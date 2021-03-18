@@ -344,3 +344,5 @@ project/plugins/project/
 hs_err_pid*
 
 null/
+.bloop/
+.metals/

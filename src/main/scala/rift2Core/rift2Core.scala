@@ -1,9 +1,10 @@
 /*
 * @Author: Ruige Lee
-* @Date:   2021-03-11 19:52:04
+* @Date:   2021-03-18 16:11:48
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-11 19:52:22
+* @Last Modified time: 2021-03-18 19:22:19
 */
+
 
 /*
   Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
@@ -22,9 +23,16 @@
 */
 
 
+package rift2Core
+
+import chisel3._
+import chisel3.util._
+import rift2Core.basicElement._
+
+class rift2Core extends Module {
 
 
-
+}
 
 
 
