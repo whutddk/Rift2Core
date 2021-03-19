@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-18 19:59:57
+* @Last Modified time: 2021-03-19 16:23:39
 */
 
 /*
@@ -73,7 +73,7 @@ trait Bru_isa extends Bundle {
 }
 
 trait Lsu_isa extends Bundle {
-	val Lb  = Bool()
+	val lb  = Bool()
 	val lh  = Bool()
 	val lw  = Bool()
 	val ld  = Bool()
@@ -100,7 +100,7 @@ trait Csr_isa extends Bundle {
 trait Mul_isa extends Bundle {
 	val mul     = Bool()
 	val mulh    = Bool()
-	val mullhsu = Bool()
+	val mulhsu = Bool()
 	val mulhu   = Bool()
 	val div     = Bool()
 	val divu    = Bool()
@@ -121,6 +121,7 @@ trait Privil_isa extends Bundle {
 
 	val uret = Bool()
 	val sret = Bool()
+	val dret = Bool()
 
 	val wfi = Bool()
 
@@ -133,6 +134,7 @@ trait Privil_isa extends Bundle {
 	val hlv_bu = Bool()
 	val hlv_h = Bool()
 	val hlv_hu = Bool()
+	val hlvx_hu = Bool()
 	val hlv_w = Bool()
 	val hlvx_wu = Bool()
 	val hsv_b = Bool()
@@ -145,7 +147,7 @@ trait Privil_isa extends Bundle {
 }
 
 trait Aextend_isa extends Bundle {
-	val LR_w      = Bool()
+	val lr_w      = Bool()
 	val sc_w      = Bool()
 	val amoswap_w = Bool()
 	val amoadd_w  = Bool()
@@ -203,7 +205,7 @@ trait Fextend_isa extends Bundle {
 	val fcvt_s_lu = Bool()
 } 
 
-trait Qextend_isa extends Bundle {
+trait Dextend_isa extends Bundle {
 	val fld = Bool()
 	val fsd = Bool()
 	val fmadd_d = Bool()
@@ -228,8 +230,8 @@ trait Qextend_isa extends Bundle {
 	val fclass_d = Bool()
 	val fcvt_w_d = Bool()
 	val fcvt_wu_d = Bool()
-	val fmv_d_w = Bool()
-	val fmv_d_wu = Bool()
+	val fcvt_d_w = Bool()
+	val fcvt_d_wu = Bool()
 
 	val fcvt_l_d = Bool()
 	val fcvt_lu_d = Bool()
@@ -240,6 +242,14 @@ trait Qextend_isa extends Bundle {
 } 
 
 
+trait Instruction_set extends Alu_isa with Bru_isa with Lsu_isa with Csr_isa with Mul_isa with Privil_isa with Aextend_isa with Fextend_isa with Dextend_isa {
+	
+}
 
-
-
+class Instruction_info extends Bundle with Instruction_set {
+	val imm = UInt(64.W)
+	val shamt = UInt(6.W)
+	val rd0 = UInt(5.W)
+	val rs1 = UInt(5.W)
+	val rs2 = UInt(5.W)
+}

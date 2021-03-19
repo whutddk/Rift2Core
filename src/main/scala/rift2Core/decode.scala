@@ -1,13 +1,11 @@
-package rift2Core.basicElement
+package rift2Core
 
 /*
 * @Author: Ruige Lee
-* @Date:   2021-03-18 16:49:02
+* @Date:   2021-03-19 09:55:43
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-19 16:23:33
+* @Last Modified time: 2021-03-19 10:40:20
 */
-
-
 
 /*
   Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
@@ -25,40 +23,44 @@ package rift2Core.basicElement
    limitations under the License.
 */
 
+
 import chisel3._
 import chisel3.util._
+import rift2Core.basicElement._
 
 
-class Info_pc_if extends Bundle {
-	val fetch_addr = Output(UInt(64.W))
-	} 
+class decode extends Module {
+	val io = IO (
+		new Bundle {
+			val iq_id = Flipped(new DecoupledIO(new Info_iq_id()))
+			val id_dpt = new DecoupledIO(new Info_id_dpt())
+
+		}
+	)
+
+	val instr32 = Wire(UInt(32.W))
+	val instr16 = Wire(UInt(16.W))
+
+	instr32 := io.iq_id.bits.iq_id_instr
+	instr16 := io.iq_id.bits.iq_id_instr(15,0)
 
 
-class Info_if_iq extends Bundle {
-	val ic_iq_pc = Output(UInt(64.W))
-	val ic_iq_instr = Output(UInt(64.W)) 
+	
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 
-class Info_iq_id extends Bundle {
-	val iq_id_isRVC = Output(Bool())
-	val iq_id_pc = Output(UInt(64.W))
-	val iq_id_instr = Output(UInt(32.W)) 
-}
 
-
-
-
-
-
-class Info_id_dpt extends Instruction_info {
-
-	val isIFAccessFault = Bool()
-	val isIlleage = Bool()
-
-	val isRVC = Bool()
-	val pc = UInt(64.W)
-
-}
 
 
