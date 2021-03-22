@@ -4,7 +4,7 @@ package rift2Core.frontend
 * @Author: Ruige Lee
 * @Date:   2021-03-19 16:24:13
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-22 17:16:13
+* @Last Modified time: 2021-03-22 17:23:40
 */
 
 
@@ -32,17 +32,9 @@ import chisel3.util._
 import rift2Core.basicElement._
 
 
-class Decode16 extends Module {
+class Decode16 (x:UInt) {
 
-	val io = IO(new Bundle{
-		val instr = Input(UInt(32.W))
-		val info = Output(new Instruction_info)
-
-	}) 
-
-	val x = Wire(UInt(32.W))
-	x := io.instr
-	// io.instr := x
+	val info = Wire(new Instruction_info)
 
 
 	val c_addi4spn = Wire(Bool())
@@ -139,7 +131,7 @@ class Decode16 extends Module {
 	c_sdsp     := ( x === BitPat("b????????????????111???????????10") )
 
 
-	io.info.rd0        :=
+	info.rd0        :=
 		MuxCase( 0.U, Array(
 				( x === BitPat("b????????????????0?????????????00") ) -> Cat(1.U(2.W), x(4,2)),
 				( x === BitPat("b????????????????0?????????????01") ) -> x(11,7),
@@ -149,7 +141,7 @@ class Decode16 extends Module {
 		)
 
 
-	io.info.rs1        := 
+	info.rs1        := 
 		MuxCase( 0.U, Array(
 				( x === BitPat("b??????????????????????????????00") ) -> Cat(1.U(2.W), x(9,7)),
 				( x === BitPat("b????????????????0?????????????01") ) -> x(11,7),
@@ -159,7 +151,7 @@ class Decode16 extends Module {
 		)
 
 
-	io.info.rs2        := 
+	info.rs2        := 
 		MuxCase( 0.U, Array(
 				( x === BitPat("b????????????????1?????????????00") ) -> Cat(1.U(2.W), x(4,2)),
 				( x === BitPat("b????????????????0?????????????01") ) -> x(11,7),
@@ -168,9 +160,9 @@ class Decode16 extends Module {
 			)
 		)
 	
-	io.info.shamt      := Cat(x(12), x(6,2))
+	info.shamt      := Cat(x(12), x(6,2))
 
-	io.info.imm        :=
+	info.imm        :=
 		MuxCase( 0.S, Array(
 				c_addi4spn -> addi4spnImm,
 				c_fld -> ldImm,
@@ -201,195 +193,195 @@ class Decode16 extends Module {
 
 
 
-	io.info.lui         := c_lui
-	io.info.auipc       := false.B
-	io.info.addi        := c_addi4spn | c_nop | c_addi | c_addi16sp
-	io.info.addiw       := c_addiw
-	io.info.slti        := false.B
-	io.info.sltiu       := false.B
-	io.info.xori        := false.B
-	io.info.ori         := false.B
-	io.info.andi        := c_andi
-	io.info.slli        := c_slli
-	io.info.slliw       := false.B
-	io.info.srli        := c_srli
-	io.info.srliw       := false.B
-	io.info.srai        := c_srai
-	io.info.sraiw       := false.B
-	io.info.add         := c_mv | c_add
-	io.info.addw        := c_addw
-	io.info.sub         := c_sub
-	io.info.subw        := c_subw
-	io.info.sll         := false.B
-	io.info.sllw        := false.B
-	io.info.slt         := false.B
-	io.info.sltu        := false.B
-	io.info.xor         := c_xor
-	io.info.srl         := false.B
-	io.info.srlw        := false.B
-	io.info.sra         := false.B
-	io.info.sraw        := false.B
-	io.info.or          := c_or
-	io.info.and         := c_and
+	info.lui         := c_lui
+	info.auipc       := false.B
+	info.addi        := c_addi4spn | c_nop | c_addi | c_addi16sp
+	info.addiw       := c_addiw
+	info.slti        := false.B
+	info.sltiu       := false.B
+	info.xori        := false.B
+	info.ori         := false.B
+	info.andi        := c_andi
+	info.slli        := c_slli
+	info.slliw       := false.B
+	info.srli        := c_srli
+	info.srliw       := false.B
+	info.srai        := c_srai
+	info.sraiw       := false.B
+	info.add         := c_mv | c_add
+	info.addw        := c_addw
+	info.sub         := c_sub
+	info.subw        := c_subw
+	info.sll         := false.B
+	info.sllw        := false.B
+	info.slt         := false.B
+	info.sltu        := false.B
+	info.xor         := c_xor
+	info.srl         := false.B
+	info.srlw        := false.B
+	info.sra         := false.B
+	info.sraw        := false.B
+	info.or          := c_or
+	info.and         := c_and
 
-	io.info.jal         := c_j
-	io.info.jalr        := c_jr | c_jalr
-	io.info.beq         := c_beqz
-	io.info.bne         := c_bnez
-	io.info.blt         := false.B
-	io.info.bge         := false.B
-	io.info.bltu        := false.B
-	io.info.bgeu        := false.B
+	info.jal         := c_j
+	info.jalr        := c_jr | c_jalr
+	info.beq         := c_beqz
+	info.bne         := c_bnez
+	info.blt         := false.B
+	info.bge         := false.B
+	info.bltu        := false.B
+	info.bgeu        := false.B
 
-	io.info.lb          := false.B
-	io.info.lh          := false.B
-	io.info.lw          := c_lw | c_lwsp
-	io.info.ld          := c_ld | c_ldsp
-	io.info.lbu         := false.B
-	io.info.lhu         := false.B
-	io.info.lwu         := false.B
-	io.info.sb          := false.B
-	io.info.sh          := false.B
-	io.info.sw          := c_sw | c_swsp
-	io.info.sd          := c_sd | c_sdsp
-	io.info.fence       := false.B
-	io.info.fence_i     := false.B
+	info.lb          := false.B
+	info.lh          := false.B
+	info.lw          := c_lw | c_lwsp
+	info.ld          := c_ld | c_ldsp
+	info.lbu         := false.B
+	info.lhu         := false.B
+	info.lwu         := false.B
+	info.sb          := false.B
+	info.sh          := false.B
+	info.sw          := c_sw | c_swsp
+	info.sd          := c_sd | c_sdsp
+	info.fence       := false.B
+	info.fence_i     := false.B
 
-	io.info.rw          := false.B
-	io.info.rs          := false.B
-	io.info.rc          := false.B
-	io.info.rwi         := false.B
-	io.info.rsi         := false.B
-	io.info.rci         := false.B
+	info.rw          := false.B
+	info.rs          := false.B
+	info.rc          := false.B
+	info.rwi         := false.B
+	info.rsi         := false.B
+	info.rci         := false.B
 
-	io.info.mul         := false.B
-	io.info.mulh        := false.B
-	io.info.mulhsu      := false.B
-	io.info.mulhu       := false.B
-	io.info.div         := false.B
-	io.info.divu        := false.B
-	io.info.rem         := false.B
-	io.info.remu        := false.B
-	io.info.mulw        := false.B
-	io.info.divw        := false.B
-	io.info.divuw       := false.B
-	io.info.remw        := false.B
-	io.info.remuw       := false.B
+	info.mul         := false.B
+	info.mulh        := false.B
+	info.mulhsu      := false.B
+	info.mulhu       := false.B
+	info.div         := false.B
+	info.divu        := false.B
+	info.rem         := false.B
+	info.remu        := false.B
+	info.mulw        := false.B
+	info.divw        := false.B
+	info.divuw       := false.B
+	info.remw        := false.B
+	info.remuw       := false.B
 
-	io.info.ecall       := false.B
-	io.info.ebreak      := c_ebreak
-	io.info.mret        := false.B
-	io.info.uret        := false.B
-	io.info.sret        := false.B
-	io.info.dret        := false.B
+	info.ecall       := false.B
+	info.ebreak      := c_ebreak
+	info.mret        := false.B
+	info.uret        := false.B
+	info.sret        := false.B
+	info.dret        := false.B
 
-	io.info.wfi         := false.B
+	info.wfi         := false.B
 
-	io.info.sfence_vma  := false.B
+	info.sfence_vma  := false.B
 
-	io.info.hfence_vvma := false.B
-	io.info.hfence_gvma := false.B
+	info.hfence_vvma := false.B
+	info.hfence_gvma := false.B
 
-	io.info.hlv_b       := false.B
-	io.info.hlv_bu      := false.B
-	io.info.hlv_h       := false.B
-	io.info.hlv_hu      := false.B
-	io.info.hlvx_hu     := false.B
-	io.info.hlv_w       := false.B
-	io.info.hlvx_wu     := false.B
-	io.info.hsv_b       := false.B
-	io.info.hsv_h       := false.B
-	io.info.hsv_w       := false.B
-	io.info.hlv_wu      := false.B
-	io.info.hlv_d       := false.B
-	io.info.hsv_d       := false.B
+	info.hlv_b       := false.B
+	info.hlv_bu      := false.B
+	info.hlv_h       := false.B
+	info.hlv_hu      := false.B
+	info.hlvx_hu     := false.B
+	info.hlv_w       := false.B
+	info.hlvx_wu     := false.B
+	info.hsv_b       := false.B
+	info.hsv_h       := false.B
+	info.hsv_w       := false.B
+	info.hlv_wu      := false.B
+	info.hlv_d       := false.B
+	info.hsv_d       := false.B
 
-	io.info.lr_w        := false.B
-	io.info.sc_w        := false.B
-	io.info.amoswap_w   := false.B
-	io.info.amoadd_w    := false.B
-	io.info.amoxor_w    := false.B
-	io.info.amoand_w    := false.B
-	io.info.amoor_w     := false.B
-	io.info.amomin_w    := false.B
-	io.info.amomax_w    := false.B
-	io.info.amominu_w   := false.B
-	io.info.amomaxu_w   := false.B
-	io.info.lr_d        := false.B
-	io.info.sc_d        := false.B
-	io.info.amoswap_d   := false.B
-	io.info.amoadd_d    := false.B
-	io.info.amoxor_d    := false.B
-	io.info.amoand_d    := false.B
-	io.info.amoor_d     := false.B
-	io.info.amomin_d    := false.B
-	io.info.amomax_d    := false.B
-	io.info.amominu_d   := false.B
-	io.info.amomaxu_d   := false.B
+	info.lr_w        := false.B
+	info.sc_w        := false.B
+	info.amoswap_w   := false.B
+	info.amoadd_w    := false.B
+	info.amoxor_w    := false.B
+	info.amoand_w    := false.B
+	info.amoor_w     := false.B
+	info.amomin_w    := false.B
+	info.amomax_w    := false.B
+	info.amominu_w   := false.B
+	info.amomaxu_w   := false.B
+	info.lr_d        := false.B
+	info.sc_d        := false.B
+	info.amoswap_d   := false.B
+	info.amoadd_d    := false.B
+	info.amoxor_d    := false.B
+	info.amoand_d    := false.B
+	info.amoor_d     := false.B
+	info.amomin_d    := false.B
+	info.amomax_d    := false.B
+	info.amominu_d   := false.B
+	info.amomaxu_d   := false.B
 
-	io.info.flw         := false.B
-	io.info.fsw         := false.B
-	io.info.fmadd_s     := false.B
-	io.info.fmsub_s     := false.B
-	io.info.fnmsub_s    := false.B
-	io.info.fnmadd_s    := false.B
-	io.info.fadd_s      := false.B
-	io.info.fsub_s      := false.B
-	io.info.fmul_s      := false.B
-	io.info.fdiv_s      := false.B
-	io.info.fsqrt_s     := false.B
-	io.info.fsgnj_s     := false.B
-	io.info.fsgnjn_s    := false.B
-	io.info.fsgnjx_s    := false.B
-	io.info.fmin_s      := false.B
-	io.info.fmax_s      := false.B
-	io.info.fcvt_w_s    := false.B
-	io.info.fcvt_wu_s   := false.B
-	io.info.fmv_x_w     := false.B
-	io.info.feq_s       := false.B
-	io.info.flt_s       := false.B
-	io.info.fle_s       := false.B
-	io.info.fclass_s    := false.B
-	io.info.fcvt_s_w    := false.B
-	io.info.fcvt_s_wu   := false.B
-	io.info.fmv_w_x     := false.B
-	io.info.fcvt_l_s    := false.B
-	io.info.fcvt_lu_s   := false.B
-	io.info.fcvt_s_l    := false.B
-	io.info.fcvt_s_lu   := false.B
+	info.flw         := false.B
+	info.fsw         := false.B
+	info.fmadd_s     := false.B
+	info.fmsub_s     := false.B
+	info.fnmsub_s    := false.B
+	info.fnmadd_s    := false.B
+	info.fadd_s      := false.B
+	info.fsub_s      := false.B
+	info.fmul_s      := false.B
+	info.fdiv_s      := false.B
+	info.fsqrt_s     := false.B
+	info.fsgnj_s     := false.B
+	info.fsgnjn_s    := false.B
+	info.fsgnjx_s    := false.B
+	info.fmin_s      := false.B
+	info.fmax_s      := false.B
+	info.fcvt_w_s    := false.B
+	info.fcvt_wu_s   := false.B
+	info.fmv_x_w     := false.B
+	info.feq_s       := false.B
+	info.flt_s       := false.B
+	info.fle_s       := false.B
+	info.fclass_s    := false.B
+	info.fcvt_s_w    := false.B
+	info.fcvt_s_wu   := false.B
+	info.fmv_w_x     := false.B
+	info.fcvt_l_s    := false.B
+	info.fcvt_lu_s   := false.B
+	info.fcvt_s_l    := false.B
+	info.fcvt_s_lu   := false.B
 
-	io.info.fld         := c_fld
-	io.info.fsd         := c_fsd
-	io.info.fmadd_d     := false.B
-	io.info.fmsub_d     := false.B
-	io.info.fnmsub_d    := false.B
-	io.info.fnmadd_d    := false.B
-	io.info.fadd_d      := false.B
-	io.info.fsub_d      := false.B
-	io.info.fmul_d      := false.B
-	io.info.fdiv_d      := false.B
-	io.info.fsqrt_d     := false.B
-	io.info.fsgnj_d     := false.B
-	io.info.fsgnjn_d    := false.B
-	io.info.fsgnjx_d    := false.B
-	io.info.fmin_d      := false.B
-	io.info.fmax_d      := false.B
-	io.info.fcvt_s_d    := false.B
-	io.info.fcvt_d_s    := false.B
-	io.info.feq_d       := false.B
-	io.info.flt_d       := false.B
-	io.info.fle_d       := false.B
-	io.info.fclass_d    := false.B
-	io.info.fcvt_w_d    := false.B
-	io.info.fcvt_wu_d   := false.B
-	io.info.fcvt_d_w    := false.B
-	io.info.fcvt_d_wu   := false.B
-	io.info.fcvt_l_d    := false.B
-	io.info.fcvt_lu_d   := false.B
-	io.info.fmv_x_d     := false.B
-	io.info.fcvt_d_l    := false.B
-	io.info.fcvt_d_lu   := false.B
-	io.info.fmv_d_x     := false.B
+	info.fld         := c_fld
+	info.fsd         := c_fsd
+	info.fmadd_d     := false.B
+	info.fmsub_d     := false.B
+	info.fnmsub_d    := false.B
+	info.fnmadd_d    := false.B
+	info.fadd_d      := false.B
+	info.fsub_d      := false.B
+	info.fmul_d      := false.B
+	info.fdiv_d      := false.B
+	info.fsqrt_d     := false.B
+	info.fsgnj_d     := false.B
+	info.fsgnjn_d    := false.B
+	info.fsgnjx_d    := false.B
+	info.fmin_d      := false.B
+	info.fmax_d      := false.B
+	info.fcvt_s_d    := false.B
+	info.fcvt_d_s    := false.B
+	info.feq_d       := false.B
+	info.flt_d       := false.B
+	info.fle_d       := false.B
+	info.fclass_d    := false.B
+	info.fcvt_w_d    := false.B
+	info.fcvt_wu_d   := false.B
+	info.fcvt_d_w    := false.B
+	info.fcvt_d_wu   := false.B
+	info.fcvt_l_d    := false.B
+	info.fcvt_lu_d   := false.B
+	info.fmv_x_d     := false.B
+	info.fcvt_d_l    := false.B
+	info.fcvt_d_lu   := false.B
+	info.fmv_d_x     := false.B
 
 }
 
