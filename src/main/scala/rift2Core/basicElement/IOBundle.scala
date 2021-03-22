@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:49:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-22 17:12:48
+* @Last Modified time: 2021-03-22 19:18:54
 */
 
 
@@ -33,23 +33,16 @@ class Info_pc_if extends Bundle {
 	val fetch_addr = Output(UInt(64.W))
 	} 
 
-
 class Info_if_iq extends Bundle {
 	val pc = Output(UInt(64.W))
 	val instr = Output(UInt(64.W)) 
 }
-
 
 class Info_iq_id extends Bundle {
 	val isRVC = Output(Bool())
 	val pc = Output(UInt(64.W))
 	val instr = Output(UInt(32.W)) 
 }
-
-
-
-
-
 
 class Info_id_dpt extends Bundle {
 
