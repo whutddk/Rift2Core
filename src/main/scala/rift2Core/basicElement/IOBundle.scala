@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:49:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-19 16:23:33
+* @Last Modified time: 2021-03-22 12:05:30
 */
 
 
@@ -35,15 +35,15 @@ class Info_pc_if extends Bundle {
 
 
 class Info_if_iq extends Bundle {
-	val ic_iq_pc = Output(UInt(64.W))
-	val ic_iq_instr = Output(UInt(64.W)) 
+	val pc = Output(UInt(64.W))
+	val instr = Output(UInt(64.W)) 
 }
 
 
 class Info_iq_id extends Bundle {
-	val iq_id_isRVC = Output(Bool())
-	val iq_id_pc = Output(UInt(64.W))
-	val iq_id_instr = Output(UInt(32.W)) 
+	val isrvc = Output(Bool())
+	val pc = Output(UInt(64.W))
+	val instr = Output(UInt(32.W)) 
 }
 
 
@@ -51,8 +51,9 @@ class Info_iq_id extends Bundle {
 
 
 
-class Info_id_dpt extends Instruction_info {
+class Info_id_dpt extends Bundle {
 
+	val info = new Instruction_info()
 	val isIFAccessFault = Bool()
 	val isIlleage = Bool()
 

@@ -1,11 +1,9 @@
 @REM @Author: Ruige Lee
 @REM @Date:   2021-03-05 10:42:25
 @REM @Last Modified by:   Ruige Lee
-@REM Modified time: 2021-03-18 16:09:12
+@REM Modified time: 2021-03-22 16:12:19
 
 
 
 
-
-sbt run
-
+sbt "test:runMain test.testMain --target-dir generated/AND"

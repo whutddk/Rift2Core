@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-19 16:23:39
+* @Last Modified time: 2021-03-22 16:26:17
 */
 
 /*
@@ -247,7 +247,7 @@ trait Instruction_set extends Alu_isa with Bru_isa with Lsu_isa with Csr_isa wit
 }
 
 class Instruction_info extends Bundle with Instruction_set {
-	val imm = UInt(64.W)
+	val imm = SInt(64.W)
 	val shamt = UInt(6.W)
 	val rd0 = UInt(5.W)
 	val rs1 = UInt(5.W)
