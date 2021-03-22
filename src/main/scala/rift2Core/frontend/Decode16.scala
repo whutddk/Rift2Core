@@ -4,7 +4,7 @@ package rift2Core.frontend
 * @Author: Ruige Lee
 * @Date:   2021-03-19 16:24:13
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-22 14:58:36
+* @Last Modified time: 2021-03-22 17:16:13
 */
 
 
@@ -32,7 +32,7 @@ import chisel3.util._
 import rift2Core.basicElement._
 
 
-class decode16 extends Module {
+class Decode16 extends Module {
 
 	val io = IO(new Bundle{
 		val instr = Input(UInt(32.W))
@@ -85,18 +85,18 @@ class decode16 extends Module {
 	val c_sdsp  = Wire(Bool())
 
 
-	def addi4spnImm = Cat(0.U(54.W), x(10,7), x(12,11), x(5), x(6), 0.U(2.W))
-	def lwImm = Cat(0.U(57.W), x(5), x(12,10), x(6), 0.U(2.W))
-	def ldImm = Cat(0.U(56.W), x(6,5), x(12,10), 0.U(3.W))
-	def lwspImm = Cat(0.U(56.W), x(3,2), x(12), x(6,4), 0.U(2.W))
-	def ldspImm = Cat(0.U(55.W), x(4,2), x(12), x(6,5), 0.U(3.W))
-	def swspImm = Cat(0.U(56.W), x(8,7), x(12,9), 0.U(2.W))
-	def sdspImm = Cat(0.U(55.W), x(9,7), x(12,10), 0.U(3.W))
-	def luiImm = Cat(Fill(47, x(12)), x(6,2), 0.U(12.W))
-	def addi16spImm = Cat(Fill(55, x(12)), x(4,3), x(5), x(2), x(6), 0.U(4.W))
-	def addiImm = Cat(Fill(59, x(12)), x(6,2))
-	def jImm = Cat(Fill(53, x(12)), x(8), x(10,9), x(6), x(7), x(2), x(11), x(5,3), 0.U(1.W))
-	def bImm = Cat(Fill(56, x(12)), x(6,5), x(2), x(11,10), x(4,3), 0.U(1.W))
+	def addi4spnImm = Cat(0.U(54.W), x(10,7), x(12,11), x(5), x(6), 0.U(2.W)).asSInt()
+	def lwImm = Cat(0.U(57.W), x(5), x(12,10), x(6), 0.U(2.W)).asSInt()
+	def ldImm = Cat(0.U(56.W), x(6,5), x(12,10), 0.U(3.W)).asSInt()
+	def lwspImm = Cat(0.U(56.W), x(3,2), x(12), x(6,4), 0.U(2.W)).asSInt()
+	def ldspImm = Cat(0.U(55.W), x(4,2), x(12), x(6,5), 0.U(3.W)).asSInt()
+	def swspImm = Cat(0.U(56.W), x(8,7), x(12,9), 0.U(2.W)).asSInt()
+	def sdspImm = Cat(0.U(55.W), x(9,7), x(12,10), 0.U(3.W)).asSInt()
+	def luiImm = Cat(Fill(47, x(12)), x(6,2), 0.U(12.W)).asSInt()
+	def addi16spImm = Cat(Fill(55, x(12)), x(4,3), x(5), x(2), x(6), 0.U(4.W)).asSInt()
+	def addiImm = Cat(Fill(59, x(12)), x(6,2)).asSInt()
+	def jImm = Cat(Fill(53, x(12)), x(8), x(10,9), x(6), x(7), x(2), x(11), x(5,3), 0.U(1.W)).asSInt()
+	def bImm = Cat(Fill(56, x(12)), x(6,5), x(2), x(11,10), x(4,3), 0.U(1.W)).asSInt()
 
 
 	c_addi4spn := ( x === BitPat("b????????????????000???????????00") ) & (x(12,5) =/= 0.U)
@@ -171,7 +171,7 @@ class decode16 extends Module {
 	io.info.shamt      := Cat(x(12), x(6,2))
 
 	io.info.imm        :=
-		MuxCase( 0.U, Array(
+		MuxCase( 0.S, Array(
 				c_addi4spn -> addi4spnImm,
 				c_fld -> ldImm,
 				c_lw -> lwImm,

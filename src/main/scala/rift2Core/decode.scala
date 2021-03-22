@@ -4,7 +4,7 @@ package rift2Core
 * @Author: Ruige Lee
 * @Date:   2021-03-19 09:55:43
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-22 17:12:43
+* @Last Modified time: 2021-03-22 17:15:05
 */
 
 /*
@@ -45,11 +45,11 @@ class Decode extends Module {
 	// 	new decode32(io.iq_id.bits.instr).info
 	// 	)
 
-	val d32 = Module(new Decode32())
+	val d16 = Module(new Decode16())
 
 
-	d32.io.instr := io.iq_id.bits.instr
-	io.id_dpt.bits.info := d32.io.info
+	d16.io.instr := io.iq_id.bits.instr
+	io.id_dpt.bits.info := d16.io.info
 	io.id_dpt.valid := true.B
 	io.iq_id.ready := true.B
 
