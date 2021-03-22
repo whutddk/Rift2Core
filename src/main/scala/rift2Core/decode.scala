@@ -4,7 +4,7 @@ package rift2Core
 * @Author: Ruige Lee
 * @Date:   2021-03-19 09:55:43
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-22 20:00:05
+* @Last Modified time: 2021-03-22 20:02:27
 */
 
 /*
@@ -59,10 +59,7 @@ class Decode extends Module {
 	instr_info_fifo.io.enq.bits  := info_id_dpt
 
 
-	io.id_dpt.valid              := instr_info_fifo.io.deq.valid
-	instr_info_fifo.io.deq.ready := io.id_dpt.ready 
-	io.id_dpt.bits               := instr_info_fifo.io.deq.bits
-
+	io.id_dpt              <> instr_info_fifo.io.deq
 
 }
 
