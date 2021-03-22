@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:11:48
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-18 19:22:19
+* @Last Modified time: 2021-03-22 16:07:07
 */
 
 
@@ -23,15 +23,21 @@
 */
 
 
-package rift2Core
+package test
 
 import chisel3._
 import chisel3.util._
 import rift2Core.basicElement._
 
-class rift2Core extends Module {
+class rift2Core extends RawModule {
+  val io = IO(new Bundle{
+    val a = Input(UInt(1.W))
+    val b = Input(UInt(1.W))
+    val c = Output(UInt(1.W))
+  })
 
 
+  io.c := io.a | io.b
 }
 
 

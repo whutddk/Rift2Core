@@ -1,4 +1,4 @@
-package rift2Core.decode
+package rift2Core.frontend
 
 
 
@@ -6,7 +6,7 @@ package rift2Core.decode
 * @Author: Ruige Lee
 * @Date:   2021-03-19 10:40:09
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-22 16:27:55
+* @Last Modified time: 2021-03-22 17:06:53
 */
 
 
@@ -31,7 +31,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.basicElement._
 
-class decode32 extends Module {
+class Decode32 extends Module {
 
 	val io = IO(new Bundle{
 		val instr = Input(UInt(32.W))

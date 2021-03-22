@@ -1,0 +1,395 @@
+package rift2Core.frontend
+
+/*
+* @Author: Ruige Lee
+* @Date:   2021-03-19 16:24:13
+* @Last Modified by:   Ruige Lee
+* @Last Modified time: 2021-03-22 14:58:36
+*/
+
+
+
+
+/*
+  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
+
+import chisel3._
+import chisel3.util._
+import rift2Core.basicElement._
+
+
+class decode16 extends Module {
+
+	val io = IO(new Bundle{
+		val instr = Input(UInt(32.W))
+		val info = Output(new Instruction_info)
+
+	}) 
+
+	val x = Wire(UInt(32.W))
+	x := io.instr
+	// io.instr := x
+
+
+	val c_addi4spn = Wire(Bool())
+	val c_fld = Wire(Bool())
+	val c_lw  = Wire(Bool())
+	val c_ld  = Wire(Bool())
+	val c_fsd  = Wire(Bool())
+	val c_sw  = Wire(Bool())
+	val c_sd  = Wire(Bool())
+	val c_nop  = Wire(Bool())
+	val c_addi  = Wire(Bool())
+	val c_addiw  = Wire(Bool())
+	val c_li  = Wire(Bool())
+	val c_addi16sp  = Wire(Bool())
+	val c_lui  = Wire(Bool())
+	val c_srli  = Wire(Bool())
+	val c_srai  = Wire(Bool())
+	val c_andi  = Wire(Bool())
+	val c_sub  = Wire(Bool())
+	val c_xor  = Wire(Bool())
+	val c_or  = Wire(Bool())
+	val c_and  = Wire(Bool())
+	val c_subw  = Wire(Bool())
+	val c_addw  = Wire(Bool())
+	val c_j  = Wire(Bool())
+	val c_beqz  = Wire(Bool())
+	val c_bnez  = Wire(Bool())
+
+	val c_slli  = Wire(Bool())
+	val c_fldsp  = Wire(Bool())
+	val c_lwsp  = Wire(Bool())
+	val c_ldsp  = Wire(Bool())
+	val c_jr  = Wire(Bool())
+	val c_mv  = Wire(Bool())
+	val c_ebreak  = Wire(Bool())
+	val c_jalr  = Wire(Bool())
+	val c_add  = Wire(Bool())
+	val c_fsdsp  = Wire(Bool())
+	val c_swsp  = Wire(Bool())
+	val c_sdsp  = Wire(Bool())
+
+
+	def addi4spnImm = Cat(0.U(54.W), x(10,7), x(12,11), x(5), x(6), 0.U(2.W))
+	def lwImm = Cat(0.U(57.W), x(5), x(12,10), x(6), 0.U(2.W))
+	def ldImm = Cat(0.U(56.W), x(6,5), x(12,10), 0.U(3.W))
+	def lwspImm = Cat(0.U(56.W), x(3,2), x(12), x(6,4), 0.U(2.W))
+	def ldspImm = Cat(0.U(55.W), x(4,2), x(12), x(6,5), 0.U(3.W))
+	def swspImm = Cat(0.U(56.W), x(8,7), x(12,9), 0.U(2.W))
+	def sdspImm = Cat(0.U(55.W), x(9,7), x(12,10), 0.U(3.W))
+	def luiImm = Cat(Fill(47, x(12)), x(6,2), 0.U(12.W))
+	def addi16spImm = Cat(Fill(55, x(12)), x(4,3), x(5), x(2), x(6), 0.U(4.W))
+	def addiImm = Cat(Fill(59, x(12)), x(6,2))
+	def jImm = Cat(Fill(53, x(12)), x(8), x(10,9), x(6), x(7), x(2), x(11), x(5,3), 0.U(1.W))
+	def bImm = Cat(Fill(56, x(12)), x(6,5), x(2), x(11,10), x(4,3), 0.U(1.W))
+
+
+	c_addi4spn := ( x === BitPat("b????????????????000???????????00") ) & (x(12,5) =/= 0.U)
+	c_fld      := ( x === BitPat("b????????????????001???????????00") )
+	c_lw       := ( x === BitPat("b????????????????010???????????00") )
+	c_ld       := ( x === BitPat("b????????????????011???????????00") )
+	c_fsd      := ( x === BitPat("b????????????????101???????????00") )
+	c_sw       := ( x === BitPat("b????????????????110???????????00") )
+	c_sd       := ( x === BitPat("b????????????????111???????????00") )
+	c_nop      := ( x === BitPat("b????????????????0000000000000001") )
+	c_addi     := ( x === BitPat("b????????????????000???????????01") ) & (x(11,7) =/= 0.U)
+	c_addiw    := ( x === BitPat("b????????????????001???????????01") ) & (x(11,7) =/= 0.U)
+	c_li       := ( x === BitPat("b????????????????010???????????01") ) & (x(11,7) =/= 0.U)
+	c_addi16sp := ( x === BitPat("b????????????????011?00010?????01") ) & (x(11,7) === 2.U) & (Cat(x(12), x(6,2)) =/= 0.U)
+	c_lui      := ( x === BitPat("b????????????????011???????????01") ) & (x(11,7) =/= 2.U) & (x(12,2) =/= 0.U)
+	c_srli     := ( x === BitPat("b????????????????100?00????????01") ) & (Cat(x(12), x(6,2)) =/= 0.U)
+	c_srai     := ( x === BitPat("b????????????????100?01????????01") ) & (Cat(x(12), x(6,2)) =/= 0.U)
+
+	c_andi     := ( x === BitPat("b????????????????100?10????????01") )
+	c_sub      := ( x === BitPat("b????????????????100011???00???01") )
+	c_xor      := ( x === BitPat("b????????????????100011???01???01") )
+	c_or       := ( x === BitPat("b????????????????100011???10???01") )
+	c_and      := ( x === BitPat("b????????????????100011???11???01") )
+	c_subw     := ( x === BitPat("b????????????????100111???00???01") )
+	c_addw     := ( x === BitPat("b????????????????100111???01???01") )
+	c_j        := ( x === BitPat("b????????????????101???????????01") )
+	c_beqz     := ( x === BitPat("b????????????????110???????????01") )
+	c_bnez     := ( x === BitPat("b????????????????111???????????01") )
+	c_slli     := ( x === BitPat("b????????????????000???????????10") ) & (x(11,7) =/= 0.U)
+	c_fldsp    := ( x === BitPat("b????????????????001???????????10") )
+	c_lwsp     := ( x === BitPat("b????????????????010???????????10") ) & (x(11,7) =/= 0.U)
+	c_ldsp     := ( x === BitPat("b????????????????011???????????10") ) & (x(11,7) =/= 0.U)
+	c_jr       := ( x === BitPat("b????????????????1000?????0000010") ) & (x(11,7) =/= 0.U)
+	c_mv       := ( x === BitPat("b????????????????1000??????????10") ) & (x(11,2) =/= 0.U)
+	c_ebreak   := ( x === BitPat("b????????????????1001000000000010") )
+	c_jalr     := ( x === BitPat("b????????????????1001?????0000010") ) & (x(11,7) =/= 0.U)
+	c_add      := ( x === BitPat("b????????????????1001??????????10") ) & (x(11,2) =/= 0.U)
+	c_fsdsp    := ( x === BitPat("b????????????????101???????????10") )
+	c_swsp     := ( x === BitPat("b????????????????110???????????10") )
+	c_sdsp     := ( x === BitPat("b????????????????111???????????10") )
+
+
+	io.info.rd0        :=
+		MuxCase( 0.U, Array(
+				( x === BitPat("b????????????????0?????????????00") ) -> Cat(1.U(2.W), x(4,2)),
+				( x === BitPat("b????????????????0?????????????01") ) -> x(11,7),
+				( x === BitPat("b????????????????1?????????????01") ) -> Cat(1.U(2.W), x(9,7)),
+				( x === BitPat("b??????????????????????????????10") ) -> x(11,7)
+			)
+		)
+
+
+	io.info.rs1        := 
+		MuxCase( 0.U, Array(
+				( x === BitPat("b??????????????????????????????00") ) -> Cat(1.U(2.W), x(9,7)),
+				( x === BitPat("b????????????????0?????????????01") ) -> x(11,7),
+				( x === BitPat("b????????????????1?????????????01") ) -> Cat(1.U(2.W), x(9,7)),
+				( x === BitPat("b??????????????????????????????10") ) -> x(11,7)
+			)
+		)
+
+
+	io.info.rs2        := 
+		MuxCase( 0.U, Array(
+				( x === BitPat("b????????????????1?????????????00") ) -> Cat(1.U(2.W), x(4,2)),
+				( x === BitPat("b????????????????0?????????????01") ) -> x(11,7),
+				( x === BitPat("b????????????????100???????????01") ) -> Cat(1.U(2.W), x(4,2)),
+				( x === BitPat("b????????????????100???????????10") ) -> x(6,2)
+			)
+		)
+	
+	io.info.shamt      := Cat(x(12), x(6,2))
+
+	io.info.imm        :=
+		MuxCase( 0.U, Array(
+				c_addi4spn -> addi4spnImm,
+				c_fld -> ldImm,
+				c_lw -> lwImm,
+				c_ld -> ldImm,
+				c_fsd -> ldImm,
+				c_sw -> lwImm,
+				c_sd -> ldImm,
+				c_addi -> addiImm,
+				c_addiw -> addiImm,
+				c_li ->  addiImm,
+				c_addi16sp -> addi16spImm,
+				c_lui -> luiImm,
+				c_andi ->addiImm,
+				c_j -> jImm,
+				c_beqz -> bImm,
+				c_bnez -> bImm,
+				c_fldsp -> ldspImm,
+				c_lwsp -> lwspImm,
+				c_ldsp -> ldspImm,
+				c_fsdsp -> sdspImm,
+				c_swsp -> swspImm,
+				c_sdsp -> sdspImm
+			)
+		)
+
+
+
+
+
+	io.info.lui         := c_lui
+	io.info.auipc       := false.B
+	io.info.addi        := c_addi4spn | c_nop | c_addi | c_addi16sp
+	io.info.addiw       := c_addiw
+	io.info.slti        := false.B
+	io.info.sltiu       := false.B
+	io.info.xori        := false.B
+	io.info.ori         := false.B
+	io.info.andi        := c_andi
+	io.info.slli        := c_slli
+	io.info.slliw       := false.B
+	io.info.srli        := c_srli
+	io.info.srliw       := false.B
+	io.info.srai        := c_srai
+	io.info.sraiw       := false.B
+	io.info.add         := c_mv | c_add
+	io.info.addw        := c_addw
+	io.info.sub         := c_sub
+	io.info.subw        := c_subw
+	io.info.sll         := false.B
+	io.info.sllw        := false.B
+	io.info.slt         := false.B
+	io.info.sltu        := false.B
+	io.info.xor         := c_xor
+	io.info.srl         := false.B
+	io.info.srlw        := false.B
+	io.info.sra         := false.B
+	io.info.sraw        := false.B
+	io.info.or          := c_or
+	io.info.and         := c_and
+
+	io.info.jal         := c_j
+	io.info.jalr        := c_jr | c_jalr
+	io.info.beq         := c_beqz
+	io.info.bne         := c_bnez
+	io.info.blt         := false.B
+	io.info.bge         := false.B
+	io.info.bltu        := false.B
+	io.info.bgeu        := false.B
+
+	io.info.lb          := false.B
+	io.info.lh          := false.B
+	io.info.lw          := c_lw | c_lwsp
+	io.info.ld          := c_ld | c_ldsp
+	io.info.lbu         := false.B
+	io.info.lhu         := false.B
+	io.info.lwu         := false.B
+	io.info.sb          := false.B
+	io.info.sh          := false.B
+	io.info.sw          := c_sw | c_swsp
+	io.info.sd          := c_sd | c_sdsp
+	io.info.fence       := false.B
+	io.info.fence_i     := false.B
+
+	io.info.rw          := false.B
+	io.info.rs          := false.B
+	io.info.rc          := false.B
+	io.info.rwi         := false.B
+	io.info.rsi         := false.B
+	io.info.rci         := false.B
+
+	io.info.mul         := false.B
+	io.info.mulh        := false.B
+	io.info.mulhsu      := false.B
+	io.info.mulhu       := false.B
+	io.info.div         := false.B
+	io.info.divu        := false.B
+	io.info.rem         := false.B
+	io.info.remu        := false.B
+	io.info.mulw        := false.B
+	io.info.divw        := false.B
+	io.info.divuw       := false.B
+	io.info.remw        := false.B
+	io.info.remuw       := false.B
+
+	io.info.ecall       := false.B
+	io.info.ebreak      := c_ebreak
+	io.info.mret        := false.B
+	io.info.uret        := false.B
+	io.info.sret        := false.B
+	io.info.dret        := false.B
+
+	io.info.wfi         := false.B
+
+	io.info.sfence_vma  := false.B
+
+	io.info.hfence_vvma := false.B
+	io.info.hfence_gvma := false.B
+
+	io.info.hlv_b       := false.B
+	io.info.hlv_bu      := false.B
+	io.info.hlv_h       := false.B
+	io.info.hlv_hu      := false.B
+	io.info.hlvx_hu     := false.B
+	io.info.hlv_w       := false.B
+	io.info.hlvx_wu     := false.B
+	io.info.hsv_b       := false.B
+	io.info.hsv_h       := false.B
+	io.info.hsv_w       := false.B
+	io.info.hlv_wu      := false.B
+	io.info.hlv_d       := false.B
+	io.info.hsv_d       := false.B
+
+	io.info.lr_w        := false.B
+	io.info.sc_w        := false.B
+	io.info.amoswap_w   := false.B
+	io.info.amoadd_w    := false.B
+	io.info.amoxor_w    := false.B
+	io.info.amoand_w    := false.B
+	io.info.amoor_w     := false.B
+	io.info.amomin_w    := false.B
+	io.info.amomax_w    := false.B
+	io.info.amominu_w   := false.B
+	io.info.amomaxu_w   := false.B
+	io.info.lr_d        := false.B
+	io.info.sc_d        := false.B
+	io.info.amoswap_d   := false.B
+	io.info.amoadd_d    := false.B
+	io.info.amoxor_d    := false.B
+	io.info.amoand_d    := false.B
+	io.info.amoor_d     := false.B
+	io.info.amomin_d    := false.B
+	io.info.amomax_d    := false.B
+	io.info.amominu_d   := false.B
+	io.info.amomaxu_d   := false.B
+
+	io.info.flw         := false.B
+	io.info.fsw         := false.B
+	io.info.fmadd_s     := false.B
+	io.info.fmsub_s     := false.B
+	io.info.fnmsub_s    := false.B
+	io.info.fnmadd_s    := false.B
+	io.info.fadd_s      := false.B
+	io.info.fsub_s      := false.B
+	io.info.fmul_s      := false.B
+	io.info.fdiv_s      := false.B
+	io.info.fsqrt_s     := false.B
+	io.info.fsgnj_s     := false.B
+	io.info.fsgnjn_s    := false.B
+	io.info.fsgnjx_s    := false.B
+	io.info.fmin_s      := false.B
+	io.info.fmax_s      := false.B
+	io.info.fcvt_w_s    := false.B
+	io.info.fcvt_wu_s   := false.B
+	io.info.fmv_x_w     := false.B
+	io.info.feq_s       := false.B
+	io.info.flt_s       := false.B
+	io.info.fle_s       := false.B
+	io.info.fclass_s    := false.B
+	io.info.fcvt_s_w    := false.B
+	io.info.fcvt_s_wu   := false.B
+	io.info.fmv_w_x     := false.B
+	io.info.fcvt_l_s    := false.B
+	io.info.fcvt_lu_s   := false.B
+	io.info.fcvt_s_l    := false.B
+	io.info.fcvt_s_lu   := false.B
+
+	io.info.fld         := c_fld
+	io.info.fsd         := c_fsd
+	io.info.fmadd_d     := false.B
+	io.info.fmsub_d     := false.B
+	io.info.fnmsub_d    := false.B
+	io.info.fnmadd_d    := false.B
+	io.info.fadd_d      := false.B
+	io.info.fsub_d      := false.B
+	io.info.fmul_d      := false.B
+	io.info.fdiv_d      := false.B
+	io.info.fsqrt_d     := false.B
+	io.info.fsgnj_d     := false.B
+	io.info.fsgnjn_d    := false.B
+	io.info.fsgnjx_d    := false.B
+	io.info.fmin_d      := false.B
+	io.info.fmax_d      := false.B
+	io.info.fcvt_s_d    := false.B
+	io.info.fcvt_d_s    := false.B
+	io.info.feq_d       := false.B
+	io.info.flt_d       := false.B
+	io.info.fle_d       := false.B
+	io.info.fclass_d    := false.B
+	io.info.fcvt_w_d    := false.B
+	io.info.fcvt_wu_d   := false.B
+	io.info.fcvt_d_w    := false.B
+	io.info.fcvt_d_wu   := false.B
+	io.info.fcvt_l_d    := false.B
+	io.info.fcvt_lu_d   := false.B
+	io.info.fmv_x_d     := false.B
+	io.info.fcvt_d_l    := false.B
+	io.info.fcvt_d_lu   := false.B
+	io.info.fmv_d_x     := false.B
+
+}
+

@@ -4,7 +4,7 @@ package test
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:14:36
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-22 16:20:02
+* @Last Modified time: 2021-03-22 17:03:18
 */
 
 
@@ -12,10 +12,10 @@ package test
 
 
 import chisel3._
-import _root_.rift2Core.decode.decode32
- 
+import rift2Core.Decode
+
 object testMain extends App {
-  Driver.execute(args, () => new decode32 )
+  Driver.execute(args, () => new Decode() )
 }
 
 
