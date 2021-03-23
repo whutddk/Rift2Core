@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-22 19:09:18
+* @Last Modified time: 2021-03-23 10:23:30
 */
 
 /*
@@ -291,4 +291,88 @@ class Instruction_info extends Bundle with Instruction_set {
 	val rd0 = UInt(5.W)
 	val rs1 = UInt(5.W)
 	val rs2 = UInt(5.W)
+}
+
+
+class Privil_dpt_info extends Bundle with Privil_isa {
+
+}
+
+
+class Alu_dpt_info extends Bundle with Alu_isa {
+	val pc = UInt(64.W)
+	val shamt = UInt(6.W)
+	val imm = SInt(64.W)
+	val rd0 = UInt(7.W)
+	val rs1 = UInt(7.W)
+	val rs2 = UInt(7.W)
+}
+
+class Alu_isu_info extends Bundle with Alu_isa {
+	
+}
+
+
+
+class Bru_dpt_info extends Bundle with Bru_isa {
+	val pc = UInt(64.W)
+	val imm = SInt(64.W)
+	val rd0 = UInt(7.W)
+	val rs1 = UInt(7.W)
+	val rs2 = UInt(7.W)
+}
+
+class Bru_isu_info extends Bundle with Bru_isa {
+	
+}
+
+
+
+class Lsu_dpt_info extends Bundle with Lsu_isa with Aextend_isa{
+	val imm = SInt(64.W)
+	val rd0 = UInt(7.W)
+	val rs1 = UInt(7.W)
+	val rs2 = UInt(7.W)
+}
+
+class Lsu_isu_info extends Bundle with Lsu_isa with Aextend_isa{
+	
+}
+
+class Csr_dpt_info extends Bundle with Csr_isa {
+	val pc = UInt(64.W)
+	val imm = UInt(12.W)
+	val rd0 = UInt(7.W)
+	val rs1 = UInt(7.W)
+}
+
+class Csr_isu_info extends Bundle with Csr_isa {
+	
+}
+
+class Mul_dpt_info extends Bundle with Mul_isa {
+	val rd0 = UInt(7.W)
+	val rs1 = UInt(7.W)
+	val rs2 = UInt(7.W)
+}
+
+class Mul_isu_info extends Bundle with Mul_isa {
+	
+}
+
+
+
+class Fpu_dpt_info extends Bundle with Fextend_isa with Dextend_isa {
+
+}
+
+class Fpu_isu_info extends Bundle with Fextend_isa with Dextend_isa {
+	
+}
+
+
+
+
+class Exe_wb_info extends Bundle {
+	
 }
