@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:11:48
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-22 16:07:07
+* @Last Modified time: 2021-03-23 19:17:01
 */
 
 
@@ -23,7 +23,7 @@
 */
 
 
-package test
+package rift2Core
 
 import chisel3._
 import chisel3.util._
@@ -38,6 +38,13 @@ class rift2Core extends RawModule {
 
 
   io.c := io.a | io.b
+
+
+
+  val regfiles = Module(new Regfiles)
+
+  
+
 }
 
 
