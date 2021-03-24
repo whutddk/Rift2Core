@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-24 11:46:54
+* @Last Modified time: 2021-03-24 19:55:22
 */
 
 /*
@@ -26,7 +26,7 @@ package rift2Core.basicElement
 import chisel3._
 
 
-trait Alu_isa extends Bundle{
+class Alu_isa extends Bundle{
 	val lui   = Bool()
 	val auipc = Bool()
 	val addi  = Bool()
@@ -62,7 +62,7 @@ trait Alu_isa extends Bundle{
 
 } 
 
-trait Bru_isa extends Bundle {
+class Bru_isa extends Bundle {
 	val jal  = Bool()
 	val jalr = Bool()
 	val beq  = Bool()
@@ -76,7 +76,7 @@ trait Bru_isa extends Bundle {
 
 }
 
-trait Lsu_isa extends Bundle {
+class Lsu_isa extends Bundle {
 	val lb  = Bool()
 	val lh  = Bool()
 	val lw  = Bool()
@@ -126,7 +126,7 @@ trait Lsu_isa extends Bundle {
 	def is_lsu = is_nls | is_lrsc | is_amo | is_fls
 }
 
-trait Csr_isa extends Bundle {
+class Csr_isa extends Bundle {
 	val rw  = Bool()
 	val rs  = Bool()
 	val rc  = Bool()
@@ -139,7 +139,7 @@ trait Csr_isa extends Bundle {
 	
 }
 
-trait Mul_isa extends Bundle {
+class Mul_isa extends Bundle {
 	val mul     = Bool()
 	val mulh    = Bool()
 	val mulhsu = Bool()
@@ -161,7 +161,7 @@ trait Mul_isa extends Bundle {
 }
 
 
-trait Privil_isa extends Bundle {
+class Privil_isa extends Bundle {
 	val ecall = Bool()
 	val ebreak = Bool()
 	val mret = Bool()
@@ -199,7 +199,7 @@ trait Privil_isa extends Bundle {
 }
 
 
-trait Fpu_isa extends Bundle {
+class Fpu_isa extends Bundle {
 
 	val fmadd_s = Bool()
 	val fmsub_s = Bool()
@@ -274,14 +274,21 @@ trait Fpu_isa extends Bundle {
 
 
 
-trait Instruction_set extends Alu_isa with Bru_isa with Lsu_isa with Csr_isa with Mul_isa with Privil_isa with Fpu_isa {
+trait Instruction_set {
+	val alu_isa = new Alu_isa
+	val bru_isa = new Bru_isa
+	val lsu_isa = new Lsu_isa
+	val csr_isa = new Csr_isa
+	val mul_isa = new Mul_isa
+	val privail_isa = new Privil_isa
+	val fpu_isa = new Fpu_isa
 
-
-	def is_illeage = is_alu | is_bru | is_lsu | is_csr | is_mul | is_privil | is_Fpu 
+	def is_illeage = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mul | privail_isa.is_privil | fpu_isa.is_Fpu 
 
 }
 
-class Instruction_info extends Bundle with Instruction_set {
+trait Instruction_param {
+	val pc = UInt(64.W)
 	val imm = SInt(64.W)
 	val shamt = UInt(6.W)
 	val rd0 = UInt(5.W)
@@ -290,13 +297,19 @@ class Instruction_info extends Bundle with Instruction_set {
 	val rs3 = UInt(5.W)
 }
 
+class Instruction_info extends Bundle with Instruction_set with Instruction_param{
 
-class Privil_dpt_info extends Bundle with Privil_isa {
 
 }
 
 
-class Alu_dpt_info extends Bundle with Alu_isa {
+class Privil_dpt_info extends Bundle {
+
+}
+
+
+class Alu_dpt_info extends Bundle {
+	val isa = new Alu_isa()
 	val pc = UInt(64.W)
 	val shamt = UInt(6.W)
 	val imm = SInt(64.W)
@@ -305,13 +318,14 @@ class Alu_dpt_info extends Bundle with Alu_isa {
 	val rs2 = UInt(7.W)
 }
 
-class Alu_isu_info extends Bundle with Alu_isa {
+class Alu_isu_info extends Bundle {
 	
 }
 
 
 
-class Bru_dpt_info extends Bundle with Bru_isa {
+class Bru_dpt_info extends Bundle {
+	val isa = new Bru_isa
 	val pc = UInt(64.W)
 	val imm = SInt(64.W)
 	val rd0 = UInt(7.W)
@@ -319,47 +333,51 @@ class Bru_dpt_info extends Bundle with Bru_isa {
 	val rs2 = UInt(7.W)
 }
 
-class Bru_isu_info extends Bundle with Bru_isa {
+class Bru_isu_info extends Bundle {
 	
 }
 
 
 
-class Lsu_dpt_info extends Bundle with Lsu_isa {
+class Lsu_dpt_info extends Bundle {
+	val isa = new Lsu_isa
 	val imm = SInt(64.W)
 	val rd0 = UInt(7.W)
 	val rs1 = UInt(7.W)
 	val rs2 = UInt(7.W)
 }
 
-class Lsu_isu_info extends Bundle with Lsu_isa {
+class Lsu_isu_info extends Bundle {
 	
 }
 
-class Csr_dpt_info extends Bundle with Csr_isa {
+class Csr_dpt_info extends Bundle {
+	val isa = new Csr_isa
 	val pc = UInt(64.W)
 	val imm = UInt(12.W)
 	val rd0 = UInt(7.W)
 	val rs1 = UInt(7.W)
 }
 
-class Csr_isu_info extends Bundle with Csr_isa {
+class Csr_isu_info extends Bundle {
 	
 }
 
-class Mul_dpt_info extends Bundle with Mul_isa {
+class Mul_dpt_info extends Bundle {
+	val isa = new Mul_isa
 	val rd0 = UInt(7.W)
 	val rs1 = UInt(7.W)
 	val rs2 = UInt(7.W)
 }
 
-class Mul_isu_info extends Bundle with Mul_isa {
+class Mul_isu_info extends Bundle {
 	
 }
 
 
 
-class Fpu_dpt_info extends Bundle with Fpu_isa  {
+class Fpu_dpt_info extends Bundle {
+	val isa = new Fpu_isa
 	val imm = UInt(12.W)
 	val rd0 = UInt(7.W)
 	val rs1 = UInt(7.W)
@@ -367,7 +385,7 @@ class Fpu_dpt_info extends Bundle with Fpu_isa  {
 	val rs3 = UInt(7.W)
 }
 
-class Fpu_isu_info extends Bundle with Fpu_isa {
+class Fpu_isu_info extends Bundle {
 	
 }
 

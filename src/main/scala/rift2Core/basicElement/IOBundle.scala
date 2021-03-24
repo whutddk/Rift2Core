@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:49:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-24 11:49:05
+* @Last Modified time: 2021-03-24 17:24:24
 */
 
 
@@ -56,10 +56,10 @@ class Info_id_dpt extends Bundle {
 }
 
 class Info_dpt_iss extends Bundle {
-	val alu_dpt_info = new Alu_dpt_info()
-	val bru_dpt_info = new Bru_dpt_info()
-	val lsu_dpt_info = new Lsu_dpt_info()
-	val csr_dpt_info = new Csr_dpt_info()
-	val mul_dpt_info = new Mul_dpt_info()
-	val fpu_dpt_info = new Fpu_dpt_info()
+	val alu_dpt_info = new DecoupledIO(new Alu_dpt_info())
+	val bru_dpt_info = new DecoupledIO(new Bru_dpt_info())
+	val lsu_dpt_info = new DecoupledIO(new Lsu_dpt_info())
+	val csr_dpt_info = new DecoupledIO(new Csr_dpt_info())
+	val mul_dpt_info = new DecoupledIO(new Mul_dpt_info())
+	val fpu_dpt_info = new DecoupledIO(new Fpu_dpt_info())
 }

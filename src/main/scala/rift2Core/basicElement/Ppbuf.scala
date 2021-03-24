@@ -13,7 +13,7 @@ import chisel3._
 import chisel3.util._
 
 
-abstract class Ppbuf[T]( dp: UInt) extends Module {
+abstract class Ppbuf[T <:Data](dw:T , dp: Int) extends Module {
 	val io = IO(new Bundle{
 		val push = Input(Bool())
 
@@ -21,26 +21,26 @@ abstract class Ppbuf[T]( dp: UInt) extends Module {
 		val pop  = Input(Bool())
 
 
-		val data_i = Input(T)
-		val buf_o   = Vec(dp, Output(T))
-		val valid_o = Vec(dp, Output(Bool()))
+		val data_i = Input(dw)
+		val buf_o   = Vec(dp, Output(dw))
+		val valid_o = Output(UInt(dp.W))
 
 		val flush = Output(Bool())
 	})
 
 	def pop_idx: UInt
 
-	val buf = Reg(Vec(dp, T))
-	val valid = Reg(Vec(dp, Bool()))
+	val buf = Reg(Vec(dp, dw))
+	val valid = Wire(UInt(dp.W))
 
-	def full = valid_o.andR
-	def empty = (~valid_o).andR
+	def full = valid.andR
+	def empty = (~valid).andR
 
 
-	def push_idx = {
-		Int i = 0
-		while( i < dp && valid(i) === true.B ){
-			i ++
+	def push_idx: UInt = {
+		var i = 0
+		while( i < dp && valid(i) == 1.U ){
+			i = i + 1
 		}
 		return i.U
 	}
@@ -49,24 +49,29 @@ abstract class Ppbuf[T]( dp: UInt) extends Module {
 	io.buf_o := buf
 	io.valid_o := valid
 
-	when( reset ) {
+	when( reset.asBool ) {
 		for ( i <- 0 until dp) yield 
+		{
 			buf(i) := 0.U
-			valid(i) := false.B 
+			valid(i) := 0.U 			
+		}
+
 	}
-	elsewhen( flush ) {
-		for ( i <- 0 until dp) yield 
+	.elsewhen( io.flush ) {
+		for ( i <- 0 until dp) yield {
 			buf(i) := 0.U
-			valid(i) := false.B 
+			valid(i) := 0.U			
+		}
+
 	}
-	elsewhen( io.push ) {
-		Reg(push_idx) := data_i
-		valid(push_idx) := true.B 
+	.elsewhen( io.push ) {
+		Reg(push_idx) := io.data_i
+		valid(push_idx) := 1.U
 	}
-	elsewhen( io.pop ) {
-		valid(pop_idx) := false.B 
+	.elsewhen( io.pop ) {
+		valid(pop_idx) := 0.U
 	}
 
-	assert( io.push )
+	assert( ((io.push & ~full) || (io.pop & ~empty)), "Assert Fail at ppbuf" )
 }
 
