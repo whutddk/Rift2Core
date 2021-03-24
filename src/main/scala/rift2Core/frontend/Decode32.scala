@@ -6,7 +6,7 @@ package rift2Core.frontend
 * @Author: Ruige Lee
 * @Date:   2021-03-19 10:40:09
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-22 17:23:31
+* @Last Modified time: 2021-03-24 11:33:27
 */
 
 
@@ -35,32 +35,25 @@ class Decode32 (x:UInt) {
 
 	val info = Wire(new Instruction_info)
 
-	val iType_imm = Wire(SInt(64.W))
-	val sType_imm = Wire(SInt(64.W))
-	val bType_imm = Wire(SInt(64.W))
-	val uType_imm = Wire(SInt(64.W))
-	val jType_imm = Wire(SInt(64.W))
-
-	val is_iType = Wire(Bool())
-	val is_sType = Wire(Bool())
-	val is_bType = Wire(Bool())
-	val is_uType = Wire(Bool())
-	val is_jType = Wire(Bool())
-
-
-	iType_imm := Cat( Fill(52, x(31)), x(31,20)).asSInt()
-	sType_imm := Cat( Fill(52, x(31)), x(31,25), x(11,7) ).asSInt()
-	bType_imm := Cat( Fill(52, x(31)), x(7), x(30,25), x(11,8), 0.U(1.W)).asSInt()
-	uType_imm := Cat( Fill(32, x(31)), x(31,12), 0.U(12.W)).asSInt()
-	jType_imm := Cat( Fill(44, x(31)), x(19,12), x(20), x(30,21), 0.U(1.W)).asSInt()
 
 
 
-	is_iType := info.jalr | info.lb | info.lh |info.lw | info.lbu | info.lhu | info.lwu | info.ld | info.addi | info.addiw | info.slti | info.sltiu | info.xori | info.ori | info.andi | info.fence | info.fence_i | info.rw | info.rs | info.rc | info.rwi | info.rsi | info.rci | info.flw | info.fld
-	is_sType := info.sb | info.sh | info.sw | info.sd | info.fsw | info.fsd
-	is_bType := info.beq | info.bne | info.blt | info.bge | info.bltu | info.bgeu;
-	is_uType := info.lui | info.auipc;
-	is_jType := info.jal;
+	def iType_imm = Cat( Fill(52, x(31)), x(31,20)).asSInt()
+	def sType_imm = Cat( Fill(52, x(31)), x(31,25), x(11,7) ).asSInt()
+	def bType_imm = Cat( Fill(52, x(31)), x(7), x(30,25), x(11,8), 0.U(1.W)).asSInt()
+	def uType_imm = Cat( Fill(32, x(31)), x(31,12), 0.U(12.W)).asSInt()
+	def jType_imm = Cat( Fill(44, x(31)), x(19,12), x(20), x(30,21), 0.U(1.W)).asSInt()
+	def aType_imm = Cat( Fill(62, 0.U), x(26,25)).asSInt()
+	def mType_imm = Cat( Fill(61, 0.U), x(14,12)).asSInt()
+
+
+	def is_iType = info.jalr | info.lb | info.lh |info.lw | info.lbu | info.lhu | info.lwu | info.ld | info.addi | info.addiw | info.slti | info.sltiu | info.xori | info.ori | info.andi | info.fence | info.fence_i | info.rw | info.rs | info.rc | info.rwi | info.rsi | info.rci | info.flw | info.fld
+	def is_sType = info.sb | info.sh | info.sw | info.sd | info.fsw | info.fsd 
+	def is_bType = info.beq | info.bne | info.blt | info.bge | info.bltu | info.bgeu;
+	def is_uType = info.lui | info.auipc;
+	def is_jType = info.jal;
+	def is_aType = info.is_lrsc | info.is_amo
+	def is_mType = info.is_Fpu
 
 
 
@@ -71,6 +64,8 @@ class Decode32 (x:UInt) {
 			is_bType -> bType_imm,
 			is_uType -> uType_imm,
 			is_jType -> jType_imm,
+			is_aType -> aType_imm,
+			is_mType -> mType_imm
 		)
 	)
 
@@ -81,6 +76,7 @@ class Decode32 (x:UInt) {
 	info.rd0        := x(11,7)
 	info.rs1        := x(19,15)
 	info.rs2        := x(24,20)
+	info.rs3        := x(31,27)
 	info.shamt      := x(25,20)
 
 	info.lui         := ( x === BitPat("b?????????????????????????0110111") )

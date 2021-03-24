@@ -347,3 +347,4 @@ null/
 .bloop/
 .metals/
 generated/
+.vscode/
