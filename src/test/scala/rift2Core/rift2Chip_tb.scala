@@ -15,7 +15,7 @@ import chisel3._
 import rift2Core._
 
 object testMain extends App {
-  Driver.execute(args, () => new Decode )
+  Driver.execute(args, () => new Dispatch )
 }
 
 

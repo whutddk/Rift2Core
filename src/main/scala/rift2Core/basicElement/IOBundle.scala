@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:49:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-25 11:23:47
+* @Last Modified time: 2021-03-25 16:55:37
 */
 
 
@@ -46,14 +46,21 @@ class Info_iq_id extends Bundle {
 
 class Info_id_dpt extends Bundle {
 
-	val info = new Instruction_info()
+	val info = new Info_instruction()
 	val isIFAccessFault = Bool()
 	val isIlleage = Bool()
 
 	val isRVC = Bool()
 
-
 }
+
+
+class Info_dpt_reg extends Bundle {
+	val opr = Vec(32, Vec(4, Output(Bool())))
+	val ptr = Vec(32, Input(UInt(2.W)))
+	val log = Vec(32,Vec(4, Input(UInt(2.W))) )
+}
+
 
 class Info_dpt_iss extends Bundle {
 

@@ -33,7 +33,7 @@ import rift2Core.basicElement._
 
 class Decode32 (x:UInt) {
 
-	val info = Wire(new Instruction_info)
+	val info = Wire(new Info_instruction)
 
 
 

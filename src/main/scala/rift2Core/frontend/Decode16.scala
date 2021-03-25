@@ -34,7 +34,7 @@ import rift2Core.basicElement._
 
 class Decode16 (x:UInt) {
 
-	val info = Wire(new Instruction_info)
+	val info = Wire(new Info_instruction)
 
 
 	// val c_addi4spn = Wire(Bool())

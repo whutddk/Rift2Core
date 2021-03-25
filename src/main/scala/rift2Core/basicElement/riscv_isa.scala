@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-25 11:47:24
+* @Last Modified time: 2021-03-25 16:53:31
 */
 
 /*
@@ -73,7 +73,7 @@ class Bru_isa extends Bundle {
 	val bgeu = Bool()
 
 	def is_bru = jal | jalr | beq | bne | blt | bge | bltu | bgeu
-
+	def is_branch = beq | bne | blt | bge | bltu | bgeu
 }
 
 class Lsu_isa extends Bundle {
@@ -119,6 +119,8 @@ class Lsu_isa extends Bundle {
 	val fld = Bool()
 	val fsd = Bool()
 
+	def is_lu  = lb | lh | lw | ld | lbu | lhu | lwu | lr_w | lr_d | flw | fld 
+	def is_su  = sb | sh | sw | sd | sc_w | sc_d | fsw | fsd
 	def is_nls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd | fence | fence_i
 	def is_lrsc = lr_w | sc_w | lr_d | sc_d
 	def is_amo = amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
@@ -269,7 +271,8 @@ class Fpu_isa extends Bundle {
 
 
 
-} 
+}
+
 
 
 
@@ -283,6 +286,18 @@ trait Instruction_set {
 	val privil_isa = new Privil_isa
 	val fpu_isa = new Fpu_isa
 
+	def is_fwb = lsu_isa.flw | lsu_isa.fld | lsu_isa.lr_w | lsu_isa.lr_d |
+			fpu_isa.fmadd_s | fpu_isa.fmsub_s | fpu_isa.fnmsub_s | 
+			fpu_isa.fnmadd_s | fpu_isa.fadd_s | fpu_isa.fsub_s | 
+			fpu_isa.fmul_s | fpu_isa.fdiv_s | fpu_isa.fsqrt_s | fpu_isa.fsgnj_s | 
+			fpu_isa.fsgnjn_s | fpu_isa.fsgnjx_s | fpu_isa.fmin_s | fpu_isa.fmax_s | 
+			fpu_isa.feq_s | fpu_isa.flt_s | fpu_isa.fle_s |
+			fpu_isa.fmadd_d | fpu_isa.fmsub_d | fpu_isa.fnmsub_d |
+			fpu_isa.fnmadd_d | fpu_isa.fadd_d | fpu_isa.fsub_d | fpu_isa.fmul_d |
+			fpu_isa.fdiv_d | fpu_isa.fsqrt_d | fpu_isa.fsgnj_d | fpu_isa.fsgnjn_d |
+			fpu_isa.fsgnjx_d | fpu_isa.fmin_d | fpu_isa. fmax_d
+
+	def is_iwb = ~is_fwb
 	def is_illeage = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mul | privil_isa.is_privil | fpu_isa.is_fpu 
 
 }
@@ -299,7 +314,7 @@ class Instruction_param extends Bundle {
 	val rs3_raw = UInt(5.W)
 }
 
-class Instruction_info extends Bundle with Instruction_set {
+class Info_instruction extends Bundle with Instruction_set {
 	val param = new Instruction_param
 }
 
@@ -312,9 +327,7 @@ class Rename_idx extends Bundle {
 	val rs3_idx = UInt(2.W)
 }
 
-class Privil_dpt_info extends Bundle {
 
-}
 
 
 class Alu_dpt_info extends Bundle {
@@ -324,9 +337,7 @@ class Alu_dpt_info extends Bundle {
 
 }
 
-class Alu_isu_info extends Bundle {
-	
-}
+
 
 
 
@@ -336,9 +347,7 @@ class Bru_dpt_info extends Bundle {
 	val rn = new Rename_idx
 }
 
-class Bru_isu_info extends Bundle {
-	
-}
+
 
 
 
@@ -348,9 +357,7 @@ class Lsu_dpt_info extends Bundle {
 	val rn = new Rename_idx
 }
 
-class Lsu_isu_info extends Bundle {
-	
-}
+
 
 class Csr_dpt_info extends Bundle {
 	val isa = new Csr_isa
@@ -359,20 +366,12 @@ class Csr_dpt_info extends Bundle {
 
 }
 
-class Csr_isu_info extends Bundle {
-	
-}
 
 class Mul_dpt_info extends Bundle {
 	val isa = new Mul_isa
 	val param = new Instruction_param
 	val rn = new Rename_idx
 }
-
-class Mul_isu_info extends Bundle {
-	
-}
-
 
 
 class Fpu_dpt_info extends Bundle {
@@ -381,20 +380,8 @@ class Fpu_dpt_info extends Bundle {
 	val rn = new Rename_idx
 }
 
-class Fpu_isu_info extends Bundle {
-	
-}
 
 
-
-
-class Exe_iwb_info extends Bundle {
-	
-}
-
-class Exe_fwb_info extends Bundle {
-	
-}
 
 
 class Info_reorder_i extends Bundle {
@@ -424,3 +411,44 @@ class Info_reorder_f extends Bundle {
 }
 
 
+
+
+
+
+class Privil_dpt_info extends Bundle {
+
+}
+
+class Alu_isu_info extends Bundle {
+	
+}
+
+class Bru_isu_info extends Bundle {
+	
+}
+
+class Lsu_isu_info extends Bundle {
+	
+}
+class Csr_isu_info extends Bundle {
+	
+}
+class Mul_isu_info extends Bundle {
+	
+}
+
+
+class Fpu_isu_info extends Bundle {
+	
+}
+
+
+
+
+class Exe_iwb_info extends Bundle {
+	
+}
+
+class Exe_fwb_info extends Bundle {
+	
+}
