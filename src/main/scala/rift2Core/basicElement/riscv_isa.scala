@@ -283,7 +283,7 @@ trait Instruction_set {
 	val privil_isa = new Privil_isa
 	val fpu_isa = new Fpu_isa
 
-	def is_illeage = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mul | privail_isa.is_privil | fpu_isa.is_Fpu 
+	def is_illeage = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mul | privil_isa.is_privil | fpu_isa.is_fpu 
 
 }
 
@@ -300,7 +300,7 @@ class Instruction_param extends Bundle {
 }
 
 class Instruction_info extends Bundle with Instruction_set {
-	val param = Instruction_param
+	val param = new Instruction_param
 }
 
 

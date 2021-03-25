@@ -131,7 +131,7 @@ class Decode16 (x:UInt) {
 	def c_sdsp     = ( x === BitPat("b????????????????111???????????10") )
 
 
-	info.rd0        :=
+	info.param.rd0_raw        :=
 		MuxCase( 0.U, Array(
 				( x === BitPat("b????????????????0?????????????00") ) -> Cat(1.U(2.W), x(4,2)),
 				( x === BitPat("b????????????????0?????????????01") ) -> x(11,7),
@@ -141,7 +141,7 @@ class Decode16 (x:UInt) {
 		)
 
 
-	info.rs1        := 
+	info.param.rs1_raw        := 
 		MuxCase( 0.U, Array(
 				( x === BitPat("b??????????????????????????????00") ) -> Cat(1.U(2.W), x(9,7)),
 				( x === BitPat("b????????????????0?????????????01") ) -> x(11,7),
@@ -151,7 +151,7 @@ class Decode16 (x:UInt) {
 		)
 
 
-	info.rs2        := 
+	info.param.rs2_raw       := 
 		MuxCase( 0.U, Array(
 				( x === BitPat("b????????????????1?????????????00") ) -> Cat(1.U(2.W), x(4,2)),
 				( x === BitPat("b????????????????0?????????????01") ) -> x(11,7),
@@ -160,9 +160,10 @@ class Decode16 (x:UInt) {
 			)
 		)
 	
-	info.shamt      := Cat(x(12), x(6,2))
+	info.param.rs3_raw       := 0.U
+	info.param.shamt      := Cat(x(12), x(6,2))
 
-	info.imm        :=
+	info.param.imm        :=
 		MuxCase( 0.S, Array(
 				c_addi4spn -> addi4spnImm,
 				c_fld -> ldImm,
@@ -268,33 +269,33 @@ class Decode16 (x:UInt) {
 	info.mul_isa.remw        := false.B
 	info.mul_isa.remuw       := false.B
 
-	info.privail_isa.ecall       := false.B
-	info.privail_isa.ebreak      := c_ebreak
-	info.privail_isa.mret        := false.B
-	info.privail_isa.uret        := false.B
-	info.privail_isa.sret        := false.B
-	info.privail_isa.dret        := false.B
+	info.privil_isa.ecall       := false.B
+	info.privil_isa.ebreak      := c_ebreak
+	info.privil_isa.mret        := false.B
+	info.privil_isa.uret        := false.B
+	info.privil_isa.sret        := false.B
+	info.privil_isa.dret        := false.B
 
-	info.privail_isa.wfi         := false.B
+	info.privil_isa.wfi         := false.B
 
-	info.privail_isa.sfence_vma  := false.B
+	info.privil_isa.sfence_vma  := false.B
 
-	info.privail_isa.hfence_vvma := false.B
-	info.privail_isa.hfence_gvma := false.B
+	info.privil_isa.hfence_vvma := false.B
+	info.privil_isa.hfence_gvma := false.B
 
-	info.privail_isa.hlv_b       := false.B
-	info.privail_isa.hlv_bu      := false.B
-	info.privail_isa.hlv_h       := false.B
-	info.privail_isa.hlv_hu      := false.B
-	info.privail_isa.hlvx_hu     := false.B
-	info.privail_isa.hlv_w       := false.B
-	info.privail_isa.hlvx_wu     := false.B
-	info.privail_isa.hsv_b       := false.B
-	info.privail_isa.hsv_h       := false.B
-	info.privail_isa.hsv_w       := false.B
-	info.privail_isa.hlv_wu      := false.B
-	info.privail_isa.hlv_d       := false.B
-	info.privail_isa.hsv_d       := false.B
+	info.privil_isa.hlv_b       := false.B
+	info.privil_isa.hlv_bu      := false.B
+	info.privil_isa.hlv_h       := false.B
+	info.privil_isa.hlv_hu      := false.B
+	info.privil_isa.hlvx_hu     := false.B
+	info.privil_isa.hlv_w       := false.B
+	info.privil_isa.hlvx_wu     := false.B
+	info.privil_isa.hsv_b       := false.B
+	info.privil_isa.hsv_h       := false.B
+	info.privil_isa.hsv_w       := false.B
+	info.privil_isa.hlv_wu      := false.B
+	info.privil_isa.hlv_d       := false.B
+	info.privil_isa.hsv_d       := false.B
 
 	info.lsu_isa.lr_w        := false.B
 	info.lsu_isa.sc_w        := false.B

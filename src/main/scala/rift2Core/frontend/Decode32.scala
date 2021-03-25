@@ -53,12 +53,12 @@ class Decode32 (x:UInt) {
 	def is_uType = info.alu_isa.lui | info.alu_isa.auipc;
 	def is_jType = info.bru_isa.jal;
 	def is_aType = info.lsu_isa.is_lrsc | info.lsu_isa.is_amo
-	def is_mType = info.fpu_isa.is_Fpu
+	def is_mType = info.fpu_isa.is_fpu
 
 
 
 
-	info.imm := MuxCase( 0.S, Array(
+	info.param.imm := MuxCase( 0.S, Array(
 			is_iType -> iType_imm,
 			is_sType -> sType_imm,
 			is_bType -> bType_imm,
@@ -73,11 +73,11 @@ class Decode32 (x:UInt) {
 
 
 
-	info.rd0        := x(11,7)
-	info.rs1        := x(19,15)
-	info.rs2        := x(24,20)
-	info.rs3        := x(31,27)
-	info.shamt      := x(25,20)
+	info.param.rd0_raw        := x(11,7)
+	info.param.rs1_raw        := x(19,15)
+	info.param.rs2_raw        := x(24,20)
+	info.param.rs3_raw        := x(31,27)
+	info.param.shamt      := x(25,20)
 
 	info.alu_isa.lui         := ( x === BitPat("b?????????????????????????0110111") )
 	info.alu_isa.auipc       := ( x === BitPat("b?????????????????????????0010111") )
@@ -154,33 +154,33 @@ class Decode32 (x:UInt) {
 	info.mul_isa.remw        := ( x === BitPat("b0000001??????????110?????0111011") )
 	info.mul_isa.remuw       := ( x === BitPat("b0000001??????????111?????0111011") )
 
-	info.privail_isa.ecall       := ( x === BitPat("b00000000000000000000000001110011") )
-	info.privail_isa.ebreak      := ( x === BitPat("b00000000000100000000000001110011") )
-	info.privail_isa.mret        := ( x === BitPat("b00110000001000000000000001110011") )
-	info.privail_isa.uret        := ( x === BitPat("b00000000001000000000000001110011") )
-	info.privail_isa.sret        := ( x === BitPat("b00010000001000000000000001110011") )
-	info.privail_isa.dret        := ( x === BitPat("b01111011001000000000000001110011") )
+	info.privil_isa.ecall       := ( x === BitPat("b00000000000000000000000001110011") )
+	info.privil_isa.ebreak      := ( x === BitPat("b00000000000100000000000001110011") )
+	info.privil_isa.mret        := ( x === BitPat("b00110000001000000000000001110011") )
+	info.privil_isa.uret        := ( x === BitPat("b00000000001000000000000001110011") )
+	info.privil_isa.sret        := ( x === BitPat("b00010000001000000000000001110011") )
+	info.privil_isa.dret        := ( x === BitPat("b01111011001000000000000001110011") )
 
-	info.privail_isa.wfi         := ( x === BitPat("b00010000010100000000000001110011") )
+	info.privil_isa.wfi         := ( x === BitPat("b00010000010100000000000001110011") )
 
-	info.privail_isa.sfence_vma  := ( x === BitPat("b0001001??????????000000001110011") )
+	info.privil_isa.sfence_vma  := ( x === BitPat("b0001001??????????000000001110011") )
 
-	info.privail_isa.hfence_vvma := ( x === BitPat("b0010001??????????000000001110011") )
-	info.privail_isa.hfence_gvma := ( x === BitPat("b0110001??????????000000001110011") )
+	info.privil_isa.hfence_vvma := ( x === BitPat("b0010001??????????000000001110011") )
+	info.privil_isa.hfence_gvma := ( x === BitPat("b0110001??????????000000001110011") )
 
-	info.privail_isa.hlv_b       := ( x === BitPat("b0110000 00000 ????? 100 ????? 1110011") )
-	info.privail_isa.hlv_bu      := ( x === BitPat("b0110000 00001 ????? 100 ????? 1110011") )
-	info.privail_isa.hlv_h       := ( x === BitPat("b0110010 00000 ????? 100 ????? 1110011") )
-	info.privail_isa.hlv_hu      := ( x === BitPat("b0110010 00001 ????? 100 ????? 1110011") )
-	info.privail_isa.hlvx_hu     := ( x === BitPat("b0110010 00011 ????? 100 ????? 1110011") )
-	info.privail_isa.hlv_w       := ( x === BitPat("b0110100 00000 ????? 100 ????? 1110011") )
-	info.privail_isa.hlvx_wu     := ( x === BitPat("b0110100 00011 ????? 100 ????? 1110011") )
-	info.privail_isa.hsv_b       := ( x === BitPat("b0110001 ????? ????? 100 00000 1110011") )
-	info.privail_isa.hsv_h       := ( x === BitPat("b0110011 ????? ????? 100 00000 1110011") )
-	info.privail_isa.hsv_w       := ( x === BitPat("b0110101 ????? ????? 100 00000 1110011") )
-	info.privail_isa.hlv_wu      := ( x === BitPat("b0110100 00001 ????? 100 ????? 1110011") )
-	info.privail_isa.hlv_d       := ( x === BitPat("b0110110 00000 ????? 100 ????? 1110011") )
-	info.privail_isa.hsv_d       := ( x === BitPat("b0110111 ????? ????? 100 00000 1110011") )
+	info.privil_isa.hlv_b       := ( x === BitPat("b0110000 00000 ????? 100 ????? 1110011") )
+	info.privil_isa.hlv_bu      := ( x === BitPat("b0110000 00001 ????? 100 ????? 1110011") )
+	info.privil_isa.hlv_h       := ( x === BitPat("b0110010 00000 ????? 100 ????? 1110011") )
+	info.privil_isa.hlv_hu      := ( x === BitPat("b0110010 00001 ????? 100 ????? 1110011") )
+	info.privil_isa.hlvx_hu     := ( x === BitPat("b0110010 00011 ????? 100 ????? 1110011") )
+	info.privil_isa.hlv_w       := ( x === BitPat("b0110100 00000 ????? 100 ????? 1110011") )
+	info.privil_isa.hlvx_wu     := ( x === BitPat("b0110100 00011 ????? 100 ????? 1110011") )
+	info.privil_isa.hsv_b       := ( x === BitPat("b0110001 ????? ????? 100 00000 1110011") )
+	info.privil_isa.hsv_h       := ( x === BitPat("b0110011 ????? ????? 100 00000 1110011") )
+	info.privil_isa.hsv_w       := ( x === BitPat("b0110101 ????? ????? 100 00000 1110011") )
+	info.privil_isa.hlv_wu      := ( x === BitPat("b0110100 00001 ????? 100 ????? 1110011") )
+	info.privil_isa.hlv_d       := ( x === BitPat("b0110110 00000 ????? 100 ????? 1110011") )
+	info.privil_isa.hsv_d       := ( x === BitPat("b0110111 ????? ????? 100 00000 1110011") )
 
 	info.lsu_isa.lr_w        := ( x === BitPat("b00010??00000?????010?????0101111") )
 	info.lsu_isa.sc_w        := ( x === BitPat("b00011????????????010?????0101111") )

@@ -90,10 +90,10 @@ class Dispatch extends Module {
 	def rename_ptr = Mux(is_fpu, io.frn_ptr, io.irn_ptr)
 	def register_log = Mux(is_fpu, io.fregLog, io.iregLog)
 
-	def rd0_raw = id_dpt_info.param.rd0
-	def rs1_raw = id_dpt_info.param.rs1	
-	def rs2_raw = id_dpt_info.param.rs2
-	def rs3_raw = id_dpt_info.param.rs3
+	def rd0_raw = id_dpt_info.param.rd0_raw
+	def rs1_raw = id_dpt_info.param.rs1_raw	
+	def rs2_raw = id_dpt_info.param.rs2_raw
+	def rs3_raw = id_dpt_info.param.rs3_raw
 
 	val rename = new Rename()
 
