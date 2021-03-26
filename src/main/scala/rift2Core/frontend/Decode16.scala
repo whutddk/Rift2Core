@@ -37,46 +37,6 @@ class Decode16 (x:UInt) {
 	val info = Wire(new Info_instruction)
 
 
-	// val c_addi4spn = Wire(Bool())
-	// val c_fld = Wire(Bool())
-	// val c_lw  = Wire(Bool())
-	// val c_ld  = Wire(Bool())
-	// val c_fsd  = Wire(Bool())
-	// val c_sw  = Wire(Bool())
-	// val c_sd  = Wire(Bool())
-	// val c_nop  = Wire(Bool())
-	// val c_addi  = Wire(Bool())
-	// val c_addiw  = Wire(Bool())
-	// val c_li  = Wire(Bool())
-	// val c_addi16sp  = Wire(Bool())
-	// val c_lui  = Wire(Bool())
-	// val c_srli  = Wire(Bool())
-	// val c_srai  = Wire(Bool())
-	// val c_andi  = Wire(Bool())
-	// val c_sub  = Wire(Bool())
-	// val c_xor  = Wire(Bool())
-	// val c_or  = Wire(Bool())
-	// val c_and  = Wire(Bool())
-	// val c_subw  = Wire(Bool())
-	// val c_addw  = Wire(Bool())
-	// val c_j  = Wire(Bool())
-	// val c_beqz  = Wire(Bool())
-	// val c_bnez  = Wire(Bool())
-
-	// val c_slli  = Wire(Bool())
-	// val c_fldsp  = Wire(Bool())
-	// val c_lwsp  = Wire(Bool())
-	// val c_ldsp  = Wire(Bool())
-	// val c_jr  = Wire(Bool())
-	// val c_mv  = Wire(Bool())
-	// val c_ebreak  = Wire(Bool())
-	// val c_jalr  = Wire(Bool())
-	// val c_add  = Wire(Bool())
-	// val c_fsdsp  = Wire(Bool())
-	// val c_swsp  = Wire(Bool())
-	// val c_sdsp  = Wire(Bool())
-
-
 	def addi4spnImm = Cat(0.U(54.W), x(10,7), x(12,11), x(5), x(6), 0.U(2.W)).asSInt()
 	def lwImm = Cat(0.U(57.W), x(5), x(12,10), x(6), 0.U(2.W)).asSInt()
 	def ldImm = Cat(0.U(56.W), x(6,5), x(12,10), 0.U(3.W)).asSInt()
@@ -89,6 +49,7 @@ class Decode16 (x:UInt) {
 	def addiImm = Cat(Fill(59, x(12)), x(6,2)).asSInt()
 	def jImm = Cat(Fill(53, x(12)), x(8), x(10,9), x(6), x(7), x(2), x(11), x(5,3), 0.U(1.W)).asSInt()
 	def bImm = Cat(Fill(56, x(12)), x(6,5), x(2), x(11,10), x(4,3), 0.U(1.W)).asSInt()
+	def shamtImm = Cat(x(12), x(6,2))
 
 
 	def c_addi4spn = ( x === BitPat("b????????????????000???????????00") ) & (x(12,5) =/= 0.U)
@@ -161,7 +122,7 @@ class Decode16 (x:UInt) {
 		)
 	
 	info.param.rs3_raw       := 0.U
-	info.param.shamt      := Cat(x(12), x(6,2))
+
 
 	info.param.imm        :=
 		MuxCase( 0.S, Array(
@@ -186,7 +147,11 @@ class Decode16 (x:UInt) {
 				c_ldsp -> ldspImm,
 				c_fsdsp -> sdspImm,
 				c_swsp -> swspImm,
-				c_sdsp -> sdspImm
+				c_sdsp -> sdspImm,
+				c_slli -> shamtImm,
+				c_srli -> shamtImm,
+				c_srai -> shamtImm,
+
 			)
 		)
 

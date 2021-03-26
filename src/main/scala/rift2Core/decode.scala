@@ -48,7 +48,7 @@ class Decode extends Module {
 
 	info_id_dpt.isIFAccessFault := (io.iq_id.bits.pc(63,32)) =/= (0.U)
 	info_id_dpt.isIlleage := io.id_dpt.bits.info.is_illeage
-	info_id_dpt.isRVC := io.iq_id.bits.isRVC
+	info_id_dpt.info.param.is_rvc := io.iq_id.bits.isRVC
 	info_id_dpt.info.param.pc := io.iq_id.bits.pc
 
 

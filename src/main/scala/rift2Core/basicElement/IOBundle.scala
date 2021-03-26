@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:49:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-25 16:55:37
+* @Last Modified time: 2021-03-26 14:45:52
 */
 
 
@@ -50,7 +50,7 @@ class Info_id_dpt extends Bundle {
 	val isIFAccessFault = Bool()
 	val isIlleage = Bool()
 
-	val isRVC = Bool()
+
 
 }
 

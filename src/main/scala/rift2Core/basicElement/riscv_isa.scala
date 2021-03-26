@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-25 16:53:31
+* @Last Modified time: 2021-03-26 14:44:42
 */
 
 /*
@@ -57,6 +57,20 @@ class Alu_isa extends Bundle{
 	val sraw  = Bool()
 	val or    = Bool()
 	val and   = Bool()
+
+	def is_32w = addiw | addw | subw | slliw | sllw | srliw | srlw | sraiw | sraw;
+	def is_usi = sltiu | sltu
+	def is_imm =  lui | auipc | addi | addiw | slti | sltiu | xori | ori | andi | slli | slliw | srli | srliw | srai | sraiw
+	def is_fun_imm = lui | auipc
+	def is_fun_add = addi | addiw | add | addw
+	def is_fun_sub = sub | subw
+	def is_fun_slt = slti | sltiu | slt | sltu
+	def is_fun_xor = xori | xor
+	def is_fun_or  = ori | or
+	def is_fun_and = andi | and
+	def is_fun_sll = slli | slliw | sll | sllw
+	def is_fun_srl = srli | srliw | srl | srlw
+	def is_fun_sra = srai | sraiw | sra | sraw
 
 	def is_alu = lui | auipc | addi | addiw | slti | sltiu | xori | ori | andi | slli | slliw | srli | srliw | srai | sraiw | add | addw | sub | subw | sll | sllw | slt | sltu | xor | srl | srlw | sra | sraw | or |and
 
@@ -305,9 +319,9 @@ trait Instruction_set {
 
 
 class Instruction_param extends Bundle {
+	val is_rvc = Bool()
 	val pc = UInt(64.W)
 	val imm = SInt(64.W)
-	val shamt = UInt(6.W)
 	val rd0_raw = UInt(5.W)
 	val rs1_raw = UInt(5.W)
 	val rs2_raw = UInt(5.W)
@@ -319,8 +333,15 @@ class Info_instruction extends Bundle with Instruction_set {
 }
 
 
+class Reg_raw extends Bundle {
+	val rd0_raw = UInt(5.W)
+	val rs1_raw = UInt(5.W)
+	val rs2_raw = UInt(5.W)
+	val rs3_raw = UInt(5.W)
+}
 
-class Rename_idx extends Bundle {
+
+class Reg_idx extends Bundle {
 	val rd0_idx = UInt(2.W)
 	val rs1_idx = UInt(2.W)
 	val rs2_idx = UInt(2.W)
@@ -333,7 +354,7 @@ class Rename_idx extends Bundle {
 class Alu_dpt_info extends Bundle {
 	val isa = new Alu_isa()
 	val param = new Instruction_param
-	val rn = new Rename_idx
+	val rn = new Reg_idx
 
 }
 
@@ -344,7 +365,7 @@ class Alu_dpt_info extends Bundle {
 class Bru_dpt_info extends Bundle {
 	val isa = new Bru_isa
 	val param = new Instruction_param
-	val rn = new Rename_idx
+	val rn = new Reg_idx
 }
 
 
@@ -354,7 +375,7 @@ class Bru_dpt_info extends Bundle {
 class Lsu_dpt_info extends Bundle {
 	val isa = new Lsu_isa
 	val param = new Instruction_param
-	val rn = new Rename_idx
+	val rn = new Reg_idx
 }
 
 
@@ -362,7 +383,7 @@ class Lsu_dpt_info extends Bundle {
 class Csr_dpt_info extends Bundle {
 	val isa = new Csr_isa
 	val param = new Instruction_param
-	val rn = new Rename_idx
+	val rn = new Reg_idx
 
 }
 
@@ -370,14 +391,14 @@ class Csr_dpt_info extends Bundle {
 class Mul_dpt_info extends Bundle {
 	val isa = new Mul_isa
 	val param = new Instruction_param
-	val rn = new Rename_idx
+	val rn = new Reg_idx
 }
 
 
 class Fpu_dpt_info extends Bundle {
 	val isa = new Fpu_isa
 	val param = new Instruction_param
-	val rn = new Rename_idx
+	val rn = new Reg_idx
 }
 
 
@@ -419,24 +440,55 @@ class Privil_dpt_info extends Bundle {
 
 }
 
-class Alu_isu_info extends Bundle {
+
+
+class Alu_function extends Bundle {
+	val imm = Bool()
+	val add = Bool()
+	val sub = Bool()
+	val slt = Bool()
+	val xor = Bool()
+	val or  = Bool()
+	val and = Bool()
+	val sll = Bool()
+	val srl = Bool()
+	val sra = Bool()
+}
+
+class Alu_param extends Bundle {
+	val is_32w = Bool()
+	val is_usi = Bool()
+	val is_imm = Bool()
+
+	val reg_raw = new Reg_raw
+	val reg_idx = new Reg_idx
+
+	val pc = UInt(64.W)
+	val imm = SInt(64.W)
+}
+
+class Alu_iss_info extends Bundle {
+	val fun = new Alu_function
+	val param = new Alu_param
+
+}
+
+class Bru_iss_info extends Bundle {
+	val fun = new Bru_isa
+	val param = new Bru_param
+}
+
+class Lsu_iss_info extends Bundle {
 	
 }
 
-class Bru_isu_info extends Bundle {
+class Csr_iss_info extends Bundle {
 	
 }
 
-class Lsu_isu_info extends Bundle {
+class Mul_iss_info extends Bundle {
 	
 }
-class Csr_isu_info extends Bundle {
-	
-}
-class Mul_isu_info extends Bundle {
-	
-}
-
 
 class Fpu_isu_info extends Bundle {
 	

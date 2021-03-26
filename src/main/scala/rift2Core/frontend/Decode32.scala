@@ -45,6 +45,7 @@ class Decode32 (x:UInt) {
 	def jType_imm = Cat( Fill(44, x(31)), x(19,12), x(20), x(30,21), 0.U(1.W)).asSInt()
 	def aType_imm = Cat( Fill(62, 0.U), x(26,25)).asSInt()
 	def mType_imm = Cat( Fill(61, 0.U), x(14,12)).asSInt()
+	def shamt_imm = Cat( Fill(58, 0.U), x(25,20) )
 
 
 	def is_iType = info.bru_isa.jalr | info.lsu_isa.lb | info.lsu_isa.lh |info.lsu_isa.lw | info.lsu_isa.lbu | info.lsu_isa.lhu | info.lsu_isa.lwu | info.lsu_isa.ld | info.alu_isa.addi | info.alu_isa.addiw | info.alu_isa.slti | info.alu_isa.sltiu | info.alu_isa.xori | info.alu_isa.ori | info.alu_isa.andi | info.lsu_isa.fence | info.lsu_isa.fence_i | info.csr_isa.rw | info.csr_isa.rs | info.csr_isa.rc | info.csr_isa.rwi | info.csr_isa.rsi | info.csr_isa.rci | info.lsu_isa.flw | info.lsu_isa.fld
@@ -54,7 +55,7 @@ class Decode32 (x:UInt) {
 	def is_jType = info.bru_isa.jal;
 	def is_aType = info.lsu_isa.is_lrsc | info.lsu_isa.is_amo
 	def is_mType = info.fpu_isa.is_fpu
-
+	def is_shamt = info.alu_isa.slli | info.alu_isa.srli | info.alu_isa.srai | info.alu_isa.slliw | info.alu_isa.srliw | info.alu_isa.sraiw
 
 
 
@@ -65,7 +66,8 @@ class Decode32 (x:UInt) {
 			is_uType -> uType_imm,
 			is_jType -> jType_imm,
 			is_aType -> aType_imm,
-			is_mType -> mType_imm
+			is_mType -> mType_imm,
+			is_shamt -> shamt_imm
 		)
 	)
 
@@ -77,7 +79,7 @@ class Decode32 (x:UInt) {
 	info.param.rs1_raw        := x(19,15)
 	info.param.rs2_raw        := x(24,20)
 	info.param.rs3_raw        := x(31,27)
-	info.param.shamt      := x(25,20)
+
 
 	info.alu_isa.lui         := ( x === BitPat("b?????????????????????????0110111") )
 	info.alu_isa.auipc       := ( x === BitPat("b?????????????????????????0010111") )
