@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-26 14:44:42
+* @Last Modified time: 2021-03-26 17:16:35
 */
 
 /*
@@ -61,8 +61,8 @@ class Alu_isa extends Bundle{
 	def is_32w = addiw | addw | subw | slliw | sllw | srliw | srlw | sraiw | sraw;
 	def is_usi = sltiu | sltu
 	def is_imm =  lui | auipc | addi | addiw | slti | sltiu | xori | ori | andi | slli | slliw | srli | srliw | srai | sraiw
-	def is_fun_imm = lui | auipc
-	def is_fun_add = addi | addiw | add | addw
+
+	def is_fun_add = addi | addiw | add | addw | lui | auipc
 	def is_fun_sub = sub | subw
 	def is_fun_slt = slti | sltiu | slt | sltu
 	def is_fun_xor = xori | xor
@@ -443,7 +443,7 @@ class Privil_dpt_info extends Bundle {
 
 
 class Alu_function extends Bundle {
-	val imm = Bool()
+
 	val add = Bool()
 	val sub = Bool()
 	val slt = Bool()
@@ -458,13 +458,13 @@ class Alu_function extends Bundle {
 class Alu_param extends Bundle {
 	val is_32w = Bool()
 	val is_usi = Bool()
-	val is_imm = Bool()
 
-	val reg_raw = new Reg_raw
-	val reg_idx = new Reg_idx
 
-	val pc = UInt(64.W)
-	val imm = SInt(64.W)
+	val op1 = UInt(64.W)
+	val op2 = UInt(64.W)
+
+	val rd0_raw = UInt(5.W)
+	val rd0_idx = UInt(2.W)
 }
 
 class Alu_iss_info extends Bundle {
@@ -473,21 +473,63 @@ class Alu_iss_info extends Bundle {
 
 }
 
+class Bru_param extends Bundle {
+	val is_rvc = Bool()
+	val pc = UInt(64.W)
+	val imm = SInt(64.W)
+
+
+	val op1 = UInt(64.W)
+	val op2 = UInt(64.W)
+
+	val rd0_raw = UInt(5.W)
+	val rd0_idx = UInt(2.W)
+}
+
 class Bru_iss_info extends Bundle {
 	val fun = new Bru_isa
 	val param = new Bru_param
+
+
+}
+
+class Lsu_param extends Bundle {
+	val op1 = UInt(64.W)
+	val op2 = UInt(64.W)
+
+	val rd0_raw = UInt(5.W)
+	val rd0_idx = UInt(2.W)
 }
 
 class Lsu_iss_info extends Bundle {
-	
+	val fun = new Lsu_isa
+	val param = new Lsu_param
+}
+
+class Csr_param extends Bundle {
+	val op1 = UInt(5.W)
+	val op2 = UInt(12.W)
+
+	val rd0_raw = UInt(5.W)
+	val rd0_idx = UInt(2.W)
 }
 
 class Csr_iss_info extends Bundle {
-	
+	val fun = new Csr_isa
+	val param = new Csr_param
+}
+
+class Mul_param extends Bundle {
+	val op1 = UInt(64.W)
+	val op2 = UInt(64.W)
+
+	val rd0_raw = UInt(5.W)
+	val rd0_idx = UInt(2.W)
 }
 
 class Mul_iss_info extends Bundle {
-	
+	val fun = new Mul_isa
+	val param = new Mul_param
 }
 
 class Fpu_isu_info extends Bundle {
