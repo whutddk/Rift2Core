@@ -28,23 +28,25 @@ package rift2Core.basicElement
 import chisel3._
 import chisel3.util._
 
-
-class Fifo_port_i[T<:Data](dw: T) extends Bundle {
+// package of input port
+class Fifo_port_i[T<:Data](private val dw: T) extends Bundle {
 	val valid = Input(Bool())
-	val data = Input(dw)
+	val data = Input(dw.cloneType)
 	val ready = Output(Bool())
 }
 
-class Fifo_port_o[T<:Data](dw: T) extends Bundle {
+// package of output port
+class Fifo_port_o[T<:Data](private val dw: T) extends Bundle {
 	val valid = Output(Bool())
-	val data = Output(dw)
+	val data = Output(dw.cloneType)
 	val ready = Input(Bool())
 }
 
+//dw:data type aw:address width, in: input port num, out: output port num 
 class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module {
 	val io = IO(new Bundle{
-		val push = Vec(in,  new Fifo_port_i(dw))
-		val pop  = Vec(out, new Fifo_port_o(dw))
+		val push = Vec(in,  new Fifo_port_i(dw.cloneType))
+		val pop  = Vec(out, new Fifo_port_o(dw.cloneType))
 
 		val flush = Input(Bool())
 	})
@@ -53,8 +55,8 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 	val dp = 2^aw
 	assert( in < dp && out < dp )
 
-	val buf = Vec(dp, Reg(dw))
-	val buf_valid = Reg(UInt(dp.W))
+	val buf = Reg(Vec(dp, dw))
+	val buf_valid = Reg(Vec(dp, Bool()))
 
 	val rd_ptr = Reg(UInt(aw.W))
 	val wr_ptr = Reg(UInt(aw.W))
@@ -92,7 +94,7 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 
 
 	when (reset.asBool() | io.flush) {
-		buf_valid  := 0.U
+		for ( i <- 0 until dp ) yield 	buf_valid(i) := false.B
 		rd_ptr := 0.U
 		wr_ptr := 0.U
 	}
@@ -101,14 +103,28 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 			val fifo_ptr_w = (wr_ptr + i.U)(aw-1,0)
 			val fifo_ptr_r = (rd_ptr + j.U)(aw-1,0)
 
-			buf_valid(fifo_ptr_w) := Mux(push_ack(i.U), 1.U, buf_valid(fifo_ptr_w))
-			buf_valid(fifo_ptr_r) := Mux(pop_ack(i.U),  0.U, buf_valid(fifo_ptr_r))
+			buf_valid(fifo_ptr_w) := Mux(push_ack(i.U), true.B, buf_valid(fifo_ptr_w))
+			buf_valid(fifo_ptr_r) := Mux(pop_ack(j.U),  false.B, buf_valid(fifo_ptr_r))
 
 			buf(fifo_ptr_w) := Mux(push_ack(i.U), io.push(i.U).data, buf(fifo_ptr_w))
-
-			rd_ptr := rd_ptr + pop_cnt
-			wr_ptr := wr_ptr + push_cnt
 		}
+
+
+
+
+
+
+		// for ( i <- 0 until dp ) yield {
+		// 	def is_push(i: UInt): Bool =  
+
+		// 	buf_valid(i) :=
+		// 	buf(i) := 
+		// }
+
+
+
+		rd_ptr := rd_ptr + pop_cnt
+		wr_ptr := wr_ptr + push_cnt
 	}
 
 

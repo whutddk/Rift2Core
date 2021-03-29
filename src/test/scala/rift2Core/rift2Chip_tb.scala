@@ -27,9 +27,13 @@ package test
 
 import chisel3._
 import rift2Core._
+import rift2Core.basicElement._
+
+
 
 object testMain extends App {
-  Driver.execute(args, () => new Dispatch )
+
+  Driver.execute(args, () => new MultiPortFifo( new Mul_iss_info, 4, 2, 2 ) )
 }
 
 
