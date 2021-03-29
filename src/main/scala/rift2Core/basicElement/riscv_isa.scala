@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-29 15:10:06
+* @Last Modified time: 2021-03-29 17:19:38
 */
 
 /*
@@ -545,4 +545,14 @@ class Exe_iwb_info extends Bundle {
 
 class Exe_fwb_info extends Bundle {
 	
+}
+
+
+
+
+class Info_bru_id extends Bundle {
+	val is_takenBranch_bits = Bool()
+	val is_takenBranch_valid = Bool()
+	val jalr_pc = UInt(64.W)
+	val jalr_valid = Bool()
 }
