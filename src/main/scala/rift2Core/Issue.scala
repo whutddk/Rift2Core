@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-25 17:55:52
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-26 17:26:49
+* @Last Modified time: 2021-03-29 15:09:55
 */
 
 
@@ -29,7 +29,7 @@ package rift2Core
 import chisel3._
 import chisel3.util._
 import rift2Core.basicElement._
-import javax.swing.UIManager
+
 
 abstract class Ele_issue(param: Instruction_param, rn: Reg_idx, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) {
 
@@ -43,8 +43,8 @@ abstract class Ele_issue(param: Instruction_param, rn: Reg_idx, log: Vec[Vec[UIn
 
 
 	// check if the rs is wrote back
-	def is_rs1_ready: Bool = (log(rs1_raw)(rs1_idx) === 2.U) | (raw === 0.U)
-	def is_rs2_ready: Bool = (log(rs2_raw)(rs2_idx) === 2.U) | (raw === 0.U)
+	def is_rs1_ready: Bool = (log(rs1_raw)(rs1_idx) === 2.U) | (rs1_raw === 0.U)
+	def is_rs2_ready: Bool = (log(rs2_raw)(rs2_idx) === 2.U) | (rs2_raw === 0.U)
 	// check if an instruction is RAW clearence, each instruction has different rs requirement
 	def is_clearRAW: Bool
 
@@ -97,7 +97,6 @@ class Alu_issue(dpt_info: Alu_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], fi
 	
 	{
 		alu_iss_info.fun.add := dpt_info.isa.is_fun_add
-		alu_iss_info.fun.sub := dpt_info.isa.is_fun_sub
 		alu_iss_info.fun.slt := dpt_info.isa.is_fun_slt
 		alu_iss_info.fun.xor := dpt_info.isa.is_fun_xor
 		alu_iss_info.fun.or  := dpt_info.isa.is_fun_or
@@ -160,8 +159,8 @@ class Alu_issue(dpt_info: Alu_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], fi
 									dpt_info.isa.sraiw  -> dpt_info.param.imm(5,0),
 									dpt_info.isa.add    -> src2,
 									dpt_info.isa.addw   -> src2,
-									dpt_info.isa.sub    -> src2,
-									dpt_info.isa.subw   -> src2,
+									dpt_info.isa.sub    -> (~src2 + 1.U),
+									dpt_info.isa.subw   -> (~src2 + 1.U),
 									dpt_info.isa.sll    -> src2,
 									dpt_info.isa.sllw   -> src2,
 									dpt_info.isa.slt    -> src2,
@@ -181,7 +180,7 @@ class Alu_issue(dpt_info: Alu_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], fi
 
 }
 
-class bru_issue(dpt_info: Bru_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) extends Ele_issue(dpt_info.param, dpt_info.rn, log, files) {
+class Bru_issue(dpt_info: Bru_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) extends Ele_issue(dpt_info.param, dpt_info.rn, log, files) {
 	val bru_iss_info = Wire(new Bru_iss_info)
 
 	override def is_clearRAW = 
@@ -219,7 +218,7 @@ class bru_issue(dpt_info: Bru_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], fi
 
 }
 
-class lsu_issue (dpt_info: Lsu_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) extends Ele_issue(dpt_info.param, dpt_info.rn, log, files) {
+class Lsu_issue (dpt_info: Lsu_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) extends Ele_issue(dpt_info.param, dpt_info.rn, log, files) {
 	val lsu_iss_info = Wire(new Lsu_iss_info)
 
 	override def is_clearRAW = 
@@ -272,14 +271,14 @@ class lsu_issue (dpt_info: Lsu_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], f
 
 		lsu_iss_info.fun  := dpt_info.isa
 
-		lsu_iss_info.param.op1 := src1.asSInt + dpt_info.param.imm
+		lsu_iss_info.param.op1 := (src1.asSInt + dpt_info.param.imm.asSInt()).asUInt()
 		lsu_iss_info.param.op2 := src2
 
 		lsu_iss_info.param.rd0_raw := dpt_info.param.rd0_raw
 		lsu_iss_info.param.rd0_idx := dpt_info.rn.rd0_idx
 }
 
-class csr_issue (dpt_info: Csr_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) extends Ele_issue(dpt_info.param, dpt_info.rn, log, files) {
+class Csr_issue (dpt_info: Csr_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) extends Ele_issue(dpt_info.param, dpt_info.rn, log, files) {
 	val csr_iss_info = Wire(new Csr_iss_info)
 
 	override def is_clearRAW = 
@@ -317,7 +316,7 @@ class csr_issue (dpt_info: Csr_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], f
 
 }
 
-class mul_issue (dpt_info: Mul_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) extends Ele_issue(dpt_info.param, dpt_info.rn, log, files) {
+class Mul_issue (dpt_info: Mul_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) extends Ele_issue(dpt_info.param, dpt_info.rn, log, files) {
 	val mul_iss_info = Wire(new Mul_iss_info)
 
 	override def is_clearRAW = 
@@ -340,7 +339,7 @@ class mul_issue (dpt_info: Mul_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], f
 	}
 }
 
-// class fpu_issue (dpt_info: Fpu_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) extends Ele_issue(dpt_info.param, dpt_info.rn, log, files) {
+// class Fpu_issue (dpt_info: Fpu_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) extends Ele_issue(dpt_info.param, dpt_info.rn, log, files) {
 // 	val fpu_iss_info = Wire(new Fpu_iss_info)
 
 // 	override def is_clearRAW = 
@@ -352,14 +351,14 @@ class mul_issue (dpt_info: Mul_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], f
 
 // }
 
-class Issue(alu_dp: Int, mul_dp: Int, fpu_dp: Int) extends Module {
+class Issue() extends Module {
 	val io = IO(new Bundle{
-		val alu_dpt_iss = Flipped(new DecoupledIO(new Alu_dpt_info))
-		val bru_dpt_iss = Flipped(new DecoupledIO(new Bru_dpt_info))
-		val lsu_dpt_iss = Flipped(new DecoupledIO(new Lsu_dpt_info))
-		val csr_dpt_iss = Flipped(new DecoupledIO(new Csr_dpt_info))
-		val mul_dpt_iss = Flipped(new DecoupledIO(new Mul_dpt_info))
-		val fpu_dpt_iss = Flipped(new DecoupledIO(new Fpu_dpt_info))
+		val alu_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Alu_dpt_info)) )
+		val bru_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Bru_dpt_info)) )
+		val lsu_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Lsu_dpt_info)) )
+		val csr_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Csr_dpt_info)) )
+		val mul_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Mul_dpt_info)) )
+		// val fpu_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Fpu_dpt_info)) )
 
 
 		val alu_iss_exe = new DecoupledIO(new Alu_iss_info)
@@ -369,6 +368,7 @@ class Issue(alu_dp: Int, mul_dp: Int, fpu_dp: Int) extends Module {
 		val mul_iss_exe = new DecoupledIO(new Mul_iss_info)
 
 		val regLog = Vec(32,Vec(4, Input(UInt(2.W))) )
+		val files = Vec(32, Vec(4, Input(UInt(64.W))))
 
 
 		val flush = Input(Bool())
@@ -377,13 +377,38 @@ class Issue(alu_dp: Int, mul_dp: Int, fpu_dp: Int) extends Module {
 
 
 
-		//issue mux
-		val alu_issue = new Alu_issue (alu_dpt_info: Vec[Alu_dpt_info], buf_valid: Vec[Bool], io.regLog, alu_dp)
+		val alu_dpt_fifo = Module(new MultiPortFifo( new Alu_dpt_info, 3, 2, 1 ))
+		val bru_dpt_fifo = Module(new MultiPortFifo( new Bru_dpt_info, 3, 2, 1 ))
+		val lsu_dpt_fifo = Module(new MultiPortFifo( new Lsu_dpt_info, 3, 2, 1 ))
+		val csr_dpt_fifo = Module(new MultiPortFifo( new Csr_dpt_info, 3, 2, 1 ))
+		val mul_dpt_fifo = Module(new MultiPortFifo( new Mul_dpt_info, 3, 2, 1 ))
+		// val fpu_dpt_buf = new MultiPortFifo( dw: T, aw: Int, in: Int, out: Int )
+
+		// dpt <> issue fifo
+		io.alu_dpt_iss <> alu_dpt_fifo.io.push
+		io.bru_dpt_iss <> bru_dpt_fifo.io.push
+		io.lsu_dpt_iss <> lsu_dpt_fifo.io.push
+		io.csr_dpt_iss <> csr_dpt_fifo.io.push
+		io.mul_dpt_iss <> mul_dpt_fifo.io.push
+
+		alu_dpt_fifo.io.flush := io.flush
+		bru_dpt_fifo.io.flush := io.flush
+		lsu_dpt_fifo.io.flush := io.flush
+		csr_dpt_fifo.io.flush := io.flush
+		mul_dpt_fifo.io.flush := io.flush
+
+
+		//issue mux: issue fifo <> issue logic
+		val alu_issue = new Alu_issue (alu_dpt_fifo.io.pop(0).bits, alu_dpt_fifo.io.pop(0).valid, io.regLog, io.files)
+		val bru_issue = new Bru_issue (bru_dpt_fifo.io.pop(0).bits, bru_dpt_fifo.io.pop(0).valid, io.regLog, io.files)
+		val lsu_issue = new Lsu_issue (lsu_dpt_fifo.io.pop(0).bits, lsu_dpt_fifo.io.pop(0).valid, io.regLog, io.files)
+		val csr_issue = new Csr_issue (csr_dpt_fifo.io.pop(0).bits, csr_dpt_fifo.io.pop(0).valid, io.regLog, io.files)
+		val mul_issue = new Mul_issue (mul_dpt_fifo.io.pop(0).bits, mul_dpt_fifo.io.pop(0).valid, io.regLog, io.files)
+	
 
 
 
-
-		//issue info (exe param) register here
+		//issue info (exe param) register is here :  issue logic <> exe param reg
 		val alu_iss_info = RegNext(alu_issue.alu_iss_info)
 		val bru_iss_info = RegNext(bru_issue.bru_iss_info)
 		val lsu_iss_info = RegNext(lsu_issue.lsu_iss_info)
@@ -402,6 +427,14 @@ class Issue(alu_dp: Int, mul_dp: Int, fpu_dp: Int) extends Module {
 		def csr_exe_ack = io.csr_iss_exe.valid & io.csr_iss_exe.ready
 		def mul_exe_ack = io.mul_iss_exe.valid & io.mul_iss_exe.ready		
 
+		alu_dpt_fifo.io.pop(0).ready := alu_exe_ack
+		bru_dpt_fifo.io.pop(0).ready := bru_exe_ack
+		lsu_dpt_fifo.io.pop(0).ready := lsu_exe_ack
+		csr_dpt_fifo.io.pop(0).ready := csr_exe_ack
+		mul_dpt_fifo.io.pop(0).ready := mul_exe_ack
+
+
+
 		alu_iss_valid := MuxCase(alu_iss_valid, Array( 
 									(reset.asBool() | io.flush) -> false.B,
 									alu_issue.is_clearRAW       -> true.B,
@@ -414,7 +447,7 @@ class Issue(alu_dp: Int, mul_dp: Int, fpu_dp: Int) extends Module {
 									bru_exe_ack                 -> false.B
 								))
 
-		lsu_iss_valid := MuxCase(lsu_ss_valid, Array( 
+		lsu_iss_valid := MuxCase(lsu_iss_valid, Array( 
 									(reset.asBool() | io.flush) -> false.B,
 									lsu_issue.is_clearRAW       -> true.B,
 									lsu_exe_ack                 -> false.B

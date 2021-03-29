@@ -1,10 +1,11 @@
-package test
+
+
 
 /*
 * @Author: Ruige Lee
-* @Date:   2021-03-18 16:14:36
+* @Date:   2021-03-29 14:34:17
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-24 11:09:31
+* @Last Modified time: 2021-03-29 14:34:23
 */
 
 /*
@@ -23,19 +24,23 @@ package test
    limitations under the License.
 */
 
+package rift2Core
 
 
 import chisel3._
-import rift2Core._
-import rift2Core.backend._
+import chisel3.util._
 import rift2Core.basicElement._
 
 
 
-object testMain extends App {
 
-  Driver.execute(args, () => new Alu() )
+
+class Execute extends Module {
+	val io = IO(new Bundle{
+
+	})
 }
+
 
 
 

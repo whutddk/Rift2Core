@@ -38,13 +38,13 @@ class Decode32 (x:UInt) {
 
 
 
-	def iType_imm = Cat( Fill(52, x(31)), x(31,20)).asSInt()
-	def sType_imm = Cat( Fill(52, x(31)), x(31,25), x(11,7) ).asSInt()
-	def bType_imm = Cat( Fill(52, x(31)), x(7), x(30,25), x(11,8), 0.U(1.W)).asSInt()
-	def uType_imm = Cat( Fill(32, x(31)), x(31,12), 0.U(12.W)).asSInt()
-	def jType_imm = Cat( Fill(44, x(31)), x(19,12), x(20), x(30,21), 0.U(1.W)).asSInt()
-	def aType_imm = Cat( Fill(62, 0.U), x(26,25)).asSInt()
-	def mType_imm = Cat( Fill(61, 0.U), x(14,12)).asSInt()
+	def iType_imm = Cat( Fill(52, x(31)), x(31,20))
+	def sType_imm = Cat( Fill(52, x(31)), x(31,25), x(11,7) )
+	def bType_imm = Cat( Fill(52, x(31)), x(7), x(30,25), x(11,8), 0.U(1.W))
+	def uType_imm = Cat( Fill(32, x(31)), x(31,12), 0.U(12.W))
+	def jType_imm = Cat( Fill(44, x(31)), x(19,12), x(20), x(30,21), 0.U(1.W))
+	def aType_imm = Cat( Fill(62, 0.U), x(26,25))
+	def mType_imm = Cat( Fill(61, 0.U), x(14,12))
 	def shamt_imm = Cat( Fill(58, 0.U), x(25,20) )
 
 

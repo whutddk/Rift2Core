@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-26 17:16:35
+* @Last Modified time: 2021-03-29 15:10:06
 */
 
 /*
@@ -62,8 +62,7 @@ class Alu_isa extends Bundle{
 	def is_usi = sltiu | sltu
 	def is_imm =  lui | auipc | addi | addiw | slti | sltiu | xori | ori | andi | slli | slliw | srli | srliw | srai | sraiw
 
-	def is_fun_add = addi | addiw | add | addw | lui | auipc
-	def is_fun_sub = sub | subw
+	def is_fun_add = addi | addiw | add | addw | lui | auipc | sub | subw
 	def is_fun_slt = slti | sltiu | slt | sltu
 	def is_fun_xor = xori | xor
 	def is_fun_or  = ori | or
@@ -321,7 +320,7 @@ trait Instruction_set {
 class Instruction_param extends Bundle {
 	val is_rvc = Bool()
 	val pc = UInt(64.W)
-	val imm = SInt(64.W)
+	val imm = UInt(64.W)
 	val rd0_raw = UInt(5.W)
 	val rs1_raw = UInt(5.W)
 	val rs2_raw = UInt(5.W)
@@ -445,7 +444,6 @@ class Privil_dpt_info extends Bundle {
 class Alu_function extends Bundle {
 
 	val add = Bool()
-	val sub = Bool()
 	val slt = Bool()
 	val xor = Bool()
 	val or  = Bool()
@@ -476,7 +474,7 @@ class Alu_iss_info extends Bundle {
 class Bru_param extends Bundle {
 	val is_rvc = Bool()
 	val pc = UInt(64.W)
-	val imm = SInt(64.W)
+	val imm = UInt(64.W)
 
 
 	val op1 = UInt(64.W)
@@ -540,7 +538,9 @@ class Fpu_isu_info extends Bundle {
 
 
 class Exe_iwb_info extends Bundle {
-	
+	val res = UInt(64.W)
+	val rd0_raw = UInt(5.W)
+	val rd0_idx = UInt(2.W)
 }
 
 class Exe_fwb_info extends Bundle {
