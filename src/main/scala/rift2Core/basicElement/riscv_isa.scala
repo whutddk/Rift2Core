@@ -4,7 +4,7 @@ package rift2Core.basicElement
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-29 17:19:38
+* @Last Modified time: 2021-03-30 16:07:22
 */
 
 /*
@@ -504,6 +504,13 @@ class Lsu_iss_info extends Bundle {
 	val param = new Lsu_param
 }
 
+
+class Csr_function extends Bundle {
+	val rw  = Bool()
+	val rs  = Bool()
+	val rc  = Bool()
+}
+
 class Csr_param extends Bundle {
 	val op1 = UInt(5.W)
 	val op2 = UInt(12.W)
@@ -513,7 +520,7 @@ class Csr_param extends Bundle {
 }
 
 class Csr_iss_info extends Bundle {
-	val fun = new Csr_isa
+	val fun = new Csr_function
 	val param = new Csr_param
 }
 
@@ -556,3 +563,29 @@ class Info_bru_id extends Bundle {
 	val jalr_pc = UInt(64.W)
 	val jalr_valid = Bool()
 }
+
+
+class Info_csr_files extends Bundle {
+	val addr = Output(UInt(12.W))
+	val op = Output(UInt(64.W))
+	val res = Input(UInt(64.W))
+	val rw = Output(Bool())
+	val rs = Output(Bool())
+	val rc = Output(Bool())
+}
+
+class Info_cmm_csr extends Bundle {
+	val is_trap = Bool()
+	val is_xRet = Bool()
+	val privil_mstatus = UInt(64.W)
+	val privil_mepc = UInt(64.W)
+	val privil_mcause = UInt(64.W)
+	val privil_mtval = UInt(64.W)
+}
+
+class Info_clint_csr extends Bundle {
+	val is_externInterrupt = Bool()
+	val is_rtimerInterrupt = Bool()
+	val is_softwvInterrupt = Bool()
+}
+

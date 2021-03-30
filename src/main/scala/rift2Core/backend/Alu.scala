@@ -111,7 +111,7 @@ class Alu extends Module {
 		iwb_valid := false.B
 	}
 
-	io.alu_iss_exe.ready := iwb_ack
+	io.alu_iss_exe.ready := true.B & ~(io.alu_exe_iwb.valid & ~io.alu_exe_iwb.ready)
 	io.alu_exe_iwb.valid := iwb_valid
 	io.alu_exe_iwb.bits.res := iwb_res
 	io.alu_exe_iwb.bits.rd0_raw := iwb_rd0(4,0)

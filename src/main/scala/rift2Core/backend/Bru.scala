@@ -96,7 +96,7 @@ class Bru extends Module {
 
 
 
-	io.bru_iss_exe.ready := iwb_ack
+	io.bru_iss_exe.ready := true.B & ~(io.bru_exe_iwb.valid & ~io.bru_exe_iwb.ready)
 	io.bru_exe_iwb.valid := iwb_valid
 	io.bru_exe_iwb.bits.res := iwb_res
 	io.bru_exe_iwb.bits.rd0_raw := iwb_rd0(4,0)

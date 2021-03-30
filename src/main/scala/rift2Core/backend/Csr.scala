@@ -30,3 +30,65 @@ import chisel3.util._
 import rift2Core.basicElement._
 
 
+
+
+
+class Csr extends Module {
+	val io = IO(new Bundle{
+		val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
+		val csr_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+
+		val cmm_csr_rlv = Input(Bool())
+		val csr_files_info = new Info_csr_files
+
+		val flush = Input(Bool())
+	})
+
+	def iss_ack = io.csr_exe_iwb.valid & io.csr_exe_iwb.ready
+	def iwb_ack = io.csr_exe_iwb.valid & io.csr_exe_iwb.ready
+
+
+	def rw = io.csr_iss_exe.bits.fun.rw
+	def rs = io.csr_iss_exe.bits.fun.rs
+	def rc = io.csr_iss_exe.bits.fun.rc
+	
+	def op = io.csr_iss_exe.bits.param.op1
+	def addr = io.csr_iss_exe.bits.param.op2
+
+	def dontRead = (io.csr_iss_exe.bits.param.rd0_raw === 0.U) & rw
+	def dontWrite = (op === 0.U) & ( rs | rc )
+
+
+	val iwb_valid = Reg(Bool())
+	val iwb_res = Reg(UInt(64.W))
+	val iwb_rd0 = Reg(UInt(7.W))
+
+	io.csr_files_info.addr := addr
+	io.csr_files_info.op := op
+	io.csr_files_info.rw := ~dontWrite & io.csr_iss_exe.valid & io.cmm_csr_rlv & ~io.csr_exe_iwb.valid & ~io.flush & rw
+	io.csr_files_info.rs := ~dontWrite & io.csr_iss_exe.valid & io.cmm_csr_rlv & ~io.csr_exe_iwb.valid & ~io.flush & rs
+	io.csr_files_info.rc := ~dontWrite & io.csr_iss_exe.valid & io.cmm_csr_rlv & ~io.csr_exe_iwb.valid & ~io.flush & rc
+
+
+	when( reset.asBool | io.flush ) {
+		iwb_valid := false.B
+		iwb_res := 0.U
+		iwb_rd0 := 0.U
+	}
+	.elsewhen( ~io.csr_exe_iwb.valid & io.csr_iss_exe.valid & io.cmm_csr_rlv) {
+		iwb_valid := true.B
+		iwb_res := io.csr_files_info.res
+		iwb_rd0 := Cat( io.csr_iss_exe.bits.param.rd0_idx, io.csr_iss_exe.bits.param.rd0_raw ) 
+	}
+	.elsewhen( iwb_ack ) {
+		iwb_valid := false.B
+	}
+
+	io.csr_iss_exe.ready := iwb_ack
+	io.csr_exe_iwb.valid := iwb_valid
+	io.csr_exe_iwb.bits.res := iwb_res
+	io.csr_exe_iwb.bits.rd0_raw := iwb_rd0(4,0)
+	io.csr_exe_iwb.bits.rd0_idx := iwb_rd0(6,5)
+
+}
+
