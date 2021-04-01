@@ -34,7 +34,7 @@ import rift2Core.basicElement._
 
 object testMain extends App {
 
-  Driver.execute(args, () => new CsrFiles() )
+  Driver.execute(args, () => new Sram(128, 8) )
 }
 
 

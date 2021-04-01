@@ -28,3 +28,28 @@ import chisel3._
 import chisel3.util._
 import rift2Core.basicElement._
 
+class Dcache( dw: Int, bk: Int, cb: Int, cl: Int ) {
+
+}
+
+
+class Lsu extends Module {
+	val io = IO(new Bundle{
+		val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
+		val lsu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+
+		val flush = Input(Bool())
+	})
+
+	val iwb_valid = Reg(Bool())
+	val iwb_res = Reg(UInt(64.W))
+	val iwb_rd0 = Reg(UInt(7.W))
+
+	def iss_ack = io.lsu_exe_iwb.valid & io.lsu_exe_iwb.ready
+	def iwb_ack = io.lsu_exe_iwb.valid & io.lsu_exe_iwb.ready
+
+	val dcache = new Dcache(128, 1, 4, 64)
+
+
+
+}

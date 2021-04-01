@@ -24,7 +24,26 @@
    limitations under the License.
 */
 
+package rift2Core.cache
 
+
+import chisel3._
+import chisel3.util._
+import chisel3.experimental.chiselName
+import rift2Core.basicElement._
+
+@chiselName
+class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
+	val addr_lsb = log2Ceil(dw*bk/8)
+	val line_w   = log2Ceil(cl)
+	val tag_w    = aw - addr_lsb - line_w
+
+	val tag_ram = VecInit( Seq.fill(cb)(Module(new Sram(tag_w, aw)).io)) 
+	val dat_ram = Vec( cb, Module(new Sram(tag_w, aw)).io)
+
+
+
+}
 
 
 
