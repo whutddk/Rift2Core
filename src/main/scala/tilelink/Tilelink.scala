@@ -3,7 +3,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-01 09:24:57
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-01 09:25:13
+* @Last Modified time: 2021-04-02 17:24:51
 */
 
 
@@ -173,7 +173,7 @@ class TileLink_mst(id: Int) extends Opcode{
 
 	def is_accessAck     = (d.opcode === AccessAck) & is_chn_d_ack
 	def is_accessAckData = (d.opcode === AccessAckData) & is_chn_d_ack
-
+	def data_ack = d.data
 
 
 
