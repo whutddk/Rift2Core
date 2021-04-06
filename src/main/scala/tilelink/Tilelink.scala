@@ -3,7 +3,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-01 09:24:57
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-02 17:24:51
+* @Last Modified time: 2021-04-06 19:36:38
 */
 
 
@@ -32,7 +32,7 @@ import chisel3.util._
 import rift2Core.basicElement._
 
 
-class TLchannel_a(aw:Int = 64) extends Bundle {
+class TLchannel_a(dw:Int, aw:Int = 32) extends Bundle {
 
 	val opcode  = Output( UInt(3.W) )
 	val param   = Output( UInt(3.W) )
@@ -40,7 +40,7 @@ class TLchannel_a(aw:Int = 64) extends Bundle {
 	val source  = Output( UInt(3.W) )
 	val address = Output( UInt(aw.W) )
 	val mask    = Output( UInt(8.W) )
-	val data    = Output( UInt(64.W) )
+	val data    = Output( UInt(dw.W) )
 	val corrupt = Output( Bool() )
 	val valid   = Output( Bool() )
 	val ready   = Input(Bool()) 		
@@ -50,7 +50,7 @@ class TLchannel_d_out extends Bundle {
 	
 }
 
-class TLchannel_d extends Bundle {
+class TLchannel_d(dw:Int) extends Bundle {
 
 	val opcode = Output( UInt(3.W) )
 	val param  = Output( UInt(2.W) )
@@ -58,7 +58,7 @@ class TLchannel_d extends Bundle {
 	val source = Output( UInt(3.W) )
 	val sink   = Output( UInt(3.W) )
 	val denied = Output( Bool() )
-	val data   = Output( UInt(64.W) )
+	val data   = Output( UInt(dw.W) )
 	val corrupt  = Output( Bool() )
 	val valid  = Output( Bool() )	
 
@@ -96,13 +96,13 @@ trait Opcode {
 }
 
 
-class TileLink_mst(id: Int) extends Opcode{
+class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 
-	val a = new TLchannel_a
-	val d = Flipped(new TLchannel_d)
+	val a = new TLchannel_a(dw, aw)
+	val d = Flipped(new TLchannel_d(dw))
 
 
-	def op_getData(addr: UInt, size: UInt ) = {
+	def op_getData(addr: UInt, size: UInt) = {
 
 		a.opcode  := Get
 		a.param   := 0.U
@@ -112,7 +112,6 @@ class TileLink_mst(id: Int) extends Opcode{
 		a.mask    := "b11111111".U
 		a.data    := 0.U
 		a.corrupt := false.B
-		a.valid   := true.B
 
 	}
 
@@ -126,7 +125,7 @@ class TileLink_mst(id: Int) extends Opcode{
 		a.mask    := mask
 		a.data    := data
 		a.corrupt := false.B
-		a.valid   := true.B
+
 
 	}
 
@@ -140,36 +139,73 @@ class TileLink_mst(id: Int) extends Opcode{
 		a.mask    := mask
 		a.data    := data
 		a.corrupt := false.B
-		a.valid   := true.B
+
 
 	}
 
 	def op_arithmeticData(addr: UInt, op: UInt, size: UInt, data: UInt, mask: UInt) = {
 		a.opcode  := ArithmeticData
 		a.param   := op
-		a.size    := size 
+		a.size    := size
 		a.source  := id.U
 		a.address := addr
 		a.mask    := mask
 		a.data    := data
 		a.corrupt := false.B
-		a.valid   := true.B
+
+
 	}
 
 	def op_logicalData(addr: UInt, op: UInt, size: UInt, data: UInt, mask: UInt) = {
 		a.opcode  := LogicalData
 		a.param   := op
-		a.size    := size 
+		a.size    := size
 		a.source  := id.U
 		a.address := addr
 		a.mask    := mask
 		a.data    := data
 		a.corrupt := false.B
-		a.valid   := true.B
 	}
 
-	def is_chn_a_ack: Bool = a.valid & a.ready
-	def is_chn_d_ack: Bool = d.ready & d.valid
+	val a_remain = RegInit(0.U(8.W))
+	val d_remain = RegInit(0.U(8.W))
+
+	when( a.valid & ~a.ready ) {
+		a_remain := 1.U << a.size
+	}
+	.elsewhen ( is_chn_a_ack ) {
+		if( a_remain == 0.U ) {
+			a_remain := (1.U << a.size) - (dw/8).U
+		}
+		else {
+			a_remain := a_remain - (dw/8).U
+		}
+	}
+
+	when ( is_chn_a_ack ) {
+		d_remain := 1.U << a.size
+	}
+	.elsewhen( is_chn_d_ack ) {
+		d_remain := d_remain - (dw/8).U
+	}
+
+	def is_a_busy = a_remain === 0.U
+	def is_d_busy = d_remain === 0.U
+
+	def is_free = ~is_a_busy & ~is_d_busy
+	def is_busy =  is_a_busy |  is_d_busy
+
+	def a_valid_set() = a.valid := true.B
+	def a_valid_rst() = a.valid := false.B
+
+	def d_ready_set() = d.ready := true.B
+	def d_ready_rst() = d.ready := false.B
+
+
+	def is_chn_a_ack:  Bool = a.valid &  a.ready
+	def is_chn_d_ack:  Bool = d.valid &  d.ready
+	def is_chn_a_nack: Bool = a.valid & ~a.ready
+	def is_chn_d_nack: Bool = d.valid & ~d.ready
 
 	def is_accessAck     = (d.opcode === AccessAck) & is_chn_d_ack
 	def is_accessAckData = (d.opcode === AccessAckData) & is_chn_d_ack
@@ -177,43 +213,44 @@ class TileLink_mst(id: Int) extends Opcode{
 
 
 
+	assert( a.size % Log2((dw/8).U) == 0.U, "a.size is upsupport"  )
 
 }
 
 
 
 
-class TileLink_slv extends Opcode{
-	val a = new TLchannel_a
-	val d = Flipped(new TLchannel_d)
+class TileLink_slv(dw: Int, aw: Int) extends Opcode{
+	val a = Flipped(new TLchannel_a(dw, aw))
+	val d = new TLchannel_d(dw)
 
 
 	def is_chn_a_ack: Bool = a.valid & a.ready
 	def is_chn_d_ack: Bool = d.ready & d.valid
 
-	def op_accessAck(sid: UInt) = {
+	def op_accessAck(sid: UInt, size: UInt) = {
 		d.opcode  := AccessAck
 		d.param   := 0.U
-		d.size    := 3.U
+		d.size    := size
 		d.source  := sid
 		d.sink    := DontCare
 		d.data    := DontCare
 		d.corrupt := false.B
 		d.denied  := false.B
-		d.valid   := true.B
+
 	}
 
 
-	def op_accessDataAck(sid: UInt, data: UInt) = {
+	def op_accessDataAck(sid: UInt, size: UInt, data: UInt) = {
 		d.opcode  := AccessAckData
 		d.param   := 0.U
-		d.size    := 3.U
+		d.size    := size
 		d.source  := sid
 		d.sink    := DontCare
 		d.data    := data
 		d.corrupt := false.B
 		d.denied  := false.B
-		d.valid   := true.B
+
 	}
 
 	def is_getData        = (a.opcode === Get)            & is_chn_a_ack 
@@ -221,5 +258,14 @@ class TileLink_slv extends Opcode{
 	def is_putPartialData = (a.opcode === PutPartialData) & is_chn_a_ack 
 	def is_arithmeticData = (a.opcode === ArithmeticData) & is_chn_a_ack 
 	def is_logicalData    = (a.opcode === LogicalData)    & is_chn_a_ack 
+
+
+	def a_ready_set = a.ready := true.B
+	def a_ready_rst = a.ready := false.B
+
+	def d_valid_set = d.valid := true.B
+	def d_valid_rst = d.valid := false.B
+
+
 }
 

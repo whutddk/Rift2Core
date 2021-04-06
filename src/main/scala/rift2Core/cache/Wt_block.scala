@@ -22,12 +22,19 @@ import chisel3._
 import chisel3.util._
 import chisel3.experimental.chiselName
 
+class Write_info extends Bundle {
+	val data = UInt(64.W)
+	val addr = UInt(32.W)
+	val wstrb = UInt(8.W)
+}
+
+
 @chiselName
-class Wt_block( dw: Int, aw: Int ) extends Module {
+class Wt_block( aw: Int ) extends Module {
 	val io = IO(new Bundle{
 
-		val data_i    = Input(UInt(dw.W))
-		val data_o    = Output(UInt(dw.W))
+		val data_i    = Input( new Write_info )
+		val data_o    = Output( new Write_info )
 
 		val commit    = Input(Bool())
 		val pop       = Input(Bool())
@@ -39,7 +46,7 @@ class Wt_block( dw: Int, aw: Int ) extends Module {
 	def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 } ;println("dp is:"+res); return res } 
 
 
-	val info       = Reg( Vec(dp, UInt(dw.W))) 
+	val info       = Reg( Vec(dp, new Write_info))
 	val is_valid   = Reg( Vec(dp, Bool()))
 	val is_commit  = Reg( Vec(dp, Bool())) 
 	val rd_ptr     = Reg(UInt((aw+1).W))
@@ -89,7 +96,7 @@ class Wt_block( dw: Int, aw: Int ) extends Module {
 	def is_hazard(chk_addr: UInt, width_mask: UInt): Bool = {
 		var res = false.B
 		for ( i <- 0 until dp ) {
-			if ( (info(i) & width_mask) == (chk_addr & width_mask) ) {
+			if ( (info(i).addr & width_mask) == (chk_addr & width_mask) ) {
 				res = true.B
 			}
 		}
