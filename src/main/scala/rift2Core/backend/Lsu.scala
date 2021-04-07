@@ -70,8 +70,9 @@ class Lsu extends Module {
 	val tag_w    = 32 - addr_lsb - line_w
 
 	val stateReg = Reg(UInt(3.W))
-
-
+	val cache_valid = Reg( Vec(cb, Vec(cl, Bool() )) )
+	val mem = new Cache_mem( dw, 32, bk, cb, cl )
+	
 	val sys_mst = new TileLink_mst(64, 32, 0)
 	val dl1_mst = new TileLink_mst(128,32, 0)
 
@@ -533,7 +534,7 @@ class Lsu extends Module {
 
 
 
-	val mem = new Cache_mem( dw, 32, bk, cb, cl )
+
 	println("the dcache has "+dw+"*"+bk+"bit,with "+cb+"cache block,and "+cl+"cache line")
 	println("Toltal size is "+dw*bk*cb*cl/8/1024.0+"KB")
 
@@ -656,7 +657,7 @@ class Lsu extends Module {
 	}
 
 
-	val cache_valid = Reg( Vec(cb, Vec(cl, Bool() )) )
+	// val cache_valid = Reg( Vec(cb, Vec(cl, Bool() )) )
 
 	when ( reset.asBool ) {
 		for ( i <- 0 until cb; j <- 0 until cl ) yield cache_valid(i)(j) := false.B
