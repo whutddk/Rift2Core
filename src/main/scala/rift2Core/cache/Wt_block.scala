@@ -30,73 +30,61 @@ class Write_info extends Bundle {
 
 
 @chiselName
-class Wt_block( aw: Int ) extends Module {
-	val io = IO(new Bundle{
+class Wt_block( aw: Int ) {
 
-		val data_i    = Input( new Write_info )
-		val data_o    = Output( new Write_info )
+		val data_i    = Wire( new Write_info )
+		val data_o    = Wire( new Write_info )
 
-		val commit    = Input(Bool())
-		val pop       = Input(Bool())
-		val push      = Input(Bool())
+		val commit    = Wire(Bool())
+		val pop       = Wire(Bool())
+		val push      = Wire(Bool())
 
-		val full      = Output(Bool())
-		val empty     = Output(Bool())
+		val full      = Wire(Bool())
+		val empty     = Wire(Bool())
 
-		val flush     = Input(Bool())
-	})
+		val flush     = Wire(Bool())
+
 
 	def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 } ;println("dp is:"+res); return res } 
 
 
-	val info       = Reg( Vec(dp, new Write_info))
-	val is_valid   = Reg( Vec(dp, Bool()))
-	val is_commit  = Reg( Vec(dp, Bool())) 
-	val rd_ptr     = Reg(UInt((aw+1).W))
-	val wr_ptr     = Reg(UInt((aw+1).W))
-	val cc_ptr     = Reg(UInt((aw+1).W))
 
 
-	when( reset.asBool ) {
-		rd_ptr := 0.U
-		wr_ptr := 0.U
-		cc_ptr := 0.U
-		
-		for ( i <- 0 until dp ) yield {
-			info(i).data  := 0.U
-			info(i).addr  := 0.U
-			info(i).wstrb := 0.U
-			is_valid(i)   := false.B
-			is_commit(i)  := false.B
-		}
-	}
-	.elsewhen(io.flush) {
+	val info       = RegInit( VecInit( Seq.fill(dp)(0.U.asTypeOf(new Write_info) )))
+	val is_valid   = RegInit( VecInit( Seq.fill(dp)(false.B)) )
+	val is_commit  = RegInit( VecInit( Seq.fill(dp)(false.B)) ) 
+	val rd_ptr     = RegInit(0.U((aw+1).W))
+	val wr_ptr     = RegInit(0.U((aw+1).W))
+	val cc_ptr     = RegInit(0.U((aw+1).W))
+
+
+	when(flush) {
 		wr_ptr := cc_ptr
 
 		for ( i <- 0 until dp ) yield is_valid(i) := is_commit(i)
 	}
-	.elsewhen(io.pop) {
+	.elsewhen(pop) {
 		rd_ptr := rd_ptr + 1.U
 
 		is_valid(rd_ptr(aw-1,0))  := false.B
 		is_commit(rd_ptr(aw-1,0)) := false.B
 	}
-	.elsewhen(io.push) {
+	.elsewhen(push) {
 		wr_ptr := wr_ptr + 1.U
 
-		info(wr_ptr(aw-1,0)) := io.data_i
+		info(wr_ptr(aw-1,0)) := data_i
 		is_valid(wr_ptr(aw-1,0))  := true.B
 	}
-	.elsewhen(io.commit) {
+	.elsewhen(commit) {
 		cc_ptr := cc_ptr + 1.U
 
 		is_commit(cc_ptr(aw-1,0)) := true.B
 	}
 
-	io.full  := (rd_ptr(aw-1,0) === wr_ptr(aw-1,0)) & ( rd_ptr(aw) =/= wr_ptr(aw) )
-	io.empty := cc_ptr === rd_ptr
+	full  := (rd_ptr(aw-1,0) === wr_ptr(aw-1,0)) & ( rd_ptr(aw) =/= wr_ptr(aw) )
+	empty := cc_ptr === rd_ptr
 
-	io.data_o := info(rd_ptr(aw-1,0))
+	data_o := info(rd_ptr(aw-1,0))
 
 	def is_hazard(chk_addr: UInt, width_mask: UInt): Bool = {
 
@@ -104,7 +92,7 @@ class Wt_block( aw: Int ) extends Module {
 		var res = false.B
 
 		for ( i <- 0 until dp ) yield {
-			res := res | ((info(i).addr & width_mask) === (chk_addr & width_mask))
+			res = res | ((info(i).addr & width_mask) === (chk_addr & width_mask))
 		}
 
 		return res

@@ -91,7 +91,7 @@ class Lsu extends Module {
 	io.lsu_iss_exe.ready := iwb_ack
 
 
-	val wtb    = Module(new Wt_block(3))
+	val wtb    = new Wt_block(3)
 
 	def op1 = io.lsu_iss_exe.bits.param.op1
 	def op2 = io.lsu_iss_exe.bits.param.op2
@@ -148,7 +148,7 @@ class Lsu extends Module {
 	def is_memory = (op1(63,32) === 0.U) & (op1(31) === 1.U)
 	def is_system = (op1(63,32) === 0.U) & (op1(31,30) === 0.U)
 	def is_hazard = wtb.is_hazard( op1_align64, Cat(Fill(2, 1.U), Fill(30, 0.U) ) ) //only check whether is mem or sys
-	def is_wtfull = wtb.io.full
+	def is_wtfull = wtb.full
 
 
 
@@ -202,7 +202,7 @@ class Lsu extends Module {
 		res      := 0.U
 	}
 	.elsewhen ( stateReg === State.dl1_state_fence ) {
-		when ( (wtb.io.empty === true.B) & (trans_kill === false.B) ) {
+		when ( (wtb.empty === true.B) & (trans_kill === false.B) ) {
 			wb_valid := true.B
 			res      := 0.U
 		}
@@ -675,17 +675,19 @@ class Lsu extends Module {
 	def is_cb_vhit(i: Int): Bool = cache_valid(i)(cl_sel) & ( mem.tag_info_r(i) === op1_tag )
 
 
+	val random_res = LFSR(log2Ceil(cb), true.B )
 
 	def replace_sel: UInt = {
-		var res = LFSR(log2Ceil(cb), true.B )
-		for ( i <- 0 until cb ) {
-			if ( cache_valid(i)(cl_sel) == false.B ){
-				res = i.U
-			}
-		}
-		return res
+		val is_cache_free_cb = for ( i <- 0 until cb ) yield (cache_valid(i)(cl_sel) === false.B)
+		val cb_num = for ( i <- 0 until cb ) yield i.U
 
+		return 	MuxCase( random_res, is_cache_free_cb zip cb_num )
 	}
+	
+	
+
+	
+
 
 	def is_block_replace(i:UInt) = UIntToOH(replace_sel)(i).asBool
 
@@ -728,20 +730,20 @@ class Lsu extends Module {
 
 
 
-	def wtb_wstrb = wtb.io.data_o.wstrb
-	def wtb_data  = wtb.io.data_o.data
-	def wtb_addr  = wtb.io.data_o.addr
+	def wtb_wstrb = wtb.data_o.wstrb
+	def wtb_data  = wtb.data_o.data
+	def wtb_addr  = wtb.data_o.addr
 
 
 
-	wtb.io.data_i.data  := lsu_wdata_align
-	wtb.io.data_i.wstrb := lsu_wstrb_align
-	wtb.io.data_i.addr  := op1_align64
+	wtb.data_i.data  := lsu_wdata_align
+	wtb.data_i.wstrb := lsu_wstrb_align
+	wtb.data_i.addr  := op1_align64
 
 	
-	wtb.io.pop := (sys_mst.is_accessAck | dl1_mst.is_accessAck)
-	wtb.io.push := stateDnxt === State.dl1_state_write
-	wtb.io.commit := io.is_store_commit
+	wtb.pop := (sys_mst.is_accessAck | dl1_mst.is_accessAck)
+	wtb.push := stateDnxt === State.dl1_state_write
+	wtb.commit := io.is_store_commit
 
 
 
@@ -771,7 +773,7 @@ class Lsu extends Module {
 	val is_l2c_fence_end = RegInit(false.B)
 	val is_l3c_fence_end = RegInit(false.B)
 
-	def is_dl1_fence_end = wtb.io.empty
+	def is_dl1_fence_end = wtb.empty
 
 
 	when ( ~is_fence & io.is_fence_commit ) {
