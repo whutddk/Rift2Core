@@ -34,16 +34,14 @@ import rift2Core.basicElement._
 
 class TLchannel_a(dw:Int, aw:Int = 32) extends Bundle {
 
-	val opcode  = Output( UInt(3.W) )
-	val param   = Output( UInt(3.W) )
-	val size    = Output( UInt(8.W) )
-	val source  = Output( UInt(3.W) )
-	val address = Output( UInt(aw.W) )
-	val mask    = Output( UInt(8.W) )
-	val data    = Output( UInt(dw.W) )
-	val corrupt = Output( Bool() )
-	val valid   = Output( Bool() )
-	val ready   = Input(Bool())
+	val opcode  = UInt(3.W)
+	val param   = UInt(3.W)
+	val size    = UInt(8.W)
+	val source  = UInt(3.W)
+	val address = UInt(aw.W)
+	val mask    = UInt(8.W)
+	val data    = UInt(dw.W)
+	val corrupt = Bool()
 
 	override def cloneType = ( new TLchannel_a(dw, aw) ).asInstanceOf[this.type]
 }
@@ -51,18 +49,14 @@ class TLchannel_a(dw:Int, aw:Int = 32) extends Bundle {
 
 class TLchannel_d(dw: Int) extends Bundle {
 
-	val opcode = Output( UInt(3.W) )
-	val param  = Output( UInt(2.W) )
-	val size   = Output( UInt(8.W) )
-	val source = Output( UInt(3.W) )
-	val sink   = Output( UInt(3.W) )
-	val denied = Output( Bool() )
-	val data   = Output( UInt(dw.W) )
-	val corrupt  = Output( Bool() )
-	val valid  = Output( Bool() )	
-
-
-	val ready  =  Input( Bool())
+	val opcode  = UInt(3.W)
+	val param   = UInt(2.W)
+	val size    = UInt(8.W)
+	val source  = UInt(3.W)
+	val sink    = UInt(3.W)
+	val denied  = Bool()
+	val data    = UInt(dw.W)
+	val corrupt = Bool()
 
 	override def cloneType = ( new TLchannel_d(dw) ).asInstanceOf[this.type]
 }
@@ -97,8 +91,13 @@ trait Opcode {
 
 class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 
-	val a = Wire(new TLchannel_a(dw, aw))
-	val d = Wire(Flipped(new TLchannel_d(dw)))
+	val a = WireDefault(0.U.asTypeOf(new TLchannel_a(dw, aw)))
+	val d = Wire(new TLchannel_d(dw))
+
+	val a_valid = WireDefault(false.B)
+	val a_ready = Wire(Bool())
+	val d_valid = Wire(Bool())
+	val d_ready = WireDefault(false.B)
 
 
 	def op_getData(addr: UInt, size: UInt) = {
@@ -169,7 +168,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 	val a_remain = RegInit(0.U(8.W))
 	val d_remain = RegInit(0.U(8.W))
 
-	when( a.valid & ~a.ready ) {
+	when( a_valid & ~a_ready ) {
 		a_remain := 1.U << a.size
 	}
 	.elsewhen ( is_chn_a_ack ) {
@@ -194,17 +193,17 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 	def is_free = ~is_a_busy & ~is_d_busy
 	def is_busy =  is_a_busy |  is_d_busy
 
-	def a_valid_set() = a.valid := true.B
-	def a_valid_rst() = a.valid := false.B
+	def a_valid_set() = a_valid := true.B
+	def a_valid_rst() = a_valid := false.B
 
-	def d_ready_set() = d.ready := true.B
-	def d_ready_rst() = d.ready := false.B
+	def d_ready_set() = d_ready := true.B
+	def d_ready_rst() = d_ready := false.B
 
 
-	def is_chn_a_ack:  Bool = a.valid &  a.ready
-	def is_chn_d_ack:  Bool = d.valid &  d.ready
-	def is_chn_a_nack: Bool = a.valid & ~a.ready
-	def is_chn_d_nack: Bool = d.valid & ~d.ready
+	def is_chn_a_ack:  Bool = a_valid &  a_ready
+	def is_chn_d_ack:  Bool = d_valid &  d_ready
+	def is_chn_a_nack: Bool = a_valid & ~a_ready
+	def is_chn_d_nack: Bool = d_valid & ~d_ready
 
 	def is_accessAck     = (d.opcode === AccessAck) & is_chn_d_ack
 	def is_accessAckData = (d.opcode === AccessAckData) & is_chn_d_ack
@@ -220,12 +219,19 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 
 
 class TileLink_slv(dw: Int, aw: Int) extends Opcode{
-	val a = Flipped(new TLchannel_a(dw, aw))
-	val d = new TLchannel_d(dw)
+
+	val a = Wire(new TLchannel_a(dw, aw))
+	val d = WireDefault(0.U.asTypeOf(new TLchannel_d(dw)))
+
+	val a_valid = Wire(Bool())
+	val a_ready = WireDefault(false.B)
+	val d_valid = WireDefault(false.B)
+	val d_ready = Wire(Bool())
 
 
-	def is_chn_a_ack: Bool = a.valid & a.ready
-	def is_chn_d_ack: Bool = d.ready & d.valid
+
+	def is_chn_a_ack: Bool = a_valid & a_ready
+	def is_chn_d_ack: Bool = d_ready & d_valid
 
 	def op_accessAck(sid: UInt, size: UInt) = {
 		d.opcode  := AccessAck
@@ -259,11 +265,11 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 	def is_logicalData    = (a.opcode === LogicalData)    & is_chn_a_ack 
 
 
-	def a_ready_set = a.ready := true.B
-	def a_ready_rst = a.ready := false.B
+	def a_ready_set = a_ready := true.B
+	def a_ready_rst = a_ready := false.B
 
-	def d_valid_set = d.valid := true.B
-	def d_valid_rst = d.valid := false.B
+	def d_valid_set = d_valid := true.B
+	def d_valid_rst = d_valid := false.B
 
 
 }
