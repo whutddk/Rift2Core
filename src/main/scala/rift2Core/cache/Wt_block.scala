@@ -40,6 +40,9 @@ class Wt_block( aw: Int ) extends Module {
 		val pop       = Input(Bool())
 		val push      = Input(Bool())
 
+		val full      = Output(Bool())
+		val empty     = Output(Bool())
+
 		val flush     = Input(Bool())
 	})
 
@@ -60,9 +63,11 @@ class Wt_block( aw: Int ) extends Module {
 		cc_ptr := 0.U
 		
 		for ( i <- 0 until dp ) yield {
-			info(i)      := 0.U
-			is_valid(i)  := false.B
-			is_commit(i) := false.B
+			info(i).data  := 0.U
+			info(i).addr  := 0.U
+			info(i).wstrb := 0.U
+			is_valid(i)   := false.B
+			is_commit(i)  := false.B
 		}
 	}
 	.elsewhen(io.flush) {
@@ -88,18 +93,20 @@ class Wt_block( aw: Int ) extends Module {
 		is_commit(cc_ptr(aw-1,0)) := true.B
 	}
 
-	def full  = (rd_ptr(aw-1,0) === wr_ptr(aw-1,0)) & ( rd_ptr(aw) =/= wr_ptr(aw) )
-	def empty = cc_ptr === rd_ptr
+	io.full  := (rd_ptr(aw-1,0) === wr_ptr(aw-1,0)) & ( rd_ptr(aw) =/= wr_ptr(aw) )
+	io.empty := cc_ptr === rd_ptr
 
 	io.data_o := info(rd_ptr(aw-1,0))
 
 	def is_hazard(chk_addr: UInt, width_mask: UInt): Bool = {
+
+		// val cmp = Wire(Vec(dp, Bool()))
 		var res = false.B
-		for ( i <- 0 until dp ) {
-			if ( (info(i).addr & width_mask) == (chk_addr & width_mask) ) {
-				res = true.B
-			}
+
+		for ( i <- 0 until dp ) yield {
+			res := res | ((info(i).addr & width_mask) === (chk_addr & width_mask))
 		}
+
 		return res
 	}
 

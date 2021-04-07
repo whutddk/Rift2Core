@@ -348,3 +348,4 @@ null/
 .metals/
 generated/
 .vscode/
+doc/tl_cache.vsdx

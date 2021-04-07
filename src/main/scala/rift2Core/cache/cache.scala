@@ -88,10 +88,11 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 			dat_ram(i)(j).addr_w := addr_sel
 			dat_ram(i)(j).addr_r := addr_sel
 
-			if ( j.U == bank_sel ){
+			when ( j.U === bank_sel ){
 				dat_ram(i)(j).en_w   := dat_en_w(i)
 				dat_ram(i)(j).en_r   := dat_en_r(i)				
-			} else {
+			}
+			.otherwise {
 				dat_ram(i)(j).en_w   := false.B
 				dat_ram(i)(j).en_r   := false.B				
 			}

@@ -43,14 +43,13 @@ class TLchannel_a(dw:Int, aw:Int = 32) extends Bundle {
 	val data    = Output( UInt(dw.W) )
 	val corrupt = Output( Bool() )
 	val valid   = Output( Bool() )
-	val ready   = Input(Bool()) 		
+	val ready   = Input(Bool())
+
+	override def cloneType = ( new TLchannel_a(dw, aw) ).asInstanceOf[this.type]
 }
 
-class TLchannel_d_out extends Bundle {
-	
-}
 
-class TLchannel_d(dw:Int) extends Bundle {
+class TLchannel_d(dw: Int) extends Bundle {
 
 	val opcode = Output( UInt(3.W) )
 	val param  = Output( UInt(2.W) )
@@ -65,7 +64,7 @@ class TLchannel_d(dw:Int) extends Bundle {
 
 	val ready  =  Input( Bool())
 
-
+	override def cloneType = ( new TLchannel_d(dw) ).asInstanceOf[this.type]
 }
 
 trait Opcode {
@@ -98,8 +97,8 @@ trait Opcode {
 
 class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 
-	val a = new TLchannel_a(dw, aw)
-	val d = Flipped(new TLchannel_d(dw))
+	val a = Wire(new TLchannel_a(dw, aw))
+	val d = Wire(Flipped(new TLchannel_d(dw)))
 
 
 	def op_getData(addr: UInt, size: UInt) = {
@@ -174,10 +173,10 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 		a_remain := 1.U << a.size
 	}
 	.elsewhen ( is_chn_a_ack ) {
-		if( a_remain == 0.U ) {
+		when ( a_remain === 0.U ) {
 			a_remain := (1.U << a.size) - (dw/8).U
 		}
-		else {
+		.otherwise {
 			a_remain := a_remain - (dw/8).U
 		}
 	}
@@ -213,7 +212,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 
 
 
-	assert( a.size % Log2((dw/8).U) == 0.U, "a.size is upsupport"  )
+	// assert( (a.size % Log2((dw/8).U)) == 0.U, "a.size is upsupport, a.size is"+ a.size+"Log2((dw/8).U)) is"+Log2((dw/8).U)) 
 
 }
 
