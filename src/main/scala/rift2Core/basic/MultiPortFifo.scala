@@ -6,7 +6,7 @@
 */
 
 
-package rift2Core.basicElement
+
 
 /*
   Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
@@ -24,6 +24,7 @@ package rift2Core.basicElement
    limitations under the License.
 */
 
+package rift2Core.basic
 
 import chisel3._
 import chisel3.util._

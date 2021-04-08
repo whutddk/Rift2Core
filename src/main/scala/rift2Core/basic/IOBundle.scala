@@ -1,4 +1,4 @@
-package rift2Core.basicElement
+
 
 /*
 * @Author: Ruige Lee
@@ -24,6 +24,8 @@ package rift2Core.basicElement
    See the License for the specific language governing permissions and
    limitations under the License.
 */
+
+package rift2Core.basic
 
 import chisel3._
 import chisel3.util._

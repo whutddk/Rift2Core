@@ -24,7 +24,7 @@
 */
 
 
-package rift2Core.basicElement
+package rift2Core.basic
 
 import chisel3._
 import chisel3.util._
