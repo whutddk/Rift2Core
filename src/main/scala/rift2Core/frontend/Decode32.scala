@@ -29,7 +29,7 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
-import rift2Core.basicElement._
+import rift2Core.basic._
 
 class Decode32 (x:UInt) {
 

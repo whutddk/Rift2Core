@@ -27,7 +27,7 @@ package rift2Core.backend
 import chisel3._
 import chisel3.util._
 import chisel3.util.random._
-import rift2Core.basicElement._
+import rift2Core.basic._
 import rift2Core.cache._
 import tilelink._
 import chisel3.experimental.ChiselEnum

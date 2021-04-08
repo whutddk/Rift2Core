@@ -45,7 +45,7 @@ class Gen_sram(dw: Int, aw: Int) extends BlackBox(Map("DW" -> dw, "AW" -> aw)) w
 		val clk    = Input(Clock())
 	})
 
-	setResource("/gen_sram.v")
+	addResource("/gen_sram.v")
 
 
 

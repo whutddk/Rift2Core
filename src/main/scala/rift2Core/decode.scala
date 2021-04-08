@@ -26,7 +26,7 @@ package rift2Core
 
 import chisel3._
 import chisel3.util._
-import rift2Core.basicElement._
+import rift2Core.basic._
 import rift2Core.frontend._
 
 

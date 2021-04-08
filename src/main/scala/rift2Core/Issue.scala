@@ -28,7 +28,7 @@ package rift2Core
 
 import chisel3._
 import chisel3.util._
-import rift2Core.basicElement._
+import rift2Core.basic._
 
 
 abstract class Ele_issue(param: Instruction_param, rn: Reg_idx, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) {

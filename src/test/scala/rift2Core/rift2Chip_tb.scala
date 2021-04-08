@@ -28,7 +28,7 @@ package test
 import chisel3._
 import rift2Core._
 import rift2Core.backend._
-import rift2Core.basicElement._
+import rift2Core.basic._
 
 
 

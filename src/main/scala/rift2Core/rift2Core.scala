@@ -27,7 +27,7 @@ package rift2Core
 
 import chisel3._
 import chisel3.util._
-import rift2Core.basicElement._
+import rift2Core.basic._
 
 class rift2Core extends RawModule {
   val io = IO(new Bundle{
