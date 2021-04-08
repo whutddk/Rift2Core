@@ -1,10 +1,11 @@
-package test
+
+package rift2Core
 
 /*
 * @Author: Ruige Lee
-* @Date:   2021-03-18 16:14:36
+* @Date:   2021-03-19 09:55:43
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-24 11:09:31
+* @Last Modified time: 2021-03-22 20:02:27
 */
 
 /*
@@ -14,7 +15,7 @@ package test
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,18 +25,37 @@ package test
 */
 
 
-
 import chisel3._
-import rift2Core._
-import rift2Core.backend._
-import rift2Core.basicElement._
+import chisel3.util._
+
+
+class Syntax extends Module {
+	val io = IO(new Bundle{
+		val a = Input(Bool())
+		val b = Input(Bool())
+		val c = Input(Bool())
+		val d = Output(Bool())
+	})
+
+	val temp = WireDefault(false.B)
+	io.d := temp
+
+	def sela() = {
+		temp := io.a
+	}
+
+	def selb() = {
+		temp := io.b
+	}
+
+		when ( io.c === true.B ) {
+			sela()
+		}
+		.otherwise {
+			selb()
+		}	
 
 
 
-object testMain extends App {
 
-  Driver.execute(args, () => new Syntax() )
 }
-
-
-
