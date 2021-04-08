@@ -26,9 +26,11 @@ package rift2Core
 
 import chisel3._
 import chisel3.util._
+import chisel3.util.random._
 
 import chisel3.experimental.ChiselEnum
 import rift2Core.basic._
+import rift2Core.cache._
 import tilelink._
 
 object Il1_state extends ChiselEnum {
@@ -52,7 +54,7 @@ class Ifetch() extends Module {
 
 	val dw = 128
 	val bk = 2
-	val cb = 2
+	val cb = 4
 	val cl = 64
 
 	val addr_lsb = log2Ceil(dw*bk/8)
@@ -67,13 +69,15 @@ class Ifetch() extends Module {
 
 
 
-	val il1_mst = new TileLink_mst(128, 32)
+	val il1_mst = new TileLink_mst(128, 32, 0)
 	val mem = new Cache_mem( dw, 32, bk, cb, cl )
 	val stateReg = RegInit(Il1_state.cfree)
 	val addr_il1_req = RegInit( "h80000000".U(32.W) )
 	val cache_valid = Reg( Vec( cl, Vec(cb, Bool()) ) )
 	val random_res = LFSR(log2Ceil(cb), true.B )
-	val is_cb_vhit = Vec(cb, Bool())
+	val is_cb_vhit = Wire(Vec(cb, Bool()))
+	val trans_kill = RegInit(false.B)
+	val is_il1_fence_req = RegInit(false.B)
 
 	val if_iq = RegInit(0.U.asTypeOf(new Info_if_iq))
 	val if_iq_valid = RegInit(false.B)
@@ -82,23 +86,25 @@ class Ifetch() extends Module {
 	def is_if_iq_ack = (io.if_iq.valid & io.if_iq.ready)
 	def is_if_iq_nack = (io.if_iq.valid & ~io.if_iq.ready)
 
-	when ( stateReg === Il1_state.cktag & is_cb_vhit.contains(true.B) & ~io.flush) {
-		if_iq.pc    := io.pc_if.addr
+
+	when ( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush) {
+		if_iq.pc    := io.pc_if.bits.addr
 		if_iq.instr := mem_dat
 		if_iq_valid := true.B
 	}
 	.elsewhen ( stateReg === Il1_state.cmiss & addr_align_128 === addr_il1_req & ~trans_kill) {
-		if_iq.pc    := io.pc_if.addr
-		if_iq.instr := il1_mst.data_ack)
+		if_iq.pc    := io.pc_if.bits.addr
+		if_iq.instr := il1_mst.data_ack
 		if_iq_valid := true.B
 	}
 
-	when (if_iq_ack){
+	when (is_if_iq_ack){
 		if_iq_valid := false.B
 	}
 
-	io.pc_if.ready := if_iq_ack
+	io.pc_if.ready := is_if_iq_ack
 
+	io.if_iq.valid      := if_iq_valid
 	io.if_iq.bits.pc    := if_iq.pc
 	io.if_iq.bits.instr := if_iq.instr
 
@@ -184,8 +190,8 @@ class Ifetch() extends Module {
 		addr_il1_req := Mux1H( Seq(
 						(stateReg === Il1_state.cfree) -> addr_align_256,
 						(stateReg === Il1_state.cktag) -> addr_align_256,
-						(stateReg === Il1_state.cmiss) -> Mux( il1_mst.is_accessAckData, addr_il1_req + "b10000".U , addr_il1_req)
-						(stateReg === Il1_state.fence) -> addr_align_256,
+						(stateReg === Il1_state.cmiss) -> Mux( il1_mst.is_accessAckData, addr_il1_req + "b10000".U , addr_il1_req),
+						(stateReg === Il1_state.fence) -> addr_align_256
 						))
 	}
 
@@ -196,36 +202,36 @@ class Ifetch() extends Module {
 							(stateReg === Il1_state.cfree) -> addr_align_128,
 							(stateReg === Il1_state.cktag) -> addr_align_128,
 							(stateReg === Il1_state.cmiss) -> addr_il1_req,
-							(stateReg === Il1_state.fence) -> addr_align_128,
+							(stateReg === Il1_state.fence) -> addr_align_128
 							))
 
 	for ( i <- 0 until cb ) yield {
 		mem.dat_en_w(i) := Mux1H( Seq(
 								(stateReg === Il1_state.cfree) -> false.B,
 								(stateReg === Il1_state.cktag) -> false.B,
-								(stateReg === Il1_state.cmiss) -> il1_mst.is_accessAckData & is_cb_vhit(i),
-								(stateReg === Il1_state.fence) -> false.B,
+								(stateReg === Il1_state.cmiss) -> (il1_mst.is_accessAckData & is_cb_vhit(i)),
+								(stateReg === Il1_state.fence) -> false.B
 								))
 
 		mem.dat_en_r(i) := Mux1H( Seq(
 								(stateReg === Il1_state.cfree) -> (stateDnxt === Il1_state.cktag),
 								(stateReg === Il1_state.cktag) -> false.B,
 								(stateReg === Il1_state.cmiss) -> false.B,
-								(stateReg === Il1_state.fence) -> false.B,
+								(stateReg === Il1_state.fence) -> false.B
 								))
 
 		mem.tag_en_w(i) := Mux1H( Seq(
 							(stateReg === Il1_state.cfree) -> false.B,
-							(stateReg === Il1_state.cktag) -> (stateDnxt === Il1_state.cmiss) & is_block_replace(i.U),
+							(stateReg === Il1_state.cktag) -> ((stateDnxt === Il1_state.cmiss) & is_block_replace(i.U)),
 							(stateReg === Il1_state.cmiss) -> false.B,
-							(stateReg === Il1_state.fence) -> false.B,
+							(stateReg === Il1_state.fence) -> false.B
 							))
 
 		mem.tag_en_r(i) := Mux1H( Seq(
 							(stateReg === Il1_state.cfree) -> (stateDnxt === Il1_state.cktag),
 							(stateReg === Il1_state.cktag) -> false.B,
 							(stateReg === Il1_state.cmiss) -> false.B,
-							(stateReg === Il1_state.fence) -> false.B,
+							(stateReg === Il1_state.fence) -> false.B
 							))
 	}
 
@@ -247,23 +253,25 @@ class Ifetch() extends Module {
 
 	
 
-	for ( i <- 0 until cb ) yield { is_cb_vhit(i) := (cache_valid(cl_sel)(i) & mem.tag_info_r === addr_tag) }
+	for ( i <- 0 until cb ) yield { is_cb_vhit(i) := ( cache_valid(cl_sel)(i) & (mem.tag_info_r(i) === addr_tag)) }
 
 
 	def replace_sel = 
 		Mux(
 			cache_valid(cl_sel).contains(false.B),
-			cache_valid(cl_sel).indexWhere(p => p === false.B),
+			cache_valid(cl_sel).indexWhere((a: Bool) => (a === false.B)),
 			random_res
 		)
 
 	def is_block_replace(i:UInt) = UIntToOH(replace_sel)(i).asBool
 
 
-	def mem_dat = 
+	def mem_dat = {
 		val cb_num = for ( i <- 0 until cb ) yield { is_cb_vhit(i) === true.B }
 		val dat_sel = for ( i <- 0 until cb ) yield { mem.dat_info_r(i) }
-		MuxCase( DontCare, cb_num zip dat_sel )
+		MuxCase( DontCare, cb_num zip dat_sel )	
+	}
+
 	
 	
 
@@ -289,10 +297,10 @@ class Ifetch() extends Module {
 	il1_mst.d_ready := true.B
 
 	when ( stateReg === Il1_state.cktag & stateDnxt === Il1_state.cmiss ) {
-		il1_mst.op_getData(addr_align_256, 5)
+		il1_mst.op_getData(addr_align_256, 5.U)
 		il1_mst.a_valid_set()
 	}
-	.elsewhen( stateReg === Il1_state.cmiss & il1_mst.sis_chn_a_ack === true.B){
+	.elsewhen( stateReg === Il1_state.cmiss & il1_mst.is_chn_a_ack === true.B){
 		il1_mst.a_valid_rst()
 	}
 
@@ -322,16 +330,15 @@ class Ifetch() extends Module {
 // FFFFFFFFFFF           EEEEEEEEEEEEEEEEEEEEEENNNNNNNN         NNNNNNN        CCCCCCCCCCCCCEEEEEEEEEEEEEEEEEEEEEE
 
 
-val trans_kill = RegInit(false.B)
 
-when ( io.flush & stateDnxt === Il1_state.cmiss ) {
-	trans_kill := true.B
-}
-.elsewhen( stateDnxt =/= Il1_state.cmiss ) {
-	trans_kill := false.B
-}
 
-val is_il1_fence_req = RegInit(false.B)
+	when ( io.flush & stateDnxt === Il1_state.cmiss ) {
+		trans_kill := true.B
+	}
+	.elsewhen( stateDnxt =/= Il1_state.cmiss ) {
+		trans_kill := false.B
+	}
+
 
 	when ( io.is_il1_fence_req & ~is_il1_fence_req ) {
 		is_il1_fence_req := true.B

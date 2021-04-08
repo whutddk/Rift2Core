@@ -87,8 +87,8 @@ class Lsu extends Module {
 
 	val trans_kill = RegInit(false.B)
 
-	val sys_mst = new TileLink_mst(64, 32, 0)
-	val dl1_mst = new TileLink_mst(128,32, 0)
+	val sys_mst = new TileLink_mst(64, 32, 1)
+	val dl1_mst = new TileLink_mst(128,32, 2)
 
 	io.sys_chn_a.bits  := sys_mst.a
 	io.sys_chn_a.valid := sys_mst.a_valid
@@ -645,7 +645,7 @@ class Lsu extends Module {
 	def replace_sel = 
 		Mux(
 			cache_valid(cl_sel).contains(false.B),
-			cache_valid(cl_sel).indexWhere(p => p === false.B),
+			cache_valid(cl_sel).indexWhere((a: Bool) => (a === false.B)),
 			random_res
 		)
 	
@@ -659,10 +659,12 @@ class Lsu extends Module {
 
 
 
-	def mem_dat = 
+	def mem_dat = {
 		val cb_num = for ( i <- 0 until cb ) yield { is_cb_vhit(i) === true.B }
 		val dat_sel = for ( i <- 0 until cb ) yield { mem.dat_info_r(i) }
-		MuxCase( DontCare, cb_num zip dat_sel )
+		MuxCase( 0.U, cb_num zip dat_sel )		
+	}
+
 	
 
 
