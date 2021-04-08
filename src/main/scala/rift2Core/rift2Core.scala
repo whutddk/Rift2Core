@@ -29,7 +29,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.basic._
 
-class rift2Core extends RawModule {
+class Rift2Core extends RawModule {
   val io = IO(new Bundle{
     val a = Input(UInt(1.W))
     val b = Input(UInt(1.W))

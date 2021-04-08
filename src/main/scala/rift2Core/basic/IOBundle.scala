@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:49:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-26 14:45:52
+* @Last Modified time: 2021-04-08 17:49:57
 */
 
 
@@ -32,12 +32,12 @@ import chisel3.util._
 
 
 class Info_pc_if extends Bundle {
-	val fetch_addr = Output(UInt(64.W))
-	} 
+	val addr = UInt(64.W)
+} 
 
 class Info_if_iq extends Bundle {
-	val pc = Output(UInt(64.W))
-	val instr = Output(UInt(64.W)) 
+	val pc = UInt(64.W)
+	val instr = UInt(128.W)
 }
 
 class Info_iq_id extends Bundle {

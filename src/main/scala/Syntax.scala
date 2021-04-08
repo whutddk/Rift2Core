@@ -64,7 +64,7 @@ class Syntax extends Module {
 			cmp(1) := b
 			cmp(2) := c
 
-		return cmp.contains(false.B)	
+		return cmp.forall(x => x === false.B)	
 	}
 
  

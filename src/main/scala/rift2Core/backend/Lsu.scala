@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-29 14:37:18
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-06 17:58:53
+* @Last Modified time: 2021-04-08 16:22:42
 */
 
 /*
@@ -70,7 +70,7 @@ class Lsu extends Module {
 	val tag_w    = 32 - addr_lsb - line_w
 
 	val stateReg = RegInit(Dl1_state.cfree)
-	val cache_valid = Reg( Vec(cb, Vec(cl, Bool() )) )
+	val cache_valid = Reg( Vec(cl, Vec(cb, Bool() )) )
 	val mem = new Cache_mem( dw, 32, bk, cb, cl )
 
 	val op1_dl1_req = RegInit(0.U(32.W))
@@ -121,9 +121,9 @@ class Lsu extends Module {
 	def op1 = io.lsu_iss_exe.bits.param.op1
 	def op2 = io.lsu_iss_exe.bits.param.op2
 	def op1_tag = op1(31,32-tag_w)
-	def op1_align64 = op1(31,0) & ~("b111".U)
-	def op1_align128 = op1(31,0) & ~("b1111".U)
-	def op1_align256 = op1(31,0) & ~("b11111".U)
+	def op1_align64 = op1(31,0) & ~("b111".U(64.W))
+	def op1_align128 = op1(31,0) & ~("b1111".U(64.W))
+	def op1_align256 = op1(31,0) & ~("b11111".U(64.W))
 
 	def cl_sel = op1(addr_lsb+line_w-1, addr_lsb)
 
@@ -338,9 +338,6 @@ class Lsu extends Module {
 		when ( sys_mst.is_chn_a_ack === true.B) {  // sys chn a ack, release a valid
 			sys_mst.a_valid_rst()
 		}
-		when ( sys_mst.is_accessAckData === true.B ) {	//sys chn d ack, leave PREAD
-			// rsp_data := sys_mst.data_ack
-		}
 	}
 	.otherwise {
 		when ( (~sys_mst.is_a_busy & ~sys_mst.is_d_busy & is_hazard ) === true.B) {
@@ -470,14 +467,14 @@ class Lsu extends Module {
 
 	def dl1_state_dnxt_in_cread = {
 		Mux( 
-			{ var res = false.B; for ( i <- 0 until cb ) {  res = res | is_cb_vhit(i) }; res},
+			is_cb_vhit.contains(true.B),
 			Dl1_state.cfree,
 			Mux( is_hazard, Dl1_state.mwait, Dl1_state.cmiss )
 		)
 	}
 
 	def dl1_state_dnxt_in_mwait = Mux( is_hazard, Dl1_state.mwait, Dl1_state.cmiss )
-	def dl1_state_dnxt_in_cmiss = Mux( dl1_mst.is_free, Dl1_state.cfree, Dl1_state.cmiss )
+	def dl1_state_dnxt_in_cmiss = Mux( dl1_mst.is_last_d_trans, Dl1_state.cfree, Dl1_state.cmiss )
 	def dl1_state_dnxt_in_write = Dl1_state.cfree
 	def dl1_state_dnxt_in_fence = Mux( is_fence_end, Dl1_state.cfree, Dl1_state.fence )
 	def dl1_state_dnxt_in_pwait = Mux( is_hazard, Dl1_state.pwait, Dl1_state.pread )
@@ -538,7 +535,7 @@ class Lsu extends Module {
 	}
 	.elsewhen( stateDnxt === Dl1_state.cmiss ) {
 		when ( dl1_mst.is_chn_a_ack === true.B ) {
-			op1_dl1_req := op1_dl1_req + "b1000".U
+			op1_dl1_req := op1_dl1_req + "b10000".U
 		}
 	}
 
@@ -626,30 +623,32 @@ class Lsu extends Module {
 
 
 	when ( reset.asBool ) {
-		for ( i <- 0 until cb; j <- 0 until cl ) yield cache_valid(i)(j) := false.B
+		for ( i <- 0 until cl; j <- 0 until cb ) yield cache_valid(i)(j) := false.B
 	}
 	.elsewhen(
 				 ( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cmiss)
 				|( stateReg === Dl1_state.mwait & stateDnxt === Dl1_state.cmiss )
 			) {
-		cache_valid(replace_sel)(cl_sel) := true.B
+		cache_valid(cl_sel)(replace_sel) := true.B
 	}
 	.elsewhen(stateReg === Dl1_state.fence & stateDnxt === Dl1_state.cfree) {
-		for ( i <- 0 until cb; j <- 0 until cl ) yield cache_valid(i)(j) := false.B
+		for ( i <- 0 until cl; j <- 0 until cb ) yield cache_valid(i)(j) := false.B
 	}
 
-
-	def is_cb_vhit(i: Int): Bool = cache_valid(i)(cl_sel) & ( mem.tag_info_r(i) === op1_tag )
-
-
+	val is_cb_vhit = Vec(cb, Bool())
+	for ( i <- 0 until cb ) yield { is_cb_vhit(i) := cache_valid(cl_sel)(i) & ( mem.tag_info_r(i) === op1_tag ) }
 
 
-	def replace_sel: UInt = {
-		val is_cache_free_cb = for ( i <- 0 until cb ) yield (cache_valid(i)(cl_sel) === false.B)
-		val cb_num = for ( i <- 0 until cb ) yield i.U
 
-		return 	MuxCase( random_res, is_cache_free_cb zip cb_num )
-	}
+
+
+	def replace_sel = 
+		Mux(
+			cache_valid(cl_sel).contains(false.B),
+			cache_valid(cl_sel).indexWhere(p => p === false.B),
+			random_res
+		)
+	
 	
 	
 
@@ -660,13 +659,11 @@ class Lsu extends Module {
 
 
 
-	def mem_dat: UInt = {
-		var res = 0.U
-		for ( i <- 0 until cb ) {
-			if ( is_cb_vhit(i) == true.B ) { res = mem.dat_info_r(i) }
-		}
-		return res
-	} 
+	def mem_dat = 
+		val cb_num = for ( i <- 0 until cb ) yield { is_cb_vhit(i) === true.B }
+		val dat_sel = for ( i <- 0 until cb ) yield { mem.dat_info_r(i) }
+		MuxCase( DontCare, cb_num zip dat_sel )
+	
 
 
 

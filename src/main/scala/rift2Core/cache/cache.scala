@@ -54,7 +54,6 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
 
 
-	val tag_wmask = WireDefault(Fill((tag_w+7)/8,1.U))
 
 
 
@@ -84,7 +83,7 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 		tag_ram(i).io.en_r   := tag_en_r(i)
 		tag_ram(i).io.en_w   := tag_en_w(i)
 
-		tag_ram(i).io.data_wstrb := tag_wmask
+		tag_ram(i).io.data_wstrb := Fill((tag_w+7)/8,1.U)
 		tag_ram(i).io.data_w := tag_info_w
 		tag_info_r(i)     := tag_ram(i).io.data_r
 

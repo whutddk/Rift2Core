@@ -189,6 +189,8 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 
 	def is_a_busy = a_remain === 0.U
 	def is_d_busy = d_remain === 0.U
+	def is_last_a_trans = (is_chn_a_ack) & (a_remain === (dw/8).U)
+	def is_last_d_trans = (is_chn_d_ack) & (d_remain === (dw/8).U)
 
 	def is_free = ~is_a_busy & ~is_d_busy
 	def is_busy =  is_a_busy |  is_d_busy
