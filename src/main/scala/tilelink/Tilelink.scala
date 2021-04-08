@@ -91,10 +91,10 @@ trait Opcode {
 
 class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 
-	val a = WireDefault(0.U.asTypeOf(new TLchannel_a(dw, aw)))
+	val a = RegInit(0.U.asTypeOf(new TLchannel_a(dw, aw)))
 	val d = Wire(new TLchannel_d(dw))
 
-	val a_valid = WireDefault(false.B)
+	val a_valid = RegInit(false.B)
 	val a_ready = Wire(Bool())
 	val d_valid = Wire(Bool())
 	val d_ready = WireDefault(false.B)
