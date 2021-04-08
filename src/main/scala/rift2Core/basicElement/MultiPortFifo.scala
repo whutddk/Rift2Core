@@ -28,26 +28,11 @@ package rift2Core.basicElement
 import chisel3._
 import chisel3.util._
 
-// // package of input port
-// class Fifo_port_i[T<:Data](private val dw: T) extends Bundle {
-// 	val valid = Input(Bool())
-// 	val data = Input(dw.cloneType)
-// 	val ready = Output(Bool())
-// }
 
-// // package of output port
-// class Fifo_port_o[T<:Data](private val dw: T) extends Bundle {
-// 	val valid = Output(Bool())
-// 	val data = Output(dw.cloneType)
-// 	val ready = Input(Bool())
-// }
 
 //dw:data type aw:address width, in: input port num, out: output port num 
 class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module {
 	val io = IO(new Bundle{
-		// val push = Vec(in,  new Fifo_port_i(dw.cloneType))
-		// val pop  = Vec(out, new Fifo_port_o(dw.cloneType))
-
 
 		val push = Vec(in, Flipped(new DecoupledIO(dw)) )
 		val pop  = Vec(out, new DecoupledIO(dw) )
@@ -56,13 +41,9 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 	})
 
 
-	def dp: Int = {
-		var res = 1
-		for ( i <- 0 until aw ) {
-			res = res * 2
-		}
-		return res
-	}
+	def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
+
+	
 	
 	scala.math.pow(2,aw).toInt
 	assert( (in < dp && out < dp) , "dp = "+dp+", in = "+in+", out = "+ out )
@@ -77,27 +58,21 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 	for ( i <- 0 until in) yield  io.push(i).ready := (buf_valid((wr_ptr + i.U)(aw-1,0)) === false.B)
 	for ( i <- 0 until out ) yield io.pop(i).valid := (buf_valid((rd_ptr + i.U)(aw-1,0)) === true.B)
 
-	def push_ack(i: UInt) = io.push(i).valid & io.push(i).ready
-	def pop_ack(i: UInt) =  io.pop(i).valid  & io.pop(i).ready
+	def push_ack(i: Int) = io.push(i.U).valid & io.push(i.U).ready
+	def pop_ack(i: Int) =  io.pop(i.U).valid  & io.pop(i.U).ready
 
 	def push_cnt: UInt = {
-		var cnt = 0.U
-		for ( i <- 0 until in ) {
-			if ( push_ack(i.U) == true.B ) {
-				cnt = i.U
-			}
-		}
-		return cnt
-	}
+		val port = for ( i <- 0 until in ) yield { push_ack(in-1-i) === true.B }  //in-1 ~ 0
+		val cnt  = for ( i <- 0 until in ) yield { (in-1-i).U } //in-1 ~ 0
 
+		return MuxCase( 0.U, port zip cnt )
+	}
+	
 	def pop_cnt: UInt = {
-		var cnt = 0.U
-		for ( i <- 0 until out ) {
-			if ( pop_ack(i.U) == true.B ) {
-				cnt = i.U
-			}
-		}
-		return cnt
+		val port = for ( i <- 0 until out ) yield { push_ack(out-1-i) === true.B }  //out-1 ~ 0
+		val cnt  = for ( i <- 0 until out ) yield { (out-1-i).U } //out-1 ~ 0
+
+		return MuxCase( 0.U, port zip cnt )
 	}
 
 
@@ -115,23 +90,14 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 			val fifo_ptr_w = (wr_ptr + i.U)(aw-1,0)
 			val fifo_ptr_r = (rd_ptr + j.U)(aw-1,0)
 
-			buf_valid(fifo_ptr_w) := Mux(push_ack(i.U), true.B, buf_valid(fifo_ptr_w))
-			buf_valid(fifo_ptr_r) := Mux(pop_ack(j.U),  false.B, buf_valid(fifo_ptr_r))
+			buf_valid(fifo_ptr_w) := Mux(push_ack(i), true.B, buf_valid(fifo_ptr_w))
+			buf_valid(fifo_ptr_r) := Mux(pop_ack(j),  false.B, buf_valid(fifo_ptr_r))
 
-			buf(fifo_ptr_w) := Mux(push_ack(i.U), io.push(i.U).bits, buf(fifo_ptr_w))
+			buf(fifo_ptr_w) := Mux(push_ack(i), io.push(i.U).bits, buf(fifo_ptr_w))
 		}
 
 
 
-
-
-
-		// for ( i <- 0 until dp ) yield {
-		// 	def is_push(i: UInt): Bool =  
-
-		// 	buf_valid(i) :=
-		// 	buf(i) := 
-		// }
 
 
 

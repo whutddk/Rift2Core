@@ -88,14 +88,13 @@ class Wt_block( aw: Int ) {
 
 	def is_hazard(chk_addr: UInt, width_mask: UInt): Bool = {
 
-		// val cmp = Wire(Vec(dp, Bool()))
-		var res = false.B
+		val cmp = Wire(Vec(dp, Bool()))
 
 		for ( i <- 0 until dp ) yield {
-			res = res | ((info(i).addr & width_mask) === (chk_addr & width_mask))
+			cmp(i) := ((info(i).addr & width_mask) === (chk_addr & width_mask))
 		}
 
-		return res
+		return cmp.contains(true.B)
 	}
 
 }

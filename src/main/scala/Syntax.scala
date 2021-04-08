@@ -35,27 +35,39 @@ class Syntax extends Module {
 		val b = Input(Bool())
 		val c = Input(Bool())
 		val d = Output(Bool())
+
+		val e = Input(Vec(3, Bool()))
 	})
 
-	val temp = WireDefault(false.B)
-	io.d := temp
+	// val temp = WireDefault(false.B)
+	// io.d := temp
 
-	def sela() = {
-		temp := io.a
+	// def sela() = {
+	// 	temp := io.a
+	// }
+
+	// def selb() = {
+	// 	temp := io.b
+	// }
+
+	// when ( io.c === true.B ) {
+	// 	sela()
+	// }
+	// .otherwise {
+	// 	selb()
+	// }	
+
+	def check_lgc(a: Bool, b: Bool, c: Bool): Bool = {
+		val cmp = Wire(Vec(3, Bool()))
+
+			cmp(0) := a
+			cmp(1) := b
+			cmp(2) := c
+
+		return cmp.contains(false.B)	
 	}
 
-	def selb() = {
-		temp := io.b
-	}
+ 
 
-		when ( io.c === true.B ) {
-			sela()
-		}
-		.otherwise {
-			selb()
-		}	
-
-
-
-
+	io.d := check_lgc(io.a, io.b, io.c)
 }
