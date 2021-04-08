@@ -45,8 +45,8 @@ class Wt_block( aw: Int ) {
 		val flush     = Wire(Bool())
 
 
-	def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 } ;println("dp is:"+res); return res } 
-
+	def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 } ; return res } 
+	println("Wt block created, dp is:"+dp);
 
 
 

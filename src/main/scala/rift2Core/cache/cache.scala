@@ -65,13 +65,13 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
 
 	val tag_ram = {
-		for ( i <- 0 until cb ) yield { val mdl = Module(new Sram((tag_w+7)/8,line_w)); mdl }
+		for ( i <- 0 until cb ) yield { val mdl = Module(new Gen_sram((tag_w+7)/8,line_w)); mdl }
 	}
 
 	val dat_ram = {
 		for ( i <- 0 until cb; j <- 0 until bk ) yield { 
 
-			val mdl = Module(new Sram(dw, line_w))
+			val mdl = Module(new Gen_sram(dw, line_w))
 			mdl
 		}
 	}
@@ -84,7 +84,7 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 		tag_ram(i).io.en_r   := tag_en_r(i)
 		tag_ram(i).io.en_w   := tag_en_w(i)
 
-		tag_ram(i).io.mask_w := tag_wmask
+		tag_ram(i).io.data_wstrb := tag_wmask
 		tag_ram(i).io.data_w := tag_info_w
 		tag_info_r(i)     := tag_ram(i).io.data_r
 
@@ -110,7 +110,7 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 			}
 
 
-			dat_ram(i*bk+j).io.mask_w := dat_info_wstrb
+			dat_ram(i*bk+j).io.data_wstrb := dat_info_wstrb
 			dat_ram(i*bk+j).io.data_w := dat_info_w
 
 		}
