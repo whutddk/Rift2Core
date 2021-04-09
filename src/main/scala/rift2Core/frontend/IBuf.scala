@@ -72,7 +72,7 @@ class IBuf() {
 	// def ibuf_o_ack(i: UInt) = ibuf_valid_o(i) & ibuf_ready_o(i)
 
 
-	val instr_buf = Module (new MultiPortFifo( UInt(16.W), 4, 8, 2 ) )
+	val instr_buf = new MultiPortFifo( UInt(16.W), 4, 8, 2 ) 
 
 
 

@@ -67,7 +67,7 @@ class Info_BHQ extends Bundle {
 
 class BHQ() {
 
-    val fifo = Module(new MultiPortFifo( new Info_BHQ, 4, 2, 1 ))
+    val fifo = new MultiPortFifo( new Info_BHQ, 4, 2, 1 )
 
 
 

@@ -32,28 +32,27 @@ import chisel3.util._
 
 
 //dw:data type aw:address width, in: input port num, out: output port num 
-class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module {
-	val io = IO(new Bundle{
+class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) {
+	val io = new Bundle{
 
-		val push = Vec(in, Flipped(new DecoupledIO(dw)) )
-		val pop  = Vec(out, new DecoupledIO(dw) )
+		val push = Wire(Vec(in, Flipped(new DecoupledIO(dw)) ))
+		val pop  = Wire(Vec(out, new DecoupledIO(dw) ))
 
-		val flush = Input(Bool())
-	})
+		val flush = Wire(Bool())
+	}
 
 
 	def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
 
 	
 	
-	scala.math.pow(2,aw).toInt
 	assert( (in < dp && out < dp) , "dp = "+dp+", in = "+in+", out = "+ out )
 
-	val buf = Reg(Vec(dp, dw))
+	val buf = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
 	val buf_valid = Reg(Vec(dp, Bool()))
 
-	val rd_ptr = Reg(UInt(aw.W))
-	val wr_ptr = Reg(UInt(aw.W))
+	val rd_ptr = RegInit(0.U(aw.W))
+	val wr_ptr = RegInit(0.U(aw.W))
 
 
 	for ( i <- 0 until in) yield  io.push(i).ready := (buf_valid((wr_ptr + i.U)(aw-1,0)) === false.B)
@@ -81,13 +80,13 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 
 
 
-	when (reset.asBool() | io.flush) {
+	when (io.flush) {
 		for ( i <- 0 until dp ) yield 	buf_valid(i) := false.B
 		rd_ptr := 0.U
 		wr_ptr := 0.U
 	}
 	.otherwise{
-		for ( i <- 0 until in; j <- 0 until out ) {
+		for ( i <- 0 until in; j <- 0 until out ) yield {
 			val fifo_ptr_w = (wr_ptr + i.U)(aw-1,0)
 			val fifo_ptr_r = (rd_ptr + j.U)(aw-1,0)
 
