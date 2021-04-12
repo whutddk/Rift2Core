@@ -56,7 +56,7 @@ class IAlign{
 
 
 
-class IBuf() {
+trait IBuf {
 
 	val ibuf_valid_i = Wire(Bool())
 	val ibuf_ready_i = Wire(Bool())

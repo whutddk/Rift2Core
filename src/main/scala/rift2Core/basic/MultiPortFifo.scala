@@ -32,14 +32,13 @@ import chisel3.util._
 
 
 //dw:data type aw:address width, in: input port num, out: output port num 
-class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) {
-	val io = new Bundle{
+class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
+	val io = IO(new Bundle{
+		val push = Vec(in, Flipped(new DecoupledIO(dw)) )
+		val pop  = Vec(out, new DecoupledIO(dw) )
 
-		val push = Wire(Vec(in, Flipped(new DecoupledIO(dw)) ))
-		val pop  = Wire(Vec(out, new DecoupledIO(dw) ))
-
-		val flush = Wire(Bool())
-	}
+		val flush = Input(Bool())
+	})
 
 
 	def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }

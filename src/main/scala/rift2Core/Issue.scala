@@ -377,11 +377,11 @@ class Issue() extends Module {
 
 
 
-		val alu_dpt_fifo = Module(new MultiPortFifo( new Alu_dpt_info, 3, 2, 1 ))
-		val bru_dpt_fifo = Module(new MultiPortFifo( new Bru_dpt_info, 3, 2, 1 ))
-		val lsu_dpt_fifo = Module(new MultiPortFifo( new Lsu_dpt_info, 3, 2, 1 ))
-		val csr_dpt_fifo = Module(new MultiPortFifo( new Csr_dpt_info, 3, 2, 1 ))
-		val mul_dpt_fifo = Module(new MultiPortFifo( new Mul_dpt_info, 3, 2, 1 ))
+		val alu_dpt_fifo = new MultiPortFifo( new Alu_dpt_info, 3, 2, 1 )
+		val bru_dpt_fifo = new MultiPortFifo( new Bru_dpt_info, 3, 2, 1 )
+		val lsu_dpt_fifo = new MultiPortFifo( new Lsu_dpt_info, 3, 2, 1 )
+		val csr_dpt_fifo = new MultiPortFifo( new Csr_dpt_info, 3, 2, 1 )
+		val mul_dpt_fifo = new MultiPortFifo( new Mul_dpt_info, 3, 2, 1 )
 		// val fpu_dpt_buf = new MultiPortFifo( dw: T, aw: Int, in: Int, out: Int )
 
 		// dpt <> issue fifo

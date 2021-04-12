@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-30 16:07:22
+* @Last Modified time: 2021-04-12 19:49:21
 */
 
 /*
@@ -590,4 +590,20 @@ class Info_clint_csr extends Bundle {
 	val is_rtimerInterrupt = Bool()
 	val is_softwvInterrupt = Bool()
 }
+
+class Info_preDecode extends Bundle {
+	val is_jal = Bool()
+	val is_jalr = Bool()
+	val is_branch = Bool()
+	val is_call = Bool()
+	val is_return = Bool()
+	val is_rvc = Bool()
+	val is_fencei = Bool()
+	val imm = UInt(64.W)
+
+	def is_pineline_cut = is_jal | is_jalr | is_branch | is_fencei
+}
+
+
+
 

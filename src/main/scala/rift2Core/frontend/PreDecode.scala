@@ -29,16 +29,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.basic._
 
-class Info_preDecode extends Bundle {
-	val is_jal = Wire(Bool())
-	val is_jalr = Wire(Bool())
-	val is_branch = Wire(Bool())
-	val is_call = Wire(Bool())
-	val is_return = Wire(Bool())
-	val is_rvc = Wire(Bool())
-	val is_fencei = Wire(Bool())
-	val imm = Wire(UInt(64.W))
-}
+
 
 class PreDecode16() {
 	val io = new Bundle {
@@ -86,12 +77,11 @@ class PreDecode32() {
 
 }
 
-class PreDecode() {
-	val io = new Bundle {
-		val ibuf_pop = Vec(4, Flipped(new DecoupledIO(UInt(16.W))))
+trait PreDecode {
 
-		val info = Vec(2, new DecoupledIO(new Info_preDecode) )
-	}
+	val ibuf_pop = Vec(4, UInt(16.W))
+	val preDecode_info = Vec(2, new Info_preDecode)
+
 
 	val pd16 = for ( i <- 0 until 2 ) yield { val mdl = new PreDecode16(); mdl }
 	val pd32 = for ( i <- 0 until 2 ) yield { val mdl = new PreDecode32(); mdl }
@@ -99,13 +89,15 @@ class PreDecode() {
 
 	def is_1st00 = ~is_1st16 & ~is_1st32
 
-	def is_1st16 = (io.ibuf_pop(0).valid === true.B) & io.ibuf_pop(0).bits(1,0) =/= "b11".U
+	def is_1st16: Bool // = (ibuf_pop(0).valid === true.B) & ibuf_pop(0).bits(1,0) =/= "b11".U
 
-	def is_1st32 = {
-		(io.ibuf_pop(0).valid === true.B) &
-		(io.ibuf_pop(1).valid === true.B) &
-		(io.ibuf_pop(0).bits(1,0) === "b11".U)
-	}
+	def is_1st32: Bool
+	
+	// {
+	// 	(ibuf_pop(0).valid === true.B) &
+	// 	(ibuf_pop(1).valid === true.B) &
+	// 	(ibuf_pop(0).bits(1,0) === "b11".U)
+	// }
 
 	def idx_2nd = Mux1H(Seq(
 		is_1st00 -> 1.U,	//dontcare
@@ -117,13 +109,14 @@ class PreDecode() {
 		(is_1st00) |
 		(~is_2nd16 & ~is_2nd32)
 	}
-	def is_2nd16 = (io.ibuf_pop(idx_2nd).valid === true.B) & io.ibuf_pop(idx_2nd).bits(1,0) =/= "b11".U
+	def is_2nd16: Bool // = (ibuf_pop(idx_2nd).valid === true.B) & ibuf_pop(idx_2nd).bits(1,0) =/= "b11".U
 
-	def is_2nd32 = {
-		(io.ibuf_pop(idx_2nd).valid === true.B) &
-		(io.ibuf_pop(idx_2nd+1.U).valid === true.B) &
-		(io.ibuf_pop(idx_2nd).bits(1,0) === "b11".U)
-	}
+	def is_2nd32: Bool
+	//  = {
+	// 	(ibuf_pop(idx_2nd).valid === true.B) &
+	// 	(ibuf_pop(idx_2nd+1.U).valid === true.B) &
+	// 	(ibuf_pop(idx_2nd).bits(1,0) === "b11".U)
+	// }
 
 	def is_00p00 = is_2nd00 & is_1st00
 	def is_00p16 = is_2nd00 & is_1st16
@@ -136,58 +129,58 @@ class PreDecode() {
 
 
 
-	pd16(0).io.instr16 := io.ibuf_pop(0).bits
-	pd32(0).io.instr32 := Cat( io.ibuf_pop(1).bits, io.ibuf_pop(0).bits)
+	pd16(0).io.instr16 := ibuf_pop(0)
+	pd32(0).io.instr32 := Cat( ibuf_pop(1), ibuf_pop(0))
 
-	pd16(1).io.instr16 := io.ibuf_pop(idx_2nd).bits
-	pd32(1).io.instr32 := Cat( io.ibuf_pop(idx_2nd+1.U).bits, io.ibuf_pop(idx_2nd).bits)
+	pd16(1).io.instr16 := ibuf_pop(idx_2nd)
+	pd32(1).io.instr32 := Cat( ibuf_pop(idx_2nd+1.U), ibuf_pop(idx_2nd))
 
 
-	io.info(0).valid := is_1st16 | is_1st32
-	io.info(1).valid := is_2nd16 | is_2nd32
+	// info(0).valid := is_1st16 | is_1st32
+	// info(1).valid := is_2nd16 | is_2nd32
 
-	io.ibuf_pop(0).ready := Mux1H(Seq(
-				is_00p00 -> false.B,
-				is_00p16 -> io.info(0).ready,
-				is_16p16 -> io.info(0).ready,
-				is_32p16 -> io.info(0).ready,
-				is_00p32 -> io.info(0).ready,
-				is_16p32 -> io.info(0).ready,
-				is_32p32 -> io.info(0).ready
-	))
+	// ibuf_pop(0).ready := Mux1H(Seq(
+	// 			is_00p00 -> false.B,
+	// 			is_00p16 -> info(0).ready,
+	// 			is_16p16 -> info(0).ready,
+	// 			is_32p16 -> info(0).ready,
+	// 			is_00p32 -> info(0).ready,
+	// 			is_16p32 -> info(0).ready,
+	// 			is_32p32 -> info(0).ready
+	// ))
 
-	io.ibuf_pop(1).ready := Mux1H(Seq(
-				is_00p00 -> false.B,
-				is_00p16 -> false.B,
-				is_16p16 -> io.info(1).ready,
-				is_32p16 -> io.info(1).ready,
-				is_00p32 -> io.info(0).ready,
-				is_16p32 -> io.info(0).ready,
-				is_32p32 -> io.info(0).ready
-	))
+	// ibuf_pop(1).ready := Mux1H(Seq(
+	// 			is_00p00 -> false.B,
+	// 			is_00p16 -> false.B,
+	// 			is_16p16 -> info(1).ready,
+	// 			is_32p16 -> info(1).ready,
+	// 			is_00p32 -> info(0).ready,
+	// 			is_16p32 -> info(0).ready,
+	// 			is_32p32 -> info(0).ready
+	// ))
 
-	io.ibuf_pop(2).ready := Mux1H(Seq(
-				is_00p00 -> false.B,
-				is_00p16 -> false.B,
-				is_16p16 -> false.B,
-				is_32p16 -> io.info(1).ready,
-				is_00p32 -> false.B,
-				is_16p32 -> io.info(1).ready,
-				is_32p32 -> io.info(1).ready
-	))
+	// ibuf_pop(2).ready := Mux1H(Seq(
+	// 			is_00p00 -> false.B,
+	// 			is_00p16 -> false.B,
+	// 			is_16p16 -> false.B,
+	// 			is_32p16 -> info(1).ready,
+	// 			is_00p32 -> false.B,
+	// 			is_16p32 -> info(1).ready,
+	// 			is_32p32 -> info(1).ready
+	// ))
 
-	io.ibuf_pop(3).ready := Mux1H(Seq(
-				is_00p00 -> false.B,
-				is_00p16 -> false.B,
-				is_16p16 -> false.B,
-				is_32p16 -> false.B,
-				is_00p32 -> false.B,
-				is_16p32 -> false.B,
-				is_32p32 -> io.info(1).ready
-	))
+	// ibuf_pop(3).ready := Mux1H(Seq(
+	// 			is_00p00 -> false.B,
+	// 			is_00p16 -> false.B,
+	// 			is_16p16 -> false.B,
+	// 			is_32p16 -> false.B,
+	// 			is_00p32 -> false.B,
+	// 			is_16p32 -> false.B,
+	// 			is_32p32 -> info(1).ready
+	// ))
 
-	io.info(0).bits := Mux( is_1st16, pd16(0).io.info, pd32(0).io.info ) //1st00 will not be care
-	io.info(1).bits := Mux( is_2nd16, pd16(1).io.info, pd32(1).io.info ) //2nd00 will not be care
+	preDecode_info(0) := Mux( is_1st16, pd16(0).io.info, pd32(0).io.info ) //1st00 will not be care
+	preDecode_info(1) := Mux( is_2nd16, pd16(1).io.info, pd32(1).io.info ) //2nd00 will not be care
 }
 
 
