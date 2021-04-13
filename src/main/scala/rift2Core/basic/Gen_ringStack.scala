@@ -77,7 +77,7 @@ class Gen_ringStack[T<:Data]( dw: T, aw: Int ) extends Module {
 
 	io.push.ready := true.B
 	io.pop.valid  := ~is_empty
-
+	io.pop.bits   := buf(rd_idx)
 
 
 
