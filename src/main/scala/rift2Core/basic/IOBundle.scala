@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:49:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-13 10:13:32
+* @Last Modified time: 2021-04-08 17:49:57
 */
 
 
@@ -35,10 +35,10 @@ class Info_pc_if extends Bundle {
 	val addr = UInt(64.W)
 } 
 
-// class Info_if_iq extends Bundle {
-// 	val pc = UInt(64.W)
-// 	val instr = UInt(128.W)
-// }
+class Info_if_iq extends Bundle {
+	val pc = UInt(64.W)
+	val instr = UInt(128.W)
+}
 
 class Info_iq_id extends Bundle {
 	val isRVC = Output(Bool())

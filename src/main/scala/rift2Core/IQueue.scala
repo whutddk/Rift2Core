@@ -32,21 +32,19 @@ import chisel3.experimental.ChiselEnum
 import rift2Core.basic._
 import rift2Core.frontend._
 
-class IQueue extends BranchPredict {
-	override val io = IO(new Bundle {
-		val bru_iq_b = new DecoupledIO( Bool() )
+class IQueue extends BranchPredict with IBuf{
+    override val io = IO(new Bundle {
+        val bru_iq_b = new DecoupledIO( Bool() )
 		val bru_iq_j = new DecoupledIO( new Info_JTB )
 
 		val iq_pc_info = new DecoupledIO(UInt(64.W))
 
-		val if_iq = Vec(4, Flipped(new DecoupledIO(UInt(16.W)) ))
-
 		val flush = Input(Bool())
-	})
+    })
 
 
-	override def ori_pc = 0.U
-	override def is_1st16 = false.B // = (ibuf_pop(0).valid === true.B) & ibuf_pop(0).bits(1,0) =/= "b11".U
+    override def ori_pc = 0.U
+    override def is_1st16 = false.B // = (ibuf_pop(0).valid === true.B) & ibuf_pop(0).bits(1,0) =/= "b11".U
 	override def is_1st32 = false.B
 	override def is_2nd16 = false.B // = (ibuf_pop(idx_2nd).valid === true.B) & ibuf_pop(idx_2nd).bits(1,0) =/= "b11".U
 	override def is_2nd32 = false.B

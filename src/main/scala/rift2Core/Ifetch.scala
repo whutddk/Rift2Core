@@ -31,7 +31,6 @@ import chisel3.util.random._
 import chisel3.experimental.ChiselEnum
 import rift2Core.basic._
 import rift2Core.cache._
-import rift2Core.frontend._
 import tilelink._
 
 object Il1_state extends ChiselEnum {
@@ -40,11 +39,10 @@ object Il1_state extends ChiselEnum {
 
 
 
-class Ifetch() extends Module with IBuf{
+class Ifetch() extends Module {
 	val io = IO(new Bundle{
 		val pc_if = Flipped(new DecoupledIO( new Info_pc_if ))
-		// val if_iq = new DecoupledIO( new Info_if_iq )
-		val if_iq = Vec(4, new DecoupledIO(UInt(16.W)) )
+		val if_iq = new DecoupledIO( new Info_if_iq )
 
 		val il1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
 		val il1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
@@ -81,42 +79,34 @@ class Ifetch() extends Module with IBuf{
 	val trans_kill = RegInit(false.B)
 	val is_il1_fence_req = RegInit(false.B)
 
-	// val if_iq = RegInit(0.U.asTypeOf(new Info_if_iq))
-	// val if_iq_valid = RegInit(false.B)
+	val if_iq = RegInit(0.U.asTypeOf(new Info_if_iq))
+	val if_iq_valid = RegInit(false.B)
 
 	def is_pc_if_ack = (io.pc_if.valid & io.pc_if.ready)
-	// def is_if_iq_ack = (io.if_iq.valid & io.if_iq.ready)
-	// def is_if_iq_nack = (io.if_iq.valid & ~io.if_iq.ready)
+	def is_if_iq_ack = (io.if_iq.valid & io.if_iq.ready)
+	def is_if_iq_nack = (io.if_iq.valid & ~io.if_iq.ready)
 
 
 	when ( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush) {
-		ia.pc    := io.pc_if.bits.addr
-		ia.instr := mem_dat
-		ibuf_valid_i := true.B
-
-		// if_iq.pc    := io.pc_if.bits.addr
-		// if_iq.instr := mem_dat
-		// if_iq_valid := true.B
+		if_iq.pc    := io.pc_if.bits.addr
+		if_iq.instr := mem_dat
+		if_iq_valid := true.B
 	}
 	.elsewhen ( stateReg === Il1_state.cmiss & addr_align_128 === addr_il1_req & ~trans_kill) {
-		ia.pc    := io.pc_if.bits.addr
-		ia.instr := il1_mst.data_ack
-		ibuf_valid_i := true.B
-
-		// if_iq.pc    := io.pc_if.bits.addr
-		// if_iq.instr := il1_mst.data_ack
-		// if_iq_valid := true.B
+		if_iq.pc    := io.pc_if.bits.addr
+		if_iq.instr := il1_mst.data_ack
+		if_iq_valid := true.B
 	}
 
-	// when (is_ibuf_i_ack){
-	// 	if_iq_valid := false.B
-	// }
+	when (is_if_iq_ack){
+		if_iq_valid := false.B
+	}
 
-	io.pc_if.ready := ibuf_ready_i  //when ibuf has enough space
+	io.pc_if.ready := is_if_iq_ack
 
-	// io.if_iq.valid      := if_iq_valid
-	// io.if_iq.bits.pc    := if_iq.pc
-	// io.if_iq.bits.instr := if_iq.instr
+	io.if_iq.valid      := if_iq_valid
+	io.if_iq.bits.pc    := if_iq.pc
+	io.if_iq.bits.instr := if_iq.instr
 
 
 	io.il1_chn_a.bits := il1_mst.a
@@ -151,7 +141,7 @@ class Ifetch() extends Module with IBuf{
 
 	def il1_state_dnxt_in_cfree = 
 		Mux( is_il1_fence_req, Il1_state.fence,
-			Mux( ( (ibuf_ready_i) & ~io.flush), Il1_state.cktag, Il1_state.cfree) ) // no valid or valid is ack then next
+			Mux( ( (~is_if_iq_nack) & ~io.flush), Il1_state.cktag, Il1_state.cfree) ) // no valid or valid is ack then next
 	def il1_state_dnxt_in_cktag = 
 		Mux( is_cb_vhit.contains(true.B), Il1_state.cfree, Il1_state.cmiss )
 	def il1_state_dnxt_in_cmiss = 
