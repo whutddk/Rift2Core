@@ -48,16 +48,18 @@ class IQueue extends Module {
 	})
 
 	val iq_ib_fifo = Module(new MultiPortFifo( new Info_iq_ib, 4, 2, 2 ))
-	val pd16 = for ( i <- 0 until 2 ) yield { val mdl = new PreDecode16(); mdl }
-	val pd32 = for ( i <- 0 until 2 ) yield { val mdl = new PreDecode32(); mdl }
+	val pd16 = for ( i <- 0 until 2 ) yield { val mdl = Module(new PreDecode16()); mdl }
+	val pd32 = for ( i <- 0 until 2 ) yield { val mdl = Module(new PreDecode32()); mdl }
 
 	val pc_qout = RegInit("h80000000".U)
 
 	val is_if_iq_ack = Wire(Vec(4, Bool()))
 	val is_iq_ib_ack = Wire(Vec(2, Bool()))
 
-	for ( i <- 0 until 4 ) yield io.if_iq(i).valid & io.if_iq(i).ready
-	for ( i <- 0 until 2 ) yield io.iq_ib(i).valid & io.iq_ib(i).ready
+	io.iq_ib <> iq_ib_fifo.io.pop
+
+	for ( i <- 0 until 4 ) yield is_if_iq_ack(i) := io.if_iq(i).valid & io.if_iq(i).ready
+	for ( i <- 0 until 2 ) yield is_iq_ib_ack(i) := io.iq_ib(i).valid & io.iq_ib(i).ready
 
 	io.if_iq(0).ready := Mux1H(Seq(
 				is_00p00 -> false.B,

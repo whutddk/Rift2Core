@@ -31,12 +31,12 @@ import rift2Core.basic._
 
 
 
-class PreDecode16() {
-	val io = new Bundle {
-		val instr16 = Wire( UInt(16.W) )
+class PreDecode16() extends Module{
+	val io = IO(new Bundle {
+		val instr16 = Input( UInt(16.W) )
 
-		val info = Wire(new Info_preDecode)
-	}
+		val info = Output(new Info_preDecode)
+	})
 
 	io.info.is_rvc := true.B
 
@@ -54,12 +54,12 @@ class PreDecode16() {
 
 }
 
-class PreDecode32() {
-	val io = new Bundle {
-		val instr32 = Wire( UInt(32.W) )
+class PreDecode32() extends Module{
+	val io = IO(new Bundle {
+		val instr32 = Input( UInt(32.W) )
 
-		val info = Wire(new Info_preDecode)
-	}
+		val info = Output(new Info_preDecode)
+	})
 
 	io.info.is_rvc := false.B
 
