@@ -79,7 +79,7 @@ class PreDecode32() {
 
 trait PreDecode {
 	
-	def ibuf_pop(i: UInt): UInt
+	val ibuf_pop = Wire(Vec(4, UInt(16.W)))
 	val preDecode_info = Wire(Vec(2, new Info_preDecode))
 
 
@@ -90,14 +90,14 @@ trait PreDecode {
 
 
 	def is_1st00 = ~is_1st16 & ~is_1st32
-	def is_1st16: Bool 
-	def is_1st32: Bool
+	val is_1st16 = Wire(Bool())
+	val is_1st32 = Wire(Bool())
 	
 	def idx_2nd: UInt
 
-	def is_2nd00: Bool
-	def is_2nd16: Bool
-	def is_2nd32: Bool
+	val is_2nd00 = Wire(Bool())
+	val is_2nd16 = Wire(Bool())
+	val is_2nd32 = Wire(Bool())
 
 
 	def is_00p00 = is_2nd00 & is_1st00

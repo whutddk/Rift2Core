@@ -34,8 +34,8 @@ import rift2Core.frontend._
 
 class IQueue extends BranchPredict {
 	val io = IO(new Bundle {
-		val bru_iq_b = new DecoupledIO( Bool() )
-		val bru_iq_j = new DecoupledIO( new Info_JTB )
+		val bru_iq_b = Flipped(new DecoupledIO( Bool() ))
+		val bru_iq_j = Flipped(new DecoupledIO( new Info_JTB ))
 
 		val iq_pc_info = new DecoupledIO(UInt(64.W))
 
@@ -45,23 +45,47 @@ class IQueue extends BranchPredict {
 		val flush = Input(Bool())
 	})
 
+	val iq_id_fifo = Module(new MultiPortFifo( new Info_iq_id, 4, 2, 2 )) //1 input, 1 output 	
+
 	def if_iq_ack(i: Int) = io.if_iq(i).valid & io.if_iq(i).ready
+
+	is_bru_iq_b_ack := io.bru_iq_b.valid & io.bru_iq_b.ready
+	io.bru_iq_b.ready := true.B
+
+	is_bru_iq_j_ack := io.bru_iq_j.valid & io.bru_iq_j.ready
+	io.bru_iq_j.ready := true.B
+
+	io.iq_pc_info.valid := is_jal | is_jalr | is_predict_taken | is_misPredict_taken_b | is_misPredict_taken_j
+	iq_pc_info_bits := io.iq_pc_info.bits
+
+	bhq.io.enq.valid  := is_branch & ((is_1stCut & iq_id_fifo.push_ack(0)) | (is_2ndCut & iq_id_fifo.push_ack(1)))
+	bhq.io.deq.ready  := io.bru_iq_b.valid & io.bru_iq_b.ready
+	bhq.reset := reset.asBool | io.flush
+
+	jhq.io.enq.valid  := is_jalr & ~is_noCut & ((is_1stCut & iq_id_fifo.push_ack(0)) | (is_2ndCut & iq_id_fifo.push_ack(1)))
+	jhq.io.deq.ready  := io.bru_iq_j.valid & io.bru_iq_j.ready
+	jhq.reset := reset.asBool | io.flush
+
+	ras.io.push.valid := is_call & ~is_noCut & ((is_1stCut & iq_id_fifo.push_ack(0)) | (is_2ndCut & iq_id_fifo.push_ack(1)))
+	ras.io.pop.ready := is_ras_taken & ((is_1stCut & iq_id_fifo.push_ack(0)) | (is_2ndCut & iq_id_fifo.push_ack(1)))
+	ras.io.flush := io.flush
+
+
 
 	val pc_qout = RegInit("h80000000".U)
 
-	io.bru_iq_b <>bru_iq_b
-	io.bru_iq_j <>bru_iq_j
+	bru_iq_b_bits := io.bru_iq_b.bits
+	bru_iq_j_bits := io.bru_iq_j.bits
 
-	override def pc1: UInt = return pc_qout
-	override def pc2: UInt = return Mux( is_1st16, pc_qout + 2.U, pc_qout + 4.U )
+	pc1 := pc_qout
+	pc2 := Mux( is_1st16, pc_qout + 2.U, pc_qout + 4.U )
 
 
-	override def is_1st16: Bool = return (io.if_iq(0).valid === true.B) & io.if_iq(0).bits(1,0) =/= "b11".U
-	override def is_1st32: Bool = {
-										return  (io.if_iq(0).valid === true.B) &
-												(io.if_iq(1).valid === true.B) &
-												(io.if_iq(0).bits(1,0) === "b11".U)
-									}
+	is_1st16 := (io.if_iq(0).valid === true.B) & (io.if_iq(0).bits(1,0) =/= "b11".U)
+	is_1st32 := (io.if_iq(0).valid === true.B) &
+				(io.if_iq(1).valid === true.B) &
+				(io.if_iq(0).bits(1,0) === "b11".U)
+
 	override def idx_2nd: UInt = 
 						return Mux1H(Seq(
 								is_1st00 -> 1.U,	//dontcare
@@ -69,12 +93,11 @@ class IQueue extends BranchPredict {
 								is_1st32 -> 2.U
 							))
 
-	override def is_2nd16: Bool = return (io.if_iq(idx_2nd).valid === true.B) & io.if_iq(idx_2nd).bits(1,0) =/= "b11".U
-	override def is_2nd32: Bool = {
-									return  (io.if_iq(idx_2nd).valid === true.B) &
-											(io.if_iq(idx_2nd+1.U).valid === true.B) &
-											(io.if_iq(idx_2nd).bits(1,0) === "b11".U)
-								}
+	is_2nd16 := (io.if_iq(idx_2nd).valid === true.B) & io.if_iq(idx_2nd).bits(1,0) =/= "b11".U
+	is_2nd32 := 	(io.if_iq(idx_2nd).valid === true.B) &
+					(io.if_iq(idx_2nd+1.U).valid === true.B) &
+					(io.if_iq(idx_2nd).bits(1,0) === "b11".U)
+
 
 
 	override def is_1stCut: Bool = return preDecode_info(0).is_pineline_cut & ~is_1st00
@@ -84,11 +107,34 @@ class IQueue extends BranchPredict {
 
 
 
+	for ( i <- 0 until 4) yield { ibuf_pop(i) := io.if_iq(i).bits }
 
-	override def ibuf_pop(i: UInt): UInt = return io.if_iq(i).bits
 
 
-	
+	pc_qout := Mux(
+					iq_id_fifo.push_ack(1),
+					Mux1H(Seq(
+						is_00p00 -> pc_qout,
+						is_00p16 -> (pc_qout + 2.U),
+						is_16p16 -> (pc_qout + 4.U),
+						is_32p16 -> (pc_qout + 6.U),
+						is_00p32 -> (pc_qout + 4.U),
+						is_16p32 -> (pc_qout + 6.U),
+						is_32p32 -> (pc_qout + 8.U)
+					)),
+					Mux( iq_id_fifo.push_ack(0),
+						Mux1H(Seq(
+							is_00p00 -> pc_qout,
+							is_00p16 -> (pc_qout + 2.U),
+							is_16p16 -> (pc_qout + 4.U),
+							is_32p16 -> (pc_qout + 2.U),
+							is_00p32 -> (pc_qout + 4.U),
+							is_16p32 -> (pc_qout + 4.U),
+							is_32p32 -> (pc_qout + 4.U)
+						)),
+						pc_qout
+					)
+				)
 
 
 
@@ -102,9 +148,9 @@ class IQueue extends BranchPredict {
 	}
 
 
-	val iq_id_fifo = Module(new MultiPortFifo( new Info_iq_id, 4, 2, 2 )) //1 input, 1 output 	
 
-	def iq_id_ack(i : Int) = iq_id_fifo.io.push(i).valid & iq_id_fifo.io.push(i).ready
+
+	// def iq_id_ack(i : Int) = iq_id_fifo.push_ack(i)
 
 
 	iq_id_fifo.io.push(0).bits.instr  := Mux( is_1st16, pd16(0).io.instr16, pd32(0).io.instr32 )
@@ -120,32 +166,32 @@ class IQueue extends BranchPredict {
 
 	io.if_iq(0).ready := Mux1H(Seq(
 				is_00p00 -> false.B,
-				is_00p16 -> iq_id_ack(0),
-				is_16p16 -> iq_id_ack(0),
-				is_32p16 -> iq_id_ack(0),
-				is_00p32 -> iq_id_ack(0),
-				is_16p32 -> iq_id_ack(0),
-				is_32p32 -> iq_id_ack(0)
+				is_00p16 -> iq_id_fifo.push_ack(0),
+				is_16p16 -> iq_id_fifo.push_ack(0),
+				is_32p16 -> iq_id_fifo.push_ack(0),
+				is_00p32 -> iq_id_fifo.push_ack(0),
+				is_16p32 -> iq_id_fifo.push_ack(0),
+				is_32p32 -> iq_id_fifo.push_ack(0)
 	))
 
 	io.if_iq(1).ready := Mux1H(Seq(
 				is_00p00 -> false.B,
 				is_00p16 -> false.B,
-				is_16p16 -> iq_id_ack(1),
-				is_32p16 -> iq_id_ack(1),
-				is_00p32 -> iq_id_ack(0),
-				is_16p32 -> iq_id_ack(0),
-				is_32p32 -> iq_id_ack(0)
+				is_16p16 -> iq_id_fifo.push_ack(1),
+				is_32p16 -> iq_id_fifo.push_ack(1),
+				is_00p32 -> iq_id_fifo.push_ack(0),
+				is_16p32 -> iq_id_fifo.push_ack(0),
+				is_32p32 -> iq_id_fifo.push_ack(0)
 	))
 
 	io.if_iq(2).ready := Mux1H(Seq(
 				is_00p00 -> false.B,
 				is_00p16 -> false.B,
 				is_16p16 -> false.B,
-				is_32p16 -> iq_id_ack(1),
+				is_32p16 -> iq_id_fifo.push_ack(1),
 				is_00p32 -> false.B,
-				is_16p32 -> iq_id_ack(1),
-				is_32p32 -> iq_id_ack(1)
+				is_16p32 -> iq_id_fifo.push_ack(1),
+				is_32p32 -> iq_id_fifo.push_ack(1)
 	))
 
 	io.if_iq(3).ready := Mux1H(Seq(
@@ -155,7 +201,7 @@ class IQueue extends BranchPredict {
 				is_32p16 -> false.B,
 				is_00p32 -> false.B,
 				is_16p32 -> false.B,
-				is_32p32 -> iq_id_ack(1)
+				is_32p32 -> iq_id_fifo.push_ack(1)
 	))
 
 
