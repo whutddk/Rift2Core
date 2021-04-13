@@ -122,22 +122,22 @@ trait JTB {
 
 
 abstract class BranchPredict() extends Module with PreDecode with BHT with JTB{
-	val io = IO(new Bundle{
 
-		val bru_iq_b = new DecoupledIO( Bool() )
-		val bru_iq_j = new DecoupledIO( new Info_JTB )
 
-		val iq_pc_info = new DecoupledIO(UInt(64.W))
+	// val bru_iq_b = new DecoupledIO( Bool() )
+	// val bru_iq_j = new DecoupledIO( new Info_JTB )
 
-		val flush = Input(Bool())
-	})
+	val iq_pc_info = new DecoupledIO(UInt(64.W))
+
+	// val flush = Input(Bool())
+
 
 /*	
 	branch history queue, for bru result checking 
 	write when one branch instr decode
 	read and pop when a bru return 
 */
-	val bhq = Module(new MultiPortFifo( new Info_BHQ, 4, 1, 1 )) //1 input, 1 output 
+	val bhq = Module(new Queue( new Info_BHQ, 16 )) //1 input, 1 output 
 
 
 /* 
@@ -147,7 +147,7 @@ abstract class BranchPredict() extends Module with PreDecode with BHT with JTB{
 	push when a jalr decode
 	pop and check when a bru jalr return
 */
-	val jhq = Module(new MultiPortFifo( UInt(64.W), 4, 1, 1 )) //1 input, 1 output I dont want to waste resource in 2 jalr instr situationb
+	val jhq = Module(new Queue( UInt(64.W), 16 )) //1 input, 1 output I dont want to waste resource in 2 jalr instr situationb
 	
 	val ras = Module(new Gen_ringStack( UInt(32.W), 4 ))
 
@@ -159,9 +159,14 @@ abstract class BranchPredict() extends Module with PreDecode with BHT with JTB{
 
 
 
-	def is_1stCut = preDecode_info(0).is_pineline_cut
-	def is_2ndCut = preDecode_info(1).is_pineline_cut
+	def is_1stCut: Bool
+	def is_2ndCut: Bool
 	def is_noCut  = ~is_1stCut & ~is_2ndCut
+	override def is_2nd00: Bool = { 
+		return 	(is_1st00) |
+				(~is_2nd16 & ~is_2nd32) |
+				is_1stCut
+	}
 
 	def is_jal    = MuxCase( false.B, Array( is_1stCut -> preDecode_info(0).is_jal,    is_2ndCut -> preDecode_info(1).is_jal ))
 	def is_jalr   = MuxCase( false.B, Array( is_1stCut -> preDecode_info(0).is_jalr,   is_2ndCut -> preDecode_info(1).is_jalr ))
@@ -172,7 +177,10 @@ abstract class BranchPredict() extends Module with PreDecode with BHT with JTB{
 	def is_fencei = MuxCase( false.B, Array( is_1stCut -> preDecode_info(0).is_fencei, is_2ndCut -> preDecode_info(1).is_fencei ))
 	def imm       = MuxCase( false.B, Array( is_1stCut -> preDecode_info(0).imm,       is_2ndCut -> preDecode_info(1).imm ))
 
-	def ori_pc: UInt
+	def pc1: UInt
+	def pc2: UInt
+
+	def ori_pc = Mux( is_1stCut, pc1, pc2)
 
 
 
@@ -182,8 +190,8 @@ abstract class BranchPredict() extends Module with PreDecode with BHT with JTB{
 	def next_pc = Mux( is_rvc, ori_pc + 2.U, ori_pc + 4.U )
 	def jal_pc = ori_pc + imm
 	def branch_pc = ori_pc + imm
-	def misPredict_pc_b = bhq.io.pop(0).bits.opp_pc
-	def misPredict_pc_j = io.bru_iq_j.bits
+	def misPredict_pc_b = bhq.io.deq.bits.opp_pc
+	def misPredict_pc_j = bru_iq_j.bits
 	def ras_pc = ras.io.pop.bits
 	def jtb_pc = jtb_read(ori_pc)
 	def jalr_pc = Mux( is_ras_taken, ras_pc, jtb_pc)
@@ -192,46 +200,52 @@ abstract class BranchPredict() extends Module with PreDecode with BHT with JTB{
 	def is_ras_taken          = is_return & ras.io.pop.valid
 	def is_predict_taken      = bht_predict(ori_pc)
 
-	def is_misPredict_taken_b = (io.bru_iq_b.bits =/= bhq.io.pop(0).bits.dir)
-	def is_misPredict_taken_j = (io.bru_iq_j.bits.tgt_pc =/= jhq.io.pop(0).bits)
+	def is_misPredict_taken_b = (bru_iq_b.bits =/= bhq.io.deq.bits.dir)
+	def is_misPredict_taken_j = (bru_iq_j.bits.tgt_pc =/= jhq.io.deq.bits)
 
 
 
-	io.iq_pc_info.valid := is_jal | is_jalr | is_predict_taken | is_misPredict_taken_b | is_misPredict_taken_j
-	io.iq_pc_info.bits  := MuxCase(DontCare, Array(
+	iq_pc_info.valid := is_jal | is_jalr | is_predict_taken | is_misPredict_taken_b | is_misPredict_taken_j
+	iq_pc_info.bits  := MuxCase(DontCare, Array(
 		is_jal                -> jal_pc,
 		is_jalr               -> jalr_pc,
 		is_predict_taken      -> branch_pc,
-		is_misPredict_taken_b -> bhq.io.pop(0).bits.opp_pc,
-		is_misPredict_taken_j -> io.bru_iq_j.bits
+		is_misPredict_taken_b -> bhq.io.deq.bits.opp_pc,
+		is_misPredict_taken_j -> bru_iq_j.bits
 	))
 
 
 	//bht update
-	override def bht_sel = bhq.io.pop(0).bits.ori_pc
-	bru_iq_b <> io.bru_iq_b
+	override def bht_sel = bhq.io.deq.bits.ori_pc
+	// bru_iq_b <> bru_iq_b
 
 	//bhq update
-	bhq.io.push(0).bits.dir    := is_predict_taken
-	bhq.io.push(0).bits.ori_pc := ori_pc
-	bhq.io.push(0).bits.opp_pc := Mux( is_predict_taken, next_pc, branch_pc )
-
+	bhq.io.enq.bits.dir    := is_predict_taken
+	bhq.io.enq.bits.ori_pc := ori_pc
+	bhq.io.enq.bits.opp_pc := Mux( is_predict_taken, next_pc, branch_pc )
+	bhq.io.enq.valid       := is_branch & ~is_noCut
 	//jhq update
-	jhq.io.push(0).bits := jalr_pc
+	jhq.io.enq.bits  := jalr_pc
+	jhq.io.enq.valid := is_jalr & ~is_noCut
 
 	//jtb
-	bru_iq_j <> io.bru_iq_j
+	// bru_iq_j <> bru_iq_j
 
 	//ras
 	ras.io.push.bits := Mux( is_call, next_pc, DontCare)
 
-	assert( ~(bhq.io.push(0).valid & ~bhq.io.push(0).ready), "Assert Fail at BHQ.push(0)" )
-	assert( ~(bhq.io.push(1).valid & ~bhq.io.push(1).ready), "Assert Fail at BHQ.push(1)" )
-	assert( ~(~bhq.io.push(0).valid & bhq.io.push(1).valid ), "Assert Fail at BHQ.push(1UP0)" )
-	assert( ~(bhq.io.pop(0).ready & ~bhq.io.pop(0).valid), "Assert Fail at BHQ.pop" )
 
-	assert( ~(jhq.io.push(0).valid & ~jhq.io.push(0).ready), "Assert Fail at JHQ.push" )
-	assert( ~(jhq.io.pop(0).ready & ~jhq.io.pop(0).valid), "Assert Fail at JHQ.pop" )
+	def bhq_nack = bhq.io.enq.valid & ~bhq.io.enq.ready
+	def jhq_nack = jhq.io.enq.valid & ~jhq.io.enq.ready
+	def is_branch_predict_nready = bhq_nack | jhq_nack
+	assert( ~(bhq_nack & jhq_nack) )
+
+
+	// assert( ~(bhq.io.enq.valid & ~bhq.io.enq.ready), "Assert Fail at BHQ.push(0)" )
+	assert( ~(bhq.io.deq.ready & ~bhq.io.deq.valid), "Assert Fail at BHQ.pop" )
+
+	// assert( ~(jhq.io.enq.valid & ~jhq.io.enq.ready), "Assert Fail at JHQ.push" )
+	assert( ~(jhq.io.deq.ready & ~jhq.io.deq.valid), "Assert Fail at JHQ.pop" )
 
 
 

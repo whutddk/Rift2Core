@@ -34,7 +34,7 @@ import rift2Core.basic._
 
 object testMain extends App {
 
-  Driver.execute(args, () => new Ifetch() )
+  Driver.execute(args, () => new IQueue() )
 }
 
 

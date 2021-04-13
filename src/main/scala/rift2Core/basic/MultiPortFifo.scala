@@ -97,9 +97,6 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 
 
 
-
-
-
 		rd_ptr := rd_ptr + pop_cnt
 		wr_ptr := wr_ptr + push_cnt
 	}

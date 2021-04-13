@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:49:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-13 10:13:32
+* @Last Modified time: 2021-04-13 11:05:58
 */
 
 
@@ -41,7 +41,7 @@ class Info_pc_if extends Bundle {
 // }
 
 class Info_iq_id extends Bundle {
-	val isRVC = Output(Bool())
+	val is_rvc = Output(Bool())
 	val pc = Output(UInt(64.W))
 	val instr = Output(UInt(32.W)) 
 }
