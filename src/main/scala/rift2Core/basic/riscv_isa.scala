@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-13 19:40:43
+* @Last Modified time: 2021-04-13 20:24:13
 */
 
 /*
@@ -614,7 +614,16 @@ class Info_iq_ib extends Bundle {
 
 class Info_ib_id extends Bundle {
 	val is_rvc = Bool()
-	val pc = UInt(64.W)
+	val pc = UInt(32.W)
 	val instr = UInt(32.W)
 }
+
+class Info_ib_pc extends Bundle {
+	val addr = UInt(32.W)
+}
+
+class Info_cmm_pc extends Bundle {
+	val addr = UInt(32.W)
+}
+
 

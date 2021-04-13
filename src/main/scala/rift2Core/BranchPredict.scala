@@ -128,8 +128,8 @@ class BranchPredict() extends Module with BHT with JTB{
 		val bru_iq_b = Flipped(new DecoupledIO( Bool() ))
 		val bru_iq_j = Flipped(new DecoupledIO( new Info_JTB ))
 
-		val ib_pc_info = new DecoupledIO(UInt(64.W))
-		val ib_iq_info = new DecoupledIO(UInt(64.W))
+		val ib_pc_info = new DecoupledIO(new Info_ib_pc)
+		val ib_iq_info = new DecoupledIO(new Info_ib_pc)
 
 		val iq_ib = Vec(2, Flipped(new DecoupledIO(new Info_iq_ib) ))
 		val ib_id = Vec(2, new DecoupledIO(new Info_ib_id))
@@ -242,7 +242,7 @@ class BranchPredict() extends Module with BHT with JTB{
 
 
 	io.ib_pc_info.valid := is_jal | is_jalr | is_predict_taken | is_misPredict_taken_b | is_misPredict_taken_j
-	io.ib_pc_info.bits  := MuxCase(DontCare, Array(
+	io.ib_pc_info.bits.addr  := MuxCase(DontCare, Array(
 		is_jal                -> jal_pc,
 		is_jalr               -> jalr_pc,
 		is_predict_taken      -> branch_pc,
