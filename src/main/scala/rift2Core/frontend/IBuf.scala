@@ -3,7 +3,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-09 10:34:13
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-09 10:34:13
+* @Last Modified time: 2021-04-13 10:12:11
 */
 
 /*
@@ -30,26 +30,41 @@ import chisel3.util._
 import rift2Core.basic._
 
 class IAlign{
-	val io = new Bundle{
-		val pc    = Wire(UInt(64.W))
-		val instr = Wire(UInt(128.W))
-		val align_instr = Wire(UInt(128.W))
-		val align_cnt  = Wire(UInt(8.W))      // 16bits has a mask		
-	}
 
-	io.align_instr := Mux1H(Seq(
-		(io.pc(3,1) === 0.U) -> io.instr(127,0),
-		(io.pc(3,1) === 1.U) -> io.instr(127,16),
-		(io.pc(3,1) === 2.U) -> io.instr(127,32),
-		(io.pc(3,1) === 3.U) -> io.instr(127,48),
-		(io.pc(3,1) === 4.U) -> io.instr(127,64),
-		(io.pc(3,1) === 5.U) -> io.instr(127,80),
-		(io.pc(3,1) === 6.U) -> io.instr(127,96),
-		(io.pc(3,1) === 7.U) -> io.instr(127,112),
+	val pc    = Wire(UInt(64.W))
+	val instr = Wire(UInt(128.W))
+	val align_instr = Wire(UInt(128.W))
+	val align_mask  = Wire( UInt(8.W) )
+
+
+
+	align_instr := Mux1H(Seq(
+		(pc(3,1) === 0.U) -> instr(127,0),
+		(pc(3,1) === 1.U) -> instr(127,16),
+		(pc(3,1) === 2.U) -> instr(127,32),
+		(pc(3,1) === 3.U) -> instr(127,48),
+		(pc(3,1) === 4.U) -> instr(127,64),
+		(pc(3,1) === 5.U) -> instr(127,80),
+		(pc(3,1) === 6.U) -> instr(127,96),
+		(pc(3,1) === 7.U) -> instr(127,112),
 	))
 
-	io.align_cnt := 8.U - io.pc(3,1)
+	align_mask := Mux1H(Seq(
+		(pc(3,1) === 0.U) -> Fill(8,1.U),
+		(pc(3,1) === 1.U) -> Fill(7,1.U),
+		(pc(3,1) === 2.U) -> Fill(6,1.U),
+		(pc(3,1) === 3.U) -> Fill(5,1.U),
+		(pc(3,1) === 4.U) -> Fill(4,1.U),
+		(pc(3,1) === 5.U) -> Fill(3,1.U),
+		(pc(3,1) === 6.U) -> Fill(2,1.U),
+		(pc(3,1) === 7.U) -> Fill(1,1.U),
+	))
+
+	def out(i: Int): UInt = {
+		return align_instr( 16*i+15, 16*i)
+	} 
 	
+	def is_valid(i: Int): Bool = return Mux( align_mask(i) === 1.U, true.B, false.B )
 	
 }
 
@@ -61,26 +76,26 @@ trait IBuf {
 	val ibuf_valid_i = Wire(Bool())
 	val ibuf_ready_i = Wire(Bool())
 
-	// val instr_buf  = RegInit(0.U(256.W))
-	// val instr_cnt = RegInit(0.U(5.W))    //can be 0 ~16
-
-	// val ibuf_valid_o = Wire(Vec(2,Bool()))
-	// val ibuf_ready_o = Wire(Vec(2,Bool()))
-
 	val ia = new IAlign()
 
-	// def ibuf_o_ack(i: UInt) = ibuf_valid_o(i) & ibuf_ready_o(i)
+
+	val ibuf = new MultiPortFifo( UInt(16.W), 4, 8, 4 ) 
+
+	for ( i <- 0 until 8 ) yield ibuf.io.push(i).bits  := ia.out(i)
+	for ( i <- 0 until 8 ) yield ibuf.io.push(i).valid := ia.is_valid(i) & ibuf_valid_i
+
+	ibuf_ready_i := 
+		ibuf.io.push(0).ready & ibuf.io.push(1).ready & ibuf.io.push(2).ready & ibuf.io.push(3).ready & 
+		ibuf.io.push(4).ready & ibuf.io.push(5).ready & ibuf.io.push(6).ready & ibuf.io.push(7).ready
+	
+
+	// def is_ibuf_i_ack: Bool = (ibuf.io.push(0).valid & ~ibuf.io.push(0).ready)
 
 
-	val instr_buf = new MultiPortFifo( UInt(16.W), 4, 8, 2 ) 
+	for ( i <- 0 until 8 ) yield {
+		assert( ~(ibuf.io.push(i).valid & ~ibuf.io.push(i).ready), "Assert Failed at ibuf push")
+	}
 
-
-
-
-
-
-
-	// assert ( ~(ibuf_o_ack(1) === true.B & ibuf_o_ack(0) === false.B), "Assert Failed at IBuf" )
 }
 
 
