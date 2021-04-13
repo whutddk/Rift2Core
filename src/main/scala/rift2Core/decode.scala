@@ -32,7 +32,7 @@ import rift2Core.frontend._
 
 class Decode extends Module {
 	val io = IO( new Bundle {
-		val iq_id = Flipped(new DecoupledIO(new Info_iq_id()))
+		val iq_id = Flipped(new DecoupledIO(new Info_ib_id()))
 		val id_dpt = new DecoupledIO(new Info_id_dpt())
 	})
 

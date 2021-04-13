@@ -77,50 +77,6 @@ class PreDecode32() {
 
 }
 
-trait PreDecode {
-	
-	val ibuf_pop = Wire(Vec(4, UInt(16.W)))
-	val preDecode_info = Wire(Vec(2, new Info_preDecode))
-
-
-
-
-	val pd16 = for ( i <- 0 until 2 ) yield { val mdl = new PreDecode16(); mdl }
-	val pd32 = for ( i <- 0 until 2 ) yield { val mdl = new PreDecode32(); mdl }
-
-
-	def is_1st00 = ~is_1st16 & ~is_1st32
-	val is_1st16 = Wire(Bool())
-	val is_1st32 = Wire(Bool())
-	
-	def idx_2nd: UInt
-
-	val is_2nd00 = Wire(Bool())
-	val is_2nd16 = Wire(Bool())
-	val is_2nd32 = Wire(Bool())
-
-
-	def is_00p00 = is_2nd00 & is_1st00
-	def is_00p16 = is_2nd00 & is_1st16
-	def is_00p32 = is_2nd00 & is_1st32
-	def is_16p16 = is_2nd16 & is_1st16
-	def is_16p32 = is_2nd16 & is_1st32
-	def is_32p16 = is_2nd32 & is_1st16
-	def is_32p32 = is_2nd32 & is_1st32
-
-
-	pd16(0).io.instr16 := ibuf_pop(0.U)
-	pd32(0).io.instr32 := Cat( ibuf_pop(1.U), ibuf_pop(0.U))
-
-	pd16(1).io.instr16 := ibuf_pop(idx_2nd)
-	pd32(1).io.instr32 := Cat( ibuf_pop(idx_2nd+1.U), ibuf_pop(idx_2nd))
-
-
-
-
-	preDecode_info(0) := Mux( is_1st16, pd16(0).io.info, pd32(0).io.info ) //1st00 will not be care
-	preDecode_info(1) := Mux( is_2nd16, pd16(1).io.info, pd32(1).io.info ) //2nd00 will not be care
-}
 
 
 

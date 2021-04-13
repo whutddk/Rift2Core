@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-12 19:49:21
+* @Last Modified time: 2021-04-13 17:27:27
 */
 
 /*
@@ -605,5 +605,10 @@ class Info_preDecode extends Bundle {
 }
 
 
+class Info_iq_ib extends Bundle {
 
+	val info = new Info_preDecode
+	val instr = UInt(32.W)
+	val pc = UInt(32.W)
+}
 

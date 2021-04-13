@@ -27,6 +27,7 @@ package test
 
 import chisel3._
 import rift2Core._
+import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.basic._
 
@@ -34,7 +35,7 @@ import rift2Core.basic._
 
 object testMain extends App {
 
-  Driver.execute(args, () => new IQueue() )
+  Driver.execute(args, () => new IQueue )
 }
 
 
