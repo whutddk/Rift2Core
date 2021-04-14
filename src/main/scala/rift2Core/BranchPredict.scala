@@ -90,40 +90,39 @@ class Info_JTB extends Bundle {
 }
 
 
-/*
-	jalr target buf
-	read only when ras is down
-	write when any jalr return
-	the pc and target pc will both be recorded
-*/
-trait JTB {
-	val bru_iq_j_bits = Wire( new Info_JTB )
+// /*
+// 	jalr target buf
+// 	read only when ras is down
+// 	write when any jalr return
+// 	the pc and target pc will both be recorded
+// */
+// trait JTB {
+// 	val bru_iq_j_bits = Wire( new Info_JTB )
 
-	val jtb_update_ptr = RegInit(0.U(3.W))
-	val jtb_buf = RegInit(VecInit(Seq.fill(8)( 0.U.asTypeOf(new Info_JTB) ) )) // 2 pc is init as 8kw
+// 	val jtb_update_ptr = RegInit(0.U(3.W))
+// 	val jtb_buf = RegInit(VecInit(Seq.fill(8)( 0.U.asTypeOf(new Info_JTB) ) )) // 2 pc is init as 8kw
 
-	val is_bru_iq_j_ack = Wire(Bool())
+// 	val is_bru_iq_j_ack = Wire(Bool())
 
-	def is_pc_hit(ori_pc: UInt) = jtb_buf.exists((x: Info_JTB) => x.ori_pc === ori_pc)
-	def is_pc_idx(ori_pc: UInt): UInt = jtb_buf.indexWhere((x: Info_JTB) => x.ori_pc === ori_pc)
+// 	def is_pc_hit(ori_pc: UInt) = jtb_buf.exists((x: Info_JTB) => x.ori_pc === ori_pc)
+// 	def is_pc_idx(ori_pc: UInt): UInt = jtb_buf.indexWhere((x: Info_JTB) => x.ori_pc === ori_pc)
 
-	when( is_bru_iq_j_ack ) {
-		def updata_idx = Mux( is_pc_hit(bru_iq_j_bits.ori_pc), is_pc_idx(bru_iq_j_bits.ori_pc), jtb_update_ptr )
-		jtb_update_ptr := Mux( is_pc_hit(bru_iq_j_bits.ori_pc), jtb_update_ptr, jtb_update_ptr + 1.U )
+// 	when( is_bru_iq_j_ack ) {
+// 		def updata_idx = Mux( is_pc_hit(bru_iq_j_bits.ori_pc), is_pc_idx(bru_iq_j_bits.ori_pc), jtb_update_ptr )
+// 		jtb_update_ptr := Mux( is_pc_hit(bru_iq_j_bits.ori_pc), jtb_update_ptr, jtb_update_ptr + 1.U )
 
-		jtb_buf(jtb_update_ptr).ori_pc := bru_iq_j_bits.ori_pc
-		jtb_buf(jtb_update_ptr).tgt_pc := bru_iq_j_bits.tgt_pc
-	}
+// 		jtb_buf(jtb_update_ptr).ori_pc := bru_iq_j_bits.ori_pc
+// 		jtb_buf(jtb_update_ptr).tgt_pc := bru_iq_j_bits.tgt_pc
+// 	}
 
-	def jtb_read(ori_pc: UInt): UInt = { 
-		Mux( is_pc_hit(ori_pc), jtb_buf(is_pc_idx(ori_pc)).tgt_pc, "h80000000".U )
-	} 
-}
-
-
+// 	def jtb_read(ori_pc: UInt): UInt = { 
+// 		Mux( is_pc_hit(ori_pc), jtb_buf(is_pc_idx(ori_pc)).tgt_pc, "h80000000".U )
+// 	} 
+// }
 
 
-class BranchPredict() extends Module with BHT with JTB{
+
+class BranchPredict() extends Module with BHT {
 	val io = IO(new Bundle {
 		val bru_iq_b = Flipped(new DecoupledIO( Bool() ))
 		val bru_iq_j = Flipped(new DecoupledIO( new Info_JTB ))
@@ -142,6 +141,8 @@ class BranchPredict() extends Module with BHT with JTB{
 	iq_id_fifo.io.flush := io.flush
 
 	val is_ib_id_ack = Wire(Vec(2, Bool()))
+
+	val ib_lock = RegInit(false.B)
 
 /*	
 	branch history queue, for bru result checking 
@@ -168,25 +169,21 @@ class BranchPredict() extends Module with BHT with JTB{
 	bru_iq_b_bits     := io.bru_iq_b.bits
 	io.bru_iq_b.ready := true.B
 
-	is_bru_iq_j_ack := io.bru_iq_j.valid & io.bru_iq_j.ready
-	bru_iq_j_bits     := io.bru_iq_j.bits
+	def is_bru_iq_j_ack = io.bru_iq_j.valid & io.bru_iq_j.ready
 	io.bru_iq_j.ready := true.B
 
 	io.ib_iq_info.bits := io.ib_pc_info.bits
 	io.ib_iq_info.valid := io.ib_pc_info.valid
 
-	io.iq_ib(0).ready := is_ib_id_ack(0)
-	io.iq_ib(1).ready := is_ib_id_ack(1)
+	io.iq_ib(0).ready := iq_id_fifo.push_ack(0) & ~ib_lock
+	io.iq_ib(1).ready := iq_id_fifo.push_ack(1) & ~ib_lock
 
-	iq_id_fifo.io.push(0).bits.pc := io.iq_ib(0).bits.pc
-	iq_id_fifo.io.push(1).bits.pc := io.iq_ib(1).bits.pc
-	iq_id_fifo.io.push(0).bits.instr := io.iq_ib(0).bits.instr
-	iq_id_fifo.io.push(1).bits.instr := io.iq_ib(1).bits.instr
-	iq_id_fifo.io.push(0).bits.is_rvc := io.iq_ib(0).bits.info.is_rvc
-	iq_id_fifo.io.push(1).bits.is_rvc := io.iq_ib(1).bits.info.is_rvc
+	iq_id_fifo.io.push(0).bits := jfilter(io.iq_ib(0).bits, is_ras_taken & is_1stCut) 
+	iq_id_fifo.io.push(1).bits := jfilter(io.iq_ib(1).bits, is_ras_taken & is_2ndCut) 
 
-	iq_id_fifo.io.push(0).valid := io.iq_ib(0).valid & Mux(is_1stCut, is_branch_predict_nready, true.B)
-	iq_id_fifo.io.push(1).valid := io.iq_ib(1).valid & ~is_1stCut & Mux(is_2ndCut, is_branch_predict_nready, true.B)
+
+	iq_id_fifo.io.push(0).valid := ~ib_lock & io.iq_ib(0).valid & Mux(is_1stCut, is_branch_predict_nready, true.B)
+	iq_id_fifo.io.push(1).valid := ~ib_lock & io.iq_ib(1).valid & ~is_1stCut & Mux(is_2ndCut, is_branch_predict_nready, true.B)
 
 	io.ib_id <> iq_id_fifo.io.pop
 
@@ -227,32 +224,65 @@ class BranchPredict() extends Module with BHT with JTB{
 	def jal_pc = ori_pc + imm
 	def branch_pc = ori_pc + imm
 	def misPredict_pc_b = bhq.io.deq.bits.opp_pc
-	def misPredict_pc_j = bru_iq_j_bits
+	def misPredict_pc_j = io.bru_iq_j.bits
 	def ras_pc = ras.io.pop.bits
-	def jtb_pc = jtb_read(ori_pc)
-	def jalr_pc = Mux( is_ras_taken, ras_pc, jtb_pc)
+	def jalr_pc = Mux( is_ras_taken, ras_pc, DontCare)
 
 
 	def is_ras_taken          = is_return & ras.io.pop.valid
 	def is_predict_taken      = bht_predict(ori_pc)
 
 	def is_misPredict_taken_b = (bru_iq_b_bits =/= bhq.io.deq.bits.dir)
-	def is_misPredict_taken_j = (bru_iq_j_bits.tgt_pc =/= jhq.io.deq.bits)
 
 
 
-	io.ib_pc_info.valid := is_jal | is_jalr | is_predict_taken | is_misPredict_taken_b | is_misPredict_taken_j
+	io.ib_pc_info.valid := is_jal | is_jalr | is_predict_taken | is_misPredict_taken_b
 	io.ib_pc_info.bits.addr  := MuxCase(DontCare, Array(
 		is_jal                -> jal_pc,
 		is_jalr               -> jalr_pc,
 		is_predict_taken      -> branch_pc,
 		is_misPredict_taken_b -> bhq.io.deq.bits.opp_pc,
-		is_misPredict_taken_j -> bru_iq_j_bits.tgt_pc
+		is_bru_iq_j_ack       -> io.bru_iq_j.bits.tgt_pc
 	))
+
+	when( io.flush ) {
+		ib_lock := false.B
+	}
+	.elsewhen( (is_jalr & ~is_ras_taken) | is_fencei ) {
+		ib_lock := true.B
+	}
 
 
 	//bht update
 	bht_sel := bhq.io.deq.bits.ori_pc
+
+
+
+
+	def jfilter(ori_info: Info_iq_ib, is_ras_pop: Bool) = {
+
+		def f_jrToj: UInt = { println("JR TO J happened"); return "b1010000000000001".U(32.W) }
+		def f_jalrTojal(x: UInt): UInt = { println("Jalr TO Jal happened"); return (x | "b1000".U) }
+
+		val filt_info = Wire(new Info_ib_id)
+
+		filt_info.pc := ori_info.pc
+		filt_info.is_rvc := ori_info.is_rvc
+		filt_info.instr := Mux( is_ras_pop,
+								Mux( ori_info.is_rvc,
+									f_jrToj,
+									f_jalrTojal(ori_info.instr)
+								),
+								ori_info.instr								
+		 )
+
+
+		filt_info
+	}
+
+
+
+
 
 	//bhq update
 	bhq.io.enq.bits.dir    := is_predict_taken
