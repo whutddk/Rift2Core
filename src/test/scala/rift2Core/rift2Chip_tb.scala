@@ -35,7 +35,7 @@ import rift2Core.basic._
 
 object testMain extends App {
 
-  Driver.execute(args, () => new Pc_gen )
+  Driver.execute(args, () => new Regfiles )
 }
 
 

@@ -11,83 +11,70 @@ package rift2Core
 import chisel3._
 import chisel3.util._
 
+import rift2Core.basic._
+
 class Regfiles extends Module{
 	val io = IO(new Bundle{
 
-
-		val wb_files = Vec(32, Vec(4, Input(UInt(64.W))))
-
-		val rn_op = Vec(32, Vec(4, Input(Bool())))
-		val wb_op = Vec(32, Vec(4, Input(Bool())))
-		val cm_op = Vec(32, Vec(4, Input(Bool())))
+		val wb_reg = Input(new Info_wb_reg)
 
 
-		val files = Vec(32, Vec(4, Output(UInt(64.W))))
-		val log = Vec(32,Vec(4, Output(UInt(2.W))) )
-		val rn_X = Vec(32, Output(UInt(2.W))) 
-		val ar_X = Vec(32, Output(UInt(2.W))) 
+
+		val rn_op = Input(Vec(32, Vec(4, Bool())))
+		val cm_op = Input(Vec(32, Vec(4, Bool())))
+
+
+		val files = Output(Vec(32, Vec(4, UInt(64.W))))
+		val log = Output(Vec(32,Vec(4, UInt(2.W))) )
+		val rn_X = Output(Vec(32, UInt(2.W))) 
+		val ar_X = Output(Vec(32, UInt(2.W))) 
 
 		val flush = Input(Bool())
 	})
 
 
+	val wb_op = Wire(Vec(32, Vec(4, Bool())))
+	wb_op := io.wb_reg.enable
+
+	val files = RegInit( VecInit(Seq.fill(32)(VecInit(Seq.fill(4)(0.U(64.W)) )))   )
+	val regLog = RegInit( VecInit(Seq.fill(32)( VecInit( (0.U(2.W)),(0.U(2.W)),(0.U(2.W)),(2.U(2.W)) )))   ) // the first reg is wb
+
+	val rename_X = RegInit( VecInit( Seq.fill(32)(0.U(2.W))) )
+	val archit_X = RegInit( VecInit( Seq.fill(32)(0.U(2.W))) )
 
 
 
-	val register = Reg(Vec(32,Vec(4, UInt(64.W)) ))
-	val regLog = Reg(Vec(32,Vec(4, UInt(2.W)) ))
-
-	val rename_X = Reg(Vec(32, UInt(2.W)) )
-	val archit_X = Reg(Vec(32, UInt(2.W)) )
-
-
-
-	io.files := register
+	io.files := files
 	io.log := regLog
 	io.rn_X := rename_X
 	io.ar_X := archit_X
 
+	for ( i <- 0 until 32; j <- 0 until 4) yield {
+		files(i)(j) := Mux( io.wb_reg.enable(i)(j), io.wb_reg.dnxt(i)(j), files(i)(j) )
+	}
+	
 
 
-
-		when(reset.asBool) {
-			for ( i <- 0 until 32;  j  <- 0 until 4) yield 
-				register(i)(j) := 0.U(64.W)
-		} 
-		.otherwise {
-			register := io.wb_files
-		}
-
-
-
-	for ( i <- 0 until 32;  j  <- 0 until 4) yield {
-		when(reset.asBool) {
-			regLog(i)(0) := 2.U(2.W)		//when reset, the first reg is wb
-			regLog(i)(1) := 0.U(2.W)
-			regLog(i)(2) := 0.U(2.W)
-			regLog(i)(3) := 0.U(2.W)
-
-			rename_X(i) := 0.U(2.W)
-			archit_X(i) := 0.U(2.W)
-		}
-		.elsewhen(io.flush) {
+	for ( i <- 0 until 32; j <- 0 until 4) yield {
+		when(io.flush) {
 			regLog(i)(j) := Mux( archit_X(i) === j.U , 2.U , 0.U)
 			rename_X(i) := archit_X(i)
 		}
-		.elsewhen(io.rn_op(i)(j)) {
-			regLog(i)(j) := 1.U(2.W)
-			rename_X(i) := j.asUInt()
+		.otherwise{
+			when(io.rn_op(i)(j)) {
+				regLog(i)(j) := 1.U(2.W)
+				rename_X(i) := j.asUInt()
+			}
+			when(wb_op(i)(j)) {
+				regLog(i)(j) := 2.U(2.W)
+			}
+			when(io.cm_op(i)(j)) {
+				regLog(i)( archit_X(i) ) := 0.U(2.W) //when reg i is commit, the last one should be free
+				archit_X(i) := j.U
+			}
 		}
-		.elsewhen(io.wb_op(i)(j)) {
-			regLog(i)(j) := 2.U(2.W)
-		}
-		.elsewhen(io.cm_op(i)(j)) {
-			regLog(i)( archit_X(i) ) := 0.U(2.W) //when reg i is commit, the last one should be free
-			archit_X(i) := j.U
-		}
-		.otherwise {
 
-		}		
+	
 	}
 
 

@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-13 20:24:13
+* @Last Modified time: 2021-04-14 10:40:20
 */
 
 /*
@@ -627,3 +627,8 @@ class Info_cmm_pc extends Bundle {
 }
 
 
+
+class Info_wb_reg extends Bundle {
+	val dnxt = Vec(32, Vec(4, UInt(64.W)))
+	val enable = Vec(32, Vec(4, Bool()))
+}
