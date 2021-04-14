@@ -267,16 +267,15 @@ class BranchPredict() extends Module with BHT {
 		val filt_info = Wire(new Info_ib_id)
 
 		filt_info.pc := ori_info.pc
-		filt_info.is_rvc := ori_info.is_rvc
+		filt_info.is_rvc := ori_info.info.is_rvc
 		filt_info.instr := Mux( is_ras_pop,
-								Mux( ori_info.is_rvc,
+								Mux( ori_info.info.is_rvc,
 									f_jrToj,
 									f_jalrTojal(ori_info.instr)
 								),
 								ori_info.instr								
 		 )
-
-
+		 
 		filt_info
 	}
 

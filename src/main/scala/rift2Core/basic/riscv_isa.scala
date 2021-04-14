@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-14 10:40:20
+* @Last Modified time: 2021-04-14 19:20:52
 */
 
 /*
@@ -631,4 +631,16 @@ class Info_cmm_pc extends Bundle {
 class Info_wb_reg extends Bundle {
 	val dnxt = Vec(32, Vec(4, UInt(64.W)))
 	val enable = Vec(32, Vec(4, Bool()))
+
+}
+
+class Info_cmm_lsu extends Bundle {
+	val is_fence_commit = Bool()
+	val is_store_commit = Bool()
+}
+
+class Info_lsu_cmm extends Bundle {
+	val is_accessFault = Bool()
+	val is_misAlign = Bool()
+	val trap_addr = UInt(64.W)
 }

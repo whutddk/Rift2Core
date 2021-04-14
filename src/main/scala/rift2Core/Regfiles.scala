@@ -23,6 +23,8 @@ class Regfiles extends Module{
 		val rn_op = Input(Vec(32, Vec(4, Bool())))
 		val cm_op = Input(Vec(32, Vec(4, Bool())))
 
+		// val hint_op = Input(Vec(32, Vec(4, Bool())))  //hint operation for marking an instr special
+
 
 		val files = Output(Vec(32, Vec(4, UInt(64.W))))
 		val log = Output(Vec(32,Vec(4, UInt(2.W))) )
@@ -66,12 +68,13 @@ class Regfiles extends Module{
 				rename_X(i) := j.asUInt()
 			}
 			when(wb_op(i)(j)) {
-				regLog(i)(j) := 2.U(2.W)
+				regLog(i)(j) := (regLog(i)(j) | "b10".U) //when hint will stay on 2, when normal wb will be 3
 			}
 			when(io.cm_op(i)(j)) {
 				regLog(i)( archit_X(i) ) := 0.U(2.W) //when reg i is commit, the last one should be free
 				archit_X(i) := j.U
 			}
+
 		}
 
 	

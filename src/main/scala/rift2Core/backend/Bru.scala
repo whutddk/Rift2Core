@@ -34,6 +34,7 @@ class Bru extends Module {
 		val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
 		val bru_exe_iwb = new DecoupledIO(new Exe_iwb_info)
 
+		val cmm_bru_ilp = Input(Bool())
 		val bru_iq_info = Output(new Info_bru_id)
 
 		val flush = Input(Bool())
@@ -46,6 +47,7 @@ class Bru extends Module {
 	val jalr_valid = Reg(Bool())
 	val jalr_pc = Reg(UInt(64.W))
 
+	def iss_exe_ack = io.bru_iss_exe.valid & io.bru_iss_exe.ready
 	def iwb_ack = io.bru_exe_iwb.valid & io.bru_exe_iwb.ready
 
 
@@ -61,10 +63,11 @@ class Bru extends Module {
 		io.bru_iss_exe.bits.fun.blt  -> (op1.asSInt < op2.asSInt),
 		io.bru_iss_exe.bits.fun.bge  -> (op1.asSInt >= op2.asSInt),
 		io.bru_iss_exe.bits.fun.bltu -> (op1 <  op2),
-		io.bru_iss_exe.bits.fun.bgeu -> (op1 >= op2)
+		io.bru_iss_exe.bits.fun.bgeu -> (op1 >= op2),
 	))
 
-
+	// two back to back branch&jalr may be executed together, the 2nd one is executed by mistake, by its mispredict will not affert the perivous one
+	def is_clear_ilp = io.bru_iss_exe.bits.fun.is_branch & io.cmm_bru_ilp
 
 	when(reset.asBool() | io.flush) {
 		iwb_valid := false.B
@@ -77,7 +80,7 @@ class Bru extends Module {
 		is_takenBranch_valid := false.B
 		is_takenBranch_bits := false.B
 	}
-	.elsewhen(io.bru_iss_exe.valid) {
+	.elsewhen(iss_exe_ack) {
 		iwb_valid := true.B
 		iwb_res := io.bru_iss_exe.bits.param.pc + Mux( io.bru_iss_exe.bits.param.is_rvc, 2.U, 4.U)
 		iwb_rd0 := Cat( io.bru_iss_exe.bits.param.rd0_idx, io.bru_iss_exe.bits.param.rd0_raw ) 
@@ -88,7 +91,7 @@ class Bru extends Module {
 		is_takenBranch_valid := io.bru_iss_exe.bits.fun.is_branch
 		is_takenBranch_bits := is_branchTaken		
 	}
-	.elsewhen( ~io.bru_iss_exe.valid & iwb_ack) {
+	.elsewhen( ~iss_exe_ack & iwb_ack) {
 		iwb_valid := false.B
 		jalr_valid := false.B
 		is_takenBranch_valid := false.B
@@ -96,7 +99,7 @@ class Bru extends Module {
 
 
 
-	io.bru_iss_exe.ready := true.B & ~(io.bru_exe_iwb.valid & ~io.bru_exe_iwb.ready)
+	io.bru_iss_exe.ready := is_clear_ilp & ~(io.bru_exe_iwb.valid & ~io.bru_exe_iwb.ready)
 	io.bru_exe_iwb.valid := iwb_valid
 	io.bru_exe_iwb.bits.res := iwb_res
 	io.bru_exe_iwb.bits.rd0_raw := iwb_rd0(4,0)
