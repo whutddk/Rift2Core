@@ -57,7 +57,7 @@ class Commit extends Privilege {
 		val cmm_pc = new DecoupledIO(new Info_cmm_pc)
 	})
 
-
+	override lazy val csrFiles = new CsrFiles
 
 	val rd0_raw = VecInit( io.rod_i(1).bits.rd0_raw, io.rod_i(0).bits.rd0_raw )
 	val rd0_idx = VecInit( io.rod_i(1).bits.rd0_idx, io.rod_i(0).bits.rd0_idx )
@@ -97,7 +97,7 @@ class Commit extends Privilege {
 
 
 
-	val csrFiles = new CsrFiles
+
 
 	csrFiles.addr := io.csr_addr
 	io.csr_data := csrFiles.read

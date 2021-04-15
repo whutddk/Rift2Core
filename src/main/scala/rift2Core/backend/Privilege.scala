@@ -77,7 +77,7 @@ trait U_Privilege {
 
 
 abstract class Privilege() extends Module with M_Privilege with H_Privilege with S_Privilege with U_Privilege{
-	val csrFiles: CsrFiles
+	lazy val csrFiles = new CsrFiles
 
 
 	csrFiles.m_csrFiles.clint_csr_info := 0.U.asTypeOf(new Info_clint_csr)
