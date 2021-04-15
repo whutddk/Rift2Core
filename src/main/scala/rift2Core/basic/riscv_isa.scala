@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-14 19:20:52
+* @Last Modified time: 2021-04-15 12:06:30
 */
 
 /*
@@ -567,14 +567,14 @@ class Info_bru_id extends Bundle {
 }
 
 
-class Info_csr_files extends Bundle {
-	val addr = Output(UInt(12.W))
-	val op = Output(UInt(64.W))
-	val res = Input(UInt(64.W))
-	val rw = Output(Bool())
-	val rs = Output(Bool())
-	val rc = Output(Bool())
-}
+// class Info_csr_files extends Bundle {
+// 	val addr = Output(UInt(12.W))
+// 	val op = Output(UInt(64.W))
+// 	val res = Input(UInt(64.W))
+// 	val rw = Output(Bool())
+// 	val rs = Output(Bool())
+// 	val rc = Output(Bool())
+// }
 
 class Info_cmm_csr extends Bundle {
 	val is_trap = Bool()

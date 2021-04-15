@@ -38,6 +38,10 @@ import rift2Core.basic._
 
 trait M_Privilege {
 
+	val csrFiles: CsrFiles
+	val is_trap: Vec[Bool]
+	val is_xRet: Vec[Bool]
+
 	val is_Mret = Wire( Vec(2, Bool()) )
 
 
@@ -45,9 +49,9 @@ trait M_Privilege {
 		0.U(51.W),
 		"b11".U(2.W), //MPP
 		0.U(3.W),
-		Mux(Privilege.is_trap.contains(true.B), M_CsrFiles.mstatus.value(3), Mux( is_Mret.contains(true.B), 1.U(1.W), 0.U(1.W) )),//MPIE
+		Mux(is_trap.contains(true.B), csrFiles.m_csrFiles.mstatus.value(3), Mux( is_Mret.contains(true.B), 1.U(1.W), 0.U(1.W) )),//MPIE
 		0.U(3.W),
-		Mux(Privilege.is_trap.contains(true.B), 0.U(1.W), Mux( is_Mret.contains(true.B), M_CsrFiles.mstatus.value(7), 0.U(1.W) )),//MIE
+		Mux(is_trap.contains(true.B), 0.U(1.W), Mux( is_Mret.contains(true.B), csrFiles.m_csrFiles.mstatus.value(7), 0.U(1.W) )),//MIE
 		0.U(3.W)
 		)
 
@@ -72,14 +76,11 @@ trait U_Privilege {
 }
 
 
-class Privilege() extends M_Privilege with H_Privilege with S_Privilege with U_Privilege{
+abstract class Privilege() extends Module with M_Privilege with H_Privilege with S_Privilege with U_Privilege{
+	val csrFiles: CsrFiles
 
-	M_CsrFiles.port := 0.U.asTypeOf(new Port)
-	H_CsrFiles.port := 0.U.asTypeOf(new Port)
-	S_CsrFiles.port := 0.U.asTypeOf(new Port)
-	U_CsrFiles.port := 0.U.asTypeOf(new Port)
-	D_CsrFiles.port := 0.U.asTypeOf(new Port)
-	M_CsrFiles.clint_csr_info := 0.U.asTypeOf(new Info_clint_csr)
+
+	csrFiles.m_csrFiles.clint_csr_info := 0.U.asTypeOf(new Info_clint_csr)
 
 	val commit_pc = Wire(Vec(2, UInt(64.W)))
 	val is_load_accessFault_ack = Wire( Vec(2, Bool()) )
@@ -94,13 +95,14 @@ class Privilege() extends M_Privilege with H_Privilege with S_Privilege with U_P
 
 	val lsu_trap_addr = Wire(UInt(64.W))
 
-	// val is_trap = Wire(Vec(2, Bool()))
+	val is_trap = Wire( Vec(2, Bool()) )
+	val is_xRet = Wire(Vec(2, Bool()))
 
 
 
-	def is_exInterrupt = M_CsrFiles.mip.value(11)
-	def is_timeInterrupt = M_CsrFiles.mip.value(7)
-	def is_softInterrupt = M_CsrFiles.mip.value(3)
+	def is_exInterrupt = csrFiles.m_csrFiles.mip.value(11) & csrFiles.m_csrFiles.mie.value(11) & csrFiles.m_csrFiles.mstatus.value(3)
+	def is_timeInterrupt = csrFiles.m_csrFiles.mip.value(7) & csrFiles.m_csrFiles.mie.value(7) & csrFiles.m_csrFiles.mstatus.value(3)
+	def is_softInterrupt = csrFiles.m_csrFiles.mip.value(3) & csrFiles.m_csrFiles.mie.value(3) & csrFiles.m_csrFiles.mstatus.value(3)
 
 
 
@@ -116,8 +118,8 @@ class Privilege() extends M_Privilege with H_Privilege with S_Privilege with U_P
 								})
 
 	for ( i <- 0 until 2 ) yield {
-		Privilege.is_trap(i) := is_interrupt | is_exception(i)
-		Privilege.is_xRet(i) := is_Mret(i) | is_Sret(i) | is_Uret(i)
+		is_trap(i) := is_interrupt | is_exception(i)
+		is_xRet(i) := is_Mret(i) | is_Sret(i) | is_Uret(i)
 	}
 
 
@@ -156,8 +158,4 @@ class Privilege() extends M_Privilege with H_Privilege with S_Privilege with U_P
 
 }
 
-object Privilege {
-	val is_trap = Wire( Vec(2, Bool()) )
-	val is_xRet = Wire(Vec(2, Bool()))
-}
 

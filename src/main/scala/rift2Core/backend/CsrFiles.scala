@@ -30,7 +30,7 @@ import rift2Core.basic._
 
 
 
-class Port extends Bundle {
+class Csr_Port extends Bundle {
 	val addr = UInt(12.W)
 	val dat_i = UInt(64.W)
 	val op_rw = Bool()
@@ -40,7 +40,7 @@ class Port extends Bundle {
 
 
 
-class CsrReg( addr: UInt, init: UInt, port: Port, ormask: UInt ) {
+class CsrReg( addr: UInt, init: UInt, port: Csr_Port, ormask: UInt ) {
 	val value = RegInit(init)
 
 	when(port.addr === addr) {
@@ -55,8 +55,8 @@ class CsrReg( addr: UInt, init: UInt, port: Port, ormask: UInt ) {
 
 
 
-object U_CsrFiles {
-	val port = Wire(new Port)
+class U_CsrFiles {
+	val port = Wire(new Csr_Port)
 
 	//user trap setup
 	val ustatus    = new CsrReg( "h000".U, 0.U, port, 0.U)
@@ -110,8 +110,8 @@ object U_CsrFiles {
 	val hpmcounter31    = new CsrReg( "hC1F".U, 0.U, port, 0.U)
 }
 
-object S_CsrFiles {
-	val port = Wire(new Port)
+class S_CsrFiles {
+	val port = Wire(new Csr_Port)
 
 	//supervisor trap setup
 	val sstatus    = new CsrReg( "h100".U, 0.U, port, 0.U)
@@ -133,8 +133,8 @@ object S_CsrFiles {
 	val satp    = new CsrReg( "h180".U, 0.U, port, 0.U)
 }
 
-object H_CsrFiles {
-	val port = Wire(new Port)
+class H_CsrFiles {
+	val port = Wire(new Csr_Port)
 
 	//hypervisor trap setup
 	val hstatus    = new CsrReg( "h600".U, 0.U, port, 0.U)
@@ -169,8 +169,8 @@ object H_CsrFiles {
 	val vsatp    = new CsrReg( "h280".U, 0.U, port, 0.U)
 }
 
-object M_CsrFiles {
-	val port = Wire(new Port)
+class M_CsrFiles {
+	val port = Wire(new Csr_Port)
 	val clint_csr_info = Wire( new Info_clint_csr )
 
 	//machine information register
@@ -258,8 +258,8 @@ object M_CsrFiles {
 	val mhpmevent3 = new CsrReg( "h323".U, 0.U, port, 0.U )
 }
 
-object D_CsrFiles {
-	val port = Wire(new Port)
+class D_CsrFiles {
+	val port = Wire(new Csr_Port)
 
 	//Debug/Trace Register
 	val tselect = new CsrReg( "h7A0".U, 0.U, port, 0.U )
@@ -274,144 +274,163 @@ object D_CsrFiles {
 	val dscratch1 = new CsrReg( "h7B3".U, 0.U, port, 0.U )
 }
 
-object csrFiles {
-	def read( addr: UInt ) = MuxCase(0.U, Array(
-								( addr === "h000".U ) -> U_CsrFiles.ustatus.value,
-								( addr === "h004".U ) -> U_CsrFiles.uie.value,
-								( addr === "h005".U ) -> U_CsrFiles.utvec.value,
-								( addr === "h040".U ) -> U_CsrFiles.uscratch.value,
-								( addr === "h041".U ) -> U_CsrFiles.uepc.value,
-								( addr === "h042".U ) -> U_CsrFiles.ucause.value,
-								( addr === "h043".U ) -> U_CsrFiles.utval.value,
-								( addr === "h044".U ) -> U_CsrFiles.uip.value,
-								( addr === "h001".U ) -> U_CsrFiles.fflags.value,
-								( addr === "h002".U ) -> U_CsrFiles.frm.value,
-								( addr === "h003".U ) -> U_CsrFiles.fcsr.value,
-								( addr === "hC00".U ) -> U_CsrFiles.cycle.value,
-								( addr === "hC01".U ) -> U_CsrFiles.time.value,
-								( addr === "hC02".U ) -> U_CsrFiles.instret.value,
-								( addr === "hC03".U ) -> U_CsrFiles.hpmcounter3.value,
-								( addr === "hC04".U ) -> U_CsrFiles.hpmcounter4.value,
-								( addr === "hC05".U ) -> U_CsrFiles.hpmcounter5.value,
-								( addr === "hC06".U ) -> U_CsrFiles.hpmcounter6.value,
-								( addr === "hC07".U ) -> U_CsrFiles.hpmcounter7.value,
-								( addr === "hC08".U ) -> U_CsrFiles.hpmcounter8.value,
-								( addr === "hC09".U ) -> U_CsrFiles.hpmcounter9.value,
-								( addr === "hC0A".U ) -> U_CsrFiles.hpmcounter10.value,
-								( addr === "hC0B".U ) -> U_CsrFiles.hpmcounter11.value,
-								( addr === "hC0C".U ) -> U_CsrFiles.hpmcounter12.value,
-								( addr === "hC0D".U ) -> U_CsrFiles.hpmcounter13.value,
-								( addr === "hC0E".U ) -> U_CsrFiles.hpmcounter14.value,
-								( addr === "hC0F".U ) -> U_CsrFiles.hpmcounter15.value,
-								( addr === "hC10".U ) -> U_CsrFiles.hpmcounter16.value,
-								( addr === "hC11".U ) -> U_CsrFiles.hpmcounter17.value,
-								( addr === "hC12".U ) -> U_CsrFiles.hpmcounter18.value,
-								( addr === "hC13".U ) -> U_CsrFiles.hpmcounter19.value,
-								( addr === "hC14".U ) -> U_CsrFiles.hpmcounter20.value,
-								( addr === "hC15".U ) -> U_CsrFiles.hpmcounter21.value,
-								( addr === "hC16".U ) -> U_CsrFiles.hpmcounter22.value,
-								( addr === "hC17".U ) -> U_CsrFiles.hpmcounter23.value,
-								( addr === "hC18".U ) -> U_CsrFiles.hpmcounter24.value,
-								( addr === "hC19".U ) -> U_CsrFiles.hpmcounter25.value,
-								( addr === "hC1A".U ) -> U_CsrFiles.hpmcounter26.value,
-								( addr === "hC1B".U ) -> U_CsrFiles.hpmcounter27.value,
-								( addr === "hC1C".U ) -> U_CsrFiles.hpmcounter28.value,
-								( addr === "hC1D".U ) -> U_CsrFiles.hpmcounter29.value,
-								( addr === "hC1E".U ) -> U_CsrFiles.hpmcounter30.value,
-								( addr === "hC1F".U ) -> U_CsrFiles.hpmcounter31.value,
-								( addr === "h100".U ) -> S_CsrFiles.sstatus.value,
-								( addr === "h102".U ) -> S_CsrFiles.sedeleg.value,
-								( addr === "h103".U ) -> S_CsrFiles.sideleg.value,
-								( addr === "h104".U ) -> S_CsrFiles.sie.value,
-								( addr === "h105".U ) -> S_CsrFiles.stvec.value,
-								( addr === "h106".U ) -> S_CsrFiles.scounteren.value,
-								( addr === "h140".U ) -> S_CsrFiles.sscratch.value,
-								( addr === "h141".U ) -> S_CsrFiles.sepc.value,
-								( addr === "h142".U ) -> S_CsrFiles.scause.value,
-								( addr === "h143".U ) -> S_CsrFiles.stval.value,
-								( addr === "h144".U ) -> S_CsrFiles.sip.value,
-								( addr === "h180".U ) -> S_CsrFiles.satp.value,
-								( addr === "h600".U ) -> H_CsrFiles.hstatus.value,
-								( addr === "h602".U ) -> H_CsrFiles.hedeleg.value,
-								( addr === "h603".U ) -> H_CsrFiles.hideleg.value,
-								( addr === "h604".U ) -> H_CsrFiles.hie.value,
-								( addr === "h606".U ) -> H_CsrFiles.hcounteren.value,
-								( addr === "h607".U ) -> H_CsrFiles.hgeie.value,
-								( addr === "h643".U ) -> H_CsrFiles.htval.value,
-								( addr === "h644".U ) -> H_CsrFiles.hip.value,
-								( addr === "h645".U ) -> H_CsrFiles.hvip.value,
-								( addr === "h64A".U ) -> H_CsrFiles.htinst.value,
-								( addr === "hE12".U ) -> H_CsrFiles.hgeip.value,
-								( addr === "h680".U ) -> H_CsrFiles.hgatp.value,
-								( addr === "h605".U ) -> H_CsrFiles.htimedelta.value,
-								( addr === "h200".U ) -> H_CsrFiles.vsstatus.value,
-								( addr === "h204".U ) -> H_CsrFiles.vsie.value,
-								( addr === "h205".U ) -> H_CsrFiles.vstvec.value,
-								( addr === "h240".U ) -> H_CsrFiles.vsscratch.value,
-								( addr === "h241".U ) -> H_CsrFiles.vsepc.value,
-								( addr === "h242".U ) -> H_CsrFiles.vscause.value,
-								( addr === "h243".U ) -> H_CsrFiles.vstval.value,
-								( addr === "h244".U ) -> H_CsrFiles.vsip.value,
-								( addr === "h280".U ) -> H_CsrFiles.vsatp.value,
-								( addr === "hF11".U ) -> M_CsrFiles.mvendorid.value,
-								( addr === "hF12".U ) -> M_CsrFiles.marchid.value,
-								( addr === "hF13".U ) -> M_CsrFiles.mimpid.value,
-								( addr === "hF14".U ) -> M_CsrFiles.mhartid.value,
-								( addr === "h300".U ) -> M_CsrFiles.mstatus.value,
-								( addr === "h301".U ) -> M_CsrFiles.misa.value,
-								( addr === "h302".U ) -> M_CsrFiles.medeleg.value,
-								( addr === "h303".U ) -> M_CsrFiles.mideleg.value,
-								( addr === "h304".U ) -> M_CsrFiles.mie.value,
-								( addr === "h305".U ) -> M_CsrFiles.mtvec.value,
-								( addr === "h306".U ) -> M_CsrFiles.mcounteren.value,
-								( addr === "h340".U ) -> M_CsrFiles.mscratch.value,
-								( addr === "h341".U ) -> M_CsrFiles.mepc.value,
-								( addr === "h342".U ) -> M_CsrFiles.mcause.value,
-								( addr === "h343".U ) -> M_CsrFiles.mtval.value,
-								( addr === "h344".U ) -> M_CsrFiles.mip.value,
-								( addr === "h34A".U ) -> M_CsrFiles.mtinst.value,
-								( addr === "h34B".U ) -> M_CsrFiles.mtval2.value,
-								( addr === "h3A0".U ) -> M_CsrFiles.pmpcfg0.value,
-								( addr === "h3A2".U ) -> M_CsrFiles.pmpcfg2.value,
-								( addr === "h3A4".U ) -> M_CsrFiles.pmpcfg4.value,
-								( addr === "h3A6".U ) -> M_CsrFiles.pmpcfg6.value,
-								( addr === "h3A8".U ) -> M_CsrFiles.pmpcfg8.value,
-								( addr === "h3AA".U ) -> M_CsrFiles.pmpcfg10.value,
-								( addr === "h3AC".U ) -> M_CsrFiles.pmpcfg12.value,
-								( addr === "h3AE".U ) -> M_CsrFiles.pmpcfg14.value,
-								( addr === "h3B0".U ) -> M_CsrFiles.pmpaddr0.value,
-								( addr === "h3B1".U ) -> M_CsrFiles.pmpaddr1.value,
-								( addr === "h3B2".U ) -> M_CsrFiles.pmpaddr2.value,
-								( addr === "h3B3".U ) -> M_CsrFiles.pmpaddr3.value,
-								( addr === "h3B4".U ) -> M_CsrFiles.pmpaddr4.value,
-								( addr === "h3B5".U ) -> M_CsrFiles.pmpaddr5.value,
-								( addr === "h3B6".U ) -> M_CsrFiles.pmpaddr6.value,
-								( addr === "h3B7".U ) -> M_CsrFiles.pmpaddr7.value,
-								( addr === "h3B8".U ) -> M_CsrFiles.pmpaddr8.value,
-								( addr === "h3B9".U ) -> M_CsrFiles.pmpaddr9.value,
-								( addr === "h3BA".U ) -> M_CsrFiles.pmpaddr10.value,
-								( addr === "h3BB".U ) -> M_CsrFiles.pmpaddr11.value,
-								( addr === "h3BC".U ) -> M_CsrFiles.pmpaddr12.value,
-								( addr === "h3BD".U ) -> M_CsrFiles.pmpaddr13.value,
-								( addr === "h3BE".U ) -> M_CsrFiles.pmpaddr14.value,
-								( addr === "h3BF".U ) -> M_CsrFiles.pmpaddr15.value,
-								( addr === "h3C0".U ) -> M_CsrFiles.pmpaddr16.value,
-								( addr === "h3C1".U ) -> M_CsrFiles.pmpaddr17.value,
-								( addr === "h3C2".U ) -> M_CsrFiles.pmpaddr18.value,
-								( addr === "h3C3".U ) -> M_CsrFiles.pmpaddr19.value,
-								( addr === "h3C4".U ) -> M_CsrFiles.pmpaddr20.value,
-								( addr === "hB00".U ) -> M_CsrFiles.mcycle.value,
-								( addr === "hB02".U ) -> M_CsrFiles.minstret.value,
-								( addr === "hB03".U ) -> M_CsrFiles.mhpmcounter3.value,
-								( addr === "h320".U ) -> M_CsrFiles.mcountinhibit.value,
-								( addr === "h323".U ) -> M_CsrFiles.mhpmevent3.value,
-								( addr === "h7A0".U ) -> D_CsrFiles.tselect.value,
-								( addr === "h7A1".U ) -> D_CsrFiles.tdata1.value,
-								( addr === "h7A2".U ) -> D_CsrFiles.tdata2.value,
-								( addr === "h7A3".U ) -> D_CsrFiles.tdata3.value,
-								( addr === "h7B0".U ) -> D_CsrFiles.dcsr.value,
-								( addr === "h7B1".U ) -> D_CsrFiles.dpc.value,
-								( addr === "h7B2".U ) -> D_CsrFiles.dscratch0.value,
-								( addr === "h7B3".U ) -> D_CsrFiles.dscratch1.value
-							))
+class CsrFiles {
+
+	val port = Wire(new Csr_Port)
+
+	val m_csrFiles = new M_CsrFiles
+	val h_csrFiles = new H_CsrFiles
+	val s_csrFiles = new S_CsrFiles
+	val u_csrFiles = new U_CsrFiles
+	val d_csrFiles = new D_CsrFiles
+
+	m_csrFiles.port := port
+	h_csrFiles.port := port
+	s_csrFiles.port := port
+	u_csrFiles.port := port
+	d_csrFiles.port := port
+
+
+	val addr = Wire(UInt(12.W))
+	val read = Wire(UInt(64.W))
+
+	read := MuxCase(0.U, Array(
+				( addr === "h000".U ) -> u_csrFiles.ustatus.value,
+				( addr === "h004".U ) -> u_csrFiles.uie.value,
+				( addr === "h005".U ) -> u_csrFiles.utvec.value,
+				( addr === "h040".U ) -> u_csrFiles.uscratch.value,
+				( addr === "h041".U ) -> u_csrFiles.uepc.value,
+				( addr === "h042".U ) -> u_csrFiles.ucause.value,
+				( addr === "h043".U ) -> u_csrFiles.utval.value,
+				( addr === "h044".U ) -> u_csrFiles.uip.value,
+				( addr === "h001".U ) -> u_csrFiles.fflags.value,
+				( addr === "h002".U ) -> u_csrFiles.frm.value,
+				( addr === "h003".U ) -> u_csrFiles.fcsr.value,
+				( addr === "hC00".U ) -> u_csrFiles.cycle.value,
+				( addr === "hC01".U ) -> u_csrFiles.time.value,
+				( addr === "hC02".U ) -> u_csrFiles.instret.value,
+				( addr === "hC03".U ) -> u_csrFiles.hpmcounter3.value,
+				( addr === "hC04".U ) -> u_csrFiles.hpmcounter4.value,
+				( addr === "hC05".U ) -> u_csrFiles.hpmcounter5.value,
+				( addr === "hC06".U ) -> u_csrFiles.hpmcounter6.value,
+				( addr === "hC07".U ) -> u_csrFiles.hpmcounter7.value,
+				( addr === "hC08".U ) -> u_csrFiles.hpmcounter8.value,
+				( addr === "hC09".U ) -> u_csrFiles.hpmcounter9.value,
+				( addr === "hC0A".U ) -> u_csrFiles.hpmcounter10.value,
+				( addr === "hC0B".U ) -> u_csrFiles.hpmcounter11.value,
+				( addr === "hC0C".U ) -> u_csrFiles.hpmcounter12.value,
+				( addr === "hC0D".U ) -> u_csrFiles.hpmcounter13.value,
+				( addr === "hC0E".U ) -> u_csrFiles.hpmcounter14.value,
+				( addr === "hC0F".U ) -> u_csrFiles.hpmcounter15.value,
+				( addr === "hC10".U ) -> u_csrFiles.hpmcounter16.value,
+				( addr === "hC11".U ) -> u_csrFiles.hpmcounter17.value,
+				( addr === "hC12".U ) -> u_csrFiles.hpmcounter18.value,
+				( addr === "hC13".U ) -> u_csrFiles.hpmcounter19.value,
+				( addr === "hC14".U ) -> u_csrFiles.hpmcounter20.value,
+				( addr === "hC15".U ) -> u_csrFiles.hpmcounter21.value,
+				( addr === "hC16".U ) -> u_csrFiles.hpmcounter22.value,
+				( addr === "hC17".U ) -> u_csrFiles.hpmcounter23.value,
+				( addr === "hC18".U ) -> u_csrFiles.hpmcounter24.value,
+				( addr === "hC19".U ) -> u_csrFiles.hpmcounter25.value,
+				( addr === "hC1A".U ) -> u_csrFiles.hpmcounter26.value,
+				( addr === "hC1B".U ) -> u_csrFiles.hpmcounter27.value,
+				( addr === "hC1C".U ) -> u_csrFiles.hpmcounter28.value,
+				( addr === "hC1D".U ) -> u_csrFiles.hpmcounter29.value,
+				( addr === "hC1E".U ) -> u_csrFiles.hpmcounter30.value,
+				( addr === "hC1F".U ) -> u_csrFiles.hpmcounter31.value,
+				( addr === "h100".U ) -> s_csrFiles.sstatus.value,
+				( addr === "h102".U ) -> s_csrFiles.sedeleg.value,
+				( addr === "h103".U ) -> s_csrFiles.sideleg.value,
+				( addr === "h104".U ) -> s_csrFiles.sie.value,
+				( addr === "h105".U ) -> s_csrFiles.stvec.value,
+				( addr === "h106".U ) -> s_csrFiles.scounteren.value,
+				( addr === "h140".U ) -> s_csrFiles.sscratch.value,
+				( addr === "h141".U ) -> s_csrFiles.sepc.value,
+				( addr === "h142".U ) -> s_csrFiles.scause.value,
+				( addr === "h143".U ) -> s_csrFiles.stval.value,
+				( addr === "h144".U ) -> s_csrFiles.sip.value,
+				( addr === "h180".U ) -> s_csrFiles.satp.value,
+				( addr === "h600".U ) -> h_csrFiles.hstatus.value,
+				( addr === "h602".U ) -> h_csrFiles.hedeleg.value,
+				( addr === "h603".U ) -> h_csrFiles.hideleg.value,
+				( addr === "h604".U ) -> h_csrFiles.hie.value,
+				( addr === "h606".U ) -> h_csrFiles.hcounteren.value,
+				( addr === "h607".U ) -> h_csrFiles.hgeie.value,
+				( addr === "h643".U ) -> h_csrFiles.htval.value,
+				( addr === "h644".U ) -> h_csrFiles.hip.value,
+				( addr === "h645".U ) -> h_csrFiles.hvip.value,
+				( addr === "h64A".U ) -> h_csrFiles.htinst.value,
+				( addr === "hE12".U ) -> h_csrFiles.hgeip.value,
+				( addr === "h680".U ) -> h_csrFiles.hgatp.value,
+				( addr === "h605".U ) -> h_csrFiles.htimedelta.value,
+				( addr === "h200".U ) -> h_csrFiles.vsstatus.value,
+				( addr === "h204".U ) -> h_csrFiles.vsie.value,
+				( addr === "h205".U ) -> h_csrFiles.vstvec.value,
+				( addr === "h240".U ) -> h_csrFiles.vsscratch.value,
+				( addr === "h241".U ) -> h_csrFiles.vsepc.value,
+				( addr === "h242".U ) -> h_csrFiles.vscause.value,
+				( addr === "h243".U ) -> h_csrFiles.vstval.value,
+				( addr === "h244".U ) -> h_csrFiles.vsip.value,
+				( addr === "h280".U ) -> h_csrFiles.vsatp.value,
+				( addr === "hF11".U ) -> m_csrFiles.mvendorid.value,
+				( addr === "hF12".U ) -> m_csrFiles.marchid.value,
+				( addr === "hF13".U ) -> m_csrFiles.mimpid.value,
+				( addr === "hF14".U ) -> m_csrFiles.mhartid.value,
+				( addr === "h300".U ) -> m_csrFiles.mstatus.value,
+				( addr === "h301".U ) -> m_csrFiles.misa.value,
+				( addr === "h302".U ) -> m_csrFiles.medeleg.value,
+				( addr === "h303".U ) -> m_csrFiles.mideleg.value,
+				( addr === "h304".U ) -> m_csrFiles.mie.value,
+				( addr === "h305".U ) -> m_csrFiles.mtvec.value,
+				( addr === "h306".U ) -> m_csrFiles.mcounteren.value,
+				( addr === "h340".U ) -> m_csrFiles.mscratch.value,
+				( addr === "h341".U ) -> m_csrFiles.mepc.value,
+				( addr === "h342".U ) -> m_csrFiles.mcause.value,
+				( addr === "h343".U ) -> m_csrFiles.mtval.value,
+				( addr === "h344".U ) -> m_csrFiles.mip.value,
+				( addr === "h34A".U ) -> m_csrFiles.mtinst.value,
+				( addr === "h34B".U ) -> m_csrFiles.mtval2.value,
+				( addr === "h3A0".U ) -> m_csrFiles.pmpcfg0.value,
+				( addr === "h3A2".U ) -> m_csrFiles.pmpcfg2.value,
+				( addr === "h3A4".U ) -> m_csrFiles.pmpcfg4.value,
+				( addr === "h3A6".U ) -> m_csrFiles.pmpcfg6.value,
+				( addr === "h3A8".U ) -> m_csrFiles.pmpcfg8.value,
+				( addr === "h3AA".U ) -> m_csrFiles.pmpcfg10.value,
+				( addr === "h3AC".U ) -> m_csrFiles.pmpcfg12.value,
+				( addr === "h3AE".U ) -> m_csrFiles.pmpcfg14.value,
+				( addr === "h3B0".U ) -> m_csrFiles.pmpaddr0.value,
+				( addr === "h3B1".U ) -> m_csrFiles.pmpaddr1.value,
+				( addr === "h3B2".U ) -> m_csrFiles.pmpaddr2.value,
+				( addr === "h3B3".U ) -> m_csrFiles.pmpaddr3.value,
+				( addr === "h3B4".U ) -> m_csrFiles.pmpaddr4.value,
+				( addr === "h3B5".U ) -> m_csrFiles.pmpaddr5.value,
+				( addr === "h3B6".U ) -> m_csrFiles.pmpaddr6.value,
+				( addr === "h3B7".U ) -> m_csrFiles.pmpaddr7.value,
+				( addr === "h3B8".U ) -> m_csrFiles.pmpaddr8.value,
+				( addr === "h3B9".U ) -> m_csrFiles.pmpaddr9.value,
+				( addr === "h3BA".U ) -> m_csrFiles.pmpaddr10.value,
+				( addr === "h3BB".U ) -> m_csrFiles.pmpaddr11.value,
+				( addr === "h3BC".U ) -> m_csrFiles.pmpaddr12.value,
+				( addr === "h3BD".U ) -> m_csrFiles.pmpaddr13.value,
+				( addr === "h3BE".U ) -> m_csrFiles.pmpaddr14.value,
+				( addr === "h3BF".U ) -> m_csrFiles.pmpaddr15.value,
+				( addr === "h3C0".U ) -> m_csrFiles.pmpaddr16.value,
+				( addr === "h3C1".U ) -> m_csrFiles.pmpaddr17.value,
+				( addr === "h3C2".U ) -> m_csrFiles.pmpaddr18.value,
+				( addr === "h3C3".U ) -> m_csrFiles.pmpaddr19.value,
+				( addr === "h3C4".U ) -> m_csrFiles.pmpaddr20.value,
+				( addr === "hB00".U ) -> m_csrFiles.mcycle.value,
+				( addr === "hB02".U ) -> m_csrFiles.minstret.value,
+				( addr === "hB03".U ) -> m_csrFiles.mhpmcounter3.value,
+				( addr === "h320".U ) -> m_csrFiles.mcountinhibit.value,
+				( addr === "h323".U ) -> m_csrFiles.mhpmevent3.value,
+				( addr === "h7A0".U ) -> d_csrFiles.tselect.value,
+				( addr === "h7A1".U ) -> d_csrFiles.tdata1.value,
+				( addr === "h7A2".U ) -> d_csrFiles.tdata2.value,
+				( addr === "h7A3".U ) -> d_csrFiles.tdata3.value,
+				( addr === "h7B0".U ) -> d_csrFiles.dcsr.value,
+				( addr === "h7B1".U ) -> d_csrFiles.dpc.value,
+				( addr === "h7B2".U ) -> d_csrFiles.dscratch0.value,
+				( addr === "h7B3".U ) -> d_csrFiles.dscratch1.value
+			))
 } 

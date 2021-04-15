@@ -31,7 +31,7 @@ import chisel3.util._
 import rift2Core.basic._
 import rift2Core.backend._
 
-class Commit extends Module {
+class Commit extends Privilege {
 	val io = IO(new Bundle{
 
 		val cm_op = Output(Vec(32, Vec(4, Bool())))
@@ -43,6 +43,10 @@ class Commit extends Module {
 		val lsu_cmm = Input( new Info_lsu_cmm )
 
 		val cmm_bru_ilp = Output(Bool())
+
+		val csr_addr = Input(UInt(12.W))
+		val csr_data = Output(UInt(64.W))
+		val csr_cmm_op = Flipped(DecoupledIO( new Csr_Port ) )
 
 		val is_misPredict = Input(Bool())
 
@@ -67,13 +71,13 @@ class Commit extends Module {
 	io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (io.log(rd0_raw(0))(rd0_idx(0)) =/= 3.U)
 
 	val is_commit_abort = VecInit(
-		(io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | Privilege.is_xRet(1) | Privilege.is_trap(1) ),
-		(io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | Privilege.is_xRet(0) | Privilege.is_trap(0) )
+		(io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet(1) | is_trap(1) ),
+		(io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet(0) | is_trap(0) )
 	)
 
 	//only one privilege can commit once
 	val is_commit_comfirm = VecInit(
-		is_wb(1) & ~is_commit_abort(1) & is_wb(0) & ~is_commit_abort(0),
+		is_wb(1) & ~is_commit_abort(1) & is_wb(0) & ~is_commit_abort(0) & ~io.rod_i(0).bits.is_csr,
 		is_wb(0) & ~is_commit_abort(0)
 	)
 
@@ -93,33 +97,51 @@ class Commit extends Module {
 
 
 
+	val csrFiles = new CsrFiles
 
-	val privilege = new Privilege
+	csrFiles.addr := io.csr_addr
+	io.csr_data := csrFiles.read
+
+	
+	io.csr_cmm_op.ready := 
+			(is_commit_comfirm(0) & io.rod_i(0).bits.is_csr) | 
+			(is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)
+
+	csrFiles.port := io.csr_cmm_op.bits
+
+
+
+
+
+
+
+
+
 
 	for ( i <- 0 until 2 ) yield {
-		privilege.commit_pc(i) := io.rod_i(i).bits.pc
-		privilege.is_load_accessFault_ack(i) := io.lsu_cmm.is_accessFault & io.rod_i(i).bits.is_lu & ~is_wb(i)
-		privilege.is_store_accessFault_ack(i) := io.lsu_cmm.is_accessFault & io.rod_i(i).bits.is_su & ~is_wb(i)
-		privilege.is_load_misAlign_ack(i) := io.lsu_cmm.is_misAlign & io.rod_i(i).bits.is_lu & ~is_wb(i)
-		privilege.is_store_misAlign_ack(i) := io.lsu_cmm.is_misAlign & io.rod_i(i).bits.is_su & ~is_wb(i)
+		commit_pc(i) := io.rod_i(i).bits.pc
+		is_load_accessFault_ack(i) := io.lsu_cmm.is_accessFault & io.rod_i(i).bits.is_lu & ~is_wb(i)
+		is_store_accessFault_ack(i) := io.lsu_cmm.is_accessFault & io.rod_i(i).bits.is_su & ~is_wb(i)
+		is_load_misAlign_ack(i) := io.lsu_cmm.is_misAlign & io.rod_i(i).bits.is_lu & ~is_wb(i)
+		is_store_misAlign_ack(i) := io.lsu_cmm.is_misAlign & io.rod_i(i).bits.is_su & ~is_wb(i)
 
-		privilege.is_ecall(i) := io.rod_i(i).bits.privil.ecall
-		privilege.is_ebreak(i) := io.rod_i(i).bits.privil.ebreak
-		privilege.is_instr_accessFault(i) := io.rod_i(i).bits.is_accessFault
-		privilege.is_illeage(i) := io.rod_i(i).bits.is_illeage
-		privilege.is_Mret(i) := io.rod_i(i).bits.privil.mret
-		privilege.is_Sret(i) := io.rod_i(i).bits.privil.sret
-		privilege.is_Uret(i) := io.rod_i(i).bits.privil.uret
+		is_ecall(i) := io.rod_i(i).bits.privil.ecall
+		is_ebreak(i) := io.rod_i(i).bits.privil.ebreak
+		is_instr_accessFault(i) := io.rod_i(i).bits.is_accessFault
+		is_illeage(i) := io.rod_i(i).bits.is_illeage
+		is_Mret(i) := io.rod_i(i).bits.privil.mret
+		is_Sret(i) := io.rod_i(i).bits.privil.sret
+		is_Uret(i) := io.rod_i(i).bits.privil.uret
 	}
-	privilege.lsu_trap_addr := io.lsu_cmm.trap_addr
+	lsu_trap_addr := io.lsu_cmm.trap_addr
 
-	io.cmm_pc.valid := Privilege.is_xRet.contains(true.B) | Privilege.is_trap.contains(true.B)
+	io.cmm_pc.valid := is_xRet.contains(true.B) | is_trap.contains(true.B)
 
 	io.cmm_pc.bits.addr := MuxCase(0.U, Array(
-		Privilege.is_xRet(0) -> M_CsrFiles.mepc.value,
-		Privilege.is_trap(0) -> M_CsrFiles.mtvec.value,
-		Privilege.is_xRet(1) -> M_CsrFiles.mepc.value,
-		Privilege.is_trap(1) -> M_CsrFiles.mtvec.value		
+		is_xRet(0) -> csrFiles.m_csrFiles.mepc.value,
+		is_trap(0) -> csrFiles.m_csrFiles.mtvec.value,
+		is_xRet(1) -> csrFiles.m_csrFiles.mepc.value,
+		is_trap(1) -> csrFiles.m_csrFiles.mtvec.value		
 	))
 
 }
