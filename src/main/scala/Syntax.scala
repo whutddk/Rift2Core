@@ -28,6 +28,13 @@ package rift2Core
 import chisel3._
 import chisel3.util._
 
+object OneModule {
+	val dnxt = Wire(UInt(64.W))
+
+	val reg = RegInit(0.U(64.W))
+
+	reg := dnxt
+}
 
 class Syntax extends Module {
 	val io = IO(new Bundle{
@@ -38,6 +45,10 @@ class Syntax extends Module {
 
 		val e = Input(Vec(3, Bool()))
 	})
+
+	OneModule.dnxt := Mux(io.a, 2.U, 10.U)
+	io.d := (OneModule.reg(1) === 1.U)
+
 
 	// val temp = WireDefault(false.B)
 	// io.d := temp
@@ -57,17 +68,17 @@ class Syntax extends Module {
 	// 	selb()
 	// }	
 
-	def check_lgc(a: Bool, b: Bool, c: Bool): Bool = {
-		val cmp = Wire(Vec(3, Bool()))
+	// def check_lgc(a: Bool, b: Bool, c: Bool): Bool = {
+	// 	val cmp = Wire(Vec(3, Bool()))
 
-			cmp(0) := a
-			cmp(1) := b
-			cmp(2) := c
+	// 		cmp(0) := a
+	// 		cmp(1) := b
+	// 		cmp(2) := c
 
-		return cmp.forall(x => x === false.B)	
-	}
+	// 	return cmp.forall(x => x === false.B)	
+	// }
 
  
 
-	io.d := check_lgc(io.a, io.b, io.c)
+	// io.d := check_lgc(io.a, io.b, io.c)
 }
