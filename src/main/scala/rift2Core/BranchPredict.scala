@@ -124,15 +124,15 @@ class Info_JTB extends Bundle {
 
 class BranchPredict() extends Module with BHT {
 	val io = IO(new Bundle {
-		val bru_iq_b = Flipped(new DecoupledIO( Bool() ))
-		val bru_iq_j = Flipped(new DecoupledIO( new Info_JTB ))
+		val bru_iq_b = Flipped(new ValidIO( Bool() ))
+		val bru_iq_j = Flipped(new ValidIO( UInt(64.W) ))
 
-		val ib_pc_info = new DecoupledIO(new Info_ib_pc)
-		val ib_iq_info = new DecoupledIO(new Info_ib_pc)
+		val ib_pc = new DecoupledIO(new Info_ib_pc)
 
 		val iq_ib = Vec(2, Flipped(new DecoupledIO(new Info_iq_ib) ))
 		val ib_id = Vec(2, new DecoupledIO(new Info_ib_id))
 
+		//include privilege, mispredict, not-include jalr
 		val flush = Input(Bool())
 	})
 
@@ -150,14 +150,6 @@ class BranchPredict() extends Module with BHT {
 	read and pop when a bru return 
 */
 	val bhq = Module(new Queue( new Info_BHQ, 16 )) //1 input, 1 output 
-/* 
-	jalr history queue, 
-	for jalr return check
-	check for any jalr return
-	push when a jalr decode
-	pop and check when a bru jalr return
-*/
-	val jhq = Module(new Queue( UInt(32.W), 16 )) //1 input, 1 output I dont want to waste resource in 2 jalr instr situationb
 
 	val ras = Module(new Gen_ringStack( UInt(32.W), 4 ))
 
@@ -165,15 +157,12 @@ class BranchPredict() extends Module with BHT {
 
 
 
-	is_bru_iq_b_ack := io.bru_iq_b.valid & io.bru_iq_b.ready
+	is_bru_iq_b_ack := io.bru_iq_b.valid
 	bru_iq_b_bits     := io.bru_iq_b.bits
-	io.bru_iq_b.ready := true.B
 
-	def is_bru_iq_j_ack = io.bru_iq_j.valid & io.bru_iq_j.ready
-	io.bru_iq_j.ready := true.B
 
-	io.ib_iq_info.bits := io.ib_pc_info.bits
-	io.ib_iq_info.valid := io.ib_pc_info.valid
+	def is_bru_iq_j_ack = io.bru_iq_j.valid
+
 
 	io.iq_ib(0).ready := iq_id_fifo.push_ack(0) & ~ib_lock
 	io.iq_ib(1).ready := iq_id_fifo.push_ack(1) & ~ib_lock
@@ -189,12 +178,8 @@ class BranchPredict() extends Module with BHT {
 
 
 	bhq.io.enq.valid := is_branch & (is_1stCut | is_2ndCut)
-	bhq.io.deq.ready := io.bru_iq_b.valid & io.bru_iq_b.ready
+	bhq.io.deq.ready := io.bru_iq_b.valid
 	bhq.reset := reset.asBool | io.flush
-
-	jhq.io.enq.valid  := is_jalr & (is_1stCut | is_2ndCut )
-	jhq.io.deq.ready  := io.bru_iq_j.valid & io.bru_iq_j.ready
-	jhq.reset := reset.asBool | io.flush
 
 	ras.io.push.valid := is_call & ((is_1stCut & iq_id_fifo.push_ack(0)) | (is_2ndCut & iq_id_fifo.push_ack(1)))
 	ras.io.pop.ready := is_ras_taken & ((is_1stCut & iq_id_fifo.push_ack(0)) | (is_2ndCut & iq_id_fifo.push_ack(1)))
@@ -232,17 +217,17 @@ class BranchPredict() extends Module with BHT {
 	def is_ras_taken          = is_return & ras.io.pop.valid
 	def is_predict_taken      = bht_predict(ori_pc)
 
-	def is_misPredict_taken_b = (bru_iq_b_bits =/= bhq.io.deq.bits.dir)
+	def is_misPredict_taken = (bru_iq_b_bits =/= bhq.io.deq.bits.dir)
 
 
 
-	io.ib_pc_info.valid := is_jal | is_jalr | is_predict_taken | is_misPredict_taken_b
-	io.ib_pc_info.bits.addr  := MuxCase(DontCare, Array(
+	io.ib_pc.valid := is_jal | is_jalr | is_predict_taken | is_misPredict_taken | is_bru_iq_j_ack
+	io.ib_pc.bits.addr  := MuxCase(DontCare, Array(
 		is_jal                -> jal_pc,
 		is_jalr               -> jalr_pc,
 		is_predict_taken      -> branch_pc,
-		is_misPredict_taken_b -> bhq.io.deq.bits.opp_pc,
-		is_bru_iq_j_ack       -> io.bru_iq_j.bits.tgt_pc
+		is_misPredict_taken -> bhq.io.deq.bits.opp_pc,
+		is_bru_iq_j_ack       -> io.bru_iq_j.bits
 	))
 
 	when( io.flush ) {
@@ -250,6 +235,9 @@ class BranchPredict() extends Module with BHT {
 	}
 	.elsewhen( (is_jalr & ~is_ras_taken) | is_fencei ) {
 		ib_lock := true.B
+	}
+	.elsewhen(is_bru_iq_j_ack) {
+		ib_lock := false.B
 	}
 
 
@@ -288,25 +276,21 @@ class BranchPredict() extends Module with BHT {
 	bhq.io.enq.bits.ori_pc := ori_pc
 	bhq.io.enq.bits.opp_pc := Mux( is_predict_taken, next_pc, branch_pc )
 
-	//jhq update
-	jhq.io.enq.bits  := jalr_pc
+
 
 	//ras
 	ras.io.push.bits := Mux( is_call, next_pc, DontCare)
 
 
 	def bhq_nack = bhq.io.enq.valid & ~bhq.io.enq.ready
-	def jhq_nack = jhq.io.enq.valid & ~jhq.io.enq.ready
+
 	// def ras_nack = ras.io.push.valid & ~ras.io.push.ready
-	def is_branch_predict_nready = bhq_nack | jhq_nack
-	assert( ~(bhq_nack & jhq_nack) )
+	def is_branch_predict_nready = bhq_nack
 
 
 	// assert( ~(bhq.io.enq.valid & ~bhq.io.enq.ready), "Assert Fail at BHQ.push(0)" )
 	assert( ~(bhq.io.deq.ready & ~bhq.io.deq.valid), "Assert Fail at BHQ.pop" )
 
-	// assert( ~(jhq.io.enq.valid & ~jhq.io.enq.ready), "Assert Fail at JHQ.push" )
-	assert( ~(jhq.io.deq.ready & ~jhq.io.deq.valid), "Assert Fail at JHQ.pop" )
 
 
 

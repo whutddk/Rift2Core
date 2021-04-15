@@ -54,7 +54,7 @@ class Commit extends Privilege {
 
 
 
-		val cmm_pc = new DecoupledIO(new Info_cmm_pc)
+		val cmm_pc = new ValidIO(new Info_cmm_pc)
 	})
 
 	override lazy val csrFiles = new CsrFiles

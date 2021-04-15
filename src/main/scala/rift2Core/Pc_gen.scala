@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-13 20:07:05
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-13 20:07:28
+* @Last Modified time: 2021-04-15 16:29:39
 */
 
 /*
@@ -34,22 +34,25 @@ import rift2Core.frontend._
 
 class Pc_gen extends Module {
 	val io = IO(new Bundle{
-		val ib_pc = Flipped(new DecoupledIO( new Info_ib_pc) )
-		val cmm_pc = Flipped ( new DecoupledIO(new Info_cmm_pc))
+		val ib_pc = Flipped(new ValidIO( new Info_ib_pc) )
+		val cmm_pc = Flipped ( new ValidIO(new Info_cmm_pc))
 		val pc_if = new DecoupledIO( new Info_pc_if )
+
+		val pc_iq = new ValidIO( UInt(64.W) )
 
 	})
 
-	io.cmm_pc.ready := true.B
-	io.ib_pc.ready  := true.B
 	io.pc_if.valid := true.B
 
-	def is_cmm_pc_ack = io.cmm_pc.valid & io.cmm_pc.ready
-	def is_ib_pc_ack = io.ib_pc.valid & io.ib_pc.ready
+	def is_cmm_pc_ack = io.cmm_pc.valid
+	def is_ib_pc_ack = io.ib_pc.valid
 	def is_pc_if_ack = io.pc_if.valid & io.pc_if.ready
 
 	val addr = RegInit("h80000000".U(32.W))
 
+
+	io.pc_iq.bits := addr
+	io.pc_iq.valid := is_cmm_pc_ack | is_ib_pc_ack
 
 	when ( is_cmm_pc_ack | is_ib_pc_ack | is_pc_if_ack ) {
 		when( is_cmm_pc_ack ){

@@ -38,8 +38,6 @@ class Decode extends Module {
 
 	val info_id_dpt = Wire(new Info_id_dpt)
 
-
-
 	info_id_dpt.info := 
 		Mux( io.iq_id.bits.is_rvc,
 		new Decode16(io.iq_id.bits.instr).info,
@@ -63,7 +61,20 @@ class Decode extends Module {
 
 }
 
+// class Decode_ss extends Module with Superscalar {
+// 	val io = IO( new Bundle {
+// 		val iq_id = Vec(2, Flipped(new DecoupledIO(new Info_ib_id())))
+// 		val id_dpt = Vec(2, new DecoupledIO(new Info_id_dpt()))
+// 	})
 
+// 	val decode = for ( i <- 0 until 2 ) yield { val mdl = Module(new Decode); mdl }
+
+// 	for ( i <- 0 until 2 ) yield { io.id_dpt(i).bits := decode(i).io. }
+
+
+
+
+// }
 
 
 

@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-08 14:32:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-08 14:32:52
+* @Last Modified time: 2021-04-15 16:18:45
 */
 
 /*
@@ -43,7 +43,7 @@ object Il1_state extends ChiselEnum {
 class Ifetch() extends Module with IBuf{
 	val io = IO(new Bundle{
 		val pc_if = Flipped(new DecoupledIO( new Info_pc_if ))
-		// val if_iq = new DecoupledIO( new Info_if_iq )
+
 		val if_iq = Vec(4, new DecoupledIO(UInt(16.W)) )
 
 		val il1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))

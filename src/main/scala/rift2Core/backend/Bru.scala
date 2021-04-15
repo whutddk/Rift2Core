@@ -35,6 +35,10 @@ class Bru extends Module {
 		val bru_exe_iwb = new DecoupledIO(new Exe_iwb_info)
 
 		val cmm_bru_ilp = Input(Bool())
+
+		val bru_iq_b = new ValidIO( Bool() )
+		val bru_iq_j = new ValidIO( UInt(64.W) )
+
 		val bru_iq_info = Output(new Info_bru_id)
 
 		val flush = Input(Bool())
@@ -105,10 +109,12 @@ class Bru extends Module {
 	io.bru_exe_iwb.bits.rd0_raw := iwb_rd0(4,0)
 	io.bru_exe_iwb.bits.rd0_idx := iwb_rd0(6,5)
 
-	io.bru_iq_info.is_takenBranch_bits := is_takenBranch_bits
-	io.bru_iq_info.is_takenBranch_valid := is_takenBranch_valid
-	io.bru_iq_info.jalr_pc := jalr_pc
-	io.bru_iq_info.jalr_valid := jalr_valid
+
+
+	io.bru_iq_b.bits := is_takenBranch_bits
+	io.bru_iq_b.valid := is_takenBranch_valid
+	io.bru_iq_j.bits := jalr_pc
+	io.bru_iq_j.valid := jalr_valid
 
 }
 

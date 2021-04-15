@@ -34,12 +34,13 @@ import rift2Core.cache._
 
 class Rift2Core extends Module {
 	val io = IO(new Bundle{
-
+		val il1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
+		val il1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
 	})
 
 	val pc_stage = new Pc_gen
 	val if_stage = new Ifetch
-	val iq_stage = new IQueue
+	val iq_stage = new Iqueue
 	val ib_stage = new BranchPredict
 	val id_stage = new Decode
 
@@ -50,6 +51,38 @@ class Rift2Core extends Module {
 	val cmm_stage = new Commit
 
 	val i_regfiles = new Regfiles
+
+	if_stage.io.il1_chn_a <> io.il1_chn_a
+	if_stage.io.il1_chn_d <> io.il1_chn_d
+
+		pc_stage.io.ib_pc <> ib_stage.io.ib_pc  //is_jal | is_jalr | is_predict_taken | is_misPredict_taken | is_bru_iq_j_ack
+		pc_stage.io.cmm_pc
+
+		pc_stage.io.pc_iq <> iq_stage.io.pc_iq	//valid when flush for new pc 
+
+		
+		pc_stage.io.pc_if <> if_stage.io.pc_if
+		if_stage.io.if_iq <> iq_stage.io.if_iq
+		iq_stage.io.iq_ib <> ib_stage.io.iq_ib
+
+
+
+
+		if_stage.io.is_il1_fence_req
+		if_stage.io.flush
+
+		
+
+
+		ib_stage.io.bru_iq_b
+		ib_stage.io.bru_iq_j
+
+
+		
+		ib_stage.io.ib_id
+
+		ib_stage.io.flush
+
 
 }
 
