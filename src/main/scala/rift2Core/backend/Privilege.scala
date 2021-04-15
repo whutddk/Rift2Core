@@ -36,21 +36,28 @@ import rift2Core.basic._
 
 
 
-trait  M_Privilege {
-	assign mstatus_except_in[2:0] = 3'b0;
-	assign mstatus_except_in[3] = (isTrap & 1'b0) | (isXRet & mstatus_csr_out[7]); //MIE
-	assign mstatus_except_in[6:4] = 3'b0;
-	assign mstatus_except_in[7] = (isTrap & mstatus_csr_out[3]) | (isXRet & 1'b1); //MPIE
-	assign mstatus_except_in[10:8] = 3'b0;
-	assign mstatus_except_in[12:11] = 2'b11; //MPP
-	assign mstatus_except_in[63:13] = 51'b0;
+trait M_Privilege {
 
 	val is_Mret = Wire( Vec(2, Bool()) )
 
 
+	def mstatus_except = Cat(
+		0.U(51.W),
+		"b11".U(2.W), //MPP
+		0.U(3.W),
+		Mux(Privilege.is_trap.contains(true.B), M_CsrFiles.mstatus.value(3), Mux( is_Mret.contains(true.B), 1.U(1.W), 0.U(1.W) )),//MPIE
+		0.U(3.W),
+		Mux(Privilege.is_trap.contains(true.B), 0.U(1.W), Mux( is_Mret.contains(true.B), M_CsrFiles.mstatus.value(7), 0.U(1.W) )),//MIE
+		0.U(3.W)
+		)
+
+
+
+
+
 }
 
-trait  H_Privilege {
+trait H_Privilege {
 
 }
 
@@ -59,14 +66,20 @@ trait  S_Privilege {
 
 }
 
-trait  U_Privilege {
+trait U_Privilege {
 	val is_Uret = Wire( Vec(2, Bool()) )
+
 }
 
 
 class Privilege() extends M_Privilege with H_Privilege with S_Privilege with U_Privilege{
 
-
+	M_CsrFiles.port := 0.U.asTypeOf(new Port)
+	H_CsrFiles.port := 0.U.asTypeOf(new Port)
+	S_CsrFiles.port := 0.U.asTypeOf(new Port)
+	U_CsrFiles.port := 0.U.asTypeOf(new Port)
+	D_CsrFiles.port := 0.U.asTypeOf(new Port)
+	M_CsrFiles.clint_csr_info := 0.U.asTypeOf(new Info_clint_csr)
 
 	val commit_pc = Wire(Vec(2, UInt(64.W)))
 	val is_load_accessFault_ack = Wire( Vec(2, Bool()) )
@@ -81,15 +94,15 @@ class Privilege() extends M_Privilege with H_Privilege with S_Privilege with U_P
 
 	val lsu_trap_addr = Wire(UInt(64.W))
 
-	val is_trap = Wire(Bool())
-	val is_xRet = Wire(Bool())
+	// val is_trap = Wire(Vec(2, Bool()))
 
-	for ( i <- 0 until 2 ) yield {
-		is_trap(i) := is_interrupt | is_exception(i)
-		is_xRet(i) := is_Mret(i) | is_Sret(i) | is_Uret(i)
-	}
 
-	def is_interrupt = is_exInterrupt | is_timeInterrupt | is_softInterrupt;
+
+	def is_exInterrupt = M_CsrFiles.mip.value(11)
+	def is_timeInterrupt = M_CsrFiles.mip.value(7)
+	def is_softInterrupt = M_CsrFiles.mip.value(3)
+
+
 
 	val is_exception = VecInit( for ( i <- 0 until 2 ) yield {
 									is_ecall(i) |
@@ -101,6 +114,20 @@ class Privilege() extends M_Privilege with H_Privilege with S_Privilege with U_P
 									is_load_misAlign_ack(i) |
 									is_store_misAlign_ack(i)
 								})
+
+	for ( i <- 0 until 2 ) yield {
+		Privilege.is_trap(i) := is_interrupt | is_exception(i)
+		Privilege.is_xRet(i) := is_Mret(i) | is_Sret(i) | is_Uret(i)
+	}
+
+
+
+//
+// only one exception will be accept once
+//
+//
+//
+//
 
 	def mcause_except = Cat(
 							is_interrupt.asUInt, 
@@ -116,7 +143,9 @@ class Privilege() extends M_Privilege with H_Privilege with S_Privilege with U_P
 								))
 							)
 
-	def mepc_except = MuxCase( 0.U, Array( is_exception -> commit_pc, is_interrupt -> commit_pc ) )
+	def is_interrupt = is_exInterrupt | is_timeInterrupt | is_softInterrupt;
+
+	def mepc_except = MuxCase( 0.U, Array( is_exception.contains(true.B) -> commit_pc, is_interrupt -> commit_pc ) )
 	def mtval_except = 
 		Mux( 
 			(is_load_accessFault_ack.contains(true.B) | 
@@ -125,5 +154,10 @@ class Privilege() extends M_Privilege with H_Privilege with S_Privilege with U_P
 			is_store_misAlign_ack.contains(true.B) ), 
 			lsu_trap_addr, 0.U)
 
+}
+
+object Privilege {
+	val is_trap = Wire( Vec(2, Bool()) )
+	val is_xRet = Wire(Vec(2, Bool()))
 }
 

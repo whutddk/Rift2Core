@@ -67,8 +67,8 @@ class Commit extends Module {
 	io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (io.log(rd0_raw(0))(rd0_idx(0)) =/= 3.U)
 
 	val is_commit_abort = VecInit(
-		(io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | privilege.is_xRet(1) | privilege.is_trap(1) ),
-		(io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | privilege.is_xRet(0) | privilege.is_trap(0) )
+		(io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | Privilege.is_xRet(1) | Privilege.is_trap(1) ),
+		(io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | Privilege.is_xRet(0) | Privilege.is_trap(0) )
 	)
 
 	//only one privilege can commit once
@@ -113,7 +113,13 @@ class Commit extends Module {
 	}
 	privilege.lsu_trap_addr := io.lsu_cmm.trap_addr
 
+	io.cmm_pc.valid := Privilege.is_xRet.contains(true.B) | Privilege.is_trap.contains(true.B)
 
-
+	io.cmm_pc.bits.addr := MuxCase(0.U, Array(
+		Privilege.is_xRet(0) -> M_CsrFiles.mepc.value,
+		Privilege.is_trap(0) -> M_CsrFiles.mtvec.value,
+		Privilege.is_xRet(1) -> M_CsrFiles.mepc.value,
+		Privilege.is_trap(1) -> M_CsrFiles.mtvec.value		
+	))
 
 }
