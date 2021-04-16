@@ -38,7 +38,7 @@ import rift2Core.frontend._
 
 
 
-class Iqueue extends Module {
+class Iqueue_ss extends Module with Superscalar{
 	val io = IO(new Bundle {
 
 		val if_iq = Vec(4, Flipped(new DecoupledIO(UInt(16.W)) ))
@@ -49,18 +49,65 @@ class Iqueue extends Module {
 	})
 
 	val iq_ib_fifo = Module(new MultiPortFifo( new Info_iq_ib, 4, 2, 2 ))
+	io.iq_ib <> iq_ib_fifo.io.deq
+
 	val pd16 = for ( i <- 0 until 2 ) yield { val mdl = Module(new PreDecode16()); mdl }
 	val pd32 = for ( i <- 0 until 2 ) yield { val mdl = Module(new PreDecode32()); mdl }
 
+	pd16(0).io.instr16 := io.if_iq(0).bits;                         pd16(1).io.instr16 := io.if_iq(idx_2nd).bits
+	pd32(0).io.instr32 := Cat( io.if_iq(1).bits, io.if_iq(0).bits); pd32(1).io.instr32 := Cat( io.if_iq(idx_2nd+1.U).bits, io.if_iq(idx_2nd).bits)
+
+	iq_ib_fifo.io.enq(0).bits.info := Mux( is_1st16, pd16(0).io.info, pd32(0).io.info ) //1st00 will not be care
+	iq_ib_fifo.io.enq(1).bits.info := Mux( is_2nd16, pd16(1).io.info, pd32(1).io.info ) //2nd00 will not be care
+
+	iq_ib_fifo.io.enq(0).bits.instr := Mux( is_1st16, io.if_iq(0).bits,     Cat( io.if_iq(1).bits, io.if_iq(0).bits) )
+	iq_ib_fifo.io.enq(1).bits.instr := Mux( is_2nd16, io.if_iq(idx_2nd).bits, Cat( io.if_iq(idx_2nd+1.U).bits, io.if_iq(idx_2nd).bits) )
+
+	iq_ib_fifo.io.enq(0).bits.pc    := pc_qout
+	iq_ib_fifo.io.enq(1).bits.pc    := Mux( is_1st16, pc_qout + 2.U, pc_qout + 4.U)
+
 	val pc_qout = RegInit("h80000000".U)
+	
 
-	val is_if_iq_ack = Wire(Vec(4, Bool()))
-	val is_iq_ib_fifo_ack = Wire(Vec(2, Bool()))
 
-	io.iq_ib <> iq_ib_fifo.io.pop
 
-	for ( i <- 0 until 4 ) yield is_if_iq_ack(i) := io.if_iq(i).valid & io.if_iq(i).ready
-	for ( i <- 0 until 2 ) yield is_iq_ib_fifo_ack(i) := iq_ib_fifo.push_ack(i)
+
+	val is_if_iq_ack = Wire(Vec(4, Bool())); for ( i <- 0 until 4 ) yield is_if_iq_ack(i) := io.if_iq(i).valid & io.if_iq(i).ready
+	val is_iq_ib_fifo_ack = Wire(Vec(2, Bool())); for ( i <- 0 until 2 ) yield is_iq_ib_fifo_ack(i) := iq_ib_fifo.is_enq_ack(i)
+
+
+	def is_1st00 =	~is_1st16 & ~is_1st32	
+	def is_1st16 = 	(io.if_iq(0).valid === true.B) & (io.if_iq(0).bits(1,0) =/= "b11".U)
+
+	def is_1st32 = 	(io.if_iq(0).valid === true.B) &
+					(io.if_iq(1).valid === true.B) &
+					(io.if_iq(0).bits(1,0) === "b11".U)
+
+	def idx_2nd = Mux( is_1st16, 1.U, 2.U )
+
+	def is_2nd00 = 	(is_1st00) |
+					(~is_2nd16 & ~is_2nd32)
+
+	def is_2nd16 = 	(io.if_iq(idx_2nd).valid === true.B) & io.if_iq(idx_2nd).bits(1,0) =/= "b11".U
+	def is_2nd32 = 	(io.if_iq(idx_2nd).valid === true.B) &
+					(io.if_iq(idx_2nd+1.U).valid === true.B) &
+					(io.if_iq(idx_2nd).bits(1,0) === "b11".U)
+
+	
+	def is_00p00 = is_2nd00 & is_1st00
+	def is_00p16 = is_2nd00 & is_1st16
+	def is_00p32 = is_2nd00 & is_1st32
+	def is_16p16 = is_2nd16 & is_1st16
+	def is_16p32 = is_2nd16 & is_1st32
+	def is_32p16 = is_2nd32 & is_1st16
+	def is_32p32 = is_2nd32 & is_1st32
+
+	override def is_1st_solo = false.B
+	override def is_2nd_solo = is_1st_solo & false.B
+
+	
+	iq_ib_fifo.io.enq(0).valid := ~is_1st00
+	iq_ib_fifo.io.enq(1).valid := ~is_2nd00
 
 
 	io.if_iq(0).ready := Mux1H(Seq(
@@ -120,61 +167,11 @@ class Iqueue extends Module {
 
 	iq_ib_fifo.io.flush := io.pc_iq.valid
 
-	iq_ib_fifo.io.push(0).valid := ~is_1st00
-	iq_ib_fifo.io.push(1).valid := ~is_2nd00
 
-	iq_ib_fifo.io.push(0).bits.info := Mux( is_1st16, pd16(0).io.info, pd32(0).io.info ) //1st00 will not be care
-	iq_ib_fifo.io.push(1).bits.info := Mux( is_2nd16, pd16(1).io.info, pd32(1).io.info ) //2nd00 will not be care
-
-	iq_ib_fifo.io.push(0).bits.instr := Mux( is_1st16, io.if_iq(0).bits,     Cat( io.if_iq(1).bits, io.if_iq(0).bits) )
-	iq_ib_fifo.io.push(1).bits.instr := Mux( is_2nd16, io.if_iq(idx_2nd).bits, Cat( io.if_iq(idx_2nd+1.U).bits, io.if_iq(idx_2nd).bits) )
-
-	iq_ib_fifo.io.push(0).bits.pc    := pc_qout
-	iq_ib_fifo.io.push(1).bits.pc    := Mux( is_1st16, pc_qout + 2.U, pc_qout + 4.U)
-
-
-
-
-
-
-
-	def is_1st00 =	~is_1st16 & ~is_1st32	
-	def is_1st16 = 	(io.if_iq(0).valid === true.B) & (io.if_iq(0).bits(1,0) =/= "b11".U)
-	def is_1st32 = 	(io.if_iq(0).valid === true.B) &
-					(io.if_iq(1).valid === true.B) &
-					(io.if_iq(0).bits(1,0) === "b11".U)
-
-
-	def idx_2nd = Mux( is_1st16, 1.U, 2.U )
-
-	def is_2nd00 = 	(is_1st00) |
-					(~is_2nd16 & ~is_2nd32)
-
-	def is_2nd16 = 	(io.if_iq(idx_2nd).valid === true.B) & io.if_iq(idx_2nd).bits(1,0) =/= "b11".U
-	def is_2nd32 = 	(io.if_iq(idx_2nd).valid === true.B) &
-					(io.if_iq(idx_2nd+1.U).valid === true.B) &
-					(io.if_iq(idx_2nd).bits(1,0) === "b11".U)
-
-
-	def is_00p00 = is_2nd00 & is_1st00
-	def is_00p16 = is_2nd00 & is_1st16
-	def is_00p32 = is_2nd00 & is_1st32
-	def is_16p16 = is_2nd16 & is_1st16
-	def is_16p32 = is_2nd16 & is_1st32
-	def is_32p16 = is_2nd32 & is_1st16
-	def is_32p32 = is_2nd32 & is_1st32
-
-
-	pd16(0).io.instr16 := io.if_iq(0).bits
-	pd32(0).io.instr32 := Cat( io.if_iq(1).bits, io.if_iq(0).bits)
-
-	pd16(1).io.instr16 := io.if_iq(idx_2nd).bits
-	pd32(1).io.instr32 := Cat( io.if_iq(idx_2nd+1.U).bits, io.if_iq(idx_2nd).bits)
 
 
 
 }
-
 
 
 

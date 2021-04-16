@@ -39,8 +39,6 @@ class Bru extends Module {
 		val bru_iq_b = new ValidIO( Bool() )
 		val bru_iq_j = new ValidIO( UInt(64.W) )
 
-		val bru_iq_info = Output(new Info_bru_id)
-
 		val flush = Input(Bool())
 	})
 

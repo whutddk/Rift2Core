@@ -44,7 +44,7 @@ import rift2Core.basic._
 
 trait BHT {
 
-	val bru_iq_b_bits = Wire(Bool())
+	def bru_iq_b_bits: Bool
 
 	val bht_sel = Wire(UInt(32.W))
 
@@ -52,7 +52,7 @@ trait BHT {
 
 	val bht_buf = RegInit(VecInit(Fill(4096, "b01".U(2.W) ) ))  //4096 history table
 
-	val is_bru_iq_b_ack = Wire(Bool())
+	def is_bru_iq_b_ack: Bool
 
 
 	val bht_idx = bht_sel(12,1)
@@ -90,39 +90,8 @@ class Info_JTB extends Bundle {
 }
 
 
-// /*
-// 	jalr target buf
-// 	read only when ras is down
-// 	write when any jalr return
-// 	the pc and target pc will both be recorded
-// */
-// trait JTB {
-// 	val bru_iq_j_bits = Wire( new Info_JTB )
 
-// 	val jtb_update_ptr = RegInit(0.U(3.W))
-// 	val jtb_buf = RegInit(VecInit(Seq.fill(8)( 0.U.asTypeOf(new Info_JTB) ) )) // 2 pc is init as 8kw
-
-// 	val is_bru_iq_j_ack = Wire(Bool())
-
-// 	def is_pc_hit(ori_pc: UInt) = jtb_buf.exists((x: Info_JTB) => x.ori_pc === ori_pc)
-// 	def is_pc_idx(ori_pc: UInt): UInt = jtb_buf.indexWhere((x: Info_JTB) => x.ori_pc === ori_pc)
-
-// 	when( is_bru_iq_j_ack ) {
-// 		def updata_idx = Mux( is_pc_hit(bru_iq_j_bits.ori_pc), is_pc_idx(bru_iq_j_bits.ori_pc), jtb_update_ptr )
-// 		jtb_update_ptr := Mux( is_pc_hit(bru_iq_j_bits.ori_pc), jtb_update_ptr, jtb_update_ptr + 1.U )
-
-// 		jtb_buf(jtb_update_ptr).ori_pc := bru_iq_j_bits.ori_pc
-// 		jtb_buf(jtb_update_ptr).tgt_pc := bru_iq_j_bits.tgt_pc
-// 	}
-
-// 	def jtb_read(ori_pc: UInt): UInt = { 
-// 		Mux( is_pc_hit(ori_pc), jtb_buf(is_pc_idx(ori_pc)).tgt_pc, "h80000000".U )
-// 	} 
-// }
-
-
-
-class BranchPredict() extends Module with BHT {
+class BranchPredict_ss extends Module with BHT with Superscalar{
 	val io = IO(new Bundle {
 		val bru_iq_b = Flipped(new ValidIO( Bool() ))
 		val bru_iq_j = Flipped(new ValidIO( UInt(64.W) ))
@@ -136,13 +105,15 @@ class BranchPredict() extends Module with BHT {
 		val flush = Input(Bool())
 	})
 
-
-	val iq_id_fifo = Module(new MultiPortFifo( new Info_ib_id, 4, 2, 2 ))
-	iq_id_fifo.io.flush := io.flush
-
-	val is_ib_id_ack = Wire(Vec(2, Bool()))
-
 	val ib_lock = RegInit(false.B)
+	val ib_id_fifo = Module(new MultiPortFifo( new Info_ib_id, 4, 2, 2 ))
+	io.ib_id <> ib_id_fifo.io.deq
+	ib_id_fifo.io.flush := io.flush
+
+	def is_ib_id_fifo_enq_ack(i: Int ) = ib_id_fifo.is_enq_ack(i)
+
+	ib_id_fifo.io.enq(0).bits := jfilter(io.iq_ib(0).bits, is_ras_taken & is_1st_solo) 
+	ib_id_fifo.io.enq(1).bits := jfilter(io.iq_ib(1).bits, is_ras_taken & is_2nd_solo) 	
 
 /*	
 	branch history queue, for bru result checking 
@@ -150,83 +121,72 @@ class BranchPredict() extends Module with BHT {
 	read and pop when a bru return 
 */
 	val bhq = Module(new Queue( new Info_BHQ, 16 )) //1 input, 1 output 
-
 	val ras = Module(new Gen_ringStack( UInt(32.W), 4 ))
 
-	for ( i <- 0 until 2 ) yield is_ib_id_ack(i) := io.ib_id(i).valid & io.ib_id(i).ready
-
-
-
-	is_bru_iq_b_ack := io.bru_iq_b.valid
-	bru_iq_b_bits     := io.bru_iq_b.bits
+	override def is_bru_iq_b_ack = io.bru_iq_b.valid
+	override def bru_iq_b_bits   = io.bru_iq_b.bits
 
 
 	def is_bru_iq_j_ack = io.bru_iq_j.valid
 
 
-	io.iq_ib(0).ready := iq_id_fifo.push_ack(0) & ~ib_lock
-	io.iq_ib(1).ready := iq_id_fifo.push_ack(1) & ~ib_lock
-
-	iq_id_fifo.io.push(0).bits := jfilter(io.iq_ib(0).bits, is_ras_taken & is_1stCut) 
-	iq_id_fifo.io.push(1).bits := jfilter(io.iq_ib(1).bits, is_ras_taken & is_2ndCut) 
-
-
-	iq_id_fifo.io.push(0).valid := ~ib_lock & io.iq_ib(0).valid & Mux(is_1stCut, is_branch_predict_nready, true.B)
-	iq_id_fifo.io.push(1).valid := ~ib_lock & io.iq_ib(1).valid & ~is_1stCut & Mux(is_2ndCut, is_branch_predict_nready, true.B)
-
-	io.ib_id <> iq_id_fifo.io.pop
-
-
-	bhq.io.enq.valid := is_branch & (is_1stCut | is_2ndCut)
-	bhq.io.deq.ready := io.bru_iq_b.valid
-	bhq.reset := reset.asBool | io.flush
-
-	ras.io.push.valid := is_call & ((is_1stCut & iq_id_fifo.push_ack(0)) | (is_2ndCut & iq_id_fifo.push_ack(1)))
-	ras.io.pop.ready := is_ras_taken & ((is_1stCut & iq_id_fifo.push_ack(0)) | (is_2ndCut & iq_id_fifo.push_ack(1)))
-	ras.io.flush := io.flush
-
-
-	def is_1stCut = io.iq_ib(0).bits.info.is_pineline_cut & io.iq_ib(0).valid
-	def is_2ndCut = io.iq_ib(1).bits.info.is_pineline_cut & io.iq_ib(1).valid & ~is_1stCut
-	def is_noCut  = ~is_1stCut & ~is_2ndCut
+	override def is_1st_solo = io.iq_ib(0).bits.info.is_pineline_cut & io.iq_ib(0).valid
+	override def is_2nd_solo = io.iq_ib(1).bits.info.is_pineline_cut & io.iq_ib(1).valid & ~is_1st_solo
+	// def is_noCut  = ~is_1stCut & ~is_2ndCut
 
 
 
-	def is_jal    = MuxCase( false.B, Array( is_1stCut -> io.iq_ib(0).bits.info.is_jal,    is_2ndCut -> io.iq_ib(1).bits.info.is_jal ))
-	def is_jalr   = MuxCase( false.B, Array( is_1stCut -> io.iq_ib(0).bits.info.is_jalr,   is_2ndCut -> io.iq_ib(1).bits.info.is_jalr ))
-	def is_branch = MuxCase( false.B, Array( is_1stCut -> io.iq_ib(0).bits.info.is_branch, is_2ndCut -> io.iq_ib(1).bits.info.is_branch ))
-	def is_call   = MuxCase( false.B, Array( is_1stCut -> io.iq_ib(0).bits.info.is_call,   is_2ndCut -> io.iq_ib(1).bits.info.is_call ))
-	def is_return = MuxCase( false.B, Array( is_1stCut -> io.iq_ib(0).bits.info.is_return, is_2ndCut -> io.iq_ib(1).bits.info.is_return ))
-	def is_rvc    = MuxCase( false.B, Array( is_1stCut -> io.iq_ib(0).bits.info.is_rvc,    is_2ndCut -> io.iq_ib(1).bits.info.is_rvc ))
-	def is_fencei = MuxCase( false.B, Array( is_1stCut -> io.iq_ib(0).bits.info.is_fencei, is_2ndCut -> io.iq_ib(1).bits.info.is_fencei ))
-	def imm       = MuxCase( 0.U,     Array( is_1stCut -> io.iq_ib(0).bits.info.imm,       is_2ndCut -> io.iq_ib(1).bits.info.imm ))
+	def is_jal    = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_jal,    is_2nd_solo -> io.iq_ib(1).bits.info.is_jal ))
+	def is_jalr   = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_jalr,   is_2nd_solo -> io.iq_ib(1).bits.info.is_jalr ))
+	def is_branch = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_branch, is_2nd_solo -> io.iq_ib(1).bits.info.is_branch ))
+	def is_call   = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_call,   is_2nd_solo -> io.iq_ib(1).bits.info.is_call ))
+	def is_return = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_return, is_2nd_solo -> io.iq_ib(1).bits.info.is_return ))
+	def is_rvc    = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_rvc,    is_2nd_solo -> io.iq_ib(1).bits.info.is_rvc ))
+	def is_fencei = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_fencei, is_2nd_solo -> io.iq_ib(1).bits.info.is_fencei ))
+	def imm       = MuxCase( 0.U,     Array( is_1st_solo -> io.iq_ib(0).bits.info.imm,       is_2nd_solo -> io.iq_ib(1).bits.info.imm ))
 
 
-	def ori_pc = Mux( is_1stCut, io.iq_ib(0).bits.pc, io.iq_ib(1).bits.pc)
-
-
+	def ori_pc = Mux( is_1st_solo, io.iq_ib(0).bits.pc, io.iq_ib(1).bits.pc)
 	def next_pc = Mux( is_rvc, ori_pc + 2.U, ori_pc + 4.U )
 	def jal_pc = ori_pc + imm
 	def branch_pc = ori_pc + imm
 	def misPredict_pc_b = bhq.io.deq.bits.opp_pc
 	def misPredict_pc_j = io.bru_iq_j.bits
-	def ras_pc = ras.io.pop.bits
+	def ras_pc = ras.io.deq.bits
 	def jalr_pc = Mux( is_ras_taken, ras_pc, DontCare)
 
 
-	def is_ras_taken          = is_return & ras.io.pop.valid
+	def is_ras_taken          = is_return & ras.io.deq.valid
 	def is_predict_taken      = bht_predict(ori_pc)
 
 	def is_misPredict_taken = (bru_iq_b_bits =/= bhq.io.deq.bits.dir)
 
 
 
+
+
+
+	ib_id_fifo.io.enq(0).valid := ~ib_lock & io.iq_ib(0).valid & Mux(is_1st_solo, bhq.io.enq.ready, true.B) & ib_id_fifo.io.enq(0).ready
+	ib_id_fifo.io.enq(1).valid := ~ib_lock & io.iq_ib(1).valid & Mux(is_2nd_solo, bhq.io.enq.ready, true.B) & ib_id_fifo.io.enq(1).ready & ~is_1st_solo
+
+	io.iq_ib(0).ready := ~ib_lock & ib_id_fifo.is_enq_ack(0)
+	io.iq_ib(1).ready := ~ib_lock & ib_id_fifo.is_enq_ack(0) & ib_id_fifo.is_enq_ack(1)
+
+
+	bhq.io.enq.valid := is_branch & bhq.io.enq.ready & Mux(is_1st_solo, ib_id_fifo.io.enq(0).ready, ib_id_fifo.io.enq(1).ready)
+	bhq.io.deq.ready := io.bru_iq_b.valid
+	bhq.reset := reset.asBool | io.flush
+
+	ras.io.enq.valid := is_call & ((is_1st_solo & ib_id_fifo.is_enq_ack(0)) | (is_2nd_solo & ib_id_fifo.is_enq_ack(1)))
+	ras.io.deq.ready := is_ras_taken & ((is_1st_solo & ib_id_fifo.is_enq_ack(0)) | (is_2nd_solo & ib_id_fifo.is_enq_ack(1)))
+	ras.io.flush := io.flush
+
 	io.ib_pc.valid := is_jal | is_jalr | is_predict_taken | is_misPredict_taken | is_bru_iq_j_ack
 	io.ib_pc.bits.addr  := MuxCase(DontCare, Array(
 		is_jal                -> jal_pc,
 		is_jalr               -> jalr_pc,
 		is_predict_taken      -> branch_pc,
-		is_misPredict_taken -> bhq.io.deq.bits.opp_pc,
+		is_misPredict_taken   -> bhq.io.deq.bits.opp_pc,
 		is_bru_iq_j_ack       -> io.bru_iq_j.bits
 	))
 
@@ -279,13 +239,11 @@ class BranchPredict() extends Module with BHT {
 
 
 	//ras
-	ras.io.push.bits := Mux( is_call, next_pc, DontCare)
+	ras.io.enq.bits := Mux( is_call, next_pc, DontCare)
 
 
-	def bhq_nack = bhq.io.enq.valid & ~bhq.io.enq.ready
-
-	// def ras_nack = ras.io.push.valid & ~ras.io.push.ready
-	def is_branch_predict_nready = bhq_nack
+	// def bhq_nack = bhq.io.enq.valid & ~bhq.io.enq.ready
+	// def is_next_ready = bhq_nack
 
 
 	// assert( ~(bhq.io.enq.valid & ~bhq.io.enq.ready), "Assert Fail at BHQ.push(0)" )

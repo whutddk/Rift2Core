@@ -15,7 +15,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,6 +30,9 @@ package rift2Core
 import chisel3._
 import chisel3.util._
 import rift2Core.basic._
+import rift2Core.backend._
+import tilelink._
+
 
 
 
@@ -37,8 +40,87 @@ import rift2Core.basic._
 
 class Execute extends Module {
 	val io = IO(new Bundle{
+		val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
+		val alu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
+		val bru_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
+		val csr_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
+		val lsu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
+		val mul_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+
+		val cmm_bru_ilp = Input(Bool())
+		val bru_iq_b = new ValidIO( Bool() )
+		val bru_iq_j = new ValidIO( UInt(64.W) )
+
+		val csr_addr = Output(UInt(12.W))
+		val csr_data = Input(UInt(64.W))
+		val csr_cmm_op = DecoupledIO( new Csr_Port ) 
+
+
+		val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
+		val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
+		val sys_chn_a = new DecoupledIO(new TLchannel_a(64,32))
+		val sys_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
+		val is_fence_commit = Input(Bool())
+		val is_store_commit = Input(Bool())
+		val l2c_fence_req = Output(Bool())
+		val l3c_fence_req = Output(Bool())
+		val l2c_fence_end = Input(Bool())
+		val l3c_fence_end = Input(Bool())
+
+		val flush = Input(Bool())
+
 
 	})
+
+	val alu = new Alu
+	val bru = new Bru
+	val lsu = new Lsu
+	val csr = new Csr
+	val mul = new Mul
+
+	alu.io.alu_iss_exe <> io.alu_iss_exe
+	alu.io.alu_exe_iwb <> io.alu_exe_iwb
+	alu.io.flush <> io.flush
+
+	bru.io.bru_iss_exe <> io.bru_iss_exe
+	bru.io.bru_exe_iwb <> io.bru_exe_iwb
+	bru.io.cmm_bru_ilp <> io.cmm_bru_ilp
+	bru.io.bru_iq_b <> io.bru_iq_b
+	bru.io.bru_iq_j <> io.bru_iq_j
+	bru.io.flush <> io.flush
+
+	csr.io.csr_iss_exe <> io.csr_iss_exe
+	csr.io.csr_exe_iwb <> io.csr_exe_iwb
+	csr.io.csr_addr <> io.csr_addr
+	csr.io.csr_data <> io.csr_data
+	csr.io.csr_cmm_op <> io.csr_cmm_op
+	csr.io.flush <> io.flush
+
+
+	lsu.io.lsu_iss_exe <> io.lsu_iss_exe
+	lsu.io.lsu_exe_iwb <> io.lsu_exe_iwb
+	lsu.io.dl1_chn_a <> io.dl1_chn_a
+	lsu.io.dl1_chn_d <> io.dl1_chn_d
+	lsu.io.sys_chn_a <> io.sys_chn_a
+	lsu.io.sys_chn_d <> io.sys_chn_d
+	lsu.io.is_fence_commit <> io.is_fence_commit
+	lsu.io.is_store_commit <> io.is_store_commit
+	lsu.io.l2c_fence_req <> io.l2c_fence_req
+	lsu.io.l3c_fence_req <> io.l3c_fence_req
+	lsu.io.l2c_fence_end <> io.l2c_fence_end
+	lsu.io.l3c_fence_end <> io.l3c_fence_end
+	lsu.io.flush <> io.flush
+
+	mul.io.mul_iss_exe <> io.mul_iss_exe
+	mul.io.mul_exe_iwb <> io.mul_exe_iwb
+	mul.io.flush <> io.flush
+
+
+
 }
 
 

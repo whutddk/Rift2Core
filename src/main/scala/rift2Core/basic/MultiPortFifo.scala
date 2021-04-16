@@ -34,8 +34,8 @@ import chisel3.util._
 //dw:data type aw:address width, in: input port num, out: output port num 
 class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
 	val io = IO(new Bundle{
-		val push = Vec(in, Flipped(new DecoupledIO(dw)) )
-		val pop  = Vec(out, new DecoupledIO(dw) )
+		val enq = Vec(in, Flipped(new DecoupledIO(dw)) )
+		val deq  = Vec(out, new DecoupledIO(dw) )
 
 		val flush = Input(Bool())
 	})
@@ -54,21 +54,21 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 	val wr_ptr = RegInit(0.U(aw.W))
 
 
-	for ( i <- 0 until in) yield  io.push(i).ready := (buf_valid((wr_ptr + i.U)(aw-1,0)) === false.B)
-	for ( i <- 0 until out ) yield io.pop(i).valid := (buf_valid((rd_ptr + i.U)(aw-1,0)) === true.B)
+	for ( i <- 0 until in) yield  io.enq(i).ready := (buf_valid((wr_ptr + i.U)(aw-1,0)) === false.B)
+	for ( i <- 0 until out ) yield io.deq(i).valid := (buf_valid((rd_ptr + i.U)(aw-1,0)) === true.B)
 
-	def push_ack(i: Int) = io.push(i.U).valid & io.push(i.U).ready
-	def pop_ack(i: Int) =  io.pop(i.U).valid  & io.pop(i.U).ready
+	def is_enq_ack(i: Int) = io.enq(i.U).valid & io.enq(i.U).ready
+	def is_deq_ack(i: Int) =  io.deq(i.U).valid  & io.deq(i.U).ready
 
-	def push_cnt: UInt = {
-		val port = for ( i <- 0 until in ) yield { push_ack(in-1-i) === true.B }  //in-1 ~ 0
+	def enq_cnt: UInt = {
+		val port = for ( i <- 0 until in ) yield { is_enq_ack(in-1-i) === true.B }  //in-1 ~ 0
 		val cnt  = for ( i <- 0 until in ) yield { (in-1-i).U } //in-1 ~ 0
 
 		return MuxCase( 0.U, port zip cnt )
 	}
 	
 	def pop_cnt: UInt = {
-		val port = for ( i <- 0 until out ) yield { push_ack(out-1-i) === true.B }  //out-1 ~ 0
+		val port = for ( i <- 0 until out ) yield { is_enq_ack(out-1-i) === true.B }  //out-1 ~ 0
 		val cnt  = for ( i <- 0 until out ) yield { (out-1-i).U } //out-1 ~ 0
 
 		return MuxCase( 0.U, port zip cnt )
@@ -89,31 +89,31 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 			val fifo_ptr_w = (wr_ptr + i.U)(aw-1,0)
 			val fifo_ptr_r = (rd_ptr + j.U)(aw-1,0)
 
-			buf_valid(fifo_ptr_w) := Mux(push_ack(i), true.B, buf_valid(fifo_ptr_w))
-			buf_valid(fifo_ptr_r) := Mux(pop_ack(j),  false.B, buf_valid(fifo_ptr_r))
+			buf_valid(fifo_ptr_w) := Mux(is_enq_ack(i), true.B, buf_valid(fifo_ptr_w))
+			buf_valid(fifo_ptr_r) := Mux(is_deq_ack(j),  false.B, buf_valid(fifo_ptr_r))
 
-			buf(fifo_ptr_w) := Mux(push_ack(i), io.push(i.U).bits, buf(fifo_ptr_w))
+			buf(fifo_ptr_w) := Mux(is_enq_ack(i), io.enq(i).bits, buf(fifo_ptr_w))
 		}
 
 
 
 		rd_ptr := rd_ptr + pop_cnt
-		wr_ptr := wr_ptr + push_cnt
+		wr_ptr := wr_ptr + enq_cnt
 	}
 
 
 	for ( i <- 0 until out ) yield {
 		val fifo_ptr_r = (rd_ptr + i.U)(aw-1,0)
-		io.pop(i.U).bits := Mux(buf_valid(fifo_ptr_r), buf(fifo_ptr_r), DontCare)
+		io.deq(i).bits := Mux(buf_valid(fifo_ptr_r), buf(fifo_ptr_r), DontCare)
 	}
 
 
 
 	for ( i <- 0 until in; j <- 0 until in ) yield 
-		assert( !(io.push(i.U).valid == true.B && io.push(j.U).valid == false.B && i >= j), "Assert Fail! in port illegal")
+		assert( !(io.enq(i).valid == true.B && io.enq(j).valid == false.B && i >= j), "Assert Fail! in port illegal")
 
 	for ( i <- 0 until out; j <- 0 until out ) yield 
-		assert( !(io.pop(i.U).valid == true.B && io.pop(j.U).valid == false.B && i >= j), "Assert Fail! out port illegal")
+		assert( !(io.deq(i).valid == true.B && io.deq(j).valid == false.B && i >= j), "Assert Fail! out port illegal")
 
 
 }

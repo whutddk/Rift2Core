@@ -32,49 +32,59 @@ import rift2Core.frontend._
 
 class Decode extends Module {
 	val io = IO( new Bundle {
-		val iq_id = Flipped(new DecoupledIO(new Info_ib_id()))
-		val id_dpt = new DecoupledIO(new Info_id_dpt())
+		val ib_id = Wire ( new Info_ib_id())
+		val id_dpt = Wire ( new Info_id_dpt())
 	})
 
-	val info_id_dpt = Wire(new Info_id_dpt)
-
-	info_id_dpt.info := 
-		Mux( io.iq_id.bits.is_rvc,
-		new Decode16(io.iq_id.bits.instr).info,
-		new Decode32(io.iq_id.bits.instr).info
+	io.id_dpt.info := 
+		Mux( io.ib_id.is_rvc,
+		new Decode16(io.ib_id.instr).info,
+		new Decode32(io.ib_id.instr).info
 		)
 
-	info_id_dpt.isIFAccessFault := (io.iq_id.bits.pc(63,32)) =/= (0.U)
-	info_id_dpt.isIlleage := io.id_dpt.bits.info.is_illeage
-	info_id_dpt.info.param.is_rvc := io.iq_id.bits.is_rvc
-	info_id_dpt.info.param.pc := io.iq_id.bits.pc
+	io.id_dpt.isIFAccessFault := (io.ib_id.pc(63,32)) =/= (0.U)
+	io.id_dpt.isIlleage := io.id_dpt.info.is_illeage
+	io.id_dpt.info.param.is_rvc := io.ib_id.is_rvc
+	io.id_dpt.info.param.pc := io.ib_id.pc
 
-
-	val instr_info_fifo = Module(new Queue(new Info_id_dpt, 16))
-
-	instr_info_fifo.io.enq.valid := io.iq_id.valid
-	io.iq_id.ready               := instr_info_fifo.io.enq.ready
-	instr_info_fifo.io.enq.bits  := info_id_dpt
-
-
-	io.id_dpt              <> instr_info_fifo.io.deq
+	
 
 }
 
-// class Decode_ss extends Module with Superscalar {
-// 	val io = IO( new Bundle {
-// 		val iq_id = Vec(2, Flipped(new DecoupledIO(new Info_ib_id())))
-// 		val id_dpt = Vec(2, new DecoupledIO(new Info_id_dpt()))
-// 	})
+class Decode_ss extends Module with Superscalar {
+	val io = IO( new Bundle {
+		val ib_id = Vec(2, Flipped(new DecoupledIO(new Info_ib_id)))
+		val id_dpt = Vec(2, new DecoupledIO(new Info_id_dpt))
 
-// 	val decode = for ( i <- 0 until 2 ) yield { val mdl = Module(new Decode); mdl }
+		val flush = Input(Bool())
+	})
 
-// 	for ( i <- 0 until 2 ) yield { io.id_dpt(i).bits := decode(i).io. }
+	val decode = for ( i <- 0 until 2 ) yield { val mdl = Module(new Decode); mdl }
+	val id_dpt_fifo = Module ( new MultiPortFifo( new Info_id_dpt, 4, 2, 2 ) )
+
+	io.id_dpt <> id_dpt_fifo.io.deq
+	id_dpt_fifo.io.flush := io.flush
+
+	for ( i <- 0 until 2 ) yield {
+		decode(i).io.ib_id := io.ib_id(i).bits
+		id_dpt_fifo.io.enq(i).bits := decode(i).io.id_dpt
+	}
 
 
 
 
-// }
+	override def is_1st_solo = false.B
+	override def is_2nd_solo = is_1st_solo & false.B
+
+	id_dpt_fifo.io.enq(0).valid := io.ib_id(0).valid
+	id_dpt_fifo.io.enq(1).valid := io.ib_id(0).valid & io.ib_id(1).valid & is_1st_solo
+
+	io.ib_id(0).ready := id_dpt_fifo.is_enq_ack(0)
+	io.ib_id(1).ready := id_dpt_fifo.is_enq_ack(0) & id_dpt_fifo.is_enq_ack(1) & is_1st_solo
+
+	assert( ~(~id_dpt_fifo.is_enq_ack(0) & id_dpt_fifo.is_enq_ack(1)), "Assert Fail! When id_dpt_fifo push(0) failed, When id_dpt_fifo push(1) must failed," )
+
+}
 
 
 

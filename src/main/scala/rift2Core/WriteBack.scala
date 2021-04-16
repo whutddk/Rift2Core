@@ -37,7 +37,6 @@ import rift2Core.basic._
 class WriteBack extends Module {
 	val io = IO(new Bundle{
 		val exe_iwb = Vec(5, (Flipped(new DecoupledIO(new Exe_iwb_info))))
-
 		val wb_reg = Output(new Info_wb_reg)
 	})
 

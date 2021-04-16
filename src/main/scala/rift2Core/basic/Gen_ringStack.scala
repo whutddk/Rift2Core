@@ -32,8 +32,8 @@ import chisel3.util._
 class Gen_ringStack[T<:Data]( dw: T, aw: Int ) extends Module {
 	val io = IO(new Bundle{
 		
-		val push = Flipped(new DecoupledIO(dw))
-		val pop  = new DecoupledIO(dw)
+		val enq = Flipped(new DecoupledIO(dw))
+		val deq  = new DecoupledIO(dw)
 
 		val flush = Input(Bool())
 
@@ -52,11 +52,11 @@ class Gen_ringStack[T<:Data]( dw: T, aw: Int ) extends Module {
 	def is_empty = (btm_ptr === top_ptr)
 	def is_full  = ((btm_ptr(aw-1, 1) === top_ptr(aw-1, 1)) & (btm_ptr(aw) =/= top_ptr(aw)))
 
-	def is_push_ack = io.push.valid & io.push.ready
-	def is_pop_ack  = io.pop.valid  & io.pop.ready
+	def is_enq_ack = io.enq.valid & io.enq.ready
+	def is_deq_ack = io.deq.valid & io.deq.ready
 
-	when( is_push_ack ) {
-		buf(wr_idx) := io.push.bits
+	when( is_enq_ack ) {
+		buf(wr_idx) := io.enq.bits
 	}
 
 	when(io.flush) {
@@ -64,24 +64,24 @@ class Gen_ringStack[T<:Data]( dw: T, aw: Int ) extends Module {
 		top_ptr := 0.U
 	}
 	.otherwise{
-		when( is_push_ack ) {
+		when( is_enq_ack ) {
 			when(is_full) {
 				btm_ptr := btm_ptr + 1.U			
 			}
 			top_ptr := top_ptr + 1.U
 		}
-		when(is_pop_ack) {
+		when( is_deq_ack ) {
 			top_ptr := top_ptr - 1.U
 		}
 	}
 
-	io.push.ready := true.B
-	io.pop.valid  := ~is_empty
-	io.pop.bits   := buf(rd_idx)
+	io.enq.ready := true.B
+	io.deq.valid  := ~is_empty
+	io.deq.bits   := buf(rd_idx)
 
 
 
-	assert ( ~(is_push_ack & is_pop_ack), "Assert Fail at RSA, RSA will never pop and push at the same times" )
+	assert ( ~(is_enq_ack & is_deq_ack), "Assert Fail at RSA, RSA will never pop and push at the same times" )
 
 
 }

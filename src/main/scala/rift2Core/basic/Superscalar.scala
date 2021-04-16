@@ -29,7 +29,10 @@ import chisel3.util._
 
 
 trait Superscalar {
-	def num = 2
+	def ss = 2
+
+	def is_1st_solo: Bool
+	def is_2nd_solo: Bool
 
 	// val is_act = Wire(Vec(num, Bool()))  //valid next
 	// val is_out = Wire(Vec(num, Bool()))  //ready perivous

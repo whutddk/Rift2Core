@@ -20,16 +20,16 @@ class Regfiles extends Module{
 
 
 
-		val rn_op = Input(Vec(32, Vec(4, Bool())))
-		val cm_op = Input(Vec(32, Vec(4, Bool())))
+		val rn_op = Vec(32, Vec(4, Input(Bool())))
+		val cm_op = Vec(32, Vec(4, Input(Bool())))
 
 		// val hint_op = Input(Vec(32, Vec(4, Bool())))  //hint operation for marking an instr special
 
 
-		val files = Output(Vec(32, Vec(4, UInt(64.W))))
-		val log = Output(Vec(32,Vec(4, UInt(2.W))) )
-		val rn_X = Output(Vec(32, UInt(2.W))) 
-		val ar_X = Output(Vec(32, UInt(2.W))) 
+		val files = Vec(32, Vec(4, Output(UInt(64.W))))
+		val log = Vec(32,Vec(4, Output(UInt(2.W))) )
+		val rn_ptr = Vec(32, Output(UInt(2.W))) 
+		// val ar_ptr = Vec(32, Output(UInt(2.W))) 
 
 		val flush = Input(Bool())
 	})
@@ -41,15 +41,15 @@ class Regfiles extends Module{
 	val files = RegInit( VecInit(Seq.fill(32)(VecInit(Seq.fill(4)(0.U(64.W)) )))   )
 	val regLog = RegInit( VecInit(Seq.fill(32)( VecInit( (0.U(2.W)),(0.U(2.W)),(0.U(2.W)),(2.U(2.W)) )))   ) // the first reg is wb
 
-	val rename_X = RegInit( VecInit( Seq.fill(32)(0.U(2.W))) )
-	val archit_X = RegInit( VecInit( Seq.fill(32)(0.U(2.W))) )
+	val rename_ptr = RegInit( VecInit( Seq.fill(32)(0.U(2.W))) )
+	val archit_ptr = RegInit( VecInit( Seq.fill(32)(0.U(2.W))) )
 
 
 
 	io.files := files
 	io.log := regLog
-	io.rn_X := rename_X
-	io.ar_X := archit_X
+	io.rn_ptr := rename_ptr
+	// io.ar_ptr := archit_ptr
 
 	for ( i <- 0 until 32; j <- 0 until 4) yield {
 		files(i)(j) := Mux( io.wb_reg.enable(i)(j), io.wb_reg.dnxt(i)(j), files(i)(j) )
@@ -59,20 +59,20 @@ class Regfiles extends Module{
 
 	for ( i <- 0 until 32; j <- 0 until 4) yield {
 		when(io.flush) {
-			regLog(i)(j) := Mux( archit_X(i) === j.U , 2.U , 0.U)
-			rename_X(i) := archit_X(i)
+			regLog(i)(j) := Mux( archit_ptr(i) === j.U , 2.U , 0.U)
+			rename_ptr(i) := archit_ptr(i)
 		}
 		.otherwise{
 			when(io.rn_op(i)(j)) {
 				regLog(i)(j) := 1.U(2.W)
-				rename_X(i) := j.asUInt()
+				rename_ptr(i) := j.asUInt()
 			}
 			when(wb_op(i)(j)) {
 				regLog(i)(j) := (regLog(i)(j) | "b10".U) //when hint will stay on 2, when normal wb will be 3
 			}
 			when(io.cm_op(i)(j)) {
-				regLog(i)( archit_X(i) ) := 0.U(2.W) //when reg i is commit, the last one should be free
-				archit_X(i) := j.U
+				regLog(i)( archit_ptr(i) ) := 0.U(2.W) //when reg i is commit, the last one should be free
+				archit_ptr(i) := j.U
 			}
 
 		}
