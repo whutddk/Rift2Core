@@ -111,33 +111,25 @@ class Rift2Core extends Module {
 
 
 		if_stage.io.is_il1_fence_req
-		if_stage.io.flush
+		
 
 		ib_stage.io.bru_iq_b <> exe_stage.io.bru_iq_b
 		ib_stage.io.bru_iq_j <> exe_stage.io.bru_iq_j
 
+
+
+		if_stage.io.flush
 		ib_stage.io.flush
-
 		id_stage.io.flush
-
-
-		dpt_stage.io.rod_f = Vec(2,new DecoupledIO(new Info_reorder_f))
-		dpt_stage.io.rn_ptr_f = Vec(32, Input(UInt(2.W))) 
-		dpt_stage.io.log_f = Vec(32,Vec(4, Input(UInt(2.W))) )
-		dpt_stage.io.rn_op_f = Vec(32, Vec(4, Output(Bool())))
-		dpt_stage.io.fpu_dpt_iss = new DecoupledIO(new Fpu_dpt_info())
 		dpt_stage.io.flush 
-
-
-		iss_stage.io.regLog = Vec(32,Vec(4, Input(UInt(2.W))) )
 		iss_stage.io.flush = Input(Bool())
-
-
+		exe_stage.io.flush = Input(Bool())
+		i_regfiles.io.flush = Input(Bool())
 
 
 	exe_stage.io.is_fence_commit = Input(Bool())
 	exe_stage.io.is_store_commit = Input(Bool())
-	exe_stage.io.flush = Input(Bool())
+	
 
 
 
@@ -157,11 +149,12 @@ class Rift2Core extends Module {
 	i_regfiles.io.cm_op <> cmm_stage.io.cm_op
 	i_regfiles.io.files <> iss_stage.io.files
 	i_regfiles.io.log <> cmm_stage.io.log
+	i_regfiles.io.log <> iss_stage.io.log
 	i_regfiles.io.log <> dpt_stage.io.log_i
 	i_regfiles.io.rn_ptr <> dpt_stage.io.rn_ptr_i
-	// i_regfiles.io.ar_ptr = Vec(32, Output(UInt(2.W))) 
 
-	i_regfiles.io.flush = Input(Bool())
+
+	
 }
 
 

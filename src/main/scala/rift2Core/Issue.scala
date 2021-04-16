@@ -353,12 +353,12 @@ class Mul_issue (dpt_info: Mul_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], f
 
 class Issue() extends Module {
 	val io = IO(new Bundle{
-		val alu_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Alu_dpt_info)) )
-		val bru_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Bru_dpt_info)) )
-		val lsu_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Lsu_dpt_info)) )
-		val csr_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Csr_dpt_info)) )
-		val mul_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Mul_dpt_info)) )
-		// val fpu_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Fpu_dpt_info)) )
+		val alu_dpt_iss = Flipped(new DecoupledIO(new Alu_dpt_info))
+		val bru_dpt_iss = Flipped(new DecoupledIO(new Bru_dpt_info))
+		val lsu_dpt_iss = Flipped(new DecoupledIO(new Lsu_dpt_info))
+		val csr_dpt_iss = Flipped(new DecoupledIO(new Csr_dpt_info))
+		val mul_dpt_iss = Flipped(new DecoupledIO(new Mul_dpt_info))
+		// val fpu_dpt_iss = Flipped(new DecoupledIO(new Fpu_dpt_info))
 
 
 		val alu_iss_exe = new DecoupledIO(new Alu_iss_info)
@@ -367,7 +367,7 @@ class Issue() extends Module {
 		val csr_iss_exe = new DecoupledIO(new Csr_iss_info)
 		val mul_iss_exe = new DecoupledIO(new Mul_iss_info)
 
-		val regLog = Vec(32,Vec(4, Input(UInt(2.W))) )
+		val log = Vec(32,Vec(4, Input(UInt(2.W))) )
 		val files = Vec(32, Vec(4, Input(UInt(64.W))))
 
 
@@ -375,39 +375,13 @@ class Issue() extends Module {
 	})
 		//dpt buf here
 
-
-
-		val alu_dpt_fifo = new MultiPortFifo( new Alu_dpt_info, 3, 2, 1 )
-		val bru_dpt_fifo = new MultiPortFifo( new Bru_dpt_info, 3, 2, 1 )
-		val lsu_dpt_fifo = new MultiPortFifo( new Lsu_dpt_info, 3, 2, 1 )
-		val csr_dpt_fifo = new MultiPortFifo( new Csr_dpt_info, 3, 2, 1 )
-		val mul_dpt_fifo = new MultiPortFifo( new Mul_dpt_info, 3, 2, 1 )
-		// val fpu_dpt_buf = new MultiPortFifo( dw: T, aw: Int, in: Int, out: Int )
-
-		// dpt <> issue fifo
-		io.alu_dpt_iss <> alu_dpt_fifo.io.push
-		io.bru_dpt_iss <> bru_dpt_fifo.io.push
-		io.lsu_dpt_iss <> lsu_dpt_fifo.io.push
-		io.csr_dpt_iss <> csr_dpt_fifo.io.push
-		io.mul_dpt_iss <> mul_dpt_fifo.io.push
-
-		alu_dpt_fifo.io.flush := io.flush
-		bru_dpt_fifo.io.flush := io.flush
-		lsu_dpt_fifo.io.flush := io.flush
-		csr_dpt_fifo.io.flush := io.flush
-		mul_dpt_fifo.io.flush := io.flush
-
-
 		//issue mux: issue fifo <> issue logic
-		val alu_issue = new Alu_issue (alu_dpt_fifo.io.pop(0).bits, alu_dpt_fifo.io.pop(0).valid, io.regLog, io.files)
-		val bru_issue = new Bru_issue (bru_dpt_fifo.io.pop(0).bits, bru_dpt_fifo.io.pop(0).valid, io.regLog, io.files)
-		val lsu_issue = new Lsu_issue (lsu_dpt_fifo.io.pop(0).bits, lsu_dpt_fifo.io.pop(0).valid, io.regLog, io.files)
-		val csr_issue = new Csr_issue (csr_dpt_fifo.io.pop(0).bits, csr_dpt_fifo.io.pop(0).valid, io.regLog, io.files)
-		val mul_issue = new Mul_issue (mul_dpt_fifo.io.pop(0).bits, mul_dpt_fifo.io.pop(0).valid, io.regLog, io.files)
+		val alu_issue = new Alu_issue (io.alu_dpt_iss.bits, io.alu_dpt_iss.valid, io.log, io.files)
+		val bru_issue = new Bru_issue (io.bru_dpt_iss.bits, io.bru_dpt_iss.valid, io.log, io.files)
+		val lsu_issue = new Lsu_issue (io.lsu_dpt_iss.bits, io.lsu_dpt_iss.valid, io.log, io.files)
+		val csr_issue = new Csr_issue (io.csr_dpt_iss.bits, io.csr_dpt_iss.valid, io.log, io.files)
+		val mul_issue = new Mul_issue (io.mul_dpt_iss.bits, io.mul_dpt_iss.valid, io.log, io.files)
 	
-
-
-
 		//issue info (exe param) register is here :  issue logic <> exe param reg
 		val alu_iss_info = RegNext(alu_issue.alu_iss_info)
 		val bru_iss_info = RegNext(bru_issue.bru_iss_info)
@@ -427,11 +401,11 @@ class Issue() extends Module {
 		def csr_exe_ack = io.csr_iss_exe.valid & io.csr_iss_exe.ready
 		def mul_exe_ack = io.mul_iss_exe.valid & io.mul_iss_exe.ready		
 
-		alu_dpt_fifo.io.pop(0).ready := alu_exe_ack
-		bru_dpt_fifo.io.pop(0).ready := bru_exe_ack
-		lsu_dpt_fifo.io.pop(0).ready := lsu_exe_ack
-		csr_dpt_fifo.io.pop(0).ready := csr_exe_ack
-		mul_dpt_fifo.io.pop(0).ready := mul_exe_ack
+		io.alu_dpt_iss.ready := alu_exe_ack
+		io.bru_dpt_iss.ready := bru_exe_ack
+		io.lsu_dpt_iss.ready := lsu_exe_ack
+		io.csr_dpt_iss.ready := csr_exe_ack
+		io.mul_dpt_iss.ready := mul_exe_ack
 
 
 
