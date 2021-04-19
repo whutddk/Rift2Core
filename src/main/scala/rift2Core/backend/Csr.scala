@@ -47,7 +47,7 @@ class Csr extends Module {
 	})
 
 	val csr_op_fifo = Module(new Queue( new Csr_Port, 1, true, false ) )
-	io.csr_cmm_op <> csr_op_fifo.io.enq
+	io.csr_cmm_op <> csr_op_fifo.io.deq
 
 	def iss_ack = io.csr_exe_iwb.valid & io.csr_exe_iwb.ready
 	def iwb_ack = io.csr_exe_iwb.valid & io.csr_exe_iwb.ready

@@ -79,21 +79,21 @@ trait IBuf {
 	val ia = new IAlign()
 
 
-	val ibuf = new MultiPortFifo( UInt(16.W), 4, 8, 4 ) 
+	val ibuf = Module(new MultiPortFifo( UInt(16.W), 4, 8, 4 ) )
 
-	for ( i <- 0 until 8 ) yield ibuf.io.push(i).bits  := ia.out(i)
-	for ( i <- 0 until 8 ) yield ibuf.io.push(i).valid := ia.is_valid(i) & ibuf_valid_i
+	for ( i <- 0 until 8 ) yield ibuf.io.enq(i).bits  := ia.out(i)
+	for ( i <- 0 until 8 ) yield ibuf.io.enq(i).valid := ia.is_valid(i) & ibuf_valid_i
 
 	ibuf_ready_i := 
-		ibuf.io.push(0).ready & ibuf.io.push(1).ready & ibuf.io.push(2).ready & ibuf.io.push(3).ready & 
-		ibuf.io.push(4).ready & ibuf.io.push(5).ready & ibuf.io.push(6).ready & ibuf.io.push(7).ready
+		ibuf.io.enq(0).ready & ibuf.io.enq(1).ready & ibuf.io.enq(2).ready & ibuf.io.enq(3).ready & 
+		ibuf.io.enq(4).ready & ibuf.io.enq(5).ready & ibuf.io.enq(6).ready & ibuf.io.enq(7).ready
 	
 
-	// def is_ibuf_i_ack: Bool = (ibuf.io.push(0).valid & ~ibuf.io.push(0).ready)
+	// def is_ibuf_i_ack: Bool = (ibuf.io.enq(0).valid & ~ibuf.io.enq(0).ready)
 
 
 	for ( i <- 0 until 8 ) yield {
-		assert( ~(ibuf.io.push(i).valid & ~ibuf.io.push(i).ready), "Assert Failed at ibuf push")
+		assert( ~(ibuf.io.enq(i).valid & ~ibuf.io.enq(i).ready), "Assert Failed at ibuf enq")
 	}
 
 }

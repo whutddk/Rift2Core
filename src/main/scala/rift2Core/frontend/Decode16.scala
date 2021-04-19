@@ -125,7 +125,7 @@ class Decode16 (x:UInt) {
 
 
 	info.param.imm        :=
-		MuxCase( 0.S, Array(
+		MuxCase( 0.U, Array(
 				c_addi4spn -> addi4spnImm,
 				c_fld -> ldImm,
 				c_lw -> lwImm,
@@ -150,7 +150,7 @@ class Decode16 (x:UInt) {
 				c_sdsp -> sdspImm,
 				c_slli -> shamtImm,
 				c_srli -> shamtImm,
-				c_srai -> shamtImm,
+				c_srai -> shamtImm
 
 			)
 		)

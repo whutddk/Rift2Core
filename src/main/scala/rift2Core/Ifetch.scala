@@ -81,51 +81,32 @@ class Ifetch() extends Module with IBuf{
 	val trans_kill = RegInit(false.B)
 	val is_il1_fence_req = RegInit(false.B)
 
-	// val if_iq = RegInit(0.U.asTypeOf(new Info_if_iq))
-	// val if_iq_valid = RegInit(false.B)
-
 	def is_pc_if_ack = (io.pc_if.valid & io.pc_if.ready)
-	// def is_if_iq_ack = (io.if_iq.valid & io.if_iq.ready)
-	// def is_if_iq_nack = (io.if_iq.valid & ~io.if_iq.ready)
-
 
 	when ( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush) {
 		ia.pc    := io.pc_if.bits.addr
 		ia.instr := mem_dat
 		ibuf_valid_i := true.B
 
-		// if_iq.pc    := io.pc_if.bits.addr
-		// if_iq.instr := mem_dat
-		// if_iq_valid := true.B
 	}
 	.elsewhen ( stateReg === Il1_state.cmiss & addr_align_128 === addr_il1_req & ~trans_kill) {
 		ia.pc    := io.pc_if.bits.addr
 		ia.instr := il1_mst.data_ack
 		ibuf_valid_i := true.B
 
-		// if_iq.pc    := io.pc_if.bits.addr
-		// if_iq.instr := il1_mst.data_ack
-		// if_iq_valid := true.B
 	}
 
-	// when (is_ibuf_i_ack){
-	// 	if_iq_valid := false.B
-	// }
 
-	io.pc_if.ready := ibuf_ready_i  //when ibuf has enough space
 
-	// io.if_iq.valid      := if_iq_valid
-	// io.if_iq.bits.pc    := if_iq.pc
-	// io.if_iq.bits.instr := if_iq.instr
-
+	io.pc_if.ready := ~io.flush & ibuf_ready_i  //when ibuf has enough space
 
 	io.il1_chn_a.bits := il1_mst.a
-	io.il1_chn_a.valid := il1_mst.a_valid
+	io.il1_chn_a.valid := ~io.flush & il1_mst.a_valid
 	il1_mst.a_ready    := io.il1_chn_a.ready
 
 	io.il1_chn_d.ready := il1_mst.d_ready
 	il1_mst.d          := io.il1_chn_d.bits
-	il1_mst.d_valid    := io.il1_chn_d.valid
+	il1_mst.d_valid    := ~io.flush & io.il1_chn_d.valid
 
 
 

@@ -49,19 +49,19 @@ class Rift2Core extends Module {
 		val l3c_fence_end = Input(Bool())
 	})
 
-	val pc_stage = new Pc_gen
-	val if_stage = new Ifetch
-	val iq_stage = new Iqueue_ss
-	val ib_stage = new BranchPredict_ss
-	val id_stage = new Decode_ss
+	lazy val pc_stage = Module(new Pc_gen)
+	lazy val if_stage = Module(new Ifetch)
+	lazy val iq_stage = Module(new Iqueue_ss)
+	lazy val ib_stage = Module(new BranchPredict_ss)
+	lazy val id_stage = Module(new Decode_ss)
 
-	val dpt_stage = new Dispatch_ss
-	val iss_stage = new Issue
-	val exe_stage = new Execute
-	val iwb_stage = new WriteBack
-	val cmm_stage = new Commit
+	lazy val dpt_stage = Module(new Dispatch_ss)
+	lazy val iss_stage = Module(new Issue)
+	lazy val exe_stage = Module(new Execute)
+	lazy val iwb_stage = Module(new WriteBack)
+	lazy val cmm_stage = Module(new Commit)
 
-	val i_regfiles = new Regfiles
+	lazy val i_regfiles = Module(new Regfiles)
 
 	if_stage.io.il1_chn_a <> io.il1_chn_a
 	if_stage.io.il1_chn_d <> io.il1_chn_d
@@ -107,40 +107,35 @@ class Rift2Core extends Module {
 		exe_stage.io.mul_exe_iwb <>	iwb_stage.io.exe_iwb(4)
 
 
-
-
-
-		if_stage.io.is_il1_fence_req
+	if_stage.io.is_il1_fence_req := false.B
 		
 
 		ib_stage.io.bru_iq_b <> exe_stage.io.bru_iq_b
 		ib_stage.io.bru_iq_j <> exe_stage.io.bru_iq_j
 
+	ib_stage.io.fencei_end := false.B
 
 
-		if_stage.io.flush
-		ib_stage.io.flush
-		id_stage.io.flush
-		dpt_stage.io.flush 
-		iss_stage.io.flush = Input(Bool())
-		exe_stage.io.flush = Input(Bool())
-		i_regfiles.io.flush = Input(Bool())
+	if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | ib_stage.io.ib_pc.valid
+	ib_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+	id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+	dpt_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+	iss_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+	exe_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+	i_regfiles.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 
-
-	exe_stage.io.is_fence_commit = Input(Bool())
-	exe_stage.io.is_store_commit = Input(Bool())
-	
+	cmm_stage.io.is_misPredict := ib_stage.io.is_misPredict_taken
 
 
 
 	cmm_stage.io.rod_i <> dpt_stage.io.rod_i
-	cmm_stage.io.cmm_lsu = Vec(2, Output(new Info_cmm_lsu))
-	cmm_stage.io.lsu_cmm = Input( new Info_lsu_cmm )
+	cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
+	cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
 	cmm_stage.io.cmm_bru_ilp <> exe_stage.io.cmm_bru_ilp
 	cmm_stage.io.csr_addr <> exe_stage.io.csr_addr
 	cmm_stage.io.csr_data <> exe_stage.io.csr_data
 	cmm_stage.io.csr_cmm_op <> exe_stage.io.csr_cmm_op
-	cmm_stage.io.is_misPredict = Input(Bool())
+
 	cmm_stage.io.cmm_pc <> pc_stage.io.cmm_pc
 
 

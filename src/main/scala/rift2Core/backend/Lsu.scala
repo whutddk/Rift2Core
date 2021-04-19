@@ -49,8 +49,8 @@ class Lsu extends Module {
 		val sys_chn_a = new DecoupledIO(new TLchannel_a(64,32))
 		val sys_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
 
-		val is_fence_commit = Input(Bool())
-		val is_store_commit = Input(Bool())
+		val cmm_lsu = Input(new Info_cmm_lsu)
+		val lsu_cmm = Output( new Info_lsu_cmm )
 
 		val l2c_fence_req = Output(Bool())
 		val l3c_fence_req = Output(Bool())
@@ -110,13 +110,15 @@ class Lsu extends Module {
 	val iwb_res = Reg(UInt(64.W))
 	val iwb_rd0 = Reg(UInt(7.W))
 
+	val is_cb_vhit = Wire(Vec(cb, Bool()))
+
 	def iss_ack = io.lsu_exe_iwb.valid & io.lsu_exe_iwb.ready
 	def iwb_ack = io.lsu_exe_iwb.valid & io.lsu_exe_iwb.ready
 
 	io.lsu_iss_exe.ready := iwb_ack
 
 
-	val wtb    = new Wt_block(3)
+	val wtb = new Wt_block(3)
 
 	def op1 = io.lsu_iss_exe.bits.param.op1
 	def op2 = io.lsu_iss_exe.bits.param.op2
@@ -124,6 +126,10 @@ class Lsu extends Module {
 	def op1_align64 = op1(31,0) & ~("b111".U(64.W))
 	def op1_align128 = op1(31,0) & ~("b1111".U(64.W))
 	def op1_align256 = op1(31,0) & ~("b11111".U(64.W))
+
+	io.lsu_cmm.is_accessFault := is_accessFalut
+	io.lsu_cmm.is_misAlign := is_misAlign
+	io.lsu_cmm.trap_addr := op1
 
 	def cl_sel = op1(addr_lsb+line_w-1, addr_lsb)
 
@@ -161,11 +167,11 @@ class Lsu extends Module {
 	def is_usi = lsu_lbu | lsu_lhu | lsu_lwu
 
 	def is_accessFalut = io.lsu_iss_exe.valid & ( is_ren | is_wen) & (~is_memory & ~is_system)
-	def is_misAlign    = io.lsu_iss_exe.valid & (
-													  ( (lsu_lh | lsu_lhu | lsu_sh ) & ( op1(0) =/= 0.U ) )
-													| ( (lsu_lw | lsu_lwu | lsu_sw ) & ( op1(1,0) =/= 0.U ) )
-													| ( (lsu_ld | lsu_sd)            & ( op1(2,0) =/= 0.U ) )			
-												)
+	def is_misAlign    = io.lsu_iss_exe.valid & MuxCase( false.B, Array(
+												(lsu_lh | lsu_lhu | lsu_sh ) -> (op1(0) =/= 0.U),
+												(lsu_lw | lsu_lwu | lsu_sw ) -> (op1(1,0) =/= 0.U ),
+												(lsu_ld | lsu_sd)            -> (op1(2,0) =/= 0.U)	
+											))
 
 
 	def is_ren = io.lsu_iss_exe.bits.fun.is_lu
@@ -635,7 +641,7 @@ class Lsu extends Module {
 		for ( i <- 0 until cl; j <- 0 until cb ) yield cache_valid(i)(j) := false.B
 	}
 
-	val is_cb_vhit = Vec(cb, Bool())
+	
 	for ( i <- 0 until cb ) yield { is_cb_vhit(i) := cache_valid(cl_sel)(i) & ( mem.tag_info_r(i) === op1_tag ) }
 
 
@@ -709,7 +715,7 @@ class Lsu extends Module {
 	
 	wtb.pop := (sys_mst.is_accessAck | dl1_mst.is_accessAck)
 	wtb.push := stateDnxt === Dl1_state.write
-	wtb.commit := io.is_store_commit
+	wtb.commit := io.cmm_lsu.is_store_commit
 	wtb.flush := io.flush
 
 
@@ -737,7 +743,7 @@ class Lsu extends Module {
 	def is_dl1_fence_end = wtb.empty
 
 
-	when ( ~is_fence & io.is_fence_commit ) {
+	when ( ~is_fence & io.cmm_lsu.is_fence_commit ) {
 		is_fence := true.B
 	}
 

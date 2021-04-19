@@ -64,8 +64,8 @@ class Execute extends Module {
 		val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
 		val sys_chn_a = new DecoupledIO(new TLchannel_a(64,32))
 		val sys_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
-		val is_fence_commit = Input(Bool())
-		val is_store_commit = Input(Bool())
+		val cmm_lsu = Input(new Info_cmm_lsu)
+		val lsu_cmm = Output( new Info_lsu_cmm )
 		val l2c_fence_req = Output(Bool())
 		val l3c_fence_req = Output(Bool())
 		val l2c_fence_end = Input(Bool())
@@ -76,11 +76,11 @@ class Execute extends Module {
 
 	})
 
-	val alu = new Alu
-	val bru = new Bru
-	val lsu = new Lsu
-	val csr = new Csr
-	val mul = new Mul
+	val alu = Module(new Alu)
+	val bru = Module(new Bru)
+	val lsu = Module(new Lsu)
+	val csr = Module(new Csr)
+	val mul = Module(new Mul)
 
 	alu.io.alu_iss_exe <> io.alu_iss_exe
 	alu.io.alu_exe_iwb <> io.alu_exe_iwb
@@ -107,8 +107,8 @@ class Execute extends Module {
 	lsu.io.dl1_chn_d <> io.dl1_chn_d
 	lsu.io.sys_chn_a <> io.sys_chn_a
 	lsu.io.sys_chn_d <> io.sys_chn_d
-	lsu.io.is_fence_commit <> io.is_fence_commit
-	lsu.io.is_store_commit <> io.is_store_commit
+	lsu.io.cmm_lsu <> io.cmm_lsu
+	lsu.io.lsu_cmm <> io.lsu_cmm
 	lsu.io.l2c_fence_req <> io.l2c_fence_req
 	lsu.io.l3c_fence_req <> io.l3c_fence_req
 	lsu.io.l2c_fence_end <> io.l2c_fence_end

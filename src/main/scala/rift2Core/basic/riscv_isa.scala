@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-15 16:27:17
+* @Last Modified time: 2021-04-19 14:18:18
 */
 
 /*
@@ -609,21 +609,21 @@ class Info_iq_ib extends Bundle {
 
 	val info = new Info_preDecode
 	val instr = UInt(32.W)
-	val pc = UInt(32.W)
+	val pc = UInt(64.W)
 }
 
 class Info_ib_id extends Bundle {
 	val is_rvc = Bool()
-	val pc = UInt(32.W)
+	val pc = UInt(64.W)
 	val instr = UInt(32.W)
 }
 
 class Info_ib_pc extends Bundle {
-	val addr = UInt(32.W)
+	val addr = UInt(64.W)
 }
 
 class Info_cmm_pc extends Bundle {
-	val addr = UInt(32.W)
+	val addr = UInt(64.W)
 }
 
 

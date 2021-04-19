@@ -30,12 +30,11 @@ import chisel3.util._
 
 
 class Gen_ringStack[T<:Data]( dw: T, aw: Int ) extends Module {
-	val io = IO(new Bundle{
-		
-		val enq = Flipped(new DecoupledIO(dw))
-		val deq  = new DecoupledIO(dw)
+	lazy val io = IO(new Bundle{
+			val enq = Flipped(new DecoupledIO(dw))
+			val deq  = new DecoupledIO(dw)
 
-		val flush = Input(Bool())
+			val flush = Input(Bool())
 
 	})
 

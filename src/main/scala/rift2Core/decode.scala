@@ -32,8 +32,8 @@ import rift2Core.frontend._
 
 class Decode extends Module {
 	val io = IO( new Bundle {
-		val ib_id = Wire ( new Info_ib_id())
-		val id_dpt = Wire ( new Info_id_dpt())
+		val ib_id = Input ( new Info_ib_id())
+		val id_dpt = Output ( new Info_id_dpt())
 	})
 
 	io.id_dpt.info := 
@@ -42,10 +42,10 @@ class Decode extends Module {
 		new Decode32(io.ib_id.instr).info
 		)
 
-	io.id_dpt.isIFAccessFault := (io.ib_id.pc(63,32)) =/= (0.U)
-	io.id_dpt.isIlleage := io.id_dpt.info.is_illeage
+	io.id_dpt.is_iFAccessFault  := io.ib_id.pc(63,32) =/= (0.U)
+	io.id_dpt.is_illeage        := io.id_dpt.info.is_illeage
 	io.id_dpt.info.param.is_rvc := io.ib_id.is_rvc
-	io.id_dpt.info.param.pc := io.ib_id.pc
+	io.id_dpt.info.param.pc     := io.ib_id.pc
 
 	
 
@@ -76,8 +76,8 @@ class Decode_ss extends Module with Superscalar {
 	override def is_1st_solo = false.B
 	override def is_2nd_solo = is_1st_solo & false.B
 
-	id_dpt_fifo.io.enq(0).valid := io.ib_id(0).valid
-	id_dpt_fifo.io.enq(1).valid := io.ib_id(0).valid & io.ib_id(1).valid & is_1st_solo
+	id_dpt_fifo.io.enq(0).valid := ~io.flush & io.ib_id(0).valid
+	id_dpt_fifo.io.enq(1).valid := ~io.flush & io.ib_id(0).valid & io.ib_id(1).valid & is_1st_solo
 
 	io.ib_id(0).ready := id_dpt_fifo.is_enq_ack(0)
 	io.ib_id(1).ready := id_dpt_fifo.is_enq_ack(0) & id_dpt_fifo.is_enq_ack(1) & is_1st_solo

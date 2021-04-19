@@ -31,7 +31,7 @@ import chisel3.util._
 import rift2Core.basic._
 import rift2Core.backend._
 
-class Commit extends Privilege {
+class Commit extends Privilege with Superscalar{
 	val io = IO(new Bundle{
 
 		val cm_op = Output(Vec(32, Vec(4, Bool())))
@@ -39,7 +39,7 @@ class Commit extends Privilege {
 
 		val rod_i = Vec(2, Flipped(new DecoupledIO( new Info_reorder_i ) ))
 
-		val cmm_lsu = Vec(2, Output(new Info_cmm_lsu))
+		val cmm_lsu = Output(new Info_cmm_lsu)
 		val lsu_cmm = Input( new Info_lsu_cmm )
 
 		val cmm_bru_ilp = Output(Bool())
@@ -49,10 +49,7 @@ class Commit extends Privilege {
 		val csr_cmm_op = Flipped(DecoupledIO( new Csr_Port ) )
 
 		val is_misPredict = Input(Bool())
-
-
-
-
+		val is_commit_abort = Vec(2, Output( Bool() ))
 
 		val cmm_pc = new ValidIO(new Info_cmm_pc)
 	})
@@ -70,15 +67,21 @@ class Commit extends Privilege {
 	//bru commit ilp
 	io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (io.log(rd0_raw(0))(rd0_idx(0)) =/= 3.U)
 
-	val is_commit_abort = VecInit(
-		(io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet(1) | is_trap(1) ),
+	def is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | ~io.rod_i(0).bits.is_su
+	def is_2nd_solo = io.is_commit_abort(1)
+
+
+	io.is_commit_abort(1) :=
+		(io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet(1) | is_trap(1) ) & is_1st_solo
+	
+	io.is_commit_abort(0) :=
 		(io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet(0) | is_trap(0) )
-	)
+
 
 	//only one privilege can commit once
 	val is_commit_comfirm = VecInit(
-		is_wb(1) & ~is_commit_abort(1) & is_wb(0) & ~is_commit_abort(0) & ~io.rod_i(0).bits.is_csr,
-		is_wb(0) & ~is_commit_abort(0)
+		is_wb(1) & ~io.is_commit_abort(1) & ~is_1st_solo,
+		is_wb(0) & ~io.is_commit_abort(0)
 	)
 
 	for ( i <- 0 until 32; j <- 0 until 4 ) yield {
@@ -90,10 +93,11 @@ class Commit extends Privilege {
 	io.rod_i(0).ready := is_commit_comfirm(0)
 	io.rod_i(1).ready := is_commit_comfirm(1)
 
-	io.cmm_lsu(0).is_fence_commit := io.rod_i(0).bits.is_fence & is_commit_comfirm(0)
-	io.cmm_lsu(1).is_fence_commit := io.rod_i(1).bits.is_fence & is_commit_comfirm(1)
-	io.cmm_lsu(0).is_store_commit := io.rod_i(0).bits.is_su & is_commit_comfirm(0)
-	io.cmm_lsu(1).is_store_commit := io.rod_i(1).bits.is_su & is_commit_comfirm(1)
+	io.cmm_lsu.is_fence_commit := 	(io.rod_i(0).bits.is_fence & is_commit_comfirm(0)) |
+									(io.rod_i(1).bits.is_fence & is_commit_comfirm(1))
+
+	io.cmm_lsu.is_store_commit := 	(io.rod_i(0).bits.is_su & is_commit_comfirm(0)) |
+									(io.rod_i(1).bits.is_su & is_commit_comfirm(1))
 
 
 

@@ -54,7 +54,7 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 	val wr_ptr = RegInit(0.U(aw.W))
 
 
-	for ( i <- 0 until in) yield  io.enq(i).ready := (buf_valid((wr_ptr + i.U)(aw-1,0)) === false.B)
+	for ( i <- 0 until in )  yield io.enq(i).ready := (buf_valid((wr_ptr + i.U)(aw-1,0)) === false.B)
 	for ( i <- 0 until out ) yield io.deq(i).valid := (buf_valid((rd_ptr + i.U)(aw-1,0)) === true.B)
 
 	def is_enq_ack(i: Int) = io.enq(i.U).valid & io.enq(i.U).ready
@@ -89,8 +89,8 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 			val fifo_ptr_w = (wr_ptr + i.U)(aw-1,0)
 			val fifo_ptr_r = (rd_ptr + j.U)(aw-1,0)
 
-			buf_valid(fifo_ptr_w) := Mux(is_enq_ack(i), true.B, buf_valid(fifo_ptr_w))
-			buf_valid(fifo_ptr_r) := Mux(is_deq_ack(j),  false.B, buf_valid(fifo_ptr_r))
+			buf_valid(fifo_ptr_w) := Mux(is_enq_ack(i), true.B,  buf_valid(fifo_ptr_w))
+			buf_valid(fifo_ptr_r) := Mux(is_deq_ack(j), false.B, buf_valid(fifo_ptr_r))
 
 			buf(fifo_ptr_w) := Mux(is_enq_ack(i), io.enq(i).bits, buf(fifo_ptr_w))
 		}

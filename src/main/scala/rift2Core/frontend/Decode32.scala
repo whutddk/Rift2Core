@@ -59,7 +59,7 @@ class Decode32 (x:UInt) {
 
 
 
-	info.param.imm := MuxCase( 0.S, Array(
+	info.param.imm := MuxCase( 0.U, Array(
 			is_iType -> iType_imm,
 			is_sType -> sType_imm,
 			is_bType -> bType_imm,

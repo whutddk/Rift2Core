@@ -67,8 +67,8 @@ trait ReOrder {
 		reorder_i_info.is_fence       := id_dpt_info.info.lsu_isa.fence
 		reorder_i_info.is_csr         := id_dpt_info.info.csr_isa.is_csr
 		reorder_i_info.privil         := id_dpt_info.info.privil_isa
-		reorder_i_info.is_accessFault := id_dpt_info.isIFAccessFault
-		reorder_i_info.is_illeage     := id_dpt_info.isIlleage
+		reorder_i_info.is_accessFault := id_dpt_info.is_iFAccessFault
+		reorder_i_info.is_illeage     := id_dpt_info.is_illeage
 
 		return reorder_i_info
 	}
