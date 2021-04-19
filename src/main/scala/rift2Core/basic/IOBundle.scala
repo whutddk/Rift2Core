@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 16:49:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-19 11:51:41
+* @Last Modified time: 2021-04-19 17:54:17
 */
 
 
@@ -44,15 +44,7 @@ class Info_pc_if extends Bundle {
 
 
 
-class Info_id_dpt extends Bundle {
 
-	val info = new Info_instruction()
-	val is_iFAccessFault = Bool()
-	val is_illeage = Bool()
-
-
-
-}
 
 
 class Info_dpt_reg extends Bundle {

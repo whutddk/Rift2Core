@@ -32,8 +32,11 @@ import chisel3._
 import chisel3.util._
 
 import rift2Core.basic._
+import chisel3.experimental.chiselName
 
 
+
+@chiselName
 class WriteBack extends Module {
 	val io = IO(new Bundle{
 		val exe_iwb = Vec(5, (Flipped(new DecoupledIO(new Exe_iwb_info))))

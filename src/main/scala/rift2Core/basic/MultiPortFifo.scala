@@ -28,10 +28,15 @@ package rift2Core.basic
 
 import chisel3._
 import chisel3.util._
+import chisel3.experimental.chiselName
+
+
 
 
 
 //dw:data type aw:address width, in: input port num, out: output port num 
+
+@chiselName
 class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
 	val io = IO(new Bundle{
 		val enq = Vec(in, Flipped(new DecoupledIO(dw)) )

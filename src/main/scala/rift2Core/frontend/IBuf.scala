@@ -73,13 +73,13 @@ class IAlign{
 
 trait IBuf {
 
-	val ibuf_valid_i = Wire(Bool())
-	val ibuf_ready_i = Wire(Bool())
+	lazy val ibuf_valid_i = Wire(Bool())
+	lazy val ibuf_ready_i = Wire(Bool())
 
-	val ia = new IAlign()
+	lazy val ia = new IAlign()
 
 
-	val ibuf = Module(new MultiPortFifo( UInt(16.W), 4, 8, 4 ) )
+	lazy val ibuf = Module(new MultiPortFifo( UInt(16.W), 4, 8, 4 ) )
 
 	for ( i <- 0 until 8 ) yield ibuf.io.enq(i).bits  := ia.out(i)
 	for ( i <- 0 until 8 ) yield ibuf.io.enq(i).valid := ia.is_valid(i) & ibuf_valid_i

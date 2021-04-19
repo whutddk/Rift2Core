@@ -28,12 +28,12 @@ package rift2Core.backend
 import chisel3._
 import chisel3.util._
 import rift2Core.basic._
+import chisel3.experimental.chiselName
 
 
 
 
-
-
+@chiselName
 class Mul extends Module {
 	val io = IO(new Bundle {
 		val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
@@ -203,28 +203,17 @@ class Mul extends Module {
 	val iwb_rd0 = Reg(UInt(7.W))
 
 
-	def is_fun_end: Bool = {
-		if ( io.mul_iss_exe.valid == true.B ) {
-			if ( ~is_div == true.B ) {
-				true.B
-			}
-			else {
-				if ( (div_by_zero | div_overflow) == true.B ) {
-					true.B
-				}
-				else if ( cnt == 64.U ) {
-					true.B
-				}
-				else {
-					false.B
-				}
-			}
-		}
-		else {
+	def is_fun_end: Bool = 
+		Mux( io.mul_iss_exe.valid,
+			MuxCase( false.B, Array(
+				(~is_div === true.B) -> true.B,
+				((div_by_zero | div_overflow) === true.B) -> true.B,
+				( cnt === 64.U ) -> true.B
+			)),
 			false.B
-		}
-	}
-
+		)
+	
+	
 
 
 	when( reset.asBool | io.flush ) {

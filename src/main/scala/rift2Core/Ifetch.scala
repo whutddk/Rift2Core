@@ -33,13 +33,16 @@ import rift2Core.basic._
 import rift2Core.cache._
 import rift2Core.frontend._
 import tilelink._
+import chisel3.experimental.chiselName
+
+
 
 object Il1_state extends ChiselEnum {
 	val cfree, cktag, cmiss, fence = Value
 }
 
 
-
+@chiselName
 class Ifetch() extends Module with IBuf{
 	val io = IO(new Bundle{
 		val pc_if = Flipped(new DecoupledIO( new Info_pc_if ))
@@ -81,20 +84,25 @@ class Ifetch() extends Module with IBuf{
 	val trans_kill = RegInit(false.B)
 	val is_il1_fence_req = RegInit(false.B)
 
+	io.if_iq <> ibuf.io.deq
+	ibuf.io.flush := io.flush
+
 	def is_pc_if_ack = (io.pc_if.valid & io.pc_if.ready)
 
-	when ( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush) {
-		ia.pc    := io.pc_if.bits.addr
-		ia.instr := mem_dat
-		ibuf_valid_i := true.B
+	ia.pc := io.pc_if.bits.addr
+	ia.instr := Mux( 
+		( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush),
+		mem_dat,
+		Mux(
+			( stateReg === Il1_state.cmiss & addr_align_128 === addr_il1_req & ~trans_kill),
+			il1_mst.data_ack,
+			DontCare
+		)
+	 )
 
-	}
-	.elsewhen ( stateReg === Il1_state.cmiss & addr_align_128 === addr_il1_req & ~trans_kill) {
-		ia.pc    := io.pc_if.bits.addr
-		ia.instr := il1_mst.data_ack
-		ibuf_valid_i := true.B
-
-	}
+	ibuf_valid_i := 
+				( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush) |
+				( stateReg === Il1_state.cmiss & addr_align_128 === addr_il1_req & ~trans_kill)
 
 
 

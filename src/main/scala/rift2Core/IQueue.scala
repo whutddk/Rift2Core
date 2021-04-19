@@ -31,13 +31,13 @@ import chisel3.util.random._
 import chisel3.experimental.ChiselEnum
 import rift2Core.basic._
 import rift2Core.frontend._
+import chisel3.experimental.chiselName
 
 
 
 
 
-
-
+@chiselName
 class Iqueue_ss extends Module with Superscalar{
 	val io = IO(new Bundle {
 

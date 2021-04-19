@@ -29,6 +29,7 @@ package rift2Core
 import chisel3._
 import chisel3.util._
 import rift2Core.basic._
+import chisel3.experimental.chiselName
 
 
 abstract class Ele_issue(param: Instruction_param, rn: Reg_idx, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) {
@@ -49,7 +50,6 @@ abstract class Ele_issue(param: Instruction_param, rn: Reg_idx, log: Vec[Vec[UIn
 	def is_clearRAW: Bool
 
 }
-
 
 
 class Alu_issue(dpt_info: Alu_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], files: Vec[Vec[UInt]]) extends Ele_issue(dpt_info.param, dpt_info.rn, log, files) {
@@ -351,6 +351,8 @@ class Mul_issue (dpt_info: Mul_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], f
 
 // }
 
+
+@chiselName
 class Issue() extends Module {
 	val io = IO(new Bundle{
 		val alu_dpt_iss = Flipped(new DecoupledIO(new Alu_dpt_info))

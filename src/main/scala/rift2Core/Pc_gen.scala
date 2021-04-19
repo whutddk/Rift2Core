@@ -31,7 +31,10 @@ import chisel3.util.random._
 import chisel3.experimental.ChiselEnum
 import rift2Core.basic._
 import rift2Core.frontend._
+import chisel3.experimental.chiselName
 
+
+@chiselName
 class Pc_gen extends Module {
 	val io = IO(new Bundle{
 		val ib_pc = Flipped(new ValidIO( new Info_ib_pc) )

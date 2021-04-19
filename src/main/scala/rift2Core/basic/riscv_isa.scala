@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-19 14:18:18
+* @Last Modified time: 2021-04-19 17:54:25
 */
 
 /*
@@ -322,6 +322,7 @@ trait Instruction_set {
 class Instruction_param extends Bundle {
 	val is_rvc = Bool()
 	val pc = UInt(64.W)
+	
 	val imm = UInt(64.W)
 	val rd0_raw = UInt(5.W)
 	val rs1_raw = UInt(5.W)
@@ -331,6 +332,7 @@ class Instruction_param extends Bundle {
 
 class Info_instruction extends Bundle with Instruction_set {
 	val param = new Instruction_param
+
 }
 
 
@@ -350,7 +352,13 @@ class Reg_idx extends Bundle {
 }
 
 
+class Info_id_dpt extends Bundle {
 
+	val info = new Info_instruction()
+	val is_iFAccessFault = Bool()
+	val is_illeage = Bool()
+
+}
 
 class Alu_dpt_info extends Bundle {
 	val isa = new Alu_isa()

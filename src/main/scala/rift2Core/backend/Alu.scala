@@ -28,11 +28,11 @@ package rift2Core.backend
 import chisel3._
 import chisel3.util._
 import rift2Core.basic._
+import chisel3.experimental.chiselName
 
 
 
-
-
+@chiselName
 class Alu extends Module {
 	val io = IO(new Bundle{
 		val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))

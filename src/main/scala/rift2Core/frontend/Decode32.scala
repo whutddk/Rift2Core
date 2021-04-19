@@ -31,10 +31,11 @@ import chisel3._
 import chisel3.util._
 import rift2Core.basic._
 
-class Decode32 (x:UInt) {
+class Decode32 (x:UInt, pc: UInt) {
 
 	val info = Wire(new Info_instruction)
-
+	info.param.pc := pc
+	info.param.is_rvc := false.B
 
 
 

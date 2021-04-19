@@ -35,7 +35,6 @@ import rift2Core.basic._
 
 
 
-
 trait M_Privilege {
 
 	val csrFiles: CsrFiles

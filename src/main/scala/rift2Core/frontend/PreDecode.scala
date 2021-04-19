@@ -28,9 +28,12 @@ package rift2Core.frontend
 import chisel3._
 import chisel3.util._
 import rift2Core.basic._
+import chisel3.experimental.chiselName
 
 
 
+
+@chiselName
 class PreDecode16() extends Module{
 	val io = IO(new Bundle {
 		val instr16 = Input( UInt(16.W) )
@@ -54,6 +57,9 @@ class PreDecode16() extends Module{
 
 }
 
+
+
+@chiselName
 class PreDecode32() extends Module{
 	val io = IO(new Bundle {
 		val instr32 = Input( UInt(32.W) )

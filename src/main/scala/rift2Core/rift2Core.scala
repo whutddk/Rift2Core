@@ -32,7 +32,9 @@ import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.cache._
 import tilelink._
+import chisel3.experimental.chiselName
 
+@chiselName
 class Rift2Core extends Module {
 	val io = IO(new Bundle{
 		val il1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))

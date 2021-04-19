@@ -32,10 +32,11 @@ import chisel3.util._
 import rift2Core.basic._
 
 
-class Decode16 (x:UInt) {
+class Decode16 (x:UInt, pc: UInt) {
 
 	val info = Wire(new Info_instruction)
-
+	info.param.pc := pc
+	info.param.is_rvc := true.B
 
 	def addi4spnImm = Cat(0.U(54.W), x(10,7), x(12,11), x(5), x(6), 0.U(2.W))
 	def lwImm = Cat(0.U(57.W), x(5), x(12,10), x(6), 0.U(2.W))

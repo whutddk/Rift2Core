@@ -26,7 +26,7 @@ package rift2Core
 import chisel3._
 import chisel3.util._
 import rift2Core.basic._
-
+import chisel3.experimental.chiselName
 
 
 class Rename(ptr: Vec[UInt], log: Vec[Vec[UInt]] ) {
@@ -153,6 +153,8 @@ trait Dpt{
 
 
 
+
+@chiselName
 class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 	val io = IO(new Bundle{
 		val id_dpt = Vec(2, Flipped(new DecoupledIO(new Info_id_dpt())))

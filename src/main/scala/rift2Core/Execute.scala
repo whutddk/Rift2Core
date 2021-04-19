@@ -32,12 +32,12 @@ import chisel3.util._
 import rift2Core.basic._
 import rift2Core.backend._
 import tilelink._
+import chisel3.experimental.chiselName
 
 
 
 
-
-
+@chiselName
 class Execute extends Module {
 	val io = IO(new Bundle{
 		val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))

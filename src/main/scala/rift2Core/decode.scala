@@ -28,8 +28,10 @@ import chisel3._
 import chisel3.util._
 import rift2Core.basic._
 import rift2Core.frontend._
+import chisel3.experimental.chiselName
 
 
+@chiselName
 class Decode extends Module {
 	val io = IO( new Bundle {
 		val ib_id = Input ( new Info_ib_id())
@@ -38,14 +40,12 @@ class Decode extends Module {
 
 	io.id_dpt.info := 
 		Mux( io.ib_id.is_rvc,
-		new Decode16(io.ib_id.instr).info,
-		new Decode32(io.ib_id.instr).info
+		new Decode16(io.ib_id.instr, io.ib_id.pc).info,
+		new Decode32(io.ib_id.instr, io.ib_id.pc).info
 		)
 
 	io.id_dpt.is_iFAccessFault  := io.ib_id.pc(63,32) =/= (0.U)
 	io.id_dpt.is_illeage        := io.id_dpt.info.is_illeage
-	io.id_dpt.info.param.is_rvc := io.ib_id.is_rvc
-	io.id_dpt.info.param.pc     := io.ib_id.pc
 
 	
 

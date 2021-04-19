@@ -37,7 +37,7 @@ import chisel3.experimental.chiselName
 
 
 
-// @chiselName
+@chiselName
 class Lsu extends Module {
 	val io = IO( new Bundle{
 		val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))

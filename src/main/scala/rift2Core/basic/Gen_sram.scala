@@ -28,9 +28,11 @@ package rift2Core.basic
 
 import chisel3._
 import chisel3.util._
+import chisel3.experimental.chiselName
 
 
 
+@chiselName
 class Gen_sram(dw: Int, aw: Int) extends BlackBox(Map("DW" -> dw, "AW" -> aw)) with HasBlackBoxResource {
 	val io = IO(new Bundle{
 		val data_w = Input(UInt(dw.W))
