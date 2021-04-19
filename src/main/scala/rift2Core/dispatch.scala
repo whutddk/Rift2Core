@@ -44,14 +44,8 @@ class Rename(ptr: Vec[UInt], log: Vec[Vec[UInt]] ) {
 	def malloc_1st(rd0: UInt): UInt = return log(rd0).indexWhere( (x:UInt) => (x === 0.U) )
 	def malloc_2nd(rd0: UInt): UInt = return log(rd0).lastIndexWhere( (x:UInt) => (x === 0.U) )
 
-	def lookup_1st( rs: UInt ): UInt = return ptr(rs)
-	def lookup_2nd( rs: UInt, rd_1st: UInt ): UInt = {
-		return Mux(
-				( rs === rd_1st ),
-				malloc_1st(rd_1st),
-				lookup_1st(rs)
-			)
-	}
+	def lookup( rs: UInt ): UInt = return ptr(rs)
+
 }
 
 trait ReOrder {
@@ -168,44 +162,54 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 		val lsu_dpt_iss = new DecoupledIO(new Lsu_dpt_info())
 		val csr_dpt_iss = new DecoupledIO(new Csr_dpt_info())
 		val mul_dpt_iss = new DecoupledIO(new Mul_dpt_info())
-		// val fpu_dpt_iss = new DecoupledIO(new Fpu_dpt_info())
 
 		val rod_i = Vec(2,new DecoupledIO(new Info_reorder_i))
-		// val rod_f = Vec(2,new DecoupledIO(new Info_reorder_f))
 
 		val rn_ptr_i = Vec(32, Input(UInt(2.W))) 
 		val log_i = Vec(32,Vec(4, Input(UInt(2.W))) )
 		val rn_op_i = Vec(32, Vec(4, Output(Bool())))
 
-		// val rn_ptr_f = Vec(32, Input(UInt(2.W))) 
-		// val log_f = Vec(32,Vec(4, Input(UInt(2.W))) )
-		// val rn_op_f = Vec(32, Vec(4, Output(Bool())))
 
 		val flush = Input(Bool())
 
 	})
 
 	val rename_i = new Rename(io.rn_ptr_i, io.log_i)
-	// val rename_f = new Rename(io.rn_ptr_f, io.log_f)
 
 	val alu_dpt_iss_fifo = Module(new MultiPortFifo(new Alu_dpt_info, 2, 2, 1))
 	val bru_dpt_iss_fifo = Module(new MultiPortFifo(new Bru_dpt_info, 2, 2, 1))
 	val lsu_dpt_iss_fifo = Module(new MultiPortFifo(new Lsu_dpt_info, 2, 2, 1))
 	val csr_dpt_iss_fifo = Module(new MultiPortFifo(new Csr_dpt_info, 2, 2, 1))
 	val mul_dpt_iss_fifo = Module(new MultiPortFifo(new Mul_dpt_info, 2, 2, 1))
-	// val fpu_dpt_iss_fifo = Module(new MultiPortFifo(new Fpu_dpt_info, 2, 2, 1))
 
 	val reOrder_fifo_i = Module(new MultiPortFifo(new Info_reorder_i, 4, 2, 2))
-	val reOrder_fifo_f = Module(new MultiPortFifo(new Info_reorder_f, 4, 2, 2))
+
+	val is_alu_dpt_1st = Wire(Bool())
+	val is_bru_dpt_1st = Wire(Bool())
+	val is_lsu_dpt_1st = Wire(Bool())
+	val is_csr_dpt_1st = Wire(Bool())
+	val is_mul_dpt_1st = Wire(Bool())
+	val is_privil_dpt_1st = Wire(Bool())
+	val is_dpt_1st = Wire(Bool())
+
+	val is_alu_dpt_2nd    = Wire(Bool())
+	val is_bru_dpt_2nd    = Wire(Bool())
+	val is_lsu_dpt_2nd    = Wire(Bool())
+	val is_csr_dpt_2nd    = Wire(Bool())
+	val is_mul_dpt_2nd    = Wire(Bool())
+	val is_privil_dpt_2nd = Wire(Bool())
+	val is_dpt_2nd = Wire(Bool())
+
+
+
 
 	alu_dpt_iss_fifo.io.flush := io.flush
 	bru_dpt_iss_fifo.io.flush := io.flush
 	lsu_dpt_iss_fifo.io.flush := io.flush
 	csr_dpt_iss_fifo.io.flush := io.flush
 	mul_dpt_iss_fifo.io.flush := io.flush
-	// fpu_dpt_iss_fifo.io.flush := io.flush
+
 	reOrder_fifo_i.io.flush := io.flush
-	// reOrder_fifo_f.io.flush := io.flush
 
 
 	io.alu_dpt_iss <> alu_dpt_iss_fifo.io.deq(0)
@@ -213,14 +217,10 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 	io.lsu_dpt_iss <> lsu_dpt_iss_fifo.io.deq(0)
 	io.csr_dpt_iss <> csr_dpt_iss_fifo.io.deq(0)
 	io.mul_dpt_iss <> mul_dpt_iss_fifo.io.deq(0)
-	// io.fpu_dpt_iss <> fpu_dpt_iss_fifo.io.deq(0)
 
 	io.rod_i <> reOrder_fifo_i.io.deq
-	// io.rod_f <> reOrder_fifo_f.io.deq
 
-
-	def is_iwb(i: Int) = io.id_dpt(i).bits.info.is_iwb
-	def is_fwb(i: Int) = io.id_dpt(i).bits.info.is_fwb
+	def is_iwb(i: Int) = true.B
 
 	def id_dpt_info(i: Int) = io.id_dpt(i).bits
 	def instruction_info(i: Int) = id_dpt_info(i).info
@@ -233,15 +233,26 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 
 
 
-	def rd0_idx_1st = rename_i.malloc_1st(rd0_raw(0)) //Mux( is_iwb(0), rename_i.malloc_1st(rd0_raw(0)), rename_f.malloc_1st(rd0_raw(0)) )
-	def rs1_idx_1st = rename_i.lookup_1st(rs1_raw(0)) //Mux( is_iwb(0), rename_i.lookup_1st(rs1_raw(0)), rename_f.lookup_1st(rs1_raw(0)) )
-	def rs2_idx_1st = rename_i.lookup_1st(rs2_raw(0)) //Mux( is_iwb(0), rename_i.lookup_1st(rs2_raw(0)), rename_f.lookup_1st(rs2_raw(0)) )
-	def rs3_idx_1st = rename_i.lookup_1st(rs3_raw(0)) //Mux( is_iwb(0), rename_i.lookup_1st(rs3_raw(0)), rename_f.lookup_1st(rs3_raw(0)) )
+	val rd0_idx_1st = Wire(UInt(2.W))
+	val rs1_idx_1st = Wire(UInt(2.W))
+	val rs2_idx_1st = Wire(UInt(2.W))
+	val rd0_idx_2nd = Wire(UInt(2.W))
+	val rs1_idx_2nd = Wire(UInt(2.W))
+	val rs2_idx_2nd = Wire(UInt(2.W))
 
-	def rd0_idx_2nd = rename_i.malloc_2nd(rd0_raw(1)) //Mux( is_iwb(1), rename_i.malloc_2nd(rd0_raw(1)),             rename_f.malloc_2nd(rd0_raw(1)) )
-	def rs1_idx_2nd = rename_i.lookup_2nd(rs1_raw(1), rd0_raw(0)) //Mux( is_iwb(1), rename_i.lookup_2nd(rs1_raw(1), rd0_raw(0)), rename_f.malloc_2nd(rs1_raw(1)) )
-	def rs2_idx_2nd = rename_i.lookup_2nd(rs2_raw(1), rd0_raw(0)) //Mux( is_iwb(1), rename_i.lookup_2nd(rs2_raw(1), rd0_raw(0)), rename_f.malloc_2nd(rs2_raw(1)) )
-	def rs3_idx_2nd = rename_i.lookup_2nd(rs3_raw(1), rd0_raw(0)) //Mux( is_iwb(1), rename_i.lookup_2nd(rs3_raw(1), rd0_raw(0)), rename_f.malloc_2nd(rs3_raw(1)) )
+	rd0_idx_1st := rename_i.malloc_1st(rd0_raw(0))
+	rd0_idx_2nd := rename_i.malloc_2nd(rd0_raw(1))
+	
+	rs1_idx_1st := rename_i.lookup(rs1_raw(0))
+	rs2_idx_1st := rename_i.lookup(rs2_raw(0))
+	
+
+
+	rs1_idx_2nd := Mux( ( rd0_raw(0) === rs1_raw(1) ), rd0_idx_1st, rename_i.lookup(rs1_raw(1)) )
+	rs2_idx_2nd := Mux( ( rd0_raw(0) === rs2_raw(1) ), rd0_idx_1st, rename_i.lookup(rs2_raw(1)) )
+
+	
+	
 
 
 	for ( i <- 0 until 32; j <- 0 until 4 ) yield {
@@ -249,9 +260,6 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 			((i.U === rd0_raw(0)) & ( j.U === rd0_idx_1st ) & is_dpt_1st & is_iwb(0)) | 
 			((i.U === rd0_raw(1)) & ( j.U === rd0_idx_2nd ) & is_dpt_2nd & is_iwb(1))
 
-		// io.rn_op_f(i)(j) := 
-		// 	((i.U === rd0_raw(0)) & ( j.U === rd0_idx_1st ) & is_dpt_1st & is_fwb(0)) | 
-		// 	((i.U === rd0_raw(1)) & ( j.U === rd0_idx_2nd ) & is_dpt_2nd & is_fwb(1))
 	}
 
 
@@ -264,25 +272,21 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 	def is_rod_ready(i: Int) = reOrder_fifo_i.io.enq(i).ready //Mux(is_iwb(i), reOrder_fifo_i.io.enq(i).ready, reOrder_fifo_f.io.enq(i).ready)
 
 
-	def is_alu_dpt_1st    = instruction_info(0).alu_isa.is_alu & ~rename_i.is_full_1st(rd0_raw(0)) & is_rod_ready(0) & alu_dpt_iss_fifo.io.enq(0).ready
-	def is_bru_dpt_1st    = instruction_info(0).bru_isa.is_bru & ~rename_i.is_full_1st(rd0_raw(0)) & is_rod_ready(0) & bru_dpt_iss_fifo.io.enq(0).ready
-	def is_lsu_dpt_1st    = instruction_info(0).lsu_isa.is_lsu & ~rename_i.is_full_1st(rd0_raw(0)) & is_rod_ready(0) & lsu_dpt_iss_fifo.io.enq(0).ready
-	// def is_lsu_dpt_1st    = instruction_info(0).lsu_isa.is_lsu & Mux( is_iwb(0), ~rename_i.is_full_1st(rd0_raw(0)), ~rename_f.is_full_1st(rd0_raw(0)) ) & is_rod_ready(0) & lsu_dpt_iss_fifo.io.enq(0).ready
-	def is_csr_dpt_1st    = instruction_info(0).csr_isa.is_csr & ~rename_i.is_full_1st(rd0_raw(0)) & is_rod_ready(0) & csr_dpt_iss_fifo.io.enq(0).ready
-	def is_mul_dpt_1st    = instruction_info(0).mul_isa.is_mul & ~rename_i.is_full_1st(rd0_raw(0)) & is_rod_ready(0) & mul_dpt_iss_fifo.io.enq(0).ready
-	// def is_fpu_dpt_1st    = instruction_info(0).fpu_isa.is_fpu & Mux( is_iwb(0), ~rename_i.is_full_1st(rd0_raw(0)), ~rename_f.is_full_1st(rd0_raw(0)) ) & is_rod_ready(0) & fpu_dpt_iss_fifo.io.enq(0).ready
-	def is_privil_dpt_1st = instruction_info(0).privil_isa.is_privil & is_rod_ready(0)
-	def is_dpt_1st = is_alu_dpt_1st | is_bru_dpt_1st | is_lsu_dpt_1st | is_csr_dpt_1st | is_mul_dpt_1st | is_privil_dpt_1st //| is_fpu_dpt_1st
+	is_alu_dpt_1st    := instruction_info(0).alu_isa.is_alu & ~rename_i.is_full_1st(rd0_raw(0)) & is_rod_ready(0) & alu_dpt_iss_fifo.io.enq(0).ready
+	is_bru_dpt_1st    := instruction_info(0).bru_isa.is_bru & ~rename_i.is_full_1st(rd0_raw(0)) & is_rod_ready(0) & bru_dpt_iss_fifo.io.enq(0).ready
+	is_lsu_dpt_1st    := instruction_info(0).lsu_isa.is_lsu & ~rename_i.is_full_1st(rd0_raw(0)) & is_rod_ready(0) & lsu_dpt_iss_fifo.io.enq(0).ready
+	is_csr_dpt_1st    := instruction_info(0).csr_isa.is_csr & ~rename_i.is_full_1st(rd0_raw(0)) & is_rod_ready(0) & csr_dpt_iss_fifo.io.enq(0).ready
+	is_mul_dpt_1st    := instruction_info(0).mul_isa.is_mul & ~rename_i.is_full_1st(rd0_raw(0)) & is_rod_ready(0) & mul_dpt_iss_fifo.io.enq(0).ready
+	is_privil_dpt_1st := instruction_info(0).privil_isa.is_privil & is_rod_ready(0)
+	is_dpt_1st        := is_alu_dpt_1st | is_bru_dpt_1st | is_lsu_dpt_1st | is_csr_dpt_1st | is_mul_dpt_1st | is_privil_dpt_1st //| is_fpu_dpt_1st
 
-	def is_alu_dpt_2nd    = instruction_info(1).alu_isa.is_alu & ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & alu_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
-	def is_bru_dpt_2nd    = instruction_info(1).bru_isa.is_bru & ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & bru_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
-	def is_lsu_dpt_2nd    = instruction_info(1).lsu_isa.is_lsu & ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & lsu_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
-	// def is_lsu_dpt_2nd    = instruction_info(1).lsu_isa.is_lsu & Mux( is_iwb(1), ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)), ~rename_f.is_full_2nd(rd0_raw(0), rd0_raw(1)) ) & is_rod_ready(1) & lsu_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
-	def is_csr_dpt_2nd    = instruction_info(1).csr_isa.is_csr & ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & csr_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
-	def is_mul_dpt_2nd    = instruction_info(1).mul_isa.is_mul & ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & mul_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
-	// def is_fpu_dpt_2nd    = instruction_info(1).fpu_isa.is_fpu & Mux( is_iwb(1), ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)), ~rename_f.is_full_2nd(rd0_raw(0), rd0_raw(1)) ) & is_rod_ready(1) & fpu_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
-	def is_privil_dpt_2nd = instruction_info(1).privil_isa.is_privil & is_rod_ready(1) & is_dpt_1st
-	def is_dpt_2nd = is_alu_dpt_2nd | is_bru_dpt_2nd | is_lsu_dpt_2nd | is_csr_dpt_2nd | is_mul_dpt_2nd | is_privil_dpt_2nd //| is_fpu_dpt_2nd
+	is_alu_dpt_2nd    := instruction_info(1).alu_isa.is_alu & ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & alu_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
+	is_bru_dpt_2nd    := instruction_info(1).bru_isa.is_bru & ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & bru_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
+	is_lsu_dpt_2nd    := instruction_info(1).lsu_isa.is_lsu & ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & lsu_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
+	is_csr_dpt_2nd    := instruction_info(1).csr_isa.is_csr & ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & csr_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
+	is_mul_dpt_2nd    := instruction_info(1).mul_isa.is_mul & ~rename_i.is_full_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & mul_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
+	is_privil_dpt_2nd := instruction_info(1).privil_isa.is_privil & is_rod_ready(1) & is_dpt_1st
+	is_dpt_2nd        := is_alu_dpt_2nd | is_bru_dpt_2nd | is_lsu_dpt_2nd | is_csr_dpt_2nd | is_mul_dpt_2nd | is_privil_dpt_2nd //| is_fpu_dpt_2nd
 
 
 
@@ -305,9 +309,7 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 
 
 	reOrder_fifo_i.io.enq(0).bits := rod_mux_i(id_dpt_info(0), rd0_idx_1st)
-	reOrder_fifo_f.io.enq(0).bits := rod_mux_f(id_dpt_info(0), rd0_idx_1st)
 	reOrder_fifo_i.io.enq(1).bits := rod_mux_i(id_dpt_info(1), rd0_idx_2nd)
-	reOrder_fifo_f.io.enq(1).bits := rod_mux_f(id_dpt_info(1), rd0_idx_2nd)
 
 	override def is_1st_solo = false.B
 	override def is_2nd_solo = is_1st_solo & false.B
@@ -334,10 +336,6 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 
 	reOrder_fifo_i.io.enq(0).valid := is_iwb(0) & is_dpt_1st
 	reOrder_fifo_i.io.enq(1).valid := is_iwb(1) & is_dpt_2nd
-	reOrder_fifo_f.io.enq(0).valid := is_fwb(0) & is_dpt_1st
-	reOrder_fifo_f.io.enq(1).valid := is_fwb(1) & is_dpt_2nd
-
-
 
 
 
