@@ -45,6 +45,7 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 		val flush = Input(Bool())
 	})
 
+	override def desiredName = "MultiPortFifo_in"+in+"_out"+out
 
 	def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
 
