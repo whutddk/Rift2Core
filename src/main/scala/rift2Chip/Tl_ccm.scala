@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-19 14:49:41
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-19 15:06:05
+* @Last Modified time: 2021-04-20 20:20:33
 */
 
 
@@ -59,7 +59,7 @@ class Tl_CCM extends Module {
 
 		
 	ram.io.addr_r := tl_slv.rsp_addr
-	ram.io.en_r   := tl_slv.is_d_busy & tl_slv.is_getData
+	ram.io.en_r   := tl_slv.is_d_busy & (tl_slv.state === Get)
 
     // tl_slv.d.data := ram.io.data_r
 

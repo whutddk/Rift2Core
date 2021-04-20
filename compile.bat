@@ -6,7 +6,7 @@
 
 
 
-rem sbt "testOnly test.WaveformSpec"
+sbt "testOnly test.WaveformSpec"
 
-sbt "test:runMain test.testMain --target-dir generated"
+@REM sbt "test:runMain test.testMain --target-dir generated"
 

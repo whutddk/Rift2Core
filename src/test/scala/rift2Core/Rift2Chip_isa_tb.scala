@@ -25,7 +25,7 @@
 
 package test
 
-// import chisel3._
+import chisel3._
 import chisel3.util._
 import rift2Core._
 import rift2Chip._
@@ -33,13 +33,15 @@ import rift2Chip._
 import chiseltest._
 import org.scalatest._
 import chisel3.iotesters._
-
+import chisel3.util.experimental._
 
 
 
 
 class WaveformTester(dut: Rift2Chip) extends PeekPokeTester(dut){
 
+	
+	poke(dut.iccm.ram.ram(0)(0), 8.U )
 
 	step(1000)
 
@@ -47,7 +49,7 @@ class WaveformTester(dut: Rift2Chip) extends PeekPokeTester(dut){
 
 class WaveformSpec extends FlatSpec with Matchers {
   "WaveformSpec" should "pass" in {
-    Driver.execute(Array("--generate-vcd-output", "on","--target-dir", "generated"), () => new Rift2Chip()){
+    chisel3.iotesters.Driver.execute(Array("--generate-vcd-output", "on","--target-dir", "generated"), () => new Rift2Chip()){
       c => new WaveformTester(c)
     } should be (true)
   }

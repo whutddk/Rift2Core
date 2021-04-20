@@ -350,3 +350,5 @@ generated/
 .vscode/
 doc/tl_cache.vsdx
 doc/~$$tl_cache.~vsdx
+*.verilog
+src/test/resources/

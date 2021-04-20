@@ -29,8 +29,7 @@ package rift2Core.basic
 import chisel3._
 import chisel3.util._
 import chisel3.experimental.chiselName
-
-
+import chisel3.util.experimental.loadMemoryFromFileInline
 
 // @chiselName
 // class Gen_sram(dw: Int, aw: Int) extends BlackBox(Map("DW" -> dw, "AW" -> aw)) with HasBlackBoxResource {
@@ -94,6 +93,8 @@ class Gen_sram(dw: Int, aw: Int) extends Module {
 
 	io.data_r := Cat( for ( i <- 0 until byte_cnt) yield data_o(byte_cnt-i-1) )
 	
+
+	// loadMemoryFromFileInline(ram, "rv64mi-p-ma_fetch")
 }
 
 
