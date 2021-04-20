@@ -37,7 +37,7 @@ class Gen_sram(dw: Int, aw: Int) extends BlackBox(Map("DW" -> dw, "AW" -> aw)) w
 	val io = IO(new Bundle{
 		val data_w = Input(UInt(dw.W))
 		val addr_w = Input(UInt(aw.W))
-		val data_wstrb = Input(UInt((dw/8).W))
+		val data_wstrb = Input(UInt(((dw+7)/8).W))
 		val en_w   = Input(Bool())
 
 		val data_r = Output(UInt(dw.W))

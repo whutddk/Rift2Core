@@ -3,7 +3,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-01 09:24:57
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-06 19:36:38
+* @Last Modified time: 2021-04-20 10:22:56
 */
 
 
@@ -97,7 +97,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 	val a_valid = RegInit(false.B)
 	val a_ready = Wire(Bool())
 	val d_valid = Wire(Bool())
-	val d_ready = WireDefault(false.B)
+	val d_ready = RegInit(false.B)
 
 
 	def op_getData(addr: UInt, size: UInt) = {
@@ -202,10 +202,10 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 	def d_ready_rst() = d_ready := false.B
 
 
-	def is_chn_a_ack:  Bool = a_valid &  a_ready
-	def is_chn_d_ack:  Bool = d_valid &  d_ready
-	def is_chn_a_nack: Bool = a_valid & ~a_ready
-	def is_chn_d_nack: Bool = d_valid & ~d_ready
+	def is_chn_a_ack  = a_valid &  a_ready
+	def is_chn_d_ack  = d_valid &  d_ready
+	def is_chn_a_nack = a_valid & ~a_ready
+	def is_chn_d_nack = d_valid & ~d_ready
 
 	def is_accessAck     = (d.opcode === AccessAck) & is_chn_d_ack
 	def is_accessAckData = (d.opcode === AccessAckData) & is_chn_d_ack
@@ -223,19 +223,16 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 
 	val a = Wire(new TLchannel_a(dw, aw))
-	val d = WireDefault(0.U.asTypeOf(new TLchannel_d(dw)))
+	val d = RegInit(0.U.asTypeOf(new TLchannel_d(dw)))
 
 	val a_valid = Wire(Bool())
-	val a_ready = WireDefault(false.B)
-	val d_valid = WireDefault(false.B)
+	val a_ready = RegInit(false.B)
+	val d_valid = RegInit(false.B)
 	val d_ready = Wire(Bool())
 
 
-
-	def is_chn_a_ack: Bool = a_valid & a_ready
-	def is_chn_d_ack: Bool = d_ready & d_valid
-
-	def op_accessAck(sid: UInt, size: UInt) = {
+	def op_accessAck(sid: UInt, size: UInt): TLchannel_d = {
+		val d = Wire(new TLchannel_d(dw))
 		d.opcode  := AccessAck
 		d.param   := 0.U
 		d.size    := size
@@ -244,11 +241,13 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 		d.data    := DontCare
 		d.corrupt := false.B
 		d.denied  := false.B
+		return d
 
 	}
 
 
-	def op_accessDataAck(sid: UInt, size: UInt, data: UInt) = {
+	def op_accessDataAck(sid: UInt, size: UInt, data: UInt): TLchannel_d = {
+		val d = Wire(new TLchannel_d(dw))
 		d.opcode  := AccessAckData
 		d.param   := 0.U
 		d.size    := size
@@ -257,14 +256,15 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 		d.data    := data
 		d.corrupt := false.B
 		d.denied  := false.B
+		return d
 
 	}
 
-	def is_getData        = (a.opcode === Get)            & is_chn_a_ack 
-	def is_putFullData    = (a.opcode === PutFullData)    & is_chn_a_ack 
-	def is_putPartialData = (a.opcode === PutPartialData) & is_chn_a_ack 
-	def is_arithmeticData = (a.opcode === ArithmeticData) & is_chn_a_ack 
-	def is_logicalData    = (a.opcode === LogicalData)    & is_chn_a_ack 
+	def is_getData       : Bool = (a.opcode === Get)            & is_chn_a_ack 
+	def is_putFullData   : Bool = (a.opcode === PutFullData)    & is_chn_a_ack 
+	def is_putPartialData: Bool = (a.opcode === PutPartialData) & is_chn_a_ack 
+	def is_arithmeticData: Bool = (a.opcode === ArithmeticData) & is_chn_a_ack 
+	def is_logicalData   : Bool = (a.opcode === LogicalData)    & is_chn_a_ack 
 
 
 	def a_ready_set = a_ready := true.B
@@ -272,6 +272,71 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 
 	def d_valid_set = d_valid := true.B
 	def d_valid_rst = d_valid := false.B
+
+
+
+
+
+
+	val a_remain = RegInit(0.U(8.W))
+	val d_remain = RegInit(0.U(8.W))
+	val rsp_addr = RegInit(0.U(aw.W))
+
+	when ( is_chn_a_ack ) {
+		when ( a_remain === 0.U ) {
+			a_remain := (1.U << a.size) - (dw/8).U
+		}
+		.otherwise {
+			a_remain := a_remain - (dw/8).U
+		}
+	}
+
+	when ( is_chn_a_ack ) {
+		d_remain := 1.U << a.size
+	}
+	.elsewhen( is_chn_d_ack ) {
+		d_remain := d_remain - (dw/8).U
+	}
+
+	when ( is_chn_a_ack ) {
+		rsp_addr := a.address
+	}
+	.elsewhen (is_chn_d_ack) {
+		rsp_addr := rsp_addr + ( 1.U << log2Ceil(dw/8) )
+	}
+
+	def is_a_busy = a_remain === 0.U
+	def is_d_busy = d_remain === 0.U
+	def is_last_a_trans = (is_chn_a_ack) & (a_remain === (dw/8).U)
+	def is_last_d_trans = (is_chn_d_ack) & (d_remain === (dw/8).U)
+
+	def is_free = ~is_a_busy & ~is_d_busy
+	def is_busy =  is_a_busy |  is_d_busy
+
+
+	def is_chn_a_ack:  Bool = a_valid &  a_ready
+	def is_chn_d_ack:  Bool = d_valid &  d_ready
+	def is_chn_a_nack: Bool = a_valid & ~a_ready
+	def is_chn_d_nack: Bool = d_valid & ~d_ready
+
+
+	def data_ack = d.data
+
+
+
+	// assert( (a.size % Log2((dw/8).U)) == 0.U, "a.size is upsupport, a.size is"+ a.size+"Log2((dw/8).U)) is"+Log2((dw/8).U)) 
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 }

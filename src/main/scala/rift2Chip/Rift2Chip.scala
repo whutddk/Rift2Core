@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-19 14:43:41
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-19 14:49:46
+* @Last Modified time: 2021-04-20 12:04:14
 */
 
 
@@ -28,36 +28,32 @@ package rift2Chip
 import chisel3._
 import chisel3.util._
 import rift2Core._
-import rift2Core.basic._
-import rift2Core.frontend._
-import rift2Core.backend._
-import rift2Core.cache._
-import tilelink._
+
+
 
 class Rift2Chip extends Module {
 	val io = IO( new Bundle{
-
+		
 	})
 
 
 	val i_rift2Core = Module( new Rift2Core )
+	val iccm = Module( new Tl_CCM )
+	val dccm = Module( new Tl_CCM )
+	val sccm = Module( new Tl_CCM )
 
+	iccm.io.ccm_chn_a <> i_rift2Core.io.il1_chn_a
+	iccm.io.ccm_chn_d <> i_rift2Core.io.il1_chn_d
+	dccm.io.ccm_chn_a <> i_rift2Core.io.dl1_chn_a
+	dccm.io.ccm_chn_d <> i_rift2Core.io.dl1_chn_d
 
-		val il1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
-		val il1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
+	sccm.io.ccm_chn_a <> i_rift2Core.io.sys_chn_a
+	sccm.io.ccm_chn_d <> i_rift2Core.io.sys_chn_d
 
-		val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
-		val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
-		val sys_chn_a = new DecoupledIO(new TLchannel_a(64,32))
-		val sys_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
-
-		val l2c_fence_req = Output(Bool())
-		val l3c_fence_req = Output(Bool())
-		val l2c_fence_end = Input(Bool())
-		val l3c_fence_end = Input(Bool())
+	i_rift2Core.io.l2c_fence_end := false.B
+	i_rift2Core.io.l3c_fence_end := false.B
 
 	
 }
-
 
 
