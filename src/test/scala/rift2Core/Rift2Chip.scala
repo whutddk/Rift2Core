@@ -34,35 +34,13 @@ import chiseltest._
 import org.scalatest._
 import chisel3.iotesters._
 
-// class Rift2Chip extends Module {
-// 	val io = IO( new Bundle{
-		
-// 	})
-
-
-// 	val i_rift2Core = Module( new Rift2Core )
-// 	val iccm = Module( new Tl_CCM )
-// 	val dccm = Module( new Tl_CCM )
-// 	val sccm = Module( new Tl_CCM )
-
-// 	iccm.io.ccm_chn_a <> i_rift2Core.io.il1_chn_a
-// 	iccm.io.ccm_chn_d <> i_rift2Core.io.il1_chn_d
-// 	dccm.io.ccm_chn_a <> i_rift2Core.io.dl1_chn_a
-// 	dccm.io.ccm_chn_d <> i_rift2Core.io.dl1_chn_d
-
-// 	sccm.io.ccm_chn_a <> i_rift2Core.io.sys_chn_a
-// 	sccm.io.ccm_chn_d <> i_rift2Core.io.sys_chn_d
-
-// 	i_rift2Core.io.l2c_fence_end := false.B
-// 	i_rift2Core.io.l3c_fence_end := false.B
-
-	
-// }
 
 
 
 
 class WaveformTester(dut: Rift2Chip) extends PeekPokeTester(dut){
+
+
 	step(1000)
 
 }

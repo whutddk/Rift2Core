@@ -28,9 +28,6 @@ package rift2Chip
 import chisel3._
 import chisel3.util._
 import rift2Core.basic._
-import rift2Core.frontend._
-import rift2Core.backend._
-import rift2Core.cache._
 import tilelink._
 
 class Tl_CCM extends Module {
@@ -50,14 +47,9 @@ class Tl_CCM extends Module {
 
 
 
-	val ram = Module( new Gen_sram(128, 14) )
+	val ram = Module( new Gen_sram(128, 10) )
 
 
-
-
-
-
-	ram.io.clk := clock
 
 
 	ram.io.data_w := tl_slv.a.data
@@ -69,8 +61,21 @@ class Tl_CCM extends Module {
 	ram.io.addr_r := tl_slv.rsp_addr
 	ram.io.en_r   := tl_slv.is_d_busy & tl_slv.is_getData
 
-    tl_slv.d.data := ram.io.data_r
+    // tl_slv.d.data := ram.io.data_r
 
+	when( tl_slv.is_d_busy ) {
+		when( tl_slv.state === tl_slv.Get ) {
+			tl_slv.op_accessAck(0.U)
+			tl_slv.d_valid_set
+		}
+		when( tl_slv.state === tl_slv.PutFullData ) {
+			tl_slv.op_accessDataAck(0.U, ram.io.data_r)
+			tl_slv.d_valid_set
+		}
+	}
+	.otherwise{
+		tl_slv.d_valid_rst
+	}
 
 
 }

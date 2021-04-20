@@ -26,6 +26,7 @@ package test
 
 
 import chisel3._
+import rift2Chip._
 import rift2Core._
 import rift2Core.frontend._
 import rift2Core.backend._
@@ -35,7 +36,7 @@ import rift2Core.basic._
 
 object testMain extends App {
 
-  Driver.execute(args, () => new Rift2Core )
+  Driver.execute(args, () => new Tl_CCM )
 }
 
 

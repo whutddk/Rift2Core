@@ -226,37 +226,41 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 	val d = RegInit(0.U.asTypeOf(new TLchannel_d(dw)))
 
 	val a_valid = Wire(Bool())
-	val a_ready = RegInit(false.B)
+	val a_ready = RegInit(true.B)
 	val d_valid = RegInit(false.B)
 	val d_ready = Wire(Bool())
 
+	val a_remain = RegInit(0.U(8.W))
+	val d_remain = RegInit(0.U(8.W))
+	val rsp_addr = RegInit(0.U(aw.W))
+	val state    = RegInit(0.U(3.W))
+	val d_size   = RegInit(0.U(8.U))
 
-	def op_accessAck(sid: UInt, size: UInt): TLchannel_d = {
-		val d = Wire(new TLchannel_d(dw))
+	def op_accessAck(sid: UInt) = {
+
 		d.opcode  := AccessAck
 		d.param   := 0.U
-		d.size    := size
+		d.size    := d_size
 		d.source  := sid
 		d.sink    := DontCare
 		d.data    := DontCare
 		d.corrupt := false.B
 		d.denied  := false.B
-		return d
 
 	}
 
 
-	def op_accessDataAck(sid: UInt, size: UInt, data: UInt): TLchannel_d = {
-		val d = Wire(new TLchannel_d(dw))
+	def op_accessDataAck(sid: UInt, data: UInt) = {
+
 		d.opcode  := AccessAckData
 		d.param   := 0.U
-		d.size    := size
+		d.size    := d_size
 		d.source  := sid
 		d.sink    := DontCare
 		d.data    := data
 		d.corrupt := false.B
 		d.denied  := false.B
-		return d
+
 
 	}
 
@@ -275,13 +279,6 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 
 
 
-
-
-
-	val a_remain = RegInit(0.U(8.W))
-	val d_remain = RegInit(0.U(8.W))
-	val rsp_addr = RegInit(0.U(aw.W))
-
 	when ( is_chn_a_ack ) {
 		when ( a_remain === 0.U ) {
 			a_remain := (1.U << a.size) - (dw/8).U
@@ -293,6 +290,7 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 
 	when ( is_chn_a_ack ) {
 		d_remain := 1.U << a.size
+		d_size := a.size
 	}
 	.elsewhen( is_chn_d_ack ) {
 		d_remain := d_remain - (dw/8).U
@@ -303,6 +301,10 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 	}
 	.elsewhen (is_chn_d_ack) {
 		rsp_addr := rsp_addr + ( 1.U << log2Ceil(dw/8) )
+	}
+
+	when( is_chn_a_ack ) {
+		state := a.opcode
 	}
 
 	def is_a_busy = a_remain === 0.U
