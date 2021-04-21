@@ -40,9 +40,7 @@ import chisel3.util.experimental._
 
 class WaveformTester(dut: Rift2Chip) extends PeekPokeTester(dut){
 
-	
-	poke(dut.iccm.ram.ram(0)(0), 8.U )
-
+  
 	step(1000)
 
 }

@@ -352,3 +352,7 @@ doc/tl_cache.vsdx
 doc/~$$tl_cache.~vsdx
 *.verilog
 src/test/resources/
+*.dump
+*.json
+tb/ci/
+tb/null

@@ -1,14 +1,6 @@
-package test
 
 /*
-* @Author: Ruige Lee
-* @Date:   2021-03-18 16:14:36
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-24 11:09:31
-*/
-
-/*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2020 Ruige Lee <wut.ruigeli@gmail.com>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,22 +14,6 @@ package test
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-
-
-
-import chisel3._
-import rift2Chip._
-import rift2Core._
-import rift2Core.frontend._
-import rift2Core.backend._
-import rift2Core.basic._
-
-
-
-object testMain extends App {
-
-  Driver.execute(args, () => new Rift2Core )
-}
 
 
 

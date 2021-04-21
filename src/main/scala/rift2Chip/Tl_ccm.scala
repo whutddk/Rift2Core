@@ -59,7 +59,7 @@ class Tl_CCM extends Module {
 
 		
 	ram.io.addr_r := tl_slv.rsp_addr
-	ram.io.en_r   := tl_slv.is_d_busy & (tl_slv.state === Get)
+	ram.io.en_r   := tl_slv.is_d_busy & (tl_slv.state === tl_slv.Get)
 
     // tl_slv.d.data := ram.io.data_r
 
