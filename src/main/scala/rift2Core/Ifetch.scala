@@ -94,7 +94,7 @@ class Ifetch() extends Module with IBuf{
 		( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush),
 		mem_dat,
 		Mux(
-			( stateReg === Il1_state.cmiss & addr_align_128 === addr_il1_req & ~trans_kill),
+			( stateReg === Il1_state.cmiss & (addr_align_128 === addr_il1_req) & ~trans_kill),
 			il1_mst.data_ack,
 			DontCare
 		)
@@ -102,11 +102,11 @@ class Ifetch() extends Module with IBuf{
 
 	ibuf_valid_i := 
 				( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush) |
-				( stateReg === Il1_state.cmiss & addr_align_128 === addr_il1_req & ~trans_kill)
+				( stateReg === Il1_state.cmiss & il1_mst.is_chn_d_ack & (addr_align_128 === addr_il1_req) & ~trans_kill)
 
 
 
-	io.pc_if.ready := ~io.flush & ibuf_ready_i  //when ibuf has enough space
+	io.pc_if.ready := ~io.flush & (stateReg =/= Il1_state.cfree) & (stateDnxt === Il1_state.cfree)
 
 	io.il1_chn_a.bits := il1_mst.a
 	io.il1_chn_a.valid := ~io.flush & il1_mst.a_valid
@@ -114,7 +114,7 @@ class Ifetch() extends Module with IBuf{
 
 	io.il1_chn_d.ready := il1_mst.d_ready
 	il1_mst.d          := io.il1_chn_d.bits
-	il1_mst.d_valid    := ~io.flush & io.il1_chn_d.valid
+	il1_mst.d_valid    := io.il1_chn_d.valid
 
 
 
@@ -212,12 +212,8 @@ class Ifetch() extends Module with IBuf{
 								(stateReg === Il1_state.fence) -> false.B
 								))
 
-		mem.dat_en_r(i) := Mux1H( Seq(
-								(stateReg === Il1_state.cfree) -> (stateDnxt === Il1_state.cktag),
-								(stateReg === Il1_state.cktag) -> false.B,
-								(stateReg === Il1_state.cmiss) -> false.B,
-								(stateReg === Il1_state.fence) -> false.B
-								))
+		mem.dat_en_r(i) := (stateDnxt === Il1_state.cktag)
+
 
 		mem.tag_en_w(i) := Mux1H( Seq(
 							(stateReg === Il1_state.cfree) -> false.B,
@@ -226,12 +222,8 @@ class Ifetch() extends Module with IBuf{
 							(stateReg === Il1_state.fence) -> false.B
 							))
 
-		mem.tag_en_r(i) := Mux1H( Seq(
-							(stateReg === Il1_state.cfree) -> (stateDnxt === Il1_state.cktag),
-							(stateReg === Il1_state.cktag) -> false.B,
-							(stateReg === Il1_state.cmiss) -> false.B,
-							(stateReg === Il1_state.fence) -> false.B
-							))
+		mem.tag_en_r(i) := (stateDnxt === Il1_state.cktag)
+
 	}
 
 	mem.dat_info_wstrb := "b1111111111111111".U

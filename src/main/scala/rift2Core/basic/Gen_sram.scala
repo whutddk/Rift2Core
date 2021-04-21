@@ -71,7 +71,7 @@ class Gen_sram(dw: Int, aw: Int) extends Module {
 	def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
 	def byte_cnt = (dw+7)/8
 
-	val ram = SyncReadMem( dp, Vec( (dw+7)/8, UInt(8.W) ) )
+	val ram = Mem( dp, Vec( byte_cnt, UInt(8.W) ) )
 
 	val data_i = Wire( Vec( byte_cnt, UInt(8.W) ) )
 	val data_o = RegInit( VecInit( Seq.fill(byte_cnt)( 0.U(8.W) ) ))

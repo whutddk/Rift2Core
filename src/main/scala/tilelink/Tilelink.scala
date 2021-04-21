@@ -99,6 +99,8 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 	val d_valid = Wire(Bool())
 	val d_ready = RegInit(false.B)
 
+	val is_chn_a_ack = WireDefault(a_valid & a_ready)
+	val is_chn_d_ack = WireDefault(d_valid & d_ready)
 
 	def op_getData(addr: UInt, size: UInt) = {
 
@@ -189,8 +191,8 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 
 	def is_a_busy = a_remain === 0.U
 	def is_d_busy = d_remain === 0.U
-	def is_last_a_trans = (is_chn_a_ack) & (a_remain === (dw/8).U)
-	def is_last_d_trans = (is_chn_d_ack) & (d_remain === (dw/8).U)
+	val is_last_a_trans = WireInit((is_chn_a_ack) & (a_remain === (dw/8).U))
+	val is_last_d_trans = WireInit((is_chn_d_ack) & (d_remain === (dw/8).U))
 
 	def is_free = ~is_a_busy & ~is_d_busy
 	def is_busy =  is_a_busy |  is_d_busy
@@ -202,13 +204,13 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 	def d_ready_rst() = d_ready := false.B
 
 
-	def is_chn_a_ack  = a_valid &  a_ready
-	def is_chn_d_ack  = d_valid &  d_ready
+
 	def is_chn_a_nack = a_valid & ~a_ready
 	def is_chn_d_nack = d_valid & ~d_ready
 
-	def is_accessAck     = (d.opcode === AccessAck) & is_chn_d_ack
-	def is_accessAckData = (d.opcode === AccessAckData) & is_chn_d_ack
+	val is_accessAck     = WireInit((d.opcode === AccessAck) & is_chn_d_ack)
+	val is_accessAckData = WireInit((d.opcode === AccessAckData) & is_chn_d_ack)
+
 	def data_ack = d.data
 
 

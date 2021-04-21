@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-20 19:55:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-21 15:51:20
+* @Last Modified time: 2021-04-21 17:41:33
 */
 
 /*
@@ -185,7 +185,7 @@ localparam DP = 2**14;
 	reg [127:0] ram[0:4096-1];
 	reg [127:0] ram_out;
 
-	assign tlslv_d_opcode = is_rd_trans ? 0 : 1;
+	assign tlslv_d_opcode = is_rd_trans ? 1 : 0;
 	assign tlslv_d_param = 2'd0;
 	assign tlslv_d_size = d_size;
 	assign tlslv_d_source = 0;

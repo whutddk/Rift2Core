@@ -64,7 +64,7 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
 
 	val tag_ram = {
-		for ( i <- 0 until cb ) yield { val mdl = Module(new Gen_sram((tag_w+7)/8,line_w)); mdl }
+		for ( i <- 0 until cb ) yield { val mdl = Module(new Gen_sram(tag_w,line_w)); mdl }
 	}
 
 	val dat_ram = {
@@ -116,7 +116,7 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
 		val bank_num = for ( j <- 0 until bk ) yield { j.U === bank_sel }
 		val dat_bank = for ( j <- 0 until bk ) yield { dat_ram( i*bk+j).io.data_r }
-		dat_info_r(i) := MuxLookup(bank_sel, DontCare, bank_num zip dat_bank )
+		dat_info_r(i) := MuxCase(DontCare, bank_num zip dat_bank )
 		
 		
 		// dat_ram( i*bk + bank_sel).io.data_r
