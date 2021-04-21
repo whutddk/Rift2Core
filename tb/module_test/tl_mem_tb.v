@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 10:32:37
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-21 11:46:52
+* @Last Modified time: 2021-04-21 14:10:58
 */
 
 
@@ -128,7 +128,7 @@ initial begin
 	tlslv_a_param = 0;
 	tlslv_a_size = 0;
 	tlslv_a_source = 0;
-	tlslv_a_address = 0;
+	tlslv_a_address = 32'h0;
 	tlslv_a_mask = 0;
 	tlslv_a_data = 0;
 	tlslv_a_corrupt = 0;
@@ -136,44 +136,45 @@ initial begin
 	tlslv_d_ready = 1;
 
 # 42
-	tlslv_a_opcode = 0;
-	tlslv_a_address = 32'h0;
-	tlslv_a_data = 128'd1;
+// 	tlslv_a_opcode = 0;
+// 	tlslv_a_address = 32'h0;
+// 	tlslv_a_data = 128'd1;
+// 	tlslv_a_size = 5;
+// 	tlslv_a_valid = 1;
+
+// # 10
+// tlslv_a_data = 128'd2;
+// 	tlslv_a_valid = 1;
+
+// # 10
+
+// 	tlslv_a_valid = 0;
+
+// # 10
+// tlslv_a_data = 128'd4;
+// 	tlslv_a_valid = 1;
+
+// # 10
+// tlslv_a_data = 128'd8;
+// 	tlslv_a_valid = 1;
+// # 10
+
+// 	tlslv_a_valid = 0;
+
+
+
+
+# 10
 	tlslv_a_size = 5;
-	tlslv_a_valid = 1;
-
-# 10
-tlslv_a_data = 128'd2;
-	tlslv_a_valid = 1;
-
-# 10
-
-	tlslv_a_valid = 0;
-
-# 10
-tlslv_a_data = 128'd4;
-	tlslv_a_valid = 1;
-
-# 10
-tlslv_a_data = 128'd8;
-	tlslv_a_valid = 1;
-# 10
-
-	tlslv_a_valid = 0;
-
-
-
-
-# 10
 	tlslv_a_opcode = 4;
-	tlslv_a_address = 32'h0;
+	tlslv_a_address = 32'h20;
 	tlslv_a_valid = 1;
 
 
 # 10
 
 	tlslv_a_valid = 0;
-	
+
 end
 
 

@@ -54,7 +54,7 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 	assert( (in < dp && out < dp) , "dp = "+dp+", in = "+in+", out = "+ out )
 
 	val buf = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
-	val buf_valid = Reg(Vec(dp, Bool()))
+	val buf_valid = RegInit(VecInit(Seq.fill(dp)(false.B)))
 
 	val rd_ptr = RegInit(0.U(aw.W))
 	val wr_ptr = RegInit(0.U(aw.W))
@@ -63,19 +63,19 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 	for ( i <- 0 until in )  yield io.enq(i).ready := (buf_valid((wr_ptr + i.U)(aw-1,0)) === false.B)
 	for ( i <- 0 until out ) yield io.deq(i).valid := (buf_valid((rd_ptr + i.U)(aw-1,0)) === true.B)
 
-	def is_enq_ack(i: Int) = io.enq(i.U).valid & io.enq(i.U).ready
-	def is_deq_ack(i: Int) =  io.deq(i.U).valid  & io.deq(i.U).ready
+	def is_enq_ack(i: Int) = io.enq(i).valid & io.enq(i).ready
+	def is_deq_ack(i: Int) = io.deq(i).valid & io.deq(i).ready
 
 	def enq_cnt: UInt = {
 		val port = for ( i <- 0 until in ) yield { is_enq_ack(in-1-i) === true.B }  //in-1 ~ 0
-		val cnt  = for ( i <- 0 until in ) yield { (in-1-i).U } //in-1 ~ 0
+		val cnt  = for ( i <- 0 until in ) yield { (in-i).U } //in ~ 1
 
 		return MuxCase( 0.U, port zip cnt )
 	}
 	
-	def pop_cnt: UInt = {
-		val port = for ( i <- 0 until out ) yield { is_enq_ack(out-1-i) === true.B }  //out-1 ~ 0
-		val cnt  = for ( i <- 0 until out ) yield { (out-1-i).U } //out-1 ~ 0
+	def deq_cnt: UInt = {
+		val port = for ( i <- 0 until out ) yield { is_deq_ack(out-1-i) === true.B }  //out-1 ~ 0
+		val cnt  = for ( i <- 0 until out ) yield { (out-i).U } //out ~ 1
 
 		return MuxCase( 0.U, port zip cnt )
 	}
@@ -95,15 +95,17 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 			val fifo_ptr_w = (wr_ptr + i.U)(aw-1,0)
 			val fifo_ptr_r = (rd_ptr + j.U)(aw-1,0)
 
-			buf_valid(fifo_ptr_w) := Mux(is_enq_ack(i), true.B,  buf_valid(fifo_ptr_w))
-			buf_valid(fifo_ptr_r) := Mux(is_deq_ack(j), false.B, buf_valid(fifo_ptr_r))
+			when( is_enq_ack(i) ) {buf_valid(fifo_ptr_w) := true.B}
+			when( is_deq_ack(j) ) {buf_valid(fifo_ptr_r) := false.B}
+			// buf_valid(fifo_ptr_w) := Mux(is_enq_ack(i), true.B,  buf_valid(fifo_ptr_w))
+			// buf_valid(fifo_ptr_r) := Mux(is_deq_ack(j), false.B, buf_valid(fifo_ptr_r))
 
 			buf(fifo_ptr_w) := Mux(is_enq_ack(i), io.enq(i).bits, buf(fifo_ptr_w))
 		}
 
 
 
-		rd_ptr := rd_ptr + pop_cnt
+		rd_ptr := rd_ptr + deq_cnt
 		wr_ptr := wr_ptr + enq_cnt
 	}
 

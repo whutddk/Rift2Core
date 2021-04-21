@@ -39,7 +39,7 @@ class TLchannel_a(dw:Int, aw:Int = 32) extends Bundle {
 	val size    = UInt(8.W)
 	val source  = UInt(3.W)
 	val address = UInt(aw.W)
-	val mask    = UInt(8.W)
+	val mask    = UInt((dw/8).W)
 	val data    = UInt(dw.W)
 	val corrupt = Bool()
 
@@ -107,7 +107,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 		a.size    := size
 		a.source  := id.U
 		a.address := addr
-		a.mask    := "b11111111".U
+		a.mask    := Fill(dw, 1.U)
 		a.data    := 0.U
 		a.corrupt := false.B
 
