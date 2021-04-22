@@ -40,16 +40,16 @@ import chisel3.experimental.chiselName
 @chiselName
 class Execute extends Module {
 	val io = IO(new Bundle{
-		val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
-		val alu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val alu_iss_exe = Flipped(new ValidIO(new Alu_iss_info))
+		val alu_exe_iwb = new ValidIO(new Exe_iwb_info)
 		val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
-		val bru_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val bru_exe_iwb = new ValidIO(new Exe_iwb_info)
 		val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
-		val csr_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val csr_exe_iwb = new ValidIO(new Exe_iwb_info)
 		val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-		val lsu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val lsu_exe_iwb = new ValidIO(new Exe_iwb_info)
 		val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
-		val mul_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val mul_exe_iwb = new ValidIO(new Exe_iwb_info)
 
 		val cmm_bru_ilp = Input(Bool())
 		val bru_iq_b = new ValidIO( Bool() )

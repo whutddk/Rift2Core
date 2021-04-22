@@ -345,7 +345,7 @@ class Issue() extends Module {
 		// val fpu_dpt_iss = Flipped(new DecoupledIO(new Fpu_dpt_info))
 
 
-		val alu_iss_exe = new DecoupledIO(new Alu_iss_info)
+		val alu_iss_exe = new ValidIO(new Alu_iss_info)
 		val bru_iss_exe = new DecoupledIO(new Bru_iss_info)
 		val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
 		val csr_iss_exe = new DecoupledIO(new Csr_iss_info)
@@ -379,7 +379,7 @@ class Issue() extends Module {
 		val csr_iss_valid = Reg(Bool())
 		val mul_iss_valid = Reg(Bool())
 
-		def alu_exe_ack = io.alu_iss_exe.valid & io.alu_iss_exe.ready
+		def alu_exe_ack = io.alu_iss_exe.valid
 		def bru_exe_ack = io.bru_iss_exe.valid & io.bru_iss_exe.ready
 		def lsu_exe_ack = io.lsu_iss_exe.valid & io.lsu_iss_exe.ready
 		def csr_exe_ack = io.csr_iss_exe.valid & io.csr_iss_exe.ready

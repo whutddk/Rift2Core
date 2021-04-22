@@ -35,8 +35,8 @@ import chisel3.experimental.chiselName
 @chiselName
 class Alu extends Module {
 	val io = IO(new Bundle{
-		val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
-		val alu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val alu_iss_exe = Flipped(new ValidIO(new Alu_iss_info))
+		val alu_exe_iwb = new ValidIO(new Exe_iwb_info)
 
 		val flush = Input(Bool())
 	})
@@ -46,8 +46,8 @@ class Alu extends Module {
 	val iwb_res = Reg(UInt(64.W))
 	val iwb_rd0 = Reg(UInt(7.W))
 
-	def iss_ack = io.alu_exe_iwb.valid & io.alu_exe_iwb.ready
-	def iwb_ack = io.alu_exe_iwb.valid & io.alu_exe_iwb.ready
+	def iss_ack = io.alu_iss_exe.valid
+	def iwb_ack = io.alu_exe_iwb.valid
 
 	def is_32w = io.alu_iss_exe.bits.param.is_32w
 	def is_usi = io.alu_iss_exe.bits.param.is_usi
@@ -111,7 +111,6 @@ class Alu extends Module {
 		iwb_valid := false.B
 	}
 
-	io.alu_iss_exe.ready := true.B & ~(io.alu_exe_iwb.valid & ~io.alu_exe_iwb.ready)
 	io.alu_exe_iwb.valid := iwb_valid
 	io.alu_exe_iwb.bits.res := iwb_res
 	io.alu_exe_iwb.bits.rd0_raw := iwb_rd0(4,0)

@@ -36,7 +36,7 @@ import chisel3.experimental.chiselName
 class Csr extends Module {
 	val io = IO(new Bundle{
 		val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
-		val csr_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val csr_exe_iwb = new ValidIO(new Exe_iwb_info)
 
 		val csr_addr = Output(UInt(12.W))
 		val csr_data = Input(UInt(64.W))
@@ -49,8 +49,8 @@ class Csr extends Module {
 	val csr_op_fifo = Module(new Queue( new Csr_Port, 1, true, false ) )
 	io.csr_cmm_op <> csr_op_fifo.io.deq
 
-	def iss_ack = io.csr_exe_iwb.valid & io.csr_exe_iwb.ready
-	def iwb_ack = io.csr_exe_iwb.valid & io.csr_exe_iwb.ready
+	def iss_ack = io.csr_iss_exe.valid & io.csr_iss_exe.ready
+	def iwb_ack = io.csr_exe_iwb.valid
 
 
 	def rw = io.csr_iss_exe.bits.fun.rw

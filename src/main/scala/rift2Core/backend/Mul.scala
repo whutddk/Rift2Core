@@ -37,13 +37,13 @@ import chisel3.experimental.chiselName
 class Mul extends Module {
 	val io = IO(new Bundle {
 		val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
-		val mul_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val mul_exe_iwb = new ValidIO(new Exe_iwb_info)
 
 		val flush = Input(Bool())
 	})
 
-	def iss_ack = io.mul_exe_iwb.valid & io.mul_exe_iwb.ready
-	def iwb_ack = io.mul_exe_iwb.valid & io.mul_exe_iwb.ready
+	def iss_ack = io.mul_iss_exe.valid & io.mul_iss_exe.ready
+	def iwb_ack = io.mul_exe_iwb.valid
 
 	def op1 = io.mul_iss_exe.bits.param.op1
 	def op2 = io.mul_iss_exe.bits.param.op2

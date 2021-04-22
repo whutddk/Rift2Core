@@ -41,7 +41,7 @@ import chisel3.experimental.chiselName
 class Lsu extends Module {
 	val io = IO( new Bundle{
 		val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-		val lsu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+		val lsu_exe_iwb = new ValidIO(new Exe_iwb_info)
 
 		val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
 		val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
@@ -112,8 +112,8 @@ class Lsu extends Module {
 
 	val is_cb_vhit = Wire(Vec(cb, Bool()))
 
-	def iss_ack = io.lsu_exe_iwb.valid & io.lsu_exe_iwb.ready
-	def iwb_ack = io.lsu_exe_iwb.valid & io.lsu_exe_iwb.ready
+	def iss_ack = io.lsu_iss_exe.valid & io.lsu_iss_exe.ready
+	def iwb_ack = io.lsu_exe_iwb.valid
 
 	io.lsu_iss_exe.ready := iwb_ack
 
