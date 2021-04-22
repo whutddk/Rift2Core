@@ -50,7 +50,7 @@ class Commit extends Privilege with Superscalar{
 
 		val csr_addr = Input(UInt(12.W))
 		val csr_data = Output(UInt(64.W))
-		val csr_cmm_op = Flipped(DecoupledIO( new Csr_Port ) )
+		val csr_cmm_op = Flipped(DecoupledIO( new Exe_Port ) )
 
 		val is_misPredict = Input(Bool())
 		val is_commit_abort = Vec(2, Output( Bool() ))
@@ -109,10 +109,10 @@ class Commit extends Privilege with Superscalar{
 	io.cmm_pc.valid := is_xRet.contains(true.B) | is_trap.contains(true.B)
 
 	io.cmm_pc.bits.addr := MuxCase(0.U, Array(
-		is_xRet(0) -> m_csrFiles.mepc.value,
-		is_trap(0) -> m_csrFiles.mtvec.value,
-		is_xRet(1) -> m_csrFiles.mepc.value,
-		is_trap(1) -> m_csrFiles.mtvec.value		
+		is_xRet(0) -> m_csrFiles.mepc.io.value,
+		is_trap(0) -> m_csrFiles.mtvec.io.value,
+		is_xRet(1) -> m_csrFiles.mepc.io.value,
+		is_trap(1) -> m_csrFiles.mtvec.io.value		
 	))
 
 
@@ -137,11 +137,13 @@ class Commit extends Privilege with Superscalar{
 	io.csr_data := csr_read(io.csr_addr)
 
 	
-	io.csr_cmm_op.ready := 
-			(is_commit_comfirm(0) & io.rod_i(0).bits.is_csr) | 
-			(is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)
+	io.csr_cmm_op.ready := io.csr_cmm_op.valid & (
+								(is_commit_comfirm(0) & io.rod_i(0).bits.is_csr) | 
+								(is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)		
+							)
 
-	csr_access.exe_port := io.csr_cmm_op.bits
+
+	csr_access.exe_port := Mux( io.csr_cmm_op.ready, io.csr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
 
 
 

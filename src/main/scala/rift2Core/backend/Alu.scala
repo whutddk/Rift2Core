@@ -42,10 +42,6 @@ class Alu extends Module {
 	})
 
 
-	val iwb_valid = Reg(Bool())
-	val iwb_res = Reg(UInt(64.W))
-	val iwb_rd0 = Reg(UInt(7.W))
-
 	def iss_ack = io.alu_iss_exe.valid
 	def iwb_ack = io.alu_exe_iwb.valid
 
@@ -97,24 +93,10 @@ class Alu extends Module {
 	))
 
 
-	when( reset.asBool | io.flush ) {
-		iwb_valid := false.B
-		iwb_res := 0.U
-		iwb_rd0 := 0.U
-	}
-	.elsewhen( io.alu_iss_exe.valid ) {
-		iwb_valid := true.B
-		iwb_res := res
-		iwb_rd0 := Cat( io.alu_iss_exe.bits.param.rd0_idx, io.alu_iss_exe.bits.param.rd0_raw ) 
-	}
-	.elsewhen( ~io.alu_iss_exe.valid & iwb_ack ) {
-		iwb_valid := false.B
-	}
-
-	io.alu_exe_iwb.valid := iwb_valid
-	io.alu_exe_iwb.bits.res := iwb_res
-	io.alu_exe_iwb.bits.rd0_raw := iwb_rd0(4,0)
-	io.alu_exe_iwb.bits.rd0_idx := iwb_rd0(6,5)
+	io.alu_exe_iwb.valid := io.alu_iss_exe.valid
+	io.alu_exe_iwb.bits.res := res
+	io.alu_exe_iwb.bits.rd0_raw := io.alu_iss_exe.bits.param.rd0_raw
+	io.alu_exe_iwb.bits.rd0_idx := io.alu_iss_exe.bits.param.rd0_idx
 
 
 

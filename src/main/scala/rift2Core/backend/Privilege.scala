@@ -60,16 +60,6 @@ abstract class Privilege() extends Module with CsrFiles{
 
 		val is_Mret = Wire( Vec(2, Bool()) )
 
-
-		def mstatus_except = Cat(
-			0.U(51.W),
-			"b11".U(2.W), //MPP
-			0.U(3.W),
-			Mux(is_trap.contains(true.B), m_csrFiles.mstatus.value(3), Mux( is_Mret.contains(true.B), 1.U(1.W), 0.U(1.W) )),//MPIE
-			0.U(3.W),
-			Mux(is_trap.contains(true.B), 0.U(1.W), Mux( is_Mret.contains(true.B), m_csrFiles.mstatus.value(7), 0.U(1.W) )),//MIE
-			0.U(3.W)
-			)
 	}
 
 	object hp {
@@ -88,19 +78,19 @@ abstract class Privilege() extends Module with CsrFiles{
 
 	object csr_access {
 
-		val exe_port = Wire(new Csr_Port)
+		val exe_port = Wire(new Exe_Port)
 
 		m_csrFiles.clint_csr_info := 0.U.asTypeOf(new Info_clint_csr)
 
-		m_csrFiles.port := exe_port
-		h_csrFiles.port := exe_port
-		s_csrFiles.port := exe_port
-		u_csrFiles.port := exe_port
-		d_csrFiles.port := exe_port
+		m_csrFiles.exe_port := exe_port
+		h_csrFiles.exe_port := exe_port
+		s_csrFiles.exe_port := exe_port
+		u_csrFiles.exe_port := exe_port
+		d_csrFiles.exe_port := exe_port
 
 
-		m_csrFiles.mcause.io.en  := is_trap.contains(true.B)
-		m_csrFiles.mcause.io.dat := 
+		m_csrFiles.mcause_pri_port.en  := is_trap.contains(true.B)
+		m_csrFiles.mcause_pri_port.dat := 
 										Cat(
 											is_interrupt.asUInt, 
 											MuxCase( 0.U(63.W), Array(
@@ -115,11 +105,12 @@ abstract class Privilege() extends Module with CsrFiles{
 												))
 										)
 
-		m_csrFiles.mepc.io.en  := is_trap.contains(true.B)
-		m_csrFiles.mepc.io.dat := MuxCase( 0.U, Array( is_exception.contains(true.B) -> commit_pc, is_interrupt -> commit_pc ) )
+		m_csrFiles.mepc_pri_port.en  := is_trap.contains(true.B)
+		m_csrFiles.mepc_pri_port.dat := commit_pc
+		//MuxCase( 0.U, Array( is_exception.contains(true.B) -> commit_pc, is_interrupt -> commit_pc ) )
 
-		m_csrFiles.mtval.io.en  := is_trap.contains(true.B)
-		m_csrFiles.mtval.io.dat := Mux( 
+		m_csrFiles.mtval_pri_port.en  := is_trap.contains(true.B)
+		m_csrFiles.mtval_pri_port.dat := Mux( 
 												(is_load_accessFault_ack.contains(true.B) | 
 												is_store_accessFault_ack.contains(true.B) | 
 												is_load_misAlign_ack.contains(true.B) | 
@@ -127,14 +118,14 @@ abstract class Privilege() extends Module with CsrFiles{
 												lsu_trap_addr, 0.U
 											)
 
-		m_csrFiles.mepc.io.en  := is_trap.contains(true.B) | is_xRet.contains(true.B)
-		m_csrFiles.mepc.io.dat := Cat(
+		m_csrFiles.mstatus_pri_port.en  := is_trap.contains(true.B) | is_xRet.contains(true.B)
+		m_csrFiles.mstatus_pri_port.dat := Cat(
 											0.U(51.W),
 											"b11".U, //MPP
 											0.U(3.W),
-											(is_trap.contains(true.B) & m_csrFiles.mstatus.value(3)) | (is_xRet.contains(true.B) & true.B), //MPIE
+											(is_trap.contains(true.B) & m_csrFiles.mstatus.io.value(3)) | (is_xRet.contains(true.B) & true.B), //MPIE
 											0.U(3.W),
-											(is_trap.contains(true.B) & false.B) | (is_xRet.contains(true.B) & m_csrFiles.mstatus.value(7)), //MIE
+											(is_trap.contains(true.B) & false.B) | (is_xRet.contains(true.B) & m_csrFiles.mstatus.io.value(7)), //MIE
 											0.U(3.W)
 										)
 
@@ -162,9 +153,9 @@ abstract class Privilege() extends Module with CsrFiles{
 
 
 
-	def is_exInterrupt   = m_csrFiles.mip.value(11) & m_csrFiles.mie.value(11) & m_csrFiles.mstatus.value(3)
-	def is_timeInterrupt = m_csrFiles.mip.value(7)  & m_csrFiles.mie.value(7)  & m_csrFiles.mstatus.value(3)
-	def is_softInterrupt = m_csrFiles.mip.value(3)  & m_csrFiles.mie.value(3)  & m_csrFiles.mstatus.value(3)
+	def is_exInterrupt   = m_csrFiles.mip.io.value(11) & m_csrFiles.mie.io.value(11) & m_csrFiles.mstatus.io.value(3)
+	def is_timeInterrupt = m_csrFiles.mip.io.value(7)  & m_csrFiles.mie.io.value(7)  & m_csrFiles.mstatus.io.value(3)
+	def is_softInterrupt = m_csrFiles.mip.io.value(3)  & m_csrFiles.mie.io.value(3)  & m_csrFiles.mstatus.io.value(3)
 
 
 

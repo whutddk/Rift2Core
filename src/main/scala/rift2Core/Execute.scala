@@ -57,7 +57,7 @@ class Execute extends Module {
 
 		val csr_addr = Output(UInt(12.W))
 		val csr_data = Input(UInt(64.W))
-		val csr_cmm_op = DecoupledIO( new Csr_Port ) 
+		val csr_cmm_op = DecoupledIO( new Exe_Port ) 
 
 
 		val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
