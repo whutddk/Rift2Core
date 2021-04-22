@@ -54,7 +54,10 @@ class Pc_gen extends Module {
 	val addr = RegInit("h80000000".U(32.W))
 
 
-	io.pc_iq.bits := addr
+	io.pc_iq.bits := MuxCase( DontCare, Array(
+								is_cmm_pc_ack -> io.cmm_pc.bits.addr,
+								is_ib_pc_ack  -> io.ib_pc.bits.addr
+							))
 	io.pc_iq.valid := is_cmm_pc_ack | is_ib_pc_ack
 
 	when ( is_cmm_pc_ack | is_ib_pc_ack | is_pc_if_ack ) {
