@@ -279,7 +279,7 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 	is_lsu_dpt_1st    := io.id_dpt(0).valid & instruction_info(0).lsu_isa.is_lsu & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & lsu_dpt_iss_fifo.io.enq(0).ready
 	is_csr_dpt_1st    := io.id_dpt(0).valid & instruction_info(0).csr_isa.is_csr & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & csr_dpt_iss_fifo.io.enq(0).ready
 	is_mul_dpt_1st    := io.id_dpt(0).valid & instruction_info(0).mul_isa.is_mul & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & mul_dpt_iss_fifo.io.enq(0).ready
-	is_privil_dpt_1st := io.id_dpt(0).valid & instruction_info(0).privil_isa.is_privil & is_rod_ready(0)
+	is_privil_dpt_1st := io.id_dpt(0).valid & (instruction_info(0).privil_isa.is_privil | io.id_dpt(0).bits.is_iFAccessFault | io.id_dpt(0).bits.is_illeage )& is_rod_ready(0)
 	is_dpt_1st        := is_alu_dpt_1st | is_bru_dpt_1st | is_lsu_dpt_1st | is_csr_dpt_1st | is_mul_dpt_1st | is_privil_dpt_1st //| is_fpu_dpt_1st
 
 	is_alu_dpt_2nd    := io.id_dpt(1).valid & instruction_info(1).alu_isa.is_alu & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & alu_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
@@ -287,7 +287,7 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 	is_lsu_dpt_2nd    := io.id_dpt(1).valid & instruction_info(1).lsu_isa.is_lsu & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & lsu_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
 	is_csr_dpt_2nd    := io.id_dpt(1).valid & instruction_info(1).csr_isa.is_csr & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & csr_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
 	is_mul_dpt_2nd    := io.id_dpt(1).valid & instruction_info(1).mul_isa.is_mul & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & mul_dpt_iss_fifo.io.enq(1).ready & is_dpt_1st
-	is_privil_dpt_2nd := io.id_dpt(1).valid & instruction_info(1).privil_isa.is_privil & is_rod_ready(1) & is_dpt_1st
+	is_privil_dpt_2nd := io.id_dpt(1).valid & (instruction_info(1).privil_isa.is_privil | io.id_dpt(1).bits.is_iFAccessFault | io.id_dpt(1).bits.is_illeage) & is_rod_ready(1) & is_dpt_1st
 	is_dpt_2nd        := is_alu_dpt_2nd | is_bru_dpt_2nd | is_lsu_dpt_2nd | is_csr_dpt_2nd | is_mul_dpt_2nd | is_privil_dpt_2nd //| is_fpu_dpt_2nd
 
 
