@@ -69,7 +69,7 @@ class WriteBack extends Module {
 		) )
 	}
 
-
+	//alu, lsu and bru must always ready
 }
 
 

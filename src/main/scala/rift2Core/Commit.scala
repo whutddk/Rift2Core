@@ -58,8 +58,6 @@ class Commit extends Privilege with Superscalar{
 		val cmm_pc = new ValidIO(new Info_cmm_pc)
 	})
 
-	override lazy val csrFiles = new CsrFiles
-
 	val rd0_raw = VecInit( io.rod_i(1).bits.rd0_raw, io.rod_i(0).bits.rd0_raw )
 	val rd0_idx = VecInit( io.rod_i(1).bits.rd0_idx, io.rod_i(0).bits.rd0_idx )
 
@@ -71,12 +69,12 @@ class Commit extends Privilege with Superscalar{
 	//bru commit ilp
 	io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (io.log(rd0_raw(0))(rd0_idx(0)) =/= 3.U)
 
-	def is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | ~io.rod_i(0).bits.is_su
-	def is_2nd_solo = io.is_commit_abort(1)
+	def is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | io.rod_i(0).bits.is_su | ~is_wb(0) 
+	def is_2nd_solo = io.is_commit_abort(1) | io.rod_i(1).bits.is_csr | io.rod_i(1).bits.is_su
 
 
 	io.is_commit_abort(1) :=
-		(io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet(1) | is_trap(1) ) & is_1st_solo
+		(io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet(1) | is_trap(1) ) & ~is_1st_solo
 	
 	io.is_commit_abort(0) :=
 		(io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet(0) | is_trap(0) )
@@ -106,16 +104,44 @@ class Commit extends Privilege with Superscalar{
 
 
 
+	lsu_trap_addr := io.lsu_cmm.trap_addr
 
-	csrFiles.addr := io.csr_addr
-	io.csr_data := csrFiles.read
+	io.cmm_pc.valid := is_xRet.contains(true.B) | is_trap.contains(true.B)
+
+	io.cmm_pc.bits.addr := MuxCase(0.U, Array(
+		is_xRet(0) -> m_csrFiles.mepc.value,
+		is_trap(0) -> m_csrFiles.mtvec.value,
+		is_xRet(1) -> m_csrFiles.mepc.value,
+		is_trap(1) -> m_csrFiles.mtvec.value		
+	))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	io.csr_data := csr_read(io.csr_addr)
 
 	
 	io.csr_cmm_op.ready := 
 			(is_commit_comfirm(0) & io.rod_i(0).bits.is_csr) | 
 			(is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)
 
-	csrFiles.port := io.csr_cmm_op.bits
+	csr_access.exe_port := io.csr_cmm_op.bits
 
 
 
@@ -126,30 +152,46 @@ class Commit extends Privilege with Superscalar{
 
 
 
-	for ( i <- 0 until 2 ) yield {
-		commit_pc(i) := io.rod_i(i).bits.pc
-		is_load_accessFault_ack(i) := io.lsu_cmm.is_accessFault & io.rod_i(i).bits.is_lu & ~is_wb(i)
-		is_store_accessFault_ack(i) := io.lsu_cmm.is_accessFault & io.rod_i(i).bits.is_su & ~is_wb(i)
-		is_load_misAlign_ack(i) := io.lsu_cmm.is_misAlign & io.rod_i(i).bits.is_lu & ~is_wb(i)
-		is_store_misAlign_ack(i) := io.lsu_cmm.is_misAlign & io.rod_i(i).bits.is_su & ~is_wb(i)
 
-		is_ecall(i) := io.rod_i(i).bits.privil.ecall
-		is_ebreak(i) := io.rod_i(i).bits.privil.ebreak
-		is_instr_accessFault(i) := io.rod_i(i).bits.is_accessFault
-		is_illeage(i) := io.rod_i(i).bits.is_illeage
-		is_Mret(i) := io.rod_i(i).bits.privil.mret
-		is_Sret(i) := io.rod_i(i).bits.privil.sret
-		is_Uret(i) := io.rod_i(i).bits.privil.uret
-	}
-	lsu_trap_addr := io.lsu_cmm.trap_addr
+		commit_pc := Mux(is_1st_solo, io.rod_i(0).bits.pc, io.rod_i(1).bits.pc)
 
-	io.cmm_pc.valid := is_xRet.contains(true.B) | is_trap.contains(true.B)
 
-	io.cmm_pc.bits.addr := MuxCase(0.U, Array(
-		is_xRet(0) -> csrFiles.m_csrFiles.mepc.value,
-		is_trap(0) -> csrFiles.m_csrFiles.mtvec.value,
-		is_xRet(1) -> csrFiles.m_csrFiles.mepc.value,
-		is_trap(1) -> csrFiles.m_csrFiles.mtvec.value		
-	))
+		is_load_accessFault_ack(0) := io.lsu_cmm.is_accessFault & io.rod_i(0).bits.is_lu & ~is_wb(0)
+		is_load_accessFault_ack(1) := io.lsu_cmm.is_accessFault & io.rod_i(1).bits.is_lu & ~is_wb(1) & ~is_1st_solo
+
+		is_store_accessFault_ack(0) := io.lsu_cmm.is_accessFault & io.rod_i(0).bits.is_su & ~is_wb(0)
+		is_store_accessFault_ack(1) := io.lsu_cmm.is_accessFault & io.rod_i(1).bits.is_su & ~is_wb(1) & ~is_1st_solo
+
+		is_load_misAlign_ack(0) := io.lsu_cmm.is_misAlign & io.rod_i(0).bits.is_lu & ~is_wb(0)
+		is_load_misAlign_ack(1) := io.lsu_cmm.is_misAlign & io.rod_i(1).bits.is_lu & ~is_wb(1) & ~is_1st_solo
+
+		is_store_misAlign_ack(0) := io.lsu_cmm.is_misAlign & io.rod_i(0).bits.is_su & ~is_wb(0)
+		is_store_misAlign_ack(1) := io.lsu_cmm.is_misAlign & io.rod_i(1).bits.is_su & ~is_wb(1) & ~is_1st_solo
+
+		is_ecall(0) := io.rod_i(0).bits.privil.ecall
+		is_ecall(1) := io.rod_i(1).bits.privil.ecall & ~is_1st_solo
+
+		is_ebreak(0) := io.rod_i(0).bits.privil.ebreak
+		is_ebreak(1) := io.rod_i(1).bits.privil.ebreak & ~is_1st_solo
+
+		is_instr_accessFault(0) := io.rod_i(0).bits.is_accessFault
+		is_instr_accessFault(1) := io.rod_i(1).bits.is_accessFault & ~is_1st_solo
+
+		is_illeage(0) := io.rod_i(0).bits.is_illeage
+		is_illeage(1) := io.rod_i(1).bits.is_illeage & ~is_1st_solo
+
+		mp.is_Mret(0) := io.rod_i(0).bits.privil.mret
+		mp.is_Mret(1) := io.rod_i(1).bits.privil.mret & ~is_1st_solo
+
+		sp.is_Sret(0) := io.rod_i(0).bits.privil.sret
+		sp.is_Sret(1) := io.rod_i(1).bits.privil.sret & ~is_1st_solo
+
+		up.is_Uret(0) := io.rod_i(0).bits.privil.uret
+		up.is_Uret(1) := io.rod_i(1).bits.privil.uret & ~is_1st_solo
+
+
+
+
+
 
 }

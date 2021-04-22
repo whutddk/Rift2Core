@@ -33,55 +33,10 @@ import chisel3.util._
 import rift2Core.basic._
 
 
+abstract class Privilege() extends Module with CsrFiles{
 
-
-trait M_Privilege {
-
-	val csrFiles: CsrFiles
-	val is_trap: Vec[Bool]
-	val is_xRet: Vec[Bool]
-
-	val is_Mret = Wire( Vec(2, Bool()) )
-
-
-	def mstatus_except = Cat(
-		0.U(51.W),
-		"b11".U(2.W), //MPP
-		0.U(3.W),
-		Mux(is_trap.contains(true.B), csrFiles.m_csrFiles.mstatus.value(3), Mux( is_Mret.contains(true.B), 1.U(1.W), 0.U(1.W) )),//MPIE
-		0.U(3.W),
-		Mux(is_trap.contains(true.B), 0.U(1.W), Mux( is_Mret.contains(true.B), csrFiles.m_csrFiles.mstatus.value(7), 0.U(1.W) )),//MIE
-		0.U(3.W)
-		)
-
-
-
-
-
-}
-
-trait H_Privilege {
-
-}
-
-trait  S_Privilege {
-	val is_Sret = Wire( Vec(2, Bool()) )
-
-}
-
-trait U_Privilege {
-	val is_Uret = Wire( Vec(2, Bool()) )
-
-}
-
-
-abstract class Privilege() extends Module with M_Privilege with H_Privilege with S_Privilege with U_Privilege{
-	lazy val csrFiles = new CsrFiles
-
-
-	csrFiles.m_csrFiles.clint_csr_info := 0.U.asTypeOf(new Info_clint_csr)
-
-	val commit_pc = Wire(Vec(2, UInt(64.W)))
+	
+	val commit_pc = Wire(UInt(64.W))
 	val is_load_accessFault_ack = Wire( Vec(2, Bool()) )
 	val is_store_accessFault_ack = Wire( Vec(2, Bool()) )
 	val is_load_misAlign_ack = Wire( Vec(2, Bool()) )
@@ -94,31 +49,141 @@ abstract class Privilege() extends Module with M_Privilege with H_Privilege with
 
 	val lsu_trap_addr = Wire(UInt(64.W))
 
-	val is_trap = Wire( Vec(2, Bool()) )
+	val is_trap = Wire( Vec(2,Bool() ))
 	val is_xRet = Wire(Vec(2, Bool()))
 
 
 
-	def is_exInterrupt = csrFiles.m_csrFiles.mip.value(11) & csrFiles.m_csrFiles.mie.value(11) & csrFiles.m_csrFiles.mstatus.value(3)
-	def is_timeInterrupt = csrFiles.m_csrFiles.mip.value(7) & csrFiles.m_csrFiles.mie.value(7) & csrFiles.m_csrFiles.mstatus.value(3)
-	def is_softInterrupt = csrFiles.m_csrFiles.mip.value(3) & csrFiles.m_csrFiles.mie.value(3) & csrFiles.m_csrFiles.mstatus.value(3)
+
+
+	object mp {
+
+		val is_Mret = Wire( Vec(2, Bool()) )
+
+
+		def mstatus_except = Cat(
+			0.U(51.W),
+			"b11".U(2.W), //MPP
+			0.U(3.W),
+			Mux(is_trap.contains(true.B), m_csrFiles.mstatus.value(3), Mux( is_Mret.contains(true.B), 1.U(1.W), 0.U(1.W) )),//MPIE
+			0.U(3.W),
+			Mux(is_trap.contains(true.B), 0.U(1.W), Mux( is_Mret.contains(true.B), m_csrFiles.mstatus.value(7), 0.U(1.W) )),//MIE
+			0.U(3.W)
+			)
+	}
+
+	object hp {
+
+	}
+
+	object sp {
+		val is_Sret = Wire( Vec(2, Bool()) )
+
+	}
+
+	object up {
+		val is_Uret = Wire( Vec(2, Bool()) )
+
+	}
+
+	object csr_access {
+
+		val exe_port = Wire(new Csr_Port)
+
+		m_csrFiles.clint_csr_info := 0.U.asTypeOf(new Info_clint_csr)
+
+		m_csrFiles.port := exe_port
+		h_csrFiles.port := exe_port
+		s_csrFiles.port := exe_port
+		u_csrFiles.port := exe_port
+		d_csrFiles.port := exe_port
+
+
+		m_csrFiles.mcause.io.en  := is_trap.contains(true.B)
+		m_csrFiles.mcause.io.dat := 
+										Cat(
+											is_interrupt.asUInt, 
+											MuxCase( 0.U(63.W), Array(
+													is_ecall.contains(true.B)        -> 11.U(63.W),
+													is_ebreak.contains(true.B)                -> 3.U(63.W),
+													is_instr_accessFault.contains(true.B)     -> 1.U(63.W),
+													is_illeage.contains(true.B)               -> 2.U(63.W),
+													is_load_accessFault_ack.contains(true.B)  -> 5.U(63.W),
+													is_store_accessFault_ack.contains(true.B) -> 7.U(63.W),
+													is_load_misAlign_ack.contains(true.B)     -> 4.U(63.W),
+													is_store_misAlign_ack.contains(true.B)	 -> 6.U(63.W)
+												))
+										)
+
+		m_csrFiles.mepc.io.en  := is_trap.contains(true.B)
+		m_csrFiles.mepc.io.dat := MuxCase( 0.U, Array( is_exception.contains(true.B) -> commit_pc, is_interrupt -> commit_pc ) )
+
+		m_csrFiles.mtval.io.en  := is_trap.contains(true.B)
+		m_csrFiles.mtval.io.dat := Mux( 
+												(is_load_accessFault_ack.contains(true.B) | 
+												is_store_accessFault_ack.contains(true.B) | 
+												is_load_misAlign_ack.contains(true.B) | 
+												is_store_misAlign_ack.contains(true.B) ), 
+												lsu_trap_addr, 0.U
+											)
+
+		m_csrFiles.mepc.io.en  := is_trap.contains(true.B) | is_xRet.contains(true.B)
+		m_csrFiles.mepc.io.dat := Cat(
+											0.U(51.W),
+											"b11".U, //MPP
+											0.U(3.W),
+											(is_trap.contains(true.B) & m_csrFiles.mstatus.value(3)) | (is_xRet.contains(true.B) & true.B), //MPIE
+											0.U(3.W),
+											(is_trap.contains(true.B) & false.B) | (is_xRet.contains(true.B) & m_csrFiles.mstatus.value(7)), //MIE
+											0.U(3.W)
+										)
+
+
+	}
 
 
 
-	val is_exception = VecInit( for ( i <- 0 until 2 ) yield {
-									is_ecall(i) |
-									is_ebreak(i) |
-									is_instr_accessFault(i) |
-									is_illeage(i) |
-									is_load_accessFault_ack(i) |
-									is_store_accessFault_ack(i) |
-									is_load_misAlign_ack(i) |
-									is_store_misAlign_ack(i)
-								})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	def is_exInterrupt   = m_csrFiles.mip.value(11) & m_csrFiles.mie.value(11) & m_csrFiles.mstatus.value(3)
+	def is_timeInterrupt = m_csrFiles.mip.value(7)  & m_csrFiles.mie.value(7)  & m_csrFiles.mstatus.value(3)
+	def is_softInterrupt = m_csrFiles.mip.value(3)  & m_csrFiles.mie.value(3)  & m_csrFiles.mstatus.value(3)
+
+
+
+	val is_exception = 	WireDefault(	VecInit( for (i <- 0 until 2) yield {
+							is_ecall(i)  |
+							is_ebreak(i)  |
+							is_instr_accessFault(i)  |
+							is_illeage(i) |
+							is_load_accessFault_ack(i)  |
+							is_store_accessFault_ack(i) |
+							is_load_misAlign_ack(i)  |
+							is_store_misAlign_ack(i)
+						}
+						))
+
 
 	for ( i <- 0 until 2 ) yield {
 		is_trap(i) := is_interrupt | is_exception(i)
-		is_xRet(i) := is_Mret(i) | is_Sret(i) | is_Uret(i)
+		is_xRet(i) := mp.is_Mret(i) | sp.is_Sret(i) | up.is_Uret(i)
 	}
 
 
@@ -130,30 +195,18 @@ abstract class Privilege() extends Module with M_Privilege with H_Privilege with
 //
 //
 
-	def mcause_except = Cat(
-							is_interrupt.asUInt, 
-							MuxCase( 0.U(63.W), Array(
-									is_ecall.contains(true.B)        -> 11.U(63.W),
-									is_ebreak(true.B)                -> 3.U(63.W),
-									is_instr_accessFault(true.B)     -> 1.U(63.W),
-									is_illeage(true.B)               -> 2.U(63.W),
-									is_load_accessFault_ack(true.B)  -> 5.U(63.W),
-									is_store_accessFault_ack(true.B) -> 7.U(63.W),
-									is_load_misAlign_ack(true.B)     -> 4.U(63.W),
-									is_store_misAlign_ack(true.B)	 -> 6.U(63.W)
-								))
-							)
+
 
 	def is_interrupt = is_exInterrupt | is_timeInterrupt | is_softInterrupt;
 
-	def mepc_except = MuxCase( 0.U, Array( is_exception.contains(true.B) -> commit_pc, is_interrupt -> commit_pc ) )
+
 	def mtval_except = 
-		Mux( 
-			(is_load_accessFault_ack.contains(true.B) | 
-			is_store_accessFault_ack.contains(true.B) | 
-			is_load_misAlign_ack.contains(true.B) | 
-			is_store_misAlign_ack.contains(true.B) ), 
-			lsu_trap_addr, 0.U)
+				Mux( 
+					(is_load_accessFault_ack.contains(true.B) | 
+					is_store_accessFault_ack.contains(true.B) | 
+					is_load_misAlign_ack.contains(true.B) | 
+					is_store_misAlign_ack.contains(true.B) ), 
+					lsu_trap_addr, 0.U)
 
 }
 

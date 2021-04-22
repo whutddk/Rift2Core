@@ -40,10 +40,20 @@ class Csr_Port extends Bundle {
 
 
 
+
+
 class CsrReg( addr: UInt, init: UInt, port: Csr_Port, ormask: UInt ) {
+	val io = new Bundle{
+		val en = WireDefault(false.B)
+		val dat = WireDefault(0.U(64.W))
+	}
+
 	val value = RegInit(init)
 
-	when(port.addr === addr) {
+	when( io.en ) {
+		value := io.dat
+	}
+	.elsewhen(port.addr === addr) {
 		value := MuxCase(value, Array(
 			port.op_rw -> (port.dat_i),
 			port.op_rs -> (value | port.dat_i),
@@ -274,9 +284,7 @@ class D_CsrFiles {
 	val dscratch1 = new CsrReg( "h7B3".U, 0.U, port, 0.U )
 }
 
-class CsrFiles {
-
-	val port = Wire(new Csr_Port)
+trait CsrFiles {
 
 	val m_csrFiles = new M_CsrFiles
 	val h_csrFiles = new H_CsrFiles
@@ -284,17 +292,10 @@ class CsrFiles {
 	val u_csrFiles = new U_CsrFiles
 	val d_csrFiles = new D_CsrFiles
 
-	m_csrFiles.port := port
-	h_csrFiles.port := port
-	s_csrFiles.port := port
-	u_csrFiles.port := port
-	d_csrFiles.port := port
 
 
-	val addr = Wire(UInt(12.W))
-	val read = Wire(UInt(64.W))
 
-	read := MuxCase(0.U, Array(
+	def csr_read(addr: UInt) = MuxCase(0.U, Array(
 				( addr === "h000".U ) -> u_csrFiles.ustatus.value,
 				( addr === "h004".U ) -> u_csrFiles.uie.value,
 				( addr === "h005".U ) -> u_csrFiles.utvec.value,
