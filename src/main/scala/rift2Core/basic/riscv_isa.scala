@@ -313,7 +313,7 @@ trait Instruction_set {
 			fpu_isa.fsgnjx_d | fpu_isa.fmin_d | fpu_isa. fmax_d
 
 	def is_iwb = ~is_fwb
-	def is_illeage = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mul | privil_isa.is_privil | fpu_isa.is_fpu 
+	def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mul | privil_isa.is_privil | fpu_isa.is_fpu) 
 
 }
 
