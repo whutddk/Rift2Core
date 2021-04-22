@@ -162,7 +162,7 @@ class Decode16 (x:UInt, pc: UInt) {
 
 	info.alu_isa.lui         := c_lui
 	info.alu_isa.auipc       := false.B
-	info.alu_isa.addi        := c_addi4spn | c_nop | c_addi | c_addi16sp
+	info.alu_isa.addi        := c_addi4spn | c_nop | c_addi | c_li | c_addi16sp
 	info.alu_isa.addiw       := c_addiw
 	info.alu_isa.slti        := false.B
 	info.alu_isa.sltiu       := false.B
