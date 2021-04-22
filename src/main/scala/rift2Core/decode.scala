@@ -74,13 +74,13 @@ class Decode_ss extends Module with Superscalar {
 
 
 	override def is_1st_solo = false.B
-	override def is_2nd_solo = is_1st_solo & false.B
+	override def is_2nd_solo = false.B
 
 	id_dpt_fifo.io.enq(0).valid := ~io.flush & io.ib_id(0).valid
-	id_dpt_fifo.io.enq(1).valid := ~io.flush & io.ib_id(0).valid & io.ib_id(1).valid & is_1st_solo
+	id_dpt_fifo.io.enq(1).valid := ~io.flush & io.ib_id(0).valid & io.ib_id(1).valid & ~is_1st_solo
 
 	io.ib_id(0).ready := id_dpt_fifo.is_enq_ack(0)
-	io.ib_id(1).ready := id_dpt_fifo.is_enq_ack(0) & id_dpt_fifo.is_enq_ack(1) & is_1st_solo
+	io.ib_id(1).ready := id_dpt_fifo.is_enq_ack(0) & id_dpt_fifo.is_enq_ack(1) & ~is_1st_solo
 
 	assert( ~(~id_dpt_fifo.is_enq_ack(0) & id_dpt_fifo.is_enq_ack(1)), "Assert Fail! When id_dpt_fifo push(0) failed, When id_dpt_fifo push(1) must failed," )
 
