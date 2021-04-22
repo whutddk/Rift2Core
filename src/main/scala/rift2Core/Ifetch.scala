@@ -205,24 +205,16 @@ class Ifetch() extends Module with IBuf{
 							))
 
 	for ( i <- 0 until cb ) yield {
-		mem.dat_en_w(i) := Mux1H( Seq(
-								(stateReg === Il1_state.cfree) -> false.B,
-								(stateReg === Il1_state.cktag) -> false.B,
-								(stateReg === Il1_state.cmiss) -> (il1_mst.is_accessAckData & is_cb_vhit(i)),
-								(stateReg === Il1_state.fence) -> false.B
-								))
+		mem.dat_en_w(i) := (stateReg === Il1_state.cmiss) & (il1_mst.is_accessAckData & is_cb_vhit(i))
 
 		mem.dat_en_r(i) := (stateDnxt === Il1_state.cktag)
 
+		mem.tag_en_w(i) := (stateReg === Il1_state.cktag) & ((stateDnxt === Il1_state.cmiss) & is_block_replace(i.U))
 
-		mem.tag_en_w(i) := Mux1H( Seq(
-							(stateReg === Il1_state.cfree) -> false.B,
-							(stateReg === Il1_state.cktag) -> ((stateDnxt === Il1_state.cmiss) & is_block_replace(i.U)),
-							(stateReg === Il1_state.cmiss) -> false.B,
-							(stateReg === Il1_state.fence) -> false.B
-							))
+		mem.tag_en_r(i) :=
+				((stateReg === Il1_state.cfree) & (stateDnxt === Il1_state.cktag)) |
+				((stateReg === Il1_state.cmiss) & (il1_mst.is_chn_a_ack))
 
-		mem.tag_en_r(i) := (stateDnxt === Il1_state.cktag)
 
 	}
 
