@@ -109,10 +109,10 @@ class Commit extends Privilege with Superscalar{
 	io.cmm_pc.valid := is_xRet.contains(true.B) | is_trap.contains(true.B)
 
 	io.cmm_pc.bits.addr := MuxCase(0.U, Array(
-		is_xRet(0) -> m_csrFiles.mepc.io.value,
-		is_trap(0) -> m_csrFiles.mtvec.io.value,
-		is_xRet(1) -> m_csrFiles.mepc.io.value,
-		is_trap(1) -> m_csrFiles.mtvec.io.value		
+		is_xRet(0) -> m_csrFiles.mepc,
+		is_trap(0) -> m_csrFiles.mtvec,
+		is_xRet(1) -> m_csrFiles.mepc,
+		is_trap(1) -> m_csrFiles.mtvec		
 	))
 
 

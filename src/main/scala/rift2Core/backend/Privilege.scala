@@ -123,9 +123,9 @@ abstract class Privilege() extends Module with CsrFiles{
 											0.U(51.W),
 											"b11".U, //MPP
 											0.U(3.W),
-											(is_trap.contains(true.B) & m_csrFiles.mstatus.io.value(3)) | (is_xRet.contains(true.B) & true.B), //MPIE
+											(is_trap.contains(true.B) & m_csrFiles.mstatus(3)) | (is_xRet.contains(true.B) & true.B), //MPIE
 											0.U(3.W),
-											(is_trap.contains(true.B) & false.B) | (is_xRet.contains(true.B) & m_csrFiles.mstatus.io.value(7)), //MIE
+											(is_trap.contains(true.B) & false.B) | (is_xRet.contains(true.B) & m_csrFiles.mstatus(7)), //MIE
 											0.U(3.W)
 										)
 
@@ -153,9 +153,9 @@ abstract class Privilege() extends Module with CsrFiles{
 
 
 
-	def is_exInterrupt   = m_csrFiles.mip.io.value(11) & m_csrFiles.mie.io.value(11) & m_csrFiles.mstatus.io.value(3)
-	def is_timeInterrupt = m_csrFiles.mip.io.value(7)  & m_csrFiles.mie.io.value(7)  & m_csrFiles.mstatus.io.value(3)
-	def is_softInterrupt = m_csrFiles.mip.io.value(3)  & m_csrFiles.mie.io.value(3)  & m_csrFiles.mstatus.io.value(3)
+	def is_exInterrupt   = m_csrFiles.mip(11) & m_csrFiles.mie(11) & m_csrFiles.mstatus(3)
+	def is_timeInterrupt = m_csrFiles.mip(7)  & m_csrFiles.mie(7)  & m_csrFiles.mstatus(3)
+	def is_softInterrupt = m_csrFiles.mip(3)  & m_csrFiles.mie(3)  & m_csrFiles.mstatus(3)
 
 
 
