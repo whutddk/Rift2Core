@@ -39,9 +39,8 @@ abstract class Ele_issue(param: Instruction_param, rn: Reg_idx, log: Vec[Vec[UIn
 	def rs1_idx = rn.rs1_idx
 	def rs2_idx = rn.rs2_idx
 
-	def src1 = files(rs1_raw)(rs1_idx)
-	def src2 = files(rs2_raw)(rs2_idx)
-
+	def src1 = Mux((rs1_raw === 0.U), 0.U, files(rs1_raw)(rs1_idx))
+	def src2 = Mux((rs2_raw === 0.U), 0.U, files(rs2_raw)(rs2_idx))
 
 	// check if the rs is wrote back
 	def is_rs1_ready: Bool = (log(rs1_raw)(rs1_idx) === 3.U) | (rs1_raw === 0.U)
