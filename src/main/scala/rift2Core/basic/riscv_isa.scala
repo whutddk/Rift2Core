@@ -522,7 +522,7 @@ class Csr_function extends Bundle {
 }
 
 class Csr_param extends Bundle {
-	val op1 = UInt(5.W)
+	val op1 = UInt(64.W)
 	val op2 = UInt(12.W)
 
 	val rd0_raw = UInt(5.W)
