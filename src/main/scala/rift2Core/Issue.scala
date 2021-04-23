@@ -44,8 +44,8 @@ abstract class Ele_issue(param: Instruction_param, rn: Reg_idx, log: Vec[Vec[UIn
 
 
 	// check if the rs is wrote back
-	def is_rs1_ready: Bool = (log(rs1_raw)(rs1_idx) === 2.U) | (rs1_raw === 0.U)
-	def is_rs2_ready: Bool = (log(rs2_raw)(rs2_idx) === 2.U) | (rs2_raw === 0.U)
+	def is_rs1_ready: Bool = (log(rs1_raw)(rs1_idx) === 3.U) | (rs1_raw === 0.U)
+	def is_rs2_ready: Bool = (log(rs2_raw)(rs2_idx) === 3.U) | (rs2_raw === 0.U)
 	// check if an instruction is RAW clearence, each instruction has different rs requirement
 	val is_clearRAW = Wire(Bool())
 
