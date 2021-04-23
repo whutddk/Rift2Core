@@ -109,7 +109,7 @@ class Ifetch() extends Module with IBuf{
 	io.pc_if.ready := ~io.flush & (stateReg =/= Il1_state.cfree) & (stateDnxt === Il1_state.cfree)
 
 	io.il1_chn_a.bits := il1_mst.a
-	io.il1_chn_a.valid := ~io.flush & il1_mst.a_valid
+	io.il1_chn_a.valid := il1_mst.a_valid
 	il1_mst.a_ready    := io.il1_chn_a.ready
 
 	io.il1_chn_d.ready := il1_mst.d_ready
