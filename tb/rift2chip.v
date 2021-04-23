@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-21 19:10:21
+* @Last Modified time: 2021-04-23 17:22:19
 */
 
 
@@ -164,20 +164,24 @@ begin
 	$dumpvars(0, rift2chip);//tb模块名称
 end
 
-// always @(negedge CLK)begin 
-// 	if (isEcall) begin
-// 		if ( x3 == 64'd1 ) begin
-// 			$display("PASS");
-// 			$finish;
-// 		end
-// 		else begin
-// 			$display("Fail");
-// 			$stop;
-// 		end
+wire isEcall = (i_rift2Core.cmm_stage.io_rod_i_0_bits_privil_ecall | i_rift2Core.cmm_stage.io_rod_i_1_bits_privil_ecall);
+wire [63:0] x3 = (i_rift2Core.i_regfiles.archit_ptr_3 == 2'd0 ? i_rift2Core.i_regfiles.files_3_0 : i_rift2Core.i_regfiles.archit_ptr_3 == 2'd1 ? i_rift2Core.i_regfiles.files_3_1 : i_rift2Core.i_regfiles.archit_ptr_3 == 2'd2 ? i_rift2Core.i_regfiles.files_3_2 : i_rift2Core.i_regfiles.files_3_3);
 
-// 	end
 
-// end
+always @(negedge CLK)begin 
+	if (isEcall) begin
+		if ( x3 == 64'd1 ) begin
+			$display("PASS");
+			$finish;
+		end
+		else begin
+			$display("Fail");
+			$stop;
+		end
+
+	end
+
+end
 
 
 
