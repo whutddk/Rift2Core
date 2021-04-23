@@ -183,10 +183,43 @@ class Decode16 (x:UInt, pc: UInt) {
 
 	info.param.rs2_raw       := 
 		MuxCase( DontCare, Array(
-				( x === BitPat("b????????????????1?????????????00") ) -> Cat(1.U(2.W), x(4,2)),
-				( x === BitPat("b????????????????0?????????????01") ) -> DontCare,
-				( x === BitPat("b????????????????100???????????01") ) -> Cat(1.U(2.W), x(4,2)),
-				( x === BitPat("b????????????????100???????????10") ) -> x(6,2)
+			c_addi4spn -> DontCare,
+			c_fld      -> DontCare,
+			c_lw       -> DontCare,
+			c_ld       -> DontCare,
+			c_fsd      -> Cat(1.U(2.W), x(4,2)),
+			c_sw       -> Cat(1.U(2.W), x(4,2)),
+			c_sd       -> Cat(1.U(2.W), x(4,2)),
+			c_nop      -> DontCare,
+			c_addi     -> DontCare,
+			c_addiw    -> DontCare,
+			c_li       -> DontCare,
+			c_addi16sp -> DontCare,
+			c_lui      -> DontCare,
+			c_srli     -> DontCare,
+			c_srai     -> DontCare,
+			c_andi     -> DontCare,
+			c_sub      -> Cat(1.U(2.W), x(4,2)),
+			c_xor      -> Cat(1.U(2.W), x(4,2)),
+			c_or       -> Cat(1.U(2.W), x(4,2)),
+			c_and      -> Cat(1.U(2.W), x(4,2)),
+			c_subw     -> Cat(1.U(2.W), x(4,2)),
+			c_addw     -> Cat(1.U(2.W), x(4,2)),
+			c_j        -> DontCare,
+			c_beqz     -> 0.U,
+			c_bnez     -> 0.U,
+			c_slli     -> DontCare,
+			c_fldsp    -> DontCare,
+			c_lwsp     -> DontCare,
+			c_ldsp     -> DontCare,
+			c_jr       -> DontCare,
+			c_mv       -> x(6,2),
+			c_ebreak   -> DontCare,
+			c_jalr     -> DontCare,
+			c_add      -> x(6,2),
+			c_fsdsp    -> x(6,2),
+			c_swsp     -> x(6,2),
+			c_sdsp     -> x(6,2)
 			)
 		)
 	
