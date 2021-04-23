@@ -52,7 +52,7 @@ trait BHT {
 
 
 
-	val bht_buf = RegInit(VecInit(Fill(4096, "b01".U(2.W) ) ))  //4096 history table
+	val bht_buf = RegInit(VecInit(Seq.fill(4096)("b01".U(2.W) ) ))  //4096 history table
 
 	def is_bru_iq_b_ack: Bool
 
@@ -61,20 +61,20 @@ trait BHT {
 
 	when( is_bru_iq_b_ack ) {
 		bht_buf(bht_idx) := Mux1H(Seq(
-			(bht_buf(bht_idx) === "b00".U) -> Mux( bru_iq_b_bits, "b01".U, "b00".U ),
-			(bht_buf(bht_idx) === "b01".U) -> Mux( bru_iq_b_bits, "b10".U, "b00".U ),
-			(bht_buf(bht_idx) === "b10".U) -> Mux( bru_iq_b_bits, "b11".U, "b01".U ),
-			(bht_buf(bht_idx) === "b11".U) -> Mux( bru_iq_b_bits, "b11".U, "b10".U )
+			(bht_buf(bht_idx) === "b00".U) -> Mux( bru_iq_b_bits, "b00".U, "b01".U ),
+			(bht_buf(bht_idx) === "b01".U) -> Mux( bru_iq_b_bits, "b00".U, "b10".U ),
+			(bht_buf(bht_idx) === "b10".U) -> Mux( bru_iq_b_bits, "b01".U, "b11".U ),
+			(bht_buf(bht_idx) === "b11".U) -> Mux( bru_iq_b_bits, "b10".U, "b11".U )
 		))
 	}
 
 	def bht_predict(pc: UInt): Bool = {
-		def idx = pc(12,1)
+		lazy val idx = pc(12,1)
 		return Mux1H( Seq(
-			(bht_buf(bht_idx) === "b00".U) -> true.B,
-			(bht_buf(bht_idx) === "b01".U) -> true.B,
-			(bht_buf(bht_idx) === "b10".U) -> false.B,
-			(bht_buf(bht_idx) === "b11".U) -> false.B
+			(bht_buf(idx) === "b00".U) -> true.B,
+			(bht_buf(idx) === "b01".U) -> true.B,
+			(bht_buf(idx) === "b10".U) -> false.B,
+			(bht_buf(idx) === "b11".U) -> false.B
 		)) 
 	}
 }
@@ -141,28 +141,28 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 
 
 
-	def is_jal    = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_jal,    is_2nd_solo -> io.iq_ib(1).bits.info.is_jal ))
-	def is_jalr   = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_jalr,   is_2nd_solo -> io.iq_ib(1).bits.info.is_jalr ))
-	def is_branch = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_branch, is_2nd_solo -> io.iq_ib(1).bits.info.is_branch ))
-	def is_call   = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_call,   is_2nd_solo -> io.iq_ib(1).bits.info.is_call ))
-	def is_return = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_return, is_2nd_solo -> io.iq_ib(1).bits.info.is_return ))
-	def is_rvc    = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_rvc,    is_2nd_solo -> io.iq_ib(1).bits.info.is_rvc ))
-	def is_fencei = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_fencei, is_2nd_solo -> io.iq_ib(1).bits.info.is_fencei ))
-	def imm       = MuxCase( 0.U,     Array( is_1st_solo -> io.iq_ib(0).bits.info.imm,       is_2nd_solo -> io.iq_ib(1).bits.info.imm ))
+	lazy val is_jal    = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_jal,    is_2nd_solo -> io.iq_ib(1).bits.info.is_jal ))
+	lazy val is_jalr   = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_jalr,   is_2nd_solo -> io.iq_ib(1).bits.info.is_jalr ))
+	lazy val is_branch = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_branch, is_2nd_solo -> io.iq_ib(1).bits.info.is_branch ))
+	lazy val is_call   = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_call,   is_2nd_solo -> io.iq_ib(1).bits.info.is_call ))
+	lazy val is_return = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_return, is_2nd_solo -> io.iq_ib(1).bits.info.is_return ))
+	lazy val is_rvc    = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_rvc,    is_2nd_solo -> io.iq_ib(1).bits.info.is_rvc ))
+	lazy val is_fencei = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_fencei, is_2nd_solo -> io.iq_ib(1).bits.info.is_fencei ))
+	lazy val imm       = MuxCase( 0.U,     Array( is_1st_solo -> io.iq_ib(0).bits.info.imm,       is_2nd_solo -> io.iq_ib(1).bits.info.imm ))
 
 
-	def ori_pc = Mux( is_1st_solo, io.iq_ib(0).bits.pc, io.iq_ib(1).bits.pc)
-	def next_pc = Mux( is_rvc, ori_pc + 2.U, ori_pc + 4.U )
-	def jal_pc = ori_pc + imm
-	def branch_pc = ori_pc + imm
-	def ras_pc = ras.io.deq.bits
-	def jalr_pc = Mux( is_ras_taken, ras_pc, DontCare)
+	lazy val ori_pc    = (Mux( is_1st_solo, io.iq_ib(0).bits.pc, io.iq_ib(1).bits.pc))
+	lazy val next_pc   = (Mux( is_rvc, ori_pc + 2.U, ori_pc + 4.U ))
+	lazy val jal_pc    = (ori_pc + imm)
+	lazy val branch_pc = (ori_pc + imm)
+	lazy val ras_pc    = (ras.io.deq.bits)
+	lazy val jalr_pc   = (Mux( is_ras_taken, ras_pc, DontCare))
 
 
-	def is_ras_taken          = is_return & ras.io.deq.valid
-	def is_predict_taken      = bht_predict(ori_pc)
+	lazy val is_ras_taken          = is_return & ras.io.deq.valid
+	lazy val is_predict_taken      = is_branch & bht_predict(ori_pc)
 
-	def is_misPredict_taken = io.bru_iq_b.valid & (bru_iq_b_bits =/= bhq.io.deq.bits.dir) 
+	lazy val is_misPredict_taken = io.bru_iq_b.valid & (bru_iq_b_bits =/= bhq.io.deq.bits.dir) 
 	io.is_misPredict_taken := is_misPredict_taken
 
 
@@ -184,7 +184,7 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 	ras.io.deq.ready := is_ras_taken & ((is_1st_solo & ib_id_fifo.is_enq_ack(0)) | (is_2nd_solo & ib_id_fifo.is_enq_ack(1)))
 	ras.io.flush := io.flush
 
-	io.ib_pc.valid := ~ib_lock & ~io.flush & (is_jal | is_jalr | is_predict_taken | is_misPredict_taken | is_bru_iq_j_ack)
+	io.ib_pc.valid := ~ib_lock & (is_jal | is_jalr | is_predict_taken | is_misPredict_taken | is_bru_iq_j_ack)
 	io.ib_pc.bits.addr  := MuxCase(DontCare, Array(
 		is_jal                -> jal_pc,
 		is_jalr               -> jalr_pc,
