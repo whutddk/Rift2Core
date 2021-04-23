@@ -35,7 +35,7 @@ import chisel3.experimental.chiselName
 @chiselName
 class Alu extends Module {
 	val io = IO(new Bundle{
-		val alu_iss_exe = Flipped(new ValidIO(new Alu_iss_info))
+		val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
 		val alu_exe_iwb = new ValidIO(new Exe_iwb_info)
 
 		val flush = Input(Bool())
@@ -92,7 +92,7 @@ class Alu extends Module {
 		io.alu_iss_exe.bits.fun.sra -> alu_sra_res
 	))
 
-
+	io.alu_iss_exe.ready := true.B
 	io.alu_exe_iwb.valid := io.alu_iss_exe.valid
 	io.alu_exe_iwb.bits.res := res
 	io.alu_exe_iwb.bits.rd0_raw := io.alu_iss_exe.bits.param.rd0_raw

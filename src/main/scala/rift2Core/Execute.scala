@@ -40,7 +40,7 @@ import chisel3.experimental.chiselName
 @chiselName
 class Execute extends Module {
 	val io = IO(new Bundle{
-		val alu_iss_exe = Flipped(new ValidIO(new Alu_iss_info))
+		val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
 		val alu_exe_iwb = new ValidIO(new Exe_iwb_info)
 		val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
 		val bru_exe_iwb = new ValidIO(new Exe_iwb_info)

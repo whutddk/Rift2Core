@@ -344,7 +344,7 @@ class Issue() extends Module {
 		// val fpu_dpt_iss = Flipped(new DecoupledIO(new Fpu_dpt_info))
 
 
-		val alu_iss_exe = new ValidIO(new Alu_iss_info)
+		val alu_iss_exe = new DecoupledIO(new Alu_iss_info)
 		val bru_iss_exe = new DecoupledIO(new Bru_iss_info)
 		val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
 		val csr_iss_exe = new DecoupledIO(new Csr_iss_info)
@@ -364,77 +364,53 @@ class Issue() extends Module {
 		val lsu_issue = new Lsu_issue (io.lsu_dpt_iss.bits, io.lsu_dpt_iss.valid, io.log, io.files)
 		val csr_issue = new Csr_issue (io.csr_dpt_iss.bits, io.csr_dpt_iss.valid, io.log, io.files)
 		val mul_issue = new Mul_issue (io.mul_dpt_iss.bits, io.mul_dpt_iss.valid, io.log, io.files)
+
+		//as a ping-pong buf
+		val alu_iss_exe_fifo = Module(new Queue (new Alu_iss_info, 1, true, false))
+		val bru_iss_exe_fifo = Module(new Queue (new Bru_iss_info, 2))
+		val lsu_iss_exe_fifo = Module(new Queue (new Lsu_iss_info, 2))
+		val csr_iss_exe_fifo = Module(new Queue (new Csr_dpt_info, 2))
+		val mul_iss_exe_fifo = Module(new Queue (new Mul_iss_info, 2))	
 	
-		//issue info (exe param) register is here :  issue logic <> exe param reg
-		val alu_iss_info = RegNext(alu_issue.alu_iss_info)
-		val bru_iss_info = RegNext(bru_issue.bru_iss_info)
-		val lsu_iss_info = RegNext(lsu_issue.lsu_iss_info)
-		val csr_iss_info = RegNext(csr_issue.csr_iss_info)
-		val mul_iss_info = RegNext(mul_issue.mul_iss_info)
+		alu_iss_exe_fifo.reset := reset.asBool | io.flush
+		bru_iss_exe_fifo.reset := reset.asBool | io.flush
+		lsu_iss_exe_fifo.reset := reset.asBool | io.flush
+		csr_iss_exe_fifo.reset := reset.asBool | io.flush
+		mul_iss_exe_fifo.reset := reset.asBool | io.flush
 
-		val alu_iss_valid = Reg(Bool())
-		val bru_iss_valid = Reg(Bool())
-		val lsu_iss_valid = Reg(Bool())
-		val csr_iss_valid = Reg(Bool())
-		val mul_iss_valid = Reg(Bool())
+		lazy val alu_iss_exe_ack = alu_iss_exe_fifo.io.enq.valid & alu_iss_exe_fifo.io.enq.ready
+		lazy val bru_iss_exe_ack = bru_iss_exe_fifo.io.enq.valid & bru_iss_exe_fifo.io.enq.ready
+		lazy val lsu_iss_exe_ack = lsu_iss_exe_fifo.io.enq.valid & lsu_iss_exe_fifo.io.enq.ready
+		lazy val csr_iss_exe_ack = csr_iss_exe_fifo.io.enq.valid & csr_iss_exe_fifo.io.enq.ready
+		lazy val mul_iss_exe_ack = mul_iss_exe_fifo.io.enq.valid & mul_iss_exe_fifo.io.enq.ready
 
-		def alu_exe_ack = io.alu_iss_exe.valid
-		def bru_exe_ack = io.bru_iss_exe.valid & io.bru_iss_exe.ready
-		def lsu_exe_ack = io.lsu_iss_exe.valid & io.lsu_iss_exe.ready
-		def csr_exe_ack = io.csr_iss_exe.valid & io.csr_iss_exe.ready
-		def mul_exe_ack = io.mul_iss_exe.valid & io.mul_iss_exe.ready		
+		io.alu_dpt_iss.ready := alu_iss_exe_ack
+		io.bru_dpt_iss.ready := bru_iss_exe_ack
+		io.lsu_dpt_iss.ready := lsu_iss_exe_ack
+		io.csr_dpt_iss.ready := csr_iss_exe_ack
+		io.mul_dpt_iss.ready := mul_iss_exe_ack
 
-		io.alu_dpt_iss.ready := alu_exe_ack
-		io.bru_dpt_iss.ready := bru_exe_ack
-		io.lsu_dpt_iss.ready := lsu_exe_ack
-		io.csr_dpt_iss.ready := csr_exe_ack
-		io.mul_dpt_iss.ready := mul_exe_ack
-
+		alu_iss_exe_fifo.io.enq.valid := alu_issue.is_clearRAW
+		bru_iss_exe_fifo.io.enq.valid := bru_issue.is_clearRAW
+		lsu_iss_exe_fifo.io.enq.valid := lsu_issue.is_clearRAW
+		csr_iss_exe_fifo.io.enq.valid := csr_issue.is_clearRAW
+		mul_iss_exe_fifo.io.enq.valid := mul_issue.is_clearRAW
 
 
-		alu_iss_valid := MuxCase(alu_iss_valid, Array( 
-									(reset.asBool() | io.flush) -> false.B,
-									alu_issue.is_clearRAW       -> true.B,
-									alu_exe_ack                 -> false.B
-								))
-
-		bru_iss_valid := MuxCase(bru_iss_valid, Array( 
-									(reset.asBool() | io.flush) -> false.B,
-									bru_issue.is_clearRAW       -> true.B,
-									bru_exe_ack                 -> false.B
-								))
-
-		lsu_iss_valid := MuxCase(lsu_iss_valid, Array( 
-									(reset.asBool() | io.flush) -> false.B,
-									lsu_issue.is_clearRAW       -> true.B,
-									lsu_exe_ack                 -> false.B
-								))
-
-		csr_iss_valid := MuxCase(csr_iss_valid, Array( 
-									(reset.asBool() | io.flush) -> false.B,
-									csr_issue.is_clearRAW       -> true.B,
-									csr_exe_ack                 -> false.B
-								))
-
-		mul_iss_valid := MuxCase(mul_iss_valid, Array( 
-									(reset.asBool() | io.flush) -> false.B,
-									mul_issue.is_clearRAW       -> true.B,
-									mul_exe_ack                 -> false.B
-								))
+		alu_iss_exe_fifo.io.enq.bits := alu_issue.alu_iss_info
+		bru_iss_exe_fifo.io.enq.bits := bru_issue.bru_iss_info
+		lsu_iss_exe_fifo.io.enq.bits := lsu_issue.lsu_iss_info
+		csr_iss_exe_fifo.io.enq.bits := csr_issue.csr_iss_info
+		mul_iss_exe_fifo.io.enq.bits := mul_issue.mul_iss_info
 
 
 
-		io.alu_iss_exe.bits  := Mux(alu_iss_valid, alu_iss_info, DontCare)
-		io.bru_iss_exe.bits  := Mux(bru_iss_valid, bru_iss_info, DontCare)
-		io.lsu_iss_exe.bits  := Mux(lsu_iss_valid, lsu_iss_info, DontCare)
-		io.csr_iss_exe.bits  := Mux(csr_iss_valid, csr_iss_info, DontCare)
-		io.mul_iss_exe.bits  := Mux(mul_iss_valid, mul_iss_info, DontCare)
 
-		io.alu_iss_exe.valid := alu_iss_valid
-		io.bru_iss_exe.valid := bru_iss_valid
-		io.lsu_iss_exe.valid := lsu_iss_valid
-		io.csr_iss_exe.valid := csr_iss_valid
-		io.mul_iss_exe.valid := mul_iss_valid
+		alu_iss_exe_fifo.io.deq <> io.alu_iss_exe
+		bru_iss_exe_fifo.io.deq <> io.bru_iss_exe
+		lsu_iss_exe_fifo.io.deq <> io.lsu_iss_exe
+		csr_iss_exe_fifo.io.deq <> io.csr_iss_exe
+		mul_iss_exe_fifo.io.deq <> io.mul_iss_exe
 
 
 }
