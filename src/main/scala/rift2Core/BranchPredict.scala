@@ -126,7 +126,7 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 	read and pop when a bru return 
 */
 	lazy val bhq = Module(new Queue( new Info_BHQ, 16 )) //1 input, 1 output 
-	lazy val ras = Module(new Gen_ringStack( UInt(32.W), 4 ))
+	lazy val ras = Module(new Gen_ringStack( UInt(64.W), 4 ))
 
 	override def is_bru_iq_b_ack = io.bru_iq_b.valid
 	override def bru_iq_b_bits   = io.bru_iq_b.bits
