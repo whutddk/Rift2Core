@@ -58,12 +58,12 @@ class Commit extends Privilege with Superscalar{
 		val cmm_pc = new ValidIO(new Info_cmm_pc)
 	})
 
-	val rd0_raw = VecInit( io.rod_i(1).bits.rd0_raw, io.rod_i(0).bits.rd0_raw )
-	val rd0_idx = VecInit( io.rod_i(1).bits.rd0_idx, io.rod_i(0).bits.rd0_idx )
+	val rd0_raw = VecInit( io.rod_i(0).bits.rd0_raw, io.rod_i(1).bits.rd0_raw )
+	val rd0_idx = VecInit( io.rod_i(0).bits.rd0_idx, io.rod_i(1).bits.rd0_idx )
 
 	val is_wb = VecInit(
-						(io.log(rd0_raw(1))(rd0_idx(1)) === 3.U) & (io.rod_i(1).valid),
-						(io.log(rd0_raw(0))(rd0_idx(0)) === 3.U) & (io.rod_i(0).valid)
+						(io.log(rd0_raw(0))(rd0_idx(0)) === 3.U) & (io.rod_i(0).valid),
+						(io.log(rd0_raw(1))(rd0_idx(1)) === 3.U) & (io.rod_i(1).valid)
 					)
 
 	//bru commit ilp
@@ -82,8 +82,8 @@ class Commit extends Privilege with Superscalar{
 
 	//only one privilege can commit once
 	val is_commit_comfirm = VecInit(
-		is_wb(1) & ~io.is_commit_abort(1) & ~is_1st_solo,
-		is_wb(0) & ~io.is_commit_abort(0)
+		is_wb(0) & ~io.is_commit_abort(0),
+		is_wb(1) & ~io.is_commit_abort(1) & ~is_1st_solo
 	)
 
 	for ( i <- 0 until 32; j <- 0 until 4 ) yield {
