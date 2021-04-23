@@ -184,7 +184,7 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 	ras.io.deq.ready := is_ras_taken & ((is_1st_solo & ib_id_fifo.is_enq_ack(0)) | (is_2nd_solo & ib_id_fifo.is_enq_ack(1)))
 	ras.io.flush := io.flush
 
-	io.ib_pc.valid := ~ib_lock & ~io.flush & is_jal | is_jalr | is_predict_taken | is_misPredict_taken | is_bru_iq_j_ack
+	io.ib_pc.valid := ~ib_lock & ~io.flush & (is_jal | is_jalr | is_predict_taken | is_misPredict_taken | is_bru_iq_j_ack)
 	io.ib_pc.bits.addr  := MuxCase(DontCare, Array(
 		is_jal                -> jal_pc,
 		is_jalr               -> jalr_pc,
