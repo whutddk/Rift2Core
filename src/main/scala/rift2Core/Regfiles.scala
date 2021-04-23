@@ -62,7 +62,7 @@ class Regfiles extends Module{
 
 	for ( i <- 0 until 32; j <- 0 until 4) yield {
 		when(io.flush) {
-			regLog(i)(j) := Mux( archit_ptr(i) === j.U , 2.U , 0.U)
+			regLog(i)(j) := Mux( archit_ptr(i) === j.U , 3.U , 0.U)
 			rename_ptr(i) := archit_ptr(i)
 		}
 		.otherwise{
