@@ -369,8 +369,8 @@ class Issue() extends Module {
 		val alu_iss_exe_fifo = Module(new Queue (new Alu_iss_info, 1, true, false))
 		val bru_iss_exe_fifo = Module(new Queue (new Bru_iss_info, 2))
 		val lsu_iss_exe_fifo = Module(new Queue (new Lsu_iss_info, 2))
-		val csr_iss_exe_fifo = Module(new Queue (new Csr_dpt_info, 2))
-		val mul_iss_exe_fifo = Module(new Queue (new Mul_iss_info, 2))	
+		val csr_iss_exe_fifo = Module(new Queue (new Csr_iss_info, 2))
+		val mul_iss_exe_fifo = Module(new Queue (new Mul_iss_info, 2))
 	
 		alu_iss_exe_fifo.reset := reset.asBool | io.flush
 		bru_iss_exe_fifo.reset := reset.asBool | io.flush
