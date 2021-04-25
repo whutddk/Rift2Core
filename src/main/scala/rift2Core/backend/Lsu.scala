@@ -41,7 +41,7 @@ import chisel3.experimental.chiselName
 class Lsu extends Module {
 	val io = IO( new Bundle{
 		val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-		val lsu_exe_iwb = new ValidIO(new Exe_iwb_info)
+		val lsu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
 
 		val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
 		val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
@@ -59,6 +59,10 @@ class Lsu extends Module {
 
 		val flush = Input(Bool())
 	})
+
+	val lsu_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
+	io.lsu_exe_iwb <> lsu_exe_iwb_fifo.io.deq
+	lsu_exe_iwb_fifo.reset := reset.asBool | io.flush
 
 	def dw = 128
 	def bk = 2
@@ -113,9 +117,8 @@ class Lsu extends Module {
 	val is_cb_vhit = Wire(Vec(cb, Bool()))
 
 	def iss_ack = io.lsu_iss_exe.valid & io.lsu_iss_exe.ready
-	def iwb_ack = io.lsu_exe_iwb.valid
 
-	io.lsu_iss_exe.ready := iwb_ack
+	io.lsu_iss_exe.ready := lsu_exe_iwb_fifo.io.enq.valid & lsu_exe_iwb_fifo.io.enq.ready
 
 
 	val wtb = new Wt_block(3)
@@ -203,56 +206,23 @@ class Lsu extends Module {
 	def load_word(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(32, Mux(is_usi, 0.U, rdata(31)) ), rdata(31,0) )
 
 
-
-	val wb_valid = Reg(Bool())
-	val res = Reg(UInt(64.W))
-
-
-	io.lsu_exe_iwb.bits.rd0_raw := io.lsu_iss_exe.bits.param.rd0_raw
-	io.lsu_exe_iwb.bits.rd0_idx := io.lsu_iss_exe.bits.param.rd0_idx
-	io.lsu_exe_iwb.bits.res := res
-	io.lsu_exe_iwb.valid := wb_valid
+	lsu_exe_iwb_fifo.io.enq.bits.rd0_raw := io.lsu_iss_exe.bits.param.rd0_raw
+	lsu_exe_iwb_fifo.io.enq.bits.rd0_idx := io.lsu_iss_exe.bits.param.rd0_idx
 
 
-	when (reset.asBool | io.flush) {
-		wb_valid := false.B
-		res      := 0.U
-	}
-	.elsewhen ( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cfree ) {
-		wb_valid := true.B
-		res      := res_dnxt
-	}
-	.elsewhen ( stateReg === Dl1_state.cmiss ) {
-		when ( (op1_dl1_req === op1_align128) & (dl1_mst.is_accessAckData === true.B) & (trans_kill === false.B) ) {
-			wb_valid := true.B
-			res      := res_dnxt
-		}
-	}
-	.elsewhen ( stateReg === Dl1_state.write & stateDnxt === Dl1_state.cfree ) {
-		wb_valid := true.B
-		res      := 0.U
-	}
-	.elsewhen ( stateReg === Dl1_state.fence ) {
-		when ( (wtb.empty === true.B) & (trans_kill === false.B) ) {
-			wb_valid := true.B
-			res      := 0.U
-		}
-	}
-	.elsewhen ( stateReg === Dl1_state.pread & stateDnxt === Dl1_state.cfree ) {
-		when ( trans_kill === false.B ) {
-			wb_valid := true.B
-			res      := res_dnxt
-		}
-	}
-	.otherwise {
 
-		when ( iwb_ack === true.B ) {
-			wb_valid := false.B
-		}
-	}
+	lsu_exe_iwb_fifo.io.enq.valid := 
+		( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cfree ) |
+		( stateReg === Dl1_state.cmiss & op1_dl1_req === op1_align128 & dl1_mst.is_accessAckData === true.B & trans_kill === false.B ) |
+		( stateReg === Dl1_state.write ) |
+		( stateReg === Dl1_state.fence & wtb.empty === true.B & trans_kill === false.B ) |
+		( stateReg === Dl1_state.pread & stateDnxt === Dl1_state.cfree & trans_kill === false.B)
 
 
-	def res_dnxt = MuxCase( DontCare, Array(
+
+	lsu_exe_iwb_fifo.io.enq.bits.res := res
+
+	def res = MuxCase( DontCare, Array(
 		io.lsu_iss_exe.bits.fun.lb        -> load_byte(is_usi, rsp_data),
 		io.lsu_iss_exe.bits.fun.lh        -> load_half(is_usi, rsp_data),
 		io.lsu_iss_exe.bits.fun.lw        -> load_word(is_usi, rsp_data),
@@ -475,11 +445,11 @@ class Lsu extends Module {
 		Mux( 
 			is_cb_vhit.contains(true.B),
 			Dl1_state.cfree,
-			Mux( is_hazard, Dl1_state.mwait, Dl1_state.cmiss )
+			Mux( is_hazard | ~lsu_exe_iwb_fifo.io.enq.ready, Dl1_state.mwait, Dl1_state.cmiss )
 		)
 	}
 
-	def dl1_state_dnxt_in_mwait = Mux( is_hazard, Dl1_state.mwait, Dl1_state.cmiss )
+	def dl1_state_dnxt_in_mwait = Mux( is_hazard | ~lsu_exe_iwb_fifo.io.enq.ready, Dl1_state.mwait, Dl1_state.cmiss )
 	def dl1_state_dnxt_in_cmiss = Mux( dl1_mst.is_last_d_trans, Dl1_state.cfree, Dl1_state.cmiss )
 	def dl1_state_dnxt_in_write = Dl1_state.cfree
 	def dl1_state_dnxt_in_fence = Mux( is_fence_end, Dl1_state.cfree, Dl1_state.fence )

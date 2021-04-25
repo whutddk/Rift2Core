@@ -39,12 +39,13 @@ import chisel3.experimental.chiselName
 @chiselName
 class WriteBack extends Module {
 	val io = IO(new Bundle{
-		val exe_iwb = Vec(5, (Flipped(new ValidIO(new Exe_iwb_info))))
+		val exe_iwb = Vec(5, (Flipped(new DecoupledIO(new Exe_iwb_info))))
 		val wb_reg = Output(new Info_wb_reg)
 	})
 
 
-	val iwb_ack = { for ( i <- 0 until 5 ) yield { io.exe_iwb(i).valid } }
+	val iwb_ack = { for ( i <- 0 until 5 ) yield { io.exe_iwb(i).valid & io.exe_iwb(i).ready} }
+	for ( i <- 0 until 5 ) yield { io.exe_iwb(i).ready := true.B }
 
 	val is_wb = Wire(Vec(32, Vec(4, Bool())))
 

@@ -36,7 +36,7 @@ import chisel3.experimental.chiselName
 class Csr extends Module {
 	val io = IO(new Bundle{
 		val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
-		val csr_exe_iwb = new ValidIO(new Exe_iwb_info)
+		val csr_exe_iwb = new DecoupledIO(new Exe_iwb_info)
 
 		val csr_addr = Output(UInt(12.W))
 		val csr_data = Input(UInt(64.W))
@@ -46,12 +46,16 @@ class Csr extends Module {
 		val flush = Input(Bool())
 	})
 
+	val csr_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
+	io.csr_exe_iwb <> csr_exe_iwb_fifo.io.deq
+	csr_exe_iwb_fifo.reset := reset.asBool | io.flush
+
 	val csr_op_fifo = Module(new Queue( new Exe_Port, 1, false, false ) )
 	io.csr_cmm_op <> csr_op_fifo.io.deq
 	csr_op_fifo.reset := reset.asBool | io.flush
 
 	def iss_ack = io.csr_iss_exe.valid & io.csr_iss_exe.ready
-	def iwb_ack = io.csr_exe_iwb.valid
+
 
 
 	def rw = io.csr_iss_exe.bits.fun.rw
@@ -72,13 +76,13 @@ class Csr extends Module {
 
 	io.csr_addr := addr
 
-	io.csr_iss_exe.ready := io.csr_exe_iwb.valid
-	io.csr_exe_iwb.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready
-	csr_op_fifo.io.enq.valid := io.csr_exe_iwb.valid & ~dontWrite
+	io.csr_iss_exe.ready     := csr_exe_iwb_fifo.io.enq.valid & csr_exe_iwb_fifo.io.enq.ready
+	csr_op_fifo.io.enq.valid := csr_exe_iwb_fifo.io.enq.valid & csr_exe_iwb_fifo.io.enq.ready & ~dontWrite
 
-	io.csr_exe_iwb.bits.res := io.csr_data
-	io.csr_exe_iwb.bits.rd0_raw := io.csr_iss_exe.bits.param.rd0_raw
-	io.csr_exe_iwb.bits.rd0_idx := io.csr_iss_exe.bits.param.rd0_idx
+	csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready
+	csr_exe_iwb_fifo.io.enq.bits.res := io.csr_data
+	csr_exe_iwb_fifo.io.enq.bits.rd0_raw := io.csr_iss_exe.bits.param.rd0_raw
+	csr_exe_iwb_fifo.io.enq.bits.rd0_idx := io.csr_iss_exe.bits.param.rd0_idx
 
 }
 

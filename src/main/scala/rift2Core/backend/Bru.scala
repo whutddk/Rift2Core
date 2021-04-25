@@ -36,7 +36,7 @@ import chisel3.experimental.chiselName
 class Bru extends Module {
 	val io = IO(new Bundle{
 		val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
-		val bru_exe_iwb = new ValidIO(new Exe_iwb_info)
+		val bru_exe_iwb = new DecoupledIO(new Exe_iwb_info)
 
 		val cmm_bru_ilp = Input(Bool())
 
@@ -46,8 +46,12 @@ class Bru extends Module {
 		val flush = Input(Bool())
 	})
 
+	val bru_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
+	io.bru_exe_iwb <> bru_exe_iwb_fifo.io.deq
+	bru_exe_iwb_fifo.reset := reset.asBool | io.flush
+
 	def iss_ack = io.bru_iss_exe.valid
-	def iwb_ack = io.bru_exe_iwb.valid
+
 
 	def op1 = io.bru_iss_exe.bits.param.op1
 	def op2 = io.bru_iss_exe.bits.param.op2
@@ -65,21 +69,21 @@ class Bru extends Module {
 	def is_clear_ilp = Mux(io.bru_iss_exe.bits.fun.is_branch, io.cmm_bru_ilp, true.B)
 
 
-
-
-
-	io.bru_iss_exe.ready := io.bru_exe_iwb.valid
-	io.bru_exe_iwb.valid := is_clear_ilp & io.bru_iss_exe.valid
-	io.bru_exe_iwb.bits.res := io.bru_iss_exe.bits.param.pc + Mux( io.bru_iss_exe.bits.param.is_rvc, 2.U, 4.U)
-	io.bru_exe_iwb.bits.rd0_raw := io.bru_iss_exe.bits.param.rd0_raw
-	io.bru_exe_iwb.bits.rd0_idx := io.bru_iss_exe.bits.param.rd0_idx
-
-
-
 	io.bru_iq_b.bits  := is_branchTaken
-	io.bru_iq_b.valid := io.bru_exe_iwb.valid & io.bru_iss_exe.bits.fun.is_branch
+	io.bru_iq_b.valid := bru_exe_iwb_fifo.io.enq.valid & io.bru_iss_exe.bits.fun.is_branch
 	io.bru_iq_j.bits  := io.bru_iss_exe.bits.param.op1 + io.bru_iss_exe.bits.param.imm
-	io.bru_iq_j.valid := io.bru_exe_iwb.valid & io.bru_iss_exe.bits.fun.jalr
+	io.bru_iq_j.valid := bru_exe_iwb_fifo.io.enq.valid & io.bru_iss_exe.bits.fun.jalr
+
+
+
+	io.bru_iss_exe.ready := bru_exe_iwb_fifo.io.enq.valid & bru_exe_iwb_fifo.io.enq.ready
+
+	bru_exe_iwb_fifo.io.enq.valid := is_clear_ilp & io.bru_iss_exe.valid
+	bru_exe_iwb_fifo.io.enq.bits.res := io.bru_iss_exe.bits.param.pc + Mux( io.bru_iss_exe.bits.param.is_rvc, 2.U, 4.U)
+	bru_exe_iwb_fifo.io.enq.bits.rd0_raw := io.bru_iss_exe.bits.param.rd0_raw
+	bru_exe_iwb_fifo.io.enq.bits.rd0_idx := io.bru_iss_exe.bits.param.rd0_idx
+
+
 
 }
 

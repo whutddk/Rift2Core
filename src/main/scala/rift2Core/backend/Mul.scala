@@ -37,13 +37,16 @@ import chisel3.experimental.chiselName
 class Mul extends Module {
 	val io = IO(new Bundle {
 		val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
-		val mul_exe_iwb = new ValidIO(new Exe_iwb_info)
+		val mul_exe_iwb = new DecoupledIO(new Exe_iwb_info)
 
 		val flush = Input(Bool())
 	})
 
+	val mul_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
+	io.mul_exe_iwb <> mul_exe_iwb_fifo.io.deq
+	mul_exe_iwb_fifo.reset := reset.asBool | io.flush
+
 	def iss_ack = io.mul_iss_exe.valid & io.mul_iss_exe.ready
-	def iwb_ack = io.mul_exe_iwb.valid
 
 	def op1 = io.mul_iss_exe.bits.param.op1
 	def op2 = io.mul_iss_exe.bits.param.op2
@@ -110,7 +113,7 @@ class Mul extends Module {
 			)
 		)
 
-	val ( cnt, isEnd ) = Counter( io.mul_iss_exe.valid & is_div, 64 )
+	val ( cnt, isEnd ) = Counter( 0 until 65 by 1, io.mul_iss_exe.valid & is_div, io.flush )
 
 
 	val dividend = Reg(UInt(128.W))
@@ -155,13 +158,13 @@ class Mul extends Module {
 	def rema_sign_corrcet = 
 		Mux(dividend_sign, ~dividend(127,64) + 1.U, dividend(127,64))
 
-	def quot_res = MuxCase(0.U, Array(
+	val quot_res = MuxCase(0.U, Array(
 		div_by_zero -> -1.S.asUInt,
 		div_overflow -> Mux( is_32w, Cat( Fill(33, 1.U(1.W)), 0.U(31.W)), Cat(1.U, 0.U(63.W))),
 		(~div_by_zero & ~div_overflow) -> quot_sign_corrcet
 		))
 
-	def rema_res = MuxCase(0.U, Array(
+	val rema_res = MuxCase(0.U, Array(
 		div_by_zero -> Mux(is_32w, cutTo32(op1), op1),
 		div_overflow -> 0.U,
 		(~div_by_zero & ~div_overflow) -> rema_sign_corrcet
@@ -198,9 +201,9 @@ class Mul extends Module {
 
 
 
-	val iwb_valid = Reg(Bool())
-	val iwb_res = Reg(UInt(64.W))
-	val iwb_rd0 = Reg(UInt(7.W))
+	// val iwb_valid = Reg(Bool())
+	// val iwb_res = Reg(UInt(64.W))
+	// val iwb_rd0 = Reg(UInt(7.W))
 
 
 	def is_fun_end: Bool = 
@@ -215,29 +218,13 @@ class Mul extends Module {
 	
 	
 
-
-	when( reset.asBool | io.flush ) {
-		iwb_valid := false.B
-		iwb_res := 0.U
-		iwb_rd0 := 0.U
-	}
-	.elsewhen( ~iwb_valid & is_fun_end ) {
-		iwb_valid := true.B
-		iwb_res := res
-		iwb_rd0 := Cat( io.mul_iss_exe.bits.param.rd0_idx, io.mul_iss_exe.bits.param.rd0_raw ) 
-	}
-	.elsewhen( iwb_ack ) {
-		iwb_valid := false.B
-	}
-
-	io.mul_iss_exe.ready := iwb_ack
-	io.mul_exe_iwb.valid := iwb_valid
-	io.mul_exe_iwb.bits.res := iwb_res
-	io.mul_exe_iwb.bits.rd0_raw := iwb_rd0(4,0)
-	io.mul_exe_iwb.bits.rd0_idx := iwb_rd0(6,5)
+	io.mul_iss_exe.ready := mul_exe_iwb_fifo.io.enq.valid & mul_exe_iwb_fifo.io.enq.ready
 
 
-
+	mul_exe_iwb_fifo.io.enq.valid := is_fun_end
+	mul_exe_iwb_fifo.io.enq.bits.res := res
+	mul_exe_iwb_fifo.io.enq.bits.rd0_raw := io.mul_iss_exe.bits.param.rd0_raw
+	mul_exe_iwb_fifo.io.enq.bits.rd0_idx := io.mul_iss_exe.bits.param.rd0_idx
 
 
 }

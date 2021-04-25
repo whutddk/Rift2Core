@@ -36,14 +36,17 @@ import chisel3.experimental.chiselName
 class Alu extends Module {
 	val io = IO(new Bundle{
 		val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
-		val alu_exe_iwb = new ValidIO(new Exe_iwb_info)
+		val alu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
 
 		val flush = Input(Bool())
 	})
 
+	val alu_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
+	io.alu_exe_iwb <> alu_exe_iwb_fifo.io.deq
+	alu_exe_iwb_fifo.reset := reset.asBool | io.flush
 
 	def iss_ack = io.alu_iss_exe.valid
-	def iwb_ack = io.alu_exe_iwb.valid
+
 
 	def is_32w = io.alu_iss_exe.bits.param.is_32w
 	def is_usi = io.alu_iss_exe.bits.param.is_usi
@@ -92,14 +95,12 @@ class Alu extends Module {
 		io.alu_iss_exe.bits.fun.sra -> alu_sra_res
 	))
 
-	io.alu_iss_exe.ready := true.B
-	io.alu_exe_iwb.valid := io.alu_iss_exe.valid
-	io.alu_exe_iwb.bits.res := res
-	io.alu_exe_iwb.bits.rd0_raw := io.alu_iss_exe.bits.param.rd0_raw
-	io.alu_exe_iwb.bits.rd0_idx := io.alu_iss_exe.bits.param.rd0_idx
+	io.alu_iss_exe.ready := alu_exe_iwb_fifo.io.enq.valid & alu_exe_iwb_fifo.io.enq.ready
 
-
-
+	alu_exe_iwb_fifo.io.enq.valid := io.alu_iss_exe.valid 
+	alu_exe_iwb_fifo.io.enq.bits.res := res
+	alu_exe_iwb_fifo.io.enq.bits.rd0_raw := io.alu_iss_exe.bits.param.rd0_raw
+	alu_exe_iwb_fifo.io.enq.bits.rd0_idx := io.alu_iss_exe.bits.param.rd0_idx
 
 
 }
