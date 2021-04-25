@@ -40,6 +40,10 @@ class Rift2Core extends Module {
 		val il1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
 		val il1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
 
+		val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
+		val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
+
+
 	})
 
 	lazy val pc_stage = Module(new Pc_gen)
@@ -57,8 +61,7 @@ class Rift2Core extends Module {
 	lazy val i_regfiles = Module(new Regfiles)
 
 ///////////////////////////////////////////////////////////////////////////
-	// val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
-	// val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
+
 	// val sys_chn_a = new DecoupledIO(new TLchannel_a(64,32))
 	// val sys_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
 
@@ -67,10 +70,6 @@ class Rift2Core extends Module {
 	// val l2c_fence_end = Input(Bool())
 	// val l3c_fence_end = Input(Bool())
 
-
-	exe_stage.io.dl1_chn_a.ready := true.B
-	exe_stage.io.dl1_chn_d.bits  := DontCare
-	exe_stage.io.dl1_chn_d.valid := false.B
 
 	exe_stage.io.sys_chn_a.ready := true.B
 	exe_stage.io.sys_chn_d.bits  := DontCare
@@ -92,20 +91,20 @@ class Rift2Core extends Module {
 
 
 
-	if_stage.io.il1_chn_a <> io.il1_chn_a
-	if_stage.io.il1_chn_d <> io.il1_chn_d
+		if_stage.io.il1_chn_a <> io.il1_chn_a
+		if_stage.io.il1_chn_d <> io.il1_chn_d
 
-	// exe_stage.io.dl1_chn_a <> io.dl1_chn_a
-	// exe_stage.io.dl1_chn_d <> io.dl1_chn_d
-	// exe_stage.io.sys_chn_a <> io.sys_chn_a
-	// exe_stage.io.sys_chn_d <> io.sys_chn_d
+		exe_stage.io.dl1_chn_a <> io.dl1_chn_a
+		exe_stage.io.dl1_chn_d <> io.dl1_chn_d
+		// exe_stage.io.sys_chn_a <> io.sys_chn_a
+		// exe_stage.io.sys_chn_d <> io.sys_chn_d
 
-	// exe_stage.io.l2c_fence_req <> io.l2c_fence_req
-	// exe_stage.io.l3c_fence_req <> io.l3c_fence_req
-	// exe_stage.io.l2c_fence_end <> io.l2c_fence_end
-	// exe_stage.io.l3c_fence_end <> io.l3c_fence_end
+		// exe_stage.io.l2c_fence_req <> io.l2c_fence_req
+		// exe_stage.io.l3c_fence_req <> io.l3c_fence_req
+		// exe_stage.io.l2c_fence_end <> io.l2c_fence_end
+		// exe_stage.io.l3c_fence_end <> io.l3c_fence_end
 
-		pc_stage.io.ib_pc <> ib_stage.io.ib_pc  //is_jal | is_jalr | is_predict_taken | is_misPredict_taken | is_bru_iq_j_ack
+		pc_stage.io.ib_pc <> ib_stage.io.ib_pc
 		
 
 		pc_stage.io.pc_iq <> iq_stage.io.pc_iq	//valid when flush for new pc 

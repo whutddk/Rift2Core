@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-20 19:55:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-25 16:05:09
+* @Last Modified time: 2021-04-25 19:23:02
 */
 
 /*
@@ -215,25 +215,25 @@ localparam DP = 2**14;
 
 
 
-reg [7:0] mem [0:200000];
+// reg [7:0] mem [0:200000];
 
-integer i, by;
-initial begin
-	$readmemh("./ci/rv64um-p-div.verilog", mem);
-	for ( i = 0; i < DP; i = i + 1 ) begin
-		for ( by = 0; by < 16; by = by + 1 ) begin
-			if ( | mem[i*16+by] ) begin
-				ram[i][8*by +: 8] = mem[i*16+by];
-			end
-			else begin
-				ram[i][8*by +: 8] = 8'h0;
-			end
-		end
+// integer i, by;
+// initial begin
+// 	$readmemh("./ci/rv64um-p-remw.verilog", mem);
+// 	for ( i = 0; i < DP; i = i + 1 ) begin
+// 		for ( by = 0; by < 16; by = by + 1 ) begin
+// 			if ( | mem[i*16+by] ) begin
+// 				ram[i][8*by +: 8] = mem[i*16+by];
+// 			end
+// 			else begin
+// 				ram[i][8*by +: 8] = 8'h0;
+// 			end
+// 		end
 
 
-	end
+// 	end
 
-end 
+// end 
 
 
 
