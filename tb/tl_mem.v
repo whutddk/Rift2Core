@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-20 19:55:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-25 10:32:38
+* @Last Modified time: 2021-04-25 11:44:19
 */
 
 /*
@@ -219,7 +219,7 @@ reg [7:0] mem [0:200000];
 
 integer i, by;
 initial begin
-	$readmemh("./ci/rv64ui-p-jalr.verilog", mem);
+	$readmemh("./ci/rv64ui-p-beq.verilog", mem);
 	for ( i = 0; i < DP; i = i + 1 ) begin
 		for ( by = 0; by < 16; by = by + 1 ) begin
 			if ( | mem[i*16+by] ) begin

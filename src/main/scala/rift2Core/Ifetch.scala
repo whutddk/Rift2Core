@@ -66,10 +66,15 @@ class Ifetch() extends Module with IBuf{
 	val line_w = log2Ceil(cl)
 	val tag_w = 32 - addr_lsb - line_w
 
-	def addr_align_128 = io.pc_if.bits.addr & ~("b1111".U(64.W))
-	def addr_align_256 = io.pc_if.bits.addr & ~("b11111".U(64.W))
-	def addr_tag = io.pc_if.bits.addr(31, 32-tag_w)
-	def cl_sel = io.pc_if.bits.addr(addr_lsb+line_w-1, addr_lsb)
+	val if_addr = Wire(UInt(64.W))
+	val if_addr_reg = RegInit( "h80000000".U(64.W) )
+
+
+
+	def addr_align_128 = if_addr & ~("b1111".U(64.W))
+	def addr_align_256 = if_addr & ~("b11111".U(64.W))
+	def addr_tag = if_addr(31, 32-tag_w)
+	def cl_sel = if_addr(addr_lsb+line_w-1, addr_lsb)
 
 
 
@@ -84,12 +89,15 @@ class Ifetch() extends Module with IBuf{
 	val trans_kill = RegInit(false.B)
 	val is_il1_fence_req = RegInit(false.B)
 
+	if_addr_reg := Mux( (stateReg === Il1_state.cfree), io.pc_if.bits.addr, if_addr_reg)
+	if_addr     := Mux( (stateReg === Il1_state.cfree), io.pc_if.bits.addr, if_addr_reg)
+
 	io.if_iq <> ibuf.io.deq
 	ibuf.io.flush := io.flush
 
 	def is_pc_if_ack = (io.pc_if.valid & io.pc_if.ready)
 
-	ia.pc := io.pc_if.bits.addr
+	ia.pc := if_addr
 	ia.instr := Mux( 
 		( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush),
 		mem_dat,
