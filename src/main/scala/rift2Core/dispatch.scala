@@ -129,7 +129,7 @@ trait Dpt{
 	def dpt_mux_mul( id_dpt_info: Info_id_dpt, rd0_idx: UInt, rs1_idx: UInt, rs2_idx: UInt ): Mul_dpt_info = {
 		val mul_dpt_info = Wire(new Mul_dpt_info)
 		mul_dpt_info.isa        := id_dpt_info.info.mul_isa
-		mul_dpt_info.param      := DontCare
+		mul_dpt_info.param      := id_dpt_info.info.param
 		mul_dpt_info.rn.rd0_idx := rd0_idx
 		mul_dpt_info.rn.rs1_idx := rs1_idx
 		mul_dpt_info.rn.rs2_idx := rs2_idx
