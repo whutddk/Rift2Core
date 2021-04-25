@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-25 12:09:54
+* @Last Modified time: 2021-04-25 15:16:53
 */
 
 
@@ -164,12 +164,25 @@ begin
 	$dumpvars(0, rift2chip);//tb模块名称
 end
 
-wire isEcall = (i_rift2Core.cmm_stage.io_rod_i_0_bits_privil_ecall | i_rift2Core.cmm_stage.io_rod_i_1_bits_privil_ecall);
+wire isEcall = 
+	( i_rift2Core.cmm_stage.io_rod_i_0_bits_privil_ecall & i_rift2Core.cmm_stage.io_rod_i_0_valid ) | 
+	( i_rift2Core.cmm_stage.io_rod_i_1_bits_privil_ecall & i_rift2Core.cmm_stage.io_rod_i_1_valid & i_rift2Core.cmm_stage.io_rod_i_0_ready );
 wire [63:0] x3 = (i_rift2Core.i_regfiles.archit_ptr_3 == 2'd0 ? i_rift2Core.i_regfiles.files_3_0 : i_rift2Core.i_regfiles.archit_ptr_3 == 2'd1 ? i_rift2Core.i_regfiles.files_3_1 : i_rift2Core.i_regfiles.archit_ptr_3 == 2'd2 ? i_rift2Core.i_regfiles.files_3_2 : i_rift2Core.i_regfiles.files_3_3);
 
-
-always @(negedge CLK)begin 
+// reg [63:0] result = 0;
+reg sim_end = 0;
+always @(posedge CLK)begin 
 	if (isEcall) begin
+		// result <= x3;
+		#1 sim_end <= 1;
+
+	end
+
+end
+
+
+always @(posedge CLK ) begin
+	if ( sim_end == 1 ) begin
 		if ( x3 == 64'd1 ) begin
 			$display("PASS");
 			$finish;
@@ -178,13 +191,8 @@ always @(negedge CLK)begin
 			$display("Fail");
 			$stop;
 		end
-
 	end
-
 end
-
-
-
 
 
 
