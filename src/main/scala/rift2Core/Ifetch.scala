@@ -94,19 +94,19 @@ class Ifetch() extends Module with IBuf{
 		( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush),
 		mem_dat,
 		Mux(
-			( stateReg === Il1_state.cmiss & (addr_align_128 === addr_il1_req) & ~trans_kill),
+			( stateReg === Il1_state.cmiss & (addr_align_128 === addr_il1_req) ),
 			il1_mst.data_ack,
 			DontCare
 		)
 	 )
 
 	ibuf_valid_i := 
-				( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush) |
+				( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) ) |
 				( stateReg === Il1_state.cmiss & il1_mst.is_chn_d_ack & (addr_align_128 === addr_il1_req) & ~trans_kill)
 
 
 
-	io.pc_if.ready := ~io.flush & (stateReg =/= Il1_state.cfree) & (stateDnxt === Il1_state.cfree)
+	io.pc_if.ready := ~trans_kill & (stateReg =/= Il1_state.cfree) & (stateDnxt === Il1_state.cfree)
 
 	io.il1_chn_a.bits := il1_mst.a
 	io.il1_chn_a.valid := il1_mst.a_valid
