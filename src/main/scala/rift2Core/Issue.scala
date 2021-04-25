@@ -105,7 +105,7 @@ class Alu_issue(dpt_info: Alu_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], fi
 		alu_iss_info.param.is_usi  := dpt_info.isa.is_usi
 
 		alu_iss_info.param.op1 := MuxCase(DontCare, Array(
-									dpt_info.isa.lui    -> dpt_info.param.pc,
+									dpt_info.isa.lui    -> 0.U,
 									dpt_info.isa.auipc  -> dpt_info.param.pc,
 									dpt_info.isa.addi   -> src1,
 									dpt_info.isa.addiw  -> src1,
