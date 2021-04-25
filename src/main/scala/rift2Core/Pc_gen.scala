@@ -65,20 +65,20 @@ class Pc_gen extends Module {
 							))
 	io.pc_iq.valid := is_cmm_pc_ack | is_ib_pc_ack | is_bru_iq_j_ack
 
-	when ( is_cmm_pc_ack | is_ib_pc_ack | is_pc_if_ack ) {
-		when( is_cmm_pc_ack ){
-			addr := io.cmm_pc.bits.addr
-		}
-		.elsewhen(is_bru_iq_j_ack){
-			addr := io.bru_iq_j.bits
-		}
-		.elsewhen(is_ib_pc_ack ) {
-			addr := io.ib_pc.bits.addr
-		}
-		.otherwise{
-			addr := (addr + 16.U) & ~("b1111".U(32.W))
-		}
+
+	when( is_cmm_pc_ack ){
+		addr := io.cmm_pc.bits.addr
 	}
+	.elsewhen(is_bru_iq_j_ack){
+		addr := io.bru_iq_j.bits
+	}
+	.elsewhen(is_ib_pc_ack ) {
+		addr := io.ib_pc.bits.addr
+	}
+	.elsewhen(is_pc_if_ack){
+		addr := (addr + 16.U) & ~("b1111".U(32.W))
+	}
+
 
 	io.pc_if.bits.addr := addr
 
