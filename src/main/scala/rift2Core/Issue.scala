@@ -284,7 +284,10 @@ class Csr_issue (dpt_info: Csr_dpt_info, buf_valid: Bool, log: Vec[Vec[UInt]], f
 					)
 
 	{
-		csr_iss_info.fun  := dpt_info.isa
+		csr_iss_info.fun.rc  := dpt_info.isa.rc | dpt_info.isa.rci
+		csr_iss_info.fun.rs  := dpt_info.isa.rs | dpt_info.isa.rsi
+		csr_iss_info.fun.rw  := dpt_info.isa.rw | dpt_info.isa.rwi
+
 		csr_iss_info.param.op1  := 
 			MuxCase(false.B, Array(
 				dpt_info.isa.rw  -> src1,
