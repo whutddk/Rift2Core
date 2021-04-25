@@ -46,7 +46,7 @@ class Csr extends Module {
 		val flush = Input(Bool())
 	})
 
-	val csr_op_fifo = Module(new Queue( new Exe_Port, 1, true, false ) )
+	val csr_op_fifo = Module(new Queue( new Exe_Port, 1, false, false ) )
 	io.csr_cmm_op <> csr_op_fifo.io.deq
 	csr_op_fifo.reset := reset.asBool | io.flush
 
