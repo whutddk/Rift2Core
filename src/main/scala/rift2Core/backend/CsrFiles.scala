@@ -416,7 +416,7 @@ trait CsrFiles {
 				( addr === "hF13".U ) -> m_csrFiles.mimpid,
 				( addr === "hF14".U ) -> m_csrFiles.mhartid,
 				( addr === "h300".U ) -> m_csrFiles.mstatus,
-				( addr === "h301".U ) -> Cat("b10".U, 0.U(36.W), "b00000000000001000100000100".U),//"b00000101000011000110101101".U),//m_csrFiles.misa,
+				( addr === "h301".U ) -> Cat("b10".U, 0.U(36.W), "b00000000000001000100000100".U(26.W)),//"b00000101000011000110101101".U(26.W)),//m_csrFiles.misa,
 				( addr === "h302".U ) -> m_csrFiles.medeleg,
 				( addr === "h303".U ) -> m_csrFiles.mideleg,
 				( addr === "h304".U ) -> m_csrFiles.mie,
