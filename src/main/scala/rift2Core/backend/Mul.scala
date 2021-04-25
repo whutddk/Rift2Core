@@ -159,7 +159,7 @@ class Mul extends Module {
 		Mux(dividend_sign, ~dividend(127,64) + 1.U, dividend(127,64))
 
 	val quot_res = MuxCase(0.U, Array(
-		div_by_zero -> -1.S.asUInt,
+		div_by_zero -> Fill(64, 1.U),
 		div_overflow -> Mux( is_32w, Cat( Fill(33, 1.U(1.W)), 0.U(31.W)), Cat(1.U, 0.U(63.W))),
 		(~div_by_zero & ~div_overflow) -> quot_sign_corrcet
 		))
