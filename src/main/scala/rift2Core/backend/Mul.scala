@@ -113,7 +113,7 @@ class Mul extends Module {
 			)
 		)
 
-	val ( cnt, isEnd ) = Counter( 0 until 65 by 1, io.mul_iss_exe.valid & is_div, io.flush )
+	val ( cnt, isEnd ) = Counter( 0 until 66 by 1, io.mul_iss_exe.valid & is_div, io.flush )
 
 
 	val dividend = Reg(UInt(128.W))
@@ -201,17 +201,12 @@ class Mul extends Module {
 
 
 
-	// val iwb_valid = Reg(Bool())
-	// val iwb_res = Reg(UInt(64.W))
-	// val iwb_rd0 = Reg(UInt(7.W))
-
-
 	def is_fun_end: Bool = 
 		Mux( io.mul_iss_exe.valid,
 			MuxCase( false.B, Array(
 				(~is_div === true.B) -> true.B,
 				((div_by_zero | div_overflow) === true.B) -> true.B,
-				( cnt === 64.U ) -> true.B
+				( cnt === 65.U ) -> true.B
 			)),
 			false.B
 		)
