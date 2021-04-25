@@ -140,13 +140,13 @@ class Rift2Core extends Module {
 		
 
 		ib_stage.io.bru_iq_b <> exe_stage.io.bru_iq_b
-		ib_stage.io.bru_iq_j <> exe_stage.io.bru_iq_j
+		pc_stage.io.bru_iq_j <> exe_stage.io.bru_iq_j
 
 	ib_stage.io.fencei_end := false.B
 
 
-	if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | ib_stage.io.ib_pc.valid
-	ib_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+	if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | ib_stage.io.ib_pc.valid | exe_stage.io.bru_iq_j.valid
+	ib_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | exe_stage.io.bru_iq_j.valid
 	id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 	dpt_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 	iss_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)

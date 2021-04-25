@@ -96,7 +96,7 @@ class Info_JTB extends Bundle {
 class BranchPredict_ss extends Module with BHT with Superscalar{
 	lazy val io = IO(new Bundle {
 		val bru_iq_b = Flipped(new ValidIO( Bool() ))
-		val bru_iq_j = Flipped(new ValidIO( UInt(64.W) ))
+
 
 		val ib_pc = new ValidIO(new Info_ib_pc)
 
@@ -130,9 +130,6 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 
 	override def is_bru_iq_b_ack = io.bru_iq_b.valid
 	override def bru_iq_b_bits   = io.bru_iq_b.bits
-
-
-	def is_bru_iq_j_ack = io.bru_iq_j.valid
 
 
 	override def is_1st_solo = io.iq_ib(0).bits.info.is_pineline_cut & io.iq_ib(0).valid
@@ -184,13 +181,12 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 	ras.io.deq.ready := is_ras_taken & ((is_1st_solo & ib_id_fifo.is_enq_ack(0)) | (is_2nd_solo & ib_id_fifo.is_enq_ack(1)))
 	ras.io.flush := io.flush
 
-	io.ib_pc.valid := ~ib_lock & (is_jal | is_jalr | is_predict_taken | is_misPredict_taken | is_bru_iq_j_ack)
+	io.ib_pc.valid := ~ib_lock & (is_jal | is_jalr | is_predict_taken | is_misPredict_taken )
 	io.ib_pc.bits.addr  := MuxCase(DontCare, Array(
 		is_jal                -> jal_pc,
 		is_jalr               -> jalr_pc,
 		is_predict_taken      -> branch_pc,
-		is_misPredict_taken   -> bhq.io.deq.bits.opp_pc,
-		is_bru_iq_j_ack       -> io.bru_iq_j.bits
+		is_misPredict_taken   -> bhq.io.deq.bits.opp_pc
 	))
 
 	when( io.flush ) {
@@ -199,10 +195,6 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 	.elsewhen( (is_jalr & ~is_ras_taken) | is_fencei ) {
 		ib_lock := true.B
 	}
-	.elsewhen(is_bru_iq_j_ack | io.fencei_end ) {
-		ib_lock := false.B
-	}
-
 
 	//bht update
 	bht_sel := bhq.io.deq.bits.ori_pc

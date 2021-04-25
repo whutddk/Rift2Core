@@ -38,7 +38,10 @@ import chisel3.experimental.chiselName
 class Pc_gen extends Module {
 	val io = IO(new Bundle{
 		val ib_pc = Flipped(new ValidIO( new Info_ib_pc) )
+		val bru_iq_j = Flipped(new ValidIO( UInt(64.W) ))
 		val cmm_pc = Flipped ( new ValidIO(new Info_cmm_pc))
+
+
 		val pc_if = new DecoupledIO( new Info_pc_if )
 
 		val pc_iq = new ValidIO( UInt(64.W) )
@@ -48,6 +51,7 @@ class Pc_gen extends Module {
 	io.pc_if.valid := true.B
 
 	def is_cmm_pc_ack = io.cmm_pc.valid
+	def is_bru_iq_j_ack = io.bru_iq_j.valid
 	def is_ib_pc_ack = io.ib_pc.valid
 	def is_pc_if_ack = io.pc_if.valid & io.pc_if.ready
 
@@ -56,13 +60,17 @@ class Pc_gen extends Module {
 
 	io.pc_iq.bits := MuxCase( DontCare, Array(
 								is_cmm_pc_ack -> io.cmm_pc.bits.addr,
+								is_bru_iq_j_ack -> io.bru_iq_j.bits,
 								is_ib_pc_ack  -> io.ib_pc.bits.addr
 							))
-	io.pc_iq.valid := is_cmm_pc_ack | is_ib_pc_ack
+	io.pc_iq.valid := is_cmm_pc_ack | is_ib_pc_ack | is_bru_iq_j_ack
 
 	when ( is_cmm_pc_ack | is_ib_pc_ack | is_pc_if_ack ) {
 		when( is_cmm_pc_ack ){
 			addr := io.cmm_pc.bits.addr
+		}
+		.elsewhen(is_bru_iq_j_ack){
+			addr := io.bru_iq_j.bits
 		}
 		.elsewhen(is_ib_pc_ack ) {
 			addr := io.ib_pc.bits.addr
