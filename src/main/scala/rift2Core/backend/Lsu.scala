@@ -192,15 +192,15 @@ class Lsu extends Module {
 
 
 
-	def lsu_rsp_data_reAlign8(rdata: UInt): UInt = MuxLookup(op1(2,0), 0.U, Array(
+	def reAlign8(rdata: UInt): UInt = MuxLookup(op1(2,0), 0.U, Array(
 			"b000".U -> rdata(7,0),   "b001".U -> rdata(15,8),  "b010".U -> rdata(23,16), "b011".U -> rdata(31,24),
 			"b100".U -> rdata(39,32), "b101".U -> rdata(47,40), "b110".U -> rdata(55,48), "b111".U -> rdata(63,56)))
 
-	def lsu_rsp_data_reAlign16(rdata: UInt): UInt = MuxLookup(op1(2,1), 0.U, Array(
+	def reAlign16(rdata: UInt): UInt = MuxLookup(op1(2,1), 0.U, Array(
 			"b00".U -> rdata(15,0), "b01".U -> rdata(31,16),
 			"b10".U -> rdata(47,32), "b11".U -> rdata(63,48)))
 
-	def lsu_rsp_data_reAlign32(rdata: UInt): UInt = MuxLookup(op1(2), 0.U, Array(
+	def reAlign32(rdata: UInt): UInt = MuxLookup(op1(2), 0.U, Array(
 									0.U -> rdata(31,0), 1.U -> rdata(63,32)))
 
 
@@ -226,13 +226,13 @@ class Lsu extends Module {
 	lsu_exe_iwb_fifo.io.enq.bits.res := res
 
 	def res = MuxCase( DontCare, Array(
-		io.lsu_iss_exe.bits.fun.lb        -> load_byte(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.lh        -> load_half(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.lw        -> load_word(is_usi, rsp_data),
+		io.lsu_iss_exe.bits.fun.lb        -> load_byte(false.B, reAlign8 (rsp_data)),
+		io.lsu_iss_exe.bits.fun.lh        -> load_half(false.B, reAlign16(rsp_data)),
+		io.lsu_iss_exe.bits.fun.lw        -> load_word(false.B, reAlign32(rsp_data)),
 		io.lsu_iss_exe.bits.fun.ld        -> rsp_data,
-		io.lsu_iss_exe.bits.fun.lbu       -> load_byte(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.lhu       -> load_half(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.lwu       -> load_word(is_usi, rsp_data),
+		io.lsu_iss_exe.bits.fun.lbu       -> load_byte(true.B, reAlign8 (rsp_data)),
+		io.lsu_iss_exe.bits.fun.lhu       -> load_half(true.B, reAlign16(rsp_data)),
+		io.lsu_iss_exe.bits.fun.lwu       -> load_word(true.B, reAlign32(rsp_data)),
 		io.lsu_iss_exe.bits.fun.sb        -> 0.U,
 		io.lsu_iss_exe.bits.fun.sh        -> 0.U,
 		io.lsu_iss_exe.bits.fun.sw        -> 0.U,
@@ -240,17 +240,17 @@ class Lsu extends Module {
 		io.lsu_iss_exe.bits.fun.fence     -> 0.U,
 		io.lsu_iss_exe.bits.fun.fence_i   -> 0.U,
 
-		io.lsu_iss_exe.bits.fun.lr_w      -> load_word(is_usi, rsp_data),
+		io.lsu_iss_exe.bits.fun.lr_w      -> load_word(is_usi, reAlign32(rsp_data)),
 		io.lsu_iss_exe.bits.fun.sc_w      -> 0.U,
-		io.lsu_iss_exe.bits.fun.amoswap_w -> load_word(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.amoadd_w  -> load_word(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.amoxor_w  -> load_word(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.amoand_w  -> load_word(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.amoor_w   -> load_word(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.amomin_w  -> load_word(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.amomax_w  -> load_word(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.amominu_w -> load_word(is_usi, rsp_data),
-		io.lsu_iss_exe.bits.fun.amomaxu_w -> load_word(is_usi, rsp_data),
+		io.lsu_iss_exe.bits.fun.amoswap_w -> load_word(is_usi, reAlign32(rsp_data)),
+		io.lsu_iss_exe.bits.fun.amoadd_w  -> load_word(is_usi, reAlign32(rsp_data)),
+		io.lsu_iss_exe.bits.fun.amoxor_w  -> load_word(is_usi, reAlign32(rsp_data)),
+		io.lsu_iss_exe.bits.fun.amoand_w  -> load_word(is_usi, reAlign32(rsp_data)),
+		io.lsu_iss_exe.bits.fun.amoor_w   -> load_word(is_usi, reAlign32(rsp_data)),
+		io.lsu_iss_exe.bits.fun.amomin_w  -> load_word(is_usi, reAlign32(rsp_data)),
+		io.lsu_iss_exe.bits.fun.amomax_w  -> load_word(is_usi, reAlign32(rsp_data)),
+		io.lsu_iss_exe.bits.fun.amominu_w -> load_word(is_usi, reAlign32(rsp_data)),
+		io.lsu_iss_exe.bits.fun.amomaxu_w -> load_word(is_usi, reAlign32(rsp_data)),
 		io.lsu_iss_exe.bits.fun.lr_d      -> rsp_data,
 		io.lsu_iss_exe.bits.fun.sc_d      -> 0.U,
 		io.lsu_iss_exe.bits.fun.amoswap_d -> rsp_data,
@@ -263,7 +263,7 @@ class Lsu extends Module {
 		io.lsu_iss_exe.bits.fun.amominu_d -> rsp_data,
 		io.lsu_iss_exe.bits.fun.amomaxu_d -> rsp_data,
 
-		io.lsu_iss_exe.bits.fun.flw       -> load_word(is_usi, rsp_data),
+		io.lsu_iss_exe.bits.fun.flw       -> load_word(is_usi, reAlign32(rsp_data)),
 		io.lsu_iss_exe.bits.fun.fsw       -> 0.U,
 		io.lsu_iss_exe.bits.fun.fld       -> rsp_data,
 		io.lsu_iss_exe.bits.fun.fsd       -> 0.U,
