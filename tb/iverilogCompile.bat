@@ -1,10 +1,10 @@
 @REM @Author: Ruige Lee
 @REM @Date:   2020-11-02 11:29:57
 @REM @Last Modified by:   Ruige Lee
-@REM Modified time: 2021-04-21 19:14:21
+@REM Modified time: 2021-04-26 18:00:40
 
 
-`define RANDOMIZE_MEM_INIT
+
 
 iverilog.exe -Wall ^
 -o ./build/wave.iverilog  ^

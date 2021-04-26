@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-26 17:48:37
+* @Last Modified time: 2021-04-26 20:25:37
 */
 
 
@@ -208,6 +208,16 @@ tl_mem d_tl_mem(
 
 
 
+reg [255:0] testName;
+
+initial begin
+	if ( $value$plusargs("%s",testName[255:0]) ) begin
+		$display("%s",testName);
+	end
+end
+
+
+
 initial begin
 	CLK = 0;
 	RSTn = 0;
@@ -275,7 +285,9 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	$readmemh("./ci/rv64mi-p-access.verilog", mem);
+	// $readmemh("./ci/rv64mi-p-ma_fetch.verilog", mem);
+	$readmemh(testName, mem);
+	
 	for ( i = 0; i < DP; i = i + 1 ) begin
 		for ( by = 0; by < 16; by = by + 1 ) begin
 			if ( | mem[i*16+by] ) begin

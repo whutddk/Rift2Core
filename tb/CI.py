@@ -2,7 +2,7 @@
 # @Author: Ruige Lee
 # @Date:   2020-11-18 15:37:18
 # @Last Modified by:   Ruige Lee
-# @Last Modified time: 2021-03-18 11:09:55
+# @Last Modified time: 2021-04-26 18:00:14
 
 
 import sys
@@ -90,7 +90,7 @@ testList = [
 
 
 
-res = os.system("iverilog -Wall -o ./build/wave.iverilog  -y ../RiftChip/ -y ../RiftChip/riftCore/ -y ../RiftChip/riftCore/backend  -y ../RiftChip/riftCore/cache  -y ../RiftChip/riftCore/backend/issue  -y ../RiftChip/riftCore/backend/execute  -y ../RiftChip/riftCore/frontend  -y ../RiftChip/element -y ../RiftChip/SoC -y ../RiftChip/SoC/xilinx_IP/axi_full_Xbar -y ../RiftChip/debug -y ../tb  -I ../tb  -I ../RiftChip/  -I ../RiftChip/SoC/xilinx_IP/axi_full_Xbar ../tb/riftChip_CI.v  ")
+res = os.system("iverilog.exe -Wall -o ./build/wave.iverilog  -y ./ -y ../src/test/resources -y ../generated/ -I ../generated/ -D RANDOMIZE_MEM_INIT ../tb/rift2chip.v ")
 
 if ( res == 0 ):
 	print ("compile pass!")
