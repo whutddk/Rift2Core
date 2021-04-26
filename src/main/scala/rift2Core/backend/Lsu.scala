@@ -218,7 +218,7 @@ class Lsu extends Module {
 		( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cfree ) |
 		( stateReg === Dl1_state.cmiss & op1_dl1_req === op1_align128 & dl1_mst.is_accessAckData === true.B & trans_kill === false.B ) |
 		( stateReg === Dl1_state.write ) |
-		( stateReg === Dl1_state.fence & wtb.empty === true.B & trans_kill === false.B ) |
+		( stateReg === Dl1_state.fence & stateDnxt === Dl1_state.cfree & wtb.empty === true.B & trans_kill === false.B ) |
 		( stateReg === Dl1_state.pread & stateDnxt === Dl1_state.cfree & trans_kill === false.B)
 
 
