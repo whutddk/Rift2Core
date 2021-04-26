@@ -746,7 +746,7 @@ class Lsu extends Module {
 		is_fence_end := false.B
 	}
 
-	when ( (is_dl1_fence_end & lsu_fence_i ) | (is_l3c_fence_end ) | ( io.flush & is_fence ) ) {
+	when ( (is_dl1_fence_end & lsu_fence_i ) | (is_l3c_fence_end ) | ( io.flush & ~is_fence ) ) {
 		is_fence_end := true.B
 	}
 
