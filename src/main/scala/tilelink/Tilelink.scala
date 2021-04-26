@@ -170,16 +170,22 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 	val a_remain = RegInit(0.U(8.W))
 	val d_remain = RegInit(0.U(8.W))
 
-	when( a_valid & ~a_ready ) {
-		a_remain := 1.U << a.size
-	}
-	.elsewhen ( is_chn_a_ack ) {
-		when ( a_remain === 0.U ) {
-			a_remain := (1.U << a.size) - (dw/8).U
+	when ( is_chn_a_ack ) {
+		when ( a.opcode === PutFullData ) {
+			when ( a_remain === 0.U ) {
+				a_remain := (1.U << a.size) - (dw/8).U
 		}
-		.otherwise {
-			a_remain := a_remain - (dw/8).U
+			.otherwise {
+				a_remain := a_remain - (dw/8).U
+			}
 		}
+		.elsewhen( a.opcode === Get ) {
+			a_remain := 0.U
+		}
+		.otherwise{
+			assert( true.B, "Assert Fail at tilelink a chn, undefine condition!" )
+		}
+
 	}
 
 	when ( is_chn_a_ack ) {
