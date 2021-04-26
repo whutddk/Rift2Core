@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-26 16:40:18
+* @Last Modified time: 2021-04-26 17:27:28
 */
 
 
@@ -275,7 +275,7 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	$readmemh("./ci/rv64ui-p-sd.verilog", mem);
+	$readmemh("./ci/rv64uc-p-rvc.verilog", mem);
 	for ( i = 0; i < DP; i = i + 1 ) begin
 		for ( by = 0; by < 16; by = by + 1 ) begin
 			if ( | mem[i*16+by] ) begin

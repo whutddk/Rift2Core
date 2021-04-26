@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-20 19:55:02
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-25 19:23:02
+* @Last Modified time: 2021-04-26 17:46:44
 */
 
 /*
@@ -196,17 +196,19 @@ localparam DP = 2**14;
 
 	wire [13:0] addr = ( ~is_rd_trans & ~is_wr_trans ) ? tlslv_a_address[4 +: 12] : rsp_addr[4 +: 12];
 
+generate
+	for ( genvar i = 0; i < 16; i = i + 1) begin
+		always @(posedge clk ) begin
+			if ( tlslv_a_valid & tlslv_a_ready & tlslv_a_opcode == 0 ) begin
+				if( tlslv_a_mask[i] ) begin
+					ram[addr][8*i +: 8] <= #1  tlslv_a_data[8*i +: 8];
+				end
+			end
+			ram_out[8*i +: 8] <= #1 ram[addr][8*i +: 8];
 
-
-	always @(posedge clk or posedge rst) begin
-		if ( tlslv_a_valid & tlslv_a_ready & tlslv_a_opcode == 0 ) begin
-			ram[addr] <= tlslv_a_data;
 		end
-
-		ram_out <= ram[addr];
-
 	end
-	
+endgenerate
 
 
 
