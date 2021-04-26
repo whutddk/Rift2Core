@@ -46,11 +46,12 @@ class Bru extends Module {
 		val flush = Input(Bool())
 	})
 
-	val bru_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
+	val bru_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, false, false ) ) // to block back-to back branch
 	io.bru_exe_iwb <> bru_exe_iwb_fifo.io.deq
 	bru_exe_iwb_fifo.reset := reset.asBool | io.flush
 
 	def iss_ack = io.bru_iss_exe.valid
+	def iwb_ack = bru_exe_iwb_fifo.io.enq.valid & bru_exe_iwb_fifo.io.enq.ready
 
 
 	def op1 = io.bru_iss_exe.bits.param.op1
@@ -70,13 +71,13 @@ class Bru extends Module {
 
 
 	io.bru_iq_b.bits  := is_branchTaken
-	io.bru_iq_b.valid := bru_exe_iwb_fifo.io.enq.valid & io.bru_iss_exe.bits.fun.is_branch
+	io.bru_iq_b.valid := iwb_ack & io.bru_iss_exe.bits.fun.is_branch
 	io.bru_iq_j.bits  := io.bru_iss_exe.bits.param.op1 + io.bru_iss_exe.bits.param.imm
-	io.bru_iq_j.valid := bru_exe_iwb_fifo.io.enq.valid & io.bru_iss_exe.bits.fun.jalr
+	io.bru_iq_j.valid := iwb_ack & io.bru_iss_exe.bits.fun.jalr
 
 
 
-	io.bru_iss_exe.ready := bru_exe_iwb_fifo.io.enq.valid & bru_exe_iwb_fifo.io.enq.ready
+	io.bru_iss_exe.ready := iwb_ack
 
 	bru_exe_iwb_fifo.io.enq.valid := is_clear_ilp & io.bru_iss_exe.valid
 	bru_exe_iwb_fifo.io.enq.bits.res := io.bru_iss_exe.bits.param.pc + Mux( io.bru_iss_exe.bits.param.is_rvc, 2.U, 4.U)
