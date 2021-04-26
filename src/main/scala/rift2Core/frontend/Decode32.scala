@@ -76,7 +76,25 @@ class Decode32 (x:UInt, pc: UInt) {
 
 
 
-	info.param.rd0_raw        := x(11,7)
+	info.param.rd0_raw        := MuxCase( x(11,7), Array(
+		info.bru_isa.beq         -> 0.U,
+		info.bru_isa.bne         -> 0.U,
+		info.bru_isa.blt         -> 0.U,
+		info.bru_isa.bge         -> 0.U,
+		info.bru_isa.bltu        -> 0.U,
+		info.bru_isa.bgeu        -> 0.U,
+		info.lsu_isa.sb          -> 0.U,
+		info.lsu_isa.sh          -> 0.U,
+		info.lsu_isa.sw          -> 0.U,
+		info.lsu_isa.sd          -> 0.U,
+		info.lsu_isa.fence       -> 0.U,
+		info.lsu_isa.fence_i     -> 0.U
+	))
+
+
+
+
+
 	info.param.rs1_raw        := x(19,15)
 	info.param.rs2_raw        := x(24,20)
 	info.param.rs3_raw        := x(31,27)
