@@ -137,17 +137,17 @@ class Lsu extends Module {
 	io.lsu_cmm.is_misAlign := is_misAlign
 	io.lsu_cmm.trap_addr := op1
 
-	def cl_sel = op1(addr_lsb+line_w-1, addr_lsb)
+	val cl_sel = op1(addr_lsb+line_w-1, addr_lsb)
 
 
-	def lsu_wstrb_align = MuxCase( 0.U, Array(
+	val lsu_wstrb_align = (MuxCase( 0.U, Array(
 						lsu_sb -> "b00000001".U,
 						lsu_sh -> "b00000011".U,
 						lsu_sw -> "b00001111".U,
 						lsu_sd -> "b11111111".U
-						)) << op1(2,0)
+						)) << op1(2,0))
 
-	def lsu_wdata_align = op2 << (op1(2,0) << 3)
+	val lsu_wdata_align = op2 << (op1(2,0) << 3)
 
 
 
@@ -536,7 +536,7 @@ class Lsu extends Module {
 							(stateReg === Dl1_state.cread) -> 0.U,
 							(stateReg === Dl1_state.mwait) -> 0.U,
 							(stateReg === Dl1_state.cmiss) -> dl1_mst.data_ack,
-							(stateReg === Dl1_state.write) -> lsu_wdata_align,
+							(stateReg === Dl1_state.write) -> Mux( op2(3) === 0.U, Cat(0.U(64.W), lsu_wdata_align(63,0)), Cat(lsu_wdata_align(63,0), 0.U(64.W))),
 							(stateReg === Dl1_state.pwait) -> 0.U,
 							(stateReg === Dl1_state.pread) -> 0.U,
 							(stateReg === Dl1_state.fence) -> 0.U
@@ -547,7 +547,7 @@ class Lsu extends Module {
 							(stateReg === Dl1_state.cread) -> 0.U,
 							(stateReg === Dl1_state.mwait) -> 0.U,
 							(stateReg === Dl1_state.cmiss) -> "b1111111111111111".U,
-							(stateReg === Dl1_state.write) -> lsu_wstrb_align,
+							(stateReg === Dl1_state.write) -> Mux( op2(3) === 0.U, Cat(0.U(8.W), lsu_wstrb_align(7,0)), Cat(lsu_wstrb_align(7,0), 0.U(8.W))),
 							(stateReg === Dl1_state.pwait) -> 0.U,
 							(stateReg === Dl1_state.pread) -> 0.U,
 							(stateReg === Dl1_state.fence) -> 0.U
