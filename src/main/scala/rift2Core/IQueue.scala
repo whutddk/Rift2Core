@@ -53,7 +53,7 @@ class Iqueue_ss extends Module with Superscalar{
 
 	val pd16 = for ( i <- 0 until 2 ) yield { val mdl = Module(new PreDecode16()); mdl }
 	val pd32 = for ( i <- 0 until 2 ) yield { val mdl = Module(new PreDecode32()); mdl }
-	val pc_qout = RegInit("h80000000".U)
+	val pc_qout = RegInit("h80000000".U(64.W))
 	
 	pd16(0).io.instr16 := io.if_iq(0).bits;                         pd16(1).io.instr16 := io.if_iq(idx_2nd).bits
 	pd32(0).io.instr32 := Cat( io.if_iq(1).bits, io.if_iq(0).bits); pd32(1).io.instr32 := Cat( io.if_iq(idx_2nd+1.U).bits, io.if_iq(idx_2nd).bits)

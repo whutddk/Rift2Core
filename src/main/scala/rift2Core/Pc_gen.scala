@@ -55,7 +55,7 @@ class Pc_gen extends Module {
 	def is_ib_pc_ack = io.ib_pc.valid
 	def is_pc_if_ack = io.pc_if.valid & io.pc_if.ready
 
-	val addr = RegInit("h80000000".U(32.W))
+	val addr = RegInit("h80000000".U(64.W))
 
 
 	io.pc_iq.bits := MuxCase( DontCare, Array(
@@ -76,7 +76,7 @@ class Pc_gen extends Module {
 		addr := io.ib_pc.bits.addr
 	}
 	.elsewhen(is_pc_if_ack){
-		addr := (addr + 16.U) & ~("b1111".U(32.W))
+		addr := (addr + 16.U) & ~("b1111".U(64.W))
 	}
 
 
