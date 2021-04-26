@@ -610,7 +610,7 @@ class Lsu extends Module {
 			) {
 		cache_valid(cl_sel)(replace_sel) := true.B
 	}
-	.elsewhen(stateReg === Dl1_state.fence & stateDnxt === Dl1_state.cfree) {
+	.elsewhen(stateReg === Dl1_state.fence & stateDnxt === Dl1_state.cfree & ~trans_kill) {
 		for ( i <- 0 until cl; j <- 0 until cb ) yield cache_valid(i)(j) := false.B
 	}
 
