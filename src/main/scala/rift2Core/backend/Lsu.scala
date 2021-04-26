@@ -110,9 +110,6 @@ class Lsu extends Module {
 	dl1_mst.d_valid    := io.dl1_chn_d.valid
 	io.dl1_chn_d.ready := dl1_mst.d_ready
 
-	val iwb_valid = Reg(Bool())
-	val iwb_res = Reg(UInt(64.W))
-	val iwb_rd0 = Reg(UInt(7.W))
 
 	val is_cb_vhit = Wire(Vec(cb, Bool()))
 
@@ -123,10 +120,16 @@ class Lsu extends Module {
 
 	val wtb = new Wt_block(3)
 
-	def op1 = io.lsu_iss_exe.bits.param.op1
+	val lsu_addr_reg = RegInit(0.U(64.W))
+	val lsu_addr = Wire(UInt(64.W))
+
+	lsu_addr_reg := Mux( stateReg === Dl1_state.cfree, io.lsu_iss_exe.bits.param.op1, lsu_addr_reg )
+	lsu_addr     := Mux( stateReg === Dl1_state.cfree, io.lsu_iss_exe.bits.param.op1, lsu_addr_reg )
+
+	def op1 = lsu_addr
 	def op2 = io.lsu_iss_exe.bits.param.op2
 	def op1_tag = op1(31,32-tag_w)
-	def op1_align64 = op1(31,0) & ~("b111".U(64.W))
+	def op1_align64  = op1(31,0) & ~("b111".U(64.W))
 	def op1_align128 = op1(31,0) & ~("b1111".U(64.W))
 	def op1_align256 = op1(31,0) & ~("b11111".U(64.W))
 
