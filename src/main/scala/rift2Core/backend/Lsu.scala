@@ -513,7 +513,7 @@ class Lsu extends Module {
 		op1_dl1_req := op1_align256
 	}
 	.elsewhen( stateDnxt === Dl1_state.cmiss ) {
-		when ( dl1_mst.is_chn_a_ack === true.B ) {
+		when ( dl1_mst.is_chn_d_ack === true.B ) {
 			op1_dl1_req := op1_dl1_req + "b10000".U
 		}
 	}
