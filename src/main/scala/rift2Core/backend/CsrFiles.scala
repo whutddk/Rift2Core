@@ -73,7 +73,7 @@ object CsrReg {
 		val csr_reg = RegInit(init)
 
 		when( pp.en ) {
-			csr_reg := pp.dat
+			csr_reg := pp.dat | ormask 
 		}
 		.elsewhen(ep.addr === addr) {
 			csr_reg := MuxCase(csr_reg, Array(
