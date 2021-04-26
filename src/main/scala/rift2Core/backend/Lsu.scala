@@ -354,11 +354,11 @@ class Lsu extends Module {
 	dl1_mst.d_ready := true.B
 
 	when( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cmiss ) {
-		dl1_mst.op_getData(op1_align64, 5.U )
+		dl1_mst.op_getData(op1_align256, 5.U )
 		dl1_mst.a_valid_set()
 	}
 	.elsewhen( stateReg === Dl1_state.mwait & stateDnxt === Dl1_state.cmiss ) {
-		dl1_mst.op_getData(op1_align64, 5.U )
+		dl1_mst.op_getData(op1_align256, 5.U )
 		dl1_mst.a_valid_set()
 	}
 	.elsewhen( stateReg === Dl1_state.cmiss ) {
