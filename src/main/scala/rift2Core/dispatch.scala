@@ -32,7 +32,7 @@ import chisel3.experimental.chiselName
 class Rename(ptr: Vec[UInt], log: Vec[Vec[UInt]] ) {
 
 	
-	def is_free_1st (rd0: UInt): Bool = return log(rd0).exists( (x:UInt) => (x === 0.U) )
+	def is_free_1st (rd: UInt): Bool = return log(rd).exists( (x:UInt) => (x === 0.U) )
 	def is_free_2nd (rd0: UInt, rd1: UInt): Bool = {
 		return Mux(
 				(rd0 === rd1),
@@ -259,8 +259,8 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 
 	for ( i <- 0 until 32; j <- 0 until 4 ) yield {
 		io.rn_op_i(i)(j) := 
-			((i.U === rd0_raw(0)) & ( j.U === rd0_idx_1st ) & is_dpt_1st & is_iwb(0)) | 
-			((i.U === rd0_raw(1)) & ( j.U === rd0_idx_2nd ) & is_dpt_2nd & is_iwb(1))
+			((i.U === rd0_raw(0)) & ( j.U === rd0_idx_1st ) & is_iwb(0) & ( is_alu_dpt_1st | is_bru_dpt_1st | is_lsu_dpt_1st | is_csr_dpt_1st | is_mul_dpt_1st  ) ) | 
+			((i.U === rd0_raw(1)) & ( j.U === rd0_idx_2nd ) & is_iwb(1) & ( is_alu_dpt_2nd | is_bru_dpt_2nd | is_lsu_dpt_2nd | is_csr_dpt_2nd | is_mul_dpt_2nd  ) )
 
 	}
 
