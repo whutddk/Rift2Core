@@ -64,10 +64,19 @@ class Regfiles extends Module{
 		when(io.cm_op(i)(j)) {
 			regLog(i)( archit_ptr(i) ) := 0.U(2.W) //when reg i is commit, the last one should be free
 			archit_ptr(i) := j.U
+			when( io.flush ) {
+				rename_ptr(i) := j.U				
+			}
+
 		}
 		.elsewhen(io.flush) {
 			regLog(i)(j) := Mux( archit_ptr(i) === j.U , 3.U , 0.U)
-			rename_ptr(i) := archit_ptr(i)
+			when(~(io.cm_op(i).contains(true.B))) {
+				rename_ptr(i) := archit_ptr(i)				
+			}
+				
+
+
 		}
 		.otherwise{
 			when(io.rn_op(i)(j)) {
