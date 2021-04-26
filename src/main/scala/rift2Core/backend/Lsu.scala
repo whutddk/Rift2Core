@@ -536,7 +536,7 @@ class Lsu extends Module {
 							(stateReg === Dl1_state.cread) -> 0.U,
 							(stateReg === Dl1_state.mwait) -> 0.U,
 							(stateReg === Dl1_state.cmiss) -> dl1_mst.data_ack,
-							(stateReg === Dl1_state.write) -> Mux( op2(3) === 0.U, Cat(0.U(64.W), lsu_wdata_align(63,0)), Cat(lsu_wdata_align(63,0), 0.U(64.W))),
+							(stateReg === Dl1_state.write) -> Mux( op1(3) === 0.U, Cat(0.U(64.W), lsu_wdata_align(63,0)), Cat(lsu_wdata_align(63,0), 0.U(64.W))),
 							(stateReg === Dl1_state.pwait) -> 0.U,
 							(stateReg === Dl1_state.pread) -> 0.U,
 							(stateReg === Dl1_state.fence) -> 0.U
@@ -547,7 +547,7 @@ class Lsu extends Module {
 							(stateReg === Dl1_state.cread) -> 0.U,
 							(stateReg === Dl1_state.mwait) -> 0.U,
 							(stateReg === Dl1_state.cmiss) -> "b1111111111111111".U,
-							(stateReg === Dl1_state.write) -> Mux( op2(3) === 0.U, Cat(0.U(8.W), lsu_wstrb_align(7,0)), Cat(lsu_wstrb_align(7,0), 0.U(8.W))),
+							(stateReg === Dl1_state.write) -> Mux( op1(3) === 0.U, Cat(0.U(8.W), lsu_wstrb_align(7,0)), Cat(lsu_wstrb_align(7,0), 0.U(8.W))),
 							(stateReg === Dl1_state.pwait) -> 0.U,
 							(stateReg === Dl1_state.pread) -> 0.U,
 							(stateReg === Dl1_state.fence) -> 0.U

@@ -57,10 +57,10 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
 
 
-	def addr_sel = cache_addr(addr_lsb+line_w-1, addr_lsb)
-	def bank_sel = cache_addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-	def data_sel = cache_addr(addr_lsb-log2Ceil(bk)-1,0)
-	def tag_info_w = cache_addr(31, 32-tag_w)
+	val addr_sel = cache_addr(addr_lsb+line_w-1, addr_lsb)
+	val bank_sel = cache_addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+	val data_sel = cache_addr(addr_lsb-log2Ceil(bk)-1,0)
+	val tag_info_w = cache_addr(31, 32-tag_w)
 
 
 	val tag_ram = {
