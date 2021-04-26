@@ -184,7 +184,10 @@ class Lsu extends Module {
 	def is_wen = io.lsu_iss_exe.bits.fun.is_su
 	def is_memory = (op1(63,32) === 0.U) & (op1(31) === 1.U)
 	def is_system = (op1(63,32) === 0.U) & (op1(31,30) === 0.U)
-	def is_hazard = wtb.is_hazard( op1_align64, Cat(Fill(2, 1.U), Fill(30, 0.U) ) ) //only check whether is mem or sys
+	
+	val is_mem_hazard = wtb.is_hazard( "h80000000".U, Cat(Fill(2, 1.U), Fill(30, 0.U) ) ) //only check whether is mem or sys
+	val is_sys_hazard = wtb.is_hazard( "h40000000".U, Cat(Fill(2, 1.U), Fill(30, 0.U) ) ) //only check whether is mem or sys
+
 	def is_wtfull = wtb.full
 
 
@@ -319,7 +322,7 @@ class Lsu extends Module {
 		}
 	}
 	.otherwise {
-		when ( (~sys_mst.is_a_busy & ~sys_mst.is_d_busy & is_hazard ) === true.B) {
+		when (stateReg =/= Dl1_state.pread & stateDnxt =/= Dl1_state.pread & is_sys_hazard & ~wtb.empty & ~sys_mst.is_busy ) {
 			sys_mst.op_putFullData(wtb_addr, 3.U, wtb_data, wtb_wstrb)
 			sys_mst.a_valid_set()
 		}
@@ -370,8 +373,7 @@ class Lsu extends Module {
 		}
 	}
 	.otherwise {
-		when ( (~dl1_mst.is_a_busy & ~dl1_mst.is_d_busy & is_hazard ) === true.B) {
-
+		when ( stateReg =/= Dl1_state.cmiss & stateDnxt =/= Dl1_state.cmiss & is_mem_hazard & ~wtb.empty & ~dl1_mst.is_busy ) {
 			def align_addr = wtb_addr & ~("b1111".U)
 			def align_data = Mux( wtb_addr(3), Cat( wtb_data, 0.U(64.W) ), Cat(  0.U(64.W), wtb_data ) )
 			def align_wstrb = Mux( wtb_addr(3), Cat( wtb_wstrb, 0.U(8.W) ), Cat(  0.U(8.W), wtb_wstrb ) )
@@ -436,8 +438,8 @@ class Lsu extends Module {
 				MuxCase(Dl1_state.cfree, Array(
 					(is_ren & is_memory) -> Dl1_state.cread,
 					(is_wen & ~is_wtfull) -> Dl1_state.write,
-					(is_ren & is_system &  is_hazard ) -> Dl1_state.pwait,
-					(is_ren & is_system & ~is_hazard ) -> Dl1_state.pread			
+					(is_ren & is_system &  is_sys_hazard ) -> Dl1_state.pwait,
+					(is_ren & is_system & ~is_sys_hazard ) -> Dl1_state.pread			
 				)),
 				Dl1_state.cfree
 			)
@@ -448,15 +450,15 @@ class Lsu extends Module {
 		Mux( 
 			is_cb_vhit.contains(true.B),
 			Dl1_state.cfree,
-			Mux( is_hazard | ~lsu_exe_iwb_fifo.io.enq.ready, Dl1_state.mwait, Dl1_state.cmiss )
+			Mux( is_mem_hazard | ~lsu_exe_iwb_fifo.io.enq.ready, Dl1_state.mwait, Dl1_state.cmiss )
 		)
 	}
 
-	def dl1_state_dnxt_in_mwait = Mux( is_hazard | ~lsu_exe_iwb_fifo.io.enq.ready, Dl1_state.mwait, Dl1_state.cmiss )
+	def dl1_state_dnxt_in_mwait = Mux( is_mem_hazard | ~lsu_exe_iwb_fifo.io.enq.ready, Dl1_state.mwait, Dl1_state.cmiss )
 	def dl1_state_dnxt_in_cmiss = Mux( dl1_mst.is_last_d_trans, Dl1_state.cfree, Dl1_state.cmiss )
 	def dl1_state_dnxt_in_write = Dl1_state.cfree
 	def dl1_state_dnxt_in_fence = Mux( is_fence_end, Dl1_state.cfree, Dl1_state.fence )
-	def dl1_state_dnxt_in_pwait = Mux( is_hazard, Dl1_state.pwait, Dl1_state.pread )
+	def dl1_state_dnxt_in_pwait = Mux( is_sys_hazard, Dl1_state.pwait, Dl1_state.pread )
 	def dl1_state_dnxt_in_pread = Mux( sys_mst.is_accessAckData, Dl1_state.cfree, Dl1_state.pread )
 
 	def stateDnxt = MuxCase( Dl1_state.cfree, Array(

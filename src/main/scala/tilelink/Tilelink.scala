@@ -189,13 +189,13 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 		d_remain := d_remain - (dw/8).U
 	}
 
-	def is_a_busy = a_remain === 0.U
-	def is_d_busy = d_remain === 0.U
+	val is_a_busy = a_remain =/= 0.U
+	val is_d_busy = d_remain =/= 0.U
 	val is_last_a_trans = WireInit((is_chn_a_ack) & (a_remain === (dw/8).U))
 	val is_last_d_trans = WireInit((is_chn_d_ack) & (d_remain === (dw/8).U))
 
-	def is_free = ~is_a_busy & ~is_d_busy
-	def is_busy =  is_a_busy |  is_d_busy
+	val is_free = ~is_a_busy & ~is_d_busy
+	val is_busy =  is_a_busy |  is_d_busy
 
 	def a_valid_set() = a_valid := true.B
 	def a_valid_rst() = a_valid := false.B

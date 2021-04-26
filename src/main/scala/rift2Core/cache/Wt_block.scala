@@ -91,7 +91,7 @@ class Wt_block( aw: Int ) {
 		val cmp = Wire(Vec(dp, Bool()))
 
 		for ( i <- 0 until dp ) yield {
-			cmp(i) := ((info(i).addr & width_mask) === (chk_addr & width_mask))
+			cmp(i) := ((info(i).addr & width_mask) === (chk_addr & width_mask)) & is_valid(i)
 		}
 
 		return cmp.contains(true.B)

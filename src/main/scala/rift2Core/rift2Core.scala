@@ -76,8 +76,8 @@ class Rift2Core extends Module {
 	exe_stage.io.sys_chn_d.valid := false.B
 
 
-	exe_stage.io.l2c_fence_end := false.B
-	exe_stage.io.l3c_fence_end := false.B
+	exe_stage.io.l2c_fence_end := true.B
+	exe_stage.io.l3c_fence_end := true.B
 
 
 ////////////////////////////////////////////////////////////////////////////
