@@ -72,7 +72,7 @@ class Bru extends Module {
 
 	io.bru_iq_b.bits  := is_branchTaken
 	io.bru_iq_b.valid := iwb_ack & io.bru_iss_exe.bits.fun.is_branch
-	io.bru_iq_j.bits  := io.bru_iss_exe.bits.param.op1 + io.bru_iss_exe.bits.param.imm
+	io.bru_iq_j.bits  := (io.bru_iss_exe.bits.param.op1 + io.bru_iss_exe.bits.param.imm) & ~("b1".U(64.W))
 	io.bru_iq_j.valid := iwb_ack & io.bru_iss_exe.bits.fun.jalr
 
 
