@@ -374,7 +374,7 @@ class Lsu extends Module {
 	}
 	.otherwise {
 		when ( stateReg =/= Dl1_state.cmiss & stateDnxt =/= Dl1_state.cmiss & is_mem_hazard & ~wtb.empty & ~dl1_mst.is_busy ) {
-			def align_addr = wtb_addr & ~("b1111".U)
+			def align_addr = wtb_addr & ~("b1111".U(32.W))
 			def align_data = Mux( wtb_addr(3), Cat( wtb_data, 0.U(64.W) ), Cat(  0.U(64.W), wtb_data ) )
 			def align_wstrb = Mux( wtb_addr(3), Cat( wtb_wstrb, 0.U(8.W) ), Cat(  0.U(8.W), wtb_wstrb ) )
 
