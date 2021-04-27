@@ -44,8 +44,8 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
 	val dat_en_w = Wire( Vec(cb, Bool()) )
 	val dat_en_r = Wire( Vec(cb, Bool()) )
-	val dat_info_wstrb = Wire(UInt((dw/8).W))
-	val dat_info_w = Wire(UInt(dw.W))
+	val dat_info_wstrb = Wire(UInt((128/8).W))
+	val dat_info_w = Wire(UInt(128.W))
 	val dat_info_r = Wire( Vec(cb, UInt(dw.W)) )
 
 	val tag_en_w = Wire( Vec(cb, Bool()) )
@@ -109,8 +109,8 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 			}
 
 
-			dat_ram(i*bk+j).io.data_wstrb := dat_info_wstrb
-			dat_ram(i*bk+j).io.data_w := dat_info_w
+			dat_ram(i*bk+j).io.data_wstrb := dat_info_wstrb << (data_sel & ~("b1111".U(32.W)) )
+			dat_ram(i*bk+j).io.data_w := Fill( dw/128, dat_info_w)
 
 		}
 
