@@ -15,7 +15,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,6 +29,7 @@ package rift2Core.cache
 import chisel3._
 import chisel3.util._
 import chisel3.util.random._
+import chisel3.experimental.ChiselEnum
 
 import tilelink._
 import base._
@@ -65,7 +66,7 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	val tag_addr_reg = RegInit(0.U(tag_w.W))
 
 
-	val req_no = RegInit()
+	val req_no = RegInit(0.U(3.W))
 
 	val tag_addr_sel = PMux( Seq(
 						(req_no === 1.U) -> il1_slv.a.address,
@@ -100,11 +101,15 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 
 	object bram {
+
+
 		val random_res = LFSR(log2Ceil(cb), true.B )
 
 		val is_cb_vhit = Wire( Vec(cb, Bool()) )
-		val cache_valid = RegInit( VecInit( Seq.fill(cl)( VecInit( cb, false.B ) ) ) )
-		val cl_sel = l2c_addr(addr_lsb+line_w-1, addr_lsb)
+		def is_block_replace(i: Int) = UIntToOH(replace_sel)(i).asBool
+
+		val cache_valid = RegInit( VecInit( Seq.fill(cl)( VecInit( Seq.fill(cb)(false.B ) ) ) ))
+		val cl_sel = cache_addr(addr_lsb+line_w-1, addr_lsb)
 		val replace_sel = 
 			Mux(
 				cache_valid(cl_sel).contains(false.B),
@@ -116,10 +121,10 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 		for ( i <- 0 until cb ) yield {
 			cache_mem.dat_en_w(i) := 
-				cb_vhit(i) & l2c_mst.is_chn_d_ack & ( fsm.state === L2C_state.flash | fsm.state === L2C_state.rspdw )
+				is_cb_vhit(i) & l2c_mst.is_chn_d_ack & ( fsm.state === L2C_state.flash | fsm.state === L2C_state.rspdw )
 
 			cache_mem.dat_en_r(i) := 
-				cb_vhit(i) & ( fsm.stateDnxt === L2C_state.rspir | fsm.stateDnxt === L2C_state.rspdr )
+				is_cb_vhit(i) & ( fsm.stateDnxt === L2C_state.rspir | fsm.stateDnxt === L2C_state.rspdr )
 		}
 
 		cache_mem.dat_info_wstrb := 
@@ -136,9 +141,9 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 
 
-		for ( i <- o until cb ) yield {
+		for ( i <- 0 until cb ) yield {
 			cache_mem.tag_en_w(i) := 
-				is_block_replace(i.U) & (fsm.state === L2C_state.cktag) & ( fsm.stateDnxt === L2C_state.flash ) 
+				is_block_replace(i) & (fsm.state === L2C_state.cktag) & ( fsm.stateDnxt === L2C_state.flash ) 
 		
 			cache_mem.tag_en_r(i) :=
 				( fsm.stateDnxt === L2C_state.cktag ) |
@@ -184,7 +189,7 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 		val l2c_state_dnxt_in_cfree = 
 			Mux( io.l2c_fence_req, L2C_state.fence,
-				Mux( (il1_chn_a.valid | dl1_chn_a.valid), L2C_state.cktag, L2C_state.cfree )
+				Mux( (il1_slv.a_valid | dl1_slv.a_valid), L2C_state.cktag, L2C_state.cfree )
 			)
 
 
@@ -214,6 +219,19 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 		))
 
 		state := stateDnxt
+	}
+
+	object bus {
+		req_no :=
+			Mux( fsm.state === L2C_state.cfree & fsm.stateDnxt === L2C_state.cktag,
+				MuxCase( 0.U, Array(
+					(il1_slv.a_valid)                            -> 1.U,
+					(dl1_slv.a_valid & dl1_slv.a.opcode === 4.U) -> 2.U,
+					(dl1_slv.a_valid & dl1_slv.a.opcode === 0.U) -> 3.U,
+					(dl1_slv.a_valid & (dl1_slv.a.opcode === 2.U | dl1_slv.a.opcode === 3.U) ) -> 4.U,
+				)),
+				req_no
+			)
 	}
 
 
