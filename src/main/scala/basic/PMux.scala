@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-27 19:49:17
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-27 20:15:05
+* @Last Modified time: 2021-04-28 10:52:18
 */
 
 
@@ -24,7 +24,7 @@
    limitations under the License.
 */
 
-package rift2Core.basic
+package basic
 
 
 import chisel3._
@@ -32,14 +32,14 @@ import chisel3.util._
 
 
 object PMux {
-	def apply[T <: Data] (mapping: Seq[(Bool, T)]): T = {
-		var res = 0.U.asTypeOf(T)
+	def apply(mapping: Seq[(Bool, UInt)]): UInt = {
+		var res = 0.U
 		var chk = false.B
 		for ((t, v) <- mapping){
 
 			assert( chk === true.B & t =/= true.B, "Assert Fail at PMux, two true.B happend" )
 
-			res = res | Mux( t, v, 0.U.asTypeOf(T) )
+			res = res | Mux( t, v, 0.U )
 			chk = chk | t
 
 		}

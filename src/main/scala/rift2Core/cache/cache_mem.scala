@@ -30,7 +30,7 @@ package rift2Core.cache
 import chisel3._
 import chisel3.util._
 import chisel3.experimental.chiselName
-import rift2Core.basic._
+import basic._
 
 @chiselName
 class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
