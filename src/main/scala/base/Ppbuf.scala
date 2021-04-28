@@ -23,7 +23,7 @@
    limitations under the License.
 */
 
-package basic
+package base
 
 import chisel3._
 import chisel3.util._

@@ -27,7 +27,7 @@ package rift2Core
 import chisel3._
 import chisel3.util._
 import chisel3.util.random._
-import basic._
+import base._
 
 import chisel3.experimental.ChiselEnum
 import rift2Core.define._

@@ -29,7 +29,7 @@ package rift2Core.cache
 
 import chisel3._
 import chisel3.util._
-import basic._
+import base._
 
 
 class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {

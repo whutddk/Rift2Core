@@ -27,7 +27,7 @@ package rift2Chip
 
 import chisel3._
 import chisel3.util._
-import basic._
+import base._
 import tilelink._
 
 
