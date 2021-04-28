@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-12 11:52:53
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-12 11:52:55
+* @Last Modified time: 2021-04-28 11:19:02
 */
 
 /*
@@ -22,15 +22,15 @@
 */
 
 
-package rift2Core.basic
+package basic
 
 import chisel3._
 import chisel3.util._
-import chisel3.experimental.chiselName
 
 
 
-@chiselName
+
+
 class Gen_ringStack[T<:Data]( dw: T, aw: Int ) extends Module {
 	lazy val io = IO(new Bundle{
 			val enq = Flipped(new DecoupledIO(dw))

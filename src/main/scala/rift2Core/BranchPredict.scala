@@ -35,8 +35,8 @@ package rift2Core
 import chisel3._
 import chisel3.util._
 import basic._
-import rift2Core.basic._
-import chisel3.experimental.chiselName
+import rift2Core.define._
+
 
 
 
@@ -93,7 +93,7 @@ class Info_JTB extends Bundle {
 }
 
 
-@chiselName
+
 class BranchPredict_ss extends Module with BHT with Superscalar{
 	lazy val io = IO(new Bundle {
 		val bru_iq_b = Flipped(new ValidIO( Bool() ))

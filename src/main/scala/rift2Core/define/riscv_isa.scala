@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-03-18 19:41:58
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-19 17:54:25
+* @Last Modified time: 2021-04-28 11:19:36
 */
 
 /*
@@ -23,7 +23,7 @@
    limitations under the License.
 */
 
-package rift2Core.basic
+package rift2Core.define
 
 import chisel3._
 

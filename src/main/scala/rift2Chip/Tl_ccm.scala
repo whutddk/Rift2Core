@@ -27,8 +27,9 @@ package rift2Chip
 
 import chisel3._
 import chisel3.util._
-import rift2Core.basic._
+import basic._
 import tilelink._
+
 
 class Tl_CCM extends Module {
 	val io = IO( new Bundle{

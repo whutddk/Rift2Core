@@ -30,7 +30,7 @@ package rift2Core.backend
 import chisel3._
 import chisel3.util._
 
-import rift2Core.basic._
+import rift2Core.define._
 
 
 abstract class Privilege() extends Module with CsrFiles{

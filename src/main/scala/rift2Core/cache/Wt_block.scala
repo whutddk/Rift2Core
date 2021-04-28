@@ -20,7 +20,7 @@ package rift2Core.cache
 
 import chisel3._
 import chisel3.util._
-import chisel3.experimental.chiselName
+
 
 class Write_info extends Bundle {
 	val data = UInt(64.W)
@@ -29,7 +29,7 @@ class Write_info extends Bundle {
 }
 
 
-@chiselName
+
 class Wt_block( aw: Int ) {
 
 		val data_i    = Wire( new Write_info )

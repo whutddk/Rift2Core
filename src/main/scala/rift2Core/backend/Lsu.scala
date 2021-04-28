@@ -27,17 +27,17 @@ package rift2Core.backend
 import chisel3._
 import chisel3.util._
 import chisel3.util.random._
-import rift2Core.basic._
+import rift2Core.define._
 import rift2Core.cache._
 import tilelink._
 import chisel3.experimental.ChiselEnum
-import chisel3.experimental.chiselName
 
 
 
 
 
-@chiselName
+
+
 class Lsu extends Module {
 	val io = IO( new Bundle{
 		val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))

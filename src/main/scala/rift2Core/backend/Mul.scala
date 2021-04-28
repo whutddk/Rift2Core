@@ -27,13 +27,12 @@ package rift2Core.backend
 
 import chisel3._
 import chisel3.util._
-import rift2Core.basic._
-import chisel3.experimental.chiselName
+import rift2Core.define._
 
 
 
 
-@chiselName
+
 class Mul extends Module {
 	val io = IO(new Bundle {
 		val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))

@@ -11,11 +11,9 @@ package rift2Core
 import chisel3._
 import chisel3.util._
 
-import rift2Core.basic._
-import chisel3.experimental.chiselName
+import rift2Core.define._
 
 
-@chiselName
 class Regfiles extends Module{
 	val io = IO(new Bundle{
 

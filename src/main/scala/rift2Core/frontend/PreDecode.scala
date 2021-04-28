@@ -27,7 +27,7 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
-import rift2Core.basic._
+import rift2Core.define._
 import chisel3.experimental.chiselName
 
 

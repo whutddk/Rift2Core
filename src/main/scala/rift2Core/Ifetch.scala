@@ -29,11 +29,11 @@ import chisel3.util._
 import chisel3.util.random._
 
 import chisel3.experimental.ChiselEnum
-import rift2Core.basic._
+import rift2Core.define._
 import rift2Core.cache._
 import rift2Core.frontend._
 import tilelink._
-import chisel3.experimental.chiselName
+
 
 
 
@@ -42,7 +42,6 @@ object Il1_state extends ChiselEnum {
 }
 
 
-@chiselName
 class Ifetch() extends Module with IBuf{
 	val io = IO(new Bundle{
 		val pc_if = Flipped(new DecoupledIO( new Info_pc_if ))
