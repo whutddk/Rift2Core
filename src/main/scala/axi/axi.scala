@@ -87,7 +87,14 @@ class AXI_mst_r(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1, len: Int ) exte
 	io.ar.valid := arvalid
 	// io.ar.bits  := io.ar_info
 	io.r.ready  := rready
+
 	
+	io.ar.bits.cache := 0.U
+	io.ar.bits.lock := 0.U
+	io.ar.bits.port := 0.U
+	io.ar.bits.qos := 0.U
+
+
 }
 
 class AXI_slv_r(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1) extends Module {
@@ -186,9 +193,16 @@ class AXI_mst_w(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1, len: Int ) exte
 	io.aw.valid := awvalid
 	io.w.valid := wvalid
 	io.b.ready := bready
-	// io.aw.bits := io.aw_info
-	// io.w.bits  := io.w_info
 	io.end := w_ack & io.w.bits.last
+
+	io.aw.bits.cache := 0.U
+	io.aw.bits.lock := 0.U
+	io.aw.bits.port := 0.U
+	io.aw.bits.qos := 0.U
+
+	io.w.bits.last := wlast
+
+
 
 }
 

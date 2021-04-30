@@ -4,7 +4,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-27 17:08:56
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-27 19:49:44
+* @Last Modified time: 2021-04-30 11:12:27
 */
 
 
@@ -35,7 +35,7 @@ import tilelink._
 import base._
 
 
-class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Module {
+class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Module {
 	val io = IO( new Bundle{
 		val il1_chn_a = Flipped( new DecoupledIO(new TLchannel_a(128, 32)) )
 		val il1_chn_d = new DecoupledIO( new TLchannel_d(128) )
@@ -54,9 +54,9 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	def line_w   = log2Ceil(cl)
 	def tag_w    = 32 - addr_lsb - line_w
 
-	val il1_slv = new TileLink_slv_lite(128, 32)
-	val dl1_slv = new TileLink_slv_lite(128, 32)
-	val l2c_mst = new TileLink_mst_heavy(128, 32, 3)
+	val il1_slv = Module(new TileLink_slv_lite(128, 32))
+	val dl1_slv = Module(new TileLink_slv_lite(128, 32))
+	val l2c_mst = Module(new TileLink_mst_heavy(128, 32, 3))
 
 	val cache_mem = new Cache_mem( dw, 32, bk, cb, cl )
 
@@ -112,7 +112,7 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 		def is_block_replace(i: Int) = UIntToOH(replace_sel)(i).asBool
 
 		val cache_valid = RegInit( VecInit( Seq.fill(cl)( VecInit( Seq.fill(cb)(false.B ) ) ) ))
-		val cl_sel = cache_addr(addr_lsb+line_w-1, addr_lsb)
+		val cl_sel = cache_addr_dnxt(addr_lsb+line_w-1, addr_lsb)
 		val replace_sel = 
 			Mux(
 				cache_valid(cl_sel).contains(false.B),
@@ -146,10 +146,10 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 		for ( i <- 0 until cb ) yield {
 			cache_mem.tag_en_w(i) := 
-				is_block_replace(i) & (fsm.state === L2C_state.cktag) & ( fsm.stateDnxt === L2C_state.flash ) 
+				is_block_replace(i) & (fsm.state_qout === L2C_state.cktag) & ( fsm.state_dnxt === L2C_state.flash ) 
 		
 			cache_mem.tag_en_r(i) :=
-				( fsm.stateDnxt === L2C_state.cktag ) |
+				( fsm.state_dnxt === L2C_state.cktag ) |
 				l2c_mst.io.a.fire
 
 		}
@@ -157,13 +157,13 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 		cache_mem.cache_addr := cache_addr_dnxt
 
-		when( fsm.state === L2C_state.cktag & fsm.stateDnxt === L2C_state.flash ) {
+		when( fsm.state_qout === L2C_state.cktag & fsm.state_dnxt === L2C_state.flash ) {
 			cache_valid(cl_sel)(replace_sel) := true.B
 		}
-		.elsewhen( fsm.state === L2C_state.fence & fsm.stateDnxt === L2C_state.cfree ) {
+		.elsewhen( fsm.state_qout === L2C_state.fence & fsm.state_dnxt === L2C_state.cfree ) {
 			for ( i <- 0 until cl; j <- 0 until cb ) yield cache_valid(i)(j) := false.B
 		}
-		.elsewhen( fsm.state === L2C_state.rspda & fsm.stateDnxt === L2C_state.cfree ) {
+		.elsewhen( fsm.state_qout === L2C_state.rspda & fsm.state_dnxt === L2C_state.cfree ) {
 			for ( i <- 0 until cb ) yield {
 				cache_valid(cl_sel)(i) := Mux( is_cb_vhit(i), false.B, cache_valid(cl_sel)(i) )
 			}
@@ -221,6 +221,7 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 			(state_qout === L2C_state.fence) -> l2c_state_dnxt_in_fence
 		))
 
+		
 		state_qout := state_dnxt
 	}
 
@@ -274,19 +275,63 @@ class L2cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 		l2c_mst.io.a.bits.param   := 
 								RegEnable( PMux( Seq(
-										// 	( fsm.state_dnxt === L2C_state.flash ) -> l2c_mst.Get,
-										// 	( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.opcode,
-										// 	( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.opcode
-										// )),
-										// 0.U(3.W),
-										// ( fsm.state_qout === L2C_state.cktag )
+											( fsm.state_dnxt === L2C_state.flash ) -> 0.U,
+											( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.param,
+											( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.param
+										)),
+										0.U(2.W),
+										( fsm.state_qout === L2C_state.cktag )
 								)
-		l2c_mst.io.a.bits.size    := size
-		l2c_mst.io.a.bits.source  := id.U
-		l2c_mst.io.a.bits.address := addr
-		l2c_mst.io.a.bits.mask    := dl1_slv.io.a.bits.mask
-		l2c_mst.io.a.bits.data    := 0.U
 
+		l2c_mst.io.a.bits.size    := 
+								RegEnable( PMux( Seq(
+											( fsm.state_dnxt === L2C_state.flash ) -> 7.U, //(1024bits)
+											( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.size,
+											( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.size
+										)),
+										0.U(8.W),
+										( fsm.state_qout === L2C_state.cktag )
+								)
+
+		l2c_mst.io.a.bits.source  := 
+								RegEnable( PMux( Seq(
+											( fsm.state_dnxt === L2C_state.flash ) -> 3.U,
+											( fsm.state_dnxt === L2C_state.rspdw ) -> 1.U,
+											( fsm.state_dnxt === L2C_state.rspda ) -> 1.U
+										)),
+										0.U(8.W),
+										( fsm.state_qout === L2C_state.cktag )
+								)
+
+		l2c_mst.io.a.bits.address := 
+								RegEnable( PMux( Seq(
+											( fsm.state_dnxt === L2C_state.flash ) -> (cache_addr_dnxt & ~("b11111111".U(32.W))),
+											( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.address,
+											( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.address
+										)),
+										0.U(8.W),
+										( fsm.state_qout === L2C_state.cktag )
+								)
+
+		l2c_mst.io.a.bits.mask    := 
+								RegEnable( PMux( Seq(
+											( fsm.state_dnxt === L2C_state.flash ) -> 0.U,
+											( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.mask,
+											( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.mask
+										)),
+										0.U(8.W),
+										( fsm.state_qout === L2C_state.cktag )
+								)
+
+		l2c_mst.io.a.bits.data    := 
+								RegEnable( PMux( Seq(
+											( fsm.state_dnxt === L2C_state.flash ) -> 0.U,
+											( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.data,
+											( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.data
+										)),
+										0.U(8.W),
+										( fsm.state_qout === L2C_state.cktag )
+								)
 
 	}
 
