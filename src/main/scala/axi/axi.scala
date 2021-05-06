@@ -62,6 +62,7 @@ class AXI_mst_r(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1, len: Int ) exte
 		// val ar_info = Input(new AXI_chn_a( addrw, idw, usw ))
 		val ar_req  = Input(Bool())
 		val end     = Output(Bool())
+		val ar_info = Input( new AXI_chn_a( addrw, idw, usw ) )
 
 		val ar = new DecoupledIO(new AXI_chn_a( addrw, idw, usw ))
 		val r  = Flipped( new DecoupledIO(new AXI_chn_r( dw, idw, usw)) )
@@ -85,14 +86,11 @@ class AXI_mst_r(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1, len: Int ) exte
 
 	io.end := r_ack & io.r.bits.last
 	io.ar.valid := arvalid
-	// io.ar.bits  := io.ar_info
 	io.r.ready  := rready
 
 	
-	io.ar.bits.cache := 0.U
-	io.ar.bits.lock := 0.U
-	io.ar.bits.port := 0.U
-	io.ar.bits.qos := 0.U
+	io.ar.bits := io.ar_info
+
 
 
 }
@@ -101,6 +99,7 @@ class AXI_slv_r(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1) extends Module 
 	val io = IO( new Bundle {
 		// val r_info = Input(new AXI_chn_r( dw, idw, usw))
 		val is_busy = Output(Bool())
+		val r_info = Input ( new AXI_chn_r( dw, idw, usw) )
 
 		val ar = Flipped( new DecoupledIO(new AXI_chn_a( addrw, idw, usw )))
 		val r  = new DecoupledIO(new AXI_chn_r( dw, idw, usw))
@@ -143,7 +142,7 @@ class AXI_slv_r(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1) extends Module 
 
 	io.ar.ready := arready
 	io.r.valid := rvalid
-	// io.r.bits := io.r_info
+	io.r.bits := io.r_info
 	io.is_busy := is_busy
 
 
@@ -156,6 +155,9 @@ class AXI_mst_w(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1, len: Int ) exte
 		// val w_info = Input(new AXI_chn_w( dw, usw ))
 		val aw_req  = Input(Bool())
 		val end     = Output(Bool())
+		val aw_info = Input( new AXI_chn_a( (addrw: Int), idw, usw ) )
+		val w_info  = Input( new AXI_chn_w( dw, usw ) )
+		
 
 
 		val aw = new DecoupledIO(new AXI_chn_a( (addrw: Int), idw, usw ))
@@ -195,12 +197,16 @@ class AXI_mst_w(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1, len: Int ) exte
 	io.b.ready := bready
 	io.end := w_ack & io.w.bits.last
 
-	io.aw.bits.cache := 0.U
-	io.aw.bits.lock := 0.U
-	io.aw.bits.port := 0.U
-	io.aw.bits.qos := 0.U
-
+	io.aw.bits := io.aw_info
+	io.w.bits  := io.w_info
 	io.w.bits.last := wlast
+
+	// io.aw.bits.cache := 0.U
+	// io.aw.bits.lock := 0.U
+	// io.aw.bits.port := 0.U
+	// io.aw.bits.qos := 0.U
+
+
 
 
 
@@ -256,6 +262,9 @@ class AXI_slv_w(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1) extends Module 
 	io.is_busy := is_busy
 	io.w.ready := wready
 	io.b.valid := bvalid
+	io.b.bits.id := 0.U
+	io.b.bits.rsp := 0.U
+	io.b.bits.user := 0.U
 
 	assert( io.aw.valid & io.aw.bits.burst =/= 2.U & io.aw.bits.burst =/= 3.U, "Assert Fail at axi_slv_read, Unsupport Burst Mode" )
 

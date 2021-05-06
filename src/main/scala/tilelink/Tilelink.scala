@@ -29,7 +29,7 @@ package tilelink
 
 import chisel3._
 import chisel3.util._
-import rift2Core.basic._
+
 
 
 class TLchannel_a(dw:Int, aw:Int = 32) extends Bundle {
@@ -412,6 +412,7 @@ class TileLink_slv_heavy(dw: Int, aw: Int ) extends Module with Opcode {
 		val is_rsp = Input( Bool() )
 		val mode = Output( UInt(3.W) )
 		val rsp_addr = Output( UInt(aw.W) )
+		val rsp_data = Input( UInt(dw.W) )
 
 		val a = Flipped( new DecoupledIO(new TLchannel_a(dw, aw) ))
 		val d = new DecoupledIO( new TLchannel_d(dw) )
@@ -470,6 +471,8 @@ class TileLink_slv_heavy(dw: Int, aw: Int ) extends Module with Opcode {
 	io.d.bits.corrupt := false.B
 	io.d.bits.denied  := false.B
 
+	io.d.bits.data := io.rsp_data
+
 }
 
 
@@ -478,6 +481,7 @@ class TileLink_slv_lite(dw: Int, aw: Int ) extends Module with Opcode {
 		val is_rsp = Input( Bool() )
 		val mode = Output( UInt(3.W) )
 		val rsp_addr = Output( UInt(aw.W) )
+		val rsp_data = Input( UInt(dw.W) )
 
 		val a = Flipped( new DecoupledIO(new TLchannel_a(dw, aw) ))
 		val d = new DecoupledIO( new TLchannel_d(dw) )
@@ -532,7 +536,7 @@ class TileLink_slv_lite(dw: Int, aw: Int ) extends Module with Opcode {
 	io.d.bits.sink    := DontCare
 	io.d.bits.corrupt := false.B
 	io.d.bits.denied  := false.B
-
+	io.d.bits.data    := io.rsp_data
 
 }
 

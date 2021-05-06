@@ -64,7 +64,26 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 		val cfree, cktag, evict, flash, rspl2, fence = Value
 	}
 
-	object fsm {
+// FFFFFFFFFFFFFFFFFFFFFF   SSSSSSSSSSSSSSS MMMMMMMM               MMMMMMMM
+// F::::::::::::::::::::F SS:::::::::::::::SM:::::::M             M:::::::M
+// F::::::::::::::::::::FS:::::SSSSSS::::::SM::::::::M           M::::::::M
+// FF::::::FFFFFFFFF::::FS:::::S     SSSSSSSM:::::::::M         M:::::::::M
+//   F:::::F       FFFFFFS:::::S            M::::::::::M       M::::::::::M
+//   F:::::F             S:::::S            M:::::::::::M     M:::::::::::M
+//   F::::::FFFFFFFFFF    S::::SSSS         M:::::::M::::M   M::::M:::::::M
+//   F:::::::::::::::F     SS::::::SSSSS    M::::::M M::::M M::::M M::::::M
+//   F:::::::::::::::F       SSS::::::::SS  M::::::M  M::::M::::M  M::::::M
+//   F::::::FFFFFFFFFF          SSSSSS::::S M::::::M   M:::::::M   M::::::M
+//   F:::::F                         S:::::SM::::::M    M:::::M    M::::::M
+//   F:::::F                         S:::::SM::::::M     MMMMM     M::::::M
+// FF:::::::FF           SSSSSSS     S:::::SM::::::M               M::::::M
+// F::::::::FF           S::::::SSSSSS:::::SM::::::M               M::::::M
+// F::::::::FF           S:::::::::::::::SS M::::::M               M::::::M
+// FFFFFFFFFFF            SSSSSSSSSSSSSSS   MMMMMMMM               MMMMMMMM
+
+
+
+
 		val state_qout = RegInit(L3C_state.cfree )
 
 		val l3c_state_dnxt_in_cfree = 
@@ -97,9 +116,9 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 			(state_qout === L3C_state.fence) -> l3c_state_dnxt_in_fence
 		))
 
-		
+		io.l3c_fence_end := (state_qout === L3C_state.fence) & (state_dnxt === L3C_state.cfree)
 		state_qout := state_dnxt
-	}
+
 
 	object bram {
 		val cache_addr_dnxt = Wire(UInt(32.W))
@@ -110,12 +129,12 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 		cache_addr_qout := cache_addr_dnxt
 
 		cache_addr_dnxt := Mux1H(Seq(
-			(fsm.state_qout === L3C_state.cfree) -> l2c_slv.io.a.bits.address,
-			(fsm.state_qout === L3C_state.cktag) -> Mux(db.is_full, db.addr_o, l2c_slv.io.a.bits.address),
-			(fsm.state_qout === L3C_state.evict) -> Mux( mem_mst_w.io.end, cache_addr_qout + "b10000".U, cache_addr_qout ),
-			(fsm.state_qout === L3C_state.flash) -> Mux( mem_mst_r.io.end, cache_addr_qout + "b10000".U, cache_addr_qout ),
-			(fsm.state_qout === L3C_state.rspl2) -> Mux( l2c_slv.io.d.fire,cache_addr_qout + "b10000".U, cache_addr_qout ),
-			(fsm.state_qout === L3C_state.fence) -> db.addr_o
+			(state_qout === L3C_state.cfree) -> l2c_slv.io.a.bits.address,
+			(state_qout === L3C_state.cktag) -> Mux(db.is_full, db.addr_o, l2c_slv.io.a.bits.address),
+			(state_qout === L3C_state.evict) -> Mux( mem_mst_w.io.end, cache_addr_qout + "b10000".U, cache_addr_qout ),
+			(state_qout === L3C_state.flash) -> Mux( mem_mst_r.io.end, cache_addr_qout + "b10000".U, cache_addr_qout ),
+			(state_qout === L3C_state.rspl2) -> Mux( l2c_slv.io.d.fire,cache_addr_qout + "b10000".U, cache_addr_qout ),
+			(state_qout === L3C_state.fence) -> db.addr_o
 
 		))
 
@@ -123,24 +142,24 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 		cache_mem.cache_addr := cache_addr_dnxt
 
 		cache_mem.dat_en_w(0) :=
-			(fsm.state_qout === L3C_state.flash & mem_mst_r.io.r.fire) |
-			(fsm.state_qout === L3C_state.rspl2 & (l2c_slv.io.a.bits.opcode === l2c_slv.PutFullData) & l2c_slv.io.a.fire)
+			(state_qout === L3C_state.flash & mem_mst_r.io.r.fire) |
+			(state_qout === L3C_state.rspl2 & (l2c_slv.io.a.bits.opcode === l2c_slv.PutFullData) & l2c_slv.io.a.fire)
 
 		cache_mem.dat_en_r(0) :=
-			(fsm.state_dnxt === L3C_state.flash) |
-			(fsm.state_dnxt === L3C_state.rspl2 & l2c_slv.io.a.bits.opcode =/= l2c_slv.PutFullData)
+			(state_dnxt === L3C_state.flash) |
+			(state_dnxt === L3C_state.rspl2 & l2c_slv.io.a.bits.opcode =/= l2c_slv.PutFullData)
 
 
 		cache_mem.dat_info_wstrb :=
 			MuxCase( DontCare, Array(
-				( fsm.state_qout === L3C_state.flash ) -> Fill(16, 1.U),
-				( fsm.state_qout === L3C_state.rspl2 ) -> l2c_slv.io.a.bits.mask
+				( state_qout === L3C_state.flash ) -> Fill(16, 1.U),
+				( state_qout === L3C_state.rspl2 ) -> l2c_slv.io.a.bits.mask
 			))
 
 		cache_mem.dat_info_w :=
 			MuxCase( DontCare, Array(
-				( fsm.state_qout === L3C_state.flash ) -> mem_mst_r.io.r.bits.data,
-				( fsm.state_qout === L3C_state.rspl2 ) -> 
+				( state_qout === L3C_state.flash ) -> mem_mst_r.io.r.bits.data,
+				( state_qout === L3C_state.rspl2 ) -> 
 					PMux( Seq(
 						(l2c_slv.io.a.bits.opcode === l2c_slv.PutFullData) -> l2c_slv.io.a.bits.data,
 						(l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData) -> 
@@ -163,10 +182,10 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 			))
 
 		cache_mem.tag_en_w :=
-			(fsm.state_qout === L3C_state.cktag) & (fsm.state_dnxt === L3C_state.flash)
+			(state_qout === L3C_state.cktag) & (state_dnxt === L3C_state.flash)
 
 		cache_mem.tag_en_r :=
-			(fsm.state_dnxt === L3C_state.cktag)
+			(state_dnxt === L3C_state.cktag)
 
 
 		val tag_addr = cache_addr_dnxt(31, 32-tag_w)
@@ -178,14 +197,14 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 		for ( i <- 0 until cl ) yield {
 			cache_valid(i) :=
 				Mux(
-					(fsm.state_qout === L3C_state.fence) & (fsm.state_dnxt === L3C_state.cfree),
+					(state_qout === L3C_state.fence) & (state_dnxt === L3C_state.cfree),
 					false.B,
 					Mux(
 						i.U =/= cl_sel,
 						cache_valid(i),
 						MuxCase( cache_valid(i), Array(
-							(fsm.state_qout === L3C_state.evict) -> false.B,
-							(fsm.state_qout === L3C_state.flash) -> true.B
+							(state_qout === L3C_state.evict) -> false.B,
+							(state_qout === L3C_state.flash) -> true.B
 						))
 					)
 			)
@@ -208,54 +227,90 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 
 		when(
 			~is_hazard & 
-			fsm.state_qout === L3C_state.cktag & fsm.state_dnxt === L3C_state.rspl2 &
+			state_qout === L3C_state.cktag & state_dnxt === L3C_state.rspl2 &
 			(l2c_slv.io.a.bits.opcode === l2c_slv.PutFullData | l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData | l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData)
 		){
 			buf(idx_enq)   := bram.cache_addr_dnxt(31,32-tag_w)
 			valid(idx_enq) := true.B
 		}
-		.elsewhen( fsm.state_qout === L3C_state.evict & fsm.state_dnxt =/= L3C_state.evict ){
+		.elsewhen( state_qout === L3C_state.evict & state_dnxt =/= L3C_state.evict ){
 			valid(idx_deq) := false.B
 		}
 
 		val addr_o = buf(idx_deq)
 	}
 
-	object bus {
-		l2c_slv.io.is_rsp   := fsm.state_qout === L3C_state.cktag & fsm.state_dnxt === L3C_state.rspl2
-		mem_mst_r.io.ar_req := fsm.state_qout === L3C_state.cktag & fsm.state_dnxt === L3C_state.flash
-		mem_mst_w.io.aw_req := fsm.state_qout =/= L3C_state.evict & fsm.state_dnxt === L3C_state.evict
-	
-		l2c_slv.io.d.bits.data := bram.mem_dat
 
-		mem_mst_r.io.ar.bits.addr :=
+// BBBBBBBBBBBBBBBBB   UUUUUUUU     UUUUUUUU   SSSSSSSSSSSSSSS 
+// B::::::::::::::::B  U::::::U     U::::::U SS:::::::::::::::S
+// B::::::BBBBBB:::::B U::::::U     U::::::US:::::SSSSSS::::::S
+// BB:::::B     B:::::BUU:::::U     U:::::UUS:::::S     SSSSSSS
+//   B::::B     B:::::B U:::::U     U:::::U S:::::S            
+//   B::::B     B:::::B U:::::D     D:::::U S:::::S            
+//   B::::BBBBBB:::::B  U:::::D     D:::::U  S::::SSSS         
+//   B:::::::::::::BB   U:::::D     D:::::U   SS::::::SSSSS    
+//   B::::BBBBBB:::::B  U:::::D     D:::::U     SSS::::::::SS  
+//   B::::B     B:::::B U:::::D     D:::::U        SSSSSS::::S 
+//   B::::B     B:::::B U:::::D     D:::::U             S:::::S
+//   B::::B     B:::::B U::::::U   U::::::U             S:::::S
+// BB:::::BBBBBB::::::B U:::::::UUU:::::::U SSSSSSS     S:::::S
+// B:::::::::::::::::B   UU:::::::::::::UU  S::::::SSSSSS:::::S
+// B::::::::::::::::B      UU:::::::::UU    S:::::::::::::::SS 
+// BBBBBBBBBBBBBBBBB         UUUUUUUUU       SSSSSSSSSSSSSSS   
+
+
+
+		io.l2c_chn_a <> l2c_slv.io.a
+		io.l2c_chn_d <> l2c_slv.io.d
+		io.mem_chn_ar <> mem_mst_r.io.ar
+		io.mem_chn_r  <> mem_mst_r.io.r
+		io.mem_chn_aw <> mem_mst_w.io.aw
+		io.mem_chn_w  <> mem_mst_w.io.w
+		io.mem_chn_b  <> mem_mst_w.io.b
+
+
+
+		l2c_slv.io.is_rsp   := state_qout === L3C_state.cktag & state_dnxt === L3C_state.rspl2
+		mem_mst_r.io.ar_req := state_qout === L3C_state.cktag & state_dnxt === L3C_state.flash
+		mem_mst_w.io.aw_req := state_qout =/= L3C_state.evict & state_dnxt === L3C_state.evict
+	
+		l2c_slv.io.rsp_data := bram.mem_dat
+
+		mem_mst_r.io.ar_info.addr :=
 			RegEnable( bram.cache_addr_dnxt & ~("b1111111111".U(32.W)), 0.U, mem_mst_r.io.ar_req )
 
 
-		mem_mst_r.io.ar.bits.burst := "b01".U
-		mem_mst_r.io.ar.bits.id := 0.U
-		mem_mst_r.io.ar.bits.len := 63.U
-		mem_mst_r.io.ar.bits.size := 4.U
-		mem_mst_r.io.ar.bits.user := 0.U
+		mem_mst_r.io.ar_info.burst := "b01".U
+		mem_mst_r.io.ar_info.id := 0.U
+		mem_mst_r.io.ar_info.len := 63.U
+		mem_mst_r.io.ar_info.size := 4.U
+		mem_mst_r.io.ar_info.user := 0.U
+		mem_mst_r.io.ar_info.cache := 0.U
+		mem_mst_r.io.ar_info.lock := 0.U
+		mem_mst_r.io.ar_info.port := 0.U
+		mem_mst_r.io.ar_info.qos := 0.U
 
-		mem_mst_w.io.aw.bits.addr :=
+
+		mem_mst_w.io.aw_info.addr :=
 			RegEnable( bram.cache_addr_dnxt & ~("b1111111111".U(32.W)), 0.U, mem_mst_w.io.aw_req )
 
 
-		mem_mst_w.io.aw.bits.burst := "b01".U
-		mem_mst_w.io.aw.bits.id := 0.U
-		mem_mst_w.io.aw.bits.len := 63.U
-		mem_mst_w.io.aw.bits.size := 4.U
-		mem_mst_w.io.aw.bits.user := 0.U
+		mem_mst_w.io.aw_info.burst := "b01".U
+		mem_mst_w.io.aw_info.id := 0.U
+		mem_mst_w.io.aw_info.len := 63.U
+		mem_mst_w.io.aw_info.size := 4.U
+		mem_mst_w.io.aw_info.user := 0.U
+		mem_mst_w.io.aw_info.cache := 0.U
+		mem_mst_w.io.aw_info.lock := 0.U
+		mem_mst_w.io.aw_info.port := 0.U
+		mem_mst_w.io.aw_info.qos := 0.U
 
-		mem_mst_w.io.w.bits.data := bram.mem_dat
-		mem_mst_w.io.w.bits.strb := Fill(16, 1.U)
-		mem_mst_w.io.w.bits.user := 0.U
-		
+		mem_mst_w.io.w_info.data := bram.mem_dat
+		mem_mst_w.io.w_info.strb := Fill(16, 1.U)
+		mem_mst_w.io.w_info.user := 0.U
+		mem_mst_w.io.w_info.last := DontCare
 
 
-
-	}
 
 }
 
