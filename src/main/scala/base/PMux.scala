@@ -37,7 +37,7 @@ object PMux {
 		var chk = false.B
 		for ((t, v) <- mapping){
 
-			assert( chk === true.B & t =/= true.B, "Assert Fail at PMux, two true.B happend" )
+			assert( ~(chk === true.B & t === true.B), "Assert Fail at PMux, two true.B happend" )
 
 			res = res | Mux( t, v, 0.U )
 			chk = chk | t

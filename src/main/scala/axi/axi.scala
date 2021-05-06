@@ -6,6 +6,22 @@
 */
 
 
+/*
+  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+	   http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package axi
 
 
@@ -99,7 +115,9 @@ class AXI_slv_r(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1) extends Module 
 	val io = IO( new Bundle {
 		// val r_info = Input(new AXI_chn_r( dw, idw, usw))
 		val is_busy = Output(Bool())
+		val req_addr = Output( UInt(addrw.W) )
 		val r_info = Input ( new AXI_chn_r( dw, idw, usw) )
+
 
 		val ar = Flipped( new DecoupledIO(new AXI_chn_a( addrw, idw, usw )))
 		val r  = new DecoupledIO(new AXI_chn_r( dw, idw, usw))
@@ -143,10 +161,12 @@ class AXI_slv_r(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1) extends Module 
 	io.ar.ready := arready
 	io.r.valid := rvalid
 	io.r.bits := io.r_info
+	io.r.bits.last := rlast
 	io.is_busy := is_busy
 
+	io.req_addr := araddr
 
-	assert( io.ar.valid & io.ar.bits.burst =/= 2.U & io.ar.bits.burst =/= 3.U, "Assert Fail at axi_slv_read, Unsupport Burst Mode" )
+	assert( ~(io.ar.valid & (io.ar.bits.burst === 2.U | io.ar.bits.burst === 3.U)), "Assert Fail at axi_slv_read, Unsupport Burst Mode" )
 }
 
 class AXI_mst_w(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1, len: Int ) extends Module {
@@ -216,6 +236,8 @@ class AXI_mst_w(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1, len: Int ) exte
 class AXI_slv_w(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1) extends Module {
 	val io = IO( new Bundle {
 		val is_busy = Output(Bool())
+		val req_addr = Output( UInt(addrw.W) )
+
 
 		val aw = Flipped( new DecoupledIO(new AXI_chn_a( addrw, idw, usw )))
 		val w  = Flipped( new DecoupledIO(new AXI_chn_w( dw, usw)))
@@ -266,6 +288,8 @@ class AXI_slv_w(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1) extends Module 
 	io.b.bits.rsp := 0.U
 	io.b.bits.user := 0.U
 
-	assert( io.aw.valid & io.aw.bits.burst =/= 2.U & io.aw.bits.burst =/= 3.U, "Assert Fail at axi_slv_read, Unsupport Burst Mode" )
+	io.req_addr := awaddr
+
+	assert( ~(io.aw.valid & (io.aw.bits.burst === 2.U | io.aw.bits.burst === 3.U)), "Assert Fail at axi_slv_write, Unsupport Burst Mode" )
 
 }
