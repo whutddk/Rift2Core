@@ -346,6 +346,7 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 	val io = IO( new Bundle {
 		val is_req = Input(Bool())
 		val mode  = Output(Bool())
+		val a_info = Input(new TLchannel_a(dw, aw))
 
 		val a = new DecoupledIO(new TLchannel_a(dw, aw))
 		val d = Flipped(new DecoupledIO(new TLchannel_d(dw)))
@@ -361,7 +362,7 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 	val a_valid  = RegInit(false.B)
 	val req_addr = RegInit( 0.U(aw.W) )
 	val size_cnt = RegInit( 0.U(8.W) )
-	val size_aim = Wire( UInt(8.W) )
+	val size_aim = RegInit( 0.U(8.W) )
 
 	when( ~io.a.valid & io.is_req & (mode === 7.U) ) { a_valid := true.B }
 	.elsewhen(
@@ -389,7 +390,7 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 	io.d.ready := true.B
 	io.mode := mode
 
-
+	io.a.bits := io.a_info
 	io.a.bits.corrupt := false.B
 
 
