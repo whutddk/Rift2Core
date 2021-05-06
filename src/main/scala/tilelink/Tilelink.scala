@@ -227,8 +227,6 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 }
 
 
-
-
 class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 
 	val a = Wire(new TLchannel_a(dw, aw))
@@ -344,11 +342,6 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 
 
 
-
-
-
-
-
 class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 	val io = IO( new Bundle {
 		val is_req = Input(Bool())
@@ -402,9 +395,6 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 
 
 }
-
-
-
 
 
 class TileLink_slv_heavy(dw: Int, aw: Int ) extends Module with Opcode {
@@ -538,6 +528,7 @@ class TileLink_slv_lite(dw: Int, aw: Int ) extends Module with Opcode {
 	io.d.bits.denied  := false.B
 	io.d.bits.data    := io.rsp_data
 
+	io.mode := mode
 }
 
 

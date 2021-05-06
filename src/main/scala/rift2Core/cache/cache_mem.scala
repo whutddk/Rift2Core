@@ -45,7 +45,7 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 	val dat_en_r = Wire( Vec(cb, Bool()) )
 	val dat_info_wstrb = Wire(UInt((128/8).W))
 	val dat_info_w = Wire(UInt(128.W))
-	val dat_info_r = Wire( Vec(cb, UInt(dw.W)) )
+	val dat_info_r = Wire( Vec(cb, UInt(128.W)) )
 
 	val tag_en_w = Wire( Vec(cb, Bool()) )
 	val tag_en_r = Wire( Vec(cb, Bool()) )	
@@ -108,14 +108,16 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 			}
 
 
-			dat_ram(i*bk+j).io.data_wstrb := dat_info_wstrb << (data_sel & ~("b1111".U(32.W)) )
+			dat_ram(i*bk+j).io.data_wstrb := dat_info_wstrb << (data_sel)
 			dat_ram(i*bk+j).io.data_w := Fill( dw/128, dat_info_w)
 
 		}
 
 		val bank_num = for ( j <- 0 until bk ) yield { j.U === bank_sel }
 		val dat_bank = for ( j <- 0 until bk ) yield { dat_ram( i*bk+j).io.data_r }
-		dat_info_r(i) := MuxCase(DontCare, bank_num zip dat_bank )
+		val data_bank_sel = MuxCase(0.U, bank_num zip dat_bank )
+
+		dat_info_r(i) := data_bank_sel << ( data_sel << 3 )
 		
 		
 		// dat_ram( i*bk + bank_sel).io.data_r
