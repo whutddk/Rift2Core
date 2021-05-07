@@ -367,12 +367,12 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 	when( ~io.a.valid & io.is_req & (mode === 7.U) ) { a_valid := true.B }
 	.elsewhen(
 				(a_ack & (mode === Get)) |
-				(a_ack & (mode === PutFullData | mode === PutPartialData) & ( size_cnt === size_aim ))
+				(a_ack & (mode === PutFullData | mode === PutPartialData) & ( (size_cnt + (dw/8).U) === size_aim ))
 		)
 	{ a_valid := false.B }
 
 	when( ~io.a.valid & io.is_req & (mode === 7.U) ) { mode := io.a.bits.opcode }
-	.elsewhen( a_ack & ( size_cnt === size_aim )  ) { mode := 7.U }
+	.elsewhen( a_ack & ( (size_cnt + (dw/8).U) === size_aim )  ) { mode := 7.U }
 
 	when( ~io.a.valid & io.is_req & (mode === 7.U) ) { size_aim := 1.U << io.a.bits.size }
 
@@ -463,6 +463,7 @@ class TileLink_slv_heavy(dw: Int, aw: Int ) extends Module with Opcode {
 	io.d.bits.denied  := false.B
 
 	io.d.bits.data := io.rsp_data
+	io.mode := mode
 
 }
 
@@ -494,17 +495,13 @@ class TileLink_slv_lite(dw: Int, aw: Int ) extends Module with Opcode {
 
 	rsp_addr := rsp_addr_dnxt
 
-	// when( mode === 7.U & io.is_rsp ) { a_ready := true.B }
-	// .elsewhen( ~(d_ack & ( size_cnt === size_aim ) ) ) { a_ready := false.B }
-
-
 	when( a_ack & mode === 7.U ) {
 		mode := MuxCase( 7.U, Array(
 			(io.a.bits.opcode === Get) -> AccessAckData,
 			(io.a.bits.opcode === PutFullData | io.a.bits.opcode === PutPartialData) -> AccessAck
 		))
 	}
-	.elsewhen( d_ack & ( size_cnt === size_aim )  ) { mode := 7.U }
+	.elsewhen( d_ack & ( (size_cnt + (dw/8).U) === size_aim )  ) { mode := 7.U }
 
 	when( a_ack & mode === 7.U ) { size_aim := 1.U << io.a.bits.size }
 

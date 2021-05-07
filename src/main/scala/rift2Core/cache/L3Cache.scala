@@ -55,7 +55,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 	def tag_w    = 32 - addr_lsb - line_w
 	def cb = 1
 
-	val l2c_slv   = Module( new TileLink_slv_lite(128, 32) )
+	val l2c_slv   = Module( new TileLink_slv_heavy(128, 32) )
 	val mem_mst_r = Module( new AXI_mst_r( 32, 128, 1, 1, 63 ))
 	val mem_mst_w = Module( new AXI_mst_w( 32, 128, 1, 1, 63 ))
 	val cache_mem = new Cache_mem( dw, 32, bk, 1, cl )
@@ -129,7 +129,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 			Mux( io.l3c_fence_req, L3C_state.fence, L3C_state.cktag ))
 
 	val l3c_state_dnxt_in_flash = 
-		Mux( mem_mst_r.io.end, L3C_state.evict, L3C_state.flash )
+		Mux( mem_mst_r.io.end, L3C_state.cktag, L3C_state.flash )
 
 	val l3c_state_dnxt_in_rspl2 = 
 		Mux( l2c_slv.io.mode === 7.U, L3C_state.cfree, L3C_state.rspl2 )
@@ -175,22 +175,22 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 	bram.cache_addr_dnxt := Mux1H(Seq(
 		(fsm.state_qout === L3C_state.cfree) -> l2c_slv.io.a.bits.address,
 		(fsm.state_qout === L3C_state.cktag) -> Mux(db.is_full, db.addr_o, l2c_slv.io.a.bits.address),
-		(fsm.state_qout === L3C_state.evict) -> Mux( mem_mst_w.io.end, bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
-		(fsm.state_qout === L3C_state.flash) -> Mux( mem_mst_r.io.end, bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
+		(fsm.state_qout === L3C_state.evict) -> Mux( mem_mst_w.io.w.fire, bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
+		(fsm.state_qout === L3C_state.flash) -> Mux( mem_mst_r.io.r.fire, bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
 		(fsm.state_qout === L3C_state.rspl2) -> Mux( l2c_slv.io.d.fire,bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
 		(fsm.state_qout === L3C_state.fence) -> db.addr_o
 
 	))
 
 
-	cache_mem.cache_addr := bram.cache_addr_dnxt
+	cache_mem.cache_addr := bram.cache_addr_qout
 
 	cache_mem.dat_en_w(0) :=
 		(fsm.state_qout === L3C_state.flash & mem_mst_r.io.r.fire) |
 		(fsm.state_qout === L3C_state.rspl2 & (l2c_slv.io.a.bits.opcode === l2c_slv.PutFullData) & l2c_slv.io.a.fire)
 
 	cache_mem.dat_en_r(0) :=
-		(fsm.state_dnxt === L3C_state.flash) |
+		(fsm.state_dnxt === L3C_state.evict) |
 		(fsm.state_dnxt === L3C_state.rspl2 & l2c_slv.io.a.bits.opcode =/= l2c_slv.PutFullData)
 
 

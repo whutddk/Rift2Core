@@ -117,7 +117,7 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 		val dat_bank = for ( j <- 0 until bk ) yield { dat_ram( i*bk+j).io.data_r }
 		val data_bank_sel = MuxCase(0.U, bank_num zip dat_bank )
 
-		dat_info_r(i) := data_bank_sel << ( data_sel << 3 )
+		dat_info_r(i) := data_bank_sel >> ( data_sel << 3 )
 		
 		
 		// dat_ram( i*bk + bank_sel).io.data_r
