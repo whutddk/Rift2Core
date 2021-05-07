@@ -73,7 +73,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 		val cache_addr_dnxt = Wire(UInt(32.W))
 		val cache_addr_qout = RegInit(0.U(32.W))
 		val cache_valid = RegInit(VecInit(Seq.fill(cl)(false.B)))
-		val mem_dat = Wire( UInt(dw.W) )
+		val mem_dat = Wire( UInt(128.W) )
 
 		val tag_addr = Wire( UInt(tag_w.W) )
 		val is_cb_hit = Wire(Bool())
@@ -150,6 +150,153 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 	fsm.state_qout := fsm.state_dnxt
 
 
+//                AAA               MMMMMMMM               MMMMMMMM     OOOOOOOOO     
+//               A:::A              M:::::::M             M:::::::M   OO:::::::::OO   
+//              A:::::A             M::::::::M           M::::::::M OO:::::::::::::OO 
+//             A:::::::A            M:::::::::M         M:::::::::MO:::::::OOO:::::::O
+//            A:::::::::A           M::::::::::M       M::::::::::MO::::::O   O::::::O
+//           A:::::A:::::A          M:::::::::::M     M:::::::::::MO:::::O     O:::::O
+//          A:::::A A:::::A         M:::::::M::::M   M::::M:::::::MO:::::O     O:::::O
+//         A:::::A   A:::::A        M::::::M M::::M M::::M M::::::MO:::::O     O:::::O
+//        A:::::A     A:::::A       M::::::M  M::::M::::M  M::::::MO:::::O     O:::::O
+//       A:::::AAAAAAAAA:::::A      M::::::M   M:::::::M   M::::::MO:::::O     O:::::O
+//      A:::::::::::::::::::::A     M::::::M    M:::::M    M::::::MO:::::O     O:::::O
+//     A:::::AAAAAAAAAAAAA:::::A    M::::::M     MMMMM     M::::::MO::::::O   O::::::O
+//    A:::::A             A:::::A   M::::::M               M::::::MO:::::::OOO:::::::O
+//   A:::::A               A:::::A  M::::::M               M::::::M OO:::::::::::::OO 
+//  A:::::A                 A:::::A M::::::M               M::::::M   OO:::::::::OO   
+// AAAAAAA                   AAAAAAAMMMMMMMM               MMMMMMMM     OOOOOOOOO    
+
+	val amo = new Bundle {
+		val res = Wire(UInt(128.W))
+
+		val op32_1 = Wire( UInt(32.W) )
+		val op32_2 = Wire( UInt(32.W) )
+		val res32 = Wire( UInt(32.W) )
+
+		val op64_1 = Wire( UInt(64.W) )
+		val op64_2 = Wire( UInt(64.W) )
+		val res64 = Wire( UInt(64.W) )	
+
+		val min_res  = Mux( l2c_slv.io.a.bits.data.asSInt > bram.mem_dat.asSInt, bram.mem_dat, l2c_slv.io.a.bits.data )
+		val max_res  = Mux( l2c_slv.io.a.bits.data.asSInt > bram.mem_dat.asSInt, l2c_slv.io.a.bits.data, bram.mem_dat )
+		val minu_rex = Mux( l2c_slv.io.a.bits.data > bram.mem_dat, bram.mem_dat, l2c_slv.io.a.bits.data )
+		val maxu_res = Mux( l2c_slv.io.a.bits.data > bram.mem_dat, l2c_slv.io.a.bits.data, bram.mem_dat )
+		val add_res  = l2c_slv.io.a.bits.data + bram.mem_dat
+		val xor_res  = bram.mem_dat ^ l2c_slv.io.a.bits.data
+		val or_res   = bram.mem_dat | l2c_slv.io.a.bits.data
+		val and_res  = bram.mem_dat & l2c_slv.io.a.bits.data
+		val swap_res = l2c_slv.io.a.bits.data
+	}
+
+
+
+
+	amo.op32_1 := Mux1H(Seq(
+		( l2c_slv.io.a.bits.mask === "h000f".U ) -> l2c_slv.io.a.bits.data(31,0),
+		( l2c_slv.io.a.bits.mask === "h00f0".U ) -> l2c_slv.io.a.bits.data(63,32),
+		( l2c_slv.io.a.bits.mask === "h0f00".U ) -> l2c_slv.io.a.bits.data(95,64),
+		( l2c_slv.io.a.bits.mask === "hf000".U ) -> l2c_slv.io.a.bits.data(127,96),
+
+	))
+
+	amo.op32_2 := Mux1H(Seq(
+		( l2c_slv.io.a.bits.mask === "h000f".U ) -> bram.mem_dat(31,0),
+		( l2c_slv.io.a.bits.mask === "h00f0".U ) -> bram.mem_dat(63,32),
+		( l2c_slv.io.a.bits.mask === "h0f00".U ) -> bram.mem_dat(95,64),
+		( l2c_slv.io.a.bits.mask === "hf000".U ) -> bram.mem_dat(127,96),
+	))
+
+	amo.op64_1 := Mux1H(Seq(
+		( l2c_slv.io.a.bits.mask === "h00ff".U ) -> l2c_slv.io.a.bits.data(63,0),
+		( l2c_slv.io.a.bits.mask === "hff00".U ) -> l2c_slv.io.a.bits.data(127,64)
+	))
+
+	amo.op64_2 := Mux1H(Seq(
+		( l2c_slv.io.a.bits.mask === "h00ff".U ) -> bram.mem_dat(63,0),
+		( l2c_slv.io.a.bits.mask === "hff00".U ) -> bram.mem_dat(127,64)
+	))
+
+	amo.res32 :=
+		Mux1H( Seq(
+			(l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData) -> 
+				Mux1H(Seq(
+					(l2c_slv.io.a.bits.param === l2c_slv.MIN)  -> Mux( amo.op32_1.asSInt > amo.op32_2.asSInt, amo.op32_2, amo.op32_1 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.MAX)  -> Mux( amo.op32_1.asSInt > amo.op32_2.asSInt, amo.op32_1, amo.op32_2 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.MINU) -> Mux( amo.op32_1        > amo.op32_2,        amo.op32_2, amo.op32_1 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.MAXU) -> Mux( amo.op32_1        > amo.op32_2,        amo.op32_1, amo.op32_2 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.ADD)  -> (amo.op32_1 + amo.op32_2)
+				)),
+			(l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData) ->
+				Mux1H(Seq(
+					(l2c_slv.io.a.bits.param === l2c_slv.XOR)  -> ( amo.op32_1 ^ amo.op32_2 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.OR)   -> ( amo.op32_1 | amo.op32_2 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.AND)  -> ( amo.op32_1 & amo.op32_2 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.SWAP) -> ( amo.op32_1 ),							
+				))
+		))
+
+	amo.res64 :=
+		Mux1H( Seq(
+			(l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData) -> 
+				Mux1H(Seq(
+					(l2c_slv.io.a.bits.param === l2c_slv.MIN)  -> Mux( amo.op64_1.asSInt > amo.op64_2.asSInt, amo.op64_2, amo.op64_1 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.MAX)  -> Mux( amo.op64_1.asSInt > amo.op64_2.asSInt, amo.op64_1, amo.op64_2 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.MINU) -> Mux( amo.op64_1        > amo.op64_2,        amo.op64_2, amo.op64_1 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.MAXU) -> Mux( amo.op64_1        > amo.op64_2,        amo.op64_1, amo.op64_2 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.ADD)  -> (amo.op64_1 + amo.op64_2)
+				)),
+			(l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData) ->
+				Mux1H(Seq(
+					(l2c_slv.io.a.bits.param === l2c_slv.XOR)  -> ( amo.op64_1 ^ amo.op64_2 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.OR)   -> ( amo.op64_1 | amo.op64_2 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.AND)  -> ( amo.op64_1 & amo.op64_2 ),
+					(l2c_slv.io.a.bits.param === l2c_slv.SWAP) -> ( amo.op64_1 ),							
+				))
+		))
+
+	amo.res :=
+		Mux1H(Seq(
+			( l2c_slv.io.a.bits.mask === "h000f".U ) -> Cat( 0.U, amo.res32),
+			( l2c_slv.io.a.bits.mask === "h00f0".U ) -> Cat( amo.res32, 0.U(32.W) ),
+			( l2c_slv.io.a.bits.mask === "h0f00".U ) -> Cat( amo.res32, 0.U(64.W) ),
+			( l2c_slv.io.a.bits.mask === "hf000".U ) -> Cat( amo.res32, 0.U(96.W) ),
+			( l2c_slv.io.a.bits.mask === "h00ff".U ) -> Cat( 0.U, amo.res64),
+			( l2c_slv.io.a.bits.mask === "hff00".U ) -> Cat( amo.res64, 0.U(64.W) )
+	))
+
+
+	assert( ~(
+				l2c_slv.io.a.fire &
+				( l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData | l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData ) & (
+					l2c_slv.io.a.bits.mask =/= "h000f".U |
+					l2c_slv.io.a.bits.mask =/= "h00f0".U |
+					l2c_slv.io.a.bits.mask =/= "h0f00".U |
+					l2c_slv.io.a.bits.mask =/= "hf000".U |
+					l2c_slv.io.a.bits.mask =/= "h00ff".U |
+					l2c_slv.io.a.bits.mask =/= "hff00".U
+				)
+			), "Assert Fail at L3 cache, invalid amo mask"	
+	)
+
+	val min_res  = Mux( l2c_slv.io.a.bits.data.asSInt > bram.mem_dat.asSInt, bram.mem_dat, l2c_slv.io.a.bits.data )
+	val max_res  = Mux( l2c_slv.io.a.bits.data.asSInt > bram.mem_dat.asSInt, l2c_slv.io.a.bits.data, bram.mem_dat )
+	val minu_rex = Mux( l2c_slv.io.a.bits.data > bram.mem_dat, bram.mem_dat, l2c_slv.io.a.bits.data )
+	val maxu_res = Mux( l2c_slv.io.a.bits.data > bram.mem_dat, l2c_slv.io.a.bits.data, bram.mem_dat )
+	val add_res  = l2c_slv.io.a.bits.data + bram.mem_dat
+	val xor_res  = bram.mem_dat ^ l2c_slv.io.a.bits.data
+	val or_res   = bram.mem_dat | l2c_slv.io.a.bits.data
+	val and_res  = bram.mem_dat & l2c_slv.io.a.bits.data
+	val swap_res = l2c_slv.io.a.bits.data
+
+
+
+
+
+
+
+
+
 
 
 // BBBBBBBBBBBBBBBBB   RRRRRRRRRRRRRRRRR                  AAA               MMMMMMMM               MMMMMMMM
@@ -205,27 +352,17 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 			( fsm.state_qout === L3C_state.rspl2 ) -> l2c_slv.io.a.bits.mask
 		))
 
+
+
+
 	cache_mem.dat_info_w :=
 		MuxCase( DontCare, Array(
 			( fsm.state_qout === L3C_state.flash ) -> mem_mst_r.io.r.bits.data,
 			( fsm.state_qout === L3C_state.rspl2 ) -> 
 				PMux( Seq(
 					(l2c_slv.io.a.bits.opcode === l2c_slv.PutFullData) -> l2c_slv.io.a.bits.data,
-					(l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData) -> 
-						PMux(Seq(
-							(l2c_slv.io.a.bits.param === l2c_slv.MIN)  -> Mux( l2c_slv.io.a.bits.data.asSInt > bram.mem_dat.asSInt, bram.mem_dat, l2c_slv.io.a.bits.data ),
-							(l2c_slv.io.a.bits.param === l2c_slv.MAX)  -> Mux( l2c_slv.io.a.bits.data.asSInt > bram.mem_dat.asSInt, l2c_slv.io.a.bits.data, bram.mem_dat ),
-							(l2c_slv.io.a.bits.param === l2c_slv.MINU) -> Mux( l2c_slv.io.a.bits.data > bram.mem_dat, bram.mem_dat, l2c_slv.io.a.bits.data ),
-							(l2c_slv.io.a.bits.param === l2c_slv.MAXU) -> Mux( l2c_slv.io.a.bits.data > bram.mem_dat, l2c_slv.io.a.bits.data, bram.mem_dat ),
-							(l2c_slv.io.a.bits.param === l2c_slv.ADD)  -> (l2c_slv.io.a.bits.data + bram.mem_dat)
-						)),
-					(l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData) ->
-						PMux(Seq(
-							(l2c_slv.io.a.bits.param === l2c_slv.XOR) -> ( bram.mem_dat ^ l2c_slv.io.a.bits.data ),
-							(l2c_slv.io.a.bits.param === l2c_slv.OR)  -> ( bram.mem_dat | l2c_slv.io.a.bits.data ),
-							(l2c_slv.io.a.bits.param === l2c_slv.AND) -> ( bram.mem_dat & l2c_slv.io.a.bits.data ),
-							(l2c_slv.io.a.bits.param === l2c_slv.SWAP) -> ( l2c_slv.io.a.bits.data ),							
-						))
+					(l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData) -> amo.res,
+					(l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData) -> amo.res
 				))
 			
 		))
