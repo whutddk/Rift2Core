@@ -367,12 +367,19 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 	when( ~io.a.valid & io.is_req & (mode === 7.U) ) { a_valid := true.B }
 	.elsewhen(
 				(a_ack & (mode === Get)) |
+				(a_ack & (mode === ArithmeticData)) |
+				(a_ack & (mode === LogicalData)) |
 				(a_ack & (mode === PutFullData | mode === PutPartialData) & ( (size_cnt + (dw/8).U) === size_aim ))
 		)
 	{ a_valid := false.B }
 
 	when( ~io.a.valid & io.is_req & (mode === 7.U) ) { mode := io.a.bits.opcode }
-	.elsewhen( a_ack & ( (size_cnt + (dw/8).U) === size_aim )  ) { mode := 7.U }
+	.elsewhen(
+		((mode === ArithmeticData | mode === LogicalData | mode === PutFullData | mode === PutPartialData) &
+			d_ack & ( size_cnt === size_aim )) |
+		( mode === Get & d_ack & ( (size_cnt + (dw/8).U) === size_aim ) )
+	  )
+	{ mode := 7.U }
 
 	when( ~io.a.valid & io.is_req & (mode === 7.U) ) { size_aim := 1.U << io.a.bits.size }
 
@@ -382,7 +389,7 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 	when( ~io.a.valid & io.is_req & (mode === 7.U) ) { size_cnt := 0.U }
 	.elsewhen (
 				( d_ack & size_cnt <= size_aim & mode === Get ) |
-				( a_ack & size_cnt <= size_aim & (mode === PutFullData | mode === PutPartialData) )
+				( a_ack & size_cnt <= size_aim & (mode === ArithmeticData | mode === LogicalData | mode === PutFullData | mode === PutPartialData) )
 			) { size_cnt := size_cnt + (dw/8).U }
 
 
@@ -429,10 +436,14 @@ class TileLink_slv_heavy(dw: Int, aw: Int ) extends Module with Opcode {
 	when( ~io.a.ready & io.a.valid & mode === 7.U & io.is_rsp ) {
 		mode := MuxCase( 7.U, Array(
 			(io.a.bits.opcode === Get) -> AccessAckData,
-			(io.a.bits.opcode === PutFullData | io.a.bits.opcode === PutPartialData) -> AccessAck
+			(io.a.bits.opcode === PutFullData | io.a.bits.opcode === PutPartialData) -> AccessAck,
+			(io.a.bits.opcode === ArithmeticData | io.a.bits.opcode === LogicalData ) -> AccessAckData
 		))
 	}
-	.elsewhen( d_ack & ( size_cnt === size_aim )  ) { mode := 7.U }
+	.elsewhen( (mode === AccessAckData & d_ack & (size_cnt + (dw/8).U) === size_aim ) |
+				(mode === AccessAck & d_ack & size_cnt === size_aim )
+			)
+	{ mode := 7.U }
 
 	when( ~io.a.ready & io.a.valid & mode === 7.U & io.is_rsp ) { size_aim := 1.U << io.a.bits.size }
 

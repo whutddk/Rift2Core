@@ -62,7 +62,7 @@ class WaveformTester(dut: Tl_l3c_tb) extends PeekPokeTester(dut){
 	poke(dut.io.a_info.address, 0.U )
 	poke(dut.io.a_info.corrupt, false.B)
 	poke(dut.io.a_info.data, 0.U)
-	poke(dut.io.a_info.mask, "hffffffffffffffff".U)
+	poke(dut.io.a_info.mask, "hffff".U)
 	poke(dut.io.a_info.opcode, 0.U)
 	poke(dut.io.a_info.param, 0.U)
 	poke(dut.io.a_info.size, 4.U)
@@ -75,37 +75,33 @@ class WaveformTester(dut: Tl_l3c_tb) extends PeekPokeTester(dut){
 	poke(dut.io.a_info.data, 0.U)
 	poke(dut.io.a_info.opcode, 0.U)
 	poke(dut.io.a_info.size, 4.U)
-
 	step(1)
 	poke(dut.io.is_req, false.B)
 
 	step(200)
 	poke(dut.io.is_req, true.B)
-	poke(dut.io.a_info.address, 8.U )
+	poke(dut.io.a_info.address, 16.U )
 	poke(dut.io.a_info.data, 1.U)
 	poke(dut.io.a_info.opcode, 0.U)
 	poke(dut.io.a_info.size, 4.U)
-
 	step(1)
 	poke(dut.io.is_req, false.B)
 
 	step(100)
 	poke(dut.io.is_req, true.B)
-	poke(dut.io.a_info.address, 16.U )
+	poke(dut.io.a_info.address, 32.U )
 	poke(dut.io.a_info.data, 2.U)
 	poke(dut.io.a_info.opcode, 0.U)
 	poke(dut.io.a_info.size, 4.U)
-
 	step(1)
 	poke(dut.io.is_req, false.B)
 
 	step(100)
 	poke(dut.io.is_req, true.B)
-	poke(dut.io.a_info.address, 24.U )
+	poke(dut.io.a_info.address, 48.U )
 	poke(dut.io.a_info.data, 3.U)
 	poke(dut.io.a_info.opcode, 0.U)
 	poke(dut.io.a_info.size, 4.U)
-
 	step(1)
 	poke(dut.io.is_req, false.B)
 
@@ -114,12 +110,33 @@ class WaveformTester(dut: Tl_l3c_tb) extends PeekPokeTester(dut){
 	poke(dut.io.is_req, true.B)
 	poke(dut.io.a_info.address, 0.U )
 	poke(dut.io.a_info.data, 0.U)
-	poke(dut.io.a_info.mask, 0.U)
 	poke(dut.io.a_info.opcode, 4.U)
 	poke(dut.io.a_info.size, 7.U)
-
 	step(1)
 	poke(dut.io.is_req, false.B)
+
+
+
+	step(100)
+	poke(dut.io.is_req, true.B)
+	poke(dut.io.a_info.address, 32.U )
+	poke(dut.io.a_info.data, "haa".U)
+	poke(dut.io.a_info.opcode, 3.U)
+	poke(dut.io.a_info.param, 3.U)
+	poke(dut.io.a_info.size, 4.U)
+	step(1)
+	poke(dut.io.is_req, false.B)
+
+	step(100)
+	poke(dut.io.is_req, true.B)
+	poke(dut.io.a_info.address, 0.U )
+	poke(dut.io.a_info.data, 0.U)
+	poke(dut.io.a_info.opcode, 4.U)
+	poke(dut.io.a_info.size, 7.U)
+	step(1)
+	poke(dut.io.is_req, false.B)
+
+
 	step(1000)
 
 }

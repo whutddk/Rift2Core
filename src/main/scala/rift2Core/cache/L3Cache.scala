@@ -186,8 +186,13 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 	cache_mem.cache_addr := bram.cache_addr_qout
 
 	cache_mem.dat_en_w(0) :=
-		(fsm.state_qout === L3C_state.flash & mem_mst_r.io.r.fire) |
-		(fsm.state_qout === L3C_state.rspl2 & (l2c_slv.io.a.bits.opcode === l2c_slv.PutFullData) & l2c_slv.io.a.fire)
+		( fsm.state_qout === L3C_state.flash & mem_mst_r.io.r.fire ) |
+		( fsm.state_qout === L3C_state.rspl2 & l2c_slv.io.a.fire &
+			(l2c_slv.io.a.bits.opcode === l2c_slv.PutFullData |
+			l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData |
+			l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData
+			)
+		)
 
 	cache_mem.dat_en_r(0) :=
 		(fsm.state_dnxt === L3C_state.evict) |
@@ -219,7 +224,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 							(l2c_slv.io.a.bits.param === l2c_slv.XOR) -> ( bram.mem_dat ^ l2c_slv.io.a.bits.data ),
 							(l2c_slv.io.a.bits.param === l2c_slv.OR)  -> ( bram.mem_dat | l2c_slv.io.a.bits.data ),
 							(l2c_slv.io.a.bits.param === l2c_slv.AND) -> ( bram.mem_dat & l2c_slv.io.a.bits.data ),
-							(l2c_slv.io.a.bits.param === l2c_slv.AND) -> ( l2c_slv.io.a.bits.data ),							
+							(l2c_slv.io.a.bits.param === l2c_slv.SWAP) -> ( l2c_slv.io.a.bits.data ),							
 						))
 				))
 			
