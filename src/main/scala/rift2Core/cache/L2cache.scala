@@ -55,8 +55,8 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	def line_w   = log2Ceil(cl)
 	def tag_w    = 32 - addr_lsb - line_w
 
-	val il1_slv = Module(new TileLink_slv_lite(128, 32))
-	val dl1_slv = Module(new TileLink_slv_lite(128, 32))
+	val il1_slv = Module(new TileLink_slv_heavy(128, 32))
+	val dl1_slv = Module(new TileLink_slv_heavy(128, 32))
 	val l2c_mst = Module(new TileLink_mst_heavy(128, 32, 3))
 
 	val cache_mem = new Cache_mem( dw, 32, bk, cb, cl )
@@ -65,13 +65,14 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	val cache_addr_qout = RegInit(0.U(32.W))
 
 
-	val tag_addr_reg = RegInit(0.U(tag_w.W))
+	val tag_addr = RegInit(0.U(tag_w.W))
 
 
-	val req_no = RegInit(0.U(3.W))
+	val req_no_dnxt = Wire( UInt(3.W) )
+	val req_no_qout = RegInit(0.U(3.W))
 
 
-	val tag_addr = cache_addr_dnxt(31, 32-tag_w)
+	// val tag_addr = cache_addr_dnxt(31, 32-tag_w)
 
 
 
@@ -116,11 +117,11 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 // BBBBBBBBBBBBBBBBB   RRRRRRRR     RRRRRRRAAAAAAA                   AAAAAAAMMMMMMMM               MMMMMMMM
 
 	cache_addr_dnxt := Mux1H( Seq(
-		(fsm.state_qout === L2C_state.cfree) -> PMux( Seq(
-														(req_no === 1.U) -> il1_slv.io.a.bits.address,
-														(req_no === 2.U) -> dl1_slv.io.a.bits.address,
-														(req_no === 3.U) -> dl1_slv.io.a.bits.address,
-														(req_no === 4.U) -> dl1_slv.io.a.bits.address
+		(fsm.state_qout === L2C_state.cfree) -> Mux1H( Seq(
+														(req_no_dnxt === 1.U) -> il1_slv.io.a.bits.address,
+														(req_no_dnxt === 2.U) -> dl1_slv.io.a.bits.address,
+														(req_no_dnxt === 3.U) -> dl1_slv.io.a.bits.address,
+														(req_no_dnxt === 4.U) -> dl1_slv.io.a.bits.address
 													)),
 		(fsm.state_qout === L2C_state.cktag) -> (	cache_addr_qout &
 													Mux(
@@ -139,7 +140,16 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 
 	def is_block_replace(i: Int) = UIntToOH(bram.replace_sel)(i).asBool
-	bram.cl_sel := cache_addr_dnxt(addr_lsb+line_w-1, addr_lsb)
+
+	bram.cl_sel := tag_addr(addr_lsb+line_w-1, addr_lsb)
+	when(fsm.state_qout === L2C_state.cfree){ tag_addr := Mux1H( Seq(
+														(req_no_dnxt === 1.U) -> il1_slv.io.a.bits.address(addr_lsb+line_w-1, addr_lsb),
+														(req_no_dnxt === 2.U) -> dl1_slv.io.a.bits.address(addr_lsb+line_w-1, addr_lsb),
+														(req_no_dnxt === 3.U) -> dl1_slv.io.a.bits.address(addr_lsb+line_w-1, addr_lsb),
+														(req_no_dnxt === 4.U) -> dl1_slv.io.a.bits.address(addr_lsb+line_w-1, addr_lsb)
+													))}
+
+	
 
 	bram.replace_sel := 
 		Mux(
@@ -157,13 +167,13 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	}
 
 	cache_mem.dat_info_wstrb := 
-		PMux( Seq(
+		Mux1H( Seq(
 			(fsm.state_qout === L2C_state.flash) -> "hffff".U,
 			(fsm.state_qout === L2C_state.rspdw) -> dl1_slv.io.a.bits.mask
 		))
 
 	cache_mem.dat_info_w :=
-		PMux( Seq(
+		Mux1H( Seq(
 			(fsm.state_qout === L2C_state.flash) -> l2c_mst.io.d.bits.data,
 			(fsm.state_qout === L2C_state.rspdw) -> dl1_slv.io.a.bits.data
 		))
@@ -199,7 +209,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 		bram.is_cb_vhit(i) := bram.cache_valid(bram.cl_sel)(i) & ( cache_mem.tag_info_r(i) === tag_addr  )
 	}
 
-	bram.mem_dat := PMux( bram.is_cb_vhit zip cache_mem.dat_info_r )
+	bram.mem_dat := Mux1H( bram.is_cb_vhit zip cache_mem.dat_info_r )
 
 
 
@@ -232,11 +242,11 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 		)
 
 
-	val l2c_state_dnxt_in_cktag = Mux1H( Seq(
-		(req_no === 1.U) -> ( Mux( bram.is_cb_vhit.contains(true.B), L2C_state.rspir, L2C_state.flash )  ),
-		(req_no === 2.U) -> ( Mux( bram.is_cb_vhit.contains(true.B), L2C_state.rspdr, L2C_state.flash )  ),
-		(req_no === 3.U) -> ( L2C_state.rspdw ),
-		(req_no === 4.U) -> ( L2C_state.rspda )
+	val l2c_state_dnxt_in_cktag = MuxCase( L2C_state.cfree, Array(
+		(req_no_qout === 1.U) -> ( Mux( bram.is_cb_vhit.contains(true.B), L2C_state.rspir, L2C_state.flash )  ),
+		(req_no_qout === 2.U) -> ( Mux( bram.is_cb_vhit.contains(true.B), L2C_state.rspdr, L2C_state.flash )  ),
+		(req_no_qout === 3.U) -> ( L2C_state.rspdw ),
+		(req_no_qout === 4.U) -> ( L2C_state.rspda )
 	) )
 
 	val l2c_state_dnxt_in_flash = Mux( l2c_mst.io.mode === 7.U, L2C_state.cktag, L2C_state.flash )
@@ -246,7 +256,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	val l2c_state_dnxt_in_rspdw = Mux( dl1_slv.io.mode === 7.U, L2C_state.cfree, L2C_state.rspdw )
 	val l2c_state_dnxt_in_fence = L2C_state.cfree
 
-	fsm.state_dnxt := Mux1H( Seq(
+	fsm.state_dnxt := MuxCase(L2C_state.cfree, Array(
 		(fsm.state_qout === L2C_state.cfree) -> l2c_state_dnxt_in_cfree,
 		(fsm.state_qout === L2C_state.cktag) -> l2c_state_dnxt_in_cktag,
 		(fsm.state_qout === L2C_state.flash) -> l2c_state_dnxt_in_flash,
@@ -279,7 +289,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 // BBBBBBBBBBBBBBBBB         UUUUUUUUU       SSSSSSSSSSSSSSS  
 
 
-	req_no :=
+	req_no_dnxt :=
 		Mux( fsm.state_qout === L2C_state.cfree & fsm.state_dnxt === L2C_state.cktag,
 			MuxCase( 0.U, Array(
 				(il1_slv.io.a.valid)                                                        -> 1.U,
@@ -288,8 +298,9 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 				(dl1_slv.io.a.valid & (dl1_slv.io.a.bits.opcode === dl1_slv.ArithmeticData |
 										dl1_slv.io.a.bits.opcode === dl1_slv.LogicalData) ) -> 4.U,
 			)),
-			req_no
+			req_no_qout
 		)
+	req_no_qout := req_no_dnxt
 
 	il1_slv.io.is_rsp :=
 					( fsm.state_qout === L2C_state.cktag & fsm.state_dnxt === L2C_state.rspir)
@@ -306,18 +317,18 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 								fsm.state_dnxt === L2C_state.rspda
 							)
 
-	il1_slv.io.d.bits.data := bram.mem_dat
+	il1_slv.io.rsp_data := bram.mem_dat
 
 
-	dl1_slv.io.d.bits.data := MuxCase( DontCare, Array(
+	dl1_slv.io.rsp_data := MuxCase( DontCare, Array(
 		(fsm.state_qout === L2C_state.rspdw) -> DontCare,
 		(fsm.state_qout === L2C_state.rspdr) -> bram.mem_dat,
 		(fsm.state_qout === L2C_state.rspda) -> l2c_mst.io.d.bits.data
 	))
 
 
-	l2c_mst.io.a.bits.opcode :=
-							RegEnable( PMux( Seq(
+	l2c_mst.io.a_info.opcode :=
+							RegEnable( Mux1H( Seq(
 										( fsm.state_dnxt === L2C_state.flash ) -> l2c_mst.Get,
 										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.opcode,
 										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.opcode
@@ -326,8 +337,8 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 									( fsm.state_qout === L2C_state.cktag )
 							)
 
-	l2c_mst.io.a.bits.param   := 
-							RegEnable( PMux( Seq(
+	l2c_mst.io.a_info.param   := 
+							RegEnable( Mux1H( Seq(
 										( fsm.state_dnxt === L2C_state.flash ) -> 0.U,
 										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.param,
 										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.param
@@ -336,8 +347,8 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 									( fsm.state_qout === L2C_state.cktag )
 							)
 
-	l2c_mst.io.a.bits.size    := 
-							RegEnable( PMux( Seq(
+	l2c_mst.io.a_info.size    := 
+							RegEnable( Mux1H( Seq(
 										( fsm.state_dnxt === L2C_state.flash ) -> 7.U, //(1024bits)
 										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.size,
 										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.size
@@ -346,8 +357,8 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 									( fsm.state_qout === L2C_state.cktag )
 							)
 
-	l2c_mst.io.a.bits.source  := 
-							RegEnable( PMux( Seq(
+	l2c_mst.io.a_info.source  := 
+							RegEnable( Mux1H( Seq(
 										( fsm.state_dnxt === L2C_state.flash ) -> 3.U,
 										( fsm.state_dnxt === L2C_state.rspdw ) -> 1.U,
 										( fsm.state_dnxt === L2C_state.rspda ) -> 1.U
@@ -356,8 +367,8 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 									( fsm.state_qout === L2C_state.cktag )
 							)
 
-	l2c_mst.io.a.bits.address := 
-							RegEnable( PMux( Seq(
+	l2c_mst.io.a_info.address := 
+							RegEnable( Mux1H( Seq(
 										( fsm.state_dnxt === L2C_state.flash ) -> (cache_addr_dnxt & ~("b11111111".U(32.W))),
 										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.address,
 										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.address
@@ -366,8 +377,8 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 									( fsm.state_qout === L2C_state.cktag )
 							)
 
-	l2c_mst.io.a.bits.mask    := 
-							RegEnable( PMux( Seq(
+	l2c_mst.io.a_info.mask    := 
+							RegEnable( Mux1H( Seq(
 										( fsm.state_dnxt === L2C_state.flash ) -> 0.U,
 										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.mask,
 										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.mask
@@ -376,8 +387,8 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 									( fsm.state_qout === L2C_state.cktag )
 							)
 
-	l2c_mst.io.a.bits.data    := 
-							RegEnable( PMux( Seq(
+	l2c_mst.io.a_info.data    := 
+							RegEnable( Mux1H( Seq(
 										( fsm.state_dnxt === L2C_state.flash ) -> 0.U,
 										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.data,
 										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.data
@@ -386,6 +397,16 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 									( fsm.state_qout === L2C_state.cktag )
 							)
 
+
+		io.il1_chn_a <> il1_slv.io.a
+		io.il1_chn_d <> il1_slv.io.d
+		io.dl1_chn_a <> dl1_slv.io.a
+		io.dl1_chn_d <> dl1_slv.io.d
+		io.l2c_chn_a <> l2c_mst.io.a
+		io.l2c_chn_d <> l2c_mst.io.d
+
+
+	l2c_mst.io.a_info.corrupt := false.B
 
 
 
