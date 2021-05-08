@@ -55,6 +55,7 @@ class AXI_chn_w( dw: Int, usw: Int = 1 ) extends Bundle {
 }
 
 
+
 class AXI_chn_b( idw: Int = 1, usw: Int = 1 ) extends Bundle {
 	val id   = UInt( idw.W )
 	val rsp  = UInt( 2.W )
