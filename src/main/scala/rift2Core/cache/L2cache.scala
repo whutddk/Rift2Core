@@ -65,7 +65,8 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	val cache_addr_qout = RegInit(0.U(32.W))
 
 
-	val tag_addr = RegInit(0.U(tag_w.W))
+	val tag_addr = RegInit(0.U(32.W))
+	val tag_info = tag_addr(31, 32-tag_w)
 
 
 	val req_no_dnxt = Wire( UInt(3.W) )
@@ -152,10 +153,10 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 	bram.cl_sel := tag_addr(addr_lsb+line_w-1, addr_lsb)
 	when(fsm.state_qout === L2C_state.cfree){ tag_addr := Mux1H( Seq(
-														(req_no_dnxt === 1.U) -> il1_slv.io.a.bits.address(addr_lsb+line_w-1, addr_lsb),
-														(req_no_dnxt === 2.U) -> dl1_slv.io.a.bits.address(addr_lsb+line_w-1, addr_lsb),
-														(req_no_dnxt === 3.U) -> dl1_slv.io.a.bits.address(addr_lsb+line_w-1, addr_lsb),
-														(req_no_dnxt === 4.U) -> dl1_slv.io.a.bits.address(addr_lsb+line_w-1, addr_lsb)
+														(req_no_dnxt === 1.U) -> il1_slv.io.a.bits.address,
+														(req_no_dnxt === 2.U) -> dl1_slv.io.a.bits.address,
+														(req_no_dnxt === 3.U) -> dl1_slv.io.a.bits.address,
+														(req_no_dnxt === 4.U) -> dl1_slv.io.a.bits.address
 													))}
 
 	
@@ -215,7 +216,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	}
 	
 	for ( i <- 0 until cb ) yield {
-		bram.is_cb_vhit(i) := bram.cache_valid(bram.cl_sel)(i) & ( cache_mem.tag_info_r(i) === tag_addr  )
+		bram.is_cb_vhit(i) := bram.cache_valid(bram.cl_sel)(i) & ( cache_mem.tag_info_r(i) === tag_info  )
 	}
 
 	bram.mem_dat := Mux1H( bram.is_cb_vhit zip cache_mem.dat_info_r )

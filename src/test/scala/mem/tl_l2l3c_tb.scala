@@ -184,7 +184,63 @@ class l2l3_tester(dut: Tl_l2l3c_tb) extends PeekPokeTester(dut){
 	poke(dut.io.is_dl1_req, false.B)
 	step(200)
 
-	step(1000)
+	poke(dut.io.is_il1_req, true.B)
+	poke(dut.io.il1_a_info.address, "h0020".U )
+	poke(dut.io.il1_a_info.data, 0.U)
+	poke(dut.io.il1_a_info.opcode, 4.U)
+	poke(dut.io.il1_a_info.size, 5.U)
+	step(1)
+	poke(dut.io.is_il1_req, false.B)
+	step(200)
+
+	poke(dut.io.is_il1_req, true.B)
+	poke(dut.io.il1_a_info.address, "h1020".U )
+	poke(dut.io.il1_a_info.data, 0.U)
+	poke(dut.io.il1_a_info.opcode, 4.U)
+	poke(dut.io.il1_a_info.size, 5.U)
+	step(1)
+	poke(dut.io.is_il1_req, false.B)
+	step(200)
+
+	poke(dut.io.is_il1_req, true.B)
+	poke(dut.io.il1_a_info.address, "h2020".U )
+	poke(dut.io.il1_a_info.data, 0.U)
+	poke(dut.io.il1_a_info.opcode, 4.U)
+	poke(dut.io.il1_a_info.size, 5.U)
+	step(1)
+	poke(dut.io.is_il1_req, false.B)
+	step(200)
+
+
+	poke(dut.io.is_il1_req, true.B)
+	poke(dut.io.il1_a_info.address, "h3020".U )
+	poke(dut.io.il1_a_info.data, 0.U)
+	poke(dut.io.il1_a_info.opcode, 4.U)
+	poke(dut.io.il1_a_info.size, 5.U)
+	step(1)
+	poke(dut.io.is_il1_req, false.B)
+	step(200)
+
+
+	poke(dut.io.is_il1_req, true.B)
+	poke(dut.io.il1_a_info.address, "h4020".U )
+	poke(dut.io.il1_a_info.data, 0.U)
+	poke(dut.io.il1_a_info.opcode, 4.U)
+	poke(dut.io.il1_a_info.size, 5.U)
+	step(1)
+	poke(dut.io.is_il1_req, false.B)
+	step(200)
+
+
+	poke(dut.io.is_il1_req, true.B)
+	poke(dut.io.il1_a_info.address, "h20020".U )
+	poke(dut.io.il1_a_info.data, 0.U)
+	poke(dut.io.il1_a_info.opcode, 4.U)
+	poke(dut.io.il1_a_info.size, 5.U)
+	step(1)
+	poke(dut.io.is_il1_req, false.B)
+	step(200)
+
 
 }
 

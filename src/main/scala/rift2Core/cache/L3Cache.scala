@@ -75,7 +75,8 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 		val cache_valid = RegInit(VecInit(Seq.fill(cl)(false.B)))
 		val mem_dat = Wire( UInt(128.W) )
 
-		val tag_addr = Wire( UInt(tag_w.W) )
+		val tag_addr = Wire( UInt(32.W) )
+		val tag_info = tag_addr(31, 32-tag_w)
 		val is_cb_hit = Wire(Bool())
 
 		val cl_sel = Wire( UInt( line_w.W ) )
@@ -375,8 +376,8 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 
 
 
-	bram.tag_addr := bram.cache_addr_dnxt(31, 32-tag_w)
-	bram.is_cb_hit := cache_mem.tag_info_r(0) === bram.tag_addr
+	bram.tag_addr := bram.cache_addr_dnxt
+	bram.is_cb_hit := cache_mem.tag_info_r(0) === bram.tag_info
 	bram.cl_sel := bram.cache_addr_dnxt(addr_lsb+line_w-1, addr_lsb)
 
 	for ( i <- 0 until cl ) yield {
