@@ -140,7 +140,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 															(req_no_qout === 4.U) -> dl1_slv.io.a.bits.address
 														))
 													),
-												fsm.state_qout
+												cache_addr_qout
 											),
 		(fsm.state_qout === L2C_state.rspir) -> Mux( il1_slv.io.d.fire, cache_addr_qout + "b10000".U, cache_addr_qout ),
 		(fsm.state_qout === L2C_state.rspdr) -> Mux( dl1_slv.io.d.fire, cache_addr_qout + "b10000".U, cache_addr_qout ),
