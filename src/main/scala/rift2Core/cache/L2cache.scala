@@ -129,9 +129,18 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 														Cat( Fill(32-addr_lsb, 1.U), Fill(addr_lsb, 0.U) ), Fill(32, 1.U)
 													)
 												),
-		(fsm.state_qout === L2C_state.flash) -> Mux( l2c_mst.io.d.fire, cache_addr_qout + "b10000".U, cache_addr_qout ),
-		(fsm.state_qout === L2C_state.rspir) -> Mux( l2c_mst.io.d.fire, cache_addr_qout + "b10000".U, cache_addr_qout ),
-		(fsm.state_qout === L2C_state.rspdr) -> Mux( l2c_mst.io.d.fire, cache_addr_qout + "b10000".U, cache_addr_qout ),
+		(fsm.state_qout === L2C_state.flash &  fsm.state_dnxt === L2C_state.flash ) 
+		                                     -> Mux( l2c_mst.io.d.fire, cache_addr_qout + "b10000".U, cache_addr_qout ),
+		(fsm.state_qout === L2C_state.flash & fsm.state_dnxt === L2C_state.cktag )
+											 -> 
+												Mux1H( Seq(
+														(req_no_qout === 1.U) -> il1_slv.io.a.bits.address,
+														(req_no_qout === 2.U) -> dl1_slv.io.a.bits.address,
+														(req_no_qout === 3.U) -> dl1_slv.io.a.bits.address,
+														(req_no_qout === 4.U) -> dl1_slv.io.a.bits.address
+													)),
+		(fsm.state_qout === L2C_state.rspir) -> Mux( il1_slv.io.d.fire, cache_addr_qout + "b10000".U, cache_addr_qout ),
+		(fsm.state_qout === L2C_state.rspdr) -> Mux( dl1_slv.io.d.fire, cache_addr_qout + "b10000".U, cache_addr_qout ),
 		(fsm.state_qout === L2C_state.rspdw) -> cache_addr_qout,
 		(fsm.state_qout === L2C_state.rspda) -> cache_addr_qout,
 		(fsm.state_qout === L2C_state.fence) -> cache_addr_qout
