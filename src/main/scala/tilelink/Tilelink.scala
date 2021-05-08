@@ -345,7 +345,7 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 	val io = IO( new Bundle {
 		val is_req = Input(Bool())
-		val mode  = Output(Bool())
+		val mode  = Output( UInt(3.W) )
 		val a_info = Input(new TLchannel_a(dw, aw))
 
 		val a = new DecoupledIO(new TLchannel_a(dw, aw))
@@ -479,66 +479,66 @@ class TileLink_slv_heavy(dw: Int, aw: Int ) extends Module with Opcode {
 }
 
 
-class TileLink_slv_lite(dw: Int, aw: Int ) extends Module with Opcode {
-	val io = IO(new Bundle{
-		val is_rsp = Input( Bool() )
-		val mode = Output( UInt(3.W) )
-		val rsp_addr = Output( UInt(aw.W) )
-		val rsp_data = Input( UInt(dw.W) )
+// class TileLink_slv_lite(dw: Int, aw: Int ) extends Module with Opcode {
+// 	val io = IO(new Bundle{
+// 		val is_rsp = Input( Bool() )
+// 		val mode = Output( UInt(3.W) )
+// 		val rsp_addr = Output( UInt(aw.W) )
+// 		val rsp_data = Input( UInt(dw.W) )
 
-		val a = Flipped( new DecoupledIO(new TLchannel_a(dw, aw) ))
-		val d = new DecoupledIO( new TLchannel_d(dw) )
-	})
+// 		val a = Flipped( new DecoupledIO(new TLchannel_a(dw, aw) ))
+// 		val d = new DecoupledIO( new TLchannel_d(dw) )
+// 	})
 
-	def addr_lsb = dw/8
+// 	def addr_lsb = dw/8
 
-	val a_ack = io.a.fire
-	val d_ack = io.d.fire
-
-
-	val mode  = RegInit(7.U(3.W))
+// 	val a_ack = io.a.fire
+// 	val d_ack = io.d.fire
 
 
-	val rsp_addr = RegInit( 0.U(aw.W) )
-	val rsp_addr_dnxt = WireDefault( rsp_addr )
-	val size_aim   = RegInit( 0.U(8.W) )
-	val size_cnt   = RegInit( 0.U(8.W) )
+// 	val mode  = RegInit(7.U(3.W))
 
-	rsp_addr := rsp_addr_dnxt
 
-	when( a_ack & mode === 7.U ) {
-		mode := MuxCase( 7.U, Array(
-			(io.a.bits.opcode === Get) -> AccessAckData,
-			(io.a.bits.opcode === PutFullData | io.a.bits.opcode === PutPartialData) -> AccessAck
-		))
-	}
-	.elsewhen( d_ack & ( (size_cnt + (dw/8).U) === size_aim )  ) { mode := 7.U }
+// 	val rsp_addr = RegInit( 0.U(aw.W) )
+// 	val rsp_addr_dnxt = WireDefault( rsp_addr )
+// 	val size_aim   = RegInit( 0.U(8.W) )
+// 	val size_cnt   = RegInit( 0.U(8.W) )
 
-	when( a_ack & mode === 7.U ) { size_aim := 1.U << io.a.bits.size }
+// 	rsp_addr := rsp_addr_dnxt
 
-	rsp_addr_dnxt := Mux( (a_ack & mode === 7.U), io.a.bits.address, 
-						Mux( (d_ack & size_cnt <= size_aim), rsp_addr + ( 1.U << addr_lsb ), rsp_addr )
-					)
+// 	when( a_ack & mode === 7.U ) {
+// 		mode := MuxCase( 7.U, Array(
+// 			(io.a.bits.opcode === Get) -> AccessAckData,
+// 			(io.a.bits.opcode === PutFullData | io.a.bits.opcode === PutPartialData) -> AccessAck
+// 		))
+// 	}
+// 	.elsewhen( d_ack & ( (size_cnt + (dw/8).U) === size_aim )  ) { mode := 7.U }
 
-	when ( a_ack & mode === 7.U ) { size_cnt := 0.U }
-	.elsewhen( d_ack & size_cnt <= size_aim ) { size_cnt := size_cnt + (dw/8).U }
+// 	when( a_ack & mode === 7.U ) { size_aim := 1.U << io.a.bits.size }
 
-	io.a.ready     := (mode === 7.U) & io.is_rsp
-	io.d.valid     := (mode =/= 7.U)
+// 	rsp_addr_dnxt := Mux( (a_ack & mode === 7.U), io.a.bits.address, 
+// 						Mux( (d_ack & size_cnt <= size_aim), rsp_addr + ( 1.U << addr_lsb ), rsp_addr )
+// 					)
 
-	io.rsp_addr    := rsp_addr_dnxt
+// 	when ( a_ack & mode === 7.U ) { size_cnt := 0.U }
+// 	.elsewhen( d_ack & size_cnt <= size_aim ) { size_cnt := size_cnt + (dw/8).U }
 
-	io.d.bits.opcode  := mode
-	io.d.bits.param := DontCare
-	io.d.bits.size := size_cnt
-	io.d.bits.source  := DontCare
-	io.d.bits.sink    := DontCare
-	io.d.bits.corrupt := false.B
-	io.d.bits.denied  := false.B
-	io.d.bits.data    := io.rsp_data
+// 	io.a.ready     := (mode === 7.U) & io.is_rsp
+// 	io.d.valid     := (mode =/= 7.U)
 
-	io.mode := mode
-}
+// 	io.rsp_addr    := rsp_addr_dnxt
+
+// 	io.d.bits.opcode  := mode
+// 	io.d.bits.param := DontCare
+// 	io.d.bits.size := size_cnt
+// 	io.d.bits.source  := DontCare
+// 	io.d.bits.sink    := DontCare
+// 	io.d.bits.corrupt := false.B
+// 	io.d.bits.denied  := false.B
+// 	io.d.bits.data    := io.rsp_data
+
+// 	io.mode := mode
+// }
 
 
 

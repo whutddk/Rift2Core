@@ -242,7 +242,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 		)
 
 
-	val l2c_state_dnxt_in_cktag = MuxCase( L2C_state.cfree, Array(
+	val l2c_state_dnxt_in_cktag = Mux1H( Seq(
 		(req_no_qout === 1.U) -> ( Mux( bram.is_cb_vhit.contains(true.B), L2C_state.rspir, L2C_state.flash )  ),
 		(req_no_qout === 2.U) -> ( Mux( bram.is_cb_vhit.contains(true.B), L2C_state.rspdr, L2C_state.flash )  ),
 		(req_no_qout === 3.U) -> ( L2C_state.rspdw ),
@@ -252,8 +252,8 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	val l2c_state_dnxt_in_flash = Mux( l2c_mst.io.mode === 7.U, L2C_state.cktag, L2C_state.flash )
 	val l2c_state_dnxt_in_rspir = Mux( il1_slv.io.mode === 7.U, L2C_state.cfree, L2C_state.rspir )
 	val l2c_state_dnxt_in_rspdr = Mux( dl1_slv.io.mode === 7.U, L2C_state.cfree, L2C_state.rspdr )
-	val l2c_state_dnxt_in_rspda = Mux( dl1_slv.io.mode === 7.U, L2C_state.cfree, L2C_state.rspda )
-	val l2c_state_dnxt_in_rspdw = Mux( dl1_slv.io.mode === 7.U, L2C_state.cfree, L2C_state.rspdw )
+	val l2c_state_dnxt_in_rspda = Mux( l2c_mst.io.mode === 7.U, L2C_state.cfree, L2C_state.rspda )
+	val l2c_state_dnxt_in_rspdw = Mux( l2c_mst.io.mode === 7.U, L2C_state.cfree, L2C_state.rspdw )
 	val l2c_state_dnxt_in_fence = L2C_state.cfree
 
 	fsm.state_dnxt := MuxCase(L2C_state.cfree, Array(
@@ -306,8 +306,11 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 					( fsm.state_qout === L2C_state.cktag & fsm.state_dnxt === L2C_state.rspir)
 
 	dl1_slv.io.is_rsp :=
-					( fsm.state_qout === L2C_state.cktag & fsm.state_dnxt === L2C_state.rspdr ) |
-					( fsm.state_qout === L2C_state.rspdw | fsm.state_qout === L2C_state.rspda )	
+		Mux1H( Seq(
+		(req_no_qout === 2.U) -> (fsm.state_qout === L2C_state.cktag & fsm.state_dnxt === L2C_state.rspdr),
+		(req_no_qout === 3.U) -> (fsm.state_qout === L2C_state.rspdw & l2c_mst.io.d.fire),
+		(req_no_qout === 4.U) -> (fsm.state_qout === L2C_state.rspda & l2c_mst.io.d.fire)
+	) )
 
 	l2c_mst.io.is_req := 	
 						( fsm.state_qout === L2C_state.cktag ) &
@@ -321,81 +324,75 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 
 	dl1_slv.io.rsp_data := MuxCase( DontCare, Array(
-		(fsm.state_qout === L2C_state.rspdw) -> DontCare,
-		(fsm.state_qout === L2C_state.rspdr) -> bram.mem_dat,
-		(fsm.state_qout === L2C_state.rspda) -> l2c_mst.io.d.bits.data
-	))
+									(fsm.state_qout === L2C_state.rspdw) -> DontCare,
+									(fsm.state_qout === L2C_state.rspdr) -> bram.mem_dat,
+									(fsm.state_qout === L2C_state.rspda) -> RegEnable(l2c_mst.io.d.bits.data,0.U(128.W), l2c_mst.io.d.fire)
+								))
+
 
 
 	l2c_mst.io.a_info.opcode :=
-							RegEnable( Mux1H( Seq(
-										( fsm.state_dnxt === L2C_state.flash ) -> l2c_mst.Get,
-										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.opcode,
-										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.opcode
-									)),
-									0.U(3.W),
-									( fsm.state_qout === L2C_state.cktag )
-							)
+							Mux1H( Seq(
+								(req_no_qout === 1.U) -> l2c_mst.Get,
+								(req_no_qout === 2.U) -> l2c_mst.Get,
+								(req_no_qout === 3.U) -> dl1_slv.io.a.bits.opcode,
+								(req_no_qout === 4.U) -> dl1_slv.io.a.bits.opcode,
+							) )
+
 
 	l2c_mst.io.a_info.param   := 
-							RegEnable( Mux1H( Seq(
-										( fsm.state_dnxt === L2C_state.flash ) -> 0.U,
-										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.param,
-										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.param
-									)),
-									0.U(2.W),
-									( fsm.state_qout === L2C_state.cktag )
-							)
+							Mux1H( Seq(
+								(req_no_qout === 1.U) -> 0.U,
+								(req_no_qout === 2.U) -> 0.U,
+								(req_no_qout === 3.U) -> dl1_slv.io.a.bits.param,
+								(req_no_qout === 4.U) -> dl1_slv.io.a.bits.param
+							) )
 
 	l2c_mst.io.a_info.size    := 
-							RegEnable( Mux1H( Seq(
-										( fsm.state_dnxt === L2C_state.flash ) -> 7.U, //(1024bits)
-										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.size,
-										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.size
-									)),
-									0.U(8.W),
-									( fsm.state_qout === L2C_state.cktag )
-							)
+							Mux1H( Seq(
+								(req_no_qout === 1.U) -> 7.U, //(1024bits)
+								(req_no_qout === 2.U) -> 7.U, //(1024bits)
+								(req_no_qout === 3.U) -> dl1_slv.io.a.bits.size,
+								(req_no_qout === 4.U) -> dl1_slv.io.a.bits.size
+							) )
+
 
 	l2c_mst.io.a_info.source  := 
-							RegEnable( Mux1H( Seq(
-										( fsm.state_dnxt === L2C_state.flash ) -> 3.U,
-										( fsm.state_dnxt === L2C_state.rspdw ) -> 1.U,
-										( fsm.state_dnxt === L2C_state.rspda ) -> 1.U
-									)),
-									0.U(8.W),
-									( fsm.state_qout === L2C_state.cktag )
-							)
+							Mux1H( Seq(
+								(req_no_qout === 1.U) -> 3.U,
+								(req_no_qout === 2.U) -> 3.U,
+								(req_no_qout === 3.U) -> 1.U,
+								(req_no_qout === 4.U) -> 1.U
+							) )
+
 
 	l2c_mst.io.a_info.address := 
-							RegEnable( Mux1H( Seq(
-										( fsm.state_dnxt === L2C_state.flash ) -> (cache_addr_dnxt & ~("b11111111".U(32.W))),
-										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.address,
-										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.address
-									)),
-									0.U(8.W),
-									( fsm.state_qout === L2C_state.cktag )
-							)
+							Mux1H( Seq(
+								(req_no_qout === 1.U) -> (cache_addr_dnxt & ~("b11111111".U(32.W))),
+								(req_no_qout === 2.U) -> (cache_addr_dnxt & ~("b11111111".U(32.W))),
+								(req_no_qout === 3.U) -> dl1_slv.io.a.bits.address,
+								(req_no_qout === 4.U) -> dl1_slv.io.a.bits.address
+							) )
 
 	l2c_mst.io.a_info.mask    := 
-							RegEnable( Mux1H( Seq(
-										( fsm.state_dnxt === L2C_state.flash ) -> 0.U,
-										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.mask,
-										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.mask
-									)),
-									0.U(8.W),
-									( fsm.state_qout === L2C_state.cktag )
-							)
+							Mux1H( Seq(
+								(req_no_qout === 1.U) -> 0.U,
+								(req_no_qout === 2.U) -> 0.U,
+								(req_no_qout === 3.U) -> dl1_slv.io.a.bits.mask,
+								(req_no_qout === 4.U) -> dl1_slv.io.a.bits.mask
+							) )
+
+
 
 	l2c_mst.io.a_info.data    := 
-							RegEnable( Mux1H( Seq(
-										( fsm.state_dnxt === L2C_state.flash ) -> 0.U,
-										( fsm.state_dnxt === L2C_state.rspdw ) -> dl1_slv.io.a.bits.data,
-										( fsm.state_dnxt === L2C_state.rspda ) -> dl1_slv.io.a.bits.data
-									)),
-									0.U(8.W),
-									( fsm.state_qout === L2C_state.cktag )
-							)
+							Mux1H( Seq(
+								(req_no_qout === 1.U) -> 0.U,
+								(req_no_qout === 2.U) -> 0.U,
+								(req_no_qout === 3.U) -> dl1_slv.io.a.bits.data,
+								(req_no_qout === 4.U) -> dl1_slv.io.a.bits.data
+							) )
+
+
 
 
 		io.il1_chn_a <> il1_slv.io.a
