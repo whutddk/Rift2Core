@@ -191,7 +191,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	}
 
 
-	cache_mem.cache_addr := cache_addr_dnxt
+	cache_mem.cache_addr := cache_addr_qout
 
 	when( fsm.state_qout === L2C_state.cktag & fsm.state_dnxt === L2C_state.flash ) {
 		bram.cache_valid(bram.cl_sel)(bram.replace_sel) := true.B

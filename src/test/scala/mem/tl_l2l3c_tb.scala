@@ -168,8 +168,8 @@ class l2l3_tester(dut: Tl_l2l3c_tb) extends PeekPokeTester(dut){
 
 	poke(dut.io.is_dl1_req, true.B)
 	poke(dut.io.dl1_a_info.address, 0.U )
-	poke(dut.io.dl1_a_info.data, 4.U)
-	poke(dut.io.dl1_a_info.opcode, 0.U)
+	poke(dut.io.dl1_a_info.data, 0.U)
+	poke(dut.io.dl1_a_info.opcode, 4.U)
 	poke(dut.io.dl1_a_info.size, 5.U)
 	step(1)
 	poke(dut.io.is_dl1_req, false.B)
@@ -177,8 +177,8 @@ class l2l3_tester(dut: Tl_l2l3c_tb) extends PeekPokeTester(dut){
 
 	poke(dut.io.is_dl1_req, true.B)
 	poke(dut.io.dl1_a_info.address, 32.U )
-	poke(dut.io.dl1_a_info.data, 4.U)
-	poke(dut.io.dl1_a_info.opcode, 0.U)
+	poke(dut.io.dl1_a_info.data, 0.U)
+	poke(dut.io.dl1_a_info.opcode, 4.U)
 	poke(dut.io.dl1_a_info.size, 5.U)
 	step(1)
 	poke(dut.io.is_dl1_req, false.B)
