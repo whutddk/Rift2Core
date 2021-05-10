@@ -202,7 +202,7 @@ class AXI_mst_w(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1, len: Int ) exte
 	.elsewhen( aw_ack ) { awvalid := false.B }
 
 	when( ~io.w.valid & io.aw_req ) { wvalid := true.B }
-	.elsewhen( w_ack ) { wvalid := false.B }
+	.elsewhen( w_ack & wlast ) { wvalid := false.B }
 
 	when( io.b.valid & ~io.b.ready ) { bready := true.B}
 	.elsewhen( io.b.ready ) { bready := false.B }

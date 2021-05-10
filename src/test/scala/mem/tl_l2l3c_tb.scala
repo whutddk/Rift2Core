@@ -239,7 +239,7 @@ class l2l3_tester(dut: Tl_l2l3c_tb) extends PeekPokeTester(dut){
 	poke(dut.io.il1_a_info.size, 5.U)
 	step(1)
 	poke(dut.io.is_il1_req, false.B)
-	step(200)
+	step(400)
 
 
 }
