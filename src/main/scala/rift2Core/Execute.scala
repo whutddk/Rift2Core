@@ -32,6 +32,7 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 import tilelink._
+import axi._
 
 
 class Execute extends Module {
@@ -58,8 +59,11 @@ class Execute extends Module {
 
 		val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
 		val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
-		val sys_chn_a = new DecoupledIO(new TLchannel_a(64,32))
-		val sys_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
+		val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+		val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
+		val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+		val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
+		val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
 		val cmm_lsu = Input(new Info_cmm_lsu)
 		val lsu_cmm = Output( new Info_lsu_cmm )
 		val l2c_fence_req = Output(Bool())
@@ -101,8 +105,12 @@ class Execute extends Module {
 	lsu.io.lsu_exe_iwb <> io.lsu_exe_iwb
 	lsu.io.dl1_chn_a <> io.dl1_chn_a
 	lsu.io.dl1_chn_d <> io.dl1_chn_d
-	lsu.io.sys_chn_a <> io.sys_chn_a
-	lsu.io.sys_chn_d <> io.sys_chn_d
+	lsu.io.sys_chn_ar <> io.sys_chn_ar
+	lsu.io.sys_chn_r  <> io.sys_chn_r
+	lsu.io.sys_chn_aw <> io.sys_chn_aw
+	lsu.io.sys_chn_w  <> io.sys_chn_w
+	lsu.io.sys_chn_b  <> io.sys_chn_b
+
 	lsu.io.cmm_lsu <> io.cmm_lsu
 	lsu.io.lsu_cmm <> io.lsu_cmm
 	lsu.io.l2c_fence_req <> io.l2c_fence_req

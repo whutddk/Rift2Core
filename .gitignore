@@ -356,3 +356,4 @@ src/test/resources/
 *.json
 tb/ci/
 tb/null
+*.vsdx

@@ -69,9 +69,18 @@ class Rift2Core extends Module {
 	// val l3c_fence_end = Input(Bool())
 
 
-	exe_stage.io.sys_chn_a.ready := true.B
-	exe_stage.io.sys_chn_d.bits  := DontCare
-	exe_stage.io.sys_chn_d.valid := false.B
+
+
+	exe_stage.io.sys_chn_ar.ready := true.B
+	exe_stage.io.sys_chn_r.valid  := false.B
+	exe_stage.io.sys_chn_r.bits  := DontCare
+
+	exe_stage.io.sys_chn_aw.ready := true.B
+	exe_stage.io.sys_chn_w.ready := true.B
+	exe_stage.io.sys_chn_b.valid  := false.B
+	exe_stage.io.sys_chn_b.bits  := DontCare
+
+
 
 
 	exe_stage.io.l2c_fence_end := true.B
