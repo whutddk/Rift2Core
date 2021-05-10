@@ -36,7 +36,7 @@ import rift2Core.cache._
 
 object testMain extends App {
 
-  Driver.execute(args, () => new L2Cache )
+  Driver.execute(args, () => new Rift2Core )
 }
 
 
