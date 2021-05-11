@@ -48,7 +48,7 @@ class Tl_CCM extends Module {
 
 
 
-	val ram = Module( new Gen_sram(128, 10) )
+	val ram = Module( new Sram(128, 10) )
 
 
 

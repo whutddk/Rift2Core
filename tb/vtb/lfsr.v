@@ -1,11 +1,12 @@
-package test
-
 /*
+* @File name: lfsr
 * @Author: Ruige Lee
-* @Date:   2021-03-18 16:14:36
+* @Email: wut.ruigeli@gmail.com
+* @Date:   2021-01-28 17:59:22
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-24 11:09:31
+* @Last Modified time: 2021-02-26 17:38:38
 */
+
 
 /*
   Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
@@ -14,7 +15,7 @@ package test
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,21 +24,38 @@ package test
    limitations under the License.
 */
 
+`timescale 1 ns / 1 ps
+
+module lfsr
+(
+	output [15:0] random,
+
+	input CLK
+);
 
 
-import chisel3._
-import rift2Chip._
-import rift2Core._
-import rift2Core.frontend._
-import rift2Core.backend._
-import rift2Core.cache._
 
 
 
-object testMain extends App {
+reg [15:0] shiftReg;
 
-  Driver.execute(args, () => new Rift2Chip )
-}
+initial begin shiftReg = $random; end
+
+wire tap;
+
+always @(posedge CLK) begin
+	shiftReg <= #1 { shiftReg[14:0], tap };
+end
+
+assign tap = shiftReg[15] ^ shiftReg[4] ^ shiftReg[2] ^ shiftReg[1];
+assign random = shiftReg;
+
+
+
+
+endmodule
+
+
 
 
 

@@ -63,13 +63,13 @@ class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
 
 	val tag_ram = {
-		for ( i <- 0 until cb ) yield { val mdl = Module(new Gen_sram(tag_w,line_w)); mdl }
+		for ( i <- 0 until cb ) yield { val mdl = Module(new Sram(tag_w,line_w)); mdl }
 	}
 
 	val dat_ram = {
 		for ( i <- 0 until cb; j <- 0 until bk ) yield { 
 
-			val mdl = Module(new Gen_sram(dw, line_w))
+			val mdl = Module(new Sram(dw, line_w))
 			mdl
 		}
 	}

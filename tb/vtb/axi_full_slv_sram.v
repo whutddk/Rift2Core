@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-02-24 09:25:27
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-11 11:47:15
+* @Last Modified time: 2021-05-11 11:36:42
 */
 
 
@@ -48,7 +48,7 @@ module axi_full_slv_sram #
 
 
 	input [DW-1:0] MEM_WDATA,
-	input [DW/8-1:0] MEM_WSTRB,
+	input [7:0] MEM_WSTRB,
 	input MEM_WLAST,
 	input MEM_WVALID,
 	output MEM_WREADY,
@@ -242,7 +242,7 @@ module axi_full_slv_sram #
 
 	wire [DW-1:0] data_w = MEM_WDATA;
 	wire [AW-1:0] addr_w = axi_awaddr_qout[3 +: AW];
-	wire [DW/8-1:0] data_wstrb = MEM_WSTRB;
+	wire [7:0] data_wstrb = MEM_WSTRB;
 	wire en_w = axi_awv_awr_flag_qout;
 
 	wire [DW-1:0] data_r;

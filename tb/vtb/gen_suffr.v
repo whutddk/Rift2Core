@@ -1,11 +1,12 @@
-package test
-
 /*
+* @File name: gen_suffr
 * @Author: Ruige Lee
-* @Date:   2021-03-18 16:14:36
+* @Email: wut.ruigeli@gmail.com
+* @Date:   2021-01-18 11:48:30
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-24 11:09:31
+* @Last Modified time: 2021-01-18 11:53:26
 */
+
 
 /*
   Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
@@ -23,21 +24,41 @@ package test
    limitations under the License.
 */
 
+`timescale 1 ns / 1 ps
+
+module gen_suffr # (
+	parameter DW = 1,
+	parameter rstValue = 1'b0
+)
+(
+
+	input [DW-1:0] set_in,
+	input [DW-1:0] rst_in,
+
+	output [DW-1:0] qout,
+
+	input CLK,
+	input RSTn
+);
 
 
-import chisel3._
-import rift2Chip._
-import rift2Core._
-import rift2Core.frontend._
-import rift2Core.backend._
-import rift2Core.cache._
+wire [DW-1:0] rsffr_qout;
+gen_rsffr # ( .DW(DW), .rstValue(rstValue)) rsffr ( .set_in(set_in), .rst_in(rst_in), .qout(rsffr_qout), .CLK(CLK), .RSTn(RSTn));
+
+
+assign qout = ~rst_in & rsffr_qout;
 
 
 
-object testMain extends App {
+//ASSERT
+always @( posedge CLK ) begin
+	if ( set_in & rst_in ) begin
+		$display("Assert Fail at gen_suff");
+		$finish;
+	end
+end
 
-  Driver.execute(args, () => new Rift2Chip )
-}
+endmodule
 
 
 

@@ -1,10 +1,10 @@
-package test
-
 /*
+* @File name: gen_dffr
 * @Author: Ruige Lee
-* @Date:   2021-03-18 16:14:36
+* @Email: wut.ruigeli@gmail.com
+* @Date:   2020-09-14 10:25:09
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-24 11:09:31
+* @Last Modified time: 2021-01-18 11:43:32
 */
 
 /*
@@ -23,21 +23,42 @@ package test
    limitations under the License.
 */
 
+`timescale 1 ns / 1 ps
+
+module gen_dffr # (
+	parameter DW = 32,
+	parameter rstValue = {DW{1'b0}}
+)
+(
+
+	input [DW-1:0] dnxt,
+	output [DW-1:0] qout,
+
+	input CLK,
+	input RSTn
+);
+
+reg [DW-1:0] qout_r;
+
+always @(posedge CLK or negedge RSTn) begin
+	if ( ~RSTn )
+		qout_r <= #1 rstValue;
+	else                  
+		qout_r <= #1 dnxt;
+end
+
+assign qout = qout_r;
+
+endmodule
 
 
-import chisel3._
-import rift2Chip._
-import rift2Core._
-import rift2Core.frontend._
-import rift2Core.backend._
-import rift2Core.cache._
 
 
 
-object testMain extends App {
 
-  Driver.execute(args, () => new Rift2Chip )
-}
+
+
+
 
 
 

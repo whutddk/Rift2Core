@@ -54,7 +54,7 @@ import chisel3.util.experimental.loadMemoryFromFileInline
 
 
 @chiselName
-class Gen_sram(dw: Int, aw: Int) extends Module {
+class Sram(dw: Int, aw: Int) extends Module {
 	val io = IO(new Bundle{
 		val data_w = Input(UInt(dw.W))
 		val addr_w = Input(UInt(aw.W))
