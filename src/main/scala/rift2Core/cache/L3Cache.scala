@@ -503,7 +503,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 
 	mem_mst_w.io.aw_info.burst := "b01".U
 	mem_mst_w.io.aw_info.id := 0.U
-	mem_mst_w.io.aw_info.len := 63.U
+	mem_mst_w.io.aw_info.len := 31.U
 	mem_mst_w.io.aw_info.size := 4.U
 	mem_mst_w.io.aw_info.user := 0.U
 	mem_mst_w.io.aw_info.cache := 0.U
