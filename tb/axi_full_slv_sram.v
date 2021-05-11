@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-02-24 09:25:27
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-11 11:47:15
+* @Last Modified time: 2021-05-11 14:56:36
 */
 
 
@@ -241,13 +241,13 @@ module axi_full_slv_sram #
 //-------------------------------------------------------------------------------------------
 
 	wire [DW-1:0] data_w = MEM_WDATA;
-	wire [AW-1:0] addr_w = axi_awaddr_qout[3 +: AW];
+	wire [AW-1:0] addr_w = axi_awaddr_qout[ADDR_LSB +: AW];
 	wire [DW/8-1:0] data_wstrb = MEM_WSTRB;
 	wire en_w = axi_awv_awr_flag_qout;
 
 	wire [DW-1:0] data_r;
 	assign MEM_RDATA = data_r;
-	wire [AW-1:0] addr_r = axi_araddr_qout[3 +: AW];
+	wire [AW-1:0] addr_r = axi_araddr_qout[ADDR_LSB +: AW];
 	wire en_r = axi_arv_arr_flag_qout;
 
 
