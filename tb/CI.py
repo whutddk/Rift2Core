@@ -2,7 +2,7 @@
 # @Author: Ruige Lee
 # @Date:   2020-11-18 15:37:18
 # @Last Modified by:   Ruige Lee
-# @Last Modified time: 2021-04-26 18:00:14
+# @Last Modified time: 2021-05-11 17:47:16
 
 
 import sys
@@ -90,7 +90,7 @@ testList = [
 
 
 
-res = os.system("iverilog.exe -Wall -o ./build/wave.iverilog  -y ./ -y ../src/test/resources -y ../generated/ -I ../generated/ -D RANDOMIZE_MEM_INIT ../tb/rift2chip.v ")
+res = os.system("iverilog.exe -Wall -o ./build/wave.iverilog  -y ./ -y ./vtb/ -y ../src/test/resources -y ../generated/ -I ../generated/ -D RANDOMIZE_MEM_INIT ../tb/rift2chip_tb.v ")
 
 if ( res == 0 ):
 	print ("compile pass!")
