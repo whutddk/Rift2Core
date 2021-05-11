@@ -127,7 +127,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 		(fsm.state_qout === L2C_state.cktag) -> (	cache_addr_qout &
 													Mux(
 														fsm.state_dnxt === L2C_state.flash,
-														Cat( Fill(32-addr_lsb, 1.U), Fill(addr_lsb, 0.U) ), Fill(32, 1.U)
+														Cat( Fill(32-addr_lsb, 1.U), 0.U(addr_lsb.W) ), Fill(32, 1.U)
 													)
 												),
 		(fsm.state_qout === L2C_state.flash) -> Mux( l2c_mst.io.d.fire,

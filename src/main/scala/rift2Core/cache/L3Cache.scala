@@ -322,11 +322,22 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 
 	bram.cache_addr_dnxt := Mux1H(Seq(
 		(fsm.state_qout === L3C_state.cfree) -> l2c_slv.io.a.bits.address,
-		(fsm.state_qout === L3C_state.cktag) -> Mux(db.is_full, db.addr_o, l2c_slv.io.a.bits.address),
+		(fsm.state_qout === L3C_state.cktag) -> 
+			Mux1H( Seq(
+				( fsm.state_dnxt === L3C_state.evict ) -> Cat(db.addr_o , 0.U(addr_lsb.W)),
+				( fsm.state_dnxt === L3C_state.flash ) -> (l2c_slv.io.a.bits.address & Cat( Fill(32-addr_lsb, 1.U), 0.U(addr_lsb.W) )),
+				( fsm.state_dnxt === L3C_state.rspl2 ) -> l2c_slv.io.a.bits.address
+			)),
+
+
+
+			// Mux( ~bram.cache_valid(bram.cl_sel), ,
+			// 	Mux( ~bram.is_cb_hit, 
+			// 		Mux( (l2c_slv.io.a.bits.opcode =/= l2c_slv.Get & db.is_full), Cat(db.addr_o , 0.U(addr_lsb.W)),   ))),
 		(fsm.state_qout === L3C_state.evict) -> Mux( mem_mst_w.io.w.fire, bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
 		(fsm.state_qout === L3C_state.flash) -> Mux( mem_mst_r.io.r.fire, bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
 		(fsm.state_qout === L3C_state.rspl2) -> Mux( l2c_slv.io.d.fire,bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
-		(fsm.state_qout === L3C_state.fence) -> db.addr_o
+		(fsm.state_qout === L3C_state.fence) -> Cat(db.addr_o , 0.U(addr_lsb.W))
 
 	))
 
@@ -376,9 +387,11 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 
 
 
-	bram.tag_addr := bram.cache_addr_dnxt
+	bram.tag_addr := l2c_slv.io.a.bits.address
 	bram.is_cb_hit := cache_mem.tag_info_r(0) === bram.tag_info
-	bram.cl_sel := bram.cache_addr_dnxt(addr_lsb+line_w-1, addr_lsb)
+	bram.cl_sel := Mux( fsm.state_qout === L3C_state.evict, db.addr_o(line_w-1,0), l2c_slv.io.a.bits.address(addr_lsb+line_w-1, addr_lsb) )
+	
+	// bram.cache_addr_qout(addr_lsb+line_w-1, addr_lsb)
 
 	for ( i <- 0 until cl ) yield {
 		bram.cache_valid(i) :=
