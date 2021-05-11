@@ -483,7 +483,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 	l2c_slv.io.rsp_data := bram.mem_dat
 
 	mem_mst_r.io.ar_info.addr :=
-		RegEnable( bram.cache_addr_dnxt & ~("b1111111111".U(32.W)), 0.U, mem_mst_r.io.ar_req )
+		RegEnable( bram.cache_addr_dnxt & ~("h1ff".U(32.W)), 0.U, mem_mst_r.io.ar_req )
 
 
 	mem_mst_r.io.ar_info.burst := "b01".U
@@ -498,7 +498,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 
 
 	mem_mst_w.io.aw_info.addr :=
-		RegEnable( bram.cache_addr_dnxt & ~("b1111111111".U(32.W)), 0.U, mem_mst_w.io.aw_req )
+		RegEnable( bram.cache_addr_dnxt & ~("h1ff".U(32.W)), 0.U, mem_mst_w.io.aw_req )
 
 
 	mem_mst_w.io.aw_info.burst := "b01".U

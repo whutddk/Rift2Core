@@ -380,8 +380,8 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 	l2c_mst.io.a_info.address := 
 							Mux1H( Seq(
-								(req_no_qout === 1.U) -> (cache_addr_dnxt & ~("b11111111".U(32.W))),
-								(req_no_qout === 2.U) -> (cache_addr_dnxt & ~("b11111111".U(32.W))),
+								(req_no_qout === 1.U) -> (cache_addr_dnxt & ~("h3f".U(32.W))),
+								(req_no_qout === 2.U) -> (cache_addr_dnxt & ~("h3f".U(32.W))),
 								(req_no_qout === 3.U) -> dl1_slv.io.a.bits.address,
 								(req_no_qout === 4.U) -> dl1_slv.io.a.bits.address
 							) )
