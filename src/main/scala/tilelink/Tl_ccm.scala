@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-19 14:49:41
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-20 20:20:33
+* @Last Modified time: 2021-05-11 10:09:05
 */
 
 
@@ -23,12 +23,12 @@
 */
 
 
-package rift2Chip
+package tilelink
 
 import chisel3._
 import chisel3.util._
 import base._
-import tilelink._
+
 
 
 class Tl_CCM extends Module {

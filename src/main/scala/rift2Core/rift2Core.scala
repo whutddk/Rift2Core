@@ -41,7 +41,10 @@ class Rift2Core extends Module {
 		val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
 		val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
 
-
+		val l2c_fence_req = Output(Bool())
+		val l3c_fence_req = Output(Bool())
+		val l2c_fence_end = Input(Bool())
+		val l3c_fence_end = Input(Bool())
 	})
 
 	lazy val pc_stage = Module(new Pc_gen)
@@ -63,12 +66,6 @@ class Rift2Core extends Module {
 	// val sys_chn_a = new DecoupledIO(new TLchannel_a(64,32))
 	// val sys_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
 
-	// val l2c_fence_req = Output(Bool())
-	// val l3c_fence_req = Output(Bool())
-	// val l2c_fence_end = Input(Bool())
-	// val l3c_fence_end = Input(Bool())
-
-
 
 
 	exe_stage.io.sys_chn_ar.ready := true.B
@@ -82,9 +79,10 @@ class Rift2Core extends Module {
 
 
 
-
-	exe_stage.io.l2c_fence_end := true.B
-	exe_stage.io.l3c_fence_end := true.B
+	io.l2c_fence_req := exe_stage.io.l2c_fence_req
+	io.l3c_fence_req := exe_stage.io.l3c_fence_req
+	exe_stage.io.l2c_fence_end := io.l2c_fence_end
+	exe_stage.io.l3c_fence_end := io.l3c_fence_end
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -92,61 +90,55 @@ class Rift2Core extends Module {
 
 
 
+	if_stage.io.il1_chn_a <> io.il1_chn_a
+	if_stage.io.il1_chn_d <> io.il1_chn_d
 
+	exe_stage.io.dl1_chn_a <> io.dl1_chn_a
+	exe_stage.io.dl1_chn_d <> io.dl1_chn_d
+	// exe_stage.io.sys_chn_a <> io.sys_chn_a
+	// exe_stage.io.sys_chn_d <> io.sys_chn_d
 
+	// exe_stage.io.l2c_fence_req <> io.l2c_fence_req
+	// exe_stage.io.l3c_fence_req <> io.l3c_fence_req
+	// exe_stage.io.l2c_fence_end <> io.l2c_fence_end
+	// exe_stage.io.l3c_fence_end <> io.l3c_fence_end
 
+	pc_stage.io.ib_pc <> ib_stage.io.ib_pc
+	
 
+	pc_stage.io.pc_iq <> iq_stage.io.pc_iq	//valid when flush for new pc 
 
+	
+	pc_stage.io.pc_if <> if_stage.io.pc_if
+	if_stage.io.if_iq <> iq_stage.io.if_iq
+	iq_stage.io.iq_ib <> ib_stage.io.iq_ib
+	ib_stage.io.ib_id <> id_stage.io.ib_id
+	id_stage.io.id_dpt <> dpt_stage.io.id_dpt
 
-		if_stage.io.il1_chn_a <> io.il1_chn_a
-		if_stage.io.il1_chn_d <> io.il1_chn_d
+	dpt_stage.io.alu_dpt_iss <> iss_stage.io.alu_dpt_iss
+	dpt_stage.io.bru_dpt_iss <> iss_stage.io.bru_dpt_iss
+	dpt_stage.io.lsu_dpt_iss <> iss_stage.io.lsu_dpt_iss
+	dpt_stage.io.csr_dpt_iss <> iss_stage.io.csr_dpt_iss
+	dpt_stage.io.mul_dpt_iss <> iss_stage.io.mul_dpt_iss
 
-		exe_stage.io.dl1_chn_a <> io.dl1_chn_a
-		exe_stage.io.dl1_chn_d <> io.dl1_chn_d
-		// exe_stage.io.sys_chn_a <> io.sys_chn_a
-		// exe_stage.io.sys_chn_d <> io.sys_chn_d
+	iss_stage.io.alu_iss_exe <> exe_stage.io.alu_iss_exe
+	iss_stage.io.bru_iss_exe <> exe_stage.io.bru_iss_exe
+	iss_stage.io.lsu_iss_exe <> exe_stage.io.lsu_iss_exe
+	iss_stage.io.csr_iss_exe <> exe_stage.io.csr_iss_exe
+	iss_stage.io.mul_iss_exe <> exe_stage.io.mul_iss_exe
 
-		// exe_stage.io.l2c_fence_req <> io.l2c_fence_req
-		// exe_stage.io.l3c_fence_req <> io.l3c_fence_req
-		// exe_stage.io.l2c_fence_end <> io.l2c_fence_end
-		// exe_stage.io.l3c_fence_end <> io.l3c_fence_end
-
-		pc_stage.io.ib_pc <> ib_stage.io.ib_pc
-		
-
-		pc_stage.io.pc_iq <> iq_stage.io.pc_iq	//valid when flush for new pc 
-
-		
-		pc_stage.io.pc_if <> if_stage.io.pc_if
-		if_stage.io.if_iq <> iq_stage.io.if_iq
-		iq_stage.io.iq_ib <> ib_stage.io.iq_ib
-		ib_stage.io.ib_id <> id_stage.io.ib_id
-		id_stage.io.id_dpt <> dpt_stage.io.id_dpt
-
-		dpt_stage.io.alu_dpt_iss <> iss_stage.io.alu_dpt_iss
-		dpt_stage.io.bru_dpt_iss <> iss_stage.io.bru_dpt_iss
-		dpt_stage.io.lsu_dpt_iss <> iss_stage.io.lsu_dpt_iss
-		dpt_stage.io.csr_dpt_iss <> iss_stage.io.csr_dpt_iss
-		dpt_stage.io.mul_dpt_iss <> iss_stage.io.mul_dpt_iss
-
-		iss_stage.io.alu_iss_exe <> exe_stage.io.alu_iss_exe
-		iss_stage.io.bru_iss_exe <> exe_stage.io.bru_iss_exe
-		iss_stage.io.lsu_iss_exe <> exe_stage.io.lsu_iss_exe
-		iss_stage.io.csr_iss_exe <> exe_stage.io.csr_iss_exe
-		iss_stage.io.mul_iss_exe <> exe_stage.io.mul_iss_exe
-
-		exe_stage.io.alu_exe_iwb <>	iwb_stage.io.exe_iwb(0)
-		exe_stage.io.bru_exe_iwb <>	iwb_stage.io.exe_iwb(1)
-		exe_stage.io.csr_exe_iwb <>	iwb_stage.io.exe_iwb(2)	
-		exe_stage.io.lsu_exe_iwb <>	iwb_stage.io.exe_iwb(3)	
-		exe_stage.io.mul_exe_iwb <>	iwb_stage.io.exe_iwb(4)
+	exe_stage.io.alu_exe_iwb <>	iwb_stage.io.exe_iwb(0)
+	exe_stage.io.bru_exe_iwb <>	iwb_stage.io.exe_iwb(1)
+	exe_stage.io.csr_exe_iwb <>	iwb_stage.io.exe_iwb(2)	
+	exe_stage.io.lsu_exe_iwb <>	iwb_stage.io.exe_iwb(3)	
+	exe_stage.io.mul_exe_iwb <>	iwb_stage.io.exe_iwb(4)
 
 
 	if_stage.io.is_il1_fence_req := false.B
 		
 
-		ib_stage.io.bru_iq_b <> exe_stage.io.bru_iq_b
-		pc_stage.io.bru_iq_j <> exe_stage.io.bru_iq_j
+	ib_stage.io.bru_iq_b <> exe_stage.io.bru_iq_b
+	pc_stage.io.bru_iq_j <> exe_stage.io.bru_iq_j
 
 	ib_stage.io.fencei_end := false.B
 

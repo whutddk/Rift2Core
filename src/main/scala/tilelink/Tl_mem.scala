@@ -3,7 +3,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-21 14:36:40
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-21 14:37:11
+* @Last Modified time: 2021-05-11 10:08:54
 */
 
 
@@ -23,11 +23,11 @@
    limitations under the License.
 */
 
-package rift2Chip
+package tilelink
 
 import chisel3._
 import chisel3.util._
-import tilelink._
+
 
 
 class Tl_mem extends BlackBox with HasBlackBoxResource {

@@ -28,31 +28,43 @@ package rift2Chip
 import chisel3._
 import chisel3.util._
 import rift2Core._
-
+import cache._
+import axi._
 
 
 class Rift2Chip extends Module {
 	val io = IO( new Bundle{
-		
+		val mem_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+		val mem_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 128, 1, 1)) )
+		val mem_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+		val mem_chn_w = new DecoupledIO(new AXI_chn_w( 128, 1 )) 
+		val mem_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))		
 	})
 
 
 	val i_rift2Core = Module( new Rift2Core )
-	val iccm = Module( new Tl_iccm )
-	// val dccm = Module( new Tl_iccm )
-	// val sccm = Module( new Tl_iccm )
+	val l2cache = Module( new L2Cache )
+	val l3cache = Module( new L3Cache )
 
-	iccm.io.ccm_chn_a <> i_rift2Core.io.il1_chn_a
-	iccm.io.ccm_chn_d <> i_rift2Core.io.il1_chn_d
-	// dccm.io.ccm_chn_a <> i_rift2Core.io.dl1_chn_a
-	// dccm.io.ccm_chn_d <> i_rift2Core.io.dl1_chn_d
 
-	// sccm.io.ccm_chn_a <> i_rift2Core.io.sys_chn_a
-	// sccm.io.ccm_chn_d <> i_rift2Core.io.sys_chn_d
+	l2cache.io.il1_chn_a <> i_rift2Core.io.il1_chn_a
+	l2cache.io.il1_chn_d <> i_rift2Core.io.il1_chn_d
+	l2cache.io.dl1_chn_a <> i_rift2Core.io.dl1_chn_a
+	l2cache.io.dl1_chn_d <> i_rift2Core.io.dl1_chn_d
+	l2cache.io.l2c_chn_a <> l3cache.io.l2c_chn_a
+	l2cache.io.l2c_chn_d <> l3cache.io.l2c_chn_d
+	l2cache.io.l2c_fence_req := i_rift2Core.io.l2c_fence_req
+	l2cache.io.l2c_fence_end := i_rift2Core.io.l3c_fence_req
 
-	// i_rift2Core.io.l2c_fence_end := false.B
-	// i_rift2Core.io.l3c_fence_end := false.B
 
+
+	l3cache.io.mem_chn_ar <> io.mem_chn_ar
+	l3cache.io.mem_chn_r  <> io.mem_chn_r
+	l3cache.io.mem_chn_aw <> io.mem_chn_aw
+	l3cache.io.mem_chn_w  <> io.mem_chn_w
+	l3cache.io.mem_chn_b  <> io.mem_chn_b
+	l3cache.io.l3c_fence_req := i_rift2Core.io.l2c_fence_end
+	l3cache.io.l3c_fence_end := i_rift2Core.io.l3c_fence_end
 	
 }
 
