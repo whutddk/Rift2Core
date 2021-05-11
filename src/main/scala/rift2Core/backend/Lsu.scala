@@ -217,8 +217,8 @@ class Lsu extends Module {
 	lsu_exe_iwb_fifo.io.enq.valid := 
 		( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cfree ) |
 		( stateReg === Dl1_state.cmiss & op1_dl1_req === op1_align128 & dl1_mst.io.d.fire & ~trans_kill ) |
-		( stateReg === Dl1_state.write & stateDnxt === Dl1_state.cfree) |
-		( stateReg === Dl1_state.fence & wtb.empty === true.B & trans_kill === false.B ) |
+		( stateReg === Dl1_state.write & stateDnxt === Dl1_state.cfree ) |
+		( stateReg === Dl1_state.cfree & stateDnxt === Dl1_state.fence ) |
 		( stateReg === Dl1_state.pread & stateDnxt === Dl1_state.cfree & trans_kill === false.B)
 
 
@@ -371,8 +371,8 @@ class Lsu extends Module {
 	))
 
 	dl1_mst.io.a_info.size    := Mux1H( Seq(
-		(stateReg === Dl1_state.cmiss) -> 5.U,
-		(stateReg =/= Dl1_state.cmiss) -> 4.U
+		(stateDnxt === Dl1_state.cmiss) -> 5.U,
+		(stateReg =/= Dl1_state.cmiss & stateDnxt =/= Dl1_state.cmiss) -> 4.U
 	))
 
 	dl1_mst.io.a_info.source  := 1.U
