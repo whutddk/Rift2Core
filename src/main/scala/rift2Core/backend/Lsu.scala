@@ -103,9 +103,9 @@ class Lsu extends Module {
 
 	val is_cb_vhit = Wire(Vec(cb, Bool()))
 
-	def iss_ack = io.lsu_iss_exe.valid & io.lsu_iss_exe.ready
 
-	io.lsu_iss_exe.ready := lsu_exe_iwb_fifo.io.enq.fire
+	
+	// lsu_exe_iwb_fifo.io.enq.fire
 
 
 
@@ -201,11 +201,11 @@ class Lsu extends Module {
 	lsu_exe_iwb_fifo.io.enq.bits.rd0_idx := io.lsu_iss_exe.bits.param.rd0_idx
 
 
-
+	io.lsu_iss_exe.ready := stateReg =/= Dl1_state.cfree & stateDnxt === Dl1_state.cfree
 	lsu_exe_iwb_fifo.io.enq.valid := 
 		( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cfree ) |
 		( stateReg === Dl1_state.cmiss & op1_dl1_req === op1_align128 & dl1_mst.io.d.fire & ~trans_kill ) |
-		( stateReg === Dl1_state.write & stateDnxt === Dl1_state.cfree ) |
+		( stateReg === Dl1_state.cfree & stateDnxt === Dl1_state.write ) |
 		( stateReg === Dl1_state.cfree & stateDnxt === Dl1_state.fence & lsu_fence ) |
 		( stateReg === Dl1_state.fence & stateDnxt === Dl1_state.cfree & lsu_fence_i ) |
 		( stateReg === Dl1_state.pread & stateDnxt === Dl1_state.cfree & trans_kill === false.B)
@@ -447,7 +447,7 @@ class Lsu extends Module {
 
 	// def dl1_state_dnxt_in_mwait = Mux( is_mem_hazard | ~lsu_exe_iwb_fifo.io.enq.ready, Dl1_state.mwait, Dl1_state.cmiss )
 	def dl1_state_dnxt_in_cmiss = Mux( dl1_mst.io.mode === 7.U, Dl1_state.cfree, Dl1_state.cmiss )
-	def dl1_state_dnxt_in_write = Mux( dl1_mst.io.d.fire , Dl1_state.cfree, Dl1_state.write)
+	def dl1_state_dnxt_in_write = Mux( dl1_mst.io.d.fire | io.flush , Dl1_state.cfree, Dl1_state.write)
 	def dl1_state_dnxt_in_fence = Dl1_state.cfree
 	// def dl1_state_dnxt_in_pwait = Mux( is_sys_hazard, Dl1_state.pwait, Dl1_state.pread )
 	def dl1_state_dnxt_in_pread = Mux( sys_mst_r.io.end, Dl1_state.cfree, Dl1_state.pread )
