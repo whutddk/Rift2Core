@@ -354,8 +354,8 @@ class Lsu extends Module {
 
 
 	dl1_mst.io.a_info.opcode  := Mux1H( Seq(
-		(stateReg === Dl1_state.cmiss) -> dl1_mst.Get,
-		(stateReg =/= Dl1_state.cmiss) -> dl1_mst.PutFullData
+		(stateDnxt === Dl1_state.cmiss) -> dl1_mst.Get,
+		(stateDnxt =/= Dl1_state.cmiss) -> dl1_mst.PutFullData
 	))
 	
 
