@@ -153,13 +153,16 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	def is_block_replace(i: Int) = UIntToOH(bram.replace_sel)(i).asBool
 
 	bram.cl_sel := tag_addr(addr_lsb+line_w-1, addr_lsb)
-	when(fsm.state_qout === L2C_state.cfree){ tag_addr := Mux1H( Seq(
-														(req_no_dnxt === 1.U) -> il1_slv.io.a.bits.address,
-														(req_no_dnxt === 2.U) -> dl1_slv.io.a.bits.address,
-														(req_no_dnxt === 3.U) -> dl1_slv.io.a.bits.address,
-														(req_no_dnxt === 4.U) -> dl1_slv.io.a.bits.address
-													))}
+	
+	when( fsm.state_qout === L2C_state.cfree & fsm.state_dnxt === L2C_state.cktag){
+		tag_addr := MuxCase( 0.U, Array(
+			il1_slv.io.a.valid -> il1_slv.io.a.bits.address,
+			dl1_slv.io.a.valid -> dl1_slv.io.a.bits.address
+		))			
+	}
 
+
+	
 	
 
 	bram.replace_sel := 
@@ -202,7 +205,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	}
 
 
-	cache_mem.cache_addr := cache_addr_qout
+	cache_mem.cache_addr := Mux( fsm.state_qout === L2C_state.cfree, cache_addr_dnxt, cache_addr_qout )
 
 	when( fsm.state_qout === L2C_state.cktag & fsm.state_dnxt === L2C_state.flash ) {
 		bram.cache_valid(bram.cl_sel)(bram.replace_sel) := true.B

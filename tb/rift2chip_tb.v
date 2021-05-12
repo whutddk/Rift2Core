@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-12 11:44:17
+* @Last Modified time: 2021-05-12 15:29:45
 */
 
 
@@ -338,6 +338,7 @@ always @(posedge CLK ) begin
 	if ( sim_end == 1 ) begin
 		if ( x3 == 64'd1 ) begin
 			$display("PASS");
+			# 1000 
 			$finish;
 		end
 		else begin
@@ -355,7 +356,7 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	// $readmemh("./ci/rv64ui-p-fence_i.verilog", mem);
+	// $readmemh("./ci/rv64uc-p-rvc.verilog", mem);
 	$readmemh(testName, mem);
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
