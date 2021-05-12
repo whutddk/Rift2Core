@@ -40,7 +40,7 @@ class Regfiles extends Module{
 	wb_op := io.wb_reg.enable
 
 	val files = RegInit( VecInit(Seq.fill(32)(VecInit(Seq.fill(4)(0.U(64.W)) )))   )
-	val regLog = RegInit( VecInit(Seq.fill(32)( VecInit( (0.U(2.W)),(0.U(2.W)),(0.U(2.W)),(3.U(2.W)) )))   ) // the first reg is wb
+	val regLog = RegInit( VecInit(Seq.fill(32)( VecInit( (3.U(2.W)),(0.U(2.W)),(0.U(2.W)),(0.U(2.W)) )))   ) // the first reg is wb
 
 	val rename_ptr = RegInit( VecInit( Seq.fill(32)(0.U(2.W))) )
 	val archit_ptr = RegInit( VecInit( Seq.fill(32)(0.U(2.W))) )
