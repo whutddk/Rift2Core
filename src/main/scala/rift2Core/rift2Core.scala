@@ -31,6 +31,7 @@ import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.cache._
 import tilelink._
+import axi._
 
 
 class Rift2Core extends Module {
@@ -43,8 +44,14 @@ class Rift2Core extends Module {
 
 		val l2c_fence_req = Output(Bool())
 		val l3c_fence_req = Output(Bool())
-		val l2c_fence_end = Input(Bool())
-		val l3c_fence_end = Input(Bool())
+
+		val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+		val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
+		val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+		val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
+		val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
+
+
 	})
 
 	lazy val pc_stage = Module(new Pc_gen)
@@ -63,26 +70,15 @@ class Rift2Core extends Module {
 
 ///////////////////////////////////////////////////////////////////////////
 
-	// val sys_chn_a = new DecoupledIO(new TLchannel_a(64,32))
-	// val sys_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
 
 
 
-	exe_stage.io.sys_chn_ar.ready := true.B
-	exe_stage.io.sys_chn_r.valid  := false.B
-	exe_stage.io.sys_chn_r.bits  := DontCare
-
-	exe_stage.io.sys_chn_aw.ready := true.B
-	exe_stage.io.sys_chn_w.ready := true.B
-	exe_stage.io.sys_chn_b.valid  := false.B
-	exe_stage.io.sys_chn_b.bits  := DontCare
 
 
 
 	io.l2c_fence_req := exe_stage.io.l2c_fence_req
 	io.l3c_fence_req := exe_stage.io.l3c_fence_req
-	exe_stage.io.l2c_fence_end := io.l2c_fence_end
-	exe_stage.io.l3c_fence_end := io.l3c_fence_end
+
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -95,13 +91,11 @@ class Rift2Core extends Module {
 
 	exe_stage.io.dl1_chn_a <> io.dl1_chn_a
 	exe_stage.io.dl1_chn_d <> io.dl1_chn_d
-	// exe_stage.io.sys_chn_a <> io.sys_chn_a
-	// exe_stage.io.sys_chn_d <> io.sys_chn_d
-
-	// exe_stage.io.l2c_fence_req <> io.l2c_fence_req
-	// exe_stage.io.l3c_fence_req <> io.l3c_fence_req
-	// exe_stage.io.l2c_fence_end <> io.l2c_fence_end
-	// exe_stage.io.l3c_fence_end <> io.l3c_fence_end
+	exe_stage.io.sys_chn_ar <> io.sys_chn_ar
+	exe_stage.io.sys_chn_r  <> io.sys_chn_r
+	exe_stage.io.sys_chn_aw <> io.sys_chn_aw
+	exe_stage.io.sys_chn_w  <> io.sys_chn_w
+	exe_stage.io.sys_chn_b  <> io.sys_chn_b
 
 	pc_stage.io.ib_pc <> ib_stage.io.ib_pc
 	
@@ -134,13 +128,14 @@ class Rift2Core extends Module {
 	exe_stage.io.mul_exe_iwb <>	iwb_stage.io.exe_iwb(4)
 
 
-	if_stage.io.is_il1_fence_req := false.B
-		
+	if_stage.io.is_il1_fence_req := exe_stage.io.il1_fence_req
+
+	
 
 	ib_stage.io.bru_iq_b <> exe_stage.io.bru_iq_b
 	pc_stage.io.bru_iq_j <> exe_stage.io.bru_iq_j
 
-	ib_stage.io.fencei_end := false.B
+	
 
 
 	if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | ib_stage.io.ib_pc.valid | exe_stage.io.bru_iq_j.valid
