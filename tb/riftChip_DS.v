@@ -2,10 +2,12 @@
 * @File name: riftChip_DS
 * @Author: Ruige Lee
 * @Email: wut.ruigeli@gmail.com
-* @Date:   2020-11-05 17:03:49
+* @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-18 16:03:54
+* @Last Modified time: 2021-05-12 16:39:11
 */
+
+
 
 /*
   Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
@@ -25,29 +27,268 @@
 
 
 `timescale 1 ns / 1 ps
-`include "define.vh"
 
 
-module riftChip_DS (
 
+
+module rift2chip_tb (
+
+	
 );
-
 
 	reg CLK;
 	reg RSTn;
 
 
-riftChip s_riftChip(
+	wire         io_mem_chn_ar_ready;
+	wire         io_mem_chn_ar_valid;
+	wire [31:0]  io_mem_chn_ar_bits_addr;
+	wire [7:0]   io_mem_chn_ar_bits_len;
+	wire [2:0]   io_mem_chn_ar_bits_size;
+	wire [1:0]   io_mem_chn_ar_bits_burst;
+	wire         io_mem_chn_r_ready;
+	wire         io_mem_chn_r_valid;
+	wire         io_mem_chn_r_bits_id;
+	wire [127:0] io_mem_chn_r_bits_data;
+	wire [1:0]   io_mem_chn_r_bits_rsp;
+	wire         io_mem_chn_r_bits_last;
+	wire         io_mem_chn_aw_ready;
+	wire         io_mem_chn_aw_valid;
+	wire [31:0]  io_mem_chn_aw_bits_addr;
+	wire [7:0]   io_mem_chn_aw_bits_len;
+	wire [2:0]   io_mem_chn_aw_bits_size;
+	wire [1:0]   io_mem_chn_aw_bits_burst;
+	wire         io_mem_chn_w_ready;
+	wire         io_mem_chn_w_valid;
+	wire [127:0] io_mem_chn_w_bits_data;
+	wire [15:0]  io_mem_chn_w_bits_strb;
+	wire         io_mem_chn_w_bits_last;
+	wire         io_mem_chn_b_ready;
+	wire         io_mem_chn_b_valid;
+	wire [1:0]   io_mem_chn_b_bits_rsp;
 
-	.CLK(CLK),
-	.RSTn(RSTn)
+	wire         io_sys_chn_ar_ready;
+	wire         io_sys_chn_ar_valid;
+	wire         io_sys_chn_ar_bits_id;
+	wire [31:0]  io_sys_chn_ar_bits_addr;
+	wire [7:0]   io_sys_chn_ar_bits_len;
+	wire [2:0]   io_sys_chn_ar_bits_size;
+	wire [1:0]   io_sys_chn_ar_bits_burst;
+	wire         io_sys_chn_ar_bits_lock;
+	wire [3:0]   io_sys_chn_ar_bits_cache;
+	wire [2:0]   io_sys_chn_ar_bits_port;
+	wire [3:0]   io_sys_chn_ar_bits_qos;
+	wire         io_sys_chn_ar_bits_user;
+	wire         io_sys_chn_r_ready;
+	wire         io_sys_chn_r_valid;
+	wire         io_sys_chn_r_bits_id;
+	wire [63:0]  io_sys_chn_r_bits_data;
+	wire [1:0]   io_sys_chn_r_bits_rsp;
+	wire         io_sys_chn_r_bits_last;
+	wire         io_sys_chn_r_bits_user;
+	wire         io_sys_chn_aw_ready;
+	wire         io_sys_chn_aw_valid;
+	wire         io_sys_chn_aw_bits_id;
+	wire [31:0]  io_sys_chn_aw_bits_addr;
+	wire [7:0]   io_sys_chn_aw_bits_len;
+	wire [2:0]   io_sys_chn_aw_bits_size;
+	wire [1:0]   io_sys_chn_aw_bits_burst;
+	wire         io_sys_chn_aw_bits_lock;
+	wire [3:0]   io_sys_chn_aw_bits_cache;
+	wire [2:0]   io_sys_chn_aw_bits_port;
+	wire [3:0]   io_sys_chn_aw_bits_qos;
+	wire         io_sys_chn_aw_bits_user;
+	wire         io_sys_chn_w_ready;
+	wire         io_sys_chn_w_valid;
+	wire [63:0]  io_sys_chn_w_bits_data;
+	wire [7:0]   io_sys_chn_w_bits_strb;
+	wire         io_sys_chn_w_bits_last;
+	wire         io_sys_chn_w_bits_user;
+	wire         io_sys_chn_b_ready;
+	wire         io_sys_chn_b_valid;
+	wire         io_sys_chn_b_bits_id;
+	wire [1:0]   io_sys_chn_b_bits_rsp;
+	wire         io_sys_chn_b_bits_user;
+
+
+
+Rift2Chip s_Rift2Chip(
+	.clock(CLK),
+	.reset(~RSTn),
+
+	.io_mem_chn_ar_ready     (io_mem_chn_ar_ready),
+	.io_mem_chn_ar_valid     (io_mem_chn_ar_valid),
+	.io_mem_chn_ar_bits_id   (),
+	.io_mem_chn_ar_bits_addr (io_mem_chn_ar_bits_addr),
+	.io_mem_chn_ar_bits_len  (io_mem_chn_ar_bits_len),
+	.io_mem_chn_ar_bits_size (io_mem_chn_ar_bits_size),
+	.io_mem_chn_ar_bits_burst(io_mem_chn_ar_bits_burst),
+	.io_mem_chn_ar_bits_lock (),
+	.io_mem_chn_ar_bits_cache(),
+	.io_mem_chn_ar_bits_port (),
+	.io_mem_chn_ar_bits_qos  (),
+	.io_mem_chn_ar_bits_user (),
+	.io_mem_chn_r_ready      (io_mem_chn_r_ready),
+	.io_mem_chn_r_valid      (io_mem_chn_r_valid),
+	.io_mem_chn_r_bits_id    (1'b0),
+	.io_mem_chn_r_bits_data  (io_mem_chn_r_bits_data),
+	.io_mem_chn_r_bits_rsp   (io_mem_chn_r_bits_rsp),
+	.io_mem_chn_r_bits_last  (io_mem_chn_r_bits_last),
+	.io_mem_chn_r_bits_user  (1'b0),
+	.io_mem_chn_aw_ready     (io_mem_chn_aw_ready),
+	.io_mem_chn_aw_valid     (io_mem_chn_aw_valid),
+	.io_mem_chn_aw_bits_id   (),
+	.io_mem_chn_aw_bits_addr (io_mem_chn_aw_bits_addr),
+	.io_mem_chn_aw_bits_len  (io_mem_chn_aw_bits_len),
+	.io_mem_chn_aw_bits_size (io_mem_chn_aw_bits_size),
+	.io_mem_chn_aw_bits_burst(io_mem_chn_aw_bits_burst),
+	.io_mem_chn_aw_bits_lock (),
+	.io_mem_chn_aw_bits_cache(),
+	.io_mem_chn_aw_bits_port (),
+	.io_mem_chn_aw_bits_qos  (),
+	.io_mem_chn_aw_bits_user (),
+	.io_mem_chn_w_ready      (io_mem_chn_w_ready),
+	.io_mem_chn_w_valid      (io_mem_chn_w_valid),
+	.io_mem_chn_w_bits_data  (io_mem_chn_w_bits_data),
+	.io_mem_chn_w_bits_strb  (io_mem_chn_w_bits_strb),
+	.io_mem_chn_w_bits_last  (io_mem_chn_w_bits_last),
+	.io_mem_chn_w_bits_user  (),
+	.io_mem_chn_b_ready      (io_mem_chn_b_ready),
+	.io_mem_chn_b_valid      (io_mem_chn_b_valid),
+	.io_mem_chn_b_bits_id    (1'b0),
+	.io_mem_chn_b_bits_rsp   (io_mem_chn_b_bits_rsp),
+	.io_mem_chn_b_bits_user  (1'b0),
+
+	.io_sys_chn_ar_ready     (io_sys_chn_ar_ready),
+	.io_sys_chn_ar_valid     (io_sys_chn_ar_valid),
+	.io_sys_chn_ar_bits_id   (),
+	.io_sys_chn_ar_bits_addr (io_sys_chn_ar_bits_addr),
+	.io_sys_chn_ar_bits_len  (),
+	.io_sys_chn_ar_bits_size (),
+	.io_sys_chn_ar_bits_burst(),
+	.io_sys_chn_ar_bits_lock (),
+	.io_sys_chn_ar_bits_cache(),
+	.io_sys_chn_ar_bits_port (),
+	.io_sys_chn_ar_bits_qos  (),
+	.io_sys_chn_ar_bits_user (),
+	.io_sys_chn_r_ready      (io_sys_chn_r_ready),
+	.io_sys_chn_r_valid      (io_sys_chn_r_valid),
+	.io_sys_chn_r_bits_id    (1'b0),
+	.io_sys_chn_r_bits_data  (io_sys_chn_r_bits_data),
+	.io_sys_chn_r_bits_rsp   (io_sys_chn_r_bits_rsp),
+	.io_sys_chn_r_bits_last  (1'b1),
+	.io_sys_chn_r_bits_user  (1'b0),
+	.io_sys_chn_aw_ready     (io_sys_chn_aw_ready),
+	.io_sys_chn_aw_valid     (io_sys_chn_aw_valid),
+	.io_sys_chn_aw_bits_id   (),
+	.io_sys_chn_aw_bits_addr (io_sys_chn_aw_bits_addr),
+	.io_sys_chn_aw_bits_len  (),
+	.io_sys_chn_aw_bits_size (),
+	.io_sys_chn_aw_bits_burst(),
+	.io_sys_chn_aw_bits_lock (),
+	.io_sys_chn_aw_bits_cache(),
+	.io_sys_chn_aw_bits_port (),
+	.io_sys_chn_aw_bits_qos  (),
+	.io_sys_chn_aw_bits_user (),
+	.io_sys_chn_w_ready      (io_sys_chn_w_ready),
+	.io_sys_chn_w_valid      (io_sys_chn_w_valid),
+	.io_sys_chn_w_bits_data  (io_sys_chn_w_bits_data),
+	.io_sys_chn_w_bits_strb  (io_sys_chn_w_bits_strb),
+	.io_sys_chn_w_bits_last  (),
+	.io_sys_chn_w_bits_user  (),
+	.io_sys_chn_b_ready      (io_sys_chn_b_ready),
+	.io_sys_chn_b_valid      (io_sys_chn_b_valid),
+	.io_sys_chn_b_bits_id    (1'b0),
+	.io_sys_chn_b_bits_rsp   (io_sys_chn_b_bits_rsp),
+	.io_sys_chn_b_bits_user  (1'b0)
 );
 
 
 
+
+axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram 
+(
+
+	.MEM_AWADDR(io_mem_chn_aw_bits_addr),
+	.MEM_AWLEN(io_mem_chn_aw_bits_len),
+	.MEM_AWSIZE(io_mem_chn_aw_bits_size),
+	.MEM_AWBURST(io_mem_chn_aw_bits_burst),
+	.MEM_AWVALID(io_mem_chn_aw_valid),
+	.MEM_AWREADY(io_mem_chn_aw_ready),
+
+
+	.MEM_WDATA(io_mem_chn_w_bits_data),
+	.MEM_WSTRB(io_mem_chn_w_bits_strb),
+	.MEM_WLAST(io_mem_chn_w_bits_last),
+	.MEM_WVALID(io_mem_chn_w_valid),
+	.MEM_WREADY(io_mem_chn_w_ready),
+
+	.MEM_BRESP(io_mem_chn_b_bits_rsp),
+	.MEM_BVALID(io_mem_chn_b_valid),
+	.MEM_BREADY(io_mem_chn_b_ready),
+
+	.MEM_ARADDR(io_mem_chn_ar_bits_addr),
+	.MEM_ARLEN(io_mem_chn_ar_bits_len),
+	.MEM_ARSIZE(io_mem_chn_ar_bits_size),
+	.MEM_ARBURST(io_mem_chn_ar_bits_burst),
+	.MEM_ARVALID(io_mem_chn_ar_valid),
+	.MEM_ARREADY(io_mem_chn_ar_ready),
+
+	.MEM_RDATA(io_mem_chn_r_bits_data),
+	.MEM_RRESP(io_mem_chn_r_bits_rsp),
+	.MEM_RLAST(io_mem_chn_r_bits_last),
+	.MEM_RVALID(io_mem_chn_r_valid),
+	.MEM_RREADY(io_mem_chn_r_ready),
+
+	.CLK        (CLK),
+	.RSTn       (RSTn)
+);
+
+
+debuger i_debuger(
+
+	.DEBUGER_AWADDR(io_sys_chn_aw_bits_addr),
+	.DEBUGER_AWVALID(io_sys_chn_aw_valid),
+	.DEBUGER_AWREADY(io_sys_chn_aw_ready),
+
+	.DEBUGER_WDATA(io_sys_chn_w_bits_data),   
+	.DEBUGER_WSTRB(io_sys_chn_w_bits_strb),
+	.DEBUGER_WVALID(io_sys_chn_w_valid),
+	.DEBUGER_WREADY(io_sys_chn_w_ready),
+
+	.DEBUGER_BRESP(io_sys_chn_b_bits_rsp),
+	.DEBUGER_BVALID(io_sys_chn_b_valid),
+	.DEBUGER_BREADY(io_sys_chn_b_ready),
+
+	.DEBUGER_ARADDR(io_sys_chn_ar_bits_addr),
+	.DEBUGER_ARVALID(io_sys_chn_ar_valid),
+	.DEBUGER_ARREADY(io_sys_chn_ar_ready),
+
+	.DEBUGER_RDATA(io_sys_chn_r_bits_data),
+	.DEBUGER_RRESP(io_sys_chn_r_bits_rsp),
+	.DEBUGER_RVALID(io_sys_chn_r_valid),
+	.DEBUGER_RREADY(io_sys_chn_r_ready),
+
+	.CLK(CLK),
+	.RSTn(RSTn)
+	
+);
+
+
+
+
+
+reg [255:0] testName;
+
 initial begin
+	if ( $value$plusargs("%s",testName[255:0]) ) begin
+		$display("%s",testName);
+	end
+end
 
 
+
+initial begin
 	CLK = 0;
 	RSTn = 0;
 
@@ -55,7 +296,9 @@ initial begin
 
 	RSTn <= 1;
 
-
+	#50000
+			$display("Time Out !!!");
+	$stop;
 end
 
 
@@ -68,47 +311,73 @@ end
 
 
 
-`define SRAM s_riftChip.i_axi_full_slv_sram.i_sram
+initial
+begin
+	$dumpfile("./build/wave.vcd"); //生成的vcd文件名称
+	$dumpvars(0, rift2chip_tb);//tb模块名称
+end
 
-`define RGF   s_riftChip.i_riftCore.i_backEnd.i_phyRegister.regFileX_qout
-`define INDEX s_riftChip.i_riftCore.i_backEnd.i_phyRegister.archi_X_qout[`RB*3 +: `RB]
+wire isEcall = 
+	( s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_0_bits_privil_ecall & s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_0_valid ) | 
+	( s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_1_bits_privil_ecall & s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_1_valid & s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_0_ready );
+wire [63:0] x3 = (s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 2'd0 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_3_0 : s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 2'd1 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_3_1 : s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 2'd2 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_3_2 : s_Rift2Chip.i_rift2Core.i_regfiles.files_3_3);
+
+
+reg sim_end = 0;
+always @(posedge CLK)begin 
+	if (isEcall) begin
+		// result <= x3;
+		#1 sim_end <= 1;
+
+	end
+
+end
+
+
+always @(posedge CLK ) begin
+	if ( sim_end == 1 ) begin
+		if ( x3 == 64'd1 ) begin
+			$display("PASS");
+			# 1000 
+			$finish;
+		end
+		else begin
+			$display("Fail");
+			$stop;
+		end
+	end
+end
 
 
 
+`define MEM s_axi_full_slv_sram.i_sram.ram
+reg [7:0] mem [0:200000];
 
-	localparam DP = 2**14;
-	integer i, by;
-
-		reg [7:0] mem [0:200000];
-		initial begin
-			$readmemh("./ci/dhrystone.riscv.verilog", mem);
-			for ( i = 0; i < DP; i = i + 1 ) begin
-				for ( by = 0; by < 8; by = by + 1 ) begin
-					if ( | mem[i*8+by] ) begin
-						`SRAM.ram[i][8*by +: 8] = mem[i*8+by];
-					end
-					else begin
-						`SRAM.ram[i][8*by +: 8] = 8'h0;
-					end
-				end
-
-				// $display("ITCM %h: %h,%h", i*4,`SRAM_ODD.ram[i],`SRAM_EVE.ram[i]);
+localparam DP = 2**14;
+integer i, by;
+initial begin
+	$readmemh("./ci/dhrystone.riscv.verilog", mem);
+	
+	for ( i = 0; i < DP; i = i + 1 ) begin
+		for ( by = 0; by < 16; by = by + 1 ) begin
+			if ( | mem[i*16+by] ) begin
+				`MEM[i][8*by +: 8] = mem[i*16+by];
 			end
-
-		end 
-
-
-
-
+			else begin
+				`MEM[i][8*by +: 8] = 8'h0;
+			end
+		end
 
 
+	end
 
-// initial
-// begin
-// 	$dumpfile("./build/wave.vcd"); //生成的vcd文件名称
-// 	$dumpvars(0, riftChip_DS);//tb模块名称
-// end
+end 
+
+
 
 endmodule
+
+
+
 
 
