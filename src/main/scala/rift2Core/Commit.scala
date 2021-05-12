@@ -106,13 +106,18 @@ class Commit extends Privilege with Superscalar{
 
 	lsu_trap_addr := io.lsu_cmm.trap_addr
 
-	io.cmm_pc.valid := is_xRet.contains(true.B) | is_trap.contains(true.B)
+	val is_fence_i = VecInit( 	io.rod_i(0).bits.is_fence_i & is_commit_comfirm(0),
+								io.rod_i(1).bits.is_fence_i & is_commit_comfirm(1)
+							)
 
+	io.cmm_pc.valid := is_xRet.contains(true.B) | is_trap.contains(true.B)
 	io.cmm_pc.bits.addr := MuxCase(0.U, Array(
 		is_xRet(0) -> m_csrFiles.mepc,
 		is_trap(0) -> m_csrFiles.mtvec,
 		is_xRet(1) -> m_csrFiles.mepc,
-		is_trap(1) -> m_csrFiles.mtvec		
+		is_trap(1) -> m_csrFiles.mtvec,
+		is_fence_i(0) -> (io.rod_i(0).bits.pc + 4.U),
+		is_fence_i(1) -> (io.rod_i(1).bits.pc + 4.U)
 	))
 
 

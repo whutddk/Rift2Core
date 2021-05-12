@@ -48,7 +48,6 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 
 		val l2c_fence_req = Input(Bool())
-		val l2c_fence_end = Output(Bool())
 	})
 
 	def addr_lsb = log2Ceil(dw*bk/8)
@@ -73,7 +72,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	val req_no_qout = RegInit(0.U(3.W))
 
 
-	// val tag_addr = cache_addr_dnxt(31, 32-tag_w)
+	val is_fence = RegInit(false.B)
 
 
 
@@ -224,6 +223,27 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	bram.mem_dat := Mux1H( bram.is_cb_vhit zip cache_mem.dat_info_r )
 
 
+// FFFFFFFFFFFFFFFFFFFFFFEEEEEEEEEEEEEEEEEEEEEENNNNNNNN        NNNNNNNN        CCCCCCCCCCCCCEEEEEEEEEEEEEEEEEEEEEE
+// F::::::::::::::::::::FE::::::::::::::::::::EN:::::::N       N::::::N     CCC::::::::::::CE::::::::::::::::::::E
+// F::::::::::::::::::::FE::::::::::::::::::::EN::::::::N      N::::::N   CC:::::::::::::::CE::::::::::::::::::::E
+// FF::::::FFFFFFFFF::::FEE::::::EEEEEEEEE::::EN:::::::::N     N::::::N  C:::::CCCCCCCC::::CEE::::::EEEEEEEEE::::E
+//   F:::::F       FFFFFF  E:::::E       EEEEEEN::::::::::N    N::::::N C:::::C       CCCCCC  E:::::E       EEEEEE
+//   F:::::F               E:::::E             N:::::::::::N   N::::::NC:::::C                E:::::E             
+//   F::::::FFFFFFFFFF     E::::::EEEEEEEEEE   N:::::::N::::N  N::::::NC:::::C                E::::::EEEEEEEEEE   
+//   F:::::::::::::::F     E:::::::::::::::E   N::::::N N::::N N::::::NC:::::C                E:::::::::::::::E   
+//   F:::::::::::::::F     E:::::::::::::::E   N::::::N  N::::N:::::::NC:::::C                E:::::::::::::::E   
+//   F::::::FFFFFFFFFF     E::::::EEEEEEEEEE   N::::::N   N:::::::::::NC:::::C                E::::::EEEEEEEEEE   
+//   F:::::F               E:::::E             N::::::N    N::::::::::NC:::::C                E:::::E             
+//   F:::::F               E:::::E       EEEEEEN::::::N     N:::::::::N C:::::C       CCCCCC  E:::::E       EEEEEE
+// FF:::::::FF           EE::::::EEEEEEEE:::::EN::::::N      N::::::::N  C:::::CCCCCCCC::::CEE::::::EEEEEEEE:::::E
+// F::::::::FF           E::::::::::::::::::::EN::::::N       N:::::::N   CC:::::::::::::::CE::::::::::::::::::::E
+// F::::::::FF           E::::::::::::::::::::EN::::::N        N::::::N     CCC::::::::::::CE::::::::::::::::::::E
+// FFFFFFFFFFF           EEEEEEEEEEEEEEEEEEEEEENNNNNNNN         NNNNNNN        CCCCCCCCCCCCCEEEEEEEEEEEEEEEEEEEEEE
+
+
+
+	when( io.l2c_fence_req & ~is_fence ) { is_fence := true.B }
+	.elsewhen( fsm.state_qout === L2C_state.fence ) { is_fence := false.B }
 
 
 
@@ -249,7 +269,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 
 
 	val l2c_state_dnxt_in_cfree = 
-		Mux( io.l2c_fence_req, L2C_state.fence,
+		Mux( is_fence, L2C_state.fence,
 			Mux( (il1_slv.io.a.valid | dl1_slv.io.a.valid), L2C_state.cktag, L2C_state.cfree )
 		)
 
@@ -280,7 +300,7 @@ class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Modul
 	))
 
 	fsm.state_qout := fsm.state_dnxt
-	io.l2c_fence_end := fsm.state_qout === L2C_state.fence
+	
 
 
 // BBBBBBBBBBBBBBBBB   UUUUUUUU     UUUUUUUU   SSSSSSSSSSSSSSS 

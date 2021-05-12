@@ -47,7 +47,6 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 		val mem_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
 
 		val l3c_fence_req = Input(Bool())
-		val l3c_fence_end = Output(Bool())
 	})
 
 	def addr_lsb = log2Ceil(dw*bk/8)
@@ -95,6 +94,8 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 		val is_hazard = Wire(Bool())
 
 		val addr_o = Wire(UInt(tag_w.W))
+
+		val is_fence = RegInit(false.B)
 	}
 
 // FFFFFFFFFFFFFFFFFFFFFF   SSSSSSSSSSSSSSS MMMMMMMM               MMMMMMMM
@@ -118,7 +119,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 
 
 	val l3c_state_dnxt_in_cfree = 
-		Mux( io.l3c_fence_req, L3C_state.fence, Mux( l2c_slv.io.a.valid, L3C_state.cktag, L3C_state.cfree ) )
+		Mux( db.is_fence, L3C_state.fence, Mux( l2c_slv.io.a.valid, L3C_state.cktag, L3C_state.cfree ) )
 
 	val l3c_state_dnxt_in_cktag = 
 		Mux( ~bram.cache_valid(bram.cl_sel), L3C_state.flash,
@@ -127,7 +128,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 
 	val l3c_state_dnxt_in_evict = 
 		Mux( ~mem_mst_w.io.end, L3C_state.evict,
-			Mux( io.l3c_fence_req, L3C_state.fence, L3C_state.cktag ))
+			Mux( db.is_fence, L3C_state.fence, L3C_state.cktag ))
 
 	val l3c_state_dnxt_in_flash = 
 		Mux( mem_mst_r.io.end, L3C_state.cktag, L3C_state.flash )
@@ -147,7 +148,6 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 		(fsm.state_qout === L3C_state.fence) -> l3c_state_dnxt_in_fence
 	))
 
-	io.l3c_fence_end := (fsm.state_qout === L3C_state.fence) & (fsm.state_dnxt === L3C_state.cfree)
 	fsm.state_qout := fsm.state_dnxt
 
 
@@ -435,6 +435,10 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 //                                                                        y:::::y                                                                                                       
 //                                                                       y:::::y                                                                                                        
 //                                                                      yyyyyyy 
+	
+
+ 
+
 
 	db.is_full  := ( db.valid.forall((x:Bool) => (x === true.B)) )
 	db.is_empty := ( db.valid.forall((x:Bool) => (x === false.B)) )
@@ -457,6 +461,29 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 	}
 
 	db.addr_o := db.buf(db.idx_deq)
+
+
+
+
+// FFFFFFFFFFFFFFFFFFFFFFEEEEEEEEEEEEEEEEEEEEEENNNNNNNN        NNNNNNNN        CCCCCCCCCCCCCEEEEEEEEEEEEEEEEEEEEEE
+// F::::::::::::::::::::FE::::::::::::::::::::EN:::::::N       N::::::N     CCC::::::::::::CE::::::::::::::::::::E
+// F::::::::::::::::::::FE::::::::::::::::::::EN::::::::N      N::::::N   CC:::::::::::::::CE::::::::::::::::::::E
+// FF::::::FFFFFFFFF::::FEE::::::EEEEEEEEE::::EN:::::::::N     N::::::N  C:::::CCCCCCCC::::CEE::::::EEEEEEEEE::::E
+//   F:::::F       FFFFFF  E:::::E       EEEEEEN::::::::::N    N::::::N C:::::C       CCCCCC  E:::::E       EEEEEE
+//   F:::::F               E:::::E             N:::::::::::N   N::::::NC:::::C                E:::::E             
+//   F::::::FFFFFFFFFF     E::::::EEEEEEEEEE   N:::::::N::::N  N::::::NC:::::C                E::::::EEEEEEEEEE   
+//   F:::::::::::::::F     E:::::::::::::::E   N::::::N N::::N N::::::NC:::::C                E:::::::::::::::E   
+//   F:::::::::::::::F     E:::::::::::::::E   N::::::N  N::::N:::::::NC:::::C                E:::::::::::::::E   
+//   F::::::FFFFFFFFFF     E::::::EEEEEEEEEE   N::::::N   N:::::::::::NC:::::C                E::::::EEEEEEEEEE   
+//   F:::::F               E:::::E             N::::::N    N::::::::::NC:::::C                E:::::E             
+//   F:::::F               E:::::E       EEEEEEN::::::N     N:::::::::N C:::::C       CCCCCC  E:::::E       EEEEEE
+// FF:::::::FF           EE::::::EEEEEEEE:::::EN::::::N      N::::::::N  C:::::CCCCCCCC::::CEE::::::EEEEEEEE:::::E
+// F::::::::FF           E::::::::::::::::::::EN::::::N       N:::::::N   CC:::::::::::::::CE::::::::::::::::::::E
+// F::::::::FF           E::::::::::::::::::::EN::::::N        N::::::N     CCC::::::::::::CE::::::::::::::::::::E
+// FFFFFFFFFFF           EEEEEEEEEEEEEEEEEEEEEENNNNNNNN         NNNNNNN        CCCCCCCCCCCCCEEEEEEEEEEEEEEEEEEEEEE
+
+	when( io.l3c_fence_req & ~db.is_fence ) { db.is_fence := true.B }
+	.elsewhen( db.is_empty &  db.is_fence ) { db.is_fence := false.B }
 
 
 

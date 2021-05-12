@@ -47,9 +47,6 @@ class Lsu extends Module {
 		val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
 		val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
 
-		// val sys_chn_a = new DecoupledIO(new TLchannel_a(64,32))
-		// val sys_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
-
 		val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
 		val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
 
@@ -61,10 +58,10 @@ class Lsu extends Module {
 		val cmm_lsu = Input(new Info_cmm_lsu)
 		val lsu_cmm = Output( new Info_lsu_cmm )
 
+		val il1_fence_req = Output(Bool())
 		val l2c_fence_req = Output(Bool())
 		val l3c_fence_req = Output(Bool())
-		val l2c_fence_end = Input(Bool())
-		val l3c_fence_end = Input(Bool())
+
 
 		val flush = Input(Bool())
 	})
@@ -92,15 +89,11 @@ class Lsu extends Module {
 
 
 	val is_fence = RegInit(false.B)
-	val is_fence_end = RegInit(false.B)
-	val is_l2c_fence_req = RegInit(false.B)
-	val is_l3c_fence_req = RegInit(false.B)
-	val is_l2c_fence_end = RegInit(false.B)
-	val is_l3c_fence_end = RegInit(false.B)
+	val is_fence_i = RegInit(false.B)
+
 
 	val trans_kill = RegInit(false.B)
 
-	// val sys_mst = new TileLink_mst(64, 32, 1)
 	val sys_mst_r = Module(new AXI_mst_r(32, 64, 1, 1, 1 ))
 	val sys_mst_w = Module(new AXI_mst_w(32, 64, 1, 1, 1 ))
 	val dl1_mst = Module(new TileLink_mst_heavy(128,32, 2))
@@ -112,7 +105,7 @@ class Lsu extends Module {
 
 	def iss_ack = io.lsu_iss_exe.valid & io.lsu_iss_exe.ready
 
-	io.lsu_iss_exe.ready := lsu_exe_iwb_fifo.io.enq.valid & lsu_exe_iwb_fifo.io.enq.ready
+	io.lsu_iss_exe.ready := lsu_exe_iwb_fifo.io.enq.fire
 
 
 	val wtb = new Wt_block(3)
@@ -182,8 +175,8 @@ class Lsu extends Module {
 	def is_memory = (op1(63,32) === 0.U) & (op1(31) === 1.U)
 	def is_system = (op1(63,32) === 0.U) & (op1(31,30) === 0.U)
 	
-	val is_mem_hazard = wtb.is_hazard( "h80000000".U, Cat(Fill(2, 1.U), Fill(30, 0.U) ) ) //only check whether is mem or sys
-	val is_sys_hazard = wtb.is_hazard( "h40000000".U, Cat(Fill(2, 1.U), Fill(30, 0.U) ) ) //only check whether is mem or sys
+	val is_mem_hazard = wtb.is_hazard( "h80000000".U, Cat(Fill(1, 1.U), Fill(31, 0.U) ) ) //only check whether is mem or sys
+	val is_sys_hazard = wtb.is_hazard( "h00000000".U, Cat(Fill(1, 1.U), Fill(31, 0.U) ) ) //only check whether is mem or sys
 
 	def is_wtfull = wtb.full
 
@@ -218,7 +211,8 @@ class Lsu extends Module {
 		( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cfree ) |
 		( stateReg === Dl1_state.cmiss & op1_dl1_req === op1_align128 & dl1_mst.io.d.fire & ~trans_kill ) |
 		( stateReg === Dl1_state.write & stateDnxt === Dl1_state.cfree ) |
-		( stateReg === Dl1_state.cfree & stateDnxt === Dl1_state.fence ) |
+		( stateReg === Dl1_state.cfree & stateDnxt === Dl1_state.fence & lsu_fence ) |
+		( stateReg === Dl1_state.fence & stateDnxt === Dl1_state.cfree & lsu_fence_i ) |
 		( stateReg === Dl1_state.pread & stateDnxt === Dl1_state.cfree & trans_kill === false.B)
 
 
@@ -467,7 +461,7 @@ class Lsu extends Module {
 	def dl1_state_dnxt_in_mwait = Mux( is_mem_hazard | ~lsu_exe_iwb_fifo.io.enq.ready, Dl1_state.mwait, Dl1_state.cmiss )
 	def dl1_state_dnxt_in_cmiss = Mux( dl1_mst.io.mode === 7.U, Dl1_state.cfree, Dl1_state.cmiss )
 	def dl1_state_dnxt_in_write = Dl1_state.cfree
-	def dl1_state_dnxt_in_fence = Mux( is_fence_end, Dl1_state.cfree, Dl1_state.fence )
+	def dl1_state_dnxt_in_fence = Mux( wtb.empty, Dl1_state.cfree, Dl1_state.fence )
 	def dl1_state_dnxt_in_pwait = Mux( is_sys_hazard, Dl1_state.pwait, Dl1_state.pread )
 	def dl1_state_dnxt_in_pread = Mux( sys_mst_r.io.end, Dl1_state.cfree, Dl1_state.pread )
 
@@ -727,44 +721,15 @@ class Lsu extends Module {
 
 
 
-	def is_dl1_fence_end = wtb.empty
+	io.il1_fence_req := wtb.empty & is_fence_i
+	io.l2c_fence_req := wtb.empty & is_fence
+	io.l3c_fence_req := wtb.empty & is_fence
 
+	when ( ~is_fence & io.cmm_lsu.is_fence_commit ) { is_fence := true.B }
+	.elsewhen(stateDnxt === Dl1_state.cfree) { is_fence := false.B }
 
-	when ( ~is_fence & io.cmm_lsu.is_fence_commit ) {
-		is_fence := true.B
-	}
-
-	when ( is_dl1_fence_end & is_fence ) {
-		when ( ~io.l2c_fence_end & ~is_l2c_fence_req ) {
-			is_l2c_fence_req := true.B
-		}
-		when ( ~io.l3c_fence_end & ~is_l3c_fence_req ) {
-			is_l3c_fence_req := true.B
-		}
-	}
-
-	when ( io.l2c_fence_end === true.B ) {
-		is_l2c_fence_req := false.B
-		is_l2c_fence_end := true.B
-	}
-
-	when ( io.l3c_fence_end === true.B ) {
-		is_l3c_fence_req := false.B
-		is_l3c_fence_end := true.B
-	}
-
-	when ( stateDnxt === Dl1_state.cfree ) {
-		is_fence := false.B
-		is_l2c_fence_end := false.B
-		is_l3c_fence_end := false.B
-		is_fence_end := false.B
-	}
-
-	when ( (is_dl1_fence_end & lsu_fence_i ) | (is_l3c_fence_end ) | ( io.flush & ~is_fence ) ) {
-		is_fence_end := true.B
-	}
-
-
+	when ( io.lsu_iss_exe.fire & lsu_fence_i ) { is_fence_i := true.B }
+	.elsewhen(stateDnxt === Dl1_state.cfree) { is_fence_i := false.B }
 
 
 	when( stateDnxt === Dl1_state.cfree & stateReg === Dl1_state.cfree ) {
@@ -778,8 +743,7 @@ class Lsu extends Module {
 	}
 
 
-	io.l2c_fence_req := is_l2c_fence_req
-	io.l3c_fence_req := is_l3c_fence_req
+
 
 
 

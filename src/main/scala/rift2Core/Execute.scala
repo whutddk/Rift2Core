@@ -66,10 +66,11 @@ class Execute extends Module {
 		val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
 		val cmm_lsu = Input(new Info_cmm_lsu)
 		val lsu_cmm = Output( new Info_lsu_cmm )
+
+		val il1_fence_req = Output(Bool())
 		val l2c_fence_req = Output(Bool())
 		val l3c_fence_req = Output(Bool())
-		val l2c_fence_end = Input(Bool())
-		val l3c_fence_end = Input(Bool())
+
 
 		val flush = Input(Bool())
 
@@ -113,10 +114,11 @@ class Execute extends Module {
 
 	lsu.io.cmm_lsu <> io.cmm_lsu
 	lsu.io.lsu_cmm <> io.lsu_cmm
+
+	lsu.io.il1_fence_req <> io.il1_fence_req
 	lsu.io.l2c_fence_req <> io.l2c_fence_req
 	lsu.io.l3c_fence_req <> io.l3c_fence_req
-	lsu.io.l2c_fence_end <> io.l2c_fence_end
-	lsu.io.l3c_fence_end <> io.l3c_fence_end
+
 	lsu.io.flush <> io.flush
 
 	mul.io.mul_iss_exe <> io.mul_iss_exe

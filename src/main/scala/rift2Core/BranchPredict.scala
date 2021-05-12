@@ -104,7 +104,6 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 		val iq_ib = Vec(2, Flipped(new DecoupledIO(new Info_iq_ib) ))
 		val ib_id = Vec(2, new DecoupledIO(new Info_ib_id))
 
-		val fencei_end = Input(Bool())
 		val is_misPredict_taken = Output(Bool())
 
 		//include privilege, mispredict, not-include jalr

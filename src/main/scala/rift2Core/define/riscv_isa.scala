@@ -423,6 +423,7 @@ class Info_reorder_i extends Bundle {
 	val is_lu = Bool()
 	val is_su = Bool()
 	val is_fence = Bool()
+	val is_fence_i = Bool()
 	val is_csr = Bool()
 
 	val privil = new Privil_isa

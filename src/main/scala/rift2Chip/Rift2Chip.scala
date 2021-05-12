@@ -65,7 +65,6 @@ class Rift2Chip extends Module {
 	l2cache.io.l2c_chn_a <> l3cache.io.l2c_chn_a
 	l2cache.io.l2c_chn_d <> l3cache.io.l2c_chn_d
 	l2cache.io.l2c_fence_req := i_rift2Core.io.l2c_fence_req
-	i_rift2Core.io.l2c_fence_end := l2cache.io.l2c_fence_end 
 
 
 
@@ -75,7 +74,6 @@ class Rift2Chip extends Module {
 	l3cache.io.mem_chn_w  <> io.mem_chn_w
 	l3cache.io.mem_chn_b  <> io.mem_chn_b
 	l3cache.io.l3c_fence_req := i_rift2Core.io.l3c_fence_req
-	i_rift2Core.io.l3c_fence_end := l3cache.io.l3c_fence_end
 	
 }
 

@@ -60,6 +60,7 @@ trait ReOrder {
 		reorder_i_info.is_lu          := id_dpt_info.info.lsu_isa.is_lu
 		reorder_i_info.is_su          := id_dpt_info.info.lsu_isa.is_su
 		reorder_i_info.is_fence       := id_dpt_info.info.lsu_isa.fence
+		reorder_i_info.is_fence_i      := id_dpt_info.info.lsu_isa.fence_i
 		reorder_i_info.is_csr         := id_dpt_info.info.csr_isa.is_csr
 		reorder_i_info.privil         := id_dpt_info.info.privil_isa
 		reorder_i_info.is_accessFault := id_dpt_info.is_iFAccessFault
