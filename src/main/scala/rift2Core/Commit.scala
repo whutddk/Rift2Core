@@ -110,7 +110,7 @@ class Commit extends Privilege with Superscalar{
 								io.rod_i(1).bits.is_fence_i & is_commit_comfirm(1)
 							)
 
-	io.cmm_pc.valid := is_xRet.contains(true.B) | is_trap.contains(true.B)
+	io.cmm_pc.valid := is_xRet.contains(true.B) | is_trap.contains(true.B) | is_fence_i.contains(true.B)
 	io.cmm_pc.bits.addr := MuxCase(0.U, Array(
 		is_xRet(0) -> m_csrFiles.mepc,
 		is_trap(0) -> m_csrFiles.mtvec,

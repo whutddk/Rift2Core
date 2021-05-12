@@ -139,7 +139,8 @@ class Rift2Core extends Module {
 
 
 	if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | ib_stage.io.ib_pc.valid | exe_stage.io.bru_iq_j.valid
-	ib_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | exe_stage.io.bru_iq_j.valid
+	iq_stage.io.flush  := exe_stage.io.il1_fence_req
+	ib_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | exe_stage.io.bru_iq_j.valid | exe_stage.io.il1_fence_req
 	id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 	dpt_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 	iss_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)

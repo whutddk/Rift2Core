@@ -92,9 +92,9 @@ class Ifetch() extends Module with IBuf{
 	if_addr     := Mux( (stateReg === Il1_state.cfree), io.pc_if.bits.addr, if_addr_reg)
 
 	io.if_iq <> ibuf.io.deq
-	ibuf.io.flush := io.flush
+	ibuf.io.flush := io.flush | io.is_il1_fence_req
 
-	def is_pc_if_ack = (io.pc_if.valid & io.pc_if.ready)
+	def is_pc_if_ack = io.pc_if.fire
 
 	ia.pc := if_addr
 	ia.instr := Mux( 
@@ -113,7 +113,7 @@ class Ifetch() extends Module with IBuf{
 
 
 
-	io.pc_if.ready := ~trans_kill & (stateReg =/= Il1_state.cfree) & (stateDnxt === Il1_state.cfree)
+	io.pc_if.ready := ~trans_kill & (stateReg === Il1_state.cktag | stateReg === Il1_state.cmiss) & (stateDnxt === Il1_state.cfree)
 
 
 

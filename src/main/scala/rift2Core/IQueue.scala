@@ -42,6 +42,8 @@ class Iqueue_ss extends Module with Superscalar{
 
 		val pc_iq = Flipped(new ValidIO( UInt(64.W) ))
 
+		val flush = Input(Bool())
+
 	})
 
 	val iq_ib_fifo = Module(new MultiPortFifo( new Info_iq_ib, 4, 2, 2 ))
@@ -162,7 +164,7 @@ class Iqueue_ss extends Module with Superscalar{
 
 
 
-	iq_ib_fifo.io.flush := io.pc_iq.valid
+	iq_ib_fifo.io.flush := io.pc_iq.valid | io.flush
 
 
 

@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-12 09:27:47
+* @Last Modified time: 2021-05-12 11:44:17
 */
 
 
@@ -67,7 +67,48 @@ module rift2chip_tb (
 	wire         io_mem_chn_b_valid;
 	wire [1:0]   io_mem_chn_b_bits_rsp;
 
-
+	wire         io_sys_chn_ar_ready;
+	wire         io_sys_chn_ar_valid;
+	wire         io_sys_chn_ar_bits_id;
+	wire [31:0]  io_sys_chn_ar_bits_addr;
+	wire [7:0]   io_sys_chn_ar_bits_len;
+	wire [2:0]   io_sys_chn_ar_bits_size;
+	wire [1:0]   io_sys_chn_ar_bits_burst;
+	wire         io_sys_chn_ar_bits_lock;
+	wire [3:0]   io_sys_chn_ar_bits_cache;
+	wire [2:0]   io_sys_chn_ar_bits_port;
+	wire [3:0]   io_sys_chn_ar_bits_qos;
+	wire         io_sys_chn_ar_bits_user;
+	wire         io_sys_chn_r_ready;
+	wire         io_sys_chn_r_valid;
+	wire         io_sys_chn_r_bits_id;
+	wire [63:0]  io_sys_chn_r_bits_data;
+	wire [1:0]   io_sys_chn_r_bits_rsp;
+	wire         io_sys_chn_r_bits_last;
+	wire         io_sys_chn_r_bits_user;
+	wire         io_sys_chn_aw_ready;
+	wire         io_sys_chn_aw_valid;
+	wire         io_sys_chn_aw_bits_id;
+	wire [31:0]  io_sys_chn_aw_bits_addr;
+	wire [7:0]   io_sys_chn_aw_bits_len;
+	wire [2:0]   io_sys_chn_aw_bits_size;
+	wire [1:0]   io_sys_chn_aw_bits_burst;
+	wire         io_sys_chn_aw_bits_lock;
+	wire [3:0]   io_sys_chn_aw_bits_cache;
+	wire [2:0]   io_sys_chn_aw_bits_port;
+	wire [3:0]   io_sys_chn_aw_bits_qos;
+	wire         io_sys_chn_aw_bits_user;
+	wire         io_sys_chn_w_ready;
+	wire         io_sys_chn_w_valid;
+	wire [63:0]  io_sys_chn_w_bits_data;
+	wire [7:0]   io_sys_chn_w_bits_strb;
+	wire         io_sys_chn_w_bits_last;
+	wire         io_sys_chn_w_bits_user;
+	wire         io_sys_chn_b_ready;
+	wire         io_sys_chn_b_valid;
+	wire         io_sys_chn_b_bits_id;
+	wire [1:0]   io_sys_chn_b_bits_rsp;
+	wire         io_sys_chn_b_bits_user;
 
 
 
@@ -116,7 +157,50 @@ Rift2Chip s_Rift2Chip(
 	.io_mem_chn_b_valid      (io_mem_chn_b_valid),
 	.io_mem_chn_b_bits_id    (1'b0),
 	.io_mem_chn_b_bits_rsp   (io_mem_chn_b_bits_rsp),
-	.io_mem_chn_b_bits_user  (1'b0)
+	.io_mem_chn_b_bits_user  (1'b0),
+
+	.io_sys_chn_ar_ready     (io_sys_chn_ar_ready),
+	.io_sys_chn_ar_valid     (io_sys_chn_ar_valid),
+	.io_sys_chn_ar_bits_id   (),
+	.io_sys_chn_ar_bits_addr (io_sys_chn_ar_bits_addr),
+	.io_sys_chn_ar_bits_len  (),
+	.io_sys_chn_ar_bits_size (),
+	.io_sys_chn_ar_bits_burst(),
+	.io_sys_chn_ar_bits_lock (),
+	.io_sys_chn_ar_bits_cache(),
+	.io_sys_chn_ar_bits_port (),
+	.io_sys_chn_ar_bits_qos  (),
+	.io_sys_chn_ar_bits_user (),
+	.io_sys_chn_r_ready      (io_sys_chn_r_ready),
+	.io_sys_chn_r_valid      (io_sys_chn_r_valid),
+	.io_sys_chn_r_bits_id    (1'b0),
+	.io_sys_chn_r_bits_data  (io_sys_chn_r_bits_data),
+	.io_sys_chn_r_bits_rsp   (io_sys_chn_r_bits_rsp),
+	.io_sys_chn_r_bits_last  (1'b1),
+	.io_sys_chn_r_bits_user  (1'b0),
+	.io_sys_chn_aw_ready     (io_sys_chn_aw_ready),
+	.io_sys_chn_aw_valid     (io_sys_chn_aw_valid),
+	.io_sys_chn_aw_bits_id   (),
+	.io_sys_chn_aw_bits_addr (io_sys_chn_aw_bits_addr),
+	.io_sys_chn_aw_bits_len  (),
+	.io_sys_chn_aw_bits_size (),
+	.io_sys_chn_aw_bits_burst(),
+	.io_sys_chn_aw_bits_lock (),
+	.io_sys_chn_aw_bits_cache(),
+	.io_sys_chn_aw_bits_port (),
+	.io_sys_chn_aw_bits_qos  (),
+	.io_sys_chn_aw_bits_user (),
+	.io_sys_chn_w_ready      (io_sys_chn_w_ready),
+	.io_sys_chn_w_valid      (io_sys_chn_w_valid),
+	.io_sys_chn_w_bits_data  (io_sys_chn_w_bits_data),
+	.io_sys_chn_w_bits_strb  (io_sys_chn_w_bits_strb),
+	.io_sys_chn_w_bits_last  (),
+	.io_sys_chn_w_bits_user  (),
+	.io_sys_chn_b_ready      (io_sys_chn_b_ready),
+	.io_sys_chn_b_valid      (io_sys_chn_b_valid),
+	.io_sys_chn_b_bits_id    (1'b0),
+	.io_sys_chn_b_bits_rsp   (io_sys_chn_b_bits_rsp),
+	.io_sys_chn_b_bits_user  (1'b0)
 );
 
 
@@ -159,6 +243,37 @@ axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram
 	.CLK        (CLK),
 	.RSTn       (RSTn)
 );
+
+
+debuger i_debuger(
+
+	.DEBUGER_AWADDR(io_sys_chn_aw_bits_addr),
+	.DEBUGER_AWVALID(io_sys_chn_aw_valid),
+	.DEBUGER_AWREADY(io_sys_chn_aw_ready),
+
+	.DEBUGER_WDATA(io_sys_chn_w_bits_data),   
+	.DEBUGER_WSTRB(io_sys_chn_w_bits_strb),
+	.DEBUGER_WVALID(io_sys_chn_w_valid),
+	.DEBUGER_WREADY(io_sys_chn_w_ready),
+
+	.DEBUGER_BRESP(io_sys_chn_b_bits_rsp),
+	.DEBUGER_BVALID(io_sys_chn_b_valid),
+	.DEBUGER_BREADY(io_sys_chn_b_ready),
+
+	.DEBUGER_ARADDR(io_sys_chn_ar_bits_addr),
+	.DEBUGER_ARVALID(io_sys_chn_ar_valid),
+	.DEBUGER_ARREADY(io_sys_chn_ar_ready),
+
+	.DEBUGER_RDATA(io_sys_chn_r_bits_data),
+	.DEBUGER_RRESP(io_sys_chn_r_bits_rsp),
+	.DEBUGER_RVALID(io_sys_chn_r_valid),
+	.DEBUGER_RREADY(io_sys_chn_r_ready),
+
+	.CLK(CLK),
+	.RSTn(RSTn)
+	
+);
+
 
 
 
@@ -240,7 +355,7 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	// $readmemh("./ci/rv64uc-p-rvc.verilog", mem);
+	// $readmemh("./ci/rv64ui-p-fence_i.verilog", mem);
 	$readmemh(testName, mem);
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
