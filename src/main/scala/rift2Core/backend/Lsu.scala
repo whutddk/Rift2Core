@@ -205,7 +205,7 @@ class Lsu extends Module {
 	lsu_exe_iwb_fifo.io.enq.valid := 
 		( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cfree ) |
 		( stateReg === Dl1_state.cmiss & op1_dl1_req === op1_align128 & dl1_mst.io.d.fire & ~trans_kill ) |
-		( stateReg === Dl1_state.cfree & stateDnxt === Dl1_state.write ) |
+		( stateReg === Dl1_state.cfree & stateDnxt === Dl1_state.wwait ) |
 		( stateReg === Dl1_state.cfree & stateDnxt === Dl1_state.fence & lsu_fence ) |
 		( stateReg === Dl1_state.fence & stateDnxt === Dl1_state.cfree & lsu_fence_i ) |
 		( stateReg === Dl1_state.pread & stateDnxt === Dl1_state.cfree & trans_kill === false.B)
@@ -262,7 +262,7 @@ class Lsu extends Module {
 	def rsp_data: UInt = MuxCase( 0.U, Array(
 		( stateReg === Dl1_state.cfree ) -> 0.U,
 		( stateReg === Dl1_state.cread ) -> Mux(op1(3), mem_dat(127,64), mem_dat(63,0)),
-		// ( stateReg === Dl1_state.mwait ) -> 0.U,
+		( stateReg === Dl1_state.wwait ) -> 0.U,
 		( stateReg === Dl1_state.cmiss ) -> Mux(op1(3), dl1_mst.io.d.bits.data(127,64), dl1_mst.io.d.bits.data(63,0)),
 		( stateReg === Dl1_state.write ) -> 0.U,
 		( stateReg === Dl1_state.fence ) -> 0.U,
@@ -321,7 +321,7 @@ class Lsu extends Module {
 	sys_mst_w.io.w_info.user := 0.U
 
 	sys_mst_r.io.ar_req := (stateReg =/= Dl1_state.pread) & (stateDnxt === Dl1_state.pread)
-	sys_mst_w.io.aw_req := (stateReg === Dl1_state.write & is_system & io.cmm_lsu.is_store_commit)
+	sys_mst_w.io.aw_req := (stateReg === Dl1_state.wwait & is_system & io.cmm_lsu.is_store_commit)
 
 
 
@@ -348,42 +348,42 @@ class Lsu extends Module {
 
 	dl1_mst.io.a_info.opcode  := Mux1H( Seq(
 		(stateDnxt === Dl1_state.cmiss) -> dl1_mst.Get,
-		(stateReg === Dl1_state.write) -> dl1_mst.PutFullData
+		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write) -> dl1_mst.PutFullData
 	))
 	
 
 	dl1_mst.io.a_info.param   := Mux1H( Seq(
 		(stateReg === Dl1_state.cmiss) -> 0.U,
-		(stateReg === Dl1_state.write) -> 0.U
+		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write) -> 0.U
 	))
 
 	dl1_mst.io.a_info.size    := Mux1H( Seq(
 		(stateDnxt === Dl1_state.cmiss) -> 5.U,
-		(stateReg === Dl1_state.write ) -> 4.U
+		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write ) -> 4.U
 	))
 
 	dl1_mst.io.a_info.source  := 1.U
 
 	dl1_mst.io.a_info.address := Mux1H( Seq(
 		(stateReg === Dl1_state.cmiss) -> op1_align256,
-		(stateReg === Dl1_state.write) -> op1_align128
+		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write) -> op1_align128
 	))
 
 	dl1_mst.io.a_info.mask    := Mux1H( Seq(
 		(stateReg === Dl1_state.cmiss) -> 0.U,
-		(stateReg === Dl1_state.write) -> Mux( op1_align64(3), Cat( lsu_wstrb_align, 0.U(8.W) ), Cat(  0.U(8.W), lsu_wstrb_align ) )
+		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write) -> Mux( op1_align64(3), Cat( lsu_wstrb_align, 0.U(8.W) ), Cat(  0.U(8.W), lsu_wstrb_align ) )
 	))
 
 	dl1_mst.io.a_info.data    := Mux1H( Seq(
 		(stateReg === Dl1_state.cmiss) -> 0.U,
-		(stateReg === Dl1_state.write) -> Mux( op1_align64(3), Cat( lsu_wdata_align, 0.U(64.W) ), Cat(  0.U(64.W), lsu_wdata_align ) )
+		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write) -> Mux( op1_align64(3), Cat( lsu_wdata_align, 0.U(64.W) ), Cat(  0.U(64.W), lsu_wdata_align ) )
 	))
 
 	dl1_mst.io.a_info.corrupt := false.B
 
 	dl1_mst.io.is_req :=
 		( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cmiss ) | 
-		( stateReg === Dl1_state.write & is_memory & io.cmm_lsu.is_store_commit) 
+		( stateReg === Dl1_state.wwait & is_memory & io.cmm_lsu.is_store_commit) 
 
 
 
@@ -410,7 +410,7 @@ class Lsu extends Module {
 
 
 	object Dl1_state extends ChiselEnum {
-		val cfree, cread, cmiss, write, fence, pread = Value
+		val cfree, cread, cmiss, wwait, write, fence, pread = Value
 	}
 
 
@@ -433,7 +433,7 @@ class Lsu extends Module {
 				(io.lsu_iss_exe.valid & ~is_accessFalut & ~is_misAlign & ~io.flush),
 				MuxCase(Dl1_state.cfree, Array(
 					(is_ren & is_memory) -> Dl1_state.cread,
-					(is_wen) -> Dl1_state.write,
+					(is_wen) -> Dl1_state.wwait,
 					// (is_ren & is_system &  is_sys_hazard ) -> Dl1_state.pwait,
 					(is_ren & is_system ) -> Dl1_state.pread			
 				)),
@@ -447,9 +447,13 @@ class Lsu extends Module {
 
 	// def dl1_state_dnxt_in_mwait = Mux( is_mem_hazard | ~lsu_exe_iwb_fifo.io.enq.ready, Dl1_state.mwait, Dl1_state.cmiss )
 	def dl1_state_dnxt_in_cmiss = Mux( dl1_mst.io.mode === 7.U, Dl1_state.cfree, Dl1_state.cmiss )
-	def dl1_state_dnxt_in_write = Mux( dl1_mst.io.d.fire | io.flush , Dl1_state.cfree, Dl1_state.write)
+	def dl1_state_dnxt_in_write = Mux( dl1_mst.io.d.fire, Dl1_state.cfree, Dl1_state.write)
 	def dl1_state_dnxt_in_fence = Dl1_state.cfree
-	// def dl1_state_dnxt_in_pwait = Mux( is_sys_hazard, Dl1_state.pwait, Dl1_state.pread )
+	def dl1_state_dnxt_in_wwait =
+								MuxCase( Dl1_state.wwait, Array(
+									io.cmm_lsu.is_store_commit -> Dl1_state.write,
+									io.flush -> Dl1_state.cfree
+									))
 	def dl1_state_dnxt_in_pread = Mux( sys_mst_r.io.end, Dl1_state.cfree, Dl1_state.pread )
 
 	def stateDnxt = MuxCase( Dl1_state.cfree, Array(
@@ -459,7 +463,7 @@ class Lsu extends Module {
 						(stateReg === Dl1_state.cmiss) -> dl1_state_dnxt_in_cmiss ,
 						(stateReg === Dl1_state.write) -> dl1_state_dnxt_in_write ,
 						(stateReg === Dl1_state.fence) -> dl1_state_dnxt_in_fence ,
-						// (stateReg === Dl1_state.pwait) -> dl1_state_dnxt_in_pwait ,
+						(stateReg === Dl1_state.wwait) -> dl1_state_dnxt_in_wwait ,
 						(stateReg === Dl1_state.pread) -> dl1_state_dnxt_in_pread ,
 					))
 
@@ -517,7 +521,7 @@ class Lsu extends Module {
 							// (stateReg === Dl1_state.mwait) -> op1_align128,
 							(stateReg === Dl1_state.cmiss) -> op1_dl1_req,
 							(stateReg === Dl1_state.write) -> op1_align128,
-							// (stateReg === Dl1_state.pwait) -> 0.U,
+							(stateReg === Dl1_state.wwait) -> op1_align128,
 							(stateReg === Dl1_state.pread) -> 0.U,
 							(stateReg === Dl1_state.fence) -> 0.U
 							))
@@ -528,7 +532,7 @@ class Lsu extends Module {
 							// (stateReg === Dl1_state.mwait) -> 0.U,
 							(stateReg === Dl1_state.cmiss) -> dl1_mst.io.d.bits.data,
 							(stateReg === Dl1_state.write) -> Mux( op1(3) === 0.U, Cat(0.U(64.W), lsu_wdata_align(63,0)), Cat(lsu_wdata_align(63,0), 0.U(64.W))),
-							// (stateReg === Dl1_state.pwait) -> 0.U,
+							(stateReg === Dl1_state.wwait) -> Mux( op1(3) === 0.U, Cat(0.U(64.W), lsu_wdata_align(63,0)), Cat(lsu_wdata_align(63,0), 0.U(64.W))),
 							(stateReg === Dl1_state.pread) -> 0.U,
 							(stateReg === Dl1_state.fence) -> 0.U
 							))
@@ -539,7 +543,7 @@ class Lsu extends Module {
 							// (stateReg === Dl1_state.mwait) -> 0.U,
 							(stateReg === Dl1_state.cmiss) -> "b1111111111111111".U,
 							(stateReg === Dl1_state.write) -> Mux( op1(3) === 0.U, Cat(0.U(8.W), lsu_wstrb_align(7,0)), Cat(lsu_wstrb_align(7,0), 0.U(8.W))),
-							// (stateReg === Dl1_state.pwait) -> 0.U,
+							(stateReg === Dl1_state.wwait) -> Mux( op1(3) === 0.U, Cat(0.U(8.W), lsu_wstrb_align(7,0)), Cat(lsu_wstrb_align(7,0), 0.U(8.W))),
 							(stateReg === Dl1_state.pread) -> 0.U,
 							(stateReg === Dl1_state.fence) -> 0.U
 							))
@@ -551,7 +555,7 @@ class Lsu extends Module {
 							// (stateReg === Dl1_state.mwait) -> false.B,
 							(stateReg === Dl1_state.cmiss) -> (is_cb_vhit(i) & dl1_mst.io.d.fire),
 							(stateReg === Dl1_state.write & dl1_mst.io.d.fire ) -> is_cb_vhit(i),
-							// (stateReg === Dl1_state.pwait) -> false.B,
+							(stateReg === Dl1_state.wwait) -> false.B,
 							(stateReg === Dl1_state.pread) -> false.B,
 							(stateReg === Dl1_state.fence) -> false.B
 							))
@@ -562,7 +566,7 @@ class Lsu extends Module {
 							// (stateReg === Dl1_state.mwait) -> false.B,
 							(stateReg === Dl1_state.cmiss) -> false.B,
 							(stateReg === Dl1_state.write) -> false.B,
-							// (stateReg === Dl1_state.pwait) -> false.B,
+							(stateReg === Dl1_state.wwait) -> false.B,
 							(stateReg === Dl1_state.pread) -> false.B,
 							(stateReg === Dl1_state.fence) -> false.B
 							))	
@@ -573,7 +577,7 @@ class Lsu extends Module {
 							// (stateReg === Dl1_state.mwait) -> ((stateDnxt === Dl1_state.cmiss) & is_block_replace(i.U)),
 							(stateReg === Dl1_state.cmiss) -> false.B,
 							(stateReg === Dl1_state.write) -> false.B,
-							// (stateReg === Dl1_state.pwait) -> false.B,
+							(stateReg === Dl1_state.wwait) -> false.B,
 							(stateReg === Dl1_state.pread) -> false.B,
 							(stateReg === Dl1_state.fence) -> false.B
 							))	
@@ -584,7 +588,7 @@ class Lsu extends Module {
 							// (stateReg === Dl1_state.mwait) -> false.B,
 							(stateReg === Dl1_state.cmiss) -> dl1_mst.io.a.fire,
 							(stateReg === Dl1_state.write) -> false.B,
-							// (stateReg === Dl1_state.pwait) -> false.B,
+							(stateReg === Dl1_state.wwait) -> false.B,
 							(stateReg === Dl1_state.pread) -> false.B,
 							(stateReg === Dl1_state.fence) -> false.B
 							))				
