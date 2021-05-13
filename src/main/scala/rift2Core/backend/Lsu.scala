@@ -447,7 +447,7 @@ class Lsu extends Module {
 
 	// def dl1_state_dnxt_in_mwait = Mux( is_mem_hazard | ~lsu_exe_iwb_fifo.io.enq.ready, Dl1_state.mwait, Dl1_state.cmiss )
 	def dl1_state_dnxt_in_cmiss = Mux( dl1_mst.io.mode === 7.U, Dl1_state.cfree, Dl1_state.cmiss )
-	def dl1_state_dnxt_in_write = Mux( dl1_mst.io.d.fire, Dl1_state.cfree, Dl1_state.write)
+	def dl1_state_dnxt_in_write = Mux( dl1_mst.io.d.fire | sys_mst_w.io.b.fire , Dl1_state.cfree, Dl1_state.write)
 	def dl1_state_dnxt_in_fence = Dl1_state.cfree
 	def dl1_state_dnxt_in_wwait =
 								MuxCase( Dl1_state.wwait, Array(
@@ -685,15 +685,9 @@ class Lsu extends Module {
 	.elsewhen(stateDnxt === Dl1_state.cfree) { is_fence_i := false.B }
 
 
-	when( stateDnxt === Dl1_state.cfree & stateReg === Dl1_state.cfree ) {
-		when ( ~io.flush ) {
-			trans_kill := false.B			
-		}
+	when ( io.flush & stateDnxt =/= Dl1_state.cfree ) { trans_kill := true.B }
+	.elsewhen( stateDnxt === Dl1_state.cfree ) { trans_kill := false.B	 }
 
-	}
-	.otherwise{
-		trans_kill := io.flush
-	}
 
 
 
