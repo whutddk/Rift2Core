@@ -294,7 +294,8 @@ class Lsu extends Module {
 
 
 	sys_mst_r.io.ar_info.id    := 1.U
-	sys_mst_r.io.ar_info.addr  := op1_align64
+	sys_mst_r.io.ar_info.addr  := Mux( stateReg === Dl1_state.cfree, op1_align64, RegEnable(op1_align64, stateDnxt =/= Dl1_state.cfree) )
+	
 	sys_mst_r.io.ar_info.len   := 1.U
 	sys_mst_r.io.ar_info.size  := 3.U
 	sys_mst_r.io.ar_info.burst := 0.U
@@ -305,7 +306,7 @@ class Lsu extends Module {
 	sys_mst_r.io.ar_info.user  := 0.U
 
 	sys_mst_w.io.aw_info.id    := 1.U
-	sys_mst_w.io.aw_info.addr  := op1_align64
+	sys_mst_w.io.aw_info.addr  := Mux( stateReg === Dl1_state.cfree, op1_align64, RegEnable(op1_align64, stateDnxt =/= Dl1_state.cfree) )
 	sys_mst_w.io.aw_info.len   := 1.U
 	sys_mst_w.io.aw_info.size  := 3.U
 	sys_mst_w.io.aw_info.burst := 0.U
@@ -315,8 +316,8 @@ class Lsu extends Module {
 	sys_mst_w.io.aw_info.qos   := 0.U
 	sys_mst_w.io.aw_info.user  := 0.U
 
-	sys_mst_w.io.w_info.data := lsu_wdata_align
-	sys_mst_w.io.w_info.strb := lsu_wstrb_align
+	sys_mst_w.io.w_info.data := Mux( stateReg === Dl1_state.cfree, lsu_wdata_align, RegEnable(lsu_wdata_align, stateDnxt =/= Dl1_state.cfree) )
+	sys_mst_w.io.w_info.strb := Mux( stateReg === Dl1_state.cfree, lsu_wstrb_align, RegEnable(lsu_wstrb_align, stateDnxt =/= Dl1_state.cfree) )
 	sys_mst_w.io.w_info.last := DontCare
 	sys_mst_w.io.w_info.user := 0.U
 
@@ -346,38 +347,62 @@ class Lsu extends Module {
 
 
 
-	dl1_mst.io.a_info.opcode  := Mux1H( Seq(
-		(stateDnxt === Dl1_state.cmiss) -> dl1_mst.Get,
-		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write) -> dl1_mst.PutFullData
+	def a_info_opcode = Mux1H( Seq(
+		(is_ren) -> dl1_mst.Get,
+		(is_wen) -> dl1_mst.PutFullData
 	))
+
+	dl1_mst.io.a_info.opcode  := 
+		Mux( stateReg === Dl1_state.cfree, a_info_opcode, RegEnable(a_info_opcode, stateDnxt =/= Dl1_state.cfree) )
 	
 
-	dl1_mst.io.a_info.param   := Mux1H( Seq(
-		(stateReg === Dl1_state.cmiss) -> 0.U,
-		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write) -> 0.U
+	def a_info_param = Mux1H( Seq(
+		(is_ren) -> 0.U,
+		(is_wen) -> 0.U
 	))
 
-	dl1_mst.io.a_info.size    := Mux1H( Seq(
-		(stateDnxt === Dl1_state.cmiss) -> 5.U,
-		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write ) -> 4.U
+	dl1_mst.io.a_info.param   :=
+		Mux( stateReg === Dl1_state.cfree, a_info_param, RegEnable(a_info_param, stateDnxt =/= Dl1_state.cfree) )
+
+
+	def a_info_size = Mux1H( Seq(
+		(is_ren) -> 5.U,
+		(is_wen) -> 4.U
 	))
+
+	dl1_mst.io.a_info.size    := 
+		Mux( stateReg === Dl1_state.cfree, a_info_size, RegEnable(a_info_size, stateDnxt =/= Dl1_state.cfree) )
+
+
 
 	dl1_mst.io.a_info.source  := 1.U
 
-	dl1_mst.io.a_info.address := Mux1H( Seq(
-		(stateReg === Dl1_state.cmiss) -> op1_align256,
-		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write) -> op1_align128
+
+	def a_info_address = Mux1H( Seq(
+		(is_ren) -> op1_align256,
+		(is_wen) -> op1_align128
 	))
 
-	dl1_mst.io.a_info.mask    := Mux1H( Seq(
-		(stateReg === Dl1_state.cmiss) -> 0.U,
-		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write) -> Mux( op1_align64(3), Cat( lsu_wstrb_align, 0.U(8.W) ), Cat(  0.U(8.W), lsu_wstrb_align ) )
+	dl1_mst.io.a_info.address := 
+		Mux( stateReg === Dl1_state.cfree, a_info_address, RegEnable(a_info_address, stateDnxt =/= Dl1_state.cfree) )
+
+
+	def a_info_mask = Mux1H( Seq(
+		(is_ren) -> 0.U,
+		(is_wen) -> Mux( op1_align64(3), Cat( lsu_wstrb_align, 0.U(8.W) ), Cat(  0.U(8.W), lsu_wstrb_align ) )
 	))
 
-	dl1_mst.io.a_info.data    := Mux1H( Seq(
-		(stateReg === Dl1_state.cmiss) -> 0.U,
-		(stateReg === Dl1_state.wwait | stateReg === Dl1_state.write) -> Mux( op1_align64(3), Cat( lsu_wdata_align, 0.U(64.W) ), Cat(  0.U(64.W), lsu_wdata_align ) )
+	dl1_mst.io.a_info.mask    := 
+		Mux( stateReg === Dl1_state.cfree, a_info_mask, RegEnable(a_info_mask, stateDnxt =/= Dl1_state.cfree) )
+
+
+	def a_info_data = Mux1H( Seq(
+		(is_ren) -> 0.U,
+		(is_wen) -> Mux( op1_align64(3), Cat( lsu_wdata_align, 0.U(64.W) ), Cat(  0.U(64.W), lsu_wdata_align ) )
 	))
+
+	dl1_mst.io.a_info.data    := 
+		Mux( stateReg === Dl1_state.cfree, a_info_data, RegEnable(a_info_data, stateDnxt =/= Dl1_state.cfree) )
 
 	dl1_mst.io.a_info.corrupt := false.B
 
