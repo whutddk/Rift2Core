@@ -53,8 +53,8 @@ class Gen_ringStack[T<:Data]( dw: T, aw: Int ) extends Module {
 	def is_empty = (btm_ptr === top_ptr)
 	def is_full  = ((btm_ptr(aw-1, 1) === top_ptr(aw-1, 1)) & (btm_ptr(aw) =/= top_ptr(aw)))
 
-	def is_enq_ack = io.enq.valid & io.enq.ready
-	def is_deq_ack = io.deq.valid & io.deq.ready
+	def is_enq_ack = io.enq.fire
+	def is_deq_ack = io.deq.fire
 
 	when( is_enq_ack ) {
 		buf(wr_idx) := io.enq.bits

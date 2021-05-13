@@ -138,14 +138,14 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 
 
 
-	lazy val is_jal    = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_jal,    is_2nd_solo -> io.iq_ib(1).bits.info.is_jal ))
-	lazy val is_jalr   = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_jalr,   is_2nd_solo -> io.iq_ib(1).bits.info.is_jalr ))
-	lazy val is_branch = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_branch, is_2nd_solo -> io.iq_ib(1).bits.info.is_branch ))
-	lazy val is_call   = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_call,   is_2nd_solo -> io.iq_ib(1).bits.info.is_call ))
-	lazy val is_return = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_return, is_2nd_solo -> io.iq_ib(1).bits.info.is_return ))
-	lazy val is_rvc    = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_rvc,    is_2nd_solo -> io.iq_ib(1).bits.info.is_rvc ))
-	lazy val is_fencei = MuxCase( false.B, Array( is_1st_solo -> io.iq_ib(0).bits.info.is_fencei, is_2nd_solo -> io.iq_ib(1).bits.info.is_fencei ))
-	lazy val imm       = MuxCase( 0.U,     Array( is_1st_solo -> io.iq_ib(0).bits.info.imm,       is_2nd_solo -> io.iq_ib(1).bits.info.imm ))
+	lazy val is_jal    = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_jal    & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_jal    & ib_id_fifo.io.enq(1).fire) ))
+	lazy val is_jalr   = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_jalr   & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_jalr   & ib_id_fifo.io.enq(1).fire) ))
+	lazy val is_branch = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_branch & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_branch & ib_id_fifo.io.enq(1).fire) ))
+	lazy val is_call   = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_call   & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_call   & ib_id_fifo.io.enq(1).fire) ))
+	lazy val is_return = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_return & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_return & ib_id_fifo.io.enq(1).fire) ))
+	lazy val is_rvc    = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_rvc    & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_rvc    & ib_id_fifo.io.enq(1).fire) ))
+	lazy val is_fencei = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_fencei & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_fencei & ib_id_fifo.io.enq(1).fire) ))
+	lazy val imm       = MuxCase( 0.U,     Array( is_1st_solo -> io.iq_ib(0).bits.info.imm, is_2nd_solo -> io.iq_ib(1).bits.info.imm ))
 
 
 	lazy val ori_pc    = (Mux( is_1st_solo, io.iq_ib(0).bits.pc, io.iq_ib(1).bits.pc))
@@ -173,16 +173,16 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 	io.iq_ib(1).ready := ~ib_lock &  ~io.flush & ib_id_fifo.is_enq_ack(0) & ib_id_fifo.is_enq_ack(1)
 
 
-	bhq.io.enq.valid := ~ib_lock & ~io.flush & is_branch & bhq.io.enq.ready & Mux(is_1st_solo, ib_id_fifo.io.enq(0).ready, ib_id_fifo.io.enq(1).ready)
+	bhq.io.enq.valid := ~ib_lock & ~io.flush & is_branch & bhq.io.enq.ready
 	bhq.io.deq.ready := io.bru_iq_b.valid
 	bhq.reset := reset.asBool | io.flush
 
-	ras.io.enq.valid := ~ib_lock & ~io.flush & is_call & ((is_1st_solo & ib_id_fifo.is_enq_ack(0)) | (is_2nd_solo & ib_id_fifo.is_enq_ack(1)))
+	ras.io.enq.valid := ~ib_lock & ~io.flush & is_call
 	ras.io.deq.ready := is_ras_taken & ((is_1st_solo & ib_id_fifo.is_enq_ack(0)) | (is_2nd_solo & ib_id_fifo.is_enq_ack(1)))
 	ras.io.flush := io.flush
 
 	io.ib_pc.valid :=
-						(~ib_lock & (is_jal | is_ras_taken | is_predict_taken)) |
+						(~ib_lock & (is_jal | is_ras_taken | is_predict_taken) ) |
 						is_misPredict_taken 
 	io.ib_pc.bits.addr  := MuxCase(DontCare, Array(
 		is_misPredict_taken   -> bhq.io.deq.bits.opp_pc,
