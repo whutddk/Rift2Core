@@ -201,7 +201,7 @@ class Lsu extends Module {
 	lsu_exe_iwb_fifo.io.enq.bits.rd0_idx := io.lsu_iss_exe.bits.param.rd0_idx
 
 
-	io.lsu_iss_exe.ready := stateReg =/= Dl1_state.cfree & stateDnxt === Dl1_state.cfree
+	io.lsu_iss_exe.ready := stateReg =/= Dl1_state.cfree & stateDnxt === Dl1_state.cfree & ~trans_kill
 	lsu_exe_iwb_fifo.io.enq.valid := 
 		( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cfree ) |
 		( stateReg === Dl1_state.cmiss & op1_dl1_req === op1_align128 & dl1_mst.io.d.fire & ~trans_kill ) |

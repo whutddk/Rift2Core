@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-12 16:39:11
+* @Last Modified time: 2021-05-13 14:35:23
 */
 
 
@@ -206,7 +206,7 @@ Rift2Chip s_Rift2Chip(
 
 
 
-axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram 
+axi_full_slv_sram # ( .DW(128), .AW(16) ) s_axi_full_slv_sram 
 (
 
 	.MEM_AWADDR(io_mem_chn_aw_bits_addr),
@@ -296,9 +296,6 @@ initial begin
 
 	RSTn <= 1;
 
-	#50000
-			$display("Time Out !!!");
-	$stop;
 end
 
 
