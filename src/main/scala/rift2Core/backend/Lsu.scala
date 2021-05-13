@@ -608,7 +608,7 @@ class Lsu extends Module {
 							))	
 
 		mem.tag_en_r(i) := Mux1H( Seq(
-							(stateReg === Dl1_state.cfree) -> ((stateDnxt === Dl1_state.cread) | ( stateDnxt === Dl1_state.write & is_memory )),
+							(stateReg === Dl1_state.cfree) -> ((stateDnxt === Dl1_state.cread) | ( stateDnxt === Dl1_state.wwait & is_memory )),
 							(stateReg === Dl1_state.cread) -> false.B,
 							// (stateReg === Dl1_state.mwait) -> false.B,
 							(stateReg === Dl1_state.cmiss) -> dl1_mst.io.a.fire,
