@@ -56,8 +56,8 @@ class Rift2Core extends Module {
 
 	lazy val pc_stage = Module(new Pc_gen)
 	lazy val if_stage = Module(new Ifetch)
-	lazy val iq_stage = Module(new Iqueue_ss)
-	lazy val ib_stage = Module(new BranchPredict_ss)
+	lazy val pd_stage = Module(new Predecode_ss)
+	lazy val bd_stage = Module(new BP_ID_ss)
 	// lazy val id_stage = Module(new BranchPredict_ss)
 
 	lazy val dpt_stage = Module(new Dispatch_ss)
@@ -97,17 +97,17 @@ class Rift2Core extends Module {
 	exe_stage.io.sys_chn_w  <> io.sys_chn_w
 	exe_stage.io.sys_chn_b  <> io.sys_chn_b
 
-	pc_stage.io.ib_pc <> ib_stage.io.ib_pc
+	pc_stage.io.bd_pc <> bd_stage.io.bd_pc
 	
 
-	pc_stage.io.pc_iq <> iq_stage.io.pc_iq	//valid when flush for new pc 
+	pc_stage.io.pc_pd <> pd_stage.io.pc_pd	//valid when flush for new pc 
 
 	
 	pc_stage.io.pc_if <> if_stage.io.pc_if
-	if_stage.io.if_iq <> iq_stage.io.if_iq
-	iq_stage.io.iq_ib <> ib_stage.io.iq_ib
-	ib_stage.io.id_dpt <> dpt_stage.io.id_dpt
-	// id_stage.io. <> 
+	if_stage.io.if_iq <> pd_stage.io.if_pd
+	pd_stage.io.pd_bd <> bd_stage.io.pd_bd
+	bd_stage.io.bd_dpt <> dpt_stage.io.bd_dpt
+
 
 	dpt_stage.io.alu_dpt_iss <> iss_stage.io.alu_dpt_iss
 	dpt_stage.io.bru_dpt_iss <> iss_stage.io.bru_dpt_iss
@@ -132,22 +132,22 @@ class Rift2Core extends Module {
 
 	
 
-	ib_stage.io.bru_iq_b <> exe_stage.io.bru_iq_b
-	pc_stage.io.bru_iq_j <> exe_stage.io.bru_iq_j
+	bd_stage.io.bru_pd_b <> exe_stage.io.bru_pd_b
+	pc_stage.io.bru_pd_j <> exe_stage.io.bru_pd_j
 
 	
 
 
-	if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | ib_stage.io.ib_pc.valid | exe_stage.io.bru_iq_j.valid
-	iq_stage.io.flush  := exe_stage.io.il1_fence_req
-	ib_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | exe_stage.io.bru_iq_j.valid | exe_stage.io.il1_fence_req
+	if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | bd_stage.io.bd_pc.valid | exe_stage.io.bru_pd_j.valid
+	pd_stage.io.flush  := exe_stage.io.il1_fence_req
+	bd_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | exe_stage.io.bru_pd_j.valid | exe_stage.io.il1_fence_req
 	// id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 	dpt_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 	iss_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 	exe_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 	i_regfiles.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 
-	cmm_stage.io.is_misPredict := ib_stage.io.is_misPredict_taken
+	cmm_stage.io.is_misPredict := bd_stage.io.is_misPredict_taken
 
 
 

@@ -21,13 +21,13 @@
    limitations under the License.
 */
 
-package rift2Core
+package rift2Core.backend
 
 import chisel3._
 import chisel3.util._
 import base._
 import rift2Core.define._
-
+import rift2Core.frontend._
 
 
 class Rename(ptr: Vec[UInt], log: Vec[Vec[UInt]] ) {
@@ -51,32 +51,32 @@ class Rename(ptr: Vec[UInt], log: Vec[Vec[UInt]] ) {
 
 trait ReOrder {
 
-	def rod_mux_i(id_dpt_info: Info_id_dpt, rd0_idx: UInt): Info_reorder_i = {
+	def rod_mux_i(bd_dpt_info: Info_bd_dpt, rd0_idx: UInt): Info_reorder_i = {
 		val reorder_i_info = Wire(new Info_reorder_i)
-		reorder_i_info.pc             := id_dpt_info.info.param.pc
-		reorder_i_info.rd0_raw        := id_dpt_info.info.param.rd0_raw
+		reorder_i_info.pc             := bd_dpt_info.info.param.pc
+		reorder_i_info.rd0_raw        := bd_dpt_info.info.param.rd0_raw
 		reorder_i_info.rd0_idx        := rd0_idx
-		reorder_i_info.is_branch      := id_dpt_info.info.bru_isa.is_branch
-		reorder_i_info.is_lu          := id_dpt_info.info.lsu_isa.is_lu
-		reorder_i_info.is_su          := id_dpt_info.info.lsu_isa.is_su
-		reorder_i_info.is_fence       := id_dpt_info.info.lsu_isa.fence
-		reorder_i_info.is_fence_i      := id_dpt_info.info.lsu_isa.fence_i
-		reorder_i_info.is_csr         := id_dpt_info.info.csr_isa.is_csr
-		reorder_i_info.privil         := id_dpt_info.info.privil_isa
-		reorder_i_info.is_accessFault := id_dpt_info.is_iFAccessFault
-		reorder_i_info.is_illeage     := id_dpt_info.is_illeage
+		reorder_i_info.is_branch      := bd_dpt_info.info.bru_isa.is_branch
+		reorder_i_info.is_lu          := bd_dpt_info.info.lsu_isa.is_lu
+		reorder_i_info.is_su          := bd_dpt_info.info.lsu_isa.is_su
+		reorder_i_info.is_fence       := bd_dpt_info.info.lsu_isa.fence
+		reorder_i_info.is_fence_i     := bd_dpt_info.info.lsu_isa.fence_i
+		reorder_i_info.is_csr         := bd_dpt_info.info.csr_isa.is_csr
+		reorder_i_info.privil         := bd_dpt_info.info.privil_isa
+		reorder_i_info.is_accessFault := bd_dpt_info.is_iFAccessFault
+		reorder_i_info.is_illeage     := bd_dpt_info.is_illeage
 
 		return reorder_i_info
 	}
 
 
-	def rod_mux_f(id_dpt_info: Info_id_dpt, rd0_idx: UInt): Info_reorder_f = {
+	def rod_mux_f(bd_dpt_info: Info_bd_dpt, rd0_idx: UInt): Info_reorder_f = {
 		val reorder_f_info = Wire(new Info_reorder_f)
-		reorder_f_info.pc             := id_dpt_info.info.param.pc
-		reorder_f_info.rd0_raw        := id_dpt_info.info.param.rd0_raw 
+		reorder_f_info.pc             := bd_dpt_info.info.param.pc
+		reorder_f_info.rd0_raw        := bd_dpt_info.info.param.rd0_raw 
 		reorder_f_info.rd0_idx        := rd0_idx
-		reorder_f_info.is_lu          := id_dpt_info.info.lsu_isa.is_lu
-		reorder_f_info.is_su          := id_dpt_info.info.lsu_isa.is_su
+		reorder_f_info.is_lu          := bd_dpt_info.info.lsu_isa.is_lu
+		reorder_f_info.is_su          := bd_dpt_info.info.lsu_isa.is_su
 		return reorder_f_info
 	}
 
@@ -84,10 +84,10 @@ trait ReOrder {
 
 trait Dpt{
 
-	def dpt_mux_alu( id_dpt_info: Info_id_dpt, rd0_idx: UInt, rs1_idx: UInt, rs2_idx: UInt ): Alu_dpt_info = {
+	def dpt_mux_alu( bd_dpt_info: Info_bd_dpt, rd0_idx: UInt, rs1_idx: UInt, rs2_idx: UInt ): Alu_dpt_info = {
 		val alu_dpt_info = Wire(new Alu_dpt_info)
-		alu_dpt_info.isa        := id_dpt_info.info.alu_isa
-		alu_dpt_info.param      := id_dpt_info.info.param
+		alu_dpt_info.isa        := bd_dpt_info.info.alu_isa
+		alu_dpt_info.param      := bd_dpt_info.info.param
 		alu_dpt_info.rn.rd0_idx := rd0_idx
 		alu_dpt_info.rn.rs1_idx := rs1_idx
 		alu_dpt_info.rn.rs2_idx := rs2_idx
@@ -95,10 +95,10 @@ trait Dpt{
 		return alu_dpt_info
 	}
 
-	def dpt_mux_bru( id_dpt_info: Info_id_dpt, rd0_idx: UInt, rs1_idx: UInt, rs2_idx: UInt ): Bru_dpt_info = {
+	def dpt_mux_bru( bd_dpt_info: Info_bd_dpt, rd0_idx: UInt, rs1_idx: UInt, rs2_idx: UInt ): Bru_dpt_info = {
 		val bru_dpt_info = Wire(new Bru_dpt_info)
-		bru_dpt_info.isa        := id_dpt_info.info.bru_isa
-		bru_dpt_info.param      := id_dpt_info.info.param
+		bru_dpt_info.isa        := bd_dpt_info.info.bru_isa
+		bru_dpt_info.param      := bd_dpt_info.info.param
 		bru_dpt_info.rn.rd0_idx := rd0_idx
 		bru_dpt_info.rn.rs1_idx := rs1_idx
 		bru_dpt_info.rn.rs2_idx := rs2_idx
@@ -106,10 +106,10 @@ trait Dpt{
 		return bru_dpt_info
 	}
 
-	def dpt_mux_lsu( id_dpt_info: Info_id_dpt, rd0_idx: UInt, rs1_idx: UInt, rs2_idx: UInt ): Lsu_dpt_info = {
+	def dpt_mux_lsu( bd_dpt_info: Info_bd_dpt, rd0_idx: UInt, rs1_idx: UInt, rs2_idx: UInt ): Lsu_dpt_info = {
 		val lsu_dpt_info = Wire(new Lsu_dpt_info)
-		lsu_dpt_info.isa        := id_dpt_info.info.lsu_isa
-		lsu_dpt_info.param      := id_dpt_info.info.param
+		lsu_dpt_info.isa        := bd_dpt_info.info.lsu_isa
+		lsu_dpt_info.param      := bd_dpt_info.info.param
 		lsu_dpt_info.rn.rd0_idx := rd0_idx
 		lsu_dpt_info.rn.rs1_idx := rs1_idx
 		lsu_dpt_info.rn.rs2_idx := rs2_idx
@@ -117,10 +117,10 @@ trait Dpt{
 		return lsu_dpt_info
 	}
 
-	def dpt_mux_csr( id_dpt_info: Info_id_dpt, rd0_idx: UInt, rs1_idx: UInt ): Csr_dpt_info = {
+	def dpt_mux_csr( bd_dpt_info: Info_bd_dpt, rd0_idx: UInt, rs1_idx: UInt ): Csr_dpt_info = {
 		val csr_dpt_info = Wire(new Csr_dpt_info)
-		csr_dpt_info.isa        := id_dpt_info.info.csr_isa
-		csr_dpt_info.param      := id_dpt_info.info.param
+		csr_dpt_info.isa        := bd_dpt_info.info.csr_isa
+		csr_dpt_info.param      := bd_dpt_info.info.param
 		csr_dpt_info.rn.rd0_idx := rd0_idx
 		csr_dpt_info.rn.rs1_idx := rs1_idx
 		csr_dpt_info.rn.rs2_idx := DontCare
@@ -128,10 +128,10 @@ trait Dpt{
 		return csr_dpt_info
 	}
 
-	def dpt_mux_mul( id_dpt_info: Info_id_dpt, rd0_idx: UInt, rs1_idx: UInt, rs2_idx: UInt ): Mul_dpt_info = {
+	def dpt_mux_mul( bd_dpt_info: Info_bd_dpt, rd0_idx: UInt, rs1_idx: UInt, rs2_idx: UInt ): Mul_dpt_info = {
 		val mul_dpt_info = Wire(new Mul_dpt_info)
-		mul_dpt_info.isa        := id_dpt_info.info.mul_isa
-		mul_dpt_info.param      := id_dpt_info.info.param
+		mul_dpt_info.isa        := bd_dpt_info.info.mul_isa
+		mul_dpt_info.param      := bd_dpt_info.info.param
 		mul_dpt_info.rn.rd0_idx := rd0_idx
 		mul_dpt_info.rn.rs1_idx := rs1_idx
 		mul_dpt_info.rn.rs2_idx := rs2_idx
@@ -139,10 +139,10 @@ trait Dpt{
 		return mul_dpt_info
 	}
 
-	def dpt_mux_fpu( id_dpt_info: Info_id_dpt, rd0_idx: UInt, rs1_idx: UInt, rs2_idx: UInt, rs3_idx: UInt ): Fpu_dpt_info = {
+	def dpt_mux_fpu( bd_dpt_info: Info_bd_dpt, rd0_idx: UInt, rs1_idx: UInt, rs2_idx: UInt, rs3_idx: UInt ): Fpu_dpt_info = {
 		val fpu_dpt_info = Wire(new Fpu_dpt_info)
-		fpu_dpt_info.isa        := id_dpt_info.info.fpu_isa
-		fpu_dpt_info.param      := id_dpt_info.info.param
+		fpu_dpt_info.isa        := bd_dpt_info.info.fpu_isa
+		fpu_dpt_info.param      := bd_dpt_info.info.param
 		fpu_dpt_info.rn.rd0_idx := rd0_idx
 		fpu_dpt_info.rn.rs1_idx := rs1_idx
 		fpu_dpt_info.rn.rs2_idx := rs2_idx
@@ -159,7 +159,7 @@ trait Dpt{
 
 class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 	val io = IO(new Bundle{
-		val id_dpt = Vec(2, Flipped(new DecoupledIO(new Info_id_dpt())))
+		val bd_dpt = Vec(2, Flipped(new DecoupledIO(new Info_bd_dpt())))
 
 		val alu_dpt_iss = new DecoupledIO(new Alu_dpt_info())
 		val bru_dpt_iss = new DecoupledIO(new Bru_dpt_info())
@@ -226,8 +226,8 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 
 	def is_iwb(i: Int) = true.B
 
-	def id_dpt_info(i: Int) = io.id_dpt(i).bits
-	def instruction_info(i: Int) = id_dpt_info(i).info
+	def bd_dpt_info(i: Int) = io.bd_dpt(i).bits
+	def instruction_info(i: Int) = bd_dpt_info(i).info
 
 
 	def rd0_raw(i: Int) = instruction_info(i).param.rd0_raw
@@ -278,22 +278,22 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 
 
 	is_alu_dpt_1st    := 
-				(io.id_dpt(0).valid & instruction_info(0).alu_isa.is_alu & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & alu_dpt_iss_fifo.io.enq.ready)
+				(io.bd_dpt(0).valid & instruction_info(0).alu_isa.is_alu & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & alu_dpt_iss_fifo.io.enq.ready)
 
 	is_bru_dpt_1st    := 
-				(io.id_dpt(0).valid & instruction_info(0).bru_isa.is_bru & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & bru_dpt_iss_fifo.io.enq.ready)
+				(io.bd_dpt(0).valid & instruction_info(0).bru_isa.is_bru & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & bru_dpt_iss_fifo.io.enq.ready)
 
 	is_lsu_dpt_1st    := 
-				(io.id_dpt(0).valid & instruction_info(0).lsu_isa.is_lsu & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & lsu_dpt_iss_fifo.io.enq.ready)
+				(io.bd_dpt(0).valid & instruction_info(0).lsu_isa.is_lsu & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & lsu_dpt_iss_fifo.io.enq.ready)
 
 	is_csr_dpt_1st    := 
-				(io.id_dpt(0).valid & instruction_info(0).csr_isa.is_csr & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & csr_dpt_iss_fifo.io.enq.ready)
+				(io.bd_dpt(0).valid & instruction_info(0).csr_isa.is_csr & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & csr_dpt_iss_fifo.io.enq.ready)
 
 	is_mul_dpt_1st    := 
-				(io.id_dpt(0).valid & instruction_info(0).mul_isa.is_mul & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & mul_dpt_iss_fifo.io.enq.ready)
+				(io.bd_dpt(0).valid & instruction_info(0).mul_isa.is_mul & rename_i.is_free_1st(rd0_raw(0)) & is_rod_ready(0) & mul_dpt_iss_fifo.io.enq.ready)
 
 	is_privil_dpt_1st := 
-				(io.id_dpt(0).valid & (instruction_info(0).privil_isa.is_privil | io.id_dpt(0).bits.is_iFAccessFault | io.id_dpt(0).bits.is_illeage ) & is_rod_ready(0))
+				(io.bd_dpt(0).valid & (instruction_info(0).privil_isa.is_privil | io.bd_dpt(0).bits.is_iFAccessFault | io.bd_dpt(0).bits.is_illeage ) & is_rod_ready(0))
 	
 	is_dpt_1st        := 
 				(is_alu_dpt_1st | is_bru_dpt_1st | is_lsu_dpt_1st | is_csr_dpt_1st | is_mul_dpt_1st | is_privil_dpt_1st) //| is_fpu_dpt_1st
@@ -303,30 +303,30 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 
 	is_alu_dpt_2nd    := 
 				(~is_alu_dpt_1st & is_dpt_1st) &
-				(io.id_dpt(1).valid & instruction_info(1).alu_isa.is_alu & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & alu_dpt_iss_fifo.io.enq.ready )
+				(io.bd_dpt(1).valid & instruction_info(1).alu_isa.is_alu & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & alu_dpt_iss_fifo.io.enq.ready )
 	
 	is_bru_dpt_2nd    := 
 				(~is_bru_dpt_1st & is_dpt_1st) &
-				(io.id_dpt(1).valid & instruction_info(1).bru_isa.is_bru & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & bru_dpt_iss_fifo.io.enq.ready)
+				(io.bd_dpt(1).valid & instruction_info(1).bru_isa.is_bru & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & bru_dpt_iss_fifo.io.enq.ready)
 
 	is_lsu_dpt_2nd    := 
 				(~is_lsu_dpt_1st & is_dpt_1st) &
-				(io.id_dpt(1).valid & instruction_info(1).lsu_isa.is_lsu & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & lsu_dpt_iss_fifo.io.enq.ready)
+				(io.bd_dpt(1).valid & instruction_info(1).lsu_isa.is_lsu & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & lsu_dpt_iss_fifo.io.enq.ready)
 
 
 	is_csr_dpt_2nd    := 
 				(~is_csr_dpt_1st & is_dpt_1st) &
-				(io.id_dpt(1).valid & instruction_info(1).csr_isa.is_csr & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & csr_dpt_iss_fifo.io.enq.ready)
+				(io.bd_dpt(1).valid & instruction_info(1).csr_isa.is_csr & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & csr_dpt_iss_fifo.io.enq.ready)
 
 
 	is_mul_dpt_2nd    := 
 				(~is_mul_dpt_1st & is_dpt_1st) &
-				(io.id_dpt(1).valid & instruction_info(1).mul_isa.is_mul & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & mul_dpt_iss_fifo.io.enq.ready)
+				(io.bd_dpt(1).valid & instruction_info(1).mul_isa.is_mul & rename_i.is_free_2nd(rd0_raw(0), rd0_raw(1)) & is_rod_ready(1) & mul_dpt_iss_fifo.io.enq.ready)
 
 
 	is_privil_dpt_2nd := 
 				(is_dpt_1st) &
-				(io.id_dpt(1).valid & (instruction_info(1).privil_isa.is_privil | io.id_dpt(1).bits.is_iFAccessFault | io.id_dpt(1).bits.is_illeage) & is_rod_ready(1))
+				(io.bd_dpt(1).valid & (instruction_info(1).privil_isa.is_privil | io.bd_dpt(1).bits.is_iFAccessFault | io.bd_dpt(1).bits.is_illeage) & is_rod_ready(1))
 
 
 	is_dpt_2nd        := is_alu_dpt_2nd | is_bru_dpt_2nd | is_lsu_dpt_2nd | is_csr_dpt_2nd | is_mul_dpt_2nd | is_privil_dpt_2nd //| is_fpu_dpt_2nd
@@ -338,43 +338,43 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 
 	alu_dpt_iss_fifo.io.enq.bits := Mux(
 										is_alu_dpt_1st,
-										dpt_mux_alu(id_dpt_info(0), rd0_idx_1st, rs1_idx_1st, rs2_idx_1st),
-										dpt_mux_alu(id_dpt_info(1), rd0_idx_2nd, rs1_idx_2nd, rs2_idx_2nd)
+										dpt_mux_alu(bd_dpt_info(0), rd0_idx_1st, rs1_idx_1st, rs2_idx_1st),
+										dpt_mux_alu(bd_dpt_info(1), rd0_idx_2nd, rs1_idx_2nd, rs2_idx_2nd)
 										)
 	bru_dpt_iss_fifo.io.enq.bits := Mux(
 										is_bru_dpt_1st,
-										dpt_mux_bru(id_dpt_info(0), rd0_idx_1st, rs1_idx_1st, rs2_idx_1st),
-										dpt_mux_bru(id_dpt_info(1), rd0_idx_2nd, rs1_idx_2nd, rs2_idx_2nd)
+										dpt_mux_bru(bd_dpt_info(0), rd0_idx_1st, rs1_idx_1st, rs2_idx_1st),
+										dpt_mux_bru(bd_dpt_info(1), rd0_idx_2nd, rs1_idx_2nd, rs2_idx_2nd)
 									)
 	lsu_dpt_iss_fifo.io.enq.bits := Mux(
 										is_lsu_dpt_1st,
-										dpt_mux_lsu(id_dpt_info(0), rd0_idx_1st, rs1_idx_1st, rs2_idx_1st),
-										dpt_mux_lsu(id_dpt_info(1), rd0_idx_2nd, rs1_idx_2nd, rs2_idx_2nd)
+										dpt_mux_lsu(bd_dpt_info(0), rd0_idx_1st, rs1_idx_1st, rs2_idx_1st),
+										dpt_mux_lsu(bd_dpt_info(1), rd0_idx_2nd, rs1_idx_2nd, rs2_idx_2nd)
 									)
 	csr_dpt_iss_fifo.io.enq.bits := Mux(
 										is_csr_dpt_1st,
-										dpt_mux_csr(id_dpt_info(0), rd0_idx_1st, rs1_idx_1st),
-										dpt_mux_csr(id_dpt_info(1), rd0_idx_2nd, rs1_idx_2nd)
+										dpt_mux_csr(bd_dpt_info(0), rd0_idx_1st, rs1_idx_1st),
+										dpt_mux_csr(bd_dpt_info(1), rd0_idx_2nd, rs1_idx_2nd)
 									)
 	mul_dpt_iss_fifo.io.enq.bits := Mux(
 										is_mul_dpt_1st,
-										dpt_mux_mul(id_dpt_info(0), rd0_idx_1st, rs1_idx_1st, rs2_idx_1st),
-										dpt_mux_mul(id_dpt_info(1), rd0_idx_2nd, rs1_idx_2nd, rs2_idx_2nd)
+										dpt_mux_mul(bd_dpt_info(0), rd0_idx_1st, rs1_idx_1st, rs2_idx_1st),
+										dpt_mux_mul(bd_dpt_info(1), rd0_idx_2nd, rs1_idx_2nd, rs2_idx_2nd)
 									)
 
 	// fpu_dpt_iss_fifo.io.enq(0).bits := dpt_mux_fpu(id_dpt_info(0), rd0_idx_1st, rs1_idx_1st, rs2_idx_1st, rs3_idx_1st)
 
 
 
-	reOrder_fifo_i.io.enq(0).bits := rod_mux_i(id_dpt_info(0), rd0_idx_1st)
-	reOrder_fifo_i.io.enq(1).bits := rod_mux_i(id_dpt_info(1), rd0_idx_2nd)
+	reOrder_fifo_i.io.enq(0).bits := rod_mux_i(bd_dpt_info(0), rd0_idx_1st)
+	reOrder_fifo_i.io.enq(1).bits := rod_mux_i(bd_dpt_info(1), rd0_idx_2nd)
 
 	override def is_1st_solo = false.B
 	override def is_2nd_solo = false.B
 
 
-	io.id_dpt(0).ready := is_dpt_1st
-	io.id_dpt(1).ready := is_dpt_2nd
+	io.bd_dpt(0).ready := is_dpt_1st
+	io.bd_dpt(1).ready := is_dpt_2nd
 
 
 
