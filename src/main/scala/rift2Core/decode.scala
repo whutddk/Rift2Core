@@ -50,6 +50,17 @@ class Decode extends Module {
 
 }
 
+
+object Decode {
+	def apply( ib_id: Info_ib_id ) = {
+		val mdl = Module(new Decode)
+		mdl.io.ib_id := ib_id
+
+		mdl.io.id_dpt
+	}
+}
+
+
 class Decode_ss extends Module with Superscalar {
 	val io = IO( new Bundle {
 		val ib_id = Vec(2, Flipped(new DecoupledIO(new Info_ib_id)))

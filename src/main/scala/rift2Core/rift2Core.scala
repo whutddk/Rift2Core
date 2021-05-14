@@ -58,7 +58,7 @@ class Rift2Core extends Module {
 	lazy val if_stage = Module(new Ifetch)
 	lazy val iq_stage = Module(new Iqueue_ss)
 	lazy val ib_stage = Module(new BranchPredict_ss)
-	lazy val id_stage = Module(new Decode_ss)
+	// lazy val id_stage = Module(new BranchPredict_ss)
 
 	lazy val dpt_stage = Module(new Dispatch_ss)
 	lazy val iss_stage = Module(new Issue)
@@ -106,8 +106,8 @@ class Rift2Core extends Module {
 	pc_stage.io.pc_if <> if_stage.io.pc_if
 	if_stage.io.if_iq <> iq_stage.io.if_iq
 	iq_stage.io.iq_ib <> ib_stage.io.iq_ib
-	ib_stage.io.ib_id <> id_stage.io.ib_id
-	id_stage.io.id_dpt <> dpt_stage.io.id_dpt
+	ib_stage.io.id_dpt <> dpt_stage.io.id_dpt
+	// id_stage.io. <> 
 
 	dpt_stage.io.alu_dpt_iss <> iss_stage.io.alu_dpt_iss
 	dpt_stage.io.bru_dpt_iss <> iss_stage.io.bru_dpt_iss
@@ -141,7 +141,7 @@ class Rift2Core extends Module {
 	if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | ib_stage.io.ib_pc.valid | exe_stage.io.bru_iq_j.valid
 	iq_stage.io.flush  := exe_stage.io.il1_fence_req
 	ib_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | exe_stage.io.bru_iq_j.valid | exe_stage.io.il1_fence_req
-	id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+	// id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 	dpt_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 	iss_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 	exe_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)

@@ -102,7 +102,8 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 		val ib_pc = new ValidIO(new Info_ib_pc)
 
 		val iq_ib = Vec(2, Flipped(new DecoupledIO(new Info_iq_ib) ))
-		val ib_id = Vec(2, new DecoupledIO(new Info_ib_id))
+		// val ib_id = Vec(2, new DecoupledIO(new Info_ib_id))
+		val id_dpt = Vec(2, new DecoupledIO(new Info_id_dpt))
 
 		val is_misPredict_taken = Output(Bool())
 
@@ -111,14 +112,20 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 	})
 
 	val ib_lock = RegInit(false.B)
-	val ib_id_fifo = Module(new MultiPortFifo( new Info_ib_id, 4, 2, 2 ))
-	io.ib_id <> ib_id_fifo.io.deq
-	ib_id_fifo.io.flush := io.flush
+	// val ib_id_fifo = Module(new MultiPortFifo( new Info_ib_id, 4, 2, 2 ))
+	// io.ib_id <> ib_id_fifo.io.deq
+	// ib_id_fifo.io.flush := io.flush
 
-	def is_ib_id_fifo_enq_ack(i: Int ) = ib_id_fifo.is_enq_ack(i)
 
-	ib_id_fifo.io.enq(0).bits := jfilter(io.iq_ib(0).bits, is_ras_taken & is_1st_solo) 
-	ib_id_fifo.io.enq(1).bits := jfilter(io.iq_ib(1).bits, is_ras_taken & is_2nd_solo) 	
+	// ib_id_fifo.io.enq(0).bits := jfilter(io.iq_ib(0).bits, is_ras_taken & is_1st_solo) 
+	// ib_id_fifo.io.enq(1).bits := jfilter(io.iq_ib(1).bits, is_ras_taken & is_2nd_solo) 	
+
+	val id_dpt_fifo = Module(new MultiPortFifo( new Info_id_dpt, 4, 2, 2 ))
+	io.id_dpt <> id_dpt_fifo.io.deq
+	id_dpt_fifo.io.flush := io.flush
+
+	id_dpt_fifo.io.enq(0).bits := Decode(jfilter(io.iq_ib(0).bits, is_ras_taken & is_1st_solo) )
+	id_dpt_fifo.io.enq(1).bits := Decode(jfilter(io.iq_ib(1).bits, is_ras_taken & is_2nd_solo) )	
 
 /*	
 	branch history queue, for bru result checking 
@@ -138,13 +145,13 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 
 
 
-	lazy val is_jal    = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_jal    & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_jal    & ib_id_fifo.io.enq(1).fire) ))
-	lazy val is_jalr   = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_jalr   & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_jalr   & ib_id_fifo.io.enq(1).fire) ))
-	lazy val is_branch = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_branch & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_branch & ib_id_fifo.io.enq(1).fire) ))
-	lazy val is_call   = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_call   & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_call   & ib_id_fifo.io.enq(1).fire) ))
-	lazy val is_return = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_return & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_return & ib_id_fifo.io.enq(1).fire) ))
-	lazy val is_rvc    = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_rvc    & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_rvc    & ib_id_fifo.io.enq(1).fire) ))
-	lazy val is_fencei = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_fencei & ib_id_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_fencei & ib_id_fifo.io.enq(1).fire) ))
+	lazy val is_jal    = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_jal    & id_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_jal    & id_dpt_fifo.io.enq(1).fire) ))
+	lazy val is_jalr   = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_jalr   & id_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_jalr   & id_dpt_fifo.io.enq(1).fire) ))
+	lazy val is_branch = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_branch & id_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_branch & id_dpt_fifo.io.enq(1).fire) ))
+	lazy val is_call   = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_call   & id_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_call   & id_dpt_fifo.io.enq(1).fire) ))
+	lazy val is_return = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_return & id_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_return & id_dpt_fifo.io.enq(1).fire) ))
+	lazy val is_rvc    = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_rvc    & id_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_rvc    & id_dpt_fifo.io.enq(1).fire) ))
+	lazy val is_fencei = MuxCase( false.B, Array( is_1st_solo -> (io.iq_ib(0).bits.info.is_fencei & id_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.iq_ib(1).bits.info.is_fencei & id_dpt_fifo.io.enq(1).fire) ))
 	lazy val imm       = MuxCase( 0.U,     Array( is_1st_solo -> io.iq_ib(0).bits.info.imm, is_2nd_solo -> io.iq_ib(1).bits.info.imm ))
 
 
@@ -166,11 +173,11 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 
 
 
-	ib_id_fifo.io.enq(0).valid := ~ib_lock & ~io.flush & io.iq_ib(0).valid & Mux(is_1st_solo, bhq.io.enq.ready, true.B) & ib_id_fifo.io.enq(0).ready
-	ib_id_fifo.io.enq(1).valid := ~ib_lock & ~io.flush & io.iq_ib(1).valid & Mux(is_2nd_solo, bhq.io.enq.ready, true.B) & ib_id_fifo.io.enq(1).ready & ~is_1st_solo
+	id_dpt_fifo.io.enq(0).valid := ~ib_lock & ~io.flush & io.iq_ib(0).valid & Mux(is_1st_solo, bhq.io.enq.ready, true.B) & id_dpt_fifo.io.enq(0).ready
+	id_dpt_fifo.io.enq(1).valid := ~ib_lock & ~io.flush & io.iq_ib(1).valid & Mux(is_2nd_solo, bhq.io.enq.ready, true.B) & id_dpt_fifo.io.enq(1).ready & ~is_1st_solo
 
-	io.iq_ib(0).ready := ~ib_lock &  ~io.flush & ib_id_fifo.is_enq_ack(0)
-	io.iq_ib(1).ready := ~ib_lock &  ~io.flush & ib_id_fifo.is_enq_ack(0) & ib_id_fifo.is_enq_ack(1)
+	io.iq_ib(0).ready := ~ib_lock &  ~io.flush & id_dpt_fifo.io.enq(0).fire
+	io.iq_ib(1).ready := ~ib_lock &  ~io.flush & id_dpt_fifo.io.enq(0).fire & id_dpt_fifo.io.enq(1).fire
 
 
 	bhq.io.enq.valid := ~ib_lock & ~io.flush & is_branch & bhq.io.enq.ready
@@ -178,7 +185,7 @@ class BranchPredict_ss extends Module with BHT with Superscalar{
 	bhq.reset := reset.asBool | io.flush
 
 	ras.io.enq.valid := ~ib_lock & ~io.flush & is_call
-	ras.io.deq.ready := is_ras_taken & ((is_1st_solo & ib_id_fifo.is_enq_ack(0)) | (is_2nd_solo & ib_id_fifo.is_enq_ack(1)))
+	ras.io.deq.ready := is_ras_taken & ((is_1st_solo & id_dpt_fifo.io.enq(0).fire) | (is_2nd_solo & id_dpt_fifo.io.enq(1).fire))
 	ras.io.flush := io.flush
 
 	io.ib_pc.valid :=
