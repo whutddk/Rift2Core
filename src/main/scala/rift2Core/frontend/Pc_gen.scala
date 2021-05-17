@@ -22,63 +22,63 @@
 */
 
 
-package rift2Core
+package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
 import chisel3.util.random._
 
-import chisel3.experimental.ChiselEnum
+
 import rift2Core.define._
-import rift2Core.frontend._
+
 
 
 class Pc_gen extends Module {
 	val io = IO(new Bundle{
-		val ib_pc = Flipped(new ValidIO( new Info_ib_pc) )
-		val bru_iq_j = Flipped(new ValidIO( UInt(64.W) ))
+		val bd_pc = Flipped(new ValidIO( UInt(64.W) ) )
+		val bru_pd_j = Flipped(new ValidIO( UInt(64.W) ))
 		val cmm_pc = Flipped ( new ValidIO(new Info_cmm_pc))
 
 
-		val pc_if = new DecoupledIO( new Info_pc_if )
+		val pc_if = new DecoupledIO( UInt(64.W) )
 
-		val pc_iq = new ValidIO( UInt(64.W) )
+		val pc_pd = new ValidIO( UInt(64.W) )
 
 	})
 
 	io.pc_if.valid := true.B
 
 	def is_cmm_pc_ack = io.cmm_pc.valid
-	def is_bru_iq_j_ack = io.bru_iq_j.valid
-	def is_ib_pc_ack = io.ib_pc.valid
+	def is_bru_pd_j_ack = io.bru_pd_j.valid
+	def is_bd_pc_ack = io.bd_pc.valid
 	def is_pc_if_ack = io.pc_if.valid & io.pc_if.ready
 
 	val addr = RegInit("h80000000".U(64.W))
 
 
-	io.pc_iq.bits := MuxCase( DontCare, Array(
+	io.pc_pd.bits := MuxCase( DontCare, Array(
 								is_cmm_pc_ack -> io.cmm_pc.bits.addr,
-								is_bru_iq_j_ack -> io.bru_iq_j.bits,
-								is_ib_pc_ack  -> io.ib_pc.bits.addr
+								is_bru_pd_j_ack -> io.bru_pd_j.bits,
+								is_bd_pc_ack  -> io.bd_pc.bits
 							))
-	io.pc_iq.valid := is_cmm_pc_ack | is_ib_pc_ack | is_bru_iq_j_ack
+	io.pc_pd.valid := is_cmm_pc_ack | is_bd_pc_ack | is_bru_pd_j_ack
 
 
 	when( is_cmm_pc_ack ){
 		addr := io.cmm_pc.bits.addr
 	}
-	.elsewhen(is_bru_iq_j_ack){
-		addr := io.bru_iq_j.bits
+	.elsewhen(is_bru_pd_j_ack){
+		addr := io.bru_pd_j.bits
 	}
-	.elsewhen(is_ib_pc_ack ) {
-		addr := io.ib_pc.bits.addr
+	.elsewhen(is_bd_pc_ack ) {
+		addr := io.bd_pc.bits
 	}
 	.elsewhen(is_pc_if_ack){
 		addr := (addr + 16.U) & ~("b1111".U(64.W))
 	}
 
 
-	io.pc_if.bits.addr := addr
+	io.pc_if.bits := addr
 
 
 }

@@ -352,13 +352,6 @@ class Reg_idx extends Bundle {
 }
 
 
-class Info_id_dpt extends Bundle {
-
-	val info = new Info_instruction()
-	val is_iFAccessFault = Bool()
-	val is_illeage = Bool()
-
-}
 
 class Alu_dpt_info extends Bundle {
 	val isa = new Alu_isa()
@@ -568,22 +561,14 @@ class Exe_fwb_info extends Bundle {
 
 
 
-class Info_bru_id extends Bundle {
-	val is_takenBranch_bits = Bool()
-	val is_takenBranch_valid = Bool()
-	val jalr_pc = UInt(64.W)
-	val jalr_valid = Bool()
-}
-
-
-// class Info_csr_files extends Bundle {
-// 	val addr = Output(UInt(12.W))
-// 	val op = Output(UInt(64.W))
-// 	val res = Input(UInt(64.W))
-// 	val rw = Output(Bool())
-// 	val rs = Output(Bool())
-// 	val rc = Output(Bool())
+// class Info_bru_id extends Bundle {
+// 	val is_takenBranch_bits = Bool()
+// 	val is_takenBranch_valid = Bool()
+// 	val jalr_pc = UInt(64.W)
+// 	val jalr_valid = Bool()
 // }
+
+
 
 class Info_cmm_csr extends Bundle {
 	val is_trap = Bool()
@@ -600,36 +585,14 @@ class Info_clint_csr extends Bundle {
 	val is_softwvInterrupt = Bool()
 }
 
-class Info_preDecode extends Bundle {
-	val is_jal = Bool()
-	val is_jalr = Bool()
-	val is_branch = Bool()
-	val is_call = Bool()
-	val is_return = Bool()
-	val is_rvc = Bool()
-	val is_fencei = Bool()
-	val imm = UInt(64.W)
-
-	def is_pineline_cut = is_jal | is_jalr | is_branch | is_fencei
-}
 
 
-class Info_iq_ib extends Bundle {
 
-	val info = new Info_preDecode
-	val instr = UInt(32.W)
-	val pc = UInt(64.W)
-}
 
-class Info_ib_id extends Bundle {
-	val is_rvc = Bool()
-	val pc = UInt(64.W)
-	val instr = UInt(32.W)
-}
 
-class Info_ib_pc extends Bundle {
-	val addr = UInt(64.W)
-}
+
+
+
 
 class Info_cmm_pc extends Bundle {
 	val addr = UInt(64.W)

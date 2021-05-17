@@ -24,7 +24,7 @@
    limitations under the License.
 */
 
-package rift2Core
+package rift2Core.backend
 
 
 import chisel3._
@@ -49,8 +49,8 @@ class Execute extends Module {
 		val mul_exe_iwb = new DecoupledIO(new Exe_iwb_info)
 
 		val cmm_bru_ilp = Input(Bool())
-		val bru_iq_b = new ValidIO( Bool() )
-		val bru_iq_j = new ValidIO( UInt(64.W) )
+		val bru_pd_b = new ValidIO( Bool() )
+		val bru_pd_j = new ValidIO( UInt(64.W) )
 
 		val csr_addr = Output(UInt(12.W))
 		val csr_data = Input(UInt(64.W))
@@ -90,8 +90,8 @@ class Execute extends Module {
 	bru.io.bru_iss_exe <> io.bru_iss_exe
 	bru.io.bru_exe_iwb <> io.bru_exe_iwb
 	bru.io.cmm_bru_ilp <> io.cmm_bru_ilp
-	bru.io.bru_iq_b <> io.bru_iq_b
-	bru.io.bru_iq_j <> io.bru_iq_j
+	bru.io.bru_pd_b <> io.bru_pd_b
+	bru.io.bru_pd_j <> io.bru_pd_j
 	bru.io.flush <> io.flush
 
 	csr.io.csr_iss_exe <> io.csr_iss_exe

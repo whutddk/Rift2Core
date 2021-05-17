@@ -294,7 +294,7 @@ class Lsu extends Module {
 
 
 	sys_mst_r.io.ar_info.id    := 1.U
-	sys_mst_r.io.ar_info.addr  := Mux( stateReg === Dl1_state.cfree, op1_align64, RegEnable(op1_align64, stateDnxt =/= Dl1_state.cfree) )
+	sys_mst_r.io.ar_info.addr  := Mux( stateReg === Dl1_state.cfree, op1_align64, RegEnable(op1_align64, stateReg === Dl1_state.cfree) )
 	
 	sys_mst_r.io.ar_info.len   := 1.U
 	sys_mst_r.io.ar_info.size  := 3.U
@@ -306,7 +306,7 @@ class Lsu extends Module {
 	sys_mst_r.io.ar_info.user  := 0.U
 
 	sys_mst_w.io.aw_info.id    := 1.U
-	sys_mst_w.io.aw_info.addr  := Mux( stateReg === Dl1_state.cfree, op1_align64, RegEnable(op1_align64, stateDnxt =/= Dl1_state.cfree) )
+	sys_mst_w.io.aw_info.addr  := Mux( stateReg === Dl1_state.cfree, op1_align64, RegEnable(op1_align64, stateReg === Dl1_state.cfree) )
 	sys_mst_w.io.aw_info.len   := 1.U
 	sys_mst_w.io.aw_info.size  := 3.U
 	sys_mst_w.io.aw_info.burst := 0.U
@@ -316,8 +316,8 @@ class Lsu extends Module {
 	sys_mst_w.io.aw_info.qos   := 0.U
 	sys_mst_w.io.aw_info.user  := 0.U
 
-	sys_mst_w.io.w_info.data := Mux( stateReg === Dl1_state.cfree, lsu_wdata_align, RegEnable(lsu_wdata_align, stateDnxt =/= Dl1_state.cfree) )
-	sys_mst_w.io.w_info.strb := Mux( stateReg === Dl1_state.cfree, lsu_wstrb_align, RegEnable(lsu_wstrb_align, stateDnxt =/= Dl1_state.cfree) )
+	sys_mst_w.io.w_info.data := Mux( stateReg === Dl1_state.cfree, lsu_wdata_align, RegEnable(lsu_wdata_align, stateReg === Dl1_state.cfree) )
+	sys_mst_w.io.w_info.strb := Mux( stateReg === Dl1_state.cfree, lsu_wstrb_align, RegEnable(lsu_wstrb_align, stateReg === Dl1_state.cfree) )
 	sys_mst_w.io.w_info.last := DontCare
 	sys_mst_w.io.w_info.user := 0.U
 
@@ -353,7 +353,7 @@ class Lsu extends Module {
 	))
 
 	dl1_mst.io.a_info.opcode  := 
-		Mux( stateReg === Dl1_state.cfree, a_info_opcode, RegEnable(a_info_opcode, stateDnxt =/= Dl1_state.cfree) )
+		Mux( stateReg === Dl1_state.cfree, a_info_opcode, RegEnable(a_info_opcode, stateReg === Dl1_state.cfree) )
 	
 
 	def a_info_param = Mux1H( Seq(
@@ -362,7 +362,7 @@ class Lsu extends Module {
 	))
 
 	dl1_mst.io.a_info.param   :=
-		Mux( stateReg === Dl1_state.cfree, a_info_param, RegEnable(a_info_param, stateDnxt =/= Dl1_state.cfree) )
+		Mux( stateReg === Dl1_state.cfree, a_info_param, RegEnable(a_info_param, stateReg === Dl1_state.cfree) )
 
 
 	def a_info_size = Mux1H( Seq(
@@ -371,7 +371,7 @@ class Lsu extends Module {
 	))
 
 	dl1_mst.io.a_info.size    := 
-		Mux( stateReg === Dl1_state.cfree, a_info_size, RegEnable(a_info_size, stateDnxt =/= Dl1_state.cfree) )
+		Mux( stateReg === Dl1_state.cfree, a_info_size, RegEnable(a_info_size, stateReg === Dl1_state.cfree) )
 
 
 
@@ -384,7 +384,7 @@ class Lsu extends Module {
 	))
 
 	dl1_mst.io.a_info.address := 
-		Mux( stateReg === Dl1_state.cfree, a_info_address, RegEnable(a_info_address, stateDnxt =/= Dl1_state.cfree) )
+		Mux( stateReg === Dl1_state.cfree, a_info_address, RegEnable(a_info_address, stateReg === Dl1_state.cfree) )
 
 
 	def a_info_mask = Mux1H( Seq(
@@ -393,7 +393,7 @@ class Lsu extends Module {
 	))
 
 	dl1_mst.io.a_info.mask    := 
-		Mux( stateReg === Dl1_state.cfree, a_info_mask, RegEnable(a_info_mask, stateDnxt =/= Dl1_state.cfree) )
+		Mux( stateReg === Dl1_state.cfree, a_info_mask, RegEnable(a_info_mask, stateReg === Dl1_state.cfree) )
 
 
 	def a_info_data = Mux1H( Seq(
@@ -402,7 +402,7 @@ class Lsu extends Module {
 	))
 
 	dl1_mst.io.a_info.data    := 
-		Mux( stateReg === Dl1_state.cfree, a_info_data, RegEnable(a_info_data, stateDnxt =/= Dl1_state.cfree) )
+		Mux( stateReg === Dl1_state.cfree, a_info_data, RegEnable(a_info_data, stateReg === Dl1_state.cfree) )
 
 	dl1_mst.io.a_info.corrupt := false.B
 

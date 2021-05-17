@@ -22,7 +22,7 @@
 */
 
 
-package rift2Core
+package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
@@ -44,7 +44,7 @@ object Il1_state extends ChiselEnum {
 
 class Ifetch() extends Module with IBuf{
 	val io = IO(new Bundle{
-		val pc_if = Flipped(new DecoupledIO( new Info_pc_if ))
+		val pc_if = Flipped(new DecoupledIO( UInt(64.W) ))
 
 		val if_iq = Vec(4, new DecoupledIO(UInt(16.W)) )
 
@@ -88,8 +88,8 @@ class Ifetch() extends Module with IBuf{
 	val trans_kill = RegInit(false.B)
 	val is_il1_fence_req = RegInit(false.B)
 
-	if_addr_reg := Mux( (stateReg === Il1_state.cfree), io.pc_if.bits.addr, if_addr_reg)
-	if_addr     := Mux( (stateReg === Il1_state.cfree), io.pc_if.bits.addr, if_addr_reg)
+	if_addr_reg := Mux( (stateReg === Il1_state.cfree), io.pc_if.bits, if_addr_reg)
+	if_addr     := Mux( (stateReg === Il1_state.cfree), io.pc_if.bits, if_addr_reg)
 
 	io.if_iq <> ibuf.io.deq
 	ibuf.io.flush := io.flush | io.is_il1_fence_req
