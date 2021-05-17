@@ -1,4 +1,4 @@
-package rift2Core.frontend
+
 
 
 
@@ -26,6 +26,7 @@ package rift2Core.frontend
    limitations under the License.
 */
 
+package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._

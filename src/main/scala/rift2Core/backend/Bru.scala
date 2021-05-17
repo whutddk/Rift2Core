@@ -38,8 +38,8 @@ class Bru extends Module {
 
 		val cmm_bru_ilp = Input(Bool())
 
-		val bru_iq_b = new ValidIO( Bool() )
-		val bru_iq_j = new ValidIO( UInt(64.W) )
+		val bru_pd_b = new ValidIO( Bool() )
+		val bru_pd_j = new ValidIO( UInt(64.W) )
 
 		val flush = Input(Bool())
 	})
@@ -68,10 +68,10 @@ class Bru extends Module {
 	def is_clear_ilp = Mux(io.bru_iss_exe.bits.fun.is_branch, io.cmm_bru_ilp, true.B)
 
 
-	io.bru_iq_b.bits  := is_branchTaken
-	io.bru_iq_b.valid := iwb_ack & io.bru_iss_exe.bits.fun.is_branch
-	io.bru_iq_j.bits  := (io.bru_iss_exe.bits.param.op1 + io.bru_iss_exe.bits.param.imm) & ~("b1".U(64.W))
-	io.bru_iq_j.valid := iwb_ack & io.bru_iss_exe.bits.fun.jalr
+	io.bru_pd_b.bits  := is_branchTaken
+	io.bru_pd_b.valid := iwb_ack & io.bru_iss_exe.bits.fun.is_branch
+	io.bru_pd_j.bits  := (io.bru_iss_exe.bits.param.op1 + io.bru_iss_exe.bits.param.imm) & ~("b1".U(64.W))
+	io.bru_pd_j.valid := iwb_ack & io.bru_iss_exe.bits.fun.jalr
 
 
 

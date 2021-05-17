@@ -23,7 +23,7 @@
    limitations under the License.
 */
 
-package rift2Core
+package rift2Core.backend
 
 
 import chisel3._
