@@ -71,9 +71,9 @@ class Lsu extends Module {
 	lsu_exe_iwb_fifo.reset := reset.asBool | io.flush
 
 	def dw = 128
-	def bk = 2
+	def bk = 4
 	def cb = 4
-	def cl = 64
+	def cl = 128
 
 	val addr_lsb = log2Ceil(dw*bk/8)
 	val line_w   = log2Ceil(cl)
@@ -121,6 +121,7 @@ class Lsu extends Module {
 	def op1_align64  = op1(31,0) & ~("b111".U(64.W))
 	def op1_align128 = op1(31,0) & ~("b1111".U(64.W))
 	def op1_align256 = op1(31,0) & ~("b11111".U(64.W))
+	def op1_align512 = op1(31,0) & ~("b111111".U(64.W))
 
 	io.lsu_cmm.is_accessFault := is_accessFalut
 	io.lsu_cmm.is_misAlign := is_misAlign
@@ -366,7 +367,7 @@ class Lsu extends Module {
 
 
 	def a_info_size = Mux1H( Seq(
-		(is_ren) -> 5.U,
+		(is_ren) -> addr_lsb.U,
 		(is_wen) -> 4.U
 	))
 
@@ -379,7 +380,7 @@ class Lsu extends Module {
 
 
 	def a_info_address = Mux1H( Seq(
-		(is_ren) -> op1_align256,
+		(is_ren) -> op1_align512,
 		(is_wen) -> op1_align128
 	))
 
@@ -526,17 +527,17 @@ class Lsu extends Module {
 
 
 
-	println("the dcache has "+dw+"*"+bk+"bit,with "+cb+"cache block,and "+cl+"cache line")
-	println("Toltal size is "+dw*bk*cb*cl/8/1024.0+"KB")
+	println("the dcache has "+dw+"*"+bk+" bit,with "+cb+"cache block, and "+cl+" cache line")
+	println("Toltal size is "+dw*bk*cb*cl/8/1024.0+" KB")
 
 
 
 	when( stateReg =/= Dl1_state.cmiss & stateDnxt === Dl1_state.cmiss ) {
-		op1_dl1_req := op1_align256
+		op1_dl1_req := op1_align512
 	}
 	.elsewhen( stateDnxt === Dl1_state.cmiss ) {
 		when ( dl1_mst.io.d.fire === true.B ) {
-			op1_dl1_req := op1_dl1_req + "b10000".U
+			op1_dl1_req := op1_dl1_req + ( 1.U << log2Ceil(dw/8).U )
 		}
 	}
 
