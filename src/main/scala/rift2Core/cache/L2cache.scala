@@ -35,7 +35,7 @@ import tilelink._
 import base._
 
 
-class L2Cache( dw:Int = 256, bk:Int = 4, cb:Int = 4, cl:Int = 32 ) extends Module {
+class L2Cache( dw:Int = 512, bk:Int = 2, cb:Int = 4, cl:Int = 512 ) extends Module {
 	val io = IO( new Bundle{
 		val il1_chn_a = Flipped( new DecoupledIO(new TLchannel_a(128, 32)) )
 		val il1_chn_d = new DecoupledIO( new TLchannel_d(128) )

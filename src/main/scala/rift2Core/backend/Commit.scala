@@ -3,7 +3,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-14 11:24:59
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-14 11:25:13
+* @Last Modified time: 2021-05-17 17:02:17
 */
 
 /*
@@ -30,11 +30,14 @@ import chisel3.util._
 
 import rift2Core.define._
 import rift2Core.backend._
+import rift2Core.privilege._
 
 
-
-
-
+/** commit
+  * @author Ruige Lee
+  * 
+  * 
+  */
 class Commit extends Privilege with Superscalar{
 	val io = IO(new Bundle{
 

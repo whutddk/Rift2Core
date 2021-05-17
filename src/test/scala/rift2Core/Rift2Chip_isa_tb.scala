@@ -29,6 +29,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core._
 import rift2Chip._
+import rift2Core.privilege._
 
 import chiseltest._
 import org.scalatest._
@@ -38,16 +39,33 @@ import chisel3.util.experimental._
 
 
 
-class WaveformTester(dut: Rift2Chip) extends PeekPokeTester(dut){
+class WaveformTester(dut: MMU) extends PeekPokeTester(dut){
 
   
+    // dut.io.if_mmu.bits := 0.U
+    // dut.io.if_mmu.valid := true.B
+
+    // dut.io.mmu_if = ValidIO(new Info_mmu_rsp)
+
+    // val iss_mmu = ValidIO(new Info_mmu_req)
+    // val mmu_iss = ValidIO(new Info_mmu_rsp)
+
+    // val csr_mmu = Input( new Info_csr_mmu )
+
+    // val mmu_chn_a = new DecoupledIO(new TLchannel_a(64, 32))
+    // val mmu_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
+
+
+    // val flush = Input(Bool())
+
+
 	step(1000)
 
 }
 
 class WaveformSpec extends FlatSpec with Matchers {
   "WaveformSpec" should "pass" in {
-    chisel3.iotesters.Driver.execute(Array("--generate-vcd-output", "on","--target-dir", "generated"), () => new Rift2Chip()){
+    chisel3.iotesters.Driver.execute(Array("--generate-vcd-output", "on","--target-dir", "generated"), () => new MMU()){
       c => new WaveformTester(c)
     } should be (true)
   }
