@@ -3,7 +3,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-04-14 11:30:55
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-14 11:31:24
+* @Last Modified time: 2021-05-17 17:00:35
 */
 
 
@@ -25,7 +25,7 @@
 */
 
 
-package rift2Core.backend
+package rift2Core.privilege
 
 import chisel3._
 import chisel3.util._
