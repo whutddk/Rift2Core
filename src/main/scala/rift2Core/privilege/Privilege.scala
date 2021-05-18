@@ -1,11 +1,4 @@
 
-/*
-* @Author: Ruige Lee
-* @Date:   2021-04-14 11:30:55
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-17 17:00:35
-*/
-
 
 
 /*
@@ -31,6 +24,7 @@ import chisel3._
 import chisel3.util._
 
 import rift2Core.define._
+import rift2Core.backend._
 
 
 abstract class Privilege() extends Module with CsrFiles{

@@ -33,8 +33,11 @@ import rift2Core.backend._
 import rift2Core.privilege._
 
 
-
-
+/** commit
+  * @author Ruige Lee
+  * 
+  * 
+  */
 class Commit extends Privilege with Superscalar{
 	val io = IO(new Bundle{
 
