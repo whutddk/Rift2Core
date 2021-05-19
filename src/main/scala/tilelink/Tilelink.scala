@@ -360,7 +360,7 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 	val mode = RegInit(7.U(3.W))
 
 	val a_valid  = RegInit(false.B)
-	val req_addr = RegInit( 0.U(aw.W) )
+	// val req_addr = RegInit( 0.U(aw.W) )
 	val size_cnt = RegInit( 0.U(8.W) )
 	val size_aim = RegInit( 0.U(8.W) )
 
@@ -383,8 +383,8 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 
 	when( ~io.a.valid & io.is_req & (mode === 7.U) ) { size_aim := 1.U << io.a.bits.size }
 
-	when( ~io.a.valid & io.is_req ) { req_addr := io.a.bits.address }
-	.elsewhen( d_ack & size_cnt <= size_aim ) { req_addr := req_addr + ( 1.U << addr_lsb )   }
+	// when( ~io.a.valid & io.is_req ) { req_addr := io.a.bits.address }
+	// .elsewhen( d_ack & size_cnt <= size_aim ) { req_addr := req_addr + ( 1.U << addr_lsb )   }
 
 	when( ~io.a.valid & io.is_req & (mode === 7.U) ) { size_cnt := 0.U }
 	.elsewhen (
