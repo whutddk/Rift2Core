@@ -219,7 +219,7 @@ class M_CsrFiles {
 
 
 
-
+	val priv_lvl = RegInit("b11".U(2.W))
 
 
 
@@ -259,7 +259,7 @@ class M_CsrFiles {
 
 	//Machine Memory Protection
 	val pmpcfg = 
-		for ( i <- 0 until 16 by 2) yield {
+		for ( i <- 0 until 16 ) yield {
 			CsrReg( "h3A0".U + i.U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)
 		}
 	// val pmpcfg0    = CsrReg( "h3A0".U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)
@@ -342,8 +342,8 @@ trait CsrFiles {
 	def csr_read(addr: UInt) = {
 
 		val pmpcfg_arr = {
-			val addr_chk = for ( i <- 0 until 16 by 2) yield { addr === ("h3A0".U + i.U) }
-			val reg_sel  = for ( i <- 0 until 16 by 2) yield { m_csrFiles.pmpcfg(i) }
+			val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
+			val reg_sel  = for ( i <- 0 until 16 ) yield { m_csrFiles.pmpcfg(i) }
 			addr_chk zip reg_sel
 		}
 
