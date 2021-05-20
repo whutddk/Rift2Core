@@ -24,12 +24,7 @@ import chisel3.util._
 import tilelink._
 
 
-class Info_ptw_rsp extends Bundle {
-  val pte = new Info_pte_sv39
-  val is_4K_page = Bool()
-  val is_giga_page = Bool()
-  val is_mega_page = Bool()
-}
+
 
 /** 
   * page table walker

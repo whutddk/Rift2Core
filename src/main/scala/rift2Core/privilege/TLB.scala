@@ -29,9 +29,6 @@ class Info_tlb_tag extends Bundle {
   val is_valid = Bool()
   val asid = UInt( 16.W )
   val vpn = Vec( 3, UInt(9.W) )
-  val is_4K_page = Bool()
-  val is_mega_page = Bool()
-  val is_giga_page = Bool()
 
 }
 
@@ -45,12 +42,12 @@ class Info_tlb_tag extends Bundle {
 class TLB( entry: Int = 32 ) extends Module {
   val io = IO(new Bundle{
 
-    val pte_o  = Output( new Info_pte_sv39 )
-    val vaddr  = Flipped(ValidIO( UInt(64.W) ))
+    val vaddr = Flipped(ValidIO( UInt(64.W) ))
+    val pte_o = ValidIO(new Info_pte_sv39)
+
     val asid_i = Input(UInt(16.W))
 
-    val tlb_renew = Flipped(ValidIO(new Info_ptw_tlb))
-    val is_hit = Output(Bool())
+    val tlb_renew = Flipped(ValidIO(new Info_pte_sv39))
 
     val flush = Input(Bool())
   })
@@ -61,17 +58,12 @@ class TLB( entry: Int = 32 ) extends Module {
   when( io.flush ) {
     for( i <- 0 until entry ) yield tag(i) := 0.U.asTypeOf( new Info_tlb_tag )
   }
-  .elsewhen(io.tlb_renew.valid){
+  .elsewhen(io.tlb_renew.valid) {
     tag(tlb_update_idx).is_valid := true.B
     tag(tlb_update_idx).asid := io.asid_i
-    tag(tlb_update_idx).is_4K_page   := io.tlb_renew.bits.is_4K_page
-    tag(tlb_update_idx).is_giga_page := io.tlb_renew.bits.is_giga_page
-    tag(tlb_update_idx).is_mega_page := io.tlb_renew.bits.is_mega_page
-    tag(tlb_update_idx).vpn(0) := io.vaddr.bits(20,12)
-    tag(tlb_update_idx).vpn(1) := io.vaddr.bits(29,21)
-    tag(tlb_update_idx).vpn(2) := io.vaddr.bits(38,30)
-
-
+    tag(tlb_update_idx).vpn(0) := io.tlb_req.bits.vaddr(20,12)
+    tag(tlb_update_idx).vpn(1) := io.tlb_req.bits.vaddr(29,21)
+    tag(tlb_update_idx).vpn(2) := io.tlb_req.bits.vaddr(38,30)
     pte(tlb_update_idx) := io.tlb_renew.bits.pte
   }
 
@@ -97,25 +89,19 @@ class TLB( entry: Int = 32 ) extends Module {
 
 
 
-  val tlb_hit = Wire(Vec( entry, Bool()))
-  for ( i <- 0 until entry ) yield {
-    tlb_hit :=
-      tag(i).is_valid & io.asid_i === tag(i).asid & io.vaddr(38,30) === tag(i).vpn(2) & (
-        tag(i).is_giga_page | (
-          io.vaddr(29,21) === tag(i).vpn(1) & (
-            tag(i).is_mega_page |
-            io.vaddr(20,12) === tag(i).vpn(0)
-          )
-        )
-      )
-  }
+  val tlb_hit = VecInit(
+      for ( i <- 0 until entry ) yield {
+          val lvl2 = tag(i).is_valid & io.asid_i === tag(i).asid & io.vaddr(38,30) === tag(i).vpn(2)
+          val lvl1 = io.vaddr(29,21) === tag(i).vpn(1)
+          val lvl0 = io.vaddr(20,12) === tag(i).vpn(0)
 
+          lvl2 & ( pte(i).is_giga_page | ( lvl1 & (pte(i).is_mega_page | lvl0 ) ) )
+      }
+  )
+  
   assert( PopCount( tlb_hit.asUInt ) <= 1.U, "Assert Fail at tlb, more than 1 entry hit!"  )
 
-  io.pte_o := Mux1H( tlb_hit zip pte )
-  io.is_hit := tlb_hit.contains(true.B) & io.vaddr.valid
-
-
+  io.pte_o = Mux1H( tlb_hit zip pte )
 
 }
 

@@ -25,18 +25,22 @@ import chisel3.util.random._
 import tilelink._
 
 class Info_pte_sv39 extends Bundle {
-  val V = Bool()
-  val R = Bool()
-  val W = Bool()
-  val X = Bool()
-  val U = Bool()
-  val G = Bool()
-  val A = Bool()
-  val D = Bool()
-  val rsw = UInt(2.W)
-  val ppn = MixedVec( Seq( UInt(9.W), UInt(9.W), UInt(26.W) ) )
-  val reserved = UInt(10.W)
+  val value = UInt(64.W)
 
+  def V = value(0).asBool
+  def R = value(1).asBool
+  def W = value(2).asBool
+  def X = value(3).asBool
+  def U = value(4).asBool
+  def G = value(5).asBool
+  def A = value(6).asBool
+  def D = value(7).asBool
+  def rsw = value(9,8)
+  def ppn = MixedVec( Seq( value(18,10), value(27,19), value(53,28) ) )
+
+  val is_4K_page = Bool()
+  val is_giga_page = Bool()
+  val is_mega_page = Bool()
 }
 
 
@@ -89,7 +93,7 @@ class Info_csr_mmu extends Bundle {
   */
 class MMU extends Module {
   val io = IO(new Bundle{
-    val if_mmu = ValidIO(UInt(64.W))
+    val if_mmu = ValidIO(new Info_mmu_req)
     val mmu_if = ValidIO(new Info_mmu_rsp)
 
     val iss_mmu = ValidIO(new Info_mmu_req)
@@ -133,7 +137,16 @@ class MMU extends Module {
   .elsewhen( req_no === 0.U & io.iss_mmu.valid & ~is_mmu_bypass_iss & ~dtlb.io.hit ){ req_no := 2.U }
   .elsewhen( ptw.io.ptw_tlb.valid ){ req_no := 0.U }
 
-  val ipte = Mux( itlb.io.is_hit, itlb.io.pte_o, ptw.io.ptw_tlb.bits.pte )
+
+
+  val i_paddr = {
+    val ipte = Mux( itlb.io.is_hit, itlb.io.pte_o.bits, ptw.io.ptw_tlb.bits.pte )
+    val pa_ppn_2 = ipte.ppn(2)
+    val pa_ppn_1 = Mux( (ipte.is_giga_page ), io.if_mmu.bits.vaddr(29,21), ipte.ppn(1) )
+    val pa_ppn_0 = Mux( (ipte.is_giga_page | ipte.is_mega_page), io.if_mmu.bits.vaddr(20,12), ipte.ppn(0) )
+    val pa_pgoff = io.if_mmu.bits.vaddr(11,0)
+    Cat( pa_ppn_2, pa_ppn_1, pa_ppn_0, pa_pgoff )
+  }
 
   val ptw_rtn = 
 
@@ -172,4 +185,29 @@ class MMU extends Module {
     ptw.io.satp_ppn = Input(UInt(44.W))
     ptw.io.ptw_chn_a = new DecoupledIO(new TLchannel_a(64, 32))
     ptw.io.ptw_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
+
+
+
+
+
+
+
+
+
+
+  io.tlb_rsp.valid := tlb_hit.contains(true.B) & io.vaddr.valid
+  io.tlb_rsp.bits.paddr := Cat(pa_ppn_2, pa_ppn_1, pa_ppn_0, pa_pgoff)
+  io.tlb_rsp.bits.is_page_fault = Bool()
+  io.tlb_rsp.bits.is_pmp_fault := DontCare
+
+  val vaddr = UInt(64.W)
+  val is_X = Bool()
+  val is_W = Bool()
+  val is_R = Bool()
+
+
+
+
+
+
 }
