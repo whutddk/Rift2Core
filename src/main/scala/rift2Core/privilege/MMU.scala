@@ -73,6 +73,7 @@ class Info_csr_mmu extends Bundle {
   val priv_lvl = UInt(2.W)
 
   val mstatus = UInt(64.W)
+  val sstatus = UInt(64.W)
 
 }
 
@@ -121,26 +122,39 @@ class MMU extends Module {
 
   val pmp_addr_vec = VecInit( 0.U(64.W), for ( i <- 0 unitl 8 ) yield io.csr_mmu.pmpaddr(i) )
 
-  itlb.io.vaddr  := io.if_mmu.bits
-  itlb.io.asid_i := io.csr_mmu.satp(59,44)
-  dtlb.io.vaddr  := io.iss_mmu.bits
-  dtlb.io.asid_i := io.csr_mmu.satp(59,44)
+  itlb.io.vaddr   := io.if_mmu.bits
+  itlb.io.asid_i  := io.csr_mmu.satp(59,44)
+  dtlb.io.vaddr   := io.iss_mmu.bits
+  dtlb.io.asid_i  := io.csr_mmu.satp(59,44)
+  ptw.io.satp_ppn := io.csr_mmu.satp(43,0)
 
   val is_mmu_bypass_if = io.csr_mmu.satp(63,60) === 0.U | io.csr_mmu.priv_lvl === "b11".U
 
   val is_mmu_bypass_ls = (io.csr_mmu.satp(63,60) === 0.U | io.csr_mmu.priv_lvl === "b11".U) & 
                         ~(io.csr_mmu.mstatus(17) === 1.U & io.csr_mmu.priv_lvl === "b11".U)
 
-  val req_no = RegInit(0.U(2.W))
+  val ptw_req_no_dnxt = Wire(UInt(2.W))
+  val ptw_req_no_qout = RegNext(req_no_dnxt, 0.U(2.W))
 
-  when( req_no === 0.U & io.if_mmu.valid & ~is_mmu_bypass_if & ~itlb.io.hit ){ req_no := 1.U }
-  .elsewhen( req_no === 0.U & io.iss_mmu.valid & ~is_mmu_bypass_iss & ~dtlb.io.hit ){ req_no := 2.U }
-  .elsewhen( ptw.io.ptw_tlb.valid ){ req_no := 0.U }
+  ptw_req_no_dnxt := {
+    val is_iptw = (io.if_mmu.valid  & ~is_mmu_bypass_if  & ~itlb.io.pte_o.valid)
+    val is_dptw = (io.iss_mmu.valid & ~is_mmu_bypass_iss & ~dtlb.io.pte_o.valid)
+    
+    MuxCase( ptw_req_no_qout, Array(
+      (ptw_req_no === 0.U & is_iptw) -> 1.U,
+      (ptw_req_no === 0.U & is_dptw) -> 2.U,
+      (ptw.io.ptw_o.valid)       -> 0.U
+    ))
+  }
 
+  val is_ptw_pmp_fault = RegEnable(
+    PMP( pmp_addr_vec, pmpcfg_vec, ptw.io.ptw_chn_a.bits.address, io.csr_mmu.priv_lvl , Cat(false.B, false.B, true.B))
+    ptw.io.ptw_chn_a.valid
+    )
 
 
   val i_paddr = {
-    val ipte = Mux( itlb.io.is_hit, itlb.io.pte_o.bits, ptw.io.ptw_tlb.bits.pte )
+    val ipte = Mux( itlb.io.pte_o.valid, itlb.io.pte_o.bits, ptw.io.ptw_tlb.bits.pte )
     val pa_ppn_2 = ipte.ppn(2)
     val pa_ppn_1 = Mux( (ipte.is_giga_page ), io.if_mmu.bits.vaddr(29,21), ipte.ppn(1) )
     val pa_ppn_0 = Mux( (ipte.is_giga_page | ipte.is_mega_page), io.if_mmu.bits.vaddr(20,12), ipte.ppn(0) )
@@ -148,44 +162,47 @@ class MMU extends Module {
     Cat( pa_ppn_2, pa_ppn_1, pa_ppn_0, pa_pgoff )
   }
 
-  val ptw_rtn = 
+  val d_paddr = {
+    val dpte = Mux( dtlb.io.pte_o.valid, dtlb.io.pte_o.bits, ptw.io.ptw_tlb.bits.pte )
+    val pa_ppn_2 = dpte.ppn(2)
+    val pa_ppn_1 = Mux( (dpte.is_giga_page ), io.iss_mmu.bits.vaddr(29,21), dpte.ppn(1) )
+    val pa_ppn_0 = Mux( (dpte.is_giga_page | dpte.is_mega_page), io.iss_mmu.bits.vaddr(20,12), dpte.ppn(0) )
+    val pa_pgoff = io.iss_mmu.bits.vaddr(11,0)
+    Cat( pa_ppn_2, pa_ppn_1, pa_ppn_0, pa_pgoff )
+  }
 
-  io.mmu_if.valid := Mux( is_mmu_bypass_if, io.if_mmu.valid, Mux( itlb.io.is_hit, true.B, Mux(  ) ) )
-  io.mmu_if.bits.paddr := Mux( is_mmu_bypass_if, io.if_mmu.bits.vaddr, Mux( itlb.io.is_hit, ) )    
-  io.mmu_if.bits.is_page_fault := Mux( is_mmu_bypass_if, false.B, Mux( itlb.io.is_hit,)  
+
+  io.mmu_if.valid := Mux( is_mmu_bypass_if, io.if_mmu.valid, (itlb.io.pte_o.valid | (ptw.io.ptw_o.valid & req_no_qout === 1.U ) ) ) )
+  io.mmu_if.bits.paddr := Mux( is_mmu_bypass_if, io.if_mmu.bits.vaddr, i_paddr )    
+  io.mmu_if.bits.is_page_fault := Mux( is_mmu_bypass_if, false.B, Mux( itlb.io.pte_o.valid,)  
   io.mmu_if.bits.is_pmp_fault := 
     PMP( pmp_addr_vec, pmpcfg_vec, io.mmu_if.bits.paddr, io.csr_mmu.priv_lvl , Cat(io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R)) | 
+    (is_ptw_pmp_fault & ptw_req_no_qout === 1.U)
 
-
-  io.mmu_iss.valid := Mux( is_mmu_bypass_iss, io.iss_mmu.valid, Mux( dtlb.io.is_hit, true.B, Mux() ))
-  io.mmu_iss.bits.paddr := Mux( is_mmu_bypass_iss, io.iss_mmu.bits.vaddr,  Mux( dtlb.io.is_hit, ) )    
-  io.mmu_iss.bits.is_page_fault := Mux( is_mmu_bypass_iss, false.B,  Mux( dtlb.io.is_hit, ) )  
+  io.mmu_iss.valid := Mux( is_mmu_bypass_iss, io.iss_mmu.valid, (dtlb.io.pte_o.valid | (ptw.io.ptw_o.valid & req_no_qout === 2.U )) )
+  io.mmu_iss.bits.paddr := Mux( is_mmu_bypass_iss, io.iss_mmu.bits.vaddr, d_paddr )    
+  io.mmu_iss.bits.is_page_fault := Mux( is_mmu_bypass_iss, false.B, Mux( dtlb.io.pte_o.valid, ) )  
   io.mmu_iss.bits.is_pmp_fault := 
     PMP( pmp_addr_vec, pmpcfg_vec, io.mmu_iss.bits.paddr, io.csr_mmu.priv_lvl , Cat(io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R) ) | 
+    (is_ptw_pmp_fault & ptw_req_no_qout === 2.U)
 
 
 
 
-    itlb.io.pte_o  = Output( new Info_pte_sv39 )
-    dtlb.io.pte_o  = Output( new Info_pte_sv39 )
-
-    itlb.io.ptw_tlb = Flipped(ValidIO(new Info_ptw_tlb))
-    dtlb.io.ptw_tlb = Flipped(ValidIO(new Info_ptw_tlb))
-
-    itlb.io.is_hit = Output(Bool())
-    dtlb.io.is_hit = Output(Bool())
-
-    itlb.io.flush = Input(Bool())
-    dtlb.io.flush = Input(Bool())
 
 
+  itlb.io.flush = Input(Bool())
+  dtlb.io.flush = Input(Bool())
 
-    ptw.io.vaddr = Flipped(ValidIO(UInt(64.W)))
-    ptw.io.ptw_tlb = ValidIO(new Info_ptw_tlb)
-    ptw.io.satp_ppn = Input(UInt(44.W))
-    ptw.io.ptw_chn_a = new DecoupledIO(new TLchannel_a(64, 32))
-    ptw.io.ptw_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
 
+  itlb.io.tlb_renew.bits := ptw.io.ptw_o.bits
+  dtlb.io.tlb_renew.bits := ptw.io.ptw_o.bits
+
+  itlb.io.tlb_renew.valid := (ptw.io.ptw_o.valid & ptw_req_no_qout === 1.U ) & ~ptw.io.is_ptw_fail
+  dtlb.io.tlb_renew.valid := (ptw.io.ptw_o.valid & ptw_req_no_qout === 2.U ) & ~ptw.io.is_ptw_fail
+
+  ptw.io.ptw_o = ValidIO(new Info_pte_sv39)
+  ptw.io.ptw_fail = Output(Bool())
 
 
 
@@ -193,21 +210,36 @@ class MMU extends Module {
 
 
 
-
-
-  io.tlb_rsp.valid := tlb_hit.contains(true.B) & io.vaddr.valid
-  io.tlb_rsp.bits.paddr := Cat(pa_ppn_2, pa_ppn_1, pa_ppn_0, pa_pgoff)
-  io.tlb_rsp.bits.is_page_fault = Bool()
-  io.tlb_rsp.bits.is_pmp_fault := DontCare
-
-  val vaddr = UInt(64.W)
-  val is_X = Bool()
-  val is_W = Bool()
-  val is_R = Bool()
+  ptw.io.vaddr.valid := ptw_req_no_dnxt === 1.U | ptw_req_no_dnxt === 2.U
+  ptw.io.vaddr.bits := 
+    MuxCase( DontCare, Array(
+      (ptw_req_no_dnxt === 0.U) -> DontCare,
+      (ptw_req_no_dnxt === 1.U) -> io.if_mmu.bits.vaddr,
+      (ptw_req_no_dnxt === 2.U) -> io.iss_mmu.bits.vaddr
+    ))
 
 
 
 
+  ptw.io.ptw_chn_a <> io.mmu_chn_a
+  ptw.io.ptw_chn_d <> io.mmu_chn_d
 
+
+  def is_chk_page_fault: Bool = (
+    pte: Info_pte_sv39,
+    chk_vaddr: UInt,
+    chk_priv: UInt,
+    chk_type: UInt)
+
+    val is_vaddr_illegal = chk_vaddr(63,39) =/= Fill(25,chk_vaddr(38))
+    val is_U_access_ilegal =
+      (chk_priv === "b00".U & pte.U === false.B) |
+      (chk_priv === "b01".U & pte.U === true.B & (io.csr_mmu.sstatus(18) === false.B) | chk_type(2) === true.B )
+
+    val is_A_illegal = pte.a === false.B
+    val is_D_illegal = pte.d === false.B & chk_type(1) === true.B
+    val is_MXR_illegal = io.csr_mmu.mstatus(19) === false.B & pte.R === false.B
+
+    return is_vaddr_illegal | is_U_access_ilegal | is_A_illegal | is_D_illegal | is_MXR_illegal
 
 }

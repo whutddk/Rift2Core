@@ -32,7 +32,8 @@ import tilelink._
 class PTW extends Module {
   val io = IO(new Bundle{
     val vaddr = Flipped(ValidIO(UInt(64.W)))
-    val ptw_tlb = ValidIO(new Info_ptw_tlb)
+    val ptw_o = ValidIO(new Info_pte_sv39)
+    val is_ptw_fail = Output(Bool())
     val satp_ppn = Input(UInt(44.W))
 
     val ptw_chn_a = new DecoupledIO(new TLchannel_a(64, 32))
@@ -74,9 +75,9 @@ class PTW extends Module {
 //  SSSSSSSSSSSSSSS         TTTTTTTTTTTAAAAAAA                   AAAAAAATTTTTTTTTTT      EEEEEEEEEEEEEEEEEEEEEE
 
 
-  val ptw_state_dnxt_in_free = Mux( io.vaddr.valid, state.walk, state.free )
+  val ptw_state_dnxt_in_free = Mux( io.vaddr.valid, state.read, state.free )
   val ptw_state_dnxt_in_read = Mux( io.ptw_chn_d.fire, state.walk, state.read )
-  val ptw_state_dnxt_in_walk = Mux( walk.is_ptw_end | walk.is_ptw_fail , state.free, state.read)
+  val ptw_state_dnxt_in_walk = Mux( walk.is_ptw_end | io.is_ptw_fail , state.free, state.read)
 
   fsm.state_dnxt := Mux1H( Seq(
     (fsm.state_qout === state.free) -> ptw_state_dnxt_in_free,
@@ -116,8 +117,9 @@ class PTW extends Module {
     val a     = RegInit(0.U(44.W))
     val level = RegInit(0.U(2.W))
     val is_ptw_end = Wire(Bool())
-    val is_ptw_fail = Wire(Bool())
-    val pte  = RegEnable( ptw_mst.io.d.bits.data, ptw_mst.io.d.fire ).asTypeOf(new Info_pte_sv39)
+    val pte_value = RegEnable( ptw_mst.io.d.bits.data, ptw_mst.io.d.fire )
+    val pte  = Wire(new Info_pte_sv39)
+    
 
     val addr  = Cat(a, Mux1H(Seq(
               (level === 0.U) -> Cat(io.vaddr.bits(20,12), 0.U(3.W)),
@@ -127,20 +129,25 @@ class PTW extends Module {
           )
   }
 
-  walk.is_ptw_end := 
-          fsm.state_qout === state.walk & 
-          walk.pte.R === true.B & 
-          walk.pte.X === true.B
+  walk.pte.value := walk.pte_value
 
-  walk.is_ptw_fail :=
-          fsm.state_qout === state.walk & (
-            ( ~walk.is_ptw_end & MuxCase( false.B, Seq( (walk.level === 0.U) -> false.B, (walk.level === 1.U) -> (walk.pte.ppn(0) =/= 0.U), (walk.level === 2.U) -> (walk.pte.ppn(0) =/= 0.U | walk.pte.ppn(1) =/= 0.U)) )) |
-            ( walk.pte.V === false.B | (walk.pte.R === false.B & walk.pte.W === true.B))
-          )
+  walk.is_ptw_end := 
+    fsm.state_qout === state.walk & 
+    walk.pte.R === true.B & 
+    walk.pte.X === true.B
+
+  io.is_ptw_fail :=
+    fsm.state_qout === state.walk & (
+      ( ~walk.is_ptw_end & MuxCase( false.B, Seq( (walk.level === 0.U) -> false.B, (walk.level === 1.U) -> (walk.pte.ppn(0) =/= 0.U), (walk.level === 2.U) -> (walk.pte.ppn(0) =/= 0.U | walk.pte.ppn(1) =/= 0.U)) )) |
+      ( walk.pte.V === false.B | (walk.pte.R === false.B & walk.pte.W === true.B))
+    )
             
-  io.ptw_tlb.bits.is_4K_page   := walk.is_ptw_end & walk.level === 0.U
-  io.ptw_tlb.bits.is_mega_page := walk.is_ptw_end & walk.level === 1.U       
-  io.ptw_tlb.bits.is_giga_page := walk.is_ptw_end & walk.level === 2.U
+  walk.pte.is_4K_page   := walk.is_ptw_end & walk.level === 0.U
+  walk.pte.is_mega_page := walk.is_ptw_end & walk.level === 1.U       
+  walk.pte.is_giga_page := value & walk.level === 2.U
+
+  io.ptw_o.bits  := walk.pte
+  io.ptw_o.valid := walk.is_ptw_end
 
   when( fsm.state_qout === state.free & fsm.state_dnxt === state.read ) {
     walk.a     := io.satp_ppn
@@ -190,3 +197,4 @@ class PTW extends Module {
 
 
 }
+
