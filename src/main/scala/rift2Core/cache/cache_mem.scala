@@ -34,94 +34,94 @@ import base._
 
 class Cache_mem( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
-	val addr_lsb = log2Ceil(dw*bk/8)
-	val line_w   = log2Ceil(cl)
-	val tag_w    = aw - addr_lsb - line_w
+  val addr_lsb = log2Ceil(dw*bk/8)
+  val line_w   = log2Ceil(cl)
+  val tag_w    = aw - addr_lsb - line_w
 
 
-	val cache_addr = Wire(UInt(aw.W))
+  val cache_addr = Wire(UInt(aw.W))
 
-	val dat_en_w = Wire( Vec(cb, Bool()) )
-	val dat_en_r = Wire( Vec(cb, Bool()) )
-	val dat_info_wstrb = Wire(UInt((128/8).W))
-	val dat_info_w = Wire(UInt(128.W))
-	val dat_info_r = Wire( Vec(cb, UInt(128.W)) )
+  val dat_en_w = Wire( Vec(cb, Bool()) )
+  val dat_en_r = Wire( Vec(cb, Bool()) )
+  val dat_info_wstrb = Wire(UInt((128/8).W))
+  val dat_info_w = Wire(UInt(128.W))
+  val dat_info_r = Wire( Vec(cb, UInt(128.W)) )
 
-	val tag_en_w = Wire( Vec(cb, Bool()) )
-	val tag_en_r = Wire( Vec(cb, Bool()) )	
-	val tag_info_r = Wire( Vec(cb, UInt(tag_w.W)) )
-
-
-
-
-
-
-	val addr_sel = cache_addr(addr_lsb+line_w-1, addr_lsb)
-	val bank_sel = cache_addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-	val data_sel = cache_addr(addr_lsb-log2Ceil(bk)-1,0)
-	val tag_info_w = cache_addr(31, 32-tag_w)
-
-
-	val tag_ram = {
-		for ( i <- 0 until cb ) yield { val mdl = Module(new Sram(tag_w,line_w)); mdl }
-	}
-
-	val dat_ram = {
-		for ( i <- 0 until cb; j <- 0 until bk ) yield { 
-
-			val mdl = Module(new Sram(dw, line_w))
-			mdl
-		}
-	}
-
-
-	for ( i <- 0 until cb ) yield {
-		tag_ram(i).io.addr_r := addr_sel
-		tag_ram(i).io.addr_w := addr_sel
-
-		tag_ram(i).io.en_r   := tag_en_r(i)
-		tag_ram(i).io.en_w   := tag_en_w(i)
-
-		tag_ram(i).io.data_wstrb := Fill((tag_w+7)/8,1.U)
-		tag_ram(i).io.data_w := tag_info_w
-		tag_info_r(i)     := tag_ram(i).io.data_r
+  val tag_en_w = Wire( Vec(cb, Bool()) )
+  val tag_en_r = Wire( Vec(cb, Bool()) )	
+  val tag_info_r = Wire( Vec(cb, UInt(tag_w.W)) )
 
 
 
 
 
 
-		for ( j <- 0 until bk ) yield {
-
-			dat_ram(i*bk+j).io.addr_w := addr_sel
-			dat_ram(i*bk+j).io.addr_r := addr_sel
-
-			when ( j.U === bank_sel ){
-				dat_ram(i*bk+j).io.en_w   := dat_en_w(i)
-				dat_ram(i*bk+j).io.en_r   := dat_en_r(i)
-				
-
-			}
-			.otherwise {
-				dat_ram(i*bk+j).io.en_w   := false.B
-				dat_ram(i*bk+j).io.en_r   := false.B				
-			}
+  val addr_sel = cache_addr(addr_lsb+line_w-1, addr_lsb)
+  val bank_sel = cache_addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  val data_sel = cache_addr(addr_lsb-log2Ceil(bk)-1,0)
+  val tag_info_w = cache_addr(31, 32-tag_w)
 
 
-			dat_ram(i*bk+j).io.data_wstrb := dat_info_wstrb << (data_sel)
-			dat_ram(i*bk+j).io.data_w := Fill( dw/128, dat_info_w)
+  val tag_ram = {
+    for ( i <- 0 until cb ) yield { val mdl = Module(new Sram(tag_w,line_w)); mdl }
+  }
 
-		}
+  val dat_ram = {
+    for ( i <- 0 until cb; j <- 0 until bk ) yield { 
 
-		val bank_num = for ( j <- 0 until bk ) yield { j.U === bank_sel }
-		val dat_bank = for ( j <- 0 until bk ) yield { dat_ram( i*bk+j).io.data_r }
-		val data_bank_sel = MuxCase(0.U, bank_num zip dat_bank )
+      val mdl = Module(new Sram(dw, line_w))
+      mdl
+    }
+  }
 
-		dat_info_r(i) := data_bank_sel >> ( data_sel << 3 )
-		
-		
-		// dat_ram( i*bk + bank_sel).io.data_r
-	}
+
+  for ( i <- 0 until cb ) yield {
+    tag_ram(i).io.addr_r := addr_sel
+    tag_ram(i).io.addr_w := addr_sel
+
+    tag_ram(i).io.en_r   := tag_en_r(i)
+    tag_ram(i).io.en_w   := tag_en_w(i)
+
+    tag_ram(i).io.data_wstrb := Fill((tag_w+7)/8,1.U)
+    tag_ram(i).io.data_w := tag_info_w
+    tag_info_r(i)     := tag_ram(i).io.data_r
+
+
+
+
+
+
+    for ( j <- 0 until bk ) yield {
+
+      dat_ram(i*bk+j).io.addr_w := addr_sel
+      dat_ram(i*bk+j).io.addr_r := addr_sel
+
+      when ( j.U === bank_sel ){
+        dat_ram(i*bk+j).io.en_w   := dat_en_w(i)
+        dat_ram(i*bk+j).io.en_r   := dat_en_r(i)
+        
+
+      }
+      .otherwise {
+        dat_ram(i*bk+j).io.en_w   := false.B
+        dat_ram(i*bk+j).io.en_r   := false.B				
+      }
+
+
+      dat_ram(i*bk+j).io.data_wstrb := dat_info_wstrb << (data_sel)
+      dat_ram(i*bk+j).io.data_w := Fill( dw/128, dat_info_w)
+
+    }
+
+    val bank_num = for ( j <- 0 until bk ) yield { j.U === bank_sel }
+    val dat_bank = for ( j <- 0 until bk ) yield { dat_ram( i*bk+j).io.data_r }
+    val data_bank_sel = MuxCase(0.U, bank_num zip dat_bank )
+
+    dat_info_r(i) := data_bank_sel >> ( data_sel << 3 )
+    
+    
+    // dat_ram( i*bk + bank_sel).io.data_r
+  }
 
 
 

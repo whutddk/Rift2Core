@@ -23,79 +23,79 @@ import chisel3.util._
 
 
 class Write_info extends Bundle {
-	val data = UInt(64.W)
-	val addr = UInt(32.W)
-	val wstrb = UInt(8.W)
+  val data = UInt(64.W)
+  val addr = UInt(32.W)
+  val wstrb = UInt(8.W)
 }
 
 
 
 class Wt_block( aw: Int ) {
 
-		val data_i    = Wire( new Write_info )
-		val data_o    = Wire( new Write_info )
+    val data_i    = Wire( new Write_info )
+    val data_o    = Wire( new Write_info )
 
-		val commit    = Wire(Bool())
-		val pop       = Wire(Bool())
-		val push      = Wire(Bool())
+    val commit    = Wire(Bool())
+    val pop       = Wire(Bool())
+    val push      = Wire(Bool())
 
-		val full      = Wire(Bool())
-		val empty     = Wire(Bool())
+    val full      = Wire(Bool())
+    val empty     = Wire(Bool())
 
-		val flush     = Wire(Bool())
-
-
-	def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 } ; return res } 
-	println("Wt block created, dp is:"+dp);
+    val flush     = Wire(Bool())
 
 
-
-	val info       = RegInit( VecInit( Seq.fill(dp)(0.U.asTypeOf(new Write_info) )))
-	val is_valid   = RegInit( VecInit( Seq.fill(dp)(false.B)) )
-	val is_commit  = RegInit( VecInit( Seq.fill(dp)(false.B)) ) 
-	val rd_ptr     = RegInit(0.U((aw+1).W))
-	val wr_ptr     = RegInit(0.U((aw+1).W))
-	val cc_ptr     = RegInit(0.U((aw+1).W))
+  def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 } ; return res } 
+  println("Wt block created, dp is:"+dp);
 
 
-	when(flush) {
-		wr_ptr := cc_ptr
 
-		for ( i <- 0 until dp ) yield is_valid(i) := is_commit(i)
-	}
-	.elsewhen(pop) {
-		rd_ptr := rd_ptr + 1.U
+  val info       = RegInit( VecInit( Seq.fill(dp)(0.U.asTypeOf(new Write_info) )))
+  val is_valid   = RegInit( VecInit( Seq.fill(dp)(false.B)) )
+  val is_commit  = RegInit( VecInit( Seq.fill(dp)(false.B)) ) 
+  val rd_ptr     = RegInit(0.U((aw+1).W))
+  val wr_ptr     = RegInit(0.U((aw+1).W))
+  val cc_ptr     = RegInit(0.U((aw+1).W))
 
-		is_valid(rd_ptr(aw-1,0))  := false.B
-		is_commit(rd_ptr(aw-1,0)) := false.B
-	}
-	.elsewhen(push) {
-		wr_ptr := wr_ptr + 1.U
 
-		info(wr_ptr(aw-1,0)) := data_i
-		is_valid(wr_ptr(aw-1,0))  := true.B
-	}
-	.elsewhen(commit) {
-		cc_ptr := cc_ptr + 1.U
+  when(flush) {
+    wr_ptr := cc_ptr
 
-		is_commit(cc_ptr(aw-1,0)) := true.B
-	}
+    for ( i <- 0 until dp ) yield is_valid(i) := is_commit(i)
+  }
+  .elsewhen(pop) {
+    rd_ptr := rd_ptr + 1.U
 
-	full  := (rd_ptr(aw-1,0) === wr_ptr(aw-1,0)) & ( rd_ptr(aw) =/= wr_ptr(aw) )
-	empty := cc_ptr === rd_ptr
+    is_valid(rd_ptr(aw-1,0))  := false.B
+    is_commit(rd_ptr(aw-1,0)) := false.B
+  }
+  .elsewhen(push) {
+    wr_ptr := wr_ptr + 1.U
 
-	data_o := info(rd_ptr(aw-1,0))
+    info(wr_ptr(aw-1,0)) := data_i
+    is_valid(wr_ptr(aw-1,0))  := true.B
+  }
+  .elsewhen(commit) {
+    cc_ptr := cc_ptr + 1.U
 
-	def is_hazard(chk_addr: UInt, width_mask: UInt): Bool = {
+    is_commit(cc_ptr(aw-1,0)) := true.B
+  }
 
-		val cmp = Wire(Vec(dp, Bool()))
+  full  := (rd_ptr(aw-1,0) === wr_ptr(aw-1,0)) & ( rd_ptr(aw) =/= wr_ptr(aw) )
+  empty := cc_ptr === rd_ptr
 
-		for ( i <- 0 until dp ) yield {
-			cmp(i) := ((info(i).addr & width_mask) === (chk_addr & width_mask)) & is_valid(i)
-		}
+  data_o := info(rd_ptr(aw-1,0))
 
-		return cmp.contains(true.B)
-	}
+  def is_hazard(chk_addr: UInt, width_mask: UInt): Bool = {
+
+    val cmp = Wire(Vec(dp, Bool()))
+
+    for ( i <- 0 until dp ) yield {
+      cmp(i) := ((info(i).addr & width_mask) === (chk_addr & width_mask)) & is_valid(i)
+    }
+
+    return cmp.contains(true.B)
+  }
 
 }
 

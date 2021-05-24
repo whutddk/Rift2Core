@@ -33,32 +33,32 @@ import rift2Core.define._
 
 
 class Decode extends Module {
-	val io = IO( new Bundle {
-		val ib_id = Input ( new Info_ib_id())
-		val id_dpt = Output ( new Info_bd_dpt())
-	})
+  val io = IO( new Bundle {
+    val ib_id = Input ( new Info_ib_id())
+    val id_dpt = Output ( new Info_bd_dpt())
+  })
 
-	io.id_dpt.info := 
-		Mux( io.ib_id.is_rvc,
-		new Decode16(io.ib_id.instr, io.ib_id.pc).info,
-		new Decode32(io.ib_id.instr, io.ib_id.pc).info
-		)
+  io.id_dpt.info := 
+    Mux( io.ib_id.is_rvc,
+    new Decode16(io.ib_id.instr, io.ib_id.pc).info,
+    new Decode32(io.ib_id.instr, io.ib_id.pc).info
+    )
 
-	io.id_dpt.is_iFAccessFault  := io.ib_id.pc(63,32) =/= (0.U)
-	io.id_dpt.is_illeage        := io.id_dpt.info.is_illeage
+  io.id_dpt.is_iFAccessFault  := io.ib_id.pc(63,32) =/= (0.U)
+  io.id_dpt.is_illeage        := io.id_dpt.info.is_illeage
 
-	
+  
 
 }
 
 
 object Decode {
-	def apply( ib_id: Info_ib_id ) = {
-		val mdl = Module(new Decode)
-		mdl.io.ib_id := ib_id
+  def apply( ib_id: Info_ib_id ) = {
+    val mdl = Module(new Decode)
+    mdl.io.ib_id := ib_id
 
-		mdl.io.id_dpt
-	}
+    mdl.io.id_dpt
+  }
 }
 
 
