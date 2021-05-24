@@ -103,6 +103,10 @@ class PreDecode32() extends Module{
 
 }
 
+/**
+  * 
+  * @todo lock the pineline when xRet comes
+  */
 
 class Predecode_ss extends Module with Superscalar{
   val io = IO(new Bundle {

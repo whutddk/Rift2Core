@@ -31,14 +31,14 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 import rift2Core.privilege._
-
+import rift2Core.privilege.csrFiles._
 
 /** commit
   * @author Ruige Lee
   * 
   * 
   */
-class Commit extends Privilege with Superscalar{
+class Commit extends Privilege with Superscalar {
   val io = IO(new Bundle{
 
     val cm_op = Output(Vec(32, Vec(4, Bool())))
@@ -59,34 +59,123 @@ class Commit extends Privilege with Superscalar{
     val is_commit_abort = Vec(2, Output( Bool() ))
 
     val cmm_pc = new ValidIO(new Info_cmm_pc)
+
+    val rtc_clock = Input(Bool())
   })
+
 
   val rd0_raw = VecInit( io.rod_i(0).bits.rd0_raw, io.rod_i(1).bits.rd0_raw )
   val rd0_idx = VecInit( io.rod_i(0).bits.rd0_idx, io.rod_i(1).bits.rd0_idx )
 
-  val is_wb = VecInit(
-            (io.log(rd0_raw(0))(rd0_idx(0)) === 3.U) & (io.rod_i(0).valid),
-            (io.log(rd0_raw(1))(rd0_idx(1)) === 3.U) & (io.rod_i(1).valid)
-          )
+
+
+  val is_wb_v =
+    VecInit(
+      (io.log(rd0_raw(0))(rd0_idx(0)) === 3.U) & (io.rod_i(0).valid),
+      (io.log(rd0_raw(1))(rd0_idx(1)) === 3.U) & (io.rod_i(1).valid)
+    )
 
   //bru commit ilp
   io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (io.log(rd0_raw(0))(rd0_idx(0)) =/= 3.U)
 
-  def is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | io.rod_i(0).bits.is_su | ~is_wb(0) | (io.rod_i(0).bits.rd0_raw === io.rod_i(1).bits.rd0_raw)
-  def is_2nd_solo = io.is_commit_abort(1) | io.rod_i(1).bits.is_csr | io.rod_i(1).bits.is_su
+  val is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | io.rod_i(0).bits.is_su | ~is_wb_v(0) | (io.rod_i(0).bits.rd0_raw === io.rod_i(1).bits.rd0_raw)
+  val is_2nd_solo = io.is_commit_abort(1) | io.rod_i(1).bits.is_csr | io.rod_i(1).bits.is_su
+
+    val is_load_accessFault_ack_v =
+      VecInit(
+        io.lsu_cmm.is_accessFault & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
+        io.lsu_cmm.is_accessFault & io.rod_i(1).bits.is_lu & ~is_wb_v(1) & ~is_1st_solo
+      )
+
+    val is_store_accessFault_ack_v =
+      VecInit(
+        io.lsu_cmm.is_accessFault & io.rod_i(0).bits.is_su & ~is_wb_v(0),
+        io.lsu_cmm.is_accessFault & io.rod_i(1).bits.is_su & ~is_wb_v(1) & ~is_1st_solo
+      )
+
+    val is_load_misAlign_ack_v =
+      VecInit(
+        io.lsu_cmm.is_misAlign & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
+        io.lsu_cmm.is_misAlign & io.rod_i(1).bits.is_lu & ~is_wb_v(1) & ~is_1st_solo
+      )
+
+    val is_store_misAlign_ack_v =
+      VecInit(
+        io.lsu_cmm.is_misAlign & io.rod_i(0).bits.is_su & ~is_wb_v(0),
+        io.lsu_cmm.is_misAlign & io.rod_i(1).bits.is_su & ~is_wb_v(1) & ~is_1st_solo
+      )
+
+    val is_ecall_v  =
+      VecInit(
+        io.rod_i(0).bits.privil.ecall,
+        io.rod_i(1).bits.privil.ecall & ~is_1st_solo
+      )
+
+    val is_ebreak_v =
+      VecInit(
+        io.rod_i(0).bits.privil.ebreak,
+        io.rod_i(1).bits.privil.ebreak & ~is_1st_solo
+      )
+ 
+    val is_instr_accessFault_v =
+      VecInit(
+        io.rod_i(0).bits.is_accessFault,
+        io.rod_i(1).bits.is_accessFault & ~is_1st_solo
+      )
+
+    val is_illeage_v =
+      VecInit(
+        io.rod_i(0).bits.is_illeage,
+        io.rod_i(1).bits.is_illeage & ~is_1st_solo
+      )
+
+    val is_mRet_v =
+      VecInit(
+        io.rod_i(0).bits.privil.mret,
+        io.rod_i(1).bits.privil.mret & ~is_1st_solo
+      )
+
+    val is_sRet_v =
+      VecInit(
+        io.rod_i(0).bits.privil.sret,
+        io.rod_i(1).bits.privil.sret & ~is_1st_solo
+      )
+
+
+
+
+
+	val is_exception_v = 
+    VecInit( for (i <- 0 until 2) yield {
+      is_ecall_v(i)  |
+      is_ebreak_v(i)  |
+      is_instr_accessFault_v(i)  |
+      is_illeage_v(i) |
+      is_load_accessFault_ack_v(i)  |
+      is_store_accessFault_ack_v(i) |
+      is_load_misAlign_ack_v(i)  |
+      is_store_misAlign_ack_v(i)
+    })
+
+	// val is_trap_v = Wire(Vec(2, Bool()))
+  // val is_xRet_v = Wire(Vec(2, Bool()))
+
+	val is_trap_v = VecInit( is_interrupt | is_exception_v(0), is_interrupt | is_exception_v(1) )
+  val is_xRet_v = VecInit( is_mRet_v(0) | is_sRet_v(0), is_mRet_v(1) | is_sRet_v(1) )
+
 
 
   io.is_commit_abort(1) :=
-    (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet(1) | is_trap(1) ) & ~is_1st_solo
+    (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) ) & ~is_1st_solo
   
   io.is_commit_abort(0) :=
-    (io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet(0) | is_trap(0) )
+    (io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet_v(0) | is_trap_v(0) )
 
 
   //only one privilege can commit once
   val is_commit_comfirm = VecInit(
-    is_wb(0) & ~io.is_commit_abort(0),
-    is_wb(1) & ~io.is_commit_abort(1) & ~is_1st_solo
+    is_wb_v(0) & ~io.is_commit_abort(0),
+    is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo
   )
 
   for ( i <- 0 until 32; j <- 0 until 4 ) yield {
@@ -107,26 +196,30 @@ class Commit extends Privilege with Superscalar{
 
 
 
-  lsu_trap_addr := io.lsu_cmm.trap_addr
+  
 
-  val is_fence_i = VecInit( 	io.rod_i(0).bits.is_fence_i & is_commit_comfirm(0),
+  val is_fence_i_v = VecInit( 	io.rod_i(0).bits.is_fence_i & is_commit_comfirm(0),
                 io.rod_i(1).bits.is_fence_i & is_commit_comfirm(1)
               )
 
-  io.cmm_pc.valid := is_xRet.contains(true.B) | is_trap.contains(true.B) | is_fence_i.contains(true.B)
+  io.cmm_pc.valid := is_xRet_v.contains(true.B) | is_trap_v.contains(true.B) | is_fence_i_v.contains(true.B)
   io.cmm_pc.bits.addr := MuxCase(0.U, Array(
-    is_xRet(0) -> m_csrFiles.mepc,
-    is_trap(0) -> m_csrFiles.mtvec,
-    is_xRet(1) -> m_csrFiles.mepc,
-    is_trap(1) -> m_csrFiles.mtvec,
-    is_fence_i(0) -> (io.rod_i(0).bits.pc + 4.U),
-    is_fence_i(1) -> (io.rod_i(1).bits.pc + 4.U)
+    is_xRet_v(0) -> mepc,
+    is_trap_v(0) -> mtvec,
+    is_xRet_v(1) -> mepc,
+    is_trap_v(1) -> mtvec,
+    is_fence_i_v(0) -> (io.rod_i(0).bits.pc + 4.U),
+    is_fence_i_v(1) -> (io.rod_i(1).bits.pc + 4.U)
   ))
 
 
 
 
-
+    val is_retired_v = 
+      VecInit(
+        is_commit_comfirm(0) | io.is_commit_abort(0),
+        is_commit_comfirm(1) | io.is_commit_abort(1)
+      )
 
 
 
@@ -151,7 +244,6 @@ class Commit extends Privilege with Superscalar{
               )
 
 
-  csr_access.exe_port := Mux( io.csr_cmm_op.ready, io.csr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
 
 
 
@@ -161,46 +253,32 @@ class Commit extends Privilege with Superscalar{
 
 
 
-
-
-    commit_pc := Mux(is_1st_solo, io.rod_i(0).bits.pc, io.rod_i(1).bits.pc)
-
-
-    is_load_accessFault_ack(0) := io.lsu_cmm.is_accessFault & io.rod_i(0).bits.is_lu & ~is_wb(0)
-    is_load_accessFault_ack(1) := io.lsu_cmm.is_accessFault & io.rod_i(1).bits.is_lu & ~is_wb(1) & ~is_1st_solo
-
-    is_store_accessFault_ack(0) := io.lsu_cmm.is_accessFault & io.rod_i(0).bits.is_su & ~is_wb(0)
-    is_store_accessFault_ack(1) := io.lsu_cmm.is_accessFault & io.rod_i(1).bits.is_su & ~is_wb(1) & ~is_1st_solo
-
-    is_load_misAlign_ack(0) := io.lsu_cmm.is_misAlign & io.rod_i(0).bits.is_lu & ~is_wb(0)
-    is_load_misAlign_ack(1) := io.lsu_cmm.is_misAlign & io.rod_i(1).bits.is_lu & ~is_wb(1) & ~is_1st_solo
-
-    is_store_misAlign_ack(0) := io.lsu_cmm.is_misAlign & io.rod_i(0).bits.is_su & ~is_wb(0)
-    is_store_misAlign_ack(1) := io.lsu_cmm.is_misAlign & io.rod_i(1).bits.is_su & ~is_wb(1) & ~is_1st_solo
-
-    is_ecall(0) := io.rod_i(0).bits.privil.ecall
-    is_ecall(1) := io.rod_i(1).bits.privil.ecall & ~is_1st_solo
-
-    is_ebreak(0) := io.rod_i(0).bits.privil.ebreak
-    is_ebreak(1) := io.rod_i(1).bits.privil.ebreak & ~is_1st_solo
-
-    is_instr_accessFault(0) := io.rod_i(0).bits.is_accessFault
-    is_instr_accessFault(1) := io.rod_i(1).bits.is_accessFault & ~is_1st_solo
-
-    is_illeage(0) := io.rod_i(0).bits.is_illeage
-    is_illeage(1) := io.rod_i(1).bits.is_illeage & ~is_1st_solo
-
-    mp.is_Mret(0) := io.rod_i(0).bits.privil.mret
-    mp.is_Mret(1) := io.rod_i(1).bits.privil.mret & ~is_1st_solo
-
-    sp.is_Sret(0) := io.rod_i(0).bits.privil.sret
-    sp.is_Sret(1) := io.rod_i(1).bits.privil.sret & ~is_1st_solo
-
-    up.is_Uret(0) := io.rod_i(0).bits.privil.uret
-    up.is_Uret(1) := io.rod_i(1).bits.privil.uret & ~is_1st_solo
-
-
-
+	rtc_clock               := io.rtc_clock	
+	exe_port                := Mux( io.csr_cmm_op.ready, io.csr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
+	is_trap                 := is_trap_v.contains(true.B)
+	is_mRet                 := is_mRet_v.contains(true.B)
+	is_sRet                 := is_sRet_v.contains(true.B)
+	commit_pc               := Mux(is_1st_solo, io.rod_i(0).bits.pc, io.rod_i(1).bits.pc)
+	ill_instr               := 0.U
+	ill_vaddr               := io.lsu_cmm.trap_addr
+	is_instr_accessFault    := is_instr_accessFault_v.contains(true.B)
+	is_instr_illeage        := is_illeage_v.contains(true.B)
+	is_breakPoint           := is_ebreak_v.contains(true.B)
+	is_load_misAlign        := is_load_misAlign_ack_v.contains(true.B)
+	is_load_accessFault     := is_load_accessFault_ack_v.contains(true.B)
+	is_storeAMO_misAlign    := is_store_misAlign_ack_v.contains(true.B)
+	is_storeAMO_accessFault := is_store_accessFault_ack_v.contains(true.B)
+	is_ecall                := is_ecall_v.contains(true.B)
+	is_instr_pageFault      := false.B
+	is_load_pageFault       := false.B
+	is_storeAMO_pageFault   := false.B
+	retired_cnt             := Mux( is_retired_v(1), 2.U, Mux(is_retired_v(0), 1.U, 0.U) )
+	clint_sw_m              := false.B
+	clint_sw_s              := false.B
+	clint_tm_m              := false.B
+	clint_tm_s              := false.B
+	clint_ex_m              := false.B
+	clint_ex_s              := false.B
 
 
 
