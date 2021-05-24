@@ -61,10 +61,10 @@ class TLB( entry: Int = 32 ) extends Module {
   .elsewhen(io.tlb_renew.valid) {
     tag(tlb_update_idx).is_valid := true.B
     tag(tlb_update_idx).asid := io.asid_i
-    tag(tlb_update_idx).vpn(0) := io.tlb_req.bits.vaddr(20,12)
-    tag(tlb_update_idx).vpn(1) := io.tlb_req.bits.vaddr(29,21)
-    tag(tlb_update_idx).vpn(2) := io.tlb_req.bits.vaddr(38,30)
-    pte(tlb_update_idx) := io.tlb_renew.bits.pte
+    tag(tlb_update_idx).vpn(0) := io.vaddr.bits(20,12)
+    tag(tlb_update_idx).vpn(1) := io.vaddr.bits(29,21)
+    tag(tlb_update_idx).vpn(2) := io.vaddr.bits(38,30)
+    pte(tlb_update_idx) := io.tlb_renew.bits
   }
 
 
@@ -91,9 +91,9 @@ class TLB( entry: Int = 32 ) extends Module {
 
   val tlb_hit = VecInit(
       for ( i <- 0 until entry ) yield {
-          val lvl2 = tag(i).is_valid & io.asid_i === tag(i).asid & io.vaddr(38,30) === tag(i).vpn(2)
-          val lvl1 = io.vaddr(29,21) === tag(i).vpn(1)
-          val lvl0 = io.vaddr(20,12) === tag(i).vpn(0)
+          val lvl2 = tag(i).is_valid & io.asid_i === tag(i).asid & io.vaddr.bits(38,30) === tag(i).vpn(2)
+          val lvl1 = io.vaddr.bits(29,21) === tag(i).vpn(1)
+          val lvl0 = io.vaddr.bits(20,12) === tag(i).vpn(0)
 
           lvl2 & ( pte(i).is_giga_page | ( lvl1 & (pte(i).is_mega_page | lvl0 ) ) )
       }
@@ -101,8 +101,8 @@ class TLB( entry: Int = 32 ) extends Module {
   
   assert( PopCount( tlb_hit.asUInt ) <= 1.U, "Assert Fail at tlb, more than 1 entry hit!"  )
 
-  io.pte_o = Mux1H( tlb_hit zip pte )
-
+  io.pte_o.bits  := Mux1H( tlb_hit zip pte )
+  io.pte_o.valid := tlb_hit.contains(true.B)
 }
 
 

@@ -31,12 +31,12 @@ import rift2Core._
 import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.cache._
-
+import rift2Core.privilege._
 
 
 object testMain extends App {
 
-  Driver.execute(args, () => new Rift2Chip )
+  Driver.execute(args, () => new MMU )
 }
 
 

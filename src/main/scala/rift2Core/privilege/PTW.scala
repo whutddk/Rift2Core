@@ -56,6 +56,22 @@ class PTW extends Module {
 
   }
 
+  val walk = new Bundle {
+    val a     = RegInit(0.U(44.W))
+    val level = RegInit(0.U(2.W))
+    val is_ptw_end = Wire(Bool())
+    val pte_value = RegEnable( ptw_mst.io.d.bits.data, ptw_mst.io.d.fire )
+    val pte  = Wire(new Info_pte_sv39)
+    
+
+    val addr  = Cat(a, Mux1H(Seq(
+              (level === 0.U) -> Cat(io.vaddr.bits(20,12), 0.U(3.W)),
+              (level === 1.U) -> Cat(io.vaddr.bits(29,21), 0.U(3.W)),
+              (level === 2.U) -> Cat(io.vaddr.bits(38,30), 0.U(3.W)),
+              ))
+          )
+  }
+
 
 //    SSSSSSSSSSSSSSS TTTTTTTTTTTTTTTTTTTTTTT         AAA         TTTTTTTTTTTTTTTTTTTTTTTEEEEEEEEEEEEEEEEEEEEEE
 //  SS:::::::::::::::ST:::::::::::::::::::::T        A:::A        T:::::::::::::::::::::TE::::::::::::::::::::E
@@ -113,21 +129,7 @@ class PTW extends Module {
 //            W:::W           W:::WA:::::A                 A:::::A L::::::::::::::::::::::LK:::::::K    K:::::K
 //             WWW             WWWAAAAAAA                   AAAAAAALLLLLLLLLLLLLLLLLLLLLLLLKKKKKKKKK    KKKKKKK
 
-  val walk = new Bundle {
-    val a     = RegInit(0.U(44.W))
-    val level = RegInit(0.U(2.W))
-    val is_ptw_end = Wire(Bool())
-    val pte_value = RegEnable( ptw_mst.io.d.bits.data, ptw_mst.io.d.fire )
-    val pte  = Wire(new Info_pte_sv39)
-    
 
-    val addr  = Cat(a, Mux1H(Seq(
-              (level === 0.U) -> Cat(io.vaddr.bits(20,12), 0.U(3.W)),
-              (level === 1.U) -> Cat(io.vaddr.bits(29,21), 0.U(3.W)),
-              (level === 2.U) -> Cat(io.vaddr.bits(38,30), 0.U(3.W)),
-              ))
-          )
-  }
 
   walk.pte.value := walk.pte_value
 
@@ -144,7 +146,7 @@ class PTW extends Module {
             
   walk.pte.is_4K_page   := walk.is_ptw_end & walk.level === 0.U
   walk.pte.is_mega_page := walk.is_ptw_end & walk.level === 1.U       
-  walk.pte.is_giga_page := value & walk.level === 2.U
+  walk.pte.is_giga_page := walk.is_ptw_end & walk.level === 2.U
 
   io.ptw_o.bits  := walk.pte
   io.ptw_o.valid := walk.is_ptw_end
