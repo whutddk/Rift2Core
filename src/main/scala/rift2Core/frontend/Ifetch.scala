@@ -26,6 +26,7 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
+import chisel3.util.Enum._
 import chisel3.util.random._
 
 import chisel3.experimental.ChiselEnum
@@ -37,9 +38,6 @@ import tilelink._
 
 
 
-object Il1_state extends ChiselEnum {
-	val cfree, cktag, cmiss, fence = Value
-}
 
 
 class Ifetch() extends Module with IBuf{
@@ -56,10 +54,12 @@ class Ifetch() extends Module with IBuf{
 		val flush = Input(Bool())
 	})
 
+	val cfree :: cktag :: cmiss :: fence :: Nil = Enum(4)
+
 	val dw = 128
-	val bk = 2
-	val cb = 4
-	val cl = 64
+	val bk = 4
+	val cb = 2
+	val cl = 256
 
 	val addr_lsb = log2Ceil(dw*bk/8)
 	val line_w = log2Ceil(cl)
@@ -72,6 +72,7 @@ class Ifetch() extends Module with IBuf{
 
 	def addr_align_128 = if_addr & ~("b1111".U(64.W))
 	def addr_align_256 = if_addr & ~("b11111".U(64.W))
+	def addr_align_512 = if_addr & ~("b111111".U(64.W))
 	def addr_tag = if_addr(31, 32-tag_w)
 	def cl_sel = if_addr(addr_lsb+line_w-1, addr_lsb)
 
@@ -80,40 +81,53 @@ class Ifetch() extends Module with IBuf{
 
 	val il1_mst = Module(new TileLink_mst_heavy(128, 32, 0))
 	val mem = new Cache_mem( dw, 32, bk, cb, cl )
-	val stateReg = RegInit(Il1_state.cfree)
 	val addr_il1_req = RegInit( "h80000000".U(32.W) )
 	val cache_valid = Reg( Vec( cl, Vec(cb, Bool()) ) )
-	val random_res = LFSR(log2Ceil(cb), true.B )
+	val random_res = LFSR(log2Ceil(4), true.B )(0)
 	val is_cb_vhit = Wire(Vec(cb, Bool()))
 	val trans_kill = RegInit(false.B)
 	val is_il1_fence_req = RegInit(false.B)
 
-	if_addr_reg := Mux( (stateReg === Il1_state.cfree), io.pc_if.bits, if_addr_reg)
-	if_addr     := Mux( (stateReg === Il1_state.cfree), io.pc_if.bits, if_addr_reg)
+	val fsm = new Bundle{
+		val state_dnxt = Wire(UInt(2.W))
+		val state_qout = RegNext(state_dnxt, cfree)
+	}
+
+	if_addr_reg := Mux( (fsm.state_qout === cfree), io.pc_if.bits, if_addr_reg)
+	if_addr     := Mux( (fsm.state_qout === cfree), io.pc_if.bits, if_addr_reg)
 
 	io.if_iq <> ibuf.io.deq
 	ibuf.io.flush := io.flush | io.is_il1_fence_req
 
-	def is_pc_if_ack = io.pc_if.fire
 
 	ia.pc := if_addr
-	ia.instr := Mux( 
-		( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) & ~io.flush),
-		mem_dat,
-		Mux(
-			( stateReg === Il1_state.cmiss & (addr_align_128 === addr_il1_req) ),
-			il1_mst.io.d.bits.data,
-			DontCare
+	ia.instr := {
+		val mem_dat = {
+			val cb_num = for ( i <- 0 until cb ) yield { is_cb_vhit(i) === true.B }
+			val dat_sel = for ( i <- 0 until cb ) yield { mem.dat_info_r(i) }
+			MuxCase( DontCare, cb_num zip dat_sel )	
+		}
+
+		Mux( 
+			( (fsm.state_qout === cktag) & is_cb_vhit.contains(true.B) & ~io.flush),
+			mem_dat,
+			Mux(
+				( fsm.state_qout === cmiss & (addr_align_128 === addr_il1_req) ),
+				il1_mst.io.d.bits.data,
+				DontCare
+			)
 		)
-	 )
+	}
+	
+
 
 	ibuf_valid_i := 
-				( (stateReg === Il1_state.cktag) & is_cb_vhit.contains(true.B) ) |
-				( stateReg === Il1_state.cmiss & il1_mst.io.d.fire & (addr_align_128 === addr_il1_req) & ~trans_kill)
+				( (fsm.state_qout === cktag) & is_cb_vhit.contains(true.B) ) |
+				( fsm.state_qout === cmiss & il1_mst.io.d.fire & (addr_align_128 === addr_il1_req) & ~trans_kill)
 
 
 
-	io.pc_if.ready := ~trans_kill & (stateReg === Il1_state.cktag | stateReg === Il1_state.cmiss) & (stateDnxt === Il1_state.cfree)
+	io.pc_if.ready := ~trans_kill & (fsm.state_qout === cktag | fsm.state_qout === cmiss) & (fsm.state_dnxt === cfree)
 
 
 
@@ -137,27 +151,30 @@ class Ifetch() extends Module with IBuf{
 //  SSSSSSSSSSSSSSS         TTTTTTTTTTTAAAAAAA                   AAAAAAATTTTTTTTTTT      EEEEEEEEEEEEEEEEEEEEEE
 
 
-	stateReg := stateDnxt
-
-	def il1_state_dnxt_in_cfree = 
-		Mux( is_il1_fence_req, Il1_state.fence,
-			Mux( ( (ibuf_ready_i) & ~io.flush), Il1_state.cktag, Il1_state.cfree) ) // no valid or valid is ack then next
-	def il1_state_dnxt_in_cktag = 
-		Mux( is_cb_vhit.contains(true.B), Il1_state.cfree, Il1_state.cmiss )
-	def il1_state_dnxt_in_cmiss = 
-		Mux( il1_mst.io.mode === 7.U, Il1_state.cfree, Il1_state.cmiss )
-	def il1_state_dnxt_in_fence = 
-		Mux( ~is_il1_fence_req, Il1_state.cfree, Il1_state.fence )
+	
 
 
 
-	def stateDnxt =
-		MuxCase( Il1_state.cfree, Array(
-			( stateReg === Il1_state.cfree ) -> il1_state_dnxt_in_cfree,
-			( stateReg === Il1_state.cktag ) -> il1_state_dnxt_in_cktag,
-			( stateReg === Il1_state.cmiss ) -> il1_state_dnxt_in_cmiss,
-			( stateReg === Il1_state.fence ) -> il1_state_dnxt_in_fence
-		))
+
+	fsm.state_dnxt := {
+		val il1_state_dnxt_in_cfree = 
+			Mux( is_il1_fence_req, fence,
+				Mux( ( (ibuf_ready_i) & ~io.flush), cktag, cfree) ) // no valid or valid is ack then next
+		val il1_state_dnxt_in_cktag = 
+			Mux( is_cb_vhit.contains(true.B), cfree, cmiss )
+		val il1_state_dnxt_in_cmiss = 
+			Mux( il1_mst.io.mode === 7.U, cfree, cmiss )
+		val il1_state_dnxt_in_fence = 
+			Mux( ~is_il1_fence_req, cfree, fence )
+
+		MuxCase( cfree, Array(
+			( fsm.state_qout === cfree ) -> il1_state_dnxt_in_cfree,
+			( fsm.state_qout === cktag ) -> il1_state_dnxt_in_cktag,
+			( fsm.state_qout === cmiss ) -> il1_state_dnxt_in_cmiss,
+			( fsm.state_qout === fence ) -> il1_state_dnxt_in_fence
+		))		
+	}
+
 
 
 
@@ -188,38 +205,31 @@ class Ifetch() extends Module with IBuf{
 
 	when ( true.B ) {
 		addr_il1_req := Mux1H( Seq(
-						(stateReg === Il1_state.cfree) -> addr_align_256,
-						(stateReg === Il1_state.cktag) -> addr_align_256,
-						(stateReg === Il1_state.cmiss) -> Mux( il1_mst.io.d.fire, addr_il1_req + "b10000".U , addr_il1_req),
-						(stateReg === Il1_state.fence) -> addr_align_256
+						(fsm.state_qout === cfree) -> addr_align_512,
+						(fsm.state_qout === cktag) -> addr_align_512,
+						(fsm.state_qout === cmiss) -> Mux( il1_mst.io.d.fire, addr_il1_req + ( 1.U << (log2Ceil(dw/8)).U) , addr_il1_req),
+						(fsm.state_qout === fence) -> addr_align_512
 						))
 	}
 
 
-
-
 	mem.cache_addr := Mux1H( Seq(
-							(stateReg === Il1_state.cfree) -> addr_align_128,
-							(stateReg === Il1_state.cktag) -> addr_align_128,
-							(stateReg === Il1_state.cmiss) -> addr_il1_req,
-							(stateReg === Il1_state.fence) -> addr_align_128
+							(fsm.state_qout === cfree) -> addr_align_128,
+							(fsm.state_qout === cktag) -> addr_align_128,
+							(fsm.state_qout === cmiss) -> addr_il1_req,
+							(fsm.state_qout === fence) -> addr_align_128
 							))
 
 	for ( i <- 0 until cb ) yield {
-		mem.dat_en_w(i) := (stateReg === Il1_state.cmiss) & (il1_mst.io.d.fire & is_cb_vhit(i))
-
-		mem.dat_en_r(i) := (stateDnxt === Il1_state.cktag)
-
-		mem.tag_en_w(i) := (stateReg === Il1_state.cktag) & ((stateDnxt === Il1_state.cmiss) & is_block_replace(i.U))
-
+		mem.dat_en_w(i) := (fsm.state_qout === cmiss) & (il1_mst.io.d.fire & is_cb_vhit(i))
+		mem.dat_en_r(i) := (fsm.state_dnxt === cktag)
+		mem.tag_en_w(i) := (fsm.state_qout === cktag) & ((fsm.state_dnxt === cmiss) & is_block_replace(i.U))
 		mem.tag_en_r(i) :=
-				((stateReg === Il1_state.cfree) & (stateDnxt === Il1_state.cktag)) |
-				((stateReg === Il1_state.cmiss) & (il1_mst.io.a.fire))
-
-
+				((fsm.state_qout === cfree) & (fsm.state_dnxt === cktag)) |
+				((fsm.state_qout === cmiss) & (il1_mst.io.a.fire))
 	}
 
-	mem.dat_info_wstrb := "b1111111111111111".U
+	mem.dat_info_wstrb := "hFFFF".U
 	mem.dat_info_w := il1_mst.io.d.bits.data
 
 
@@ -228,10 +238,10 @@ class Ifetch() extends Module with IBuf{
 	when( reset.asBool ) {
 		for ( i <- 0 until cl; j <- 0 until cb ) yield cache_valid(i)(j) := false.B
 	}
-	.elsewhen( stateReg === Il1_state.cktag & stateDnxt === Il1_state.cmiss ) {
+	.elsewhen( fsm.state_qout === cktag & fsm.state_dnxt === cmiss ) {
 		cache_valid(cl_sel)(replace_sel) := true.B
 	}
-	.elsewhen( stateReg === Il1_state.fence & stateDnxt === Il1_state.cfree ) {
+	.elsewhen( fsm.state_qout === fence & fsm.state_dnxt === cfree ) {
 		for ( i <- 0 until cl; j <- 0 until cb ) yield cache_valid(i)(j) := false.B
 	}
 
@@ -250,11 +260,7 @@ class Ifetch() extends Module with IBuf{
 	def is_block_replace(i:UInt) = UIntToOH(replace_sel)(i).asBool
 
 
-	def mem_dat = {
-		val cb_num = for ( i <- 0 until cb ) yield { is_cb_vhit(i) === true.B }
-		val dat_sel = for ( i <- 0 until cb ) yield { mem.dat_info_r(i) }
-		MuxCase( DontCare, cb_num zip dat_sel )	
-	}
+
 
 	
 	
@@ -283,14 +289,14 @@ class Ifetch() extends Module with IBuf{
 
 	il1_mst.io.a_info.opcode  := il1_mst.Get
 	il1_mst.io.a_info.param   := DontCare
-	il1_mst.io.a_info.size    := 5.U
+	il1_mst.io.a_info.size    := addr_lsb.U
 	il1_mst.io.a_info.source  := 0.U
-	il1_mst.io.a_info.address := addr_align_256
+	il1_mst.io.a_info.address := addr_align_512
 	il1_mst.io.a_info.mask    := DontCare
 	il1_mst.io.a_info.data    := DontCare
 	il1_mst.io.a_info.corrupt := false.B
 
-	il1_mst.io.is_req := stateReg === Il1_state.cktag & stateDnxt === Il1_state.cmiss
+	il1_mst.io.is_req := fsm.state_qout === cktag & fsm.state_dnxt === cmiss
 
 
 
@@ -320,10 +326,10 @@ class Ifetch() extends Module with IBuf{
 
 
 
-	when ( io.flush & stateDnxt === Il1_state.cmiss ) {
+	when ( io.flush & fsm.state_dnxt === cmiss ) {
 		trans_kill := true.B
 	}
-	.elsewhen( stateDnxt =/= Il1_state.cmiss ) {
+	.elsewhen( fsm.state_dnxt =/= cmiss ) {
 		trans_kill := false.B
 	}
 

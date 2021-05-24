@@ -36,7 +36,7 @@ import rift2Core.privilege._
 
 object testMain extends App {
 
-  Driver.execute(args, () => new MMU )
+  Driver.execute(args, () => new Rift2Chip )
 }
 
 
