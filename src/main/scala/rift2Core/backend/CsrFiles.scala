@@ -44,6 +44,21 @@ class Pri_Port extends Bundle {
 }
 
 
+object Reg_Exe_Port {
+
+  def apply( csr_reg: UInt, addr: UInt, ep: Exe_Port ): (Bool, UInt) = {
+    val enable = (ep.addr === addr) & (ep.op_rw | ep.op_rs | ep.op_rc)
+    val dnxt = Mux1H(Seq(
+        ep.op_rw -> ( ep.dat_i),
+        ep.op_rs -> (csr_reg | ep.dat_i),
+        ep.op_rc -> (csr_reg & ~ep.dat_i),
+      ))
+    return (enable, dnxt)
+  }
+}
+
+
+
 object CsrReg {
   def apply( addr: UInt, init: UInt, ormask: UInt, pp: Pri_Port, ep: Exe_Port ) = {
     val csr_reg = RegInit(init)
@@ -201,15 +216,48 @@ class M_CsrFiles {
 
 
   //machine information register
-  val mvendorid    = CsrReg( "hF11".U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)
-  val marchid      = CsrReg( "hF12".U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)
-  val mimpid       = CsrReg( "hF13".U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)
-  val mhartid      = CsrReg( "hF14".U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)
+  val mvendorid    = CsrReg( "hF11".U, 0.U(32.W), 0.U, 0.U.asTypeOf(new Pri_Port), 0.U.asTypeOf(new Exe_Port) )
+  val marchid      = CsrReg( "hF12".U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), 0.U.asTypeOf(new Exe_Port) )
+  val mimpid       = CsrReg( "hF13".U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), 0.U.asTypeOf(new Exe_Port) )
+  val mhartid      = CsrReg( "hF14".U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), 0.U.asTypeOf(new Exe_Port) )
 
 
   //Machine Trap Setup
-  val mstatus      = CsrReg( "h300".U, 0.U(64.W), "h1800".U, mstatus_pri_port, exe_port)
-  // val misa         = CsrReg( "h301".U, Cat("b10".U, 0.U(36.W), "b00000101000011000110101101".U), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)//ACDFHIMNSU
+
+  /**
+    * Machine Status Registers
+    * @param SD (63) whether either fs or xs is dirty
+    * @param MBE (37) endian of M-mode, when 0, is little-endian
+    * @param SBE (36) endian of S-mode, when 0, is little-endian
+    * @param SXL (35,34) XLEN of S-mode, hard-wire to 2.U(64.bits)
+    * @param UXL (33,32) XLEN of U-mode, hard-wire to 2.U(64.bits)
+    * @param TSR (22) trap sret, when 1, sret in s-mode cause illegal instruction exception
+    * @param TW (21) Time out wait for WFI, when 1 wfi cause illegal instruction exception in U\S-MODE
+    * @param TVM (20) Trap Virtual Memory, when 1, access satp or Sfence.vma will cause illegal instruction exception
+    * @param MXR (19) Make executable Readable. When 0, only loads form pages marked readable
+    * @param SUM (18) permit Supervisor User Memory access. When 0, S-mode accesses to page.U === 1 will fault.
+    * @param MPRV (17) Memory Privilege; When 1, load store using trans&protect in M-mode; When MRET or SRet to S\U-mode, set to 0.
+    * @param XS (16,15) aditional user-mode extension and associated state
+    * @param FS (14,13) float point statuw=s
+    * @param MPP (12,11) Previous Mode is U-mode or S-mode or M-mode? When MRet, privilege mode update to MPP, MPP set to "U"
+    * @param SPP (8) Previous Mode is U-mode or S-mode? When SRet, privilege mode update to SPP, SPP set to "U"
+    * @param MPIE (7)  When MRet, MPIE set to 1
+    * @param UBE (6) endian of U-mode, when 0, is little-endian
+    * @param SPIE (5) When SRet, SPIE set to 1
+    * @param MIE (3) M-mode Interrupt Enable; When MRet, update to MPIE
+    * @param SIE (1) S-mode Interrupt Enable; When SRet, update to SPIE
+    */
+  val mstatus      = CsrReg( "h300".U, 0.U(64.W), 0.U, mstatus_pri_port, exe_port)
+
+  /**
+    * Machine ISA register 
+    * @param MXL (63,62) is 2.U for XLEN of RiftCore is 64 
+    * @param Extensions (25:0) 
+    * @note U(20): User mode implement S(18): Supervisor mode implemented N(13): User-level interrupts supported
+    * @note M(12): Integer Multiply/Divide extension I(8): RV64I base ISA C(2): Compressed extension
+    * 
+    */
+  val misa         = CsrReg( "h301".U, Cat("b10".U, 0.U(36.W), "b00000101000011000100000100".U), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)//ACDFHIMNSU
   val medeleg      = CsrReg( "h302".U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)
   val mideleg      = CsrReg( "h303".U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)
   val mie          = CsrReg( "h304".U, 0.U(64.W), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)
@@ -378,7 +426,7 @@ trait CsrFiles {
           ( addr === "hF13".U ) -> m_csrFiles.mimpid,
           ( addr === "hF14".U ) -> m_csrFiles.mhartid,
           ( addr === "h300".U ) -> m_csrFiles.mstatus,
-          ( addr === "h301".U ) -> Cat("b10".U, 0.U(36.W), "b00000000000001000100000100".U(26.W)),//"b00000101000011000110101101".U(26.W)),//m_csrFiles.misa,
+          ( addr === "h301".U ) -> m_csrFiles.misa,
           ( addr === "h302".U ) -> m_csrFiles.medeleg,
           ( addr === "h303".U ) -> m_csrFiles.mideleg,
           ( addr === "h304".U ) -> m_csrFiles.mie,
