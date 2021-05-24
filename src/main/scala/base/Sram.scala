@@ -28,7 +28,6 @@ package base
 
 import chisel3._
 import chisel3.util._
-import chisel3.experimental.chiselName
 import chisel3.util.experimental.loadMemoryFromFileInline
 
 // @chiselName
@@ -53,7 +52,7 @@ import chisel3.util.experimental.loadMemoryFromFileInline
 // }
 
 
-@chiselName
+
 class Sram(dw: Int, aw: Int) extends Module {
 	val io = IO(new Bundle{
 		val data_w = Input(UInt(dw.W))
