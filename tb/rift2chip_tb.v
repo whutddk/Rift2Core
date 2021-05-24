@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-12 20:11:23
+* @Last Modified time: 2021-05-27 10:23:07
 */
 
 
@@ -37,6 +37,7 @@ module rift2chip_tb (
 );
 
 	reg CLK;
+	reg rtc_clock;
 	reg RSTn;
 
 
@@ -200,7 +201,9 @@ Rift2Chip s_Rift2Chip(
 	.io_sys_chn_b_valid      (io_sys_chn_b_valid),
 	.io_sys_chn_b_bits_id    (1'b0),
 	.io_sys_chn_b_bits_rsp   (io_sys_chn_b_bits_rsp),
-	.io_sys_chn_b_bits_user  (1'b0)
+	.io_sys_chn_b_bits_user  (1'b0),
+
+	.io_rtc_clock            (io_rtc_clock)
 );
 
 
@@ -290,6 +293,7 @@ end
 
 initial begin
 	CLK = 0;
+	rtc_clock = 0;
 	RSTn = 0;
 
 	#20
@@ -306,6 +310,13 @@ initial begin
 	forever
 	begin 
 		 #5 CLK <= ~CLK;
+	end
+end
+
+initial begin
+	forever
+	begin 
+		 #610 rtc_clock <= ~rtc_clock;
 	end
 end
 
