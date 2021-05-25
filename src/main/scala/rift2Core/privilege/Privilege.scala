@@ -74,54 +74,54 @@ abstract class Privilege() extends Module with CsrFiles{
 
 		val exe_port = Wire(new Exe_Port)
 
-		m_csrFiles.clint_csr_info := 0.U.asTypeOf(new Info_clint_csr)
+		// m_csrFiles.clint_csr_info := 0.U.asTypeOf(new Info_clint_csr)
 
-		m_csrFiles.exe_port := exe_port
-		h_csrFiles.exe_port := exe_port
-		s_csrFiles.exe_port := exe_port
-		u_csrFiles.exe_port := exe_port
-		d_csrFiles.exe_port := exe_port
+		// m_csrFiles.exe_port := exe_port
+		// h_csrFiles.exe_port := exe_port
+		// s_csrFiles.exe_port := exe_port
+		// u_csrFiles.exe_port := exe_port
+		// d_csrFiles.exe_port := exe_port
 
 
-		m_csrFiles.mcause_pri_port.en  := is_trap.contains(true.B)
-		m_csrFiles.mcause_pri_port.dat := 
-										Cat(
-											is_interrupt.asUInt, 
-											MuxCase( 0.U(63.W), Array(
-													is_ecall.contains(true.B)        -> 11.U(63.W),
-													is_ebreak.contains(true.B)                -> 3.U(63.W),
-													is_instr_accessFault.contains(true.B)     -> 1.U(63.W),
-													is_illeage.contains(true.B)               -> 2.U(63.W),
-													is_load_accessFault_ack.contains(true.B)  -> 5.U(63.W),
-													is_store_accessFault_ack.contains(true.B) -> 7.U(63.W),
-													is_load_misAlign_ack.contains(true.B)     -> 4.U(63.W),
-													is_store_misAlign_ack.contains(true.B)	 -> 6.U(63.W)
-												))
-										)
+		// m_csrFiles.mcause_pri_port.en  := is_trap.contains(true.B)
+		// m_csrFiles.mcause_pri_port.dat := 
+		// 								Cat(
+		// 									is_interrupt.asUInt, 
+		// 									MuxCase( 0.U(63.W), Array(
+		// 											is_ecall.contains(true.B)        -> 11.U(63.W),
+		// 											is_ebreak.contains(true.B)                -> 3.U(63.W),
+		// 											is_instr_accessFault.contains(true.B)     -> 1.U(63.W),
+		// 											is_illeage.contains(true.B)               -> 2.U(63.W),
+		// 											is_load_accessFault_ack.contains(true.B)  -> 5.U(63.W),
+		// 											is_store_accessFault_ack.contains(true.B) -> 7.U(63.W),
+		// 											is_load_misAlign_ack.contains(true.B)     -> 4.U(63.W),
+		// 											is_store_misAlign_ack.contains(true.B)	 -> 6.U(63.W)
+		// 										))
+		// 								)
 
-		m_csrFiles.mepc_pri_port.en  := is_trap.contains(true.B)
-		m_csrFiles.mepc_pri_port.dat := commit_pc
+		// m_csrFiles.mepc_pri_port.en  := is_trap.contains(true.B)
+		// m_csrFiles.mepc_pri_port.dat := commit_pc
 		//MuxCase( 0.U, Array( is_exception.contains(true.B) -> commit_pc, is_interrupt -> commit_pc ) )
 
-		m_csrFiles.mtval_pri_port.en  := is_trap.contains(true.B)
-		m_csrFiles.mtval_pri_port.dat := Mux( 
-												(is_load_accessFault_ack.contains(true.B) | 
-												is_store_accessFault_ack.contains(true.B) | 
-												is_load_misAlign_ack.contains(true.B) | 
-												is_store_misAlign_ack.contains(true.B) ), 
-												lsu_trap_addr, 0.U
-											)
+		// m_csrFiles.mtval_pri_port.en  := is_trap.contains(true.B)
+		// m_csrFiles.mtval_pri_port.dat := Mux( 
+		// 										(is_load_accessFault_ack.contains(true.B) | 
+		// 										is_store_accessFault_ack.contains(true.B) | 
+		// 										is_load_misAlign_ack.contains(true.B) | 
+		// 										is_store_misAlign_ack.contains(true.B) ), 
+		// 										lsu_trap_addr, 0.U
+		// 									)
 
-		m_csrFiles.mstatus_pri_port.en  := is_trap.contains(true.B) | is_xRet.contains(true.B)
-		m_csrFiles.mstatus_pri_port.dat := Cat(
-											0.U(51.W),
-											"b11".U, //MPP
-											0.U(3.W),
-											(is_trap.contains(true.B) & m_csrFiles.mstatus(3)) | (is_xRet.contains(true.B) & true.B), //MPIE
-											0.U(3.W),
-											(is_trap.contains(true.B) & false.B) | (is_xRet.contains(true.B) & m_csrFiles.mstatus(7)), //MIE
-											0.U(3.W)
-										)
+		// m_csrFiles.mstatus_pri_port.en  := is_trap.contains(true.B) | is_xRet.contains(true.B)
+		// m_csrFiles.mstatus_pri_port.dat := Cat(
+		// 									0.U(51.W),
+		// 									"b11".U, //MPP
+		// 									0.U(3.W),
+		// 									(is_trap.contains(true.B) & m_csrFiles.mstatus(3)) | (is_xRet.contains(true.B) & true.B), //MPIE
+		// 									0.U(3.W),
+		// 									(is_trap.contains(true.B) & false.B) | (is_xRet.contains(true.B) & m_csrFiles.mstatus(7)), //MIE
+		// 									0.U(3.W)
+		// 								)
 
 
 	}
