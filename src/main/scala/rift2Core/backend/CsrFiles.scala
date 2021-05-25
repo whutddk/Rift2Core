@@ -59,54 +59,77 @@ object Reg_Exe_Port {
 
 
 
-// object CsrReg {
-//   def apply( addr: UInt, init: UInt, ormask: UInt, pp: Pri_Port, ep: Exe_Port ) = {
-//     val csr_reg = RegInit(init)
-
-//     when( pp.en ) {
-//       csr_reg := pp.dat | ormask 
-//     }
-//     .elsewhen(ep.addr === addr) {
-//       csr_reg := MuxCase(csr_reg, Array(
-//         ep.op_rw -> ( ep.dat_i),
-//         ep.op_rs -> (csr_reg | ep.dat_i),
-//         ep.op_rc -> (csr_reg & ~ep.dat_i),
-//       )) | ormask 
-//     }
-
-//     csr_reg
-//   }
-// }
-
-
-
 trait CsrFiles {
-  val exe_port = Wire(new Exe_Port)
-  val is_csr_trap = Wire( Bool() )
-  val is_csr_mRet = Wire( Bool() )
-  val is_csr_sRet = Wire( Bool() )
-  val is_csr_uRet = Wire( Bool() )
-  val is_csr_xRet = is_csr_mRet | is_csr_sRet | is_csr_uRet
+  val exe_port: Exe_Port
+  val is_trap: Bool
+  val is_mRet: Bool
+  val is_sRet: Bool
+  val is_uRet: Bool
+  val is_xRet = is_mRet | is_sRet | is_uRet
 
-  val commit_pc = Wire(UInt(64.W))
+  val commit_pc: UInt
+  val ill_instr: UInt
+
+
+  val is_instr_accessFault:    Bool
+  val is_instr_illeage:        Bool
+  val is_breakPoint:           Bool
+  val is_load_misAlign:        Bool
+  val is_load_accessFault:     Bool
+  val is_storeAMO_misAlign:    Bool
+  val is_storeAMO_accessFault: Bool
+  val is_u_ecall:              Bool
+  val is_s_ecall:              Bool
+  val is_m_ecall:              Bool
+  val is_instr_pageFault:      Bool
+  val is_load_pageFault:       Bool
+  val is_storeAMO_pageFault:   Bool
+
+  lazy val is_exception =
+    is_instr_accessFault    |
+    is_instr_illeage        |
+    is_breakPoint           |
+    is_load_misAlign        |
+    is_load_accessFault     |
+    is_storeAMO_misAlign    |
+    is_storeAMO_accessFault |
+    is_u_ecall              |
+    is_s_ecall              |
+    is_m_ecall              |
+    is_instr_pageFault      |
+    is_load_pageFault       |
+    is_storeAMO_pageFault
+
+  lazy val is_ssi = mip(1)  & mie(1)  & mstatus(1)
+  lazy val is_msi = mip(3)  & mie(3)  & mstatus(3)
+  lazy val is_sti = mip(5)  & mie(5)  & mstatus(1)
+  lazy val is_mti = mip(7)  & mie(7)  & mstatus(3)
+  lazy val is_sei = mip(9)  & mie(9)  & mstatus(1)
+  lazy val is_mei = mip(11) & mie(11) & mstatus(3)
+
+  lazy val is_m_interrupt = is_msi | is_mti | is_mei
+  lazy val is_s_interrupt = is_ssi | is_sti | is_sei
+
+  val is_retired: Bool
+
 
 
   //user trap setup
-  val ustatus = {
+  lazy val ustatus = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h000".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val uie = {
+  lazy val uie = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h004".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val utvec = {
+  lazy val utvec = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h005".U, exe_port )
     when(enable) { value := dnxt }
@@ -114,35 +137,35 @@ trait CsrFiles {
   }
 
   //user trap handling
-  val uscratch = {
+  lazy val uscratch = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h040".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val uepc = {
+  lazy val uepc = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h041".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val ucause = {
+  lazy val ucause = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h042".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val utval = {
+  lazy val utval = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h043".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val uip = {
+  lazy val uip = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h044".U, exe_port )
     when(enable) { value := dnxt }
@@ -150,21 +173,21 @@ trait CsrFiles {
   }
 
   //user floating point csrs
-  val fflags = {
+  lazy val fflags = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h001".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val frm = {
+  lazy val frm = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h002".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val fcsr = {
+  lazy val fcsr = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h003".U, exe_port )
     when(enable) { value := dnxt }
@@ -172,28 +195,28 @@ trait CsrFiles {
   }
 
   //user conter timers
-  val cycle = {
+  lazy val cycle = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hC00".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val time = {
+  lazy val time = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hC01".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
   
-  val instret = {
+  lazy val instret = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hC02".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val hpmcounter = 
+  lazy val hpmcounter = 
     for ( i <- 0 until 32 ) yield {
       if ( i == 0 || i == 1 || i == 2 ) { 0.U }
       else {
@@ -206,42 +229,42 @@ trait CsrFiles {
 
 
   //supervisor trap setup
-  val sstatus = {
+  lazy val sstatus = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h100".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val sedeleg = {
+  lazy val sedeleg = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h102".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val sideleg = {
+  lazy val sideleg = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h103".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val sie = {
+  lazy val sie = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h104".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val stvec = {
+  lazy val stvec = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h105".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val scounteren = {
+  lazy val scounteren = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h106".U, exe_port )
     when(enable) { value := dnxt }
@@ -250,35 +273,35 @@ trait CsrFiles {
 
   //supervisor trap handling
 
-  val sscratch = {
+  lazy val sscratch = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h140".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val sepc = {
+  lazy val sepc = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h141".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val scause = {
+  lazy val scause = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h142".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val stval = {
+  lazy val stval = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h143".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val sip = {
+  lazy val sip = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h144".U, exe_port )
     when(enable) { value := dnxt }
@@ -286,7 +309,7 @@ trait CsrFiles {
   }
 
   //supervisor protection and translation
-  val satp = {
+  lazy val satp = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h180".U, exe_port )
     when(enable) { value := dnxt }
@@ -294,21 +317,21 @@ trait CsrFiles {
   }
 
   //hypervisor trap setup
-  val hstatus = {
+  lazy val hstatus = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h600".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val hedeleg = {
+  lazy val hedeleg = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h602".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val hideleg = {
+  lazy val hideleg = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h603".U, exe_port )
     when(enable) { value := dnxt }
@@ -322,14 +345,14 @@ trait CsrFiles {
     value 
   }
 
-  val hcounteren = {
+  lazy val hcounteren = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h606".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val hgeie = {
+  lazy val hgeie = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h607".U, exe_port )
     when(enable) { value := dnxt }
@@ -337,35 +360,35 @@ trait CsrFiles {
   }
 
   //hypervisor trap handling
-  val htval = {
+  lazy val htval = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h643".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val hip = {
+  lazy val hip = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h644".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val hvip = {
+  lazy val hvip = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h645".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val htinst = {
+  lazy val htinst = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h64A".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val hgeip = {
+  lazy val hgeip = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hE12".U, exe_port )
     when(enable) { value := dnxt }
@@ -373,7 +396,7 @@ trait CsrFiles {
   }
 
   //hypervisor protection and translation
-  val hgatp = {
+  lazy val hgatp = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h680".U, exe_port )
     when(enable) { value := dnxt }
@@ -381,7 +404,7 @@ trait CsrFiles {
   }
 
   //hypervisor counter timer virtualization registers
-  val htimedelta = {
+  lazy val htimedelta = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h605".U, exe_port )
     when(enable) { value := dnxt }
@@ -389,63 +412,63 @@ trait CsrFiles {
   }
 
   //virtual supervisor registers
-  val vsstatus = {
+  lazy val vsstatus = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h200".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val vsie = {
+  lazy val vsie = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h204".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val vstvec = {
+  lazy val vstvec = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h205".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val vsscratch = {
+  lazy val vsscratch = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h240".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val vsepc = {
+  lazy val vsepc = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h241".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val vscause = {
+  lazy val vscause = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h242".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val vstval = {
+  lazy val vstval = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h243".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val vsip = {
+  lazy val vsip = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h244".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val vsatp = {
+  lazy val vsatp = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h280".U, exe_port )
     when(enable) { value := dnxt }
@@ -455,16 +478,16 @@ trait CsrFiles {
 
 
 
-  val priv_lvl_dnxt = Wire(UInt(2.W))
-  val priv_lvl_qout = RegNext(priv_lvl_dnxt, "b11".U(2.W))
+  lazy val priv_lvl_dnxt = Wire(UInt(2.W))
+  lazy val priv_lvl_qout = RegNext(priv_lvl_dnxt, "b11".U(2.W))
 
-    val mpp = mstatus(12,11)
-    val spp = mstatus(8)
+    lazy val mpp = mstatus(12,11)
+    lazy val spp = mstatus(8)
     priv_lvl_dnxt := Mux1H( Seq(
-      is_csr_mRet -> mpp,
-      is_csr_sRet -> spp,
-      is_csr_uRet -> "b00".U,
-      is_csr_trap -> "b11".U
+      is_mRet -> mpp,
+      is_sRet -> spp,
+      is_uRet -> "b00".U,
+      is_trap -> "b11".U
     ))
 
 
@@ -478,28 +501,28 @@ trait CsrFiles {
 
 
   //machine information register
-  val mvendorid = {
+  lazy val mvendorid = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hF11".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val marchid = {
+  lazy val marchid = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hF12".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val mimpid = {
+  lazy val mimpid = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hF13".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val mhartid = {
+  lazy val mhartid = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hF14".U, exe_port )
     when(enable) { value := dnxt }
@@ -532,7 +555,7 @@ trait CsrFiles {
     * @param MIE (3) M-mode Interrupt Enable; When MRet, update to MPIE
     * @param SIE (1) S-mode Interrupt Enable; When SRet, update to SPIE
     */
-  val mstatus = {
+  lazy val mstatus = {
     val sd = RegInit(0.U(1.W))
     val mbe = RegInit(0.U(1.W))
     val sbe = RegInit(0.U(1.W))
@@ -558,7 +581,7 @@ trait CsrFiles {
 
     val (enable, dnxt) = Reg_Exe_Port( value, "h300".U, exe_port )
 
-    when( is_csr_trap ) {
+    when( is_trap ) {
       mpie := Mux( priv_lvl_dnxt === "b11".U, mie, mpie )
       spie := Mux( priv_lvl_dnxt === "b01".U, sie, spie )
       mie  := Mux( priv_lvl_dnxt === "b11".U, 0.U, mie )
@@ -567,16 +590,16 @@ trait CsrFiles {
       mpp  := Mux( priv_lvl_dnxt === "b11".U, priv_lvl_qout, mpp )
       spp  := Mux( priv_lvl_dnxt === "b01".U, priv_lvl_qout, spp )
     }
-    .elsewhen( is_csr_xRet ) {
-      mie  := Mux( is_csr_mRet, mpie, mie )
-      sie  := Mux( is_csr_sRet, spie, sie )
-      mpie := Mux( is_csr_mRet, 1.U, mpie )
-      spie := Mux( is_csr_sRet, 1.U, spie )
+    .elsewhen( is_xRet ) {
+      mie  := Mux( is_mRet, mpie, mie )
+      sie  := Mux( is_sRet, spie, sie )
+      mpie := Mux( is_mRet, 1.U, mpie )
+      spie := Mux( is_sRet, 1.U, spie )
 
-      mpp  := Mux( is_csr_mRet, "b00".U, mpp )
-      spp  := Mux( is_csr_sRet, "b00".U, spp )
+      mpp  := Mux( is_mRet, "b00".U, mpp )
+      spp  := Mux( is_sRet, "b00".U, spp )
 
-      mprv := Mux( (is_csr_mRet & mpp =/= "b11".U) | is_csr_sRet, 0.U, mprv )
+      mprv := Mux( (is_mRet & mpp =/= "b11".U) | is_sRet, 0.U, mprv )
     }
     .elsewhen(enable) {
       sd   := dnxt(63)
@@ -600,6 +623,7 @@ trait CsrFiles {
     }
     value
   }
+
   /**
     * Machine ISA register 
     * @param MXL (63,62) is 2.U for XLEN of RiftCore is 64 
@@ -608,7 +632,7 @@ trait CsrFiles {
     * @note M(12): Integer Multiply/Divide extension I(8): RV64I base ISA C(2): Compressed extension
     * 
     */
-  val misa = {
+  lazy val misa = {
     val mxl = RegInit(2.U(2.W))
     val extensions = RegInit("b00000101000011000100000100".U(26.W))
     val value = Cat(mxl, 0.U(36.W), extensions)
@@ -621,15 +645,14 @@ trait CsrFiles {
   
   
   
-  // CsrReg( "h301".U, Cat("b10".U, 0.U(36.W), "b00000101000011000100000100".U), 0.U, 0.U.asTypeOf(new Pri_Port), exe_port)
-  
+
   
   /**
     * Machine Trap Delegation Register
     * 
     * By default, the exception will be handled in M-mode, when the bits set, it's handled in S-mode
     */
-  val medeleg = {
+  lazy val medeleg = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h302".U, exe_port )
     value 
@@ -640,7 +663,7 @@ trait CsrFiles {
     * 
     * By default, the interrupt will be handled in M-mode, when the bits set, it's handled in S-mode
     */
-  val mideleg = {
+  lazy val mideleg = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h303".U, exe_port )
     when(enable) { value := dnxt }
@@ -657,7 +680,7 @@ trait CsrFiles {
     * @param msie (3)
     * @param ssie (1)
     */
-  val mie = {
+  lazy val mie = {
     val meie = RegInit(0.U(1.W))
     val seie = RegInit(0.U(1.W))
     val mtie = RegInit(0.U(1.W))
@@ -684,19 +707,31 @@ trait CsrFiles {
     * Machine Trap-Vector Base-Address Register
     * holds trap vector configuration, consisting of a vector of a vector base address and a bector mode 
     * @param base (63,2)
-    * @param mode (1,0)
+    * @param mode (1,0) read only in this version
     */
-  val mtvec = {
+  lazy val mtvec = {
     val base = RegInit(0.U(62.W))
-    val mode = RegInit(0.U(2.W))
+    val mode = WireDefault(0.U(2.W))
     val value = Cat( base, mode )
     val (enable, dnxt) = Reg_Exe_Port( value, "h305".U, exe_port )
-    when(enable) { base := dnxt(63,2); mode := dnxt(1,0) }
+    when(enable) { base := dnxt(63,2) & ~("b11".U(62.W)) }
     value
   }
 
-  val mcounteren = {
-    val value = RegInit(0.U(64.W))
+  /**
+    * Machine Counter-Enable Register -- mcounteren
+    *
+    * @param HPM (31,3) Whether is allowed to access hpmcounter(x) in S-mode
+    * @param IR (2) Whether is allowed to access instret in S-mode
+    * @param TM (1) Whether is allowed to access time in S-mode
+    * @param CY (0) Whether is allowed to access cycle in S-mode
+    */
+  lazy val mcounteren = {
+    val hpm = RegInit(0.U(32.W))
+    val ir  = RegInit(0.U(1.W))
+    val tm  = RegInit(0.U(1.W))
+    val cy  = RegInit(0.U(1.W))
+    val value = Cat( hpm(31,3), ir, tm, cy )
     val (enable, dnxt) = Reg_Exe_Port( value, "h306".U, exe_port )
     when(enable) { value := dnxt }
     value 
@@ -705,7 +740,12 @@ trait CsrFiles {
 
 
   //Machine Trap Handling
-  val mscratch = {
+  /**
+    * Machine Scratch Register -- mscratch
+    *
+    * it's used to hold a pointer to a M-mode hart-local context space and swapped with a user register upon entry to an M-mode trap handler
+    */
+  lazy val mscratch = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h340".U, exe_port )
     when(enable) { value := dnxt }
@@ -717,11 +757,11 @@ trait CsrFiles {
     * @note hold all valid virtual addresses 
     * when a ***trap*** is taken into ***M-mode***, update to the ***virtual address*** that was interrupted or encountered the exception 
     */
-  val mepc = {
+  lazy val mepc = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h341".U, exe_port )
 
-    when(is_csr_trap & priv_lvl_dnxt === "b11".U){
+    when(is_trap & priv_lvl_dnxt === "b11".U){
       value := commit_pc
     }
     .elsewhen(enable) { value := dnxt }
@@ -739,22 +779,22 @@ trait CsrFiles {
     * @param exception_code
     */
 
-  val mcause = {
+  lazy val mcause = {
     val interrupt = RegInit(0.U(1.W))
     val exception_code = RegInit(0.U(63.W))
     val value = Cat(interrupt, exception_code)
     val (enable, dnxt) = Reg_Exe_Port( value, "h342".U, exe_port )
 
-    when( is_interrupt & priv_lvl_dnxt === "b11".U ) {
+    when( (is_m_interrupt | is_s_interrupt) & priv_lvl_dnxt === "b11".U ) {
       interrupt := 1.U
-      exception_code := Mux1H(
+      exception_code := Mux1H( Seq(
         is_ssi -> 1.U,
         is_msi -> 3.U,
         is_sti -> 5.U,
         is_mti -> 7.U,
         is_sei -> 9.U,
         is_mei -> 11.U
-      )
+      ))
     }
     .elsewhen( is_exception & priv_lvl_dnxt === "b11".U ) {
       interrupt := 0.U
@@ -788,7 +828,7 @@ trait CsrFiles {
     * 
     * When a trap is taken into ***M-mode***, update to ***virtual address*** or ***faulting instruction***
     */
-  val mtval = {
+  lazy val mtval = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h343".U, exe_port )
     when( priv_lvl_dnxt === "b11".U ) {
@@ -823,7 +863,7 @@ trait CsrFiles {
     * @param msip (3)
     * @param ssip (1)
     */
-  val mip = {
+  lazy val mip = {
     val meip = Wire(UInt(1.W))
     val seip = Wire(UInt(1.W))
     val mtip = Wire(UInt(1.W))
@@ -835,14 +875,14 @@ trait CsrFiles {
     value
   }
 
-  val mtinst = {
+  lazy val mtinst = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h34A".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val mtval2 = {
+  lazy val mtval2 = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h34B".U, exe_port )
     when(enable) { value := dnxt }
@@ -851,7 +891,7 @@ trait CsrFiles {
 
 
   //Machine Memory Protection
-  val pmpcfg = 
+  lazy val pmpcfg = 
     for ( i <- 0 until 16 ) yield {
       val value = RegInit(0.U(64.W))
       val (enable, dnxt) = Reg_Exe_Port( value, "h3A0".U + i.U, exe_port )
@@ -860,7 +900,7 @@ trait CsrFiles {
     }
 
 
-  val pmpaddr = 
+  lazy val pmpaddr = 
     for ( i <- 0 until 64 ) yield {
       val value = RegInit(0.U(64.W))
       val (enable, dnxt) = Reg_Exe_Port( value, "h3B0".U + i.U, exe_port )
@@ -872,75 +912,97 @@ trait CsrFiles {
   //Machine Counter/Timer
 
   //0xb00
-  val mcycle = {
+  /**
+    * Hardware Performance Monitor -- mcycle
+    *
+    * @return the number of clock cycles executed by the processor core
+    */
+  lazy val mcycle = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hB00".U, exe_port )
     when(enable) { value := dnxt }
+    .otherwise { value := value + 1.U }
     value 
   }
 
-  val minstret = {
+  /**
+    * Hardware Performance Monitor -- minstret
+    *
+    * @return the number of instructions the hart has retired
+    */
+  lazy val minstret = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hB02".U, exe_port )
     when(enable) { value := dnxt }
+    .elsewhen( is_retired ) { value := value + 1.U }
     value 
   }
 
-  val mhpmcounter = 
-  for ( i <- 0 until 32 ) yield {
-    if ( i == 0 || i == 1 || i == 2 ) { 0.U }
-    else {
-      val value = RegInit(0.U(64.W))
-      val (enable, dnxt) = Reg_Exe_Port( value, "hB00".U + i.U, exe_port )
-      when(enable) { value := dnxt }
-      value 
-    }
+  /**
+    * Hardware Performance Monitor -- mhpmcounter 3~31
+    *
+    * @return 
+    */
+  lazy val mhpmcounter = 
+    for ( i <- 0 until 32 ) yield {
+      if ( i == 0 || i == 1 || i == 2 ) { 0.U }
+      else {
+        val value = RegInit(0.U(64.W))
+        val (enable, dnxt) = Reg_Exe_Port( value, "hB00".U + i.U, exe_port )
+        when(enable) { value := dnxt }
+        value 
+      }
   }
 
 
 
   //Machine Counter Setup
-  val mcountinhibit = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h320".U, exe_port )
-    when(enable) { value := dnxt }
+  /**
+    * 
+    * when set, the counter will not increase, all hard-wire to 0 in this version
+    * 
+    */
+  lazy val mcountinhibit = {
+    val value = WireDefault(0.U(64.W))
+    // val (enable, dnxt) = Reg_Exe_Port( value, "h320".U, exe_port )
+    // when(enable) { value := dnxt }
     value 
   }
 
-  val mhpmevent = 
-  for ( i <- 0 until 32 ) yield {
-    if ( i == 0 || i == 1 || i == 2 ) { 0.U }
-    else {
-      val value = RegInit(0.U(64.W))
-      val (enable, dnxt) = Reg_Exe_Port( value, "hB20".U + i.U, exe_port )
-      when(enable) { value := dnxt }
-      value 
+  lazy val mhpmevent = 
+    for ( i <- 0 until 32 ) yield {
+      if ( i == 0 || i == 1 || i == 2 ) { 0.U }
+      else {
+        val value = RegInit(0.U(64.W))
+        val (enable, dnxt) = Reg_Exe_Port( value, "hB20".U + i.U, exe_port )
+        when(enable) { value := dnxt }
+        value 
     }
   }
   
   
   //Debug/Trace Register
-  val tselect = {
+  lazy val tselect = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7A0".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
-  val tdata1 = {
+  lazy val tdata1 = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7A1".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val tdata2 = {
+  lazy val tdata2 = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7A2".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val tdata3 = {
+  lazy val tdata3 = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7A3".U, exe_port )
     when(enable) { value := dnxt }
@@ -948,28 +1010,28 @@ trait CsrFiles {
   }
 
   //Debug Mode Register
-  val dcsr = {
+  lazy val dcsr = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7B0".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val dpc = {
+  lazy val dpc = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7B1".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val dscratch0 = {
+  lazy val dscratch0 = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7B2".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val dscratch1 = {
+  lazy val dscratch1 = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7B3".U, exe_port )
     when(enable) { value := dnxt }
@@ -983,7 +1045,6 @@ trait CsrFiles {
 
 
   def csr_read(addr: UInt) = {
-
     val pmpcfg_arr = {
       val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
       val reg_sel  = for ( i <- 0 until 16 ) yield { pmpcfg(i) }
@@ -1097,4 +1158,6 @@ trait CsrFiles {
 
     Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
   }
+
+
 } 
