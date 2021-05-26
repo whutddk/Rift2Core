@@ -229,11 +229,71 @@ trait CsrFiles {
 
 
   //supervisor trap setup
+  
+  /**
+    * Supervisor Status Register -- sstatus
+    * 
+    * @param SD (63) whether either fs or xs is dirty
+    * @param UXL (33,32) XLEN of U-mode, hard-wire to 2.U(64.bits)
+    * @param MXR (19) Make executable Readable. When 0, only loads form pages marked readable
+    * @param SUM (18) permit Supervisor User Memory access. When 0, S-mode accesses to page.U === 1 will fault.
+    * @param XS (16,15) aditional user-mode extension and associated state
+    * @param FS (14,13) float point statuw=s
+    * @param SPP (8) Previous Mode is U-mode or S-mode? When SRet, privilege mode update to SPP, SPP set to "U"
+    * @param UBE (6) endian of U-mode, when 0, is little-endian
+    * @param SPIE (5) When SRet, SPIE set to 1
+    * @param SIE (1) S-mode Interrupt Enable; When SRet, update to SPIE
+    * 
+    */  
   lazy val sstatus = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h100".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
+    val sd = RegInit(0.U(1.W))
+    val uxl = WireDefault(2.U(2.W))
+    val mxr = RegInit(0.U(1.W))
+    val sum = RegInit(0.U(1.W))
+    val xs = RegInit(0.U(2.W))
+    val fs = RegInit(0.U(2.W))
+    val spp = RegInit(0.U(1.W))
+    val ube = RegInit(0.U(1.W))
+    val spie = RegInit(0.U(1.W))
+    val sie = RegInit(0.U(1.W))
+
+    val value = Cat( sd, 0.U(29.W), uxl, 0.U(12.W), mxr, sum, 0.U(1.W), xs, fs, 0.U(4.W), spp, 0.U(1.W), ube, spie, 0.U(3.W), sie, 0.U(1.W) )
+
+    val (enable0, dnxt0) = Reg_Exe_Port( value, "h100".U, exe_port )
+    val (enable1, dnxt1) = Reg_Exe_Port( value, "h300".U, exe_port )
+
+    when( is_trap ) {
+      spp  := Mux( priv_lvl_qout === "b00".U, 0.U, 1.U )
+      spie := Mux( priv_lvl_dnxt === "b01".U, sie, spie )
+      sie  := Mux( priv_lvl_dnxt === "b01".U, 0.U, sie )
+    }
+    .elsewhen( is_sRet ) {
+      spie := 1.U
+      sie  := spie
+    }
+    .elsewhen(enable0) {
+      sd   := dnxt0(63)
+      mxr  := dnxt0(19)
+      sum  := dnxt0(18)
+      xs   := dnxt0(16,15)
+      fs   := dnxt0(14,13)
+      spp  := dnxt0(8)
+      ube  := dnxt0(6)
+      spie := dnxt0(5)
+      sie  := dnxt0(1)
+    }
+    .elsewhen(enable1) {
+      sd   := dnxt1(63)
+      mxr  := dnxt1(19)
+      sum  := dnxt1(18)
+      xs   := dnxt1(16,15)
+      fs   := dnxt1(14,13)
+      spp  := dnxt1(8)
+      ube  := dnxt1(6)
+      spie := dnxt1(5)
+      sie  := dnxt1(1)
+    }
+    value
   }
 
   lazy val sedeleg = {
@@ -555,27 +615,32 @@ trait CsrFiles {
     * @param MIE (3) M-mode Interrupt Enable; When MRet, update to MPIE
     * @param SIE (1) S-mode Interrupt Enable; When SRet, update to SPIE
     */
+
+
+
+
+
   lazy val mstatus = {
-    val sd = RegInit(0.U(1.W))
+    val sd = sstatus(63)
     val mbe = RegInit(0.U(1.W))
     val sbe = RegInit(0.U(1.W))
     val sxl = WireDefault(2.U(2.W))
-    val uxl = WireDefault(2.U(2.W))
+    val uxl = sstatus(33,32)
     val tsr = RegInit(0.U(1.W))
     val tw = RegInit(0.U(1.W))
     val tvm = RegInit(0.U(1.W))
-    val mxr = RegInit(0.U(1.W))
-    val sum = RegInit(0.U(1.W))
+    val mxr = sstatus(19)
+    val sum = sstatus(18)
     val mprv = RegInit(0.U(1.W))
-    val xs = RegInit(0.U(2.W))
-    val fs = RegInit(0.U(2.W))
+    val xs = sstatus(16,15)
+    val fs = sstatus(14,13)
     val mpp = RegInit(0.U(2.W))
-    val spp = RegInit(0.U(1.W))
+    val spp = sstatus(8)
     val mpie = RegInit(0.U(1.W))
-    val ube = RegInit(0.U(1.W))
-    val spie = RegInit(0.U(1.W))
+    val ube = sstatus(6)
+    val spie = sstatus(5)
     val mie = RegInit(0.U(1.W))
-    val sie = RegInit(0.U(1.W))
+    val sie = sstatus(1)
 
     val value = Cat( sd, 0.U(25.W), mbe, sbe, sxl, uxl, 0.U(9.W), tsr, tw, tvm, mxr, sum, mprv, xs, fs, mpp, 0.U(2.W), spp, mpie, ube, spie, 0.U(1.W), mie, 0.U(1.W), sie, 0.U(1.W) )
 
@@ -583,43 +648,28 @@ trait CsrFiles {
 
     when( is_trap ) {
       mpie := Mux( priv_lvl_dnxt === "b11".U, mie, mpie )
-      spie := Mux( priv_lvl_dnxt === "b01".U, sie, spie )
       mie  := Mux( priv_lvl_dnxt === "b11".U, 0.U, mie )
-      sie  := Mux( priv_lvl_dnxt === "b01".U, 0.U, sie )
-
       mpp  := Mux( priv_lvl_dnxt === "b11".U, priv_lvl_qout, mpp )
-      spp  := Mux( priv_lvl_dnxt === "b01".U, priv_lvl_qout, spp )
+
     }
     .elsewhen( is_xRet ) {
       mie  := Mux( is_mRet, mpie, mie )
-      sie  := Mux( is_sRet, spie, sie )
       mpie := Mux( is_mRet, 1.U, mpie )
-      spie := Mux( is_sRet, 1.U, spie )
-
       mpp  := Mux( is_mRet, "b00".U, mpp )
-      spp  := Mux( is_sRet, "b00".U, spp )
 
       mprv := Mux( (is_mRet & mpp =/= "b11".U) | is_sRet, 0.U, mprv )
     }
     .elsewhen(enable) {
-      sd   := dnxt(63)
+
       mbe  := dnxt(37)
       sbe  := dnxt(36)
       tsr  := dnxt(22)
       tw   := dnxt(21)
       tvm  := dnxt(20)
-      mxr  := dnxt(19)
-      sum  := dnxt(18)
       mprv := dnxt(17)
-      xs   := dnxt(16,15)
-      fs   := dnxt(14,13)
       mpp  := dnxt(12,11)
-      spp  := dnxt(8)
       mpie := dnxt(7)
-      ube  := dnxt(6)
-      spie := dnxt(5)
       mie  := dnxt(3)
-      sie  := dnxt(1)
     }
     value
   }
