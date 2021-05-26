@@ -24,21 +24,21 @@ abstract class CsrFiles_U extends CsrFiles_D {
     
 
   //user trap setup
-  // lazy val ustatus = {
+  // ustatus := {
   //   val value = RegInit(0.U(64.W))
   //   val (enable, dnxt) = Reg_Exe_Port( value, "h000".U, exe_port )
   //   when(enable) { value := dnxt }
   //   value 
   // }
 
-  // lazy val uie = {
+  // uie := {
   //   val value = RegInit(0.U(64.W))
   //   val (enable, dnxt) = Reg_Exe_Port( value, "h004".U, exe_port )
   //   when(enable) { value := dnxt }
   //   value 
   // }
 
-  // lazy val utvec = {
+  // utvec := {
   //   val value = RegInit(0.U(64.W))
   //   val (enable, dnxt) = Reg_Exe_Port( value, "h005".U, exe_port )
   //   when(enable) { value := dnxt }
@@ -46,49 +46,49 @@ abstract class CsrFiles_U extends CsrFiles_D {
   // }
 
   //user trap handling
-  // lazy val uscratch = {
+  // uscratch := {
   //   val value = RegInit(0.U(64.W))
   //   val (enable, dnxt) = Reg_Exe_Port( value, "h040".U, exe_port )
   //   when(enable) { value := dnxt }
   //   value 
   // }
 
-  // lazy val uepc = {
+  // uepc := {
   //   val value = RegInit(0.U(64.W))
   //   val (enable, dnxt) = Reg_Exe_Port( value, "h041".U, exe_port )
   //   when(enable) { value := dnxt }
   //   value 
   // }
 
-  // lazy val ucause = {
+  // ucause := {
   //   val value = RegInit(0.U(64.W))
   //   val (enable, dnxt) = Reg_Exe_Port( value, "h042".U, exe_port )
   //   when(enable) { value := dnxt }
   //   value 
   // }
 
-  // lazy val utval = {
+  // utval := {
   //   val value = RegInit(0.U(64.W))
   //   val (enable, dnxt) = Reg_Exe_Port( value, "h043".U, exe_port )
   //   when(enable) { value := dnxt }
   //   value 
   // }
 
-  // lazy val uip = {
+  // uip := {
   //   val value = RegInit(0.U(64.W))
   //   val (enable, dnxt) = Reg_Exe_Port( value, "h044".U, exe_port )
   //   when(enable) { value := dnxt }
   //   value 
   // }
 
-  // lazy val sedeleg = {
+  // sedeleg := {
   //   val value = RegInit(0.U(64.W))
   //   val (enable, dnxt) = Reg_Exe_Port( value, "h102".U, exe_port )
   //   when(enable) { value := dnxt }
   //   value 
   // }
 
-  // lazy val sideleg = {
+  // sideleg := {
   //   val value = RegInit(0.U(64.W))
   //   val (enable, dnxt) = Reg_Exe_Port( value, "h103".U, exe_port )
   //   when(enable) { value := dnxt }

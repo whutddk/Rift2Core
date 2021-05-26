@@ -26,27 +26,27 @@ abstract class CsrFiles_D extends CsrFiles_M {
 
     
   //Debug/Trace Register
-  lazy val tselect = {
+  tselect := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7A0".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
-  lazy val tdata1 = {
+  tdata1 := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7A1".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val tdata2 = {
+  tdata2 := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7A2".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val tdata3 = {
+  tdata3 := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7A3".U, exe_port )
     when(enable) { value := dnxt }
@@ -54,28 +54,28 @@ abstract class CsrFiles_D extends CsrFiles_M {
   }
 
   //Debug Mode Register
-  lazy val dcsr = {
+  dcsr := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7B0".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val dpc = {
+  dpc := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7B1".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val dscratch0 = {
+  dscratch0 := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7B2".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val dscratch1 = {
+  dscratch1 := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7B3".U, exe_port )
     when(enable) { value := dnxt }

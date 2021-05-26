@@ -45,6 +45,8 @@ class Rift2Chip extends Module {
     val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
     val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
     val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
+
+    val rtc_clock = Input(Bool())
   })
 
 
@@ -75,6 +77,8 @@ class Rift2Chip extends Module {
   l3cache.io.mem_chn_b  <> io.mem_chn_b
   l3cache.io.l3c_fence_req := i_rift2Core.io.l3c_fence_req
   
+
+  i_rift2Core.io.rtc_clock := io.rtc_clock
 }
 
 

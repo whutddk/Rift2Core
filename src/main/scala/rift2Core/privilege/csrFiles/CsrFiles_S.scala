@@ -41,55 +41,8 @@ abstract class CsrFiles_S extends CsrFiles_U {
     * @param SIE (1) S-mode Interrupt Enable; When SRet, update to SPIE
     * 
     */  
-  lazy val sstatus = {
-    val sd = RegInit(0.U(1.W))
-    val uxl = WireDefault(2.U(2.W))
-    val mxr = RegInit(0.U(1.W))
-    val sum = RegInit(0.U(1.W))
-    val xs = RegInit(0.U(2.W))
-    val fs = RegInit(0.U(2.W))
-    val spp = RegInit(0.U(1.W))
-    val ube = RegInit(0.U(1.W))
-    val spie = RegInit(0.U(1.W))
-    val sie = RegInit(0.U(1.W))
-
-    val value = Cat( sd, 0.U(29.W), uxl, 0.U(12.W), mxr, sum, 0.U(1.W), xs, fs, 0.U(4.W), spp, 0.U(1.W), ube, spie, 0.U(3.W), sie, 0.U(1.W) )
-
-    val (enable0, dnxt0) = Reg_Exe_Port( value, "h100".U, exe_port )
-    val (enable1, dnxt1) = Reg_Exe_Port( value, "h300".U, exe_port )
-
-    when( is_trap ) {
-      spp  := Mux( priv_lvl_qout === "b00".U, 0.U, 1.U )
-      spie := Mux( priv_lvl_dnxt === "b01".U, sie, spie )
-      sie  := Mux( priv_lvl_dnxt === "b01".U, 0.U, sie )
-    }
-    .elsewhen( is_sRet ) {
-      spie := 1.U
-      sie  := spie
-    }
-    .elsewhen(enable0) {
-      sd   := dnxt0(63)
-      mxr  := dnxt0(19)
-      sum  := dnxt0(18)
-      xs   := dnxt0(16,15)
-      fs   := dnxt0(14,13)
-      spp  := dnxt0(8)
-      ube  := dnxt0(6)
-      spie := dnxt0(5)
-      sie  := dnxt0(1)
-    }
-    .elsewhen(enable1) {
-      sd   := dnxt1(63)
-      mxr  := dnxt1(19)
-      sum  := dnxt1(18)
-      xs   := dnxt1(16,15)
-      fs   := dnxt1(14,13)
-      spp  := dnxt1(8)
-      ube  := dnxt1(6)
-      spie := dnxt1(5)
-      sie  := dnxt1(1)
-    }
-    value
+  sstatus := {
+    mstatus & Cat( "b1".U, 0.U(29.W), "b11".U, 0.U(12.W), "b11011110000101100010".U )
   }
 
 
@@ -100,7 +53,7 @@ abstract class CsrFiles_S extends CsrFiles_U {
   * 
   */
 
-  lazy val sie = {
+  sie := {
     val meie = RegInit(0.U(1.W))
     val seie = RegInit(0.U(1.W))
     val mtie = RegInit(0.U(1.W))
@@ -141,7 +94,7 @@ abstract class CsrFiles_S extends CsrFiles_U {
     * @param base (63,2) vector base address, either va or pa
     * @param mode (1,0) vector mode,hard-wire to 0 in this version
     */
-  lazy val stvec = {
+  stvec := {
     val base = RegInit(0.U(62.W))
     val mode = WireDefault(0.U(2.W))
     val value = Cat(base, 0.U(1.W), mode)
@@ -161,14 +114,14 @@ abstract class CsrFiles_S extends CsrFiles_U {
     * @param CY (0) Whether is allowed to access cycle in U-mode
     */
 
-  lazy val scounteren = {
+  scounteren := {
     val hpm = RegInit(0.U(32.W))
     val ir  = RegInit(0.U(1.W))
     val tm  = RegInit(0.U(1.W))
     val cy  = RegInit(0.U(1.W))
     val value = Cat( hpm(31,3), ir, tm, cy )
     val (enable, dnxt) = Reg_Exe_Port( value, "h106".U, exe_port )
-    when(enable) { value := dnxt }
+    when(enable) { hpm := dnxt; ir := dnxt(2); tm := dnxt(1); cy := dnxt(0) }
     value 
   }
 
@@ -179,7 +132,7 @@ abstract class CsrFiles_S extends CsrFiles_U {
     *
     * @note used to hold a pointer to the hart-local supervisor context while the hart is executing user code
     */
-  lazy val sscratch = {
+  sscratch := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h140".U, exe_port )
     when(enable) { value := dnxt }
@@ -193,11 +146,11 @@ abstract class CsrFiles_S extends CsrFiles_U {
     * hold virtual addresses: when a trap is taken into S-mode, sepc is written with the virtual address of
     * the instruction that was interrupted or that encountered the exception
     */
-  lazy val sepc = {
+  sepc := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h141".U, exe_port )
 
-    when( is_trap & priv_lvl_dnxt === "01".U ) {
+    when( is_trap & priv_lvl_dnxt === "b01".U ) {
       value := commit_pc
     }
     .elsewhen(enable) { value := dnxt }
@@ -211,7 +164,7 @@ abstract class CsrFiles_S extends CsrFiles_U {
     * @return
     */
 
-  lazy val scause = {
+  scause := {
 
     val interrupt = RegInit(0.U(1.W))
     val exception_code = RegInit(0.U(63.W))
@@ -264,7 +217,7 @@ abstract class CsrFiles_S extends CsrFiles_U {
     *
     * @return
     */
-  lazy val stval = {
+  stval := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h143".U, exe_port )
     when( priv_lvl_dnxt === "b01".U ) {
@@ -295,7 +248,7 @@ abstract class CsrFiles_S extends CsrFiles_U {
   * 
   */
 
-  lazy val sip = {
+  sip := {
     val meip = clint_ex_m
     val seip = clint_ex_s
     val mtip = clint_tm_m
@@ -319,7 +272,7 @@ abstract class CsrFiles_S extends CsrFiles_U {
     * @param PPN (43,0) physical page number (ppn) of the root page table
     */
 
-  lazy val satp = {
+  satp := {
     val mode = RegInit(0.U(4.W))
     val asid = RegInit(0.U(16.W))
     val ppn  = RegInit(0.U(44.W))

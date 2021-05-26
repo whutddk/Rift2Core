@@ -51,7 +51,7 @@ class Rift2Core extends Module {
     val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
     val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
 
-
+    val rtc_clock = Input(Bool())
   })
 
   lazy val pc_stage = Module(new Pc_gen)
@@ -171,7 +171,7 @@ class Rift2Core extends Module {
   i_regfiles.io.log <> dpt_stage.io.log_i
   i_regfiles.io.rn_ptr <> dpt_stage.io.rn_ptr_i
 
-
+  cmm_stage.io.rtc_clock := io.rtc_clock
   
 }
 

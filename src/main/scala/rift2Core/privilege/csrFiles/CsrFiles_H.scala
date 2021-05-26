@@ -23,42 +23,42 @@ import rift2Core.define._
 abstract class CsrFiles_H extends CsrFiles_S {
 
   //hypervisor trap setup
-  lazy val hstatus = {
+  hstatus := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h600".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val hedeleg = {
+  hedeleg := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h602".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val hideleg = {
+  hideleg := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h603".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  val hie = {
+  hie := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h604".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val hcounteren = {
+  hcounteren := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h606".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val hgeie = {
+  hgeie := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h607".U, exe_port )
     when(enable) { value := dnxt }
@@ -66,35 +66,35 @@ abstract class CsrFiles_H extends CsrFiles_S {
   }
 
   //hypervisor trap handling
-  lazy val htval = {
+  htval := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h643".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val hip = {
+  hip := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h644".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val hvip = {
+  hvip := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h645".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val htinst = {
+  htinst := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h64A".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val hgeip = {
+  hgeip := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hE12".U, exe_port )
     when(enable) { value := dnxt }
@@ -102,7 +102,7 @@ abstract class CsrFiles_H extends CsrFiles_S {
   }
 
   //hypervisor protection and translation
-  lazy val hgatp = {
+  hgatp := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h680".U, exe_port )
     when(enable) { value := dnxt }
@@ -110,7 +110,7 @@ abstract class CsrFiles_H extends CsrFiles_S {
   }
 
   //hypervisor counter timer virtualization registers
-  lazy val htimedelta = {
+  htimedelta := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h605".U, exe_port )
     when(enable) { value := dnxt }
@@ -118,63 +118,63 @@ abstract class CsrFiles_H extends CsrFiles_S {
   }
 
   //virtual supervisor registers
-  lazy val vsstatus = {
+  vsstatus := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h200".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val vsie = {
+  vsie := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h204".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val vstvec = {
+  vstvec := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h205".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val vsscratch = {
+  vsscratch := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h240".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val vsepc = {
+  vsepc := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h241".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val vscause = {
+  vscause := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h242".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val vstval = {
+  vstval := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h243".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val vsip = {
+  vsip := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h244".U, exe_port )
     when(enable) { value := dnxt }
     value 
   }
 
-  lazy val vsatp = {
+  vsatp := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h280".U, exe_port )
     when(enable) { value := dnxt }

@@ -30,6 +30,14 @@ import rift2Core.privilege.csrFiles._
 
 abstract class Privilege extends CsrFiles{
 
+  priv_lvl_dnxt :=
+    WireDefault(
+      Mux1H( Seq(
+        is_mRet -> mstatus(12,11),
+        is_sRet -> mstatus(8),
+        is_trap -> "b11".U
+      ))
+    )
 
 
 
