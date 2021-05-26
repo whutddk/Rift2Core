@@ -21,7 +21,7 @@
    limitations under the License.
 */
 
-package rift2Core.backend
+package rift2Core.privilege
 
 
 import chisel3._
@@ -112,65 +112,73 @@ trait CsrFiles {
 
   val is_retired: Bool
 
+  val clint_sw_m: Bool
+  val clint_sw_s: Bool
+  val clint_tm_m: Bool
+  val clint_tm_s: Bool
+  val clint_ex_m: Bool
+  val clint_ex_s: Bool
+
+  val rtc_clock: Bool
 
 
   //user trap setup
-  lazy val ustatus = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h000".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // lazy val ustatus = {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h000".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
-  lazy val uie = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h004".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // lazy val uie = {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h004".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
-  lazy val utvec = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h005".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // lazy val utvec = {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h005".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
   //user trap handling
-  lazy val uscratch = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h040".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // lazy val uscratch = {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h040".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
-  lazy val uepc = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h041".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // lazy val uepc = {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h041".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
-  lazy val ucause = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h042".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // lazy val ucause = {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h042".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
-  lazy val utval = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h043".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // lazy val utval = {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h043".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
-  lazy val uip = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h044".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // lazy val uip = {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h044".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
   //user floating point csrs
   lazy val fflags = {
@@ -195,24 +203,46 @@ trait CsrFiles {
   }
 
   //user conter timers
+  /**
+    * Hardware Performance Monitor -- cycle (read-only)
+    * @return a count of the number of clock cycles executed by the ***processor core*** on which the hart is running from an arbitrary start time in the past
+    *
+    */
   lazy val cycle = {
+
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hC00".U, exe_port )
-    when(enable) { value := dnxt }
+    value := value + 1.U
     value 
   }
 
+  /**
+    * Hardware Performance Monitor -- time (read-only)
+    * @return a count of the number of ***rtc*** cycles executed by the ***processor core*** on which the hart is running from an arbitrary start time in the past
+    *
+    */
   lazy val time = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hC01".U, exe_port )
-    when(enable) { value := dnxt }
+    val rtc_toggle = {
+      val rtc_0 = ShiftRegister(rtc_clock, 3)
+      val rtc_1 = ShiftRegister(rtc_clock, 4)
+      rtc_0 ^ rtc_1
+    }
+    when(rtc_toggle) { value := value + 1.U }
     value 
   }
   
+  /**
+    * Hardware Performance Monitor -- instret (read-only)
+    * 
+    * @return the number of instructions the hart has retired
+    */
+
   lazy val instret = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hC02".U, exe_port )
-    when(enable) { value := dnxt }
+    when( is_retired ) { value := value + 1.U }
     value 
   }
 
@@ -296,36 +326,93 @@ trait CsrFiles {
     value
   }
 
-  lazy val sedeleg = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h102".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // lazy val sedeleg = {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h102".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
-  lazy val sideleg = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h103".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // lazy val sideleg = {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h103".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+/**
+  * Supervisor Interrupt Register -- sie (enable)
+  * @note read-only, meie(11), mtie(7), msie(3) is visible and maskable when mideleg(x) set
+  * 
+  */
 
   lazy val sie = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h104".U, exe_port )
-    when(enable) { value := dnxt }
+    val meie = RegInit(0.U(1.W))
+    val seie = RegInit(0.U(1.W))
+    val mtie = RegInit(0.U(1.W))
+    val stie = RegInit(0.U(1.W))
+    val msie = RegInit(0.U(1.W))
+    val ssie = RegInit(0.U(1.W))
+    val value =
+      Cat(
+        0.U(4.W), meie & mideleg(11), 0.U(1.W), seie,
+        0.U(1.W), mtie & mideleg(7),  0.U(1.W), stie,
+        0.U(1.W), msie & mideleg(3),  0.U(1.W), ssie, 0.U(1.W) )
+
+    val (enable0, dnxt0) = Reg_Exe_Port( value, "h104".U, exe_port )
+    val (enable1, dnxt1) = Reg_Exe_Port( value, "h304".U, exe_port )
+
+    when(enable0) {
+      meie := dnxt0(11)
+      seie := dnxt0(9)
+      mtie := dnxt0(7)
+      stie := dnxt0(5)
+      msie := dnxt0(3)
+      ssie := dnxt0(1)
+
+    }
+    .elsewhen(enable1) {
+      seie := dnxt1(9)
+      stie := dnxt1(5)
+      ssie := dnxt1(1)
+    }
+    value
+  }
+
+
+  /**
+    * Supervisor Trap Vector Base Address Register --stvec
+    *
+    * @note holdstrap vector configuration
+    * @param base (63,2) vector base address, either va or pa
+    * @param mode (1,0) vector mode,hard-wire to 0 in this version
+    */
+  lazy val stvec = {
+    val base = RegInit(0.U(62.W))
+    val mode = WireDefault(0.U(2.W))
+    val value = Cat(base, 0.U(1.W), mode)
+    val (enable, dnxt) = Reg_Exe_Port( value, "h105".U, exe_port )
+
+    when(enable) { base := dnxt(63,2) }
     value 
   }
 
-  lazy val stvec = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h105".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  /**
+    * Supervisor Timers and Performance Counters -- Counter-Enable Register -- scounteren
+    * 
+    * @note controls the availability of the hardware performance monitoring counters to U-mode
+    * @param HPM (31,3) Whether is allowed to access hpmcounter(x) in U-mode
+    * @param IR (2) Whether is allowed to access instret in U-mode
+    * @param TM (1) Whether is allowed to access time in U-mode
+    * @param CY (0) Whether is allowed to access cycle in U-mode
+    */
 
   lazy val scounteren = {
-    val value = RegInit(0.U(64.W))
+    val hpm = RegInit(0.U(32.W))
+    val ir  = RegInit(0.U(1.W))
+    val tm  = RegInit(0.U(1.W))
+    val cy  = RegInit(0.U(1.W))
+    val value = Cat( hpm(31,3), ir, tm, cy )
     val (enable, dnxt) = Reg_Exe_Port( value, "h106".U, exe_port )
     when(enable) { value := dnxt }
     value 
@@ -333,6 +420,11 @@ trait CsrFiles {
 
   //supervisor trap handling
 
+  /**
+    * Supervisor Scratch Register -- sscratch
+    *
+    * @note used to hold a pointer to the hart-local supervisor context while the hart is executing user code
+    */
   lazy val sscratch = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h140".U, exe_port )
@@ -340,39 +432,146 @@ trait CsrFiles {
     value 
   }
 
+
+  /**
+    * Supervisor Exception Program Counter -- sepc
+    * 
+    * hold virtual addresses: when a trap is taken into S-mode, sepc is written with the virtual address of
+    * the instruction that was interrupted or that encountered the exception
+    */
   lazy val sepc = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h141".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
+
+    when( is_trap & priv_lvl_dnxt === "01".U ) {
+      value := commit_pc
+    }
+    .elsewhen(enable) { value := dnxt }
+    value & ~(1.U(64.W))
   }
+
+  /**
+    * Supervisor Cause Register -- scause
+    * 
+    * when a trap is taken into S-mode, scause is written with a code indicating the event that cause the trap
+    * @return
+    */
 
   lazy val scause = {
-    val value = RegInit(0.U(64.W))
+
+    val interrupt = RegInit(0.U(1.W))
+    val exception_code = RegInit(0.U(63.W))
+    val value = Cat(interrupt, exception_code)
     val (enable, dnxt) = Reg_Exe_Port( value, "h142".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
+
+    when( (is_m_interrupt | is_s_interrupt) & priv_lvl_dnxt === "b01".U ) {
+      interrupt := 1.U
+      exception_code := Mux1H( Seq(
+        is_ssi -> 1.U,
+        is_msi -> 3.U,
+        is_sti -> 5.U,
+        is_mti -> 7.U,
+        is_sei -> 9.U,
+        is_mei -> 11.U
+      ))
+    }
+    .elsewhen( is_exception & priv_lvl_dnxt === "b01".U ) {
+      interrupt := 0.U
+      exception_code := Mux1H( Seq(
+        is_instr_accessFault    -> 1.U,
+        is_instr_illeage        -> 2.U,
+        is_breakPoint           -> 3.U,
+        is_load_misAlign        -> 4.U,
+        is_load_accessFault     -> 5.U,
+        is_storeAMO_misAlign    -> 6.U,
+        is_storeAMO_accessFault -> 7.U,
+        is_u_ecall              -> 8.U,
+        is_s_ecall              -> 9.U,
+        is_m_ecall              -> 11.U,
+        is_instr_pageFault      -> 12.U,
+        is_load_pageFault       -> 13.U,
+        is_storeAMO_pageFault   -> 15.U
+      ))
+    }
+    .elsewhen(enable) {
+      interrupt := dnxt(63)
+      exception_code := dnxt(62,0)
+    }
+
+    value
   }
 
+
+
+  /**
+    * Supervisor Trap Value Register -- stval
+    * 
+    * when a trap is taken into S-mode, stval is written with exception-specific information to assist softwave in handling the trap
+    *
+    * @return
+    */
   lazy val stval = {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h143".U, exe_port )
-    when(enable) { value := dnxt }
+    when( priv_lvl_dnxt === "b01".U ) {
+      value := Mux1H( Seq(
+        is_instr_accessFault    -> commit_pc,
+        is_instr_illeage        -> ill_instr,
+        is_breakPoint           -> commit_pc,
+        is_load_misAlign        -> commit_pc,
+        is_load_accessFault     -> commit_pc,
+        is_storeAMO_misAlign    -> commit_pc,
+        is_storeAMO_accessFault -> commit_pc,
+        is_instr_pageFault      -> commit_pc,
+        is_load_pageFault       -> commit_pc,
+        is_storeAMO_pageFault   -> commit_pc       
+      ))
+    }
+    .elsewhen(enable) { value := dnxt }
+
     value 
   }
+
+
+
+
+/**
+  * Supervisor Interrupt Register -- sip
+  * @note read-only, meip(11), mtip(7), msip(3) is visible when mideleg(x) set
+  * 
+  */
 
   lazy val sip = {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h144".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
+    val meip = clint_ex_m
+    val seip = clint_ex_s
+    val mtip = clint_tm_m
+    val stip = clint_tm_s
+    val msip = clint_sw_m
+    val ssip = clint_sw_s
+    val value =
+      Cat(
+        0.U(4.W), meip & mideleg(11), 0.U(1.W), seip,
+        0.U(1.W), mtip & mideleg(7),  0.U(1.W), stip,
+        0.U(1.W), msip & mideleg(3),  0.U(1.W), ssip, 0.U(1.W) )
+
+    value
   }
 
-  //supervisor protection and translation
+  /**
+    * Supervisor Address protection and translation Register -- satp
+    *
+    * @param mode (63,60) select the current address-translation scheme  
+    * @param asid (59,44) address space identifier, which facilitates address-translation fences on a per-address-space basis
+    * @param PPN (43,0) physical page number (ppn) of the root page table
+    */
+
   lazy val satp = {
-    val value = RegInit(0.U(64.W))
+    val mode = RegInit(0.U(4.W))
+    val asid = RegInit(0.U(16.W))
+    val ppn  = RegInit(0.U(44.W))
+    val value = Cat( mode & "b1000".U, asid, ppn )
     val (enable, dnxt) = Reg_Exe_Port( value, "h180".U, exe_port )
-    when(enable) { value := dnxt }
+    when(enable) { mode := dnxt(63,60); asid := dnxt(59,44); ppn := dnxt(43,0) }
     value 
   }
 
@@ -732,22 +931,19 @@ trait CsrFiles {
     */
   lazy val mie = {
     val meie = RegInit(0.U(1.W))
-    val seie = RegInit(0.U(1.W))
+    val seie = sie(9)
     val mtie = RegInit(0.U(1.W))
-    val stie = RegInit(0.U(1.W))
+    val stie = sie(5)
     val msie = RegInit(0.U(1.W))
-    val ssie = RegInit(0.U(1.W))
+    val ssie = sie(1)
     val value = Cat( 0.U(4.W), meie, 0.U(1.W), seie, 0.U(1.W), mtie, 0.U(1.W), stie, 0.U(1.W), msie, 0.U(1.W),ssie, 0.U(1.W) )
 
     val (enable, dnxt) = Reg_Exe_Port( value, "h304".U, exe_port )
 
     when(enable) {
       meie := dnxt(11)
-      seie := dnxt(9)
       mtie := dnxt(7)
-      stie := dnxt(5)
       msie := dnxt(3)
-      ssie := dnxt(1)
     }
     value
   }
@@ -835,14 +1031,14 @@ trait CsrFiles {
     val value = Cat(interrupt, exception_code)
     val (enable, dnxt) = Reg_Exe_Port( value, "h342".U, exe_port )
 
-    when( (is_m_interrupt | is_s_interrupt) & priv_lvl_dnxt === "b11".U ) {
+    when( (is_m_interrupt) & priv_lvl_dnxt === "b11".U ) {
       interrupt := 1.U
       exception_code := Mux1H( Seq(
-        is_ssi -> 1.U,
+        // is_ssi -> 1.U,
         is_msi -> 3.U,
-        is_sti -> 5.U,
+        // is_sti -> 5.U,
         is_mti -> 7.U,
-        is_sei -> 9.U,
+        // is_sei -> 9.U,
         is_mei -> 11.U
       ))
     }
@@ -914,13 +1110,17 @@ trait CsrFiles {
     * @param ssip (1)
     */
   lazy val mip = {
-    val meip = Wire(UInt(1.W))
-    val seip = Wire(UInt(1.W))
-    val mtip = Wire(UInt(1.W))
-    val stip = Wire(UInt(1.W))
-    val msip = Wire(UInt(1.W))
-    val ssip = Wire(UInt(1.W))
-    val value = Cat( 0.U(4.W), meip, 0.U(1.W), seip, 0.U(1.W), mtip, 0.U(1.W), stip, 0.U(1.W), msip, 0.U(1.W),ssip, 0.U(1.W) )
+    val meip = clint_ex_m
+    val seip = clint_ex_s
+    val mtip = clint_tm_m
+    val stip = clint_tm_s
+    val msip = clint_sw_m
+    val ssip = clint_sw_s
+    val value =
+      Cat(
+        0.U(4.W), meip, 0.U(1.W), seip,
+        0.U(1.W), mtip, 0.U(1.W), stip,
+        0.U(1.W), msip, 0.U(1.W), ssip, 0.U(1.W) )
 
     value
   }
@@ -1126,14 +1326,14 @@ trait CsrFiles {
     }
 
     val normal_arr = Array(
-          ( addr === "h000".U ) -> ustatus,
-          ( addr === "h004".U ) -> uie,
-          ( addr === "h005".U ) -> utvec,
-          ( addr === "h040".U ) -> uscratch,
-          ( addr === "h041".U ) -> uepc,
-          ( addr === "h042".U ) -> ucause,
-          ( addr === "h043".U ) -> utval,
-          ( addr === "h044".U ) -> uip,
+          // ( addr === "h000".U ) -> ustatus,
+          // ( addr === "h004".U ) -> uie,
+          // ( addr === "h005".U ) -> utvec,
+          // ( addr === "h040".U ) -> uscratch,
+          // ( addr === "h041".U ) -> uepc,
+          // ( addr === "h042".U ) -> ucause,
+          // ( addr === "h043".U ) -> utval,
+          // ( addr === "h044".U ) -> uip,
           ( addr === "h001".U ) -> fflags,
           ( addr === "h002".U ) -> frm,
           ( addr === "h003".U ) -> fcsr,
@@ -1141,8 +1341,8 @@ trait CsrFiles {
           ( addr === "hC01".U ) -> time,
           ( addr === "hC02".U ) -> instret,
           ( addr === "h100".U ) -> sstatus,
-          ( addr === "h102".U ) -> sedeleg,
-          ( addr === "h103".U ) -> sideleg,
+          // ( addr === "h102".U ) -> sedeleg,
+          // ( addr === "h103".U ) -> sideleg,
           ( addr === "h104".U ) -> sie,
           ( addr === "h105".U ) -> stvec,
           ( addr === "h106".U ) -> scounteren,
