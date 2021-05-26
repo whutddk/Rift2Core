@@ -45,7 +45,7 @@ object Reg_Exe_Port {
   }
 }
 
-abstract class CsrFiles_port {
+abstract class CsrFiles_port extends Module{
   val exe_port: Exe_Port
   val is_trap: Bool
   val is_mRet: Bool
@@ -55,6 +55,7 @@ abstract class CsrFiles_port {
 
   val commit_pc: UInt
   val ill_instr: UInt
+  val ill_vaddr: UInt
 
 
   val is_instr_accessFault:    Bool
@@ -64,31 +65,13 @@ abstract class CsrFiles_port {
   val is_load_accessFault:     Bool
   val is_storeAMO_misAlign:    Bool
   val is_storeAMO_accessFault: Bool
-  val is_u_ecall:              Bool
-  val is_s_ecall:              Bool
-  val is_m_ecall:              Bool
+  val is_ecall:                Bool
   val is_instr_pageFault:      Bool
   val is_load_pageFault:       Bool
   val is_storeAMO_pageFault:   Bool
 
-  lazy val is_exception =
-    is_instr_accessFault    |
-    is_instr_illeage        |
-    is_breakPoint           |
-    is_load_misAlign        |
-    is_load_accessFault     |
-    is_storeAMO_misAlign    |
-    is_storeAMO_accessFault |
-    is_u_ecall              |
-    is_s_ecall              |
-    is_m_ecall              |
-    is_instr_pageFault      |
-    is_load_pageFault       |
-    is_storeAMO_pageFault
 
-
-
-  val is_retired: Bool
+  val retired_cnt: UInt
 
   val clint_sw_m: Bool
   val clint_sw_s: Bool

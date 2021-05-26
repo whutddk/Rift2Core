@@ -34,9 +34,30 @@ abstract class CsrFiles_M extends CsrFiles_port {
   lazy val is_mti = mip(7)  & mie(7)  & mstatus(3)
   lazy val is_sei = mip(9)  & mie(9)  & mstatus(1)
   lazy val is_mei = mip(11) & mie(11) & mstatus(3)
-  
-  lazy val is_m_interrupt = is_msi | is_mti | is_mei
-  lazy val is_s_interrupt = is_ssi | is_sti | is_sei  
+
+  lazy val is_u_ecall = is_ecall & priv_lvl_qout === "b00".U
+  lazy val is_s_ecall = is_ecall & priv_lvl_qout === "b01".U
+  lazy val is_m_ecall = is_ecall & priv_lvl_qout === "b11".U
+
+  lazy val is_exception =
+    is_instr_accessFault    |
+    is_instr_illeage        |
+    is_breakPoint           |
+    is_load_misAlign        |
+    is_load_accessFault     |
+    is_storeAMO_misAlign    |
+    is_storeAMO_accessFault |
+    is_u_ecall              |
+    is_s_ecall              |
+    is_m_ecall              |
+    is_instr_pageFault      |
+    is_load_pageFault       |
+    is_storeAMO_pageFault
+
+
+  val is_m_interrupt = is_msi | is_mti | is_mei
+  val is_s_interrupt = is_ssi | is_sti | is_sei
+  val is_interrupt = is_m_interrupt | is_s_interrupt
 
   lazy val priv_lvl_dnxt = Wire(UInt(2.W))
   lazy val priv_lvl_qout = RegNext(priv_lvl_dnxt, "b11".U(2.W))
@@ -112,8 +133,7 @@ abstract class CsrFiles_M extends CsrFiles_port {
 
   lazy val instret = {
     val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "hC02".U, exe_port )
-    when( is_retired ) { value := value + 1.U }
+    value := value + retired_cnt
     value 
   }
 
@@ -450,16 +470,16 @@ abstract class CsrFiles_M extends CsrFiles_port {
     val (enable, dnxt) = Reg_Exe_Port( value, "h343".U, exe_port )
     when( priv_lvl_dnxt === "b11".U ) {
       value := Mux1H( Seq(
-        is_instr_accessFault    -> commit_pc,
+        is_instr_accessFault    -> ill_vaddr,
         is_instr_illeage        -> ill_instr,
-        is_breakPoint           -> commit_pc,
-        is_load_misAlign        -> commit_pc,
-        is_load_accessFault     -> commit_pc,
-        is_storeAMO_misAlign    -> commit_pc,
-        is_storeAMO_accessFault -> commit_pc,
-        is_instr_pageFault      -> commit_pc,
-        is_load_pageFault       -> commit_pc,
-        is_storeAMO_pageFault   -> commit_pc       
+        is_breakPoint           -> ill_vaddr,
+        is_load_misAlign        -> ill_vaddr,
+        is_load_accessFault     -> ill_vaddr,
+        is_storeAMO_misAlign    -> ill_vaddr,
+        is_storeAMO_accessFault -> ill_vaddr,
+        is_instr_pageFault      -> ill_vaddr,
+        is_load_pageFault       -> ill_vaddr,
+        is_storeAMO_pageFault   -> ill_vaddr       
       ))
     }
     .elsewhen(enable) { value := dnxt }
@@ -555,7 +575,7 @@ abstract class CsrFiles_M extends CsrFiles_port {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "hB02".U, exe_port )
     when(enable) { value := dnxt }
-    .elsewhen( is_retired ) { value := value + 1.U }
+    .otherwise { value := value + retired_cnt }
     value 
   }
 

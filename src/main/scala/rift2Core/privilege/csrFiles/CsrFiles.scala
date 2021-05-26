@@ -25,12 +25,6 @@ import rift2Core.privilege._
 
 
 
-
-
-
-
-
-
 abstract class CsrFiles extends CsrFiles_H{
 
 
