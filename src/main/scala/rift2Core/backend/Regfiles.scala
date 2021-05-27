@@ -58,7 +58,7 @@ class Regfiles extends Module{
 
     val files = Vec(64, Output(UInt(64.W)))
     val log = Vec(64, Output(UInt(2.W)))
-    val rn_ptr = Vec(32, Output(UInt(6.W))) 
+    val rn_ptr = Vec(32, Output(UInt(6.W)))
 
 
     val flush = Input(Bool())
@@ -149,7 +149,6 @@ class Regfiles extends Module{
         (is_rn(j) & i.U === rn_raw(j)) -> rn_phy(j)
         
       ))
-
     }
   }
 
