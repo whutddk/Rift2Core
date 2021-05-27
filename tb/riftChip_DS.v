@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-13 14:35:23
+* @Last Modified time: 2021-06-01 14:18:52
 */
 
 
@@ -37,6 +37,7 @@ module rift2chip_tb (
 );
 
 	reg CLK;
+  reg rtc_clock;
 	reg RSTn;
 
 
@@ -200,7 +201,9 @@ Rift2Chip s_Rift2Chip(
 	.io_sys_chn_b_valid      (io_sys_chn_b_valid),
 	.io_sys_chn_b_bits_id    (1'b0),
 	.io_sys_chn_b_bits_rsp   (io_sys_chn_b_bits_rsp),
-	.io_sys_chn_b_bits_user  (1'b0)
+	.io_sys_chn_b_bits_user  (1'b0),
+
+	.io_rtc_clock            (rtc_clock)
 );
 
 
@@ -306,7 +309,12 @@ initial begin
 	end
 end
 
-
+initial begin
+	forever
+	begin 
+		 #610 rtc_clock <= ~rtc_clock;
+	end
+end
 
 initial
 begin
@@ -317,7 +325,70 @@ end
 wire isEcall = 
 	( s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_0_bits_privil_ecall & s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_0_valid ) | 
 	( s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_1_bits_privil_ecall & s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_1_valid & s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_0_ready );
-wire [63:0] x3 = (s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 2'd0 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_3_0 : s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 2'd1 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_3_1 : s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 2'd2 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_3_2 : s_Rift2Chip.i_rift2Core.i_regfiles.files_3_3);
+wire [63:0] x3 = 	
+  s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd0  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_0  :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd1  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_1  :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd2  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_2  :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd3  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_3  :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd4  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_4  :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd5  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_5  :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd6  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_6  :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd7  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_7  :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd8  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_8  :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd9  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_9  :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd10 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_10 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd11 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_11 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd12 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_12 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd13 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_13 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd14 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_14 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd15 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_15 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd16 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_16 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd17 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_17 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd18 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_18 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd19 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_19 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd20 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_20 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd21 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_21 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd22 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_22 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd23 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_23 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd24 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_24 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd25 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_25 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd26 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_26 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd27 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_27 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd28 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_28 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd29 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_29 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd30 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_30 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd31 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_31 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd32 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_32 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd33 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_33 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd34 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_34 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd35 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_35 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd36 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_36 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd37 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_37 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd38 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_38 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd39 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_39 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd40 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_40 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd41 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_41 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd42 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_42 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd43 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_43 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd44 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_44 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd45 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_45 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd46 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_46 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd47 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_47 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd48 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_48 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd49 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_49 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd50 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_50 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd51 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_51 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd52 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_52 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd53 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_53 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd54 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_54 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd55 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_55 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd56 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_56 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd57 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_57 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd58 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_58 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd59 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_59 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd60 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_60 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd61 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_61 :
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd62 ? s_Rift2Chip.i_rift2Core.i_regfiles.files_62 : s_Rift2Chip.i_rift2Core.i_regfiles.files_63;
 
 
 reg sim_end = 0;
@@ -353,7 +424,7 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	$readmemh("./ci/dhrystone.riscv.verilog", mem);
+	$readmemh("./ci/dhrystone5.riscv.verilog", mem);
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
 		for ( by = 0; by < 16; by = by + 1 ) begin

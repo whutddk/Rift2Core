@@ -198,8 +198,7 @@ class Lsu extends Module {
   def load_word(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(32, Mux(is_usi, 0.U, rdata(31)) ), rdata(31,0) )
 
 
-  lsu_exe_iwb_fifo.io.enq.bits.rd0_raw := io.lsu_iss_exe.bits.param.rd0_raw
-  lsu_exe_iwb_fifo.io.enq.bits.rd0_idx := io.lsu_iss_exe.bits.param.rd0_idx
+  lsu_exe_iwb_fifo.io.enq.bits.rd0_phy := io.lsu_iss_exe.bits.param.rd0_phy
 
 
   io.lsu_iss_exe.ready := stateReg =/= Dl1_state.cfree & stateDnxt === Dl1_state.cfree & ~trans_kill
