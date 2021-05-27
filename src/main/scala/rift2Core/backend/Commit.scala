@@ -65,18 +65,18 @@ class Commit extends Privilege with Superscalar {
 
 
   val rd0_raw = VecInit( io.rod_i(0).bits.rd0_raw, io.rod_i(1).bits.rd0_raw )
-  val rd0_idx = VecInit( io.rod_i(0).bits.rd0_idx, io.rod_i(1).bits.rd0_idx )
+  val rd0_phy = VecInit( io.rod_i(0).bits.rd0_phy, io.rod_i(1).bits.rd0_phy )
 
 
 
   val is_wb_v =
     VecInit(
-      (io.log(rd0_raw(0))(rd0_idx(0)) === 3.U) & (io.rod_i(0).valid),
-      (io.log(rd0_raw(1))(rd0_idx(1)) === 3.U) & (io.rod_i(1).valid)
+      (io.log(rd0_raw(0))(rd0_phy(0)) === 3.U) & (io.rod_i(0).valid),
+      (io.log(rd0_raw(1))(rd0_phy(1)) === 3.U) & (io.rod_i(1).valid)
     )
 
   //bru commit ilp
-  io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (io.log(rd0_raw(0))(rd0_idx(0)) =/= 3.U)
+  io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (io.log(rd0_raw(0))(rd0_phy(0)) =/= 3.U)
 
   val is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | io.rod_i(0).bits.is_su | ~is_wb_v(0) | (io.rod_i(0).bits.rd0_raw === io.rod_i(1).bits.rd0_raw)
   val is_2nd_solo = io.is_commit_abort(1) | io.rod_i(1).bits.is_csr | io.rod_i(1).bits.is_su
@@ -180,8 +180,8 @@ class Commit extends Privilege with Superscalar {
 
   for ( i <- 0 until 32; j <- 0 until 4 ) yield {
     io.cm_op(i)(j) := 
-      (is_commit_comfirm(0) & rd0_raw(0) === i.U & rd0_idx(0) === j.U) | 
-      (is_commit_comfirm(1) & rd0_raw(1) === i.U & rd0_idx(1) === j.U)
+      (is_commit_comfirm(0) & rd0_raw(0) === i.U & rd0_phy(0) === j.U) | 
+      (is_commit_comfirm(1) & rd0_raw(1) === i.U & rd0_phy(1) === j.U)
   }
 
   io.rod_i(0).ready := is_commit_comfirm(0)

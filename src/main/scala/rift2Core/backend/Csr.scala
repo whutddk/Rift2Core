@@ -64,7 +64,6 @@ class Csr extends Module {
   def dat = io.csr_iss_exe.bits.param.op1
   def addr = io.csr_iss_exe.bits.param.op2
 
-  def dontRead = (io.csr_iss_exe.bits.param.rd0_raw === 0.U) & rw
   def dontWrite = (dat === 0.U) & ( rs | rc )
 
   csr_op_fifo.io.enq.bits.addr := addr
@@ -80,8 +79,8 @@ class Csr extends Module {
 
   csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready
   csr_exe_iwb_fifo.io.enq.bits.res := io.csr_data
-  csr_exe_iwb_fifo.io.enq.bits.rd0_raw := io.csr_iss_exe.bits.param.rd0_raw
-  csr_exe_iwb_fifo.io.enq.bits.rd0_idx := io.csr_iss_exe.bits.param.rd0_idx
+
+  csr_exe_iwb_fifo.io.enq.bits.rd0_phy := io.csr_iss_exe.bits.param.rd0_phy
 
 }
 
