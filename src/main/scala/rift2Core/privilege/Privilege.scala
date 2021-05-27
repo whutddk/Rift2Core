@@ -39,7 +39,7 @@ abstract class Privilege extends CsrFiles{
       ))
     )
 
-
+  priv_lvl_enable := is_trap | is_mRet | is_trap
 
 }
 

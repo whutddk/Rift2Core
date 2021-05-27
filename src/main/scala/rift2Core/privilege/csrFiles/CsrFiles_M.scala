@@ -298,7 +298,16 @@ abstract class CsrFiles_M extends CsrFiles_port {
     */
   misa := {
     val mxl = RegInit(2.U(2.W))
-    val extensions = RegInit("b00000101000011000100000100".U(26.W))
+    val extensions = {
+      if (false) {
+        RegInit("b00000101000001000100000100".U(26.W))  
+      }
+      else {
+        RegInit("b00000000000001000100000100".U(26.W))
+      }
+    
+    }
+
     val value = Cat(mxl, 0.U(36.W), extensions)
 
     val (enable, dnxt) = Reg_Exe_Port( value, "h301".U, exe_port )
