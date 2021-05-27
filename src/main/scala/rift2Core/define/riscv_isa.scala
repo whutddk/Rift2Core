@@ -600,11 +600,11 @@ class Info_cmm_pc extends Bundle {
 
 
 
-class Info_wb_reg extends Bundle {
-  val dnxt = Vec(32, Vec(4, UInt(64.W)))
-  val enable = Vec(32, Vec(4, Bool()))
+// class Info_wb_reg extends Bundle {
+//   val dnxt = Vec(64, UInt(64.W))
+//   val enable = Vec(64, Bool())
 
-}
+// }
 
 class Info_cmm_lsu extends Bundle {
   val is_fence_commit = Bool()
