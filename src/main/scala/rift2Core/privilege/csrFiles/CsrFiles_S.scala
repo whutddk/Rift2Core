@@ -97,7 +97,7 @@ abstract class CsrFiles_S extends CsrFiles_U {
   stvec := {
     val base = RegInit(0.U(62.W))
     val mode = WireDefault(0.U(2.W))
-    val value = Cat(base, 0.U(1.W), mode)
+    val value = Cat(base, mode)
     val (enable, dnxt) = Reg_Exe_Port( value, "h105".U, exe_port )
 
     when(enable) { base := dnxt(63,2) }

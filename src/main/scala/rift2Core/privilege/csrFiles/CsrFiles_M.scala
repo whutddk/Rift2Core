@@ -384,7 +384,7 @@ abstract class CsrFiles_M extends CsrFiles_port {
     val mode = WireDefault(0.U(2.W))
     val value = Cat( base, mode )
     val (enable, dnxt) = Reg_Exe_Port( value, "h305".U, exe_port )
-    when(enable) { base := dnxt(63,2) & ~("b11".U(62.W)) }
+    when(enable) { base := dnxt(63,2) }
     value
   }
 
