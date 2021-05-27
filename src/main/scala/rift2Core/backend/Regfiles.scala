@@ -51,9 +51,9 @@ class Regfiles extends Module{
 
 
 
-    val rn_op = Vec(2, ValidIO( new Info_rename_op ))
-    val wb_op = Vec(2, ValidIO( new Info_writeback_op))
-    val cm_op = Vec(2, ValidIO( new Info_commit_op ))
+    val rn_op = Vec(2, Flipped(ValidIO( new Info_rename_op )))
+    val wb_op = Vec(5, Flipped(ValidIO( new Info_writeback_op)))
+    val cm_op = Vec(2, Flipped(ValidIO( new Info_commit_op )))
 
 
     val files = Vec(64, Output(UInt(64.W)))
@@ -103,7 +103,7 @@ class Regfiles extends Module{
   io.log := regLog
   io.rn_ptr := rename_ptr
 
-  for ( i <- 0 until 2 ) yield {
+  for ( i <- 0 until 5 ) yield {
     when( io.wb_op(i).valid ) {
       files(io.wb_op(i).bits.phy) := io.wb_op(i).bits.dnxt
     }
@@ -117,8 +117,8 @@ class Regfiles extends Module{
   val rn_raw = VecInit( io.rn_op(0).bits.raw, io.rn_op(1).bits.raw )
   val rn_phy = VecInit( io.rn_op(0).bits.phy, io.rn_op(1).bits.phy )
 
-  val is_wb  = VecInit( io.wb_op(0).valid,    io.wb_op(1).valid )
-  val wb_phy = VecInit( io.wb_op(0).bits.phy, io.wb_op(1).bits.phy )
+  val is_wb  = VecInit( for ( k <- 0 until 5 ) yield { io.wb_op(k).valid } )
+  val wb_phy = VecInit( for ( k <- 0 until 5 ) yield { io.wb_op(k).bits.phy } )
 
   val is_cm = VecInit( io.cm_op(0).valid,     io.cm_op(1).valid )
   val cm_raw = VecInit( io.cm_op(0).bits.raw, io.cm_op(1).bits.raw )
@@ -127,19 +127,22 @@ class Regfiles extends Module{
 
   for ( i <- 0 until 64 ) yield {
     for ( j <- 0 until 2 ) yield {
+      for ( k <- 0 until 5 ) yield {
 
-      regLog(i) := MuxCase( regLog(i), Array(
-        ( is_cm(1) & archit_ptr(cm_raw(1)) === i.U ) -> 0.U(2.W), //when reg i is commit, the last one should be free
-       
-       
-       
-       
-        ( is_cm(0) & Mux( is_cm(1) & (cm_raw(1) === cm_raw(0)), cm_phy(0) === i.U, archit_ptr(cm_raw(0)) === i.U  ) ) -> 0.U(2.W), //when reg i is commit, the last one should be free
+        regLog(i) := MuxCase( regLog(i), Array(
+          ( is_cm(1) & archit_ptr(cm_raw(1)) === i.U ) -> 0.U(2.W), //when reg i is commit, the last one should be free
         
-        ( io.flush )                                -> Mux( archit_ptr.contains(i.U), 3.U, 0.U ),
-        ( is_rn(j) & rn_phy(j) === i.U )            -> 1.U(2.W),
-        ( is_wb(j) & wb_phy(j) === i.U )            -> (regLog(i) | "b10".U)
-      ))
+        
+        
+        
+          ( is_cm(0) & Mux( is_cm(1) & (cm_raw(1) === cm_raw(0)), cm_phy(0) === i.U, archit_ptr(cm_raw(0)) === i.U  ) ) -> 0.U(2.W), //when reg i is commit, the last one should be free
+          
+          ( io.flush )                                -> Mux( archit_ptr.contains(i.U), 3.U, 0.U ),
+          ( is_rn(j) & rn_phy(j) === i.U )            -> 1.U(2.W),
+
+          ( is_wb(k) & wb_phy(k) === i.U )            -> (regLog(i) | "b10".U)
+        ))
+      }
     }
   }
 

@@ -163,7 +163,7 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 
     val rn_ptr_i = Vec(32, Input(UInt(6.W)))
     val log_i = Vec(64, Input(UInt(2.W)))
-    val rn_op_i = Vec(2, Flipped(ValidIO( new Info_rename_op )))
+    val rn_op_i = Vec(2, ValidIO( new Info_rename_op ))
 
     val flush = Input(Bool())
 
