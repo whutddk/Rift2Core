@@ -129,7 +129,13 @@ class Regfiles extends Module{
     for ( j <- 0 until 2 ) yield {
 
       regLog(i) := MuxCase( regLog(i), Array(
-        ( is_cm(j) & archit_ptr(cm_raw(j)) === i.U) -> 0.U(2.W), //when reg i is commit, the last one should be free
+        ( is_cm(1) & archit_ptr(cm_raw(1)) === i.U ) -> 0.U(2.W), //when reg i is commit, the last one should be free
+       
+       
+       
+       
+        ( is_cm(0) & Mux( is_cm(1) & (cm_raw(1) === cm_raw(0)), cm_phy(0) === i.U, archit_ptr(cm_raw(0)) === i.U  ) ) -> 0.U(2.W), //when reg i is commit, the last one should be free
+        
         ( io.flush )                                -> Mux( archit_ptr.contains(i.U), 3.U, 0.U ),
         ( is_rn(j) & rn_phy(j) === i.U )            -> 1.U(2.W),
         ( is_wb(j) & wb_phy(j) === i.U )            -> (regLog(i) | "b10".U)
@@ -138,18 +144,24 @@ class Regfiles extends Module{
   }
 
 
-  for ( j <- 0 until 2 ) yield {
-    when( is_cm(j) ) { archit_ptr(cm_raw(j)) := cm_phy(j) }
-  }
+
+  when( is_cm(1) ) { archit_ptr(cm_raw(1)) := cm_phy(1) }
+  when( is_cm(0) & ~(cm_raw(0) === cm_raw(1) & is_cm(1)) ) { archit_ptr(cm_raw(0)) := cm_phy(0) }
+
 
   for ( i <- 0 until 64 ) yield {
-    for ( j <- 0 until 2 ) yield {
+    // for ( j <- 0 until 2 ) yield {
       rename_ptr(i) := MuxCase( rename_ptr(i), Array(
-        io.flush                       -> Mux( is_cm(j) & i.U === cm_raw(j), cm_phy(j), archit_ptr(i) ),
-        (is_rn(j) & i.U === rn_raw(j)) -> rn_phy(j)
-        
+        io.flush                       -> Mux(
+                                            is_cm(1) & i.U === cm_raw(1), cm_phy(1),
+                                            Mux(
+                                              is_cm(0) & i.U === cm_raw(0), cm_phy(0), archit_ptr(i) )
+                                            ),
+
+        (is_rn(1) & i.U === rn_raw(1)) -> rn_phy(1),
+        (is_rn(0) & i.U === rn_raw(0)) -> rn_phy(0)
       ))
-    }
+
   }
 
 
@@ -197,8 +209,8 @@ class Regfiles extends Module{
   assert( ~(io.wb_op(0).valid & io.wb_op(1).valid & (io.wb_op(0).bits.phy === io.wb_op(1).bits.phy)), "Assert Fail at Register Files, a physical register is written back twice in one cycle, that's impossible!")
   assert( ~(io.cm_op(0).valid & io.cm_op(1).valid & (io.cm_op(0).bits.phy === io.cm_op(1).bits.phy)), "Assert Fail at Register Files, a physical register is committed twice in one cycle, that's impossible!")
 
-  assert( ~(io.rn_op(0).valid & io.rn_op(1).valid & (io.rn_op(0).bits.raw === io.rn_op(1).bits.raw)), "Assert Fail at Register Files, a RAW register is renamed twice in one cycle, it's not allow in this version")
-  assert( ~(io.cm_op(0).valid & io.cm_op(1).valid & (io.cm_op(0).bits.raw === io.cm_op(1).bits.raw)), "Assert Fail at Register Files, a RAW register is committed twice in one cycle, it's not allow in this version")
+  // assert( ~(io.rn_op(0).valid & io.rn_op(1).valid & (io.rn_op(0).bits.raw === io.rn_op(1).bits.raw)), "Assert Fail at Register Files, a RAW register is renamed twice in one cycle, it's not allow in this version")
+  // assert( ~(io.cm_op(0).valid & io.cm_op(1).valid & (io.cm_op(0).bits.raw === io.cm_op(1).bits.raw)), "Assert Fail at Register Files, a RAW register is committed twice in one cycle, it's not allow in this version")
  
 
 
