@@ -427,7 +427,7 @@ class Info_reorder_i extends Bundle {
 
 class Info_reorder_f extends Bundle {
   val pc = UInt(64.W)
-  val rd0_phy = UInt(2.W)
+  val rd0_phy = UInt(6.W)
 
   val is_lu = Bool()
   val is_su = Bool()
@@ -547,7 +547,7 @@ class Fpu_isu_info extends Bundle {
 class Exe_iwb_info extends Bundle {
   val res = UInt(64.W)
 
-  val rd0_phy = UInt(2.W)
+  val rd0_phy = UInt(6.W)
 }
 
 class Exe_fwb_info extends Bundle {

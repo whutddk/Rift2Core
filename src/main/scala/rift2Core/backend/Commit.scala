@@ -41,8 +41,9 @@ import rift2Core.privilege.csrFiles._
 class Commit extends Privilege with Superscalar {
   val io = IO(new Bundle{
 
-    val cm_op = Output(Vec(32, Vec(4, Bool())))
-    val log = Input(Vec(32,Vec(4, UInt(2.W))) )
+    val cm_op = Vec(2, ValidIO( new Info_commit_op ))
+    val log = Input(Vec(64, UInt(2.W)))
+
 
     val rod_i = Vec(2, Flipped(new DecoupledIO( new Info_reorder_i ) ))
 
@@ -71,12 +72,12 @@ class Commit extends Privilege with Superscalar {
 
   val is_wb_v =
     VecInit(
-      (io.log(rd0_raw(0))(rd0_phy(0)) === 3.U) & (io.rod_i(0).valid),
-      (io.log(rd0_raw(1))(rd0_phy(1)) === 3.U) & (io.rod_i(1).valid)
+      (io.log(rd0_phy(0)) === 3.U) & (io.rod_i(0).valid),
+      (io.log(rd0_phy(1)) === 3.U) & (io.rod_i(1).valid)
     )
 
   //bru commit ilp
-  io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (io.log(rd0_raw(0))(rd0_phy(0)) =/= 3.U)
+  io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (io.log(rd0_phy(0)) =/= 3.U)
 
   val is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | io.rod_i(0).bits.is_su | ~is_wb_v(0) | (io.rod_i(0).bits.rd0_raw === io.rod_i(1).bits.rd0_raw)
   val is_2nd_solo = io.is_commit_abort(1) | io.rod_i(1).bits.is_csr | io.rod_i(1).bits.is_su
@@ -178,11 +179,22 @@ class Commit extends Privilege with Superscalar {
     is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo
   )
 
-  for ( i <- 0 until 32; j <- 0 until 4 ) yield {
-    io.cm_op(i)(j) := 
-      (is_commit_comfirm(0) & rd0_raw(0) === i.U & rd0_phy(0) === j.U) | 
-      (is_commit_comfirm(1) & rd0_raw(1) === i.U & rd0_phy(1) === j.U)
-  }
+  // for ( i <- 0 until 32; j <- 0 until 4 ) yield {
+  //   io.cm_op(i)(j) := 
+  //     (is_commit_comfirm(0) & rd0_raw(0) === i.U & rd0_phy(0) === j.U) | 
+  //     (is_commit_comfirm(1) & rd0_raw(1) === i.U & rd0_phy(1) === j.U)
+  // }
+
+  io.cm_op(0).valid := is_commit_comfirm(0)
+  io.cm_op(1).valid := is_commit_comfirm(1)
+
+  io.cm_op(0).bits.phy := rd0_phy(0)
+  io.cm_op(1).bits.phy := rd0_phy(1)
+
+  io.cm_op(0).bits.raw := rd0_raw(0)
+  io.cm_op(1).bits.raw := rd0_raw(1)
+
+
 
   io.rod_i(0).ready := is_commit_comfirm(0)
   io.rod_i(1).ready := is_commit_comfirm(1)

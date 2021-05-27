@@ -79,15 +79,18 @@ class Regfiles extends Module{
     * @note "b01".U at Rename
     * @note "b1x".U at WriteBack
     */
-  val regLog = RegInit( VecInit(Seq.fill(64)( 0.U ))   ) // the first reg is wb
+  val regLog = RegInit( VecInit( Seq.fill(32)("b11".U(2.W) ) ++ Seq.fill(32)(0.U(2.W) )) )
 
+  
   /**
   * Indicate which physical register is the rename one
   * 
   * @note don't care at reset
   * @note 0.U ~ 63.U
   */
-  val rename_ptr = RegInit( VecInit( Seq.fill(32)(0.U(6.W))) )
+  val rename_ptr = RegInit( VecInit( for ( i <- 0 until 32 ) yield (i.U(6.W))  ))
+
+  
 
   /**
   * Indicate which physical register is the archiitecture one
@@ -95,7 +98,8 @@ class Regfiles extends Module{
   * @note don't care at reset
   * @note 0.U ~ 63.U
   */
-  val archit_ptr = RegInit( VecInit( Seq.fill(32)(0.U(6.W))) )
+  val archit_ptr = RegInit( VecInit( for ( i <- 0 until 32 ) yield (i.U(6.W))  ))
+
 
 
 
@@ -126,9 +130,6 @@ class Regfiles extends Module{
 
 
   for ( i <- 0 until 64 ) yield {
-    for ( j <- 0 until 2 ) yield {
-      for ( k <- 0 until 5 ) yield {
-
         regLog(i) := MuxCase( regLog(i), Array(
           ( is_cm(1) & archit_ptr(cm_raw(1)) === i.U ) -> 0.U(2.W), //when reg i is commit, the last one should be free
         
@@ -138,12 +139,15 @@ class Regfiles extends Module{
           ( is_cm(0) & Mux( is_cm(1) & (cm_raw(1) === cm_raw(0)), cm_phy(0) === i.U, archit_ptr(cm_raw(0)) === i.U  ) ) -> 0.U(2.W), //when reg i is commit, the last one should be free
           
           ( io.flush )                                -> Mux( archit_ptr.contains(i.U), 3.U, 0.U ),
-          ( is_rn(j) & rn_phy(j) === i.U )            -> 1.U(2.W),
+          ( is_rn(0) & rn_phy(0) === i.U )           -> 1.U(2.W),
+          ( is_rn(1) & rn_phy(1) === i.U )           -> 1.U(2.W),
 
-          ( is_wb(k) & wb_phy(k) === i.U )            -> (regLog(i) | "b10".U)
+          ( is_wb(0) & wb_phy(0) === i.U )            -> (regLog(i) | "b10".U),
+          ( is_wb(1) & wb_phy(1) === i.U )            -> (regLog(i) | "b10".U),
+          ( is_wb(2) & wb_phy(2) === i.U )            -> (regLog(i) | "b10".U),
+          ( is_wb(3) & wb_phy(3) === i.U )            -> (regLog(i) | "b10".U),
+          ( is_wb(4) & wb_phy(4) === i.U )            -> (regLog(i) | "b10".U)
         ))
-      }
-    }
   }
 
 
@@ -152,7 +156,7 @@ class Regfiles extends Module{
   when( is_cm(0) & ~(cm_raw(0) === cm_raw(1) & is_cm(1)) ) { archit_ptr(cm_raw(0)) := cm_phy(0) }
 
 
-  for ( i <- 0 until 64 ) yield {
+  for ( i <- 0 until 32 ) yield {
     // for ( j <- 0 until 2 ) yield {
       rename_ptr(i) := MuxCase( rename_ptr(i), Array(
         io.flush                       -> Mux(

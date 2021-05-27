@@ -48,6 +48,7 @@ trait ReOrder {
   def rod_mux_i(bd_dpt_info: Info_bd_dpt, rd0_phy: UInt): Info_reorder_i = {
     val reorder_i_info = Wire(new Info_reorder_i)
     reorder_i_info.pc             := bd_dpt_info.info.param.pc
+    reorder_i_info.rd0_raw        := bd_dpt_info.info.param.rd0_raw
     reorder_i_info.rd0_phy        := rd0_phy
     reorder_i_info.is_branch      := bd_dpt_info.info.bru_isa.is_branch
     reorder_i_info.is_lu          := bd_dpt_info.info.lsu_isa.is_lu

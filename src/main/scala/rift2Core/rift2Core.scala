@@ -162,7 +162,7 @@ class Rift2Core extends Module {
   cmm_stage.io.cmm_pc <> pc_stage.io.cmm_pc
 
 
-  i_regfiles.io.wb_reg <> iwb_stage.io.wb_reg
+  i_regfiles.io.wb_op <> iwb_stage.io.wb_op
   i_regfiles.io.rn_op <> dpt_stage.io.rn_op_i
   i_regfiles.io.cm_op <> cmm_stage.io.cm_op
   i_regfiles.io.files <> iss_stage.io.files
