@@ -52,7 +52,7 @@ class Regfiles extends Module{
 
 
     val rn_op = Vec(2, Flipped(ValidIO( new Info_rename_op )))
-    val wb_op = Vec(5, Flipped(ValidIO( new Info_writeback_op)))
+    val wb_op = Vec(2, Flipped(ValidIO( new Info_writeback_op)))
     val cm_op = Vec(2, Flipped(ValidIO( new Info_commit_op )))
 
 
@@ -107,7 +107,7 @@ class Regfiles extends Module{
   io.log := regLog
   io.rn_ptr := rename_ptr
 
-  for ( i <- 0 until 5 ) yield {
+  for ( i <- 0 until 2 ) yield {
     when( io.wb_op(i).valid ) {
       files(io.wb_op(i).bits.phy) := io.wb_op(i).bits.dnxt
     }
@@ -121,8 +121,8 @@ class Regfiles extends Module{
   val rn_raw = VecInit( io.rn_op(0).bits.raw, io.rn_op(1).bits.raw )
   val rn_phy = VecInit( io.rn_op(0).bits.phy, io.rn_op(1).bits.phy )
 
-  val is_wb  = VecInit( for ( k <- 0 until 5 ) yield { io.wb_op(k).valid } )
-  val wb_phy = VecInit( for ( k <- 0 until 5 ) yield { io.wb_op(k).bits.phy } )
+  val is_wb  = VecInit( for ( k <- 0 until 2 ) yield { io.wb_op(k).valid } )
+  val wb_phy = VecInit( for ( k <- 0 until 2 ) yield { io.wb_op(k).bits.phy } )
 
   val is_cm = VecInit( io.cm_op(0).valid,     io.cm_op(1).valid )
   val cm_raw = VecInit( io.cm_op(0).bits.raw, io.cm_op(1).bits.raw )
@@ -142,9 +142,9 @@ class Regfiles extends Module{
 
       ( is_wb(0) & wb_phy(0) === i.U )            -> (regLog(i) | "b10".U),
       ( is_wb(1) & wb_phy(1) === i.U )            -> (regLog(i) | "b10".U),
-      ( is_wb(2) & wb_phy(2) === i.U )            -> (regLog(i) | "b10".U),
-      ( is_wb(3) & wb_phy(3) === i.U )            -> (regLog(i) | "b10".U),
-      ( is_wb(4) & wb_phy(4) === i.U )            -> (regLog(i) | "b10".U)
+      // ( is_wb(2) & wb_phy(2) === i.U )            -> (regLog(i) | "b10".U),
+      // ( is_wb(3) & wb_phy(3) === i.U )            -> (regLog(i) | "b10".U),
+      // ( is_wb(4) & wb_phy(4) === i.U )            -> (regLog(i) | "b10".U)
     ))
 
     assert( ~(is_cm(1) & archit_ptr(cm_raw(1)) === i.U & regLog(i) =/= "b11".U),  "Assert Fail at register Files, when cm_op(1) commit, regLog(i) in cm_op(1) should be \"b11\".U"  )
@@ -155,9 +155,9 @@ class Regfiles extends Module{
     
     assert( ~(is_wb(0) & wb_phy(0) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(0), regLog(i) in cm_op(0) should be \"b01\".U" )
     assert( ~(is_wb(1) & wb_phy(1) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(1), regLog(i) in cm_op(0) should be \"b01\".U" )
-    assert( ~(is_wb(2) & wb_phy(2) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(2), regLog(i) in cm_op(0) should be \"b01\".U" )
-    assert( ~(is_wb(3) & wb_phy(3) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(3), regLog(i) in cm_op(0) should be \"b01\".U" )
-    assert( ~(is_wb(4) & wb_phy(4) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(4), regLog(i) in cm_op(0) should be \"b01\".U" )
+    // assert( ~(is_wb(2) & wb_phy(2) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(2), regLog(i) in cm_op(0) should be \"b01\".U" )
+    // assert( ~(is_wb(3) & wb_phy(3) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(3), regLog(i) in cm_op(0) should be \"b01\".U" )
+    // assert( ~(is_wb(4) & wb_phy(4) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(4), regLog(i) in cm_op(0) should be \"b01\".U" )
   }
 
 

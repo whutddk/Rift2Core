@@ -37,21 +37,30 @@ class WriteBack extends Module {
   val io = IO(new Bundle{
     val exe_iwb = Vec(5, (Flipped(new DecoupledIO(new Exe_iwb_info))))
 
-    val wb_op = Vec(5, ValidIO( new Info_writeback_op))
-    // val wb_reg = Output(new Info_writeback_op)
+    val wb_op = Vec(2, ValidIO( new Info_writeback_op))
   })
 
 
-  for ( i <- 0 until 5 ) yield { io.exe_iwb(i).ready := true.B }
+  io.exe_iwb(0).ready := PopCount(Seq( io.exe_iwb(1).fire, io.exe_iwb(2).fire ) ) < 2.U
+  io.exe_iwb(1).ready := true.B
+  io.exe_iwb(2).ready := true.B
+  io.exe_iwb(3).ready := PopCount(Seq( io.exe_iwb(0).fire, io.exe_iwb(1).fire, io.exe_iwb(2).fire ) ) < 2.U
+  io.exe_iwb(4).ready := PopCount(Seq( io.exe_iwb(0).fire, io.exe_iwb(1).fire, io.exe_iwb(2).fire, io.exe_iwb(3).fire ) ) < 2.U
 
-  for ( i <- 0 until 5 ) yield {
-    io.wb_op(i).valid :=  io.exe_iwb(i).fire
-  }
 
 
-  for ( i <- 0 until 5 ) yield {
-    io.wb_op(i).bits.phy  := io.exe_iwb(i).bits.rd0_phy
-    io.wb_op(i).bits.dnxt := io.exe_iwb(i).bits.res
+
+  io.wb_op(0).valid := PopCount(Seq( io.exe_iwb(0).fire, io.exe_iwb(1).fire, io.exe_iwb(2).fire, io.exe_iwb(3).fire, io.exe_iwb(4).fire ) ) > 0.U
+  io.wb_op(1).valid := PopCount(Seq( io.exe_iwb(0).fire, io.exe_iwb(1).fire, io.exe_iwb(2).fire, io.exe_iwb(3).fire, io.exe_iwb(4).fire ) ) === 2.U
+
+  val idx = VecInit(
+    io.exe_iwb.indexWhere    ( (x:DecoupledIO[Exe_iwb_info]) => (x.fire === true.B)),
+    io.exe_iwb.lastIndexWhere( (x:DecoupledIO[Exe_iwb_info]) => (x.fire === true.B))
+  )
+
+  for ( i <- 0 until 2 ) yield {
+    io.wb_op(i).bits.phy  := io.exe_iwb(idx(i)).bits.rd0_phy
+    io.wb_op(i).bits.dnxt := io.exe_iwb(idx(i)).bits.res
 
   }
   //alu, lsu and bru must always ready

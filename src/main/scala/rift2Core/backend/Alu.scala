@@ -94,7 +94,7 @@ class Alu extends Module {
     io.alu_iss_exe.bits.fun.sra -> alu_sra_res
   ))
 
-  io.alu_iss_exe.ready := alu_exe_iwb_fifo.io.enq.valid & alu_exe_iwb_fifo.io.enq.ready
+  io.alu_iss_exe.ready := alu_exe_iwb_fifo.io.enq.fire
 
   alu_exe_iwb_fifo.io.enq.valid := io.alu_iss_exe.valid 
   alu_exe_iwb_fifo.io.enq.bits.res := res
