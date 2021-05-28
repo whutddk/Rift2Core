@@ -130,30 +130,45 @@ class Regfiles extends Module{
 
 
   for ( i <- 0 until 64 ) yield {
-        regLog(i) := MuxCase( regLog(i), Array(
-          ( is_cm(1) & archit_ptr(cm_raw(1)) === i.U ) -> 0.U(2.W), //when reg i is commit, the last one should be free
-        
-        
-        
-        
-          ( is_cm(0) & Mux( is_cm(1) & (cm_raw(1) === cm_raw(0)), cm_phy(0) === i.U, archit_ptr(cm_raw(0)) === i.U  ) ) -> 0.U(2.W), //when reg i is commit, the last one should be free
-          
-          ( io.flush )                                -> Mux( archit_ptr.contains(i.U), 3.U, 0.U ),
-          ( is_rn(0) & rn_phy(0) === i.U )           -> 1.U(2.W),
-          ( is_rn(1) & rn_phy(1) === i.U )           -> 1.U(2.W),
+    regLog(i) := MuxCase( regLog(i), Array(
+      ( is_cm(1) & archit_ptr(cm_raw(1)) === i.U ) -> 0.U(2.W), //when reg i is commit, the last one should be free
+    
+      ( is_cm(0) & Mux( is_cm(1) & cm_raw(1) === cm_raw(0), cm_phy(0), archit_ptr(cm_raw(0))) === i.U ) -> 0.U(2.W), //when reg i is commit, the last one should be free
+      
+      ( io.flush & is_cm(0) & cm_phy(0) === i.U ) -> regLog(i),
+      ( io.flush )                                -> Mux( archit_ptr.contains(i.U), 3.U, 0.U ),
+      ( is_rn(0) & rn_phy(0) === i.U )           -> 1.U(2.W),
+      ( is_rn(1) & rn_phy(1) === i.U )           -> 1.U(2.W),
 
-          ( is_wb(0) & wb_phy(0) === i.U )            -> (regLog(i) | "b10".U),
-          ( is_wb(1) & wb_phy(1) === i.U )            -> (regLog(i) | "b10".U),
-          ( is_wb(2) & wb_phy(2) === i.U )            -> (regLog(i) | "b10".U),
-          ( is_wb(3) & wb_phy(3) === i.U )            -> (regLog(i) | "b10".U),
-          ( is_wb(4) & wb_phy(4) === i.U )            -> (regLog(i) | "b10".U)
-        ))
+      ( is_wb(0) & wb_phy(0) === i.U )            -> (regLog(i) | "b10".U),
+      ( is_wb(1) & wb_phy(1) === i.U )            -> (regLog(i) | "b10".U),
+      ( is_wb(2) & wb_phy(2) === i.U )            -> (regLog(i) | "b10".U),
+      ( is_wb(3) & wb_phy(3) === i.U )            -> (regLog(i) | "b10".U),
+      ( is_wb(4) & wb_phy(4) === i.U )            -> (regLog(i) | "b10".U)
+    ))
+
+    assert( ~(is_cm(1) & archit_ptr(cm_raw(1)) === i.U & regLog(i) =/= "b11".U),  "Assert Fail at register Files, when cm_op(1) commit, regLog(i) in cm_op(1) should be \"b11\".U"  )
+    assert( ~(is_cm(0) & Mux( is_cm(1) & cm_raw(1) === cm_raw(0), cm_phy(0), archit_ptr(cm_raw(0))) === i.U & regLog(i) =/= "b11".U ),  "Assert Fail at register Files, when cm_op(0) commit, regLog(i) in cm_op(0) should be \"b11\".U"  )
+    assert( ~((io.flush & is_cm(0) & cm_phy(0) === i.U) & regLog(i) =/= "b11".U), "Assert Fail at register Files, when cm_op(0) commit, and cm_op(1) is flush, regLog(i) in cm_op(0) should be \"b11\".U" )
+    assert( ~(is_rn(0) & rn_phy(0) === i.U & regLog(i) =/= 0.U), "Assert Fail at register Files, when rn_op(0), regLog(i) in cm_op(0) should be \"b00\".U" )
+    assert( ~(is_rn(1) & rn_phy(1) === i.U & regLog(i) =/= 0.U), "Assert Fail at register Files, when rn_op(0), regLog(i) in cm_op(0) should be \"b00\".U" )
+    
+    assert( ~(is_wb(0) & wb_phy(0) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(0), regLog(i) in cm_op(0) should be \"b01\".U" )
+    assert( ~(is_wb(1) & wb_phy(1) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(1), regLog(i) in cm_op(0) should be \"b01\".U" )
+    assert( ~(is_wb(2) & wb_phy(2) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(2), regLog(i) in cm_op(0) should be \"b01\".U" )
+    assert( ~(is_wb(3) & wb_phy(3) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(3), regLog(i) in cm_op(0) should be \"b01\".U" )
+    assert( ~(is_wb(4) & wb_phy(4) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(4), regLog(i) in cm_op(0) should be \"b01\".U" )
   }
 
 
 
   when( is_cm(1) ) { archit_ptr(cm_raw(1)) := cm_phy(1) }
   when( is_cm(0) & ~(cm_raw(0) === cm_raw(1) & is_cm(1)) ) { archit_ptr(cm_raw(0)) := cm_phy(0) }
+
+  for ( i <- 0 until 32 ) yield {
+    assert( regLog(archit_ptr(i)) === "b11".U, "Assert Fail at regisiter Files, the reglog archit_ptr pointer point to should be \"b11\".U" )
+  }
+
 
 
   for ( i <- 0 until 32 ) yield {
