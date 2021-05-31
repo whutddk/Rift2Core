@@ -141,7 +141,7 @@ class read_op(files: Vec[UInt]) {
   assert( alu_chn_valid_i < 3.U, "Assert Fail at read op, alu cannot req src3" )
   assert( bru_chn_valid_i < 3.U, "Assert Fail at read op, bru cannot req src3" )
   assert( lsu_chn_valid_i < 3.U, "Assert Fail at read op, lsu cannot req src3" )
-  assert( mul_chn_valid_i === 0.U | mul_chn_valid_i === 2.U, "Assert Fail at read op, mul cannot only req src1 or req src3" )
+  assert( mul_chn_valid_i < 3.U, "Assert Fail at read op, mul cannot req src3" )
 
 }
 
