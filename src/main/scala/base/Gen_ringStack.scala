@@ -12,7 +12,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-	   http://www.apache.org/licenses/LICENSE-2.0
+     http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,57 +32,57 @@ import chisel3.util._
 
 
 class Gen_ringStack[T<:Data]( dw: T, aw: Int ) extends Module {
-	lazy val io = IO(new Bundle{
-			val enq = Flipped(new DecoupledIO(dw))
-			val deq  = new DecoupledIO(dw)
+  lazy val io = IO(new Bundle{
+      val enq = Flipped(new DecoupledIO(dw))
+      val deq  = new DecoupledIO(dw)
 
-			val flush = Input(Bool())
+      val flush = Input(Bool())
 
-	})
+  })
 
-	def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
-
-
-	val buf = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
-	val btm_ptr = RegInit(0.U((aw+1).W))
-	val top_ptr = RegInit(0.U((aw+1).W))
-
-	def rd_idx = top_ptr(aw-1, 0) - 1.U
-	def wr_idx = top_ptr(aw-1, 0)
-
-	def is_empty = (btm_ptr === top_ptr)
-	def is_full  = ((btm_ptr(aw-1, 1) === top_ptr(aw-1, 1)) & (btm_ptr(aw) =/= top_ptr(aw)))
-
-	def is_enq_ack = io.enq.fire
-	def is_deq_ack = io.deq.fire
-
-	when( is_enq_ack ) {
-		buf(wr_idx) := io.enq.bits
-	}
-
-	when(io.flush) {
-		btm_ptr := 0.U
-		top_ptr := 0.U
-	}
-	.otherwise{
-		when( is_enq_ack ) {
-			when(is_full) {
-				btm_ptr := btm_ptr + 1.U			
-			}
-			top_ptr := top_ptr + 1.U
-		}
-		when( is_deq_ack ) {
-			top_ptr := top_ptr - 1.U
-		}
-	}
-
-	io.enq.ready := true.B
-	io.deq.valid  := ~is_empty
-	io.deq.bits   := buf(rd_idx)
+  def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
 
 
+  val buf = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
+  val btm_ptr = RegInit(0.U((aw+1).W))
+  val top_ptr = RegInit(0.U((aw+1).W))
 
-	assert ( ~(is_enq_ack & is_deq_ack), "Assert Fail at RSA, RSA will never pop and push at the same times" )
+  def rd_idx = top_ptr(aw-1, 0) - 1.U
+  def wr_idx = top_ptr(aw-1, 0)
+
+  def is_empty = (btm_ptr === top_ptr)
+  def is_full  = ((btm_ptr(aw-1, 1) === top_ptr(aw-1, 1)) & (btm_ptr(aw) =/= top_ptr(aw)))
+
+  def is_enq_ack = io.enq.fire
+  def is_deq_ack = io.deq.fire
+
+  when( is_enq_ack ) {
+    buf(wr_idx) := io.enq.bits
+  }
+
+  when(io.flush) {
+    btm_ptr := 0.U
+    top_ptr := 0.U
+  }
+  .otherwise{
+    when( is_enq_ack ) {
+      when(is_full) {
+        btm_ptr := btm_ptr + 1.U			
+      }
+      top_ptr := top_ptr + 1.U
+    }
+    when( is_deq_ack ) {
+      top_ptr := top_ptr - 1.U
+    }
+  }
+
+  io.enq.ready := true.B
+  io.deq.valid  := ~is_empty
+  io.deq.bits   := buf(rd_idx)
+
+
+
+  assert ( ~(is_enq_ack & is_deq_ack), "Assert Fail at RSA, RSA will never pop and push at the same times" )
 
 
 }

@@ -2,12 +2,10 @@
 
 /*
 * @Author: Ruige Lee
-* @Date:   2021-03-18 16:49:02
+* @Date:   2021-03-19 09:55:43
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-28 11:19:23
+* @Last Modified time: 2021-03-22 20:02:27
 */
-
-
 
 /*
   Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
@@ -25,35 +23,42 @@
    limitations under the License.
 */
 
-package rift2Core.define
+package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
-
-
-class Info_pc_if extends Bundle {
-	val addr = UInt(64.W)
-} 
-
-// class Info_if_iq extends Bundle {
-// 	val pc = UInt(64.W)
-// 	val instr = UInt(128.W)
-// }
+import base._
+import rift2Core.define._
 
 
 
+class Decode extends Module {
+  val io = IO( new Bundle {
+    val ib_id = Input ( new Info_ib_id())
+    val id_dpt = Output ( new Info_bd_dpt())
+  })
+
+  io.id_dpt.info := 
+    Mux( io.ib_id.is_rvc,
+    new Decode16(io.ib_id.instr, io.ib_id.pc).info,
+    new Decode32(io.ib_id.instr, io.ib_id.pc).info
+    )
+
+  io.id_dpt.is_iFAccessFault  := io.ib_id.pc(63,32) =/= (0.U)
+  io.id_dpt.is_illeage        := io.id_dpt.info.is_illeage
+
+  
+
+}
 
 
+object Decode {
+  def apply( ib_id: Info_ib_id ) = {
+    val mdl = Module(new Decode)
+    mdl.io.ib_id := ib_id
 
-
-
-class Info_dpt_reg extends Bundle {
-	val opr = Vec(32, Vec(4, Output(Bool())))
-	val ptr = Vec(32, Input(UInt(2.W)))
-	val log = Vec(32,Vec(4, Input(UInt(2.W))) )
+    mdl.io.id_dpt
+  }
 }
 
 
-class Info_dpt_iss extends Bundle {
-
-}
