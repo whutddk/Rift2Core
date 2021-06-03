@@ -57,6 +57,7 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
   val cache_mem = new Cache_mem( dw, 32, bk, 1, cl )
 
   is_release_req
+  is_release_end
   is_probe_rtn
   req_no
 
@@ -80,8 +81,8 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
     val BRCH = 1.U
     val TRUK = 2.U
 
-    val cache_addr_dnxt = Wire(UInt(32.W))
-    val cache_addr_qout = RegInit(0.U(32.W))
+    // val cache_addr_dnxt = Wire(UInt(32.W))
+    // val cache_addr_qout = RegInit(0.U(32.W))
     val cache_coherence = RegInit(VecInit(Seq.fill(cl)(0.U(3.W))))
     val cache_dirty = RegInit(VecInit(Seq.fill(cl)(false.B)))
     val mem_dat = Wire( UInt(128.W) )
@@ -144,21 +145,17 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
       * @note when cache_miss goto fsm.evice, when cache_hit goto fsm.grant
       */
     val l3c_state_dnxt_in_probe =
-      Mux( is_release_req, fsm.rlese,
-        Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ),
-          Mux( ~bram.is_cb_hit, fsm.evict, fsm.grant ),
-          fsm.probe
-        )
+      Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ),
+        Mux( ~bram.is_cb_hit, fsm.evict, fsm.grant ),
+        fsm.probe
       )
 
+
     /**
-      * @note when axi_w rtn, exit evict 
-      * @note if entry from fence, goto fence, or goto cktag 
+      * @note when axi_w rtn, exit evict, if entry from fence, goto fence, or goto cktag 
       */
     val l3c_state_dnxt_in_evict = 
-      Mux( ~mem_mst_w.io.end, fsm.evict,
-        Mux( bram.is_fence, fsm.fence, fsm.cktag )
-      )
+      Mux( ~mem_mst_w.io.end, fsm.evict, fsm.cktag )
 
     /**
       * @note waitting for axi rtn and goto grant
@@ -172,15 +169,14 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
     val l3c_state_dnxt_in_grant = 
       Mux( io.l2c_chn_c(req_no).e.fire, fsm.cfree, fsm.grant )
 
-
     /**
       * @note when no dirty, goto cfree or goto evict
       */
     val l3c_state_dnxt_in_fence = 
-      Mux( bram.cache_dirty.contains(true.B), fsm.evict, fsm.cfree )
+      Mux( bram.cache_dirty.contains(true.B), fsm.fence, fsm.cfree )
 
     val l3c_state_dnxt_in_rlese = 
-      Mux( io.l2c_chn_b.exists((x:DecoupledIO[TLchannel_b]) => (x.valid === true.B) ), fsm.probe, fsm.cfree )
+      Mux( is_release_end, fsm.rlese, fsm.cfree )
 
     Mux1H( Seq(
       (fsm.state_qout === fsm.cfree) -> l3c_state_dnxt_in_cfree,
@@ -214,34 +210,54 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 // BBBBBBBBBBBBBBBBB   RRRRRRRR     RRRRRRRAAAAAAA                   AAAAAAAMMMMMMMM               MMMMMMMM
 
   bram.mem_dat := cache_mem.dat_info_r(0)
-  bram.cache_addr_qout := bram.cache_addr_dnxt
+  // bram.cache_addr_qout := bram.cache_addr_dnxt
 
-  bram.cache_addr_dnxt := Mux1H(Seq(
-    (fsm.state_qout === L3C_state.cfree) -> l2c_slv.io.a.bits.address,
-    (fsm.state_qout === L3C_state.cktag) -> 
-      Mux1H( Seq(
-        ( fsm.state_dnxt === L3C_state.evict ) -> Cat(db.addr_o , 0.U(addr_lsb.W)),
-        ( fsm.state_dnxt === L3C_state.flash ) -> (l2c_slv.io.a.bits.address & Cat( Fill(32-addr_lsb, 1.U), 0.U(addr_lsb.W) )),
-        ( fsm.state_dnxt === L3C_state.rspl2 ) -> l2c_slv.io.a.bits.address
-      )),
+  // bram.cache_addr_dnxt := Mux1H(Seq(
+  //   (fsm.state_qout === L3C_state.cfree) -> l2c_slv.io.a.bits.address,
+  //   (fsm.state_qout === L3C_state.cktag) -> 
+  //     Mux1H( Seq(
+  //       ( fsm.state_dnxt === L3C_state.evict ) -> Cat(db.addr_o , 0.U(addr_lsb.W)),
+  //       ( fsm.state_dnxt === L3C_state.flash ) -> (l2c_slv.io.a.bits.address & Cat( Fill(32-addr_lsb, 1.U), 0.U(addr_lsb.W) )),
+  //       ( fsm.state_dnxt === L3C_state.rspl2 ) -> l2c_slv.io.a.bits.address
+  //     )),
 
-    (fsm.state_qout === L3C_state.evict) -> Mux( mem_mst_w.io.w.fire, bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
-    (fsm.state_qout === L3C_state.flash) -> Mux( mem_mst_r.io.r.fire, bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
-    (fsm.state_qout === L3C_state.rspl2) -> Mux( l2c_slv.io.d.fire,bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
-    (fsm.state_qout === L3C_state.fence) -> Cat(db.addr_o , 0.U(addr_lsb.W))
+  //   (fsm.state_qout === L3C_state.evict) -> Mux( mem_mst_w.io.w.fire, bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
+  //   (fsm.state_qout === L3C_state.flash) -> Mux( mem_mst_r.io.r.fire, bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
+  //   (fsm.state_qout === L3C_state.rspl2) -> Mux( l2c_slv.io.d.fire,bram.cache_addr_qout + "b10000".U, bram.cache_addr_qout ),
+  //   (fsm.state_qout === L3C_state.fence) -> Cat(db.addr_o , 0.U(addr_lsb.W))
 
-  ))
+  // ))
 
 
-  cache_mem.cache_addr := bram.cache_addr_qout
+  cache_mem.cache_addr := 
+    Mux1H(Seq(
+      //dat_en_w
+      ( fsm.state_qout === fsm.flash & mem_mst_r.io.r.fire ) ->
+      ( fsm.state_qout === fsm.rlese & l2c_slv.io.c.fire ) ->
+      ( fsm.state_qout === fsm.probe & l2c_slv.io.c.fire ->
+
+      //dat_en_r
+      (fsm.state_dnxt === L3C_state.evict) ->
+      (fsm.state_dnxt === L3C_state.grant) ->
+      (fsm.state_dnxt === L3C_state.fence) ->
+
+      //tag_en_w
+      (fsm.state_qout === L3C_state.cktag) & (fsm.state_dnxt === L3C_state.flash) ->
+
+      //tag_en_r
+      (fsm.state_dnxt === L3C_state.cktag) ->
+    ))
+  
 
   cache_mem.dat_en_w(0) :=
     ( fsm.state_qout === fsm.flash & mem_mst_r.io.r.fire ) |
-    ( fsm.state_qout === fsm.rlese & l2c_slv.io.c.fire )
+    ( fsm.state_qout === fsm.rlese & l2c_slv.io.c.fire ) |
+    ( fsm.state_qout === fsm.probe & l2c_slv.io.c.fire )
 
   cache_mem.dat_en_r(0) :=
     (fsm.state_dnxt === L3C_state.evict) |
-    (fsm.state_dnxt === L3C_state.grant)
+    (fsm.state_dnxt === L3C_state.grant) |
+    (fsm.state_dnxt === L3C_state.fence)
 
 
   cache_mem.dat_info_wstrb := Fill(16, 1.U)

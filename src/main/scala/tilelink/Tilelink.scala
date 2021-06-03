@@ -91,21 +91,31 @@ class TLchannel_e extends Bundle {
   override def cloneType = ( new TLchannel_e ).asInstanceOf[this.type]
 }
 
-trait Opcode {
+object Opcode {
   def PutFullData    = 0.U
   def PutPartialData = 1.U
   def ArithmeticData = 2.U
   def LogicalData    = 3.U
   def Get            = 4.U
   def Intent         = 5.U
-  def Acquire        = 6.U
+  def AcquireBlock   = 6.U
+  def AcquirePrem    = 7.U
 
   def AccessAck     = 0.U
   def AccessAckData = 1.U
   def HintAck       = 2.U
   def Grant         = 4.U
   def GrantData     = 5.U
+
+  def Release       = 6.U
+  def ReleaseData   = 7.U
   def ReleaseAck    = 6.U
+
+  def ProbeBlock    = 6.U
+  def ProbePerm     = 7.U
+  def ProbeAckData  = 5.U
+  def ProbeAck      = 4.U
+
 
   def MIN  = 0.U
   def MAX  = 1.U
