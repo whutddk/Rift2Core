@@ -63,10 +63,6 @@ class Acquire_Slv(dw:Int, aw:Int, id:Int) {
   val toCache = DecoupledIO( new Info_context_cache )
   val fromCache = Flipped(DecoupledIO( new Info_rd_cache ))
 
-  val toCache_valid = RegInit(false.B)
-  val toCache_bits  = RegInit()
-
-
   toCache.valid := a.valid
   toCache.bits.addr := a.bits.address
   toCache.bits.context := 0.U
@@ -102,13 +98,14 @@ class Release_Slv(dw:Int, aw:Int, id:Int) {
 }
 
 
-
+/**
+  * @note just boardcast the probe, wait for release
+  *
+  */
 class Probe_Slv(dw:Int, aw:Int, id:Int) {
   val b = new DecoupledIO(new TLchannel_b(dw, aw))
-  val c = Flipped(new DecoupledIO(new TLchannel_c(dw, aw)))
 
   val fromCache = Flipped(DecoupledIO( new Info_context_cache))
-  val toCache = DecoupledIO( new Info_wr_cache )
 
 }
 

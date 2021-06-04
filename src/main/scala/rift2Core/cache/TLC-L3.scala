@@ -26,6 +26,11 @@ import tilelink._
 import axi._
 import base._
 
+object Coher {
+  def NONE = 0.U
+  def TRNK = 1.U
+  def TTIP = 2.U
+}
 
 class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
   val io = IO(new Bundle{
@@ -54,7 +59,8 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
   val l2c_slv   = Module( new TileLink_slv_heavy(128, 32) )
   val mem_mst_r = Module( new AXI_mst_r( 32, 128, 1, 1, 63 ))
   val mem_mst_w = Module( new AXI_mst_w( 32, 128, 1, 1, 63 ))
-  val cache_mem = new Cache_mem( dw, 32, bk, 1, cl )
+  val cache_dat = new Cache_dat( dw, 32, bk, 1, cl )
+  val cache_tag = new Cache_tag( dw, 32, bk, 1, cl )
 
   is_release_req
   is_release_end
@@ -62,6 +68,13 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
   req_no
 
   val fsm = new Bundle {
+    val is_op_aqblk = RegInit(false.B)
+    val is_op_wbblk = RegInit(false.B)
+    val is_op_fence = RegInit(false.B)
+
+    assert(PopCount(Cat(is_op_aqblk, is_op_wbblk, is_op_fence) <= 1.U, "Assert Failed at TLC, cannot op in 2 stage at a time." ))
+
+
     val cfree = 0.U
     val cktag = 1.U
     val flash = 2.U
@@ -77,9 +90,6 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
   }
 
   val bram = new Bundle {
-    val NONE = 0.U
-    val BRCH = 1.U
-    val TRUK = 2.U
 
     // val cache_addr_dnxt = Wire(UInt(32.W))
     // val cache_addr_qout = RegInit(0.U(32.W))
@@ -126,42 +136,48 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
       * @note when l2c aquire, goto cktag 
       */ 
     val l3c_state_dnxt_in_cfree = 
-      Mux( bram.is_fence, fsm.fence,
-        Mux( is_release_req, fsm.rlese,
-          Mux( io.l2c_chn_a.exists((x:DecoupledIO[TLchannel_a]) => (x.valid === true.B) ), fsm.cktag, fsm.cfree ) 
-        )
-      )
+      Mux1H(Seq(
+        is_op_fence -> fsm.fence,
+        is_op_wbblk -> fsm.rlese,
+        is_op_aqblk -> fsm.cktag
+      ))
+
 
     /**
       * @note the only cache line is none? just aquire next level memory
       * @note the only cache line is t or b, no matter hit or no-hit, porbe perivious level cache
       */
     val l3c_state_dnxt_in_cktag = 
-      Mux( bram.cache_coherence(bram.cl_sel) === bram.NONE, fsm.flash, fsm.probe )
+      Mux1H( Seq(
+        bram.cache_coherence(bram.cl_sel) === Coher.NONE -> fsm.flash,
+        bram.cache_coherence(bram.cl_sel) === Coher.TTIP & bram.is_cb_hit -> fsm.grant,
+        bram.cache_coherence(bram.cl_sel) === Coher.TTIP & ~bram.is_cb_hit -> fsm.evict,
+        bram.cache_coherence(bram.cl_sel) === Coher.TRUK -> fsm.probe
+      ))
 
 
     /**
       * @note when probe rtn in chn c, exit fsm.probe
       * @note when cache_miss goto fsm.evice, when cache_hit goto fsm.grant
       */
-    val l3c_state_dnxt_in_probe =
-      Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ),
-        Mux( ~bram.is_cb_hit, fsm.evict, fsm.grant ),
-        fsm.probe
-      )
-
+    val l3c_state_dnxt_in_probe = fsm.rlese
 
     /**
       * @note when axi_w rtn, exit evict, if entry from fence, goto fence, or goto cktag 
       */
     val l3c_state_dnxt_in_evict = 
-      Mux( ~mem_mst_w.io.end, fsm.evict, fsm.cktag )
+      Mux( ~mem_mst_w.io.end, fsm.evict, 
+        Mux1H(Seq(
+          is_op_aqblk -> fsm.cktag,
+          is_op_fence -> fsm.fence
+        ))
+      )
 
     /**
       * @note waitting for axi rtn and goto grant
       */
     val l3c_state_dnxt_in_flash = 
-      Mux( mem_mst_r.io.end, fsm.grant, fsm.flash )
+      Mux( mem_mst_r.io.end, fsm.cktag, fsm.flash )
 
     /**
       * @note when grant rtn, goto cfree
@@ -173,10 +189,16 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
       * @note when no dirty, goto cfree or goto evict
       */
     val l3c_state_dnxt_in_fence = 
-      Mux( bram.cache_dirty.contains(true.B), fsm.fence, fsm.cfree )
-
+      Mux( bram.cache_coherence.contains(Coher.TRUK), fsm.probe, 
+        Mux( bram.cache_coherence.forall(x:UInt => x === Coher.NONE), fsm.cfree, fsm.fence  )
+      ) 
+      
     val l3c_state_dnxt_in_rlese = 
-      Mux( is_release_end, fsm.rlese, fsm.cfree )
+      Mux1H(Seq(
+        is_op_aqblk -> Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ), fsm.cktag, fsm.rlese ),
+        is_op_wbblk -> Mux( is_release_end, fsm.cfree, fsm.rlese ),
+        is_op_fence -> Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ), fsm.evict, fsm.rlese )
+      ))
 
     Mux1H( Seq(
       (fsm.state_qout === fsm.cfree) -> l3c_state_dnxt_in_cfree,
@@ -234,7 +256,6 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
       //dat_en_w
       ( fsm.state_qout === fsm.flash & mem_mst_r.io.r.fire ) ->
       ( fsm.state_qout === fsm.rlese & l2c_slv.io.c.fire ) ->
-      ( fsm.state_qout === fsm.probe & l2c_slv.io.c.fire ->
 
       //dat_en_r
       (fsm.state_dnxt === L3C_state.evict) ->
