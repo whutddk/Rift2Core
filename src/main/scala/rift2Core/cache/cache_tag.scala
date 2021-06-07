@@ -36,15 +36,9 @@ class Cache_tag( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
   val tag_addr_r = Wire(UInt(aw.W))
   val tag_addr_w = Wire(UInt(aw.W))
 
-
-
   val tag_en_w = Wire( Vec(cb, Bool()) )
   val tag_en_r = Wire( Vec(cb, Bool()) )	
   val tag_info_r = Wire( Vec(cb, UInt(tag_w.W)) )
-
-
-
-
 
 
   val addr_sel_w = tag_addr_w(addr_lsb+line_w-1, addr_lsb)
@@ -56,8 +50,6 @@ class Cache_tag( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
   val tag_ram = {
     for ( i <- 0 until cb ) yield { val mdl = Module(new Sram(tag_w,line_w)); mdl }
   }
-
-
 
   for ( i <- 0 until cb ) yield {
     tag_ram(i).io.addr_r := addr_sel_r
