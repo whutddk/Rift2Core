@@ -58,21 +58,21 @@ trait fsm extends Module{
   val is_op_wbblk = RegInit(false.B)
   val is_op_fence = RegInit(false.B)
 
-  assert(PopCount(Cat(is_op_aqblk, is_op_wbblk, is_op_fence) <= 1.U, "Assert Failed at TLC, cannot op in 2 stage at a time." ))
+  assert(PopCount(Cat(is_op_aqblk, is_op_wbblk, is_op_fence)) <= 1.U, "Assert Failed at TLC, cannot op in 2 stage at a time." )
 
   when( state_dnxt === cfree ) {
     is_op_aqblk := false.B
     is_op_wbblk := false.B
     is_op_fence := false.B
   }
-  .elsewhen( PopCount(Cat(is_op_aqblk, is_op_wbblk, is_op_fence) === 0.U ) ) {
+  .elsewhen( PopCount(Cat(is_op_aqblk, is_op_wbblk, is_op_fence)) === 0.U ) {
     when( is_fence_req ) {
       is_op_fence := true.B
     }
     .elsewhen( is_wbblk_req ) {
       is_op_wbblk := true.B
     }
-    .elsewhen( is_awblk_req ) {
+    .elsewhen( is_aqblk_req ) {
       is_op_aqblk := true.B
     }
   }
@@ -82,9 +82,9 @@ trait fsm extends Module{
     * @note when l2c require release, goto release_ack
     * @note when l2c aquire, goto cktag 
     */ 
-  val l3c_state_dnxt_in_cfree = 
+  val tlc_state_dnxt_in_cfree = 
     Mux1H(Seq(
-      is_fence_req -> fence,
+      is_fence_req -> cktag,
       is_wbblk_req -> rlese,
       is_aqblk_req -> cktag
     ))
@@ -93,47 +93,47 @@ trait fsm extends Module{
     * @note the only cache line is none? just aquire next level memory
     * @note the only cache line is t or b, no matter hit or no-hit, porbe perivious level cache
     */
-    val l3c_state_dnxt_in_cktag = Wire(UInt(3.W))
+    val tlc_state_dnxt_in_cktag = Wire(UInt(3.W))
 
     /**
       * @note when probe rtn in chn c, exit fsm.probe
       * @note when cache_miss goto fsm.evice, when cache_hit goto fsm.grant
       */
-    val l3c_state_dnxt_in_probe = Wire(UInt(3.W))
+    val tlc_state_dnxt_in_probe = Wire(UInt(3.W))
 
     /**
       * @note when axi_w rtn, exit evict, if entry from fence, goto fence, or goto cktag 
       */
-    val l3c_state_dnxt_in_evict = Wire(UInt(3.W))
+    val tlc_state_dnxt_in_evict = Wire(UInt(3.W))
 
     /**
       * @note waitting for axi rtn and goto grant
       */
-    val l3c_state_dnxt_in_flash = Wire(UInt(3.W))
+    val tlc_state_dnxt_in_flash = Wire(UInt(3.W))
 
     /**
       * @note when grant rtn, goto cfree
       */
-    val l3c_state_dnxt_in_grant = Wire(UInt(3.W))
+    val tlc_state_dnxt_in_grant = Wire(UInt(3.W))
       
-    val l3c_state_dnxt_in_rlese = Wire(UInt(3.W))
+    val tlc_state_dnxt_in_rlese = Wire(UInt(3.W))
 
 
 
-  fsm.state_dnxt :=
+  state_dnxt :=
     Mux1H( Seq(
-      (fsm.state_qout === fsm.cfree) -> l3c_state_dnxt_in_cfree,
-      (fsm.state_qout === fsm.cktag) -> l3c_state_dnxt_in_cktag,
-      (fsm.state_qout === fsm.flash) -> l3c_state_dnxt_in_flash,
-      (fsm.state_qout === fsm.evict) -> l3c_state_dnxt_in_evict,
-      (fsm.state_qout === fsm.probe) -> l3c_state_dnxt_in_probe,
-      (fsm.state_qout === fsm.grant) -> l3c_state_dnxt_in_grant,
-      (fsm.state_qout === fsm.rlese) -> l3c_state_dnxt_in_rlese
+      (state_qout === cfree) -> tlc_state_dnxt_in_cfree,
+      (state_qout === cktag) -> tlc_state_dnxt_in_cktag,
+      (state_qout === flash) -> tlc_state_dnxt_in_flash,
+      (state_qout === evict) -> tlc_state_dnxt_in_evict,
+      (state_qout === probe) -> tlc_state_dnxt_in_probe,
+      (state_qout === grant) -> tlc_state_dnxt_in_grant,
+      (state_qout === rlese) -> tlc_state_dnxt_in_rlese
     ))
 
 }
 
-abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_size:Int = dw ) extends fsm {
+abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_size:Int ) extends fsm {
  
   def addr_lsb = log2Ceil(dw*bk/8)
   def line_w   = log2Ceil(cl)
@@ -162,28 +162,29 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
   def cl_sel(addr: UInt): UInt = addr(addr_lsb+line_w-1, addr_lsb)
 
 
-  val aqblk_req_addr = RegInit(0.U(64.W))
-  val wbblk_req_addr = RegInit(0.U(64.W))
-  val fence_req_addr = RegInit(0.U(64.W))
+  val req_addr = RegInit(0.U(64.W))
 
-  assert( aqblk_req_addr(mst_lsb-1,0) === 0.U,  "Assert Failed at TLC, aquire request addr misalign!" )
-  assert( wbblk_req_addr(mst_lsb-1,0) === 0.U, "Assert Failed at TLC, release request addr misalign!" )
-  assert( fence_req_addr(addr_lsb-1,0) === 0.U, "Assert Failed at TLC, fence request addr misalign!" )
+
+  // assert( aqblk_req_addr(mst_lsb-1,0) === 0.U,  "Assert Failed at TLC, aquire request addr misalign!" )
+  // assert( wbblk_req_addr(mst_lsb-1,0) === 0.U, "Assert Failed at TLC, release request addr misalign!" )
+  // assert( fence_req_addr(addr_lsb-1,0) === 0.U, "Assert Failed at TLC, fence request addr misalign!" )
 
   val aqblk_req_agent = RegInit(0.U(3.W))
   val wbblk_req_agent = RegInit(0.U(3.W))
 
   val tag_addr = Wire( UInt(32.W) )
 
-  val is_cb_hit =
+  val is_cb_hit = VecInit(
     for ( i <- 0 until cb ) yield {
-      cache_tag.tag_info_r(i) === bram.tag_info
+      cache_tag.tag_info_r(i) === tag_info
     }
+  )
+
 
   assert( PopCount(is_cb_hit.asUInt) <= 1.U, "Assert Failed, More than one block hit is not allowed!" )
 
   val cb_sel = 
-    Mux( is_cb_hit.contian(true.B), UIntToOH(is_cb_hit.asUInt),
+    Mux( is_cb_hit.contains(true.B), UIntToOH(is_cb_hit.asUInt),
       Mux( cache_tag.tag_info_r.contains(0.U), cache_tag.tag_info_r.indexWhere((x:UInt) => (x === 0.U)),
         random_res
     ))
@@ -191,8 +192,8 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
   val probe_addr = RegEnable(
     Mux1H(
       ( state_qout === cktag & state_dnxt === probe ) -> Mux1H(Seq(
-                                                          is_op_aqblk -> aqblk_req_addr,
-                                                          is_op_fence -> fence_req_addr,
+                                                          is_op_aqblk -> req_addr,
+                                                          is_op_fence -> req_addr,
                                                         )),
       ( state_qout === rlese & state_dnxt === probe ) -> probe_addr + ( 1.U << mst_lsb )
     ),
@@ -210,7 +211,7 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
 
   val flash_addr = RegEnable(
     Mux1H(
-      (state_qout === cktag & state_dnxt === flash) -> aqblk_req_addr,
+      (state_qout === cktag & state_dnxt === flash) -> req_addr,
       (state_qout === flash & is_flash_bus_fire)      -> flash_addr + ( 1.U << bus_lsb )
     ),
     (state_qout === cktag & state_dnxt === flash) |
@@ -245,7 +246,7 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
   val grant_addr = 
     RegEnable(
       Mux1H(
-        ( state_qout === cktag & state_dnxt === grant) -> aqblk_req_addr,
+        ( state_qout === cktag & state_dnxt === grant) -> req_addr,
         ( state_qout === grant & is_grant_bus_fire)    -> grant_addr + ( 1.U << bus_lsb )
       ),
       (state_qout === cktag & state_dnxt === grant) |
@@ -256,14 +257,14 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
   //is_evict_bus_fire = mem_mst_w.io.w.fire
 
   val evict_addr = {
-    val abandon_addr = Cat(cache_tag.tag_info_r(cb_sel), cl_sel(aqblk_req_addr), 0.U(addr_lsb))
+    val abandon_addr = Cat(cache_tag.tag_info_r(cb_sel), cl_sel(req_addr), 0.U(addr_lsb))
 
     RegEnable(
       Mux1H(
         (state_qout =/= evict & state_dnxt === evict) ->
           Mux1H(Seq(
             is_op_aqblk -> abandon_addr,//from cktag
-            is_op_fence -> fence_req_addr
+            is_op_fence -> req_addr
           ))
         (state_qout === evict & is_evict_bus_fire) -> evict_addr + ( 1.U << bus_lsb )
       ),
@@ -280,20 +281,20 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
 
 
   tlc_state_dnxt_in_cktag := {
-    val aqblk_req_cl = cl_sel( aqblk_req_addr )
-    val fence_req_cl = cl_sel(fence_req_addr)
+    val req_cl = cl_sel(req_addr)
+
 
     Mux1H(Seq(
       is_op_aqblk -> Mux1H( Seq(
-                      cache_coherence(aqblk_req_cl)(cb_sel) === Coher.NONE -> flash,
-                      cache_coherence(aqblk_req_cl)(cb_sel) === Coher.TTIP -> Mux(is_cb_hit.contian(true.B), grant, evict),
-                      cache_coherence(aqblk_req_cl)(cb_sel) === Coher.TRUK -> probe
+                      cache_coherence(req_cl)(cb_sel) === Coher.NONE -> flash,
+                      cache_coherence(req_cl)(cb_sel) === Coher.TTIP -> Mux(is_cb_hit.contian(true.B), grant, evict),
+                      cache_coherence(req_cl)(cb_sel) === Coher.TRUK -> probe
                     ))
       is_op_fence -> Mux( ~is_cb_hit.contian(true.B), cfree, 
                       Mux1H(Seq(
-                        cache_coherence(fence_req_cl)(cb_sel) === Coher.NONE -> cfree,
-                        cache_coherence(fence_req_cl)(cb_sel) === Coher.TTIP -> evict,
-                        cache_coherence(fence_req_cl)(cb_sel) === Coher.TRUK -> probe
+                        cache_coherence(req_cl)(cb_sel) === Coher.NONE -> cfree,
+                        cache_coherence(req_cl)(cb_sel) === Coher.TTIP -> evict,
+                        cache_coherence(req_cl)(cb_sel) === Coher.TRUK -> probe
                       ))
                     )
     ))
@@ -341,7 +342,7 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
 
   for ( i <- 0 until cl; j <- 0 until cb ) yield {
 
-    when( is_op_aqblk & i.U === cl_sel(aqblk_req_addr) & j.U === cb_sel ) {
+    when( is_op_aqblk & i.U === cl_sel(req_addr) & j.U === cb_sel ) {
       cache_coherence(i)(j) :=
         Mux1H(Seq(
           ( state_qout === flash & state_dnxt =/= flash ) -> Coher.TTIP,
@@ -351,7 +352,7 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
         ))
     }
 
-    when( is_op_fence & i.U === cl_sel(fence_req_addr) & j.U === cb_sel ) {
+    when( is_op_fence & i.U === cl_sel(req_addr) & j.U === cb_sel ) {
       cache_coherence(i)(j) := 
         Mux1H(Seq(
           ( state_qout === rlese & state_dnxt === cktag ) -> Coher.TTIP,
@@ -362,26 +363,14 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
         ))
     }
 
-    when( i.U === cl_sel(fence_req_addr) & j.U === cb_sel ) {
-
-
-
-
-    }
-
-    bram.cache_dirty(i)(j) := 
-      Mux(
-        i.U =/= bram.cl_sel,
-        bram.cache_coherence(i),
-        MuxCase( bram.cache_dirty(i), Array(
-          (fsm.state_qout === fsm.rlese & ) -> ,
-          (fsm.state_qout === fsm.probe & io.l2c_chn_c(req_no)) -> 
+    val is_release_with_block: Bool
+    when( i.U === cl_sel(req_addr) & j.U === cb_sel ) {
+       bram.cache_dirty(i)(j) := 
+        Mux1H(Seq(
+          (state_qout === rlese & (state_dnxt === cktag | state_dnxt === cfree) & is_release_with_block) -> true.B
+          (state_qout === evict & state_dnxt === cktag) -> false.B
         ))
-      )
-  }
-
-
-
+    }
 
 }
 
@@ -534,13 +523,13 @@ abstract class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 256, mst
 
   cache_tag.tag_addr_r := 
     Mux1H(Seq(
-      is_op_aqblk -> aqblk_req_addr,
-      is_op_fence -> fence_req_addr
+      is_op_aqblk -> req_addr,
+      is_op_fence -> req_addr
     ))
 
   cache_tag.tag_addr_w :=
     Mux1H(Seq(
-      is_op_aqblk -> aqblk_req_addr,
+      is_op_aqblk -> req_addr,
       is_op_fence -> 0.U
     ))
 

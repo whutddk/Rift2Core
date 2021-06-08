@@ -25,12 +25,9 @@ import base._
 
 class Cache_tag( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
-
-  val tag_w    = {
-    val addr_lsb = log2Ceil(dw*bk/8)
-    val line_w   = log2Ceil(cl)
-    aw - addr_lsb - line_w
-  }
+  val addr_lsb = log2Ceil(dw*bk/8)
+  val line_w   = log2Ceil(cl)
+  val tag_w   = aw - addr_lsb - line_w
 
 
   val tag_addr_r = Wire(UInt(aw.W))
