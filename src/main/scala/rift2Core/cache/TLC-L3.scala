@@ -25,6 +25,7 @@ import chisel3.experimental.ChiselEnum
 import tilelink._
 import axi._
 import base._
+import org.scalatest.selenium.WebBrowser
 
 object Coher {
   def NONE = 0.U
@@ -198,79 +199,84 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
     Mux1H(
       ( state_qout === cktag & state_dnxt === probe ) -> aqblk_req_addr,
       ( state_qout === fence & state_dnxt === probe ) -> fence_req_addr,
-      ( state_qout === probe & state_dnxt === rlese ) -> probe_addr + ( 1.U << bus_lsb )
+      ( state_qout === rlese & state_dnxt === probe ) -> probe_addr + ( 1.U << mst_lsb )
     ),
     ( state_qout === cktag & state_dnxt === probe) |
     ( state_qout === fence & state_dnxt === probe) |
-    ( state_qout === probe & state_dnxt === rlese)
+    ( state_qout === rlese & state_dnxt === probe)
   )
 
-  val flash_port_fire: Bool
-  // flash_port_fire = mem_mst_r.io.r.fire
+  val is_probe_process_end = probe_addr(addr_lsb-1, mst_lsb).andR
+
+
+
+
+  val is_flash_bus_fire: Bool
+  // is_flash_bus_fire = mem_mst_r.io.r.fire
 
   val flash_addr = RegEnable(
     Mux1H(
       (state_qout === cktag & state_dnxt === flash) -> aqblk_req_addr,
-      (state_qout === flash & flash_port_fire)      -> flash_addr + ( 1.U << bus_lsb )
+      (state_qout === flash & is_flash_bus_fire)      -> flash_addr + ( 1.U << bus_lsb )
     ),
     (state_qout === cktag & state_dnxt === flash) |
-    (state_qout === flash & flash_port_fire)
+    (state_qout === flash & is_flash_bus_fire)
   )
 
-  val release_bus_valid: Bool
-  val release_bus_fire: Bool
+  val is_release_bus_valid: Bool
+  val is_release_bus_fire: Bool
   //release_valid = l2c_slv.io.c.valid
   val release_bus_addr: UInt
   // release_bus_addr = l2c_slv.io.c.bits.address
   val release_addr = RegInit(0.U(64.W))
 
-  val release_bus_end = release_bus_fire & release_addr(mst_lsb-1, bus_lsb).andR
+  val is_release_bus_end = is_release_bus_fire & release_addr(mst_lsb-1, bus_lsb).andR
 
-    when( release_bus_valid & release_addr === 0.U ) {
+    when( is_release_bus_valid & release_addr === 0.U ) {
       release_addr := release_bus_addr
     }
     .elsewhen( release_bus_end ) {
       release_addr := 0.U 
     }
-    .elsewhen( release_bus_fire ) {
+    .elsewhen( is_release_bus_fire ) {
       release_addr := release_addr + ( 1.U << bus_lsb )
     }
-    assert( ~(release_bus_valid & release_bus_addr(mst_lsb-1,0) =/= 0.U), "Assert Failed at tlc, the address of chn_c is misalign" )
+    assert( ~(is_release_bus_valid & release_bus_addr(mst_lsb-1,0) =/= 0.U), "Assert Failed at tlc, the address of chn_c is misalign" )
 
 
-  val grant_bus_fire: Bool
-  //grant_bus_fire = l2c_slv.io.d.fire
+  val is_grant_bus_fire: Bool
+  //is_grant_bus_fire = l2c_slv.io.d.fire
 
 
   val grant_addr = 
     RegEnable(
       Mux1H(
         ( state_qout === cktag & state_dnxt === grant) -> aqblk_req_addr,
-        ( state_qout === grant & grant_bus_fire)       -> grant_addr + ( 1.U << bus_lsb )
+        ( state_qout === grant & is_grant_bus_fire)    -> grant_addr + ( 1.U << bus_lsb )
       ),
       (state_qout === cktag & state_dnxt === grant) |
-      (state_qout === grant & grant_bus_fire)
+      (state_qout === grant & is_grant_bus_fire)
     )
 
-  val evict_bus_fire: Bool
-  //evict_bus_fire = mem_mst_w.io.w.fire
+  val is_evict_bus_fire: Bool
+  //is_evict_bus_fire = mem_mst_w.io.w.fire
 
   val evict_addr = 
     RegEnable(
       Mux1H(
-        (fsm.state_qout =/= fsm.evict & fsm.state_dnxt === fsm.evict) ->
+        (state_qout =/= evict & state_dnxt === evict) ->
           Mux1H(Seq(
             is_op_aqblk -> ,//from cktag
             is_op_fence -> fence_req_addr
           ))
-        (fsm.state_qout === fsm.evict & evict_bus_fire) -> evict_addr + ( 1.U << bus_lsb )
+        (state_qout === evict & is_evict_bus_fire) -> evict_addr + ( 1.U << bus_lsb )
       ),
-      (fsm.state_qout =/= fsm.evict & fsm.state_dnxt === fsm.evict) |
-      (fsm.state_qout === fsm.evict & evict_bus_fire)
+      (state_qout =/= evict & state_dnxt === evict) |
+      (state_qout === evict & is_evict_bus_fire)
     )
 
-
-  val is_probe_end = 
+  val is_evict_bus_end = is_evict_bus_fire & evict_addr(addr_lsb-1, bus_lsb).andR
+    // is_evict_bus_end = mem_mst_w.io.end
 
 
   tlc_state_dnxt_in_cktag := {
@@ -283,16 +289,44 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
     ))
   }
 
+  val is_probe_bus_fire: Bool
+  tlc_state_dnxt_in_probe := Mux( is_probe_bus_fire, rlese, probe)
 
-  l3c_state_dnxt_in_probe := Mux( is_probe_end, fsm.rlese, fsm.cktag)
+  tlc_state_dnxt_in_evict := 
+    Mux( ~is_evict_bus_end, evict, 
+      Mux1H(Seq(
+        is_op_aqblk -> cktag,
+        is_op_fence -> fence
+      ))
+    )
+
+  val is_flash_bus_fire: Bool
+  val is_flash_bus_end = is_flash_bus_fire & flash_addr(addr_lsb-1, bus_lsb).andR
+  // is_flash_bus_end = mem_mst_r.io.end
+
+  tlc_state_dnxt_in_flash := Mux( is_flash_bus_end, cktag, flash )
 
 
+  val is_grant_bus_end = is_grant_bus_fire & grant_addr(mst_lsb-1, bus_lsb)
+  // is_grant_bus_end = io.l2c_chn_c(req_no).e.fire
 
+  tlc_state_dnxt_in_grant := Mux( is_grant_bus_end, cfree, grant )
 
+  val is_probe_rtn:Vec[Bool]
 
+  tlc_state_dnxt_in_rlese := 
+      Mux1H(Seq(
+        is_op_aqblk -> Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ),
+                        Mux( is_probe_process_end, cktag, probe ),
+                        fsm.rlese ),
+        is_op_wbblk -> Mux( is_release_bus_end, cfree, rlese ),
+        is_op_fence -> Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ), evict, rlese )
+      ))
+
+  
 
   for ( i <- 0 until cl ) yield {
-    val cache_coherence_dnxt = Wire(Vec(cl, UInt(3.W)))
+    val cache_coherence_dnxt = Wire(Vec(cl, Vec(cb, UInt(3.W))))
 
 
     when( (fsm.state_qout === fsm.fence) & (fsm.state_dnxt === fsm.cfree) ) {
@@ -324,6 +358,9 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
       )
   }
 
+
+
+
 }
 
 
@@ -335,43 +372,20 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
 
 
 
-    /**
-      * @note when axi_w rtn, exit evict, if entry from fence, goto fence, or goto cktag 
-      */
-    val l3c_state_dnxt_in_evict = 
-      Mux( ~mem_mst_w.io.end, fsm.evict, 
-        Mux1H(Seq(
-          is_op_aqblk -> fsm.cktag,
-          is_op_fence -> fsm.fence
-        ))
-      )
 
-    /**
-      * @note waitting for axi rtn and goto grant
-      */
-    val l3c_state_dnxt_in_flash = 
-      Mux( mem_mst_r.io.end, fsm.cktag, fsm.flash )
 
-    /**
-      * @note when grant rtn, goto cfree
-      */
-    val l3c_state_dnxt_in_grant = 
-      Mux( io.l2c_chn_c(req_no).e.fire, fsm.cfree, fsm.grant )
+  tlc_state_dnxt_in_fence := 
+    Mux( cache_coherence.contains(Coher.TRUK), probe, 
+      Mux( cache_coherence.forall(x:UInt => x === Coher.NONE), cfree, fence  )
+    ) 
 
-    /**
-      * @note when no dirty, goto cfree or goto evict
-      */
-    val l3c_state_dnxt_in_fence = 
-      Mux( bram.cache_coherence.contains(Coher.TRUK), fsm.probe, 
-        Mux( bram.cache_coherence.forall(x:UInt => x === Coher.NONE), fsm.cfree, fsm.fence  )
-      ) 
-      
-    val l3c_state_dnxt_in_rlese = 
-      Mux1H(Seq(
-        is_op_aqblk -> Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ), fsm.probe, fsm.rlese ),
-        is_op_wbblk -> Mux( is_release_end, fsm.cfree, fsm.rlese ),
-        is_op_fence -> Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ), fsm.evict, fsm.rlese )
-      ))
+
+
+
+    
+
+
+
 
 
 
