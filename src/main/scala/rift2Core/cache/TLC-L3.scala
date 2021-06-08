@@ -46,7 +46,6 @@ trait fsm extends Module{
   val flash = 2.U
   val evict = 3.U
   val probe = 4.U
-  val fence = 5.U
   val grant = 6.U
   val rlese = 7.U
   
@@ -116,11 +115,6 @@ trait fsm extends Module{
       * @note when grant rtn, goto cfree
       */
     val l3c_state_dnxt_in_grant = Wire(UInt(3.W))
-
-    /**
-      * @note when no dirty, goto cfree or goto evict
-      */
-    val l3c_state_dnxt_in_fence = Wire(UInt(3.W))
       
     val l3c_state_dnxt_in_rlese = Wire(UInt(3.W))
 
@@ -134,7 +128,6 @@ trait fsm extends Module{
       (fsm.state_qout === fsm.evict) -> l3c_state_dnxt_in_evict,
       (fsm.state_qout === fsm.probe) -> l3c_state_dnxt_in_probe,
       (fsm.state_qout === fsm.grant) -> l3c_state_dnxt_in_grant,
-      (fsm.state_qout === fsm.fence) -> l3c_state_dnxt_in_fence,
       (fsm.state_qout === fsm.rlese) -> l3c_state_dnxt_in_rlese
     ))
 
@@ -184,25 +177,26 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
 
   val is_cb_hit =
     for ( i <- 0 until cb ) yield {
-      cache_tag.tag_info_r(0) === bram.tag_info
+      cache_tag.tag_info_r(i) === bram.tag_info
     }
 
   assert( PopCount(is_cb_hit.asUInt) <= 1.U, "Assert Failed, More than one block hit is not allowed!" )
 
   val cb_sel = 
     Mux( is_cb_hit.contian(true.B), UIntToOH(is_cb_hit.asUInt),
-      Mux( cache_coherence(aqblk_req_cl).contains(Coher.NONE), cache_coherence(aqblk_req_cl).indexWhere((x:UInt) => (x === Coher.NONE)),
+      Mux( cache_tag.tag_info_r.contains(0.U), cache_tag.tag_info_r.indexWhere((x:UInt) => (x === 0.U)),
         random_res
     ))
 
   val probe_addr = RegEnable(
     Mux1H(
-      ( state_qout === cktag & state_dnxt === probe ) -> aqblk_req_addr,
-      ( state_qout === fence & state_dnxt === probe ) -> fence_req_addr,
+      ( state_qout === cktag & state_dnxt === probe ) -> Mux1H(Seq(
+                                                          is_op_aqblk -> aqblk_req_addr,
+                                                          is_op_fence -> fence_req_addr,
+                                                        )),
       ( state_qout === rlese & state_dnxt === probe ) -> probe_addr + ( 1.U << mst_lsb )
     ),
     ( state_qout === cktag & state_dnxt === probe) |
-    ( state_qout === fence & state_dnxt === probe) |
     ( state_qout === rlese & state_dnxt === probe)
   )
 
@@ -261,12 +255,14 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
   val is_evict_bus_fire: Bool
   //is_evict_bus_fire = mem_mst_w.io.w.fire
 
-  val evict_addr = 
+  val evict_addr = {
+    val abandon_addr = Cat(cache_tag.tag_info_r(cb_sel), cl_sel(aqblk_req_addr), 0.U(addr_lsb))
+
     RegEnable(
       Mux1H(
         (state_qout =/= evict & state_dnxt === evict) ->
           Mux1H(Seq(
-            is_op_aqblk -> ,//from cktag
+            is_op_aqblk -> abandon_addr,//from cktag
             is_op_fence -> fence_req_addr
           ))
         (state_qout === evict & is_evict_bus_fire) -> evict_addr + ( 1.U << bus_lsb )
@@ -274,19 +270,35 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
       (state_qout =/= evict & state_dnxt === evict) |
       (state_qout === evict & is_evict_bus_fire)
     )
+  }
 
-  val is_evict_bus_end = is_evict_bus_fire & evict_addr(addr_lsb-1, bus_lsb).andR
+
+  val is_evict_bus_end = 
+    Mux(cache_dirty(fence_req_cl)(cb_sel), is_evict_bus_fire & evict_addr(addr_lsb-1, bus_lsb).andR, is_evict_bus_fire)
+
     // is_evict_bus_end = mem_mst_w.io.end
 
 
   tlc_state_dnxt_in_cktag := {
     val aqblk_req_cl = cl_sel( aqblk_req_addr )
+    val fence_req_cl = cl_sel(fence_req_addr)
 
-    Mux1H( Seq(
-      cache_coherence(aqblk_req_cl)(cb_sel) === Coher.NONE -> flash,
-      cache_coherence(aqblk_req_cl)(cb_sel) === Coher.TTIP -> Mux(is_cb_hit.contian(true.B), grant, evict),
-      cache_coherence(aqblk_req_cl)(cb_sel) === Coher.TRUK -> probe
+    Mux1H(Seq(
+      is_op_aqblk -> Mux1H( Seq(
+                      cache_coherence(aqblk_req_cl)(cb_sel) === Coher.NONE -> flash,
+                      cache_coherence(aqblk_req_cl)(cb_sel) === Coher.TTIP -> Mux(is_cb_hit.contian(true.B), grant, evict),
+                      cache_coherence(aqblk_req_cl)(cb_sel) === Coher.TRUK -> probe
+                    ))
+      is_op_fence -> Mux( ~is_cb_hit.contian(true.B), cfree, 
+                      Mux1H(Seq(
+                        cache_coherence(fence_req_cl)(cb_sel) === Coher.NONE -> cfree,
+                        cache_coherence(fence_req_cl)(cb_sel) === Coher.TTIP -> evict,
+                        cache_coherence(fence_req_cl)(cb_sel) === Coher.TRUK -> probe
+                      ))
+                    )
     ))
+
+
   }
 
   val is_probe_bus_fire: Bool
@@ -296,7 +308,7 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
     Mux( ~is_evict_bus_end, evict, 
       Mux1H(Seq(
         is_op_aqblk -> cktag,
-        is_op_fence -> fence
+        is_op_fence -> cfree
       ))
     )
 
@@ -315,39 +327,49 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
   val is_probe_rtn:Vec[Bool]
 
   tlc_state_dnxt_in_rlese := 
-      Mux1H(Seq(
-        is_op_aqblk -> Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ),
-                        Mux( is_probe_process_end, cktag, probe ),
-                        fsm.rlese ),
-        is_op_wbblk -> Mux( is_release_bus_end, cfree, rlese ),
-        is_op_fence -> Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ), evict, rlese )
-      ))
-
-  
-
-  for ( i <- 0 until cl ) yield {
-    val cache_coherence_dnxt = Wire(Vec(cl, Vec(cb, UInt(3.W))))
+    Mux1H(Seq(
+      (is_op_aqblk | is_op_fence) -> Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ),
+                                      Mux( is_probe_process_end, cktag, probe ),
+                                      rlese ),
+      is_op_wbblk -> Mux( is_release_bus_end, cfree, rlese ),
+    ))
 
 
-    when( (fsm.state_qout === fsm.fence) & (fsm.state_dnxt === fsm.cfree) ) {
-      bram.cache_coherence(i) := bram.NONE
+
+  val is_L3cache: Boolean
+
+
+  for ( i <- 0 until cl; j <- 0 until cb ) yield {
+
+    when( is_op_aqblk & i.U === cl_sel(aqblk_req_addr) & j.U === cb_sel ) {
+      cache_coherence(i)(j) :=
+        Mux1H(Seq(
+          ( state_qout === flash & state_dnxt =/= flash ) -> Coher.TTIP,
+          ( state_qout === rlese & state_dnxt === cktag ) -> Coher.TTIP,
+          ( state_qout === grant & state_dnxt =/= grant ) -> Coher.TRNK,
+          ( state_qout === evict & state_dnxt =/= evict ) -> Coher.NONE
+        ))
     }
-    when
-    bram.cache_coherence(i) :=
-      Mux(
-        (fsm.state_qout === fsm.fence) & (fsm.state_dnxt === fsm.cfree),
-        bram.NONE,
-        Mux(
-          i.U =/= bram.cl_sel(),
-          bram.cache_coherence(i),
-          MuxCase( bram.cache_coherence(i), Array(
-            (fsm.state_qout === fsm.evict & fsm.state_dnxt =/= fsm.evict) -> bram.NONE,
-            (fsm.state_qout === fsm.flash & fsm.state_dnxt =/= fsm.flash) -> bram.TRUK
-          ))
-        )
-      )
 
-    bram.cache_dirty(i) := 
+    when( is_op_fence & i.U === cl_sel(fence_req_addr) & j.U === cb_sel ) {
+      cache_coherence(i)(j) := 
+        Mux1H(Seq(
+          ( state_qout === rlese & state_dnxt === cktag ) -> Coher.TTIP,
+          ( state_qout === evict & state_dnxt =/= evict ) -> {
+                                                              if(is_L3cache) {Coher.TTIP} 
+                                                              else {Coher.NONE}
+                                                            }
+        ))
+    }
+
+    when( i.U === cl_sel(fence_req_addr) & j.U === cb_sel ) {
+
+
+
+
+    }
+
+    bram.cache_dirty(i)(j) := 
       Mux(
         i.U =/= bram.cl_sel,
         bram.cache_coherence(i),
@@ -374,10 +396,7 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
 
 
 
-  tlc_state_dnxt_in_fence := 
-    Mux( cache_coherence.contains(Coher.TRUK), probe, 
-      Mux( cache_coherence.forall(x:UInt => x === Coher.NONE), cfree, fence  )
-    ) 
+
 
 
 
@@ -519,9 +538,16 @@ abstract class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 256, mst
       is_op_fence -> fence_req_addr
     ))
 
-  cache_tag.tag_addr_w := aqblk_req_addr
+  cache_tag.tag_addr_w :=
+    Mux1H(Seq(
+      is_op_aqblk -> aqblk_req_addr,
+      is_op_fence -> 0.U
+    ))
 
-  cache_tag.tag_en_w := fsm.state_qout === fsm.cktag & fsm.state_dnxt === fsm.flash
+  cache_tag.tag_en_w :=
+    (fsm.state_qout === fsm.cktag & fsm.state_dnxt === fsm.flash) |
+    (fsm.state_qout === fsm.evict & fsm.state_dnxt === fsm.cfree)
+    
   cache_tag.tag_en_r := fsm.state_dnxt === fsm.cktag
 
 
