@@ -382,9 +382,102 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
 }
 
 
-abstract class TLC_bus( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_size:Int ) extends TLC_ram( dw, bk, cb, cl, mst_size ){
+abstract class TLC_slv_port( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_num:Int = 3, mst_size:Int )  extends TLC_ram( dw, bk, cb, cl, mst_size ){
+
+  val slv_chn_a = Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_a(128, 32))))
+  val slv_chn_b = Vec(mst_num, new DecoupledIO(new TLchannel_b(128, 32)))
+  val slv_chn_c = Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_c(128, 32))))
+  val slv_chn_d = Vec(mst_num, new DecoupledIO( new TLchannel_d(128)))
+  val slv_chn_e = Vec(mst_num, Flipped(new DecoupledIO( new TLchannel_e)))
+
+ val aqblk_agent_no = {
+    if ( mst_num == 1 ) {
+      0.U(1.W)
+    }
+    else {
+      val value = RegInit(0.U((log2Ceil(mst_num)).W))
+
+      val req = for ( i <- 0 until mst_num ) yield { slv_chn_a(i).valid }
+      val no = for ( i <- 0 until mst_num ) yield { i.U }
+
+      when( state_qout === cfree & state_dnxt === cktag ) {
+        value := PriorityMux( req zip no )
+      }
+      value
+    }
+  }
+  
+  val wbblk_agent_no = {
+    if ( mst_num == 1 ) {
+      0.U(1.W)
+    }
+    else {
+      val value = RegInit(0.U((log2Ceil(mst_num)).W))
+
+      val req = for ( i <- 0 until mst_num ) yield { slv_chn_c(i).valid }
+      val no = for ( i <- 0 until mst_num ) yield { i.U }
+
+      when( state_qout === rlese & release_addr === 0.U & slv_chn_c.exists(x => x.valid === true.B)  ) {
+        value := PriorityMux( req zip no )
+      }
+      value
+    }
+  }
+
+  assert( mst_num > 0, "Invalid Setting at TLC-L3, mst number must larger than 0" )
+
+  override val is_aqblk_req = (state_qout === cfree) & slv_chn_a.exists((x:DecoupledIO[TLchannel_a]) => (x.valid === true.B) )
+  override val is_wbblk_req = (state_qout === cfree) & slv_chn_c.exists((x:DecoupledIO[TLchannel_c]) => (x.valid === true.B) )
+
+  assert( ~((is_op_aqblk | is_op_wbblk | is_op_fence) & (state_qout === cfree)), "Assert Failed at TLC_slv_port, when cfree, no op can be valid" )
 
 
+
+
+  override val is_release_bus_valid = slv_chn_c.exists((x:DecoupledIO[TLchannel_c]) => (x.valid === true.B) )
+  override val is_release_bus_fire = slv_chn_c(wbblk_agent_no).fire
+
+  override val release_bus_addr = slv_chn_c(wbblk_agent_no).bits.address
+
+
+  override val is_grant_bus_fire = slv_chn_d(aqblk_agent_no).fire
+
+
+
+  override val is_probe_rtn = RegInit(VecInit(Seq.fill(mst_num)(false.B)))
+  when( state_qout === probe & state_dnxt === rlese ) { is_probe_rtn := 0.U.asBools }
+  .elsewhen( state_qout === rlese ) {
+      when(
+        is_release_bus_end & (
+          slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ProbeAckData |
+          slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ProbeAck
+        )
+      ) { is_probe_rtn(wbblk_agent_no) := true.B }
+
+  }
+
+  override val is_release_with_block = 
+    is_release_bus_fire & (
+      slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ReleaseData |
+      slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ProbeAckData
+    )
+
+  override val release_data = slv_chn_c(wbblk_agent_no).bits.data
+
+
+
+
+
+
+
+}
+
+
+trait TLC_mst {
+
+}
+
+trait AXI_mst {
 
 }
 
@@ -424,92 +517,20 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 256, mst_num:Int 
   // val wbblk_agent_no: UInt
 
 
-  val aqblk_agent_no = {
-    if ( mst_num == 1 ) {
-      0.U(1.W)
-    }
-    else {
-      val value = RegInit(0.U((log2Ceil(mst_num)).W))
-
-      val req = for ( i <- 0 until mst_num ) yield { io.slv_chn_a(i).valid }
-      val no = for ( i <- 0 until mst_num ) yield { i.U }
-
-      when( state_qout === cfree & state_dnxt === cktag ) {
-        value := PriorityMux( req zip no )
-      }
-      value
-    }
-  }
-  
-  val wbblk_agent_no = {
-    if ( mst_num == 1 ) {
-      0.U(1.W)
-    }
-    else {
-      val value = RegInit(0.U((log2Ceil(mst_num)).W))
-
-      val req = for ( i <- 0 until mst_num ) yield { io.slv_chn_c(i).valid }
-      val no = for ( i <- 0 until mst_num ) yield { i.U }
-
-      when( state_qout === rlese & release_addr === 0.U & io.slv_chn_c.exists(x => x.valid === true.B)  ) {
-        value := PriorityMux( req zip no )
-      }
-      value
-    }
-  }
-
-
-
-
-  assert( mst_num > 0, "Invalid Setting at TLC-L3, mst number must larger than 0" )
+ 
 
   val mem_mst_r = Module( new AXI_mst_r( 32, 128, 1, 1, 63 ))
   val mem_mst_w = Module( new AXI_mst_w( 32, 128, 1, 1, 63 ))
 
   override val is_L3cache = true
 
-
-  override val is_aqblk_req = ~is_op_aqblk & ~is_op_wbblk & ~is_op_fence & io.slv_chn_a.exists((x:DecoupledIO[TLchannel_a]) => (x.valid === true.B) )
-  override val is_wbblk_req = ~is_op_aqblk & ~is_op_wbblk & ~is_op_fence & io.slv_chn_c.exists((x:DecoupledIO[TLchannel_c]) => (x.valid === true.B) )
-  override val is_fence_req = ~is_op_aqblk & ~is_op_wbblk & ~is_op_fence & io.l3c_fence.valid
-
+  override val is_fence_req = ~is_op_aqblk & ~is_op_wbblk & ~is_op_fence & l3c_fence.valid
 
   override val is_flash_bus_fire = io.mem_chn_r.fire
-
-  override val is_release_bus_valid = io.slv_chn_c.exists((x:DecoupledIO[TLchannel_c]) => (x.valid === true.B) )
-  override val is_release_bus_fire = io.slv_chn_c(wbblk_agent_no).fire
-
-  override val release_bus_addr = io.slv_chn_c(wbblk_agent_no).bits.address
-
-
-  override val is_grant_bus_fire = io.slv_chn_d(aqblk_agent_no).fire
-
   override val is_evict_bus_fire = io.mem_chn_w.fire
-
-  override val is_probe_rtn = RegInit(VecInit(Seq.fill(mst_num)(false.B)))
-  when( state_qout === probe & state_dnxt === rlese ) { is_probe_rtn := 0.U.asBools }
-  .elsewhen( state_qout === rlese ) {
-      when(
-        is_release_bus_end & (
-          io.slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ProbeAckData |
-          io.slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ProbeAck
-        )
-      ) { is_probe_rtn(wbblk_agent_no) := true.B }
-
-  }
-
-  override val is_release_with_block = 
-    is_release_bus_fire & (
-      io.slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ReleaseData |
-      io.slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ProbeAckData
-    )
-
-  override val flash_data = io.mem_chn_r.bits.data
-
-  override val release_data = io.slv_chn_c(wbblk_agent_no).bits.data
  
 
-
+  override val flash_data = io.mem_chn_r.bits.data
 
 }
 
