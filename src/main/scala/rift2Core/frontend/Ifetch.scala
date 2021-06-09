@@ -287,7 +287,7 @@ class Ifetch() extends Module with IBuf{
   io.il1_chn_d <> il1_mst.io.d
 
 
-  il1_mst.io.a_info.opcode  := il1_mst.Get
+  il1_mst.io.a_info.opcode  := Opcode.Get
   il1_mst.io.a_info.param   := DontCare
   il1_mst.io.a_info.size    := addr_lsb.U
   il1_mst.io.a_info.source  := 0.U

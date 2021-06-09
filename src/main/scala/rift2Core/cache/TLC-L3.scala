@@ -20,12 +20,12 @@ package rift2Core.cache
 import chisel3._
 import chisel3.util._
 import chisel3.util.random._
-import chisel3.experimental.ChiselEnum
+
 
 import tilelink._
 import axi._
 import base._
-import org.scalatest.selenium.WebBrowser
+
 
 object Coher {
   def NONE = 0.U
@@ -35,11 +35,11 @@ object Coher {
 
 
 
-trait fsm extends Module{
+abstract class TLC_fsm extends Module{
 
-  val is_fence_req = Wire(Bool()) 
-  val is_wbblk_req = Wire(Bool()) 
-  val is_aqblk_req = Wire(Bool()) 
+  val is_fence_req: Bool
+  val is_wbblk_req: Bool
+  val is_aqblk_req: Bool
 
   val cfree = 0.U
   val cktag = 1.U
@@ -133,7 +133,7 @@ trait fsm extends Module{
 
 }
 
-abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_size:Int ) extends fsm {
+abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_size:Int ) extends TLC_fsm {
  
   def addr_lsb = log2Ceil(dw*bk/8)
   def line_w   = log2Ceil(cl)
@@ -141,7 +141,7 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
 
   def mst_lsb = log2Ceil(mst_size/8)
 
-  def bus_lsb: Int
+  def bus_lsb = log2Ceil(128/8)
 
   val cache_dat = new Cache_dat( dw, 32, bk, 1, cl )
   val cache_tag = new Cache_tag( dw, 32, bk, 1, cl )
@@ -154,31 +154,64 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
   val cache_coherence = RegInit(VecInit(Seq.fill(cl)(VecInit(Seq.fill(cb)(0.U(3.W))))))
   val cache_dirty = RegInit(VecInit(Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B)))))
 
-  val mem_dat = Wire( UInt(128.W) )
-
-  val tag_info = tag_addr(31, 32-tag_w)
-
-
-  def cl_sel(addr: UInt): UInt = addr(addr_lsb+line_w-1, addr_lsb)
-
-
   val req_addr = RegInit(0.U(64.W))
+  val req_cl = req_addr(addr_lsb+line_w-1, addr_lsb)
+
+  val probe_addr = RegInit(0.U(64.W))
+  val flash_addr = RegInit(0.U(64.W))
+  val release_addr = RegInit(0.U(64.W))
+  val grant_addr = RegInit(0.U(64.W))
+  val evict_addr = RegInit(0.U(64.W))
+
+  val is_probe_process_end = probe_addr(addr_lsb-1, mst_lsb).andR
+  val is_flash_bus_fire: Bool
+  // is_flash_bus_fire = mem_mst_r.io.r.fire
+  val is_release_bus_valid: Bool
+  val is_release_bus_fire: Bool
+  //release_valid = l2c_slv.io.c.valid
+  val release_bus_addr: UInt
+  // release_bus_addr = l2c_slv.io.c.bits.address
+
+  val is_release_bus_end = is_release_bus_fire & release_addr(mst_lsb-1, bus_lsb).andR
+  val is_grant_bus_fire: Bool
+  //is_grant_bus_fire = l2c_slv.io.d.fire
+  val is_evict_bus_fire: Bool
+  //is_evict_bus_fire = mem_mst_w.io.w.fire
+  val is_flash_bus_end = is_flash_bus_fire & flash_addr(addr_lsb-1, bus_lsb).andR
+  // is_flash_bus_end = mem_mst_r.io.end
+  val is_grant_bus_end = is_grant_bus_fire & grant_addr(mst_lsb-1, bus_lsb).andR
+  // is_grant_bus_end = io.l2c_chn_c(req_no).e.fire
+  val is_probe_rtn:Vec[Bool]
+  val is_L3cache: Boolean
+  val is_release_with_block: Bool
+  val flash_data: UInt
+  // flash_data = mem_mst_r.io.r.bits.data
+  val release_data: UInt
+  // release_data = l2c_slv.io.c.bits.data
+
+  val abandon_addr = Cat(cache_tag.tag_info_r(cb_sel), req_cl, 0.U(addr_lsb))
+  val is_evict_bus_end = 
+    Mux(cache_dirty(req_cl)(cb_sel), is_evict_bus_fire & evict_addr(addr_lsb-1, bus_lsb).andR, is_evict_bus_fire)
+    // is_evict_bus_end = mem_mst_w.io.end
 
 
   // assert( aqblk_req_addr(mst_lsb-1,0) === 0.U,  "Assert Failed at TLC, aquire request addr misalign!" )
   // assert( wbblk_req_addr(mst_lsb-1,0) === 0.U, "Assert Failed at TLC, release request addr misalign!" )
   // assert( fence_req_addr(addr_lsb-1,0) === 0.U, "Assert Failed at TLC, fence request addr misalign!" )
 
-  val aqblk_req_agent = RegInit(0.U(3.W))
-  val wbblk_req_agent = RegInit(0.U(3.W))
 
-  val tag_addr = Wire( UInt(32.W) )
 
-  val is_cb_hit = VecInit(
-    for ( i <- 0 until cb ) yield {
-      cache_tag.tag_info_r(i) === tag_info
-    }
-  )
+
+  val is_cb_hit = {
+    val tag_info = req_addr(31, 32-tag_w)
+    VecInit(
+      for ( i <- 0 until cb ) yield {
+        cache_tag.tag_info_r(i) === tag_info
+      }
+    )
+  }
+
+
 
 
   assert( PopCount(is_cb_hit.asUInt) <= 1.U, "Assert Failed, More than one block hit is not allowed!" )
@@ -189,121 +222,59 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
         random_res
     ))
 
-  val probe_addr = RegEnable(
-    Mux1H(
-      ( state_qout === cktag & state_dnxt === probe ) -> Mux1H(Seq(
-                                                          is_op_aqblk -> req_addr,
-                                                          is_op_fence -> req_addr,
-                                                        )),
-      ( state_qout === rlese & state_dnxt === probe ) -> probe_addr + ( 1.U << mst_lsb )
-    ),
-    ( state_qout === cktag & state_dnxt === probe) |
-    ( state_qout === rlese & state_dnxt === probe)
-  )
 
-  val is_probe_process_end = probe_addr(addr_lsb-1, mst_lsb).andR
+
+  val mem_dat = Mux1H( is_cb_hit zip cache_dat.dat_info_r )
 
 
 
 
-  val is_flash_bus_fire: Bool
-  // is_flash_bus_fire = mem_mst_r.io.r.fire
+  when(state_qout === cktag & state_dnxt === probe) { probe_addr := req_addr }
+  when(state_qout === rlese & state_dnxt === probe) { probe_addr := probe_addr + ( 1.U << mst_lsb ) }
 
-  val flash_addr = RegEnable(
-    Mux1H(
-      (state_qout === cktag & state_dnxt === flash) -> req_addr,
-      (state_qout === flash & is_flash_bus_fire)      -> flash_addr + ( 1.U << bus_lsb )
-    ),
-    (state_qout === cktag & state_dnxt === flash) |
-    (state_qout === flash & is_flash_bus_fire)
-  )
+  when(state_qout === cktag & state_dnxt === flash) { flash_addr := req_addr }
+  when(state_qout === flash & is_flash_bus_fire) { flash_addr := flash_addr + ( 1.U << bus_lsb ) }
 
-  val is_release_bus_valid: Bool
-  val is_release_bus_fire: Bool
-  //release_valid = l2c_slv.io.c.valid
-  val release_bus_addr: UInt
-  // release_bus_addr = l2c_slv.io.c.bits.address
-  val release_addr = RegInit(0.U(64.W))
-
-  val is_release_bus_end = is_release_bus_fire & release_addr(mst_lsb-1, bus_lsb).andR
-
-    when( is_release_bus_valid & release_addr === 0.U ) {
-      release_addr := release_bus_addr
-    }
-    .elsewhen( release_bus_end ) {
-      release_addr := 0.U 
-    }
-    .elsewhen( is_release_bus_fire ) {
-      release_addr := release_addr + ( 1.U << bus_lsb )
-    }
-    assert( ~(is_release_bus_valid & release_bus_addr(mst_lsb-1,0) =/= 0.U), "Assert Failed at tlc, the address of chn_c is misalign" )
-
-
-  val is_grant_bus_fire: Bool
-  //is_grant_bus_fire = l2c_slv.io.d.fire
-
-
-  val grant_addr = 
-    RegEnable(
-      Mux1H(
-        ( state_qout === cktag & state_dnxt === grant) -> req_addr,
-        ( state_qout === grant & is_grant_bus_fire)    -> grant_addr + ( 1.U << bus_lsb )
-      ),
-      (state_qout === cktag & state_dnxt === grant) |
-      (state_qout === grant & is_grant_bus_fire)
-    )
-
-  val is_evict_bus_fire: Bool
-  //is_evict_bus_fire = mem_mst_w.io.w.fire
-
-  val evict_addr = {
-    val abandon_addr = Cat(cache_tag.tag_info_r(cb_sel), cl_sel(req_addr), 0.U(addr_lsb))
-
-    RegEnable(
-      Mux1H(
-        (state_qout =/= evict & state_dnxt === evict) ->
-          Mux1H(Seq(
-            is_op_aqblk -> abandon_addr,//from cktag
-            is_op_fence -> req_addr
-          ))
-        (state_qout === evict & is_evict_bus_fire) -> evict_addr + ( 1.U << bus_lsb )
-      ),
-      (state_qout =/= evict & state_dnxt === evict) |
-      (state_qout === evict & is_evict_bus_fire)
-    )
+  when( state_qout === rlese ) {
+    when( is_release_bus_valid & release_addr === 0.U ) { release_addr := release_bus_addr }
+    .elsewhen( is_release_bus_end ) { release_addr := 0.U }
+    .elsewhen( is_release_bus_fire ) { release_addr := release_addr + ( 1.U << bus_lsb ) }
   }
 
 
-  val is_evict_bus_end = 
-    Mux(cache_dirty(fence_req_cl)(cb_sel), is_evict_bus_fire & evict_addr(addr_lsb-1, bus_lsb).andR, is_evict_bus_fire)
+  assert( ~(is_release_bus_valid & release_bus_addr(mst_lsb-1,0) =/= 0.U), "Assert Failed at tlc, the address of chn_c is misalign" )
 
-    // is_evict_bus_end = mem_mst_w.io.end
+  when(state_qout === cktag & state_dnxt === grant) { grant_addr := req_addr }
+  when(state_qout === grant & is_grant_bus_fire) { grant_addr := grant_addr + ( 1.U << bus_lsb ) }
+
+  when(state_qout =/= evict & state_dnxt === evict) {
+    evict_addr :=
+      Mux1H(Seq(
+        is_op_aqblk -> abandon_addr,//from cktag
+        is_op_fence -> req_addr
+      ))
+  }
+  .elsewhen(state_qout === evict & is_evict_bus_fire) { evict_addr := evict_addr + ( 1.U << bus_lsb ) }
 
 
   tlc_state_dnxt_in_cktag := {
-    val req_cl = cl_sel(req_addr)
-
-
     Mux1H(Seq(
       is_op_aqblk -> Mux1H( Seq(
-                      cache_coherence(req_cl)(cb_sel) === Coher.NONE -> flash,
-                      cache_coherence(req_cl)(cb_sel) === Coher.TTIP -> Mux(is_cb_hit.contian(true.B), grant, evict),
-                      cache_coherence(req_cl)(cb_sel) === Coher.TRUK -> probe
-                    ))
-      is_op_fence -> Mux( ~is_cb_hit.contian(true.B), cfree, 
+                      ( cache_coherence(req_cl)(cb_sel) === Coher.NONE ) -> flash,
+                      ( cache_coherence(req_cl)(cb_sel) === Coher.TTIP ) -> Mux(is_cb_hit.contains(true.B), grant, evict),
+                      ( cache_coherence(req_cl)(cb_sel) === Coher.TRNK ) -> probe
+                    )),
+      is_op_fence -> Mux( ~is_cb_hit.contains(true.B), cfree, 
                       Mux1H(Seq(
-                        cache_coherence(req_cl)(cb_sel) === Coher.NONE -> cfree,
-                        cache_coherence(req_cl)(cb_sel) === Coher.TTIP -> evict,
-                        cache_coherence(req_cl)(cb_sel) === Coher.TRUK -> probe
+                        ( cache_coherence(req_cl)(cb_sel) === Coher.NONE ) -> cfree,
+                        ( cache_coherence(req_cl)(cb_sel) === Coher.TTIP ) -> evict,
+                        ( cache_coherence(req_cl)(cb_sel) === Coher.TRNK ) -> probe
                       ))
                     )
     ))
-
-
   }
 
-  val is_probe_bus_fire: Bool
-  tlc_state_dnxt_in_probe := Mux( is_probe_bus_fire, rlese, probe)
+  tlc_state_dnxt_in_probe := rlese
 
   tlc_state_dnxt_in_evict := 
     Mux( ~is_evict_bus_end, evict, 
@@ -313,20 +284,8 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
       ))
     )
 
-  val is_flash_bus_fire: Bool
-  val is_flash_bus_end = is_flash_bus_fire & flash_addr(addr_lsb-1, bus_lsb).andR
-  // is_flash_bus_end = mem_mst_r.io.end
-
   tlc_state_dnxt_in_flash := Mux( is_flash_bus_end, cktag, flash )
-
-
-  val is_grant_bus_end = is_grant_bus_fire & grant_addr(mst_lsb-1, bus_lsb)
-  // is_grant_bus_end = io.l2c_chn_c(req_no).e.fire
-
   tlc_state_dnxt_in_grant := Mux( is_grant_bus_end, cfree, grant )
-
-  val is_probe_rtn:Vec[Bool]
-
   tlc_state_dnxt_in_rlese := 
     Mux1H(Seq(
       (is_op_aqblk | is_op_fence) -> Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ),
@@ -335,14 +294,9 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
       is_op_wbblk -> Mux( is_release_bus_end, cfree, rlese ),
     ))
 
-
-
-  val is_L3cache: Boolean
-
-
   for ( i <- 0 until cl; j <- 0 until cb ) yield {
 
-    when( is_op_aqblk & i.U === cl_sel(req_addr) & j.U === cb_sel ) {
+    when( is_op_aqblk & i.U === req_cl & j.U === cb_sel ) {
       cache_coherence(i)(j) :=
         Mux1H(Seq(
           ( state_qout === flash & state_dnxt =/= flash ) -> Coher.TTIP,
@@ -352,7 +306,7 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
         ))
     }
 
-    when( is_op_fence & i.U === cl_sel(req_addr) & j.U === cb_sel ) {
+    when( is_op_fence & i.U === req_cl & j.U === cb_sel ) {
       cache_coherence(i)(j) := 
         Mux1H(Seq(
           ( state_qout === rlese & state_dnxt === cktag ) -> Coher.TTIP,
@@ -363,70 +317,100 @@ abstract class bram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_si
         ))
     }
 
-    val is_release_with_block: Bool
-    when( i.U === cl_sel(req_addr) & j.U === cb_sel ) {
-       bram.cache_dirty(i)(j) := 
+    when( i.U === req_cl & j.U === cb_sel ) {
+       cache_dirty(i)(j) := 
         Mux1H(Seq(
-          (state_qout === rlese & (state_dnxt === cktag | state_dnxt === cfree) & is_release_with_block) -> true.B
+          (state_qout === rlese & (state_dnxt === cktag | state_dnxt === cfree) & is_release_with_block) -> true.B,
           (state_qout === evict & state_dnxt === cktag) -> false.B
         ))
     }
+
+  }
+
+  cache_dat.dat_addr_w :=
+    Mux1H( Seq(
+      (state_qout === flash) -> flash_addr,
+      (state_qout === rlese) -> release_addr
+    ))
+
+  cache_dat.dat_en_w :=
+    ( state_qout === flash & is_flash_bus_fire ) |
+    ( state_qout === rlese & is_release_bus_fire & is_release_with_block)
+
+  cache_dat.dat_info_wstrb := Fill(16, 1.U)
+
+  cache_dat.dat_info_w :=
+    Mux1H( Seq(
+      ( state_qout === flash ) -> flash_data,
+      ( state_qout === rlese ) -> release_data,
+    ))
+
+  cache_dat.dat_en_r :=
+    ( state_qout === evict) |
+    ( state_qout === grant)
+
+  cache_dat.dat_addr_r :=
+    Mux1H(Seq(
+      ( state_qout === evict) -> evict_addr,
+      ( state_qout === grant) -> grant_addr
+    ))
+
+  cache_tag.tag_addr_r := req_addr
+
+  cache_tag.tag_addr_w :=
+    Mux1H(Seq(
+      is_op_aqblk -> req_addr,
+      is_op_fence -> (req_addr & Fill(addr_lsb + line_w, 1.U)) //force tag == 0.U to implit invalid in L2
+    ))
+
+  cache_tag.tag_en_w := {
+    if( is_L3cache ) {
+      is_op_aqblk & (
+        ( state_qout === cktag & state_dnxt === flash) |
+        ( state_qout === evict & state_dnxt === cfree)          
+      )
+    }
+    else {
+      ( state_qout === cktag & state_dnxt === flash) |
+      ( state_qout === evict & state_dnxt === cfree)          
+    }
+  }
+
+    
+  cache_tag.tag_en_r := state_dnxt === cktag
+
+}
+
+
+abstract class TLC_bus( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_size:Int ) extends TLC_ram( dw, bk, cb, cl, mst_size ){
+
+
 
 }
 
 
 
 
+class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 256, mst_num:Int = 3, mst_size:Int = 1024 ) extends TLC_bus( dw, bk, cb, cl, mst_size ) {
+  val io = IO(new Bundle{
 
-
-
-
-
-
-
-
-
-
-
-
-
+    val slv_chn_a = Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_a(128, 32))))
+    val slv_chn_b = Vec(mst_num, new DecoupledIO(new TLchannel_b(128, 32)))
+    val slv_chn_c = Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_c(128, 32))))
+    val slv_chn_d = Vec(mst_num, new DecoupledIO( new TLchannel_d(128)))
+    val slv_chn_e = Vec(mst_num, Flipped(new DecoupledIO( new TLchannel_e)))
     
+    val mem_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+    val mem_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 128, 1, 1)) )
+
+    val mem_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+    val mem_chn_w = new DecoupledIO(new AXI_chn_w( 128, 1 )) 
+    val mem_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
+
+    val l3c_fence = Flipped(DecoupledIO(Bool()))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-abstract class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 256, mst_num:Int = 3, mst_size:Int = dw ) extends Module {
-  // val io = IO(new Bundle{
-
-  //   val slv_chn_a = Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_a(128, 32))))
-  //   val slv_chn_b = Vec(mst_num, new DecoupledIO(new TLchannel_b(128, 32)))
-  //   val slv_chn_c = Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_c(128, 32))))
-  //   val slv_chn_d = Vec(mst_num, new DecoupledIO( new TLchannel_d(128)))
-  //   val slv_chn_e = Vec(mst_num, Flipped(new DecoupledIO( new TLchannel_e)))
-    
-  //   val mem_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-  //   val mem_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 128, 1, 1)) )
-
-  //   val mem_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-  //   val mem_chn_w = new DecoupledIO(new AXI_chn_w( 128, 1 )) 
-  //   val mem_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
-
-  //   val l3c_fence_req = Input(Bool())
-  // })
-
-
-  
+  })
 
 
   val tl_slv = {
@@ -436,216 +420,94 @@ abstract class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 256, mst
     }
   }
   
+  // val aqblk_agent_no: UInt
+  // val wbblk_agent_no: UInt
 
 
+  val aqblk_agent_no = {
+    if ( mst_num == 1 ) {
+      0.U(1.W)
+    }
+    else {
+      val value = RegInit(0.U((log2Ceil(mst_num)).W))
 
-  // val mem_mst_r = Module( new AXI_mst_r( 32, 128, 1, 1, 63 ))
-  // val mem_mst_w = Module( new AXI_mst_w( 32, 128, 1, 1, 63 ))
+      val req = for ( i <- 0 until mst_num ) yield { io.slv_chn_a(i).valid }
+      val no = for ( i <- 0 until mst_num ) yield { i.U }
 
+      when( state_qout === cfree & state_dnxt === cktag ) {
+        value := PriorityMux( req zip no )
+      }
+      value
+    }
+  }
+  
+  val wbblk_agent_no = {
+    if ( mst_num == 1 ) {
+      0.U(1.W)
+    }
+    else {
+      val value = RegInit(0.U((log2Ceil(mst_num)).W))
 
-  is_release_req
-  is_release_end
-  is_probe_rtn
-  req_no
-  is_probe_end
+      val req = for ( i <- 0 until mst_num ) yield { io.slv_chn_c(i).valid }
+      val no = for ( i <- 0 until mst_num ) yield { i.U }
 
- 
-
+      when( state_qout === rlese & release_addr === 0.U & io.slv_chn_c.exists(x => x.valid === true.B)  ) {
+        value := PriorityMux( req zip no )
+      }
+      value
+    }
   }
 
 
 
 
+  assert( mst_num > 0, "Invalid Setting at TLC-L3, mst number must larger than 0" )
+
+  val mem_mst_r = Module( new AXI_mst_r( 32, 128, 1, 1, 63 ))
+  val mem_mst_w = Module( new AXI_mst_w( 32, 128, 1, 1, 63 ))
+
+  override val is_L3cache = true
 
 
+  override val is_aqblk_req = ~is_op_aqblk & ~is_op_wbblk & ~is_op_fence & io.slv_chn_a.exists((x:DecoupledIO[TLchannel_a]) => (x.valid === true.B) )
+  override val is_wbblk_req = ~is_op_aqblk & ~is_op_wbblk & ~is_op_fence & io.slv_chn_c.exists((x:DecoupledIO[TLchannel_c]) => (x.valid === true.B) )
+  override val is_fence_req = ~is_op_aqblk & ~is_op_wbblk & ~is_op_fence & io.l3c_fence.valid
 
 
+  override val is_flash_bus_fire = io.mem_chn_r.fire
 
- 
+  override val is_release_bus_valid = io.slv_chn_c.exists((x:DecoupledIO[TLchannel_c]) => (x.valid === true.B) )
+  override val is_release_bus_fire = io.slv_chn_c(wbblk_agent_no).fire
 
-
-
-// BBBBBBBBBBBBBBBBB   RRRRRRRRRRRRRRRRR                  AAA               MMMMMMMM               MMMMMMMM
-// B::::::::::::::::B  R::::::::::::::::R                A:::A              M:::::::M             M:::::::M
-// B::::::BBBBBB:::::B R::::::RRRRRR:::::R              A:::::A             M::::::::M           M::::::::M
-// BB:::::B     B:::::BRR:::::R     R:::::R            A:::::::A            M:::::::::M         M:::::::::M
-//   B::::B     B:::::B  R::::R     R:::::R           A:::::::::A           M::::::::::M       M::::::::::M
-//   B::::B     B:::::B  R::::R     R:::::R          A:::::A:::::A          M:::::::::::M     M:::::::::::M
-//   B::::BBBBBB:::::B   R::::RRRRRR:::::R          A:::::A A:::::A         M:::::::M::::M   M::::M:::::::M
-//   B:::::::::::::BB    R:::::::::::::RR          A:::::A   A:::::A        M::::::M M::::M M::::M M::::::M
-//   B::::BBBBBB:::::B   R::::RRRRRR:::::R        A:::::A     A:::::A       M::::::M  M::::M::::M  M::::::M
-//   B::::B     B:::::B  R::::R     R:::::R      A:::::AAAAAAAAA:::::A      M::::::M   M:::::::M   M::::::M
-//   B::::B     B:::::B  R::::R     R:::::R     A:::::::::::::::::::::A     M::::::M    M:::::M    M::::::M
-//   B::::B     B:::::B  R::::R     R:::::R    A:::::AAAAAAAAAAAAA:::::A    M::::::M     MMMMM     M::::::M
-// BB:::::BBBBBB::::::BRR:::::R     R:::::R   A:::::A             A:::::A   M::::::M               M::::::M
-// B:::::::::::::::::B R::::::R     R:::::R  A:::::A               A:::::A  M::::::M               M::::::M
-// B::::::::::::::::B  R::::::R     R:::::R A:::::A                 A:::::A M::::::M               M::::::M
-// BBBBBBBBBBBBBBBBB   RRRRRRRR     RRRRRRRAAAAAAA                   AAAAAAAMMMMMMMM               MMMMMMMM
+  override val release_bus_addr = io.slv_chn_c(wbblk_agent_no).bits.address
 
 
+  override val is_grant_bus_fire = io.slv_chn_d(aqblk_agent_no).fire
 
+  override val is_evict_bus_fire = io.mem_chn_w.fire
 
-  cache_dat.dat_addr_w :=
-    Mux1H(
-      (fsm.state_qout === fsm.flash) -> flash_addr,
-      (fsm.state_qout === fsm.rlese) -> release_addr
+  override val is_probe_rtn = RegInit(VecInit(Seq.fill(mst_num)(false.B)))
+  when( state_qout === probe & state_dnxt === rlese ) { is_probe_rtn := 0.U.asBools }
+  .elsewhen( state_qout === rlese ) {
+      when(
+        is_release_bus_end & (
+          io.slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ProbeAckData |
+          io.slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ProbeAck
+        )
+      ) { is_probe_rtn(wbblk_agent_no) := true.B }
+
+  }
+
+  override val is_release_with_block = 
+    is_release_bus_fire & (
+      io.slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ReleaseData |
+      io.slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ProbeAckData
     )
 
+  override val flash_data = io.mem_chn_r.bits.data
 
-  cache_dat.dat_en_w :=
-    ( fsm.state_qout === fsm.flash & mem_mst_r.io.r.fire ) |
-    ( fsm.state_qout === fsm.rlese & l2c_slv.io.c.fire )
-
-  cache_dat.dat_info_wstrb := Fill(16, 1.U)
-
-  cache_dat.dat_info_w :=
-    Mux1H( Seq(
-      ( fsm.state_qout === fsm.flash ) -> mem_mst_r.io.r.bits.data,
-      ( fsm.state_qout === fsm.rlese ) -> l2c_slv.io.c.bits.data,
-    ))
-
-  cache_dat.dat_en_r :=
-    ( fsm.state_qout === fsm.evict) |
-    ( fsm.state_qout === fsm.grant)
-
-
-
-
-  cache_dat.dat_addr_r :=
-    Mux1H(Seq(
-      ( fsm.state_qout === fsm.evict) -> evict_addr,
-      ( fsm.state_qout === fsm.grant) -> grant_addr
-    ))
-
-  bram.mem_dat := cache_mem.dat_info_r(0)
-
-
-
-  cache_tag.tag_addr_r := 
-    Mux1H(Seq(
-      is_op_aqblk -> req_addr,
-      is_op_fence -> req_addr
-    ))
-
-  cache_tag.tag_addr_w :=
-    Mux1H(Seq(
-      is_op_aqblk -> req_addr,
-      is_op_fence -> 0.U
-    ))
-
-  cache_tag.tag_en_w :=
-    (fsm.state_qout === fsm.cktag & fsm.state_dnxt === fsm.flash) |
-    (fsm.state_qout === fsm.evict & fsm.state_dnxt === fsm.cfree)
-    
-  cache_tag.tag_en_r := fsm.state_dnxt === fsm.cktag
-
-
-
-
-
-  
-
-  
-
-
-
+  override val release_data = io.slv_chn_c(wbblk_agent_no).bits.data
  
-
-
-
-
-
-
-// FFFFFFFFFFFFFFFFFFFFFFEEEEEEEEEEEEEEEEEEEEEENNNNNNNN        NNNNNNNN        CCCCCCCCCCCCCEEEEEEEEEEEEEEEEEEEEEE
-// F::::::::::::::::::::FE::::::::::::::::::::EN:::::::N       N::::::N     CCC::::::::::::CE::::::::::::::::::::E
-// F::::::::::::::::::::FE::::::::::::::::::::EN::::::::N      N::::::N   CC:::::::::::::::CE::::::::::::::::::::E
-// FF::::::FFFFFFFFF::::FEE::::::EEEEEEEEE::::EN:::::::::N     N::::::N  C:::::CCCCCCCC::::CEE::::::EEEEEEEEE::::E
-//   F:::::F       FFFFFF  E:::::E       EEEEEEN::::::::::N    N::::::N C:::::C       CCCCCC  E:::::E       EEEEEE
-//   F:::::F               E:::::E             N:::::::::::N   N::::::NC:::::C                E:::::E             
-//   F::::::FFFFFFFFFF     E::::::EEEEEEEEEE   N:::::::N::::N  N::::::NC:::::C                E::::::EEEEEEEEEE   
-//   F:::::::::::::::F     E:::::::::::::::E   N::::::N N::::N N::::::NC:::::C                E:::::::::::::::E   
-//   F:::::::::::::::F     E:::::::::::::::E   N::::::N  N::::N:::::::NC:::::C                E:::::::::::::::E   
-//   F::::::FFFFFFFFFF     E::::::EEEEEEEEEE   N::::::N   N:::::::::::NC:::::C                E::::::EEEEEEEEEE   
-//   F:::::F               E:::::E             N::::::N    N::::::::::NC:::::C                E:::::E             
-//   F:::::F               E:::::E       EEEEEEN::::::N     N:::::::::N C:::::C       CCCCCC  E:::::E       EEEEEE
-// FF:::::::FF           EE::::::EEEEEEEE:::::EN::::::N      N::::::::N  C:::::CCCCCCCC::::CEE::::::EEEEEEEE:::::E
-// F::::::::FF           E::::::::::::::::::::EN::::::N       N:::::::N   CC:::::::::::::::CE::::::::::::::::::::E
-// F::::::::FF           E::::::::::::::::::::EN::::::N        N::::::N     CCC::::::::::::CE::::::::::::::::::::E
-// FFFFFFFFFFF           EEEEEEEEEEEEEEEEEEEEEENNNNNNNN         NNNNNNN        CCCCCCCCCCCCCEEEEEEEEEEEEEEEEEEEEEE
-
-  when( io.l3c_fence_req & ~db.is_fence ) { db.is_fence := true.B }
-  .elsewhen( db.is_empty &  db.is_fence ) { db.is_fence := false.B }
-
-
-
-// BBBBBBBBBBBBBBBBB   UUUUUUUU     UUUUUUUU   SSSSSSSSSSSSSSS 
-// B::::::::::::::::B  U::::::U     U::::::U SS:::::::::::::::S
-// B::::::BBBBBB:::::B U::::::U     U::::::US:::::SSSSSS::::::S
-// BB:::::B     B:::::BUU:::::U     U:::::UUS:::::S     SSSSSSS
-//   B::::B     B:::::B U:::::U     U:::::U S:::::S            
-//   B::::B     B:::::B U:::::D     D:::::U S:::::S            
-//   B::::BBBBBB:::::B  U:::::D     D:::::U  S::::SSSS         
-//   B:::::::::::::BB   U:::::D     D:::::U   SS::::::SSSSS    
-//   B::::BBBBBB:::::B  U:::::D     D:::::U     SSS::::::::SS  
-//   B::::B     B:::::B U:::::D     D:::::U        SSSSSS::::S 
-//   B::::B     B:::::B U:::::D     D:::::U             S:::::S
-//   B::::B     B:::::B U::::::U   U::::::U             S:::::S
-// BB:::::BBBBBB::::::B U:::::::UUU:::::::U SSSSSSS     S:::::S
-// B:::::::::::::::::B   UU:::::::::::::UU  S::::::SSSSSS:::::S
-// B::::::::::::::::B      UU:::::::::UU    S:::::::::::::::SS 
-// BBBBBBBBBBBBBBBBB         UUUUUUUUU       SSSSSSSSSSSSSSS   
-
-
-
-  io.l2c_chn_a <> l2c_slv.io.a
-  io.l2c_chn_d <> l2c_slv.io.d
-  io.mem_chn_ar <> mem_mst_r.io.ar
-  io.mem_chn_r  <> mem_mst_r.io.r
-  io.mem_chn_aw <> mem_mst_w.io.aw
-  io.mem_chn_w  <> mem_mst_w.io.w
-  io.mem_chn_b  <> mem_mst_w.io.b
-
-
-
-  l2c_slv.io.is_rsp   := fsm.state_qout === L3C_state.cktag & fsm.state_dnxt === L3C_state.rspl2
-  mem_mst_r.io.ar_req := fsm.state_qout === L3C_state.cktag & fsm.state_dnxt === L3C_state.flash
-  mem_mst_w.io.aw_req := fsm.state_qout =/= L3C_state.evict & fsm.state_dnxt === L3C_state.evict
-
-  l2c_slv.io.rsp_data := bram.mem_dat
-
-  mem_mst_r.io.ar_info.addr :=
-    RegEnable( bram.cache_addr_dnxt & ~("h1ff".U(32.W)), 0.U, mem_mst_r.io.ar_req )
-
-
-  mem_mst_r.io.ar_info.burst := "b01".U
-  mem_mst_r.io.ar_info.id := 0.U
-  mem_mst_r.io.ar_info.len := 31.U
-  mem_mst_r.io.ar_info.size := 4.U
-  mem_mst_r.io.ar_info.user := 0.U
-  mem_mst_r.io.ar_info.cache := 0.U
-  mem_mst_r.io.ar_info.lock := 0.U
-  mem_mst_r.io.ar_info.port := 0.U
-  mem_mst_r.io.ar_info.qos := 0.U
-
-
-  mem_mst_w.io.aw_info.addr :=
-    RegEnable( bram.cache_addr_dnxt & ~("h1ff".U(32.W)), 0.U, mem_mst_w.io.aw_req )
-
-
-  mem_mst_w.io.aw_info.burst := "b01".U
-  mem_mst_w.io.aw_info.id := 0.U
-  mem_mst_w.io.aw_info.len := 31.U
-  mem_mst_w.io.aw_info.size := 4.U
-  mem_mst_w.io.aw_info.user := 0.U
-  mem_mst_w.io.aw_info.cache := 0.U
-  mem_mst_w.io.aw_info.lock := 0.U
-  mem_mst_w.io.aw_info.port := 0.U
-  mem_mst_w.io.aw_info.qos := 0.U
-
-  mem_mst_w.io.w_info.data := bram.mem_dat
-  mem_mst_w.io.w_info.strb := Fill(16, 1.U)
-  mem_mst_w.io.w_info.user := 0.U
-  mem_mst_w.io.w_info.last := DontCare
 
 
 

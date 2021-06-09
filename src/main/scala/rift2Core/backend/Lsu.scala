@@ -348,8 +348,8 @@ class Lsu extends Module {
 
 
   def a_info_opcode = Mux1H( Seq(
-    (is_ren) -> dl1_mst.Get,
-    (is_wen) -> dl1_mst.PutFullData
+    (is_ren) -> Opcode.Get,
+    (is_wen) -> Opcode.PutFullData
   ))
 
   dl1_mst.io.a_info.opcode  := 

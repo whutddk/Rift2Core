@@ -107,12 +107,12 @@ object Opcode {
   def Grant         = 4.U
   def GrantData     = 5.U
 
-  def Release       = 6.U
+  def ReleasePerm   = 6.U
   def ReleaseData   = 7.U
   def ReleaseAck    = 6.U
 
   def ProbeBlock    = 6.U
-  def ProbePerm     = 7.U
+  // def ProbePerm     = 7.U
   def ProbeAckData  = 5.U
   def ProbeAck      = 4.U
 
@@ -132,7 +132,7 @@ object Opcode {
 
 
 
-class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
+class TileLink_mst(dw: Int, aw: Int, id: Int) {
 
   val a = RegInit(0.U.asTypeOf(new TLchannel_a(dw, aw)))
   val d = Wire(new TLchannel_d(dw))
@@ -147,7 +147,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 
   def op_getData(addr: UInt, size: UInt) = {
 
-    a.opcode  := Get
+    a.opcode  := Opcode.Get
     a.param   := 0.U
     a.size    := size
     a.source  := id.U
@@ -160,7 +160,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 
   def op_putFullData(addr: UInt, size: UInt, data: UInt, mask: UInt) = {
 
-    a.opcode  := PutFullData
+    a.opcode  := Opcode.PutFullData
     a.param   := 0.U 
     a.size    := size
     a.source  := id.U
@@ -174,7 +174,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 
   def op_putPartialData(addr: UInt, size: UInt, data: UInt, mask: UInt) = {
 
-    a.opcode  := PutPartialData
+    a.opcode  := Opcode.PutPartialData
     a.param   := 0.U 
     a.size    := size
     a.source  := id.U
@@ -187,7 +187,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
   }
 
   def op_arithmeticData(addr: UInt, op: UInt, size: UInt, data: UInt, mask: UInt) = {
-    a.opcode  := ArithmeticData
+    a.opcode  := Opcode.ArithmeticData
     a.param   := op
     a.size    := size
     a.source  := id.U
@@ -200,7 +200,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
   }
 
   def op_logicalData(addr: UInt, op: UInt, size: UInt, data: UInt, mask: UInt) = {
-    a.opcode  := LogicalData
+    a.opcode  := Opcode.LogicalData
     a.param   := op
     a.size    := size
     a.source  := id.U
@@ -214,7 +214,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
   val d_remain = RegInit(0.U(8.W))
 
   when ( is_chn_a_ack ) {
-    when ( a.opcode === PutFullData ) {
+    when ( a.opcode === Opcode.PutFullData ) {
       when ( a_remain === 0.U ) {
         a_remain := (1.U << a.size) - (dw/8).U
     }
@@ -222,7 +222,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
         a_remain := a_remain - (dw/8).U
       }
     }
-    .elsewhen( a.opcode === Get ) {
+    .elsewhen( a.opcode === Opcode.Get ) {
       a_remain := 0.U
     }
     .otherwise{
@@ -257,8 +257,8 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
   def is_chn_a_nack = a_valid & ~a_ready
   def is_chn_d_nack = d_valid & ~d_ready
 
-  val is_accessAck     = WireInit((d.opcode === AccessAck) & is_chn_d_ack)
-  val is_accessAckData = WireInit((d.opcode === AccessAckData) & is_chn_d_ack)
+  val is_accessAck     = WireInit((d.opcode === Opcode.AccessAck) & is_chn_d_ack)
+  val is_accessAckData = WireInit((d.opcode === Opcode.AccessAckData) & is_chn_d_ack)
 
   def data_ack = d.data
 
@@ -269,7 +269,7 @@ class TileLink_mst(dw: Int, aw: Int, id: Int) extends Opcode{
 }
 
 
-class TileLink_slv(dw: Int, aw: Int) extends Opcode{
+class TileLink_slv(dw: Int, aw: Int){
 
   val a = Wire(new TLchannel_a(dw, aw))
   val d = RegInit(0.U.asTypeOf(new TLchannel_d(dw)))
@@ -287,7 +287,7 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 
   def op_accessAck(sid: UInt) = {
 
-    d.opcode  := AccessAck
+    d.opcode  := Opcode.AccessAck
     d.param   := 0.U
     d.size    := d_size
     d.source  := sid
@@ -301,7 +301,7 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 
   def op_accessDataAck(sid: UInt, data: UInt) = {
 
-    d.opcode  := AccessAckData
+    d.opcode  := Opcode.AccessAckData
     d.param   := 0.U
     d.size    := d_size
     d.source  := sid
@@ -313,11 +313,11 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 
   }
 
-  def is_getData       : Bool = (a.opcode === Get)            & is_chn_a_ack 
-  def is_putFullData   : Bool = (a.opcode === PutFullData)    & is_chn_a_ack 
-  def is_putPartialData: Bool = (a.opcode === PutPartialData) & is_chn_a_ack 
-  def is_arithmeticData: Bool = (a.opcode === ArithmeticData) & is_chn_a_ack 
-  def is_logicalData   : Bool = (a.opcode === LogicalData)    & is_chn_a_ack 
+  def is_getData       : Bool = (a.opcode === Opcode.Get)            & is_chn_a_ack 
+  def is_putFullData   : Bool = (a.opcode === Opcode.PutFullData)    & is_chn_a_ack 
+  def is_putPartialData: Bool = (a.opcode === Opcode.PutPartialData) & is_chn_a_ack 
+  def is_arithmeticData: Bool = (a.opcode === Opcode.ArithmeticData) & is_chn_a_ack 
+  def is_logicalData   : Bool = (a.opcode === Opcode.LogicalData)    & is_chn_a_ack 
 
 
   def a_ready_set = a_ready := true.B
@@ -384,7 +384,7 @@ class TileLink_slv(dw: Int, aw: Int) extends Opcode{
 
 
 
-class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
+class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module{
   val io = IO( new Bundle {
     val is_req = Input(Bool())
     val mode  = Output( UInt(3.W) )
@@ -408,18 +408,18 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 
   when( ~io.a.valid & io.is_req & (mode === 7.U) ) { a_valid := true.B }
   .elsewhen(
-        (a_ack & (mode === Get)) |
-        (a_ack & (mode === ArithmeticData)) |
-        (a_ack & (mode === LogicalData)) |
-        (a_ack & (mode === PutFullData | mode === PutPartialData) & ( (size_cnt + (dw/8).U) === size_aim ))
+        (a_ack & (mode === Opcode.Get)) |
+        (a_ack & (mode === Opcode.ArithmeticData)) |
+        (a_ack & (mode === Opcode.LogicalData)) |
+        (a_ack & (mode === Opcode.PutFullData | mode === Opcode.PutPartialData) & ( (size_cnt + (dw/8).U) === size_aim ))
     )
   { a_valid := false.B }
 
   when( ~io.a.valid & io.is_req & (mode === 7.U) ) { mode := io.a.bits.opcode }
   .elsewhen(
-    ((mode === ArithmeticData | mode === LogicalData | mode === PutFullData | mode === PutPartialData) &
+    ((mode === Opcode.ArithmeticData | mode === Opcode.LogicalData | mode === Opcode.PutFullData | mode === Opcode.PutPartialData) &
       d_ack & ( size_cnt === size_aim )) |
-    ( mode === Get & d_ack & ( (size_cnt + (dw/8).U) === size_aim ) )
+    ( mode === Opcode.Get & d_ack & ( (size_cnt + (dw/8).U) === size_aim ) )
     )
   { mode := 7.U }
 
@@ -430,8 +430,8 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 
   when( ~io.a.valid & io.is_req & (mode === 7.U) ) { size_cnt := 0.U }
   .elsewhen (
-        ( d_ack & size_cnt <= size_aim & mode === Get ) |
-        ( a_ack & size_cnt <= size_aim & (mode === ArithmeticData | mode === LogicalData | mode === PutFullData | mode === PutPartialData) )
+        ( d_ack & size_cnt <= size_aim & mode === Opcode.Get ) |
+        ( a_ack & size_cnt <= size_aim & (mode === Opcode.ArithmeticData | mode === Opcode.LogicalData | mode === Opcode.PutFullData | mode === Opcode.PutPartialData) )
       ) { size_cnt := size_cnt + (dw/8).U }
 
 
@@ -447,7 +447,7 @@ class TileLink_mst_heavy(dw: Int, aw: Int, id: Int) extends Module with Opcode{
 }
 
 
-class TileLink_slv_heavy(dw: Int, aw: Int ) extends Module with Opcode {
+class TileLink_slv_heavy(dw: Int, aw: Int ) extends Module {
   val io = IO(new Bundle{
     val is_rsp = Input( Bool() )
     val mode = Output( UInt(3.W) )
@@ -477,13 +477,13 @@ class TileLink_slv_heavy(dw: Int, aw: Int ) extends Module with Opcode {
 
   when( ~io.a.ready & io.a.valid & mode === 7.U & io.is_rsp ) {
     mode := MuxCase( 7.U, Array(
-      (io.a.bits.opcode === Get) -> AccessAckData,
-      (io.a.bits.opcode === PutFullData | io.a.bits.opcode === PutPartialData) -> AccessAck,
-      (io.a.bits.opcode === ArithmeticData | io.a.bits.opcode === LogicalData ) -> AccessAckData
+      (io.a.bits.opcode === Opcode.Get) -> Opcode.AccessAckData,
+      (io.a.bits.opcode === Opcode.PutFullData | io.a.bits.opcode === Opcode.PutPartialData) -> Opcode.AccessAck,
+      (io.a.bits.opcode === Opcode.ArithmeticData | io.a.bits.opcode === Opcode.LogicalData ) -> Opcode.AccessAckData
     ))
   }
-  .elsewhen( (mode === AccessAckData & d_ack & (size_cnt + (dw/8).U) === size_aim ) |
-        (mode === AccessAck & d_ack & size_cnt === size_aim )
+  .elsewhen( (mode === Opcode.AccessAckData & d_ack & (size_cnt + (dw/8).U) === size_aim ) |
+        (mode === Opcode.AccessAck & d_ack & size_cnt === size_aim )
       )
   { mode := 7.U }
 
@@ -494,8 +494,8 @@ class TileLink_slv_heavy(dw: Int, aw: Int ) extends Module with Opcode {
 
   when ( ~io.a.ready & io.a.valid & mode === 7.U & io.is_rsp ) { size_cnt := 0.U }
   .elsewhen (
-        ( d_ack & size_cnt <= size_aim & mode === AccessAckData ) |
-        ( a_ack & size_cnt <= size_aim & mode === AccessAck )
+        ( d_ack & size_cnt <= size_aim & mode === Opcode.AccessAckData ) |
+        ( a_ack & size_cnt <= size_aim & mode === Opcode.AccessAck )
       ) { size_cnt := size_cnt + (dw/8).U }
 
   when( ~io.d.valid & mode =/= 7.U ) { d_valid := true.B }

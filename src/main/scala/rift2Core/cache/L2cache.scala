@@ -328,10 +328,10 @@ class L2Cache( dw:Int = 512, bk:Int = 2, cb:Int = 4, cl:Int = 512 ) extends Modu
     Mux( fsm.state_qout === L2C_state.cfree & fsm.state_dnxt === L2C_state.cktag,
       MuxCase( 0.U, Array(
         (il1_slv.io.a.valid)                                                        -> 1.U,
-        (dl1_slv.io.a.valid & dl1_slv.io.a.bits.opcode === dl1_slv.Get)             -> 2.U,
-        (dl1_slv.io.a.valid & dl1_slv.io.a.bits.opcode === dl1_slv.PutFullData)     -> 3.U,
-        (dl1_slv.io.a.valid & (dl1_slv.io.a.bits.opcode === dl1_slv.ArithmeticData |
-                    dl1_slv.io.a.bits.opcode === dl1_slv.LogicalData) ) -> 4.U,
+        (dl1_slv.io.a.valid & dl1_slv.io.a.bits.opcode === Opcode.Get)             -> 2.U,
+        (dl1_slv.io.a.valid & dl1_slv.io.a.bits.opcode === Opcode.PutFullData)     -> 3.U,
+        (dl1_slv.io.a.valid & (dl1_slv.io.a.bits.opcode === Opcode.ArithmeticData |
+                    dl1_slv.io.a.bits.opcode === Opcode.LogicalData) ) -> 4.U,
       )),
       req_no_qout
     )
@@ -368,8 +368,8 @@ class L2Cache( dw:Int = 512, bk:Int = 2, cb:Int = 4, cl:Int = 512 ) extends Modu
 
   l2c_mst.io.a_info.opcode :=
               Mux1H( Seq(
-                (req_no_qout === 1.U) -> l2c_mst.Get,
-                (req_no_qout === 2.U) -> l2c_mst.Get,
+                (req_no_qout === 1.U) -> Opcode.Get,
+                (req_no_qout === 2.U) -> Opcode.Get,
                 (req_no_qout === 3.U) -> dl1_slv.io.a.bits.opcode,
                 (req_no_qout === 4.U) -> dl1_slv.io.a.bits.opcode,
               ) )

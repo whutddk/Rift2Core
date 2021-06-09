@@ -60,16 +60,16 @@ class Tl_CCM extends Module {
 
     
   ram.io.addr_r := tl_slv.rsp_addr
-  ram.io.en_r   := tl_slv.is_d_busy & (tl_slv.state === tl_slv.Get)
+  ram.io.en_r   := tl_slv.is_d_busy & (tl_slv.state === Opcode.Get)
 
     // tl_slv.d.data := ram.io.data_r
 
   when( tl_slv.is_d_busy ) {
-    when( tl_slv.state === tl_slv.Get ) {
+    when( tl_slv.state === Opcode.Get ) {
       tl_slv.op_accessAck(0.U)
       tl_slv.d_valid_set
     }
-    when( tl_slv.state === tl_slv.PutFullData ) {
+    when( tl_slv.state === Opcode.PutFullData ) {
       tl_slv.op_accessDataAck(0.U, ram.io.data_r)
       tl_slv.d_valid_set
     }

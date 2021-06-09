@@ -124,7 +124,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
   val l3c_state_dnxt_in_cktag = 
     Mux( ~bram.cache_valid(bram.cl_sel), L3C_state.flash,
       Mux( ~bram.is_cb_hit, L3C_state.evict,
-        Mux( (l2c_slv.io.a.bits.opcode =/= l2c_slv.Get & db.is_full), L3C_state.evict, L3C_state.rspl2  )))
+        Mux( (l2c_slv.io.a.bits.opcode =/= Opcode.Get & db.is_full), L3C_state.evict, L3C_state.rspl2  )))
 
   val l3c_state_dnxt_in_evict = 
     Mux( ~mem_mst_w.io.end, L3C_state.evict,
@@ -220,39 +220,39 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 
   amo.res32 :=
     Mux1H( Seq(
-      (l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData) -> 
+      (l2c_slv.io.a.bits.opcode === Opcode.ArithmeticData) -> 
         Mux1H(Seq(
-          (l2c_slv.io.a.bits.param === l2c_slv.MIN)  -> Mux( amo.op32_1.asSInt > amo.op32_2.asSInt, amo.op32_2, amo.op32_1 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.MAX)  -> Mux( amo.op32_1.asSInt > amo.op32_2.asSInt, amo.op32_1, amo.op32_2 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.MINU) -> Mux( amo.op32_1        > amo.op32_2,        amo.op32_2, amo.op32_1 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.MAXU) -> Mux( amo.op32_1        > amo.op32_2,        amo.op32_1, amo.op32_2 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.ADD)  -> (amo.op32_1 + amo.op32_2)
+          (l2c_slv.io.a.bits.param === Opcode.MIN)  -> Mux( amo.op32_1.asSInt > amo.op32_2.asSInt, amo.op32_2, amo.op32_1 ),
+          (l2c_slv.io.a.bits.param === Opcode.MAX)  -> Mux( amo.op32_1.asSInt > amo.op32_2.asSInt, amo.op32_1, amo.op32_2 ),
+          (l2c_slv.io.a.bits.param === Opcode.MINU) -> Mux( amo.op32_1        > amo.op32_2,        amo.op32_2, amo.op32_1 ),
+          (l2c_slv.io.a.bits.param === Opcode.MAXU) -> Mux( amo.op32_1        > amo.op32_2,        amo.op32_1, amo.op32_2 ),
+          (l2c_slv.io.a.bits.param === Opcode.ADD)  -> (amo.op32_1 + amo.op32_2)
         )),
-      (l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData) ->
+      (l2c_slv.io.a.bits.opcode === Opcode.LogicalData) ->
         Mux1H(Seq(
-          (l2c_slv.io.a.bits.param === l2c_slv.XOR)  -> ( amo.op32_1 ^ amo.op32_2 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.OR)   -> ( amo.op32_1 | amo.op32_2 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.AND)  -> ( amo.op32_1 & amo.op32_2 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.SWAP) -> ( amo.op32_1 ),							
+          (l2c_slv.io.a.bits.param === Opcode.XOR)  -> ( amo.op32_1 ^ amo.op32_2 ),
+          (l2c_slv.io.a.bits.param === Opcode.OR)   -> ( amo.op32_1 | amo.op32_2 ),
+          (l2c_slv.io.a.bits.param === Opcode.AND)  -> ( amo.op32_1 & amo.op32_2 ),
+          (l2c_slv.io.a.bits.param === Opcode.SWAP) -> ( amo.op32_1 ),							
         ))
     ))
 
   amo.res64 :=
     Mux1H( Seq(
-      (l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData) -> 
+      (l2c_slv.io.a.bits.opcode === Opcode.ArithmeticData) -> 
         Mux1H(Seq(
-          (l2c_slv.io.a.bits.param === l2c_slv.MIN)  -> Mux( amo.op64_1.asSInt > amo.op64_2.asSInt, amo.op64_2, amo.op64_1 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.MAX)  -> Mux( amo.op64_1.asSInt > amo.op64_2.asSInt, amo.op64_1, amo.op64_2 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.MINU) -> Mux( amo.op64_1        > amo.op64_2,        amo.op64_2, amo.op64_1 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.MAXU) -> Mux( amo.op64_1        > amo.op64_2,        amo.op64_1, amo.op64_2 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.ADD)  -> (amo.op64_1 + amo.op64_2)
+          (l2c_slv.io.a.bits.param === Opcode.MIN)  -> Mux( amo.op64_1.asSInt > amo.op64_2.asSInt, amo.op64_2, amo.op64_1 ),
+          (l2c_slv.io.a.bits.param === Opcode.MAX)  -> Mux( amo.op64_1.asSInt > amo.op64_2.asSInt, amo.op64_1, amo.op64_2 ),
+          (l2c_slv.io.a.bits.param === Opcode.MINU) -> Mux( amo.op64_1        > amo.op64_2,        amo.op64_2, amo.op64_1 ),
+          (l2c_slv.io.a.bits.param === Opcode.MAXU) -> Mux( amo.op64_1        > amo.op64_2,        amo.op64_1, amo.op64_2 ),
+          (l2c_slv.io.a.bits.param === Opcode.ADD)  -> (amo.op64_1 + amo.op64_2)
         )),
-      (l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData) ->
+      (l2c_slv.io.a.bits.opcode === Opcode.LogicalData) ->
         Mux1H(Seq(
-          (l2c_slv.io.a.bits.param === l2c_slv.XOR)  -> ( amo.op64_1 ^ amo.op64_2 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.OR)   -> ( amo.op64_1 | amo.op64_2 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.AND)  -> ( amo.op64_1 & amo.op64_2 ),
-          (l2c_slv.io.a.bits.param === l2c_slv.SWAP) -> ( amo.op64_1 ),							
+          (l2c_slv.io.a.bits.param === Opcode.XOR)  -> ( amo.op64_1 ^ amo.op64_2 ),
+          (l2c_slv.io.a.bits.param === Opcode.OR)   -> ( amo.op64_1 | amo.op64_2 ),
+          (l2c_slv.io.a.bits.param === Opcode.AND)  -> ( amo.op64_1 & amo.op64_2 ),
+          (l2c_slv.io.a.bits.param === Opcode.SWAP) -> ( amo.op64_1 ),							
         ))
     ))
 
@@ -269,7 +269,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
 
   assert( ~(
         l2c_slv.io.a.fire &
-        ( l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData | l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData ) & (
+        ( l2c_slv.io.a.bits.opcode === Opcode.ArithmeticData | l2c_slv.io.a.bits.opcode === Opcode.LogicalData ) & (
           l2c_slv.io.a.bits.mask =/= "h000f".U |
           l2c_slv.io.a.bits.mask =/= "h00f0".U |
           l2c_slv.io.a.bits.mask =/= "h0f00".U |
@@ -347,15 +347,15 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
   cache_mem.dat_en_w(0) :=
     ( fsm.state_qout === L3C_state.flash & mem_mst_r.io.r.fire ) |
     ( fsm.state_qout === L3C_state.rspl2 & l2c_slv.io.a.fire &
-      (l2c_slv.io.a.bits.opcode === l2c_slv.PutFullData |
-      l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData |
-      l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData
+      (l2c_slv.io.a.bits.opcode === Opcode.PutFullData |
+      l2c_slv.io.a.bits.opcode === Opcode.ArithmeticData |
+      l2c_slv.io.a.bits.opcode === Opcode.LogicalData
       )
     )
 
   cache_mem.dat_en_r(0) :=
     (fsm.state_dnxt === L3C_state.evict) |
-    (fsm.state_dnxt === L3C_state.rspl2 & l2c_slv.io.a.bits.opcode =/= l2c_slv.PutFullData)
+    (fsm.state_dnxt === L3C_state.rspl2 & l2c_slv.io.a.bits.opcode =/= Opcode.PutFullData)
 
 
   cache_mem.dat_info_wstrb :=
@@ -372,9 +372,9 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
       ( fsm.state_qout === L3C_state.flash ) -> mem_mst_r.io.r.bits.data,
       ( fsm.state_qout === L3C_state.rspl2 ) -> 
         Mux1H( Seq(
-          (l2c_slv.io.a.bits.opcode === l2c_slv.PutFullData) -> l2c_slv.io.a.bits.data,
-          (l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData) -> amo.res,
-          (l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData) -> amo.res
+          (l2c_slv.io.a.bits.opcode === Opcode.PutFullData) -> l2c_slv.io.a.bits.data,
+          (l2c_slv.io.a.bits.opcode === Opcode.ArithmeticData) -> amo.res,
+          (l2c_slv.io.a.bits.opcode === Opcode.LogicalData) -> amo.res
         ))
       
     ))
@@ -451,7 +451,7 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
   when(
     ~db.is_hazard & 
     fsm.state_qout === L3C_state.cktag & fsm.state_dnxt === L3C_state.rspl2 &
-    (l2c_slv.io.a.bits.opcode === l2c_slv.PutFullData | l2c_slv.io.a.bits.opcode === l2c_slv.ArithmeticData | l2c_slv.io.a.bits.opcode === l2c_slv.LogicalData)
+    (l2c_slv.io.a.bits.opcode === Opcode.PutFullData | l2c_slv.io.a.bits.opcode === Opcode.ArithmeticData | l2c_slv.io.a.bits.opcode === Opcode.LogicalData)
   ){
     db.buf(db.idx_enq)   := bram.cache_addr_dnxt(31,32-tag_w)
     db.valid(db.idx_enq) := true.B
