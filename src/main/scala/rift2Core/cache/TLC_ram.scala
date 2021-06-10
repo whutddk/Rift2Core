@@ -78,7 +78,6 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
   // is_grant_bus_end = io.l2c_chn_c(req_no).e.fire
   val is_probe_fire: Vec[Bool]
   val is_probe_rtn:Vec[Bool]
-  val is_L3cache: Boolean
   val is_release_with_block: Bool
   val flash_data: UInt
   // flash_data = mem_mst_r.io.r.bits.data
@@ -200,10 +199,7 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
       cache_coherence(i)(j) := 
         Mux1H(Seq(
           ( state_qout === rlese & state_dnxt === cktag ) -> Coher.TTIP,
-          ( state_qout === evict & state_dnxt =/= evict ) -> {
-                                                              if(is_L3cache) {Coher.TTIP} 
-                                                              else {Coher.NONE}
-                                                            }
+          ( state_qout === evict & state_dnxt =/= evict ) -> Coher.NONE
         ))
     }
 
@@ -247,24 +243,13 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
 
   cache_tag.tag_addr_r := req_addr
 
-  cache_tag.tag_addr_w :=
-    Mux1H(Seq(
-      is_op_aqblk -> req_addr,
-      is_op_fence -> (req_addr & Fill(addr_lsb + line_w, 1.U)) //force tag == 0.U to implit invalid in L2
-    ))
+  cache_tag.tag_addr_w := req_addr
+      // is_op_fence -> (req_addr & Fill(addr_lsb + line_w, 1.U)) //force tag == 0.U to implit invalid in L2
 
-  cache_tag.tag_en_w := {
-    if( is_L3cache ) {
-      is_op_aqblk & (
-        ( state_qout === cktag & state_dnxt === flash) |
-        ( state_qout === evict & state_dnxt === cfree)          
-      )
-    }
-    else {
-      ( state_qout === cktag & state_dnxt === flash) |
-      ( state_qout === evict & state_dnxt === cfree)          
-    }
-  }
+
+  cache_tag.tag_en_w := ( state_qout === cktag & state_dnxt === flash)
+      
+
 
     
   cache_tag.tag_en_r := state_dnxt === cktag
