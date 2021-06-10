@@ -95,18 +95,47 @@ class TLC_CrossBar_Nto1(slv: Int) extends Module {
   val a_idx = Mux( is_a_chn_busy, a_chn_qout, a_chn_dnxt )
   val c_idx = Mux( is_c_chn_busy, c_chn_qout, c_chn_dnxt )
   val e_idx = Mux( is_e_chn_busy, e_chn_qout, e_chn_dnxt )
-  val b_idx = io.mst_chn_b.bits.source
+  // val b_idx = io.mst_chn_b.bits.source
   val d_idx = io.mst_chn_d.bits.source
 
+  val is_boardcast_fire = RegInit( VecInit(Seq.fill(slv)(false.B)) )
 
-  io.mst_chn_a <> io.slv_chn_a(a_idx)
-  io.mst_chn_b <> io.slv_chn_b(b_idx)
-  io.mst_chn_c <> io.slv_chn_c(c_idx)
-  io.mst_chn_d <> io.slv_chn_d(d_idx)
-  io.mst_chn_e <> io.slv_chn_e(e_idx)
+  for ( i <- 0 until slv ) yield {
+    when( io.mst_chn_b.fire ) { is_boardcast_fire(i) := false.B }
+    .elsewhen( io.slv_chn_b(i).fire ) { is_boardcast_fire(i) := true.B }
+  }
 
 
-  assert( (b_idx < slv.U) & (d_idx < slv.U), "Assert Failed at TLC CrossBar, Cannot find the master agent!" )
+  for ( i <- 0 until slv ) yield {
+    io.slv_chn_a(i).ready := Mux( i.U === a_idx, io.mst_chn_a.ready, false.B )
+    io.slv_chn_c(i).ready := Mux( i.U === c_idx, io.mst_chn_c.ready, false.B )
+    io.slv_chn_e(i).ready := Mux( i.U === e_idx, io.mst_chn_e.ready, false.B )
+
+    io.slv_chn_b(i).valid := io.mst_chn_b.valid & ~is_boardcast_fire(i)
+    io.slv_chn_b(i).bits  := io.mst_chn_b.bits
+
+    io.slv_chn_d(i).valid := Mux( i.U === d_idx, io.mst_chn_d.valid, false.B )
+
+
+  }
+
+
+
+  io.mst_chn_a.valid := io.slv_chn_a(a_idx).valid
+  io.mst_chn_a.bits  := io.slv_chn_a(a_idx).bits
+  io.mst_chn_c.valid := io.slv_chn_c(c_idx).valid
+  io.mst_chn_c.bits  := io.slv_chn_c(c_idx).bits
+  io.mst_chn_e.valid := io.slv_chn_e(e_idx).valid
+  io.mst_chn_e.bits  := io.slv_chn_e(e_idx).bits
+
+
+  io.mst_chn_b.ready := is_boardcast_fire.forall((x:Bool) => (x === true.B))
+
+  io.mst_chn_d.bits  := io.slv_chn_d(d_idx).bits
+  io.mst_chn_d.ready := io.slv_chn_d(d_idx).ready
+
+
+  assert( (d_idx < slv.U), "Assert Failed at TLC CrossBar, Cannot find the master agent!" )
 
 }
 
