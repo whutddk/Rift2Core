@@ -76,7 +76,7 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
   // is_flash_bus_end = mem_mst_r.io.end
   val is_grant_bus_end = is_grant_bus_fire & grant_addr(mst_lsb-1, bus_lsb).andR
   // is_grant_bus_end = io.l2c_chn_c(req_no).e.fire
-  val is_probe_fire: Vec[Bool]
+  val is_probe_fire: Bool
   val is_probe_rtn:Vec[Bool]
   val is_release_with_block: Bool
   val flash_data: UInt
@@ -162,7 +162,7 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
 
 
 
-  tlc_state_dnxt_in_probe := Mux( is_probe_fire.asUInt.andR, rlese, probe)
+  tlc_state_dnxt_in_probe := Mux( is_probe_fire, rlese, probe)
 
   tlc_state_dnxt_in_evict := 
     Mux( ~is_evict_bus_end, evict, 
