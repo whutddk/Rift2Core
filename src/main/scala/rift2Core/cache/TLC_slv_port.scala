@@ -91,8 +91,11 @@ abstract class TLC_slv_port( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25,
 
       release_addr := slv_chn_c(idx).bits.address
     }
-    .elsewhen( is_release_bus_end ) { release_addr := 0.U }
-    .elsewhen( is_release_bus_fire ) { release_addr := release_addr + ( 1.U << bus_lsb ) }
+    .elsewhen( is_release_bus_fire & ~is_release_bus_end ) { release_addr := release_addr + ( 1.U << bus_lsb ) }
+
+    .elsewhen( is_release_bus_end & (slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ProbeAck | slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ProbeAckData) ) { release_addr := 0.U }
+    .elsewhen( slv_chn_d(wbblk_agent_no).fire & slv_chn_d(wbblk_agent_no).bits.opcode === Opcode.ReleaseAck ) { release_addr := 0.U }
+  
   }
 
   for ( i <- 0 until mst_num ) yield {
@@ -141,7 +144,7 @@ abstract class TLC_slv_port( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25,
 
   val a_ready = RegInit(VecInit(Seq.fill(mst_num)(false.B)))
   val b_valid = RegInit(VecInit(Seq.fill(mst_num)(false.B)))
-  val b_bits  = RegInit(0.U.asTypeOf(new TLchannel_b(128, 32)))
+
   val c_ready = RegInit(VecInit(Seq.fill(mst_num)(false.B)))
   val d_valid = RegInit(VecInit(Seq.fill(mst_num)(false.B)))
   val d_bits  = RegInit(0.U.asTypeOf(new TLchannel_d(128)))
@@ -150,7 +153,7 @@ abstract class TLC_slv_port( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25,
   for ( i <- 0 until mst_num ) yield {
     slv_chn_a(i).ready := a_ready(i)
     slv_chn_b(i).valid := b_valid(i)
-    slv_chn_b(i).bits  := b_bits
+
     slv_chn_c(i).ready := c_ready(i)
     slv_chn_d(i).valid := d_valid(i)
     slv_chn_d(i).bits  := d_bits 
@@ -160,76 +163,65 @@ abstract class TLC_slv_port( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25,
 
 
 
-  when( state_qout === cktag & state_dnxt === grant & is_op_aqblk ) {
-    a_ready(aqblk_agent_no) := true.B
-  }
-  .elsewhen( slv_chn_a(aqblk_agent_no).fire ) {
-    a_ready(aqblk_agent_no) := false.B
-  }
+  when( state_qout === cktag & state_dnxt === grant & is_op_aqblk ) { a_ready(aqblk_agent_no) := true.B }
+  .elsewhen( slv_chn_a(aqblk_agent_no).fire ) { a_ready(aqblk_agent_no) := false.B }
   
-
-
+  for ( i <- 0 until mst_num ) yield {
+    when( state_qout === cktag & state_dnxt === probe ) { b_valid(i) := true.B; is_probe_fire(i) := false.B }
+    .elsewhen( slv_chn_b(i).fire ) { b_valid(i) := false.B; is_probe_fire(i) := true.B }
+  }
 
   for ( i <- 0 until mst_num ) yield {
-    when( state_qout === cktag & state_dnxt === probe ) {
-      b_valid(i) := true.B
-      is_probe_fire(i) := false.B 
-    }
-    .elsewhen( slv_chn_b(i).fire ) {
-      b_valid(i) := false.B
-      is_probe_fire(i) := true.B 
-    }
-  }
+    slv_chn_b(i).bits.opcode  := Opcode.ProbeBlock
+    slv_chn_b(i).bits.param   := TLparam.toN
+    slv_chn_b(i).bits.size    := log2Ceil(mst_size/8).U
+    slv_chn_b(i).bits.source  := DontCare
+    slv_chn_b(i).bits.address := probe_addr
+    slv_chn_b(i).bits.mask    := DontCare
+    slv_chn_b(i).bits.data    := DontCare
+    slv_chn_b(i).bits.corrupt := false.B
+  } 
 
-  when( state_qout === cktag & state_dnxt === probe ) {
-    b_bits.opcode  := 
-    b_bits.param   := 
-    b_bits.size    := 
-    b_bits.source  := 
-    b_bits.address := 
-    b_bits.mask    := 
-    b_bits.data    := 
-    b_bits.corrupt := 
-  }
 
   when( state_qout === rlese & release_addr =/= 0.U  ) {
-    when( slv_chn_c(wbblk_agent_no).valid & ~slv_chn_c(wbblk_agent_no).ready ) {
-      c_ready(wbblk_agent_no) := true.B
-    }
-    .elsewhen( slv_chn_c(wbblk_agent_no).fire ) {
-      c_ready(wbblk_agent_no) := false.B
-    }
+    when( slv_chn_c(wbblk_agent_no).valid & ~slv_chn_c(wbblk_agent_no).ready ) { c_ready(wbblk_agent_no) := true.B }
+    .elsewhen( slv_chn_c(wbblk_agent_no).fire ) { c_ready(wbblk_agent_no) := false.B }
   }
 
 
-  d_valid
   when( state_qout === rlese ) {
-
+    when( is_release_bus_end & slv_chn_c(wbblk_agent_no).bits.opcode === Opcode.ReleaseData) { d_valid(wbblk_agent_no) := true.B }
+    .elsewhen( slv_chn_d(wbblk_agent_no).fire ) { d_valid(wbblk_agent_no) := false.B }
+  }
+  .elsewhen( state_qout === grant ) {
+    when( slv_chn_d(aqblk_agent_no).valid === false.B ) { d_valid(aqblk_agent_no) := true.B }
+    .elsewhen( slv_chn_d(aqblk_agent_no).fire ) { d_valid(aqblk_agent_no) := false.B }
   }
 
-  when( state_qout === grant )
+
+  d_bits.opcode  := Mux1H(Seq(
+    ( state_qout === rlese ) -> Opcode.ReleaseAck,
+    ( state_qout === grant ) -> Opcode.GrantData
+  ))
+  
+  d_bits.param   := Mux1H(Seq(
+    ( state_qout === rlese ) -> 0.U,
+    ( state_qout === grant ) -> TLparam.toT
+  ))
+
+  d_bits.size    := log2Ceil(mst_size/8).U
+  d_bits.source  := DontCare
+  d_bits.sink    := DontCare
+  d_bits.denied  := false.B
+  d_bits.data    := mem_dat
+  d_bits.corrupt := false.B
 
 
-  e_ready
+
+  when( slv_chn_e(aqblk_agent_no).valid ) { e_ready(aqblk_agent_no) := true.B }
+  .elsewhen(slv_chn_e(aqblk_agent_no).fire) { e_ready(aqblk_agent_no) := false.B }
 
 
-  b_bits.opcode  
-  b_bits.param   
-  b_bits.size    
-  b_bits.source  
-  b_bits.address 
-  b_bits.mask    
-  b_bits.data    
-  b_bits.corrupt 
-
-  d_bits.opcode  
-  d_bits.param   
-  d_bits.size    
-  d_bits.source  
-  d_bits.sink    
-  d_bits.denied  
-  d_bits.data    
-  d_bits.corrupt 
 
 }
 

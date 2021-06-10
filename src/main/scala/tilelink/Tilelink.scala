@@ -99,15 +99,15 @@ object Opcode {
   def Get            = 4.U
   def Intent         = 5.U
   def AcquireBlock   = 6.U
-  def AcquirePrem    = 7.U
+  // def AcquirePrem    = 7.U
 
   def AccessAck     = 0.U
   def AccessAckData = 1.U
   def HintAck       = 2.U
-  def Grant         = 4.U
+  // def Grant         = 4.U
   def GrantData     = 5.U
 
-  def ReleasePerm   = 6.U
+  // def ReleasePerm   = 6.U
   def ReleaseData   = 7.U
   def ReleaseAck    = 6.U
 
@@ -116,7 +116,9 @@ object Opcode {
   def ProbeAckData  = 5.U
   def ProbeAck      = 4.U
 
+}
 
+object TLparam {
   def MIN  = 0.U
   def MAX  = 1.U
   def MINU = 2.U
@@ -127,8 +129,23 @@ object Opcode {
   def OR   = 1.U
   def AND  = 2.U
   def SWAP = 3.U
-}
 
+  def toT = 0.U
+  def toB = 1.U
+  def toN = 2.U
+
+  def NtoB = 0.U
+  def NtoT = 1.U
+  def BtoT = 2.U
+
+  def TtoB = 0.U
+  def TtoN = 1.U
+  def BtoN = 2.U
+
+  def TtoT = 0.U
+  def BtoB = 1.U
+  def NtoN = 2.U
+}
 
 
 
