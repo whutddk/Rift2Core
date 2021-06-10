@@ -62,8 +62,9 @@ abstract class TLC_mst_axi( dw:Int, bk:Int, cb:Int, cl:Int, mst_num:Int, mst_siz
   mst_chn_ar.bits.qos   := 0.U
   mst_chn_ar.bits.user  := 0.U
 
-  when( mst_chn_r.valid === true.B ) { r_ready := true.B }
-  .elsewhen( mst_chn_r.fire ) { r_ready := false.B }
+
+  when( mst_chn_r.fire ) { r_ready := false.B }
+  .elsewhen( mst_chn_r.valid === true.B ) { r_ready := true.B }
 
   override val flash_data = mst_chn_r.bits.data 
   override val is_evict_bus_end = is_evict_bus_fire & evict_addr(addr_lsb-1, bus_lsb).andR
@@ -86,42 +87,19 @@ abstract class TLC_mst_axi( dw:Int, bk:Int, cb:Int, cl:Int, mst_num:Int, mst_siz
   mst_chn_aw.bits.qos   := 0.U
   mst_chn_aw.bits.user  := 0.U
 
-  when( state_qout === evict ) { w_valid := true.B  }
-  .elsewhen( mst_chn_w.fire ) { w_valid := false.B }
+
+  when( mst_chn_w.fire ) { w_valid := false.B }
+  .elsewhen( state_qout === evict ) { w_valid := true.B  }
 
   mst_chn_w.bits.data := mem_dat
   mst_chn_w.bits.strb := "hFFFF".U
   mst_chn_w.bits.last := is_evict_bus_end
   mst_chn_w.bits.user := 0.U
 
-  when( mst_chn_b.valid ) { b_ready := true.B }
-  .elsewhen( mst_chn_b.fire ) { b_ready := false.B }
+  when( mst_chn_b.fire ) { b_ready := false.B }
+  .elsewhen( mst_chn_b.valid ) { b_ready := true.B }
 
-
-// class AXI_chn_w( dw: Int, usw: Int = 1 ) extends Bundle {
-//   val data = UInt(dw.W)
-//   val strb = UInt( (dw/8).W )
-//   val last = Bool()
-//   val user = UInt(usw.W)
-
-
-
-
-
-// class AXI_chn_b( idw: Int = 1, usw: Int = 1 ) extends Bundle {
-//   val id   = UInt( idw.W )
-//   val rsp  = UInt( 2.W )
-//   val user = UInt( usw.W )
-
-
-
-// class AXI_chn_r( dw: Int, idw: Int = 1, usw: Int = 1 ) extends Bundle {
-//   val id    = UInt(idw.W)
-//   val data = UInt(dw.W)
-//   val rsp  = UInt(2.W)
-//   val last = Bool()
-//   val user = UInt(usw.W)
-
+  cache_fence.ready := cache_dirty
 
 }
 

@@ -77,5 +77,10 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 256, mst_num:Int 
 
   override val flash_data = io.mem_chn_r.bits.data
 
+val is_evict_bus_end: Bool
+    Mux(cache_dirty(req_cl)(cb_sel), is_evict_bus_fire & evict_addr(addr_lsb-1, bus_lsb).andR, is_evict_bus_fire)
+
+
+
 }
 

@@ -201,6 +201,7 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
           ( state_qout === evict & state_dnxt =/= evict ) -> Coher.NONE
         ))
     }
+    .elsewhen(  ) { cache_coherence(i)(j) := Coher.NONE }
 
     when( i.U === req_cl & j.U === cb_sel ) {
        cache_dirty(i)(j) := 
