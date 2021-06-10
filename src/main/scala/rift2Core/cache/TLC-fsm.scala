@@ -34,7 +34,7 @@ object Coher {
 
 
 
-abstract class TLC_fsm extends Module{
+abstract class TLC_fsm extends MultiIOModule{
 
   val is_fence_req: Bool
   val is_wbblk_req: Bool

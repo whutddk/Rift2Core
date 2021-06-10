@@ -30,13 +30,13 @@ import base._
 
 
 
-abstract class TLC_slv_port( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_num:Int = 3, mst_size:Int )  extends TLC_ram( dw, bk, cb, cl, mst_size ){
+abstract class TLC_slv_port( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_num:Int = 3, mst_size:Int ) extends TLC_ram( dw, bk, cb, cl, mst_size ){
 
-  val slv_chn_a = Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_a(128, 32))))
-  val slv_chn_b = Vec(mst_num, new DecoupledIO(new TLchannel_b(128, 32)))
-  val slv_chn_c = Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_c(128, 32))))
-  val slv_chn_d = Vec(mst_num, new DecoupledIO( new TLchannel_d(128)))
-  val slv_chn_e = Vec(mst_num, Flipped(new DecoupledIO( new TLchannel_e)))
+  val slv_chn_a = IO(Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_a(128, 32)))))
+  val slv_chn_b = IO(Vec(mst_num, new DecoupledIO(new TLchannel_b(128, 32))))
+  val slv_chn_c = IO(Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_c(128, 32)))))
+  val slv_chn_d = IO(Vec(mst_num, new DecoupledIO( new TLchannel_d(128))))
+  val slv_chn_e = IO(Vec(mst_num, Flipped(new DecoupledIO( new TLchannel_e))))
 
  val aqblk_agent_no = {
     if ( mst_num == 1 ) {
@@ -220,6 +220,40 @@ abstract class TLC_slv_port( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25,
 
   when( slv_chn_e(aqblk_agent_no).valid ) { e_ready(aqblk_agent_no) := true.B }
   .elsewhen(slv_chn_e(aqblk_agent_no).fire) { e_ready(aqblk_agent_no) := false.B }
+
+
+
+
+
+
+
+
+  := slv_chn_a().bits.opcode  
+  := slv_chn_a().bits.param   
+  := slv_chn_a().bits.size    
+  := slv_chn_a().bits.source  
+  := slv_chn_a().bits.address 
+  := slv_chn_a().bits.mask    
+  := slv_chn_a().bits.data    
+  := slv_chn_a().bits.corrupt 
+
+
+
+  := slv_chn_c().bits.opcode  
+  := slv_chn_c().bits.param   
+  := slv_chn_c().bits.size    
+  := slv_chn_c().bits.source  
+  := slv_chn_c().bits.address 
+  := slv_chn_c().bits.data    
+  := slv_chn_c().bits.corrupt 
+
+  := slv_chn_e().bits.sink
+
+
+
+
+
+
 
 
 

@@ -85,8 +85,7 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
   // release_data = l2c_slv.io.c.bits.data
 
   val abandon_addr = Cat(cache_tag.tag_info_r(cb_sel), req_cl, 0.U(addr_lsb))
-  val is_evict_bus_end = 
-    Mux(cache_dirty(req_cl)(cb_sel), is_evict_bus_fire & evict_addr(addr_lsb-1, bus_lsb).andR, is_evict_bus_fire)
+  val is_evict_bus_end: Bool
     // is_evict_bus_end = mem_mst_w.io.end
 
 
@@ -207,7 +206,7 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
        cache_dirty(i)(j) := 
         Mux1H(Seq(
           (state_qout === rlese & (state_dnxt === cktag | state_dnxt === cfree) & is_release_with_block) -> true.B,
-          (state_qout === evict & state_dnxt === cktag) -> false.B
+          (state_qout === evict & state_dnxt =/= evict) -> false.B
         ))
     }
 

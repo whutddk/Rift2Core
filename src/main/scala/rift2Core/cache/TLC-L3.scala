@@ -62,18 +62,8 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 256, mst_num:Int 
   })
 
 
-  val tl_slv = {
-    for ( i <- 0 until mst_num ) yield {
-      val mdl = Module( new TileLink_slv_heavy(128, 32) )
-      mdl
-    }
-  }
   
-  // val aqblk_agent_no: UInt
-  // val wbblk_agent_no: UInt
 
-
- 
 
   val mem_mst_r = Module( new AXI_mst_r( 32, 128, 1, 1, 63 ))
   val mem_mst_w = Module( new AXI_mst_w( 32, 128, 1, 1, 63 ))
