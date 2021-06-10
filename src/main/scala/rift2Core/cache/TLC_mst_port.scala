@@ -99,7 +99,9 @@ abstract class TLC_mst_axi( dw:Int, bk:Int, cb:Int, cl:Int, mst_num:Int, mst_siz
   when( mst_chn_b.fire ) { b_ready := false.B }
   .elsewhen( mst_chn_b.valid ) { b_ready := true.B }
 
-  cache_fence.ready := cache_dirty
+
+  override val is_arch_fence_end = cache_fence.fire
+  cache_fence.ready := cache_dirty.forall( (x:Vec[Bool]) => (x.forall((y:Bool) => (y === true.B))) )
 
 }
 

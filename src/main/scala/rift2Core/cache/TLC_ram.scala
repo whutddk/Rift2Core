@@ -182,6 +182,8 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
       is_op_wbblk -> Mux( is_release_bus_end, cfree, rlese ),
     ))
 
+  val is_arch_fence_end: Bool
+
   for ( i <- 0 until cl; j <- 0 until cb ) yield {
 
     when( is_op_aqblk & i.U === req_cl & j.U === cb_sel ) {
@@ -194,6 +196,8 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
         ))
     }
 
+
+
     when( is_op_fence & i.U === req_cl & j.U === cb_sel ) {
       cache_coherence(i)(j) := 
         Mux1H(Seq(
@@ -201,7 +205,7 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
           ( state_qout === evict & state_dnxt =/= evict ) -> Coher.NONE
         ))
     }
-    .elsewhen(  ) { cache_coherence(i)(j) := Coher.NONE }
+    .elsewhen( is_arch_fence_end ) { cache_coherence(i)(j) := Coher.NONE }
 
     when( i.U === req_cl & j.U === cb_sel ) {
        cache_dirty(i)(j) := 
