@@ -68,12 +68,19 @@ class TLC_L3 ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 256, mst_num:Int 
   val mem_mst_r = Module( new AXI_mst_r( 32, 128, 1, 1, 63 ))
   val mem_mst_w = Module( new AXI_mst_w( 32, 128, 1, 1, 63 ))
 
+  override val is_evict_bus_fire: Bool
+  override val is_evict_bus_end: Bool
+
+  override val is_flash_bus_end = is_flash_bus_fire & flash_addr(addr_lsb-1, bus_lsb).andR
+  override val flash_data: UInt
+  override val is_flash_bus_fire: Bool
+
 
   override val is_fence_req = ~is_op_aqblk & ~is_op_wbblk & ~is_op_fence & l3c_fence.valid
 
   override val is_flash_bus_fire = io.mem_chn_r.fire
   override val is_evict_bus_fire = io.mem_chn_w.fire
- 
+   val fence_req_addr: UInt
 
   override val flash_data = io.mem_chn_r.bits.data
 

@@ -58,42 +58,62 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
   val grant_addr = RegInit(0.U(64.W))
   val evict_addr = RegInit(0.U(64.W))
 
-  val is_probe_process_end = probe_addr(addr_lsb-1, mst_lsb).andR
-  val is_flash_bus_fire: Bool
-  // is_flash_bus_fire = mem_mst_r.io.r.fire
+  
 
+  
   val is_release_bus_fire: Bool
-  //release_valid = l2c_slv.io.c.valid
-  val release_bus_addr = Wire(UInt(64.W))
-  // release_bus_addr = l2c_slv.io.c.bits.address
+  val is_release_addr_end: Bool
+  val is_release_bus_end: Bool
+  val is_release_bus_end_with_probe: Bool
+  val is_release_bus_end_with_release: Bool
+  val is_release_fire_with_block: Bool
+  val is_release_fire_with_nblock: Bool
 
-  val is_release_bus_end = is_release_bus_fire & release_addr(mst_lsb-1, bus_lsb).andR
+  val release_data: UInt
+
+  val is_release_ack: Bool
+
+
+
   val is_grant_bus_fire: Bool
-  //is_grant_bus_fire = l2c_slv.io.d.fire
+  val is_grant_addr_end: Bool
+  val is_grant_bus_end:  Bool
+
+
   val is_evict_bus_fire: Bool
-  //is_evict_bus_fire = mem_mst_w.io.w.fire
+  val is_evict_bus_end: Bool
+
   val is_flash_bus_end = is_flash_bus_fire & flash_addr(addr_lsb-1, bus_lsb).andR
-  // is_flash_bus_end = mem_mst_r.io.end
-  val is_grant_bus_end = is_grant_bus_fire & grant_addr(mst_lsb-1, bus_lsb).andR
-  // is_grant_bus_end = io.l2c_chn_c(req_no).e.fire
+  val flash_data: UInt
+  val is_flash_bus_fire: Bool
+
+
   val is_probe_fire: Bool
   val is_probe_rtn:Vec[Bool]
-  val is_release_with_block: Bool
-  val flash_data: UInt
-  // flash_data = mem_mst_r.io.r.bits.data
-  val release_data: UInt
-  // release_data = l2c_slv.io.c.bits.data
+  val is_probe_addr_end = probe_addr(addr_lsb-1, mst_lsb).andR
+ 
+  val fence_req_addr: UInt
+  val release_req_addr: UInt
+  val acquire_req_addr: UInt
 
   val abandon_addr = Cat(cache_tag.tag_info_r(cb_sel), req_cl, 0.U(addr_lsb))
-  val is_evict_bus_end: Bool
-    // is_evict_bus_end = mem_mst_w.io.end
 
 
-  // assert( aqblk_req_addr(mst_lsb-1,0) === 0.U,  "Assert Failed at TLC, aquire request addr misalign!" )
-  // assert( wbblk_req_addr(mst_lsb-1,0) === 0.U, "Assert Failed at TLC, release request addr misalign!" )
-  // assert( fence_req_addr(addr_lsb-1,0) === 0.U, "Assert Failed at TLC, fence request addr misalign!" )
 
-
+  when( state_dnxt === cfree ) {
+    req_addr := 0.U
+  }
+  .elsewhen( PopCount(Cat(is_op_aqblk, is_op_wbblk, is_op_fence)) === 0.U ) {
+    when( is_fence_req ) {
+      req_addr := fence_req_addr
+    }
+    .elsewhen( is_wbblk_req ) {
+      req_addr := release_req_addr
+    }
+    .elsewhen( is_aqblk_req ) {
+      req_addr := acquire_req_addr
+    }
+  }
 
 
   val is_cb_hit = {
@@ -177,7 +197,7 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
   tlc_state_dnxt_in_rlese := 
     Mux1H(Seq(
       (is_op_aqblk | is_op_fence) -> Mux( is_probe_rtn.forall( (x:Bool) => (x === true.B) ),
-                                      Mux( is_probe_process_end, cktag, probe ),
+                                      Mux( is_probe_addr_end, cktag, probe ),
                                       rlese ),
       is_op_wbblk -> Mux( is_release_bus_end, cfree, rlese ),
     ))
@@ -210,7 +230,7 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
     when( i.U === req_cl & j.U === cb_sel ) {
        cache_dirty(i)(j) := 
         Mux1H(Seq(
-          (state_qout === rlese & (state_dnxt === cktag | state_dnxt === cfree) & is_release_with_block) -> true.B,
+          (state_qout === rlese & (state_dnxt === cktag | state_dnxt === cfree) & is_release_fire_with_block) -> true.B,
           (state_qout === evict & state_dnxt =/= evict) -> false.B
         ))
     }
@@ -225,7 +245,7 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
 
   cache_dat.dat_en_w :=
     ( state_qout === flash & is_flash_bus_fire ) |
-    ( state_qout === rlese & is_release_bus_fire & is_release_with_block)
+    ( state_qout === rlese & is_release_fire_with_block)
 
   cache_dat.dat_info_wstrb := Fill(16, 1.U)
 
