@@ -65,12 +65,30 @@ abstract class TLC_mst_axi( dw:Int, bk:Int, cb:Int, cl:Int, mst_num:Int, mst_siz
 
   when( mst_chn_r.fire ) { r_ready := false.B }
   .elsewhen( mst_chn_r.valid === true.B ) { r_ready := true.B }
+  
 
-  override val flash_data = mst_chn_r.bits.data 
-  override val is_evict_bus_end = is_evict_bus_fire & evict_addr(addr_lsb-1, bus_lsb).andR
+
   override val is_fence_req = state_qout === cfree & cache_fence.valid
-  override val is_flash_bus_fire = mst_chn_r.fire
+  val is_no_dirty_block = cache_dirty.forall( (x:Vec[Bool]) => (x.forall((y:Bool) => (y === true.B))) )
+  override val is_arch_fence_end = cache_fence.fire
+
   override val is_evict_bus_fire = mst_chn_w.fire
+  override val is_evict_bus_end = is_evict_bus_fire & evict_addr(addr_lsb-1, bus_lsb).andR
+
+  override val is_flash_bus_end = is_flash_bus_fire & flash_addr(addr_lsb-1, bus_lsb).andR
+  override val flash_data = mst_chn_r.bits.data 
+  override val is_flash_bus_fire = mst_chn_r.fire
+
+  override val fence_req_addr = {
+
+    val fence_cl = Wire( UInt(line_w) )
+    fence_cl := cache_dirty.indexWhere( (x:Vec[Bool]) => ( x.exists( (y:Bool) => ( y === true.B ) ) ) )
+    val fence_cb = Wire( UInt() )
+    fence_cb := cache_dirty(fence_cl).indexWhere((x:Bool) => ( x === true.B ))
+
+    Cat(  )
+
+  }
 
 
   when( state_qout === cktag & state_dnxt === evict ) { aw_valid := true.B  }
@@ -100,12 +118,21 @@ abstract class TLC_mst_axi( dw:Int, bk:Int, cb:Int, cl:Int, mst_num:Int, mst_siz
   .elsewhen( mst_chn_b.valid ) { b_ready := true.B }
 
 
-  override val is_arch_fence_end = cache_fence.fire
-  cache_fence.ready := cache_dirty.forall( (x:Vec[Bool]) => (x.forall((y:Bool) => (y === true.B))) )
+
+  cache_fence.ready := is_no_dirty_block
+
+
 
 }
 
 
 abstract class TLC_mst_tlc( dw:Int, bk:Int, cb:Int, cl:Int, mst_num:Int, mst_size:Int ) extends TLC_slv_port( dw, bk, cb, cl, mst_num, mst_size ) {
+
+  val mst_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
+  val mst_chn_b = Flipped(new DecoupledIO(new TLchannel_b(128, 32)))
+  val mst_chn_c = new DecoupledIO(new TLchannel_c(128, 32))
+  val mst_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128)))
+  val mst_chn_e = new DecoupledIO( new TLchannel_e)
+
 
 }

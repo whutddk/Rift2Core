@@ -30,27 +30,58 @@ import base._
 
 abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst_size:Int ) extends TLC_fsm {
  
-  def addr_lsb = log2Ceil(dw*bk/8)
-  def line_w   = log2Ceil(cl)
-  def tag_w    = 32 - addr_lsb - line_w
+  /**
+    * The Address LSB of this level cache is log(dw*bk/8)
+    */
+  val addr_lsb = log2Ceil(dw*bk/8)
+  val line_w   = log2Ceil(cl)
+  val tag_w    = 32 - addr_lsb - line_w
 
-  def mst_lsb = log2Ceil(mst_size/8)
 
-  def bus_lsb = log2Ceil(128/8)
+  val mst_lsb = log2Ceil(mst_size/8)
+
+  val bus_lsb = log2Ceil(128/8)
 
   val cache_dat = new Cache_dat( dw, 32, bk, 1, cl )
   val cache_tag = new Cache_tag( dw, 32, bk, 1, cl )
 
+  /**
+    * Get a random index of cache block, lock when get into aqblk state
+    */
   val random_res = {
     val increment = ~is_op_aqblk
     LFSR(log2Ceil(16), increment )
   }
 
+  /**
+    * indecated the coherence state of each cache-block in every cache-line
+    * @note In this version, the mei mode is used. there are 3 states TTIP, TRUK, NONE. 
+    * @note only a single client may ever have a copy of a block at a time
+    * @param NONE the cache-block is invalid
+    * @param TRUK the cache-block is valid and is a trunk, the next level cached it too, cannot read or write
+    * @param TTIP the cache-block is valid and is a tips, can read and write
+    */
   val cache_coherence = RegInit(VecInit(Seq.fill(cl)(VecInit(Seq.fill(cb)(0.U(3.W))))))
+  
+  /**
+    * indecated whether a block is dirty
+    * @note data is marked as dirty when written
+    */
   val cache_dirty = RegInit(VecInit(Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B)))))
 
-  val req_addr = RegInit(0.U(64.W))
-  val req_cl = req_addr(addr_lsb+line_w-1, addr_lsb)
+  /**
+    * the request address from mst, using for acquire or release
+    */
+  val mst_req_addr = RegInit(0.U(64.W))
+
+
+  val mst_req_cl = mst_req_addr(addr_lsb+line_w-1, addr_lsb)
+    // Mux1H(Seq(
+    //   is_op_aqblk -> req_addr(addr_lsb+line_w-1, addr_lsb),
+    //   is_op_wbblk -> req_addr(addr_lsb+line_w-1, addr_lsb),
+    //   is_op_fence -> req_cl_fence,
+    // ))
+
 
   val probe_addr = RegInit(0.U(64.W))
   val flash_addr = RegInit(0.U(64.W))
@@ -92,32 +123,39 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
   val is_probe_rtn:Vec[Bool]
   val is_probe_addr_end = probe_addr(addr_lsb-1, mst_lsb).andR
  
-  val fence_req_addr: UInt
   val release_req_addr: UInt
   val acquire_req_addr: UInt
 
   val abandon_addr = Cat(cache_tag.tag_info_r(cb_sel), req_cl, 0.U(addr_lsb))
 
-
+  val fence_addr: UInt
+  val fence_header: UInt
+  val fence_cb: UInt
+  val fence_cl: UInt
+  val fence_dat: UInt
 
   when( state_dnxt === cfree ) {
-    req_addr := 0.U
+    mst_req_addr := 0.U
   }
   .elsewhen( PopCount(Cat(is_op_aqblk, is_op_wbblk, is_op_fence)) === 0.U ) {
-    when( is_fence_req ) {
-      req_addr := fence_req_addr
-    }
-    .elsewhen( is_wbblk_req ) {
-      req_addr := release_req_addr
+    when( is_wbblk_req ) {
+      mst_req_addr := release_req_addr
     }
     .elsewhen( is_aqblk_req ) {
-      req_addr := acquire_req_addr
+      mst_req_addr := acquire_req_addr
     }
   }
 
 
   val is_cb_hit = {
-    val tag_info = req_addr(31, 32-tag_w)
+    val tag_info = 
+      Mux1H(Seq(
+        is_op_aqblk -> mst_req_addr(31, 32-tag_w),
+        is_op_wbblk -> mst_req_addr(31, 32-tag_w),
+        is_op_fence -> fence_addr(31,32-tag_w)
+
+      ))
+    mst_req_addr(31, 32-tag_w)
     VecInit(
       for ( i <- 0 until cb ) yield {
         cache_tag.tag_info_r(i) === tag_info
@@ -131,10 +169,21 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
   assert( PopCount(is_cb_hit.asUInt) <= 1.U, "Assert Failed, More than one block hit is not allowed!" )
 
   val cb_sel = 
+    Mux1H( Seq(
+      is_op_aqblk -> cb_sel_aqblk,
+      is_op_wbblk -> cb_sel_wbblk,
+      is_op_fence -> cb_sel_fence
+    ) )
+
+
+  val cb_sel_aqblk =
     Mux( is_cb_hit.contains(true.B), UIntToOH(is_cb_hit.asUInt),
       Mux( cache_tag.tag_info_r.contains(0.U), cache_tag.tag_info_r.indexWhere((x:UInt) => (x === 0.U)),
         random_res
     ))
+  val cb_sel_wbblk = cb_sel_aqblk
+
+  val cb_sel_fence: UInt
 
 
 
@@ -143,7 +192,7 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
 
 
 
-  when(state_qout === cktag & state_dnxt === probe) { probe_addr := req_addr }
+  when(state_qout === cktag & state_dnxt === probe) { probe_addr := Mux1H( Seq( is_op_aqblk -> req_addr, is_op_fence -> abandon_addr )) }
   when(state_qout === rlese & state_dnxt === probe) { probe_addr := probe_addr + ( 1.U << mst_lsb ) }
 
   when(state_qout === cktag & state_dnxt === flash) { flash_addr := req_addr }
@@ -170,9 +219,9 @@ abstract class TLC_ram ( dw:Int = 1024, bk:Int = 4, cb:Int = 4, cl:Int = 25, mst
                       ( cache_coherence(req_cl)(cb_sel) === Coher.TTIP ) -> Mux(is_cb_hit.contains(true.B), grant, evict),
                       ( cache_coherence(req_cl)(cb_sel) === Coher.TRNK ) -> probe
                     )),
-      is_op_fence -> Mux( ~is_cb_hit.contains(true.B), cfree, 
+      is_op_fence -> Mux( ~is_cb_hit.contains(true.B), evict, 
                       Mux1H(Seq(
-                        ( cache_coherence(req_cl)(cb_sel) === Coher.NONE ) -> cfree,
+                        ( cache_coherence(req_cl)(cb_sel) === Coher.NONE ) -> evict,
                         ( cache_coherence(req_cl)(cb_sel) === Coher.TTIP ) -> evict,
                         ( cache_coherence(req_cl)(cb_sel) === Coher.TRNK ) -> probe
                       ))
