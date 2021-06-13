@@ -49,6 +49,7 @@ trait TLC_slv extends MultiIOModule {
   val e_ready = RegInit(false.B)
 
 
+
   slv_chn_a.ready := a_ready
   slv_chn_b.valid := b_valid
 
@@ -61,80 +62,53 @@ trait TLC_slv extends MultiIOModule {
   .elsewhen(slv_chn_e.fire) { e_ready := false.B }
 
 
-  when( slv_chn_c.fire & slv_chn_c.bits.opcode === Opcode.ReleaseData ) { d_valid := true.B }
-  .elsewhen( slv_chn_a.fire ) { d_valid := true.B }
-    .elsewhen( slv_chn_d.fire ) { d_valid := false.B }
+  val is_in_grant = RegInit(false.B)
+
+  when( slv_chn_c.fire & slv_chn_c.bits.opcode === Opcode.ReleaseData ) {
+    d_valid := true.B
+    d_bits_opcode := Opcode.ReleaseAck
+    d_bits_param := 0.U
+    d_bits_source := slv_chn_c.bits.source
   }
+  .elsewhen( is_in_grant & ~d_valid ) {
+    d_valid := true.B
+    d_bits_opcode := Opcode.GrantData
+    d_bits_param := TLparam.toT
+    d_bits_source := slv_chn_a.bits.source
+  }
+  .elsewhen( slv_chn_d.fire ) { d_valid := false.B }
 
-
-  d_bits.opcode := Mux1H(Seq(
-    ( state_qout === rlese ) -> Opcode.ReleaseAck,
-    ( state_qout === grant ) -> Opcode.GrantData
-  ))
-  
-  d_bits.param := Mux1H(Seq(
-    ( state_qout === rlese ) -> 0.U,
-    ( state_qout === grant ) -> TLparam.toT
-  ))
-
+  d_bits.opcode := d_bits_opcode
+  d_bits.param := d_bits_param
   d_bits.size    := log2Ceil(mst_size/8).U
-  d_bits.source  := Mux1H(Seq(
-    ( state_qout === rlese ) -> RegEnable( slv_chn_c.bits.source, is_release_bus_end_with_release ),
-    ( state_qout === grant ) -> RegEnable( slv_chn_a.bits.source, slv_chn_a.fire )
-  ))
-
+  d_bits.source  := slv_chn_a.bits_source
   d_bits.sink    := DontCare
   d_bits.denied  := false.B
   d_bits.data    := mem_dat
   d_bits.corrupt := false.B
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-  when( state_qout === rlese ) {
-    when( slv_chn_c.valid === true.B & release_addr === 0.U ) {
-      release_addr := slv_chn_c.bits.address
-    }
-    .elsewhen( is_release_bus_fire & ~is_release_bus_end ) { release_addr := release_addr + ( 1.U << bus_lsb ) }
-
-    .elsewhen( is_release_bus_end_with_probe ) { release_addr := 0.U }
-    .elsewhen( is_release_ack ) { release_addr := 0.U }
-  
+  when( slv_chn_c.valid === true.B & release_addr === 0.U ) {
+    release_addr := slv_chn_c.bits.address
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  .elsewhen( is_release_bus_fire & ~is_release_bus_end ) { release_addr := release_addr + ( 1.U << bus_lsb ) }
+  .elsewhen( is_release_bus_end_with_probe ) { release_addr := 0.U }
+  .elsewhen( is_release_ack ) { release_addr := 0.U }
+  
+  when( state_qout === rlese & release_addr =/= 0.U  ) {
+    when( slv_chn_c.valid & ~slv_chn_c.ready ) { c_ready := true.B }
+    .elsewhen( slv_chn_c.fire ) { c_ready := false.B }
+  }
 
 
   assert( ~(slv_chn_c.valid & slv_chn_c.bits.address(mst_lsb-1,0) =/= 0.U), "Assert Failed at tlc, the address of chn_c is misalign" )
 
 
-
+  val probe_req:
+  val probe_addr
+  val probe_
+    when( state_qout === cktag & state_dnxt === probe ) { b_valid := true.B;  }
+    .elsewhen( slv_chn_b.fire ) { b_valid := false.B }
 
 
 
@@ -163,8 +137,7 @@ trait TLC_slv extends MultiIOModule {
   .elsewhen( slv_chn_a.fire ) { a_ready := false.B }
   
 
-    when( state_qout === cktag & state_dnxt === probe ) { b_valid := true.B;  }
-    .elsewhen( slv_chn_b.fire ) { b_valid := false.B }
+
 
 
     slv_chn_b.bits.opcode  := Opcode.ProbeBlock
@@ -178,10 +151,7 @@ trait TLC_slv extends MultiIOModule {
 
 
 
-  when( state_qout === rlese & release_addr =/= 0.U  ) {
-    when( slv_chn_c.valid & ~slv_chn_c.ready ) { c_ready := true.B }
-    .elsewhen( slv_chn_c.fire ) { c_ready := false.B }
-  }
+
 
 
 
