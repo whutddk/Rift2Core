@@ -25,30 +25,111 @@ import chisel3.util._
 import tilelink._
 import axi._
 import base._
+import rift2Core.cache.Coher
 
-//state: free grant ack_release req_probe ack_probe
+//产生寄生消息由Waiting
+//发生总线请求用valid
+//操作占用用stateOn
 
-// free flash evict
-
-
-trait slv_acquire extends MultiIOModule{
-  val slv_chn_a = IO(Flipped(new DecoupledIO(new TLchannel_a(128, 32))))
-
+trait TLC_info extends MultiIOModule {
   val tag_w: Int
   val cb: Int
+//产生寄生消息由Waiting
+//发生总线请求用valid
+//操作占用用stateOn
+  // val is_SlvAcquire_Waiting = false.B
+  val is_SlvAcquire_valid: Bool
+  val is_SlvAcquire_StateOn: Bool
+  val is_SlvAcquire_allowen: Bool
 
-  /**
-    * if a master port probe req has been ack, probe_ack/probe_data_ack should be produce first 
-    *
-    */
-  val flag_is_mst_probe: Bool
+  val is_SlvGrantData_Waiting: Bool
+  // val is_SlvGrantData_valid: Bool
+  val is_SlvGrantData_StateOn: Bool
+  val is_SlvGrantData_allowen: Bool
 
-  /**
-    * if a slave port comes a release data (from other slave)
-    *
-    * @note slv_chnc_valid
-    */
-  val is_release_data: Bool
+  // val is_SlvGrantAck_Waiting: Bool
+  val is_SlvGrantAck_valid: Bool
+  val is_SlvGrantAck_StateOn: Bool
+  val is_SlvGrantAck_allowen: Bool
+
+  val is_SlvProbe_Waiting: Bool
+  // val is_SlvProbe_valid: Bool
+  val is_SlvProbe_StateOn: Bool
+  val is_SlvProbe_allowen: Bool
+
+  // val is_SlvProbeAck_Waiting: Bool
+  val is_SlvProbeAck_valid: Bool
+  val is_SlvProbeAck_StateOn: Bool
+  val is_SlvProbeAck_allowen: Bool
+
+  // val is_SlvProbeData_Waiting: Bool
+  val is_SlvProbeData_valid: Bool
+  val is_SlvProbeData_StateOn: Bool
+  val is_SlvProbeData_allowen: Bool
+
+  // val is_SlvReleaseData_Waiting: Bool
+  val is_SlvReleaseData_valid: Bool
+  val is_SlvReleaseData_StateOn: Bool
+  val is_SlvReleaseData_allowen: Bool
+
+  val is_SlvReleaseAck_Waiting: Bool
+  // val is_SlvReleaseAck_valid: Bool
+  val is_SlvReleaseAck_StateOn: Bool
+  val is_SlvReleaseAck_allowen: Bool
+
+
+
+  val is_MstAcquire_Waiting: Bool
+  // val is_MstAcquire_valid: Bool
+  val is_MstAcquire_StateOn: Bool
+  val is_MstAcquire_allowen: Bool
+
+  // val is_MstGrantData_Waiting: Bool
+  val is_MstGrantData_valid: Bool
+  val is_MstGrantData_StateOn: Bool
+  val is_MstGrantData_allowen: Bool
+
+  val is_MstGrantAck_Waiting: Bool
+  // val is_MstGrantAck_valid: Bool
+  val is_MstGrantAck_StateOn: Bool
+  val is_MstGrantAck_allowen: Bool
+
+  // val is_MstProbe_Waiting: Bool
+  val is_MstProbe_valid: Bool
+  val is_MstProbe_StateOn: Bool
+  val is_MstProbe_allowen: Bool
+
+  val is_MstProbeAck_Waiting: Bool
+  // val is_MstProbeAck_valid: Bool
+  val is_MstProbeAck_StateOn: Bool
+  val is_MstProbeAck_allowen: Bool
+
+  val is_MstProbeData_Waiting: Bool
+  // val is_MstProbeData_valid: Bool
+  val is_MstProbeData_StateOn: Bool
+  val is_MstProbeData_allowen: Bool
+
+  val is_MstReleaseData_Waiting: Bool
+  // val is_MstReleaseData_valid: Bool
+  val is_MstReleaseData_StateOn: Bool
+  val is_MstReleaseData_allowen: Bool
+
+  // val is_MstReleaseAck_Waiting: Bool
+  val is_MstReleaseAck_valid: Bool
+  val is_MstReleaseAck_StateOn: Bool
+  val is_MstReleaseAck_allowen: Bool
+
+
+}
+
+
+
+
+/**
+  * this operation will happen once when free
+  */
+trait slv_acquire extends TLC_info{
+  val slv_chn_a = IO(Flipped(new DecoupledIO(new TLchannel_a(128, 32))))
 
 
   val cache_tag: Cache_tag
@@ -57,16 +138,52 @@ trait slv_acquire extends MultiIOModule{
   val a_ready = RegInit(false.B)
   slv_chn_a.ready := a_ready
 
-  val is_allowen_acquire = ~flag_is_mst_probe & ~is_release_data
-  val is_acuqire_rsp = is_allowen_acquire & slv_chn_a.valid & ~slv_chn_a.ready
+  val is_allowen_SlvAcquire =
+    ~is_SlvAcquire_StateOn &
+    ~is_SlvGrantData_StateOn &
+    ~is_SlvGrantAck_StateOn &
+    ~is_SlvProbe_StateOn &
+    ~is_SlvProbeData_StateOn &
+    ~is_SlvProbeAck_StateOn &
+    ~is_SlvReleaseData_StateOn &
+    ~is_SlvReleaseAck_StateOn &
+
+    ~is_MstAcquire_StateOn &
+    ~is_MstGrantData_StateOn &
+    ~is_MstGrantAck_StateOn &
+    ~is_MstProbe_StateOn &
+    ~is_MstProbeData_StateOn &
+    ~is_MstProbeAck_StateOn &
+    ~is_MstReleaseData_StateOn &
+    ~is_MstReleaseAck_StateOn &
+
+    ~is_SlvGrantData_Waiting &
+    ~is_SlvGrantAck_valid &
+    ~is_SlvProbe_Waiting &
+    ~is_SlvProbeData_valid &
+    ~is_SlvProbeAck_valid &
+    ~is_SlvReleaseData_valid &
+    ~is_SlvReleaseAck_Waiting &
+    ~is_MstAcquire_Waiting &
+    ~is_MstGrantData_valid &
+    ~is_MstGrantAck_Waiting &
+    ~is_MstProbe_valid &
+    ~is_MstProbeAck_Waiting &
+    ~is_MstProbeData_Waiting &
+    ~is_MstReleaseData_Waiting &
+    ~is_MstReleaseAck_valid
+
+  val is_SlvAcquire_rsp = is_allowen_slv_acquire & slv_chn_a.valid & ~slv_chn_a.ready
+
 
   when( is_acuqire_rsp ) { a_ready := true.B }
   .elsewhen( slv_chn_a.fire ) { a_ready := false.B }
 
-  val info_acquire_cache_tag_ren   = is_acuqire_rsp
-  val info_acquire_cache_tag_raddr = slv_chn_a.bits.address
-  val info_acquire_source = RegEnable( slv_chn_a.bits.source, is_acuqire_rsp )
-  val info_acquire_cb = {
+  val info_slvAcquire_cache_tag_ren   = is_SlvAcquire_rsp
+  val info_slvAcquire_cache_tag_raddr = slv_chn_a.bits.address
+  val info_slvAcquire_address = RegEnable( slv_chn_a.bits.address, is_SlvAcquire_rsp )
+  val info_slvAcquire_source  = RegEnable( slv_chn_a.bits.source,  is_SlvAcquire_rsp )
+  val info_slvAcquire_cb = {
     val tag_info = slv_chn_a.bits.address( 31, 32-tag_w )
     val is_cb_hit =
           VecInit(
@@ -83,10 +200,109 @@ trait slv_acquire extends MultiIOModule{
     RegEnable( cb_sel, slv_chn_a.fire )
   }
 
+  val is_SlvAcquire_StateOn = RegInit( false.B )
+
+  when( slv_chn_a.fire ) {
+    is_SlvAcquire_StateOn := true.B
+    is_SlvGrantData_Waiting := true.B
+  }
+
 }
 
+/**
+  * this operation will happened every times when free and is_pending_slv_acquire
+  */
+trait slv_grantData extends TLC_info {
+
+  val cache_tag: Cache_tag
+  val cache_coh: Cache_coh
+
+  val is_SlvGrantData_allowen = 
+
+     is_SlvAcquire_StateOn & 
+    ~is_SlvGrantData_StateOn &
+    ~is_SlvGrantAck_StateOn &
+    ~is_SlvProbe_StateOn &
+    ~is_SlvProbeData_StateOn &
+    ~is_SlvProbeAck_StateOn &
+    ~is_SlvReleaseData_StateOn &
+    ~is_SlvReleaseAck_StateOn &
+
+    ~is_MstAcquire_StateOn &
+    ~is_MstGrantData_StateOn &
+    ~is_MstGrantAck_StateOn &
+    ~is_MstProbe_StateOn &
+    ~is_MstProbeData_StateOn &
+    ~is_MstProbeAck_StateOn &
+    ~is_MstReleaseData_StateOn &
+    ~is_MstReleaseAck_StateOn &
+
+     is_SlvGrantData_Waiting &
+    ~is_SlvGrantAck_valid &
+    ~is_SlvProbe_Waiting &
+    ~is_SlvProbeData_valid &
+    ~is_SlvProbeAck_valid &
+    ~is_SlvReleaseData_valid &
+    ~is_SlvReleaseAck_Waiting &
+    ~is_MstAcquire_Waiting &
+    ~is_MstGrantData_valid &
+    ~is_MstGrantAck_Waiting &
+    ~is_MstProbe_valid &
+    ~is_MstProbeAck_Waiting &
+    ~is_MstProbeData_Waiting &
+    ~is_MstReleaseData_Waiting &
+    ~is_MstReleaseAck_valid
 
 
+
+
+  val slvGrantData_State_dnxt = Wire(UInt(3.W))
+  val slvGrantData_State_qout = RegNext(slvGrantData_State_dnxt, 0.U)
+  val is_slvGrantData_hit_clearen = cache_tag.tag_info_r(info_slvAcquire_cb) === slvGrantData_addr(31, 32-tag_w)
+  val is_slvGrantData_coh_clearen = cache_coh.coh_info_r(info_slvAcquire_cb) === Coher.TTIP
+  val is_slvGrantData_clearen = is_slvGrantData_hit_clearen & is_slvGrantData_coh_clearen
+  val is_slvGrantData_addrend = slvGrantData_addr( mst_lsb-1, addr_lsb ).andR
+  
+  val slvGrantData_addr = RegInit( 0.U(64.W) )
+
+  when( slvGrantData_State_qout === 1.U & slvGrantData_State_dnxt === 2.U ) {
+    slvGrantData_addr := info_slvAcquire_address
+  }
+  .elsewhen( slvGrantData_State_qout === 2.U ) {
+    slvGrantData_addr := Mux( slv_chn_d.fire, slvGrantData_addr + (1.U << bus_lsb) , slvGrantData_addr )
+  }
+
+
+  slvGrantData_State_dnxt :=
+    Mux1H(Seq(
+      (slvGrantData_State_qout === 0.U) -> Mux( is_SlvGrantData_allowen, 1.U, 0.U ),
+      (slvGrantData_State_qout === 1.U) -> Mux( is_slvGrantData_clearen, 2.U, 0.U ),
+      (slvGrantData_State_qout === 2.U) -> Mux( is_slvGrantData_addrend, 0.U, 2.U )
+    ))
+
+  override val is_SlvGrantData_StateOn = RegNext( slvGrantData_State_dnxt =/= 0.U, false.B )
+
+  when( slvGrantData_State_qout === 1.U ) {
+    when( cache_coh.coh_info_r(info_slvAcquire_cb) === Coher.TRNK ) {
+      is_SlvProbe_Waiting := true.B
+    }
+    .elsewhen( cache_coh.coh_info_r(info_slvAcquire_cb) === Coher.TTIP ) {
+      when( cache_tag.tag_info_r(info_slvAcquire_cb) === slvGrantData_addr(31, 32-tag_w) ) {
+      }
+      .elsewhen( cache_tag.tag_info_r(info_slvAcquire_cb) =/= slvGrantData_addr(31, 32-tag_w) ) {
+        is_MstReleaseAck_Waiting := true.B
+      }
+    }
+    .elsewhen( cache_coh.coh_info_r(info_slvAcquire_cb) === Coher.NONE ) {
+      is_MstAcquire_Waiting := ture.B
+    }
+  }
+
+trait slv_grantack extends TLC_info {
+  override val is_pending_acquire: Bool
+  
+  when( slv_chn_e.fire ) { is_pending_acquire := false.B}
+}
 
 
 
@@ -230,6 +446,23 @@ trait slv_acquire extends MultiIOModule{
 
 // }
 
+
+  // val is_SlvAcquire_valid: Bool
+  // val is_SlvGrantData_Waiting: Bool
+  // val is_SlvGrantAck_valid: Bool
+  // val is_SlvProbe_Waiting: Bool
+  // val is_SlvProbeAck_valid: Bool
+  // val is_SlvProbeData_valid: Bool
+  // val is_SlvReleaseData_valid: Bool
+  // val is_SlvReleaseAck_Waiting: Bool
+  // val is_MstAcquire_Waiting: Bool
+  // val is_MstGrantData_valid: Bool
+  // val is_MstGrantAck_Waiting: Bool
+  // val is_MstProbe_valid: Bool
+  // val is_MstProbeAck_Waiting: Bool
+  // val is_MstProbeData_Waiting: Bool
+  // val is_MstReleaseData_Waiting: Bool
+  // val is_MstReleaseAck_valid: Bool
 
 
 
