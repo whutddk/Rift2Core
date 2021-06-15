@@ -44,10 +44,17 @@ import rift2Core.cache._
 // }
 
 
-object Coher {
-  def NONE = 0.U
-  def TRNK = 1.U
-  def TTIP = 2.U
+class Coher extends Bundle{
+  // def NONE = 0.U
+  // def TRNK = 1.U
+  // def TTIP = 2.U
+
+  val modified = Bool()
+  val exclusive = Bool()
+  val shared = false.B
+  val invalidn = Bool()
+
+
 }
 
 
@@ -169,7 +176,7 @@ abstract class TLC_base extends MultiIOModule {
   val info_slvAcquire_address = Wire( UInt(64.W) )
   val info_slvAcquire_source  = Wire( UInt(8.W) )
 
-
+  val info_mstProbe_address = Wire( UInt(64.W) )
 }
 
 

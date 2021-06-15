@@ -23,7 +23,6 @@ import chisel3._
 import chisel3.util._
 
 import tilelink._
-import axi._
 import base._
 import rift2Core.cache._
 import chisel3.util.random._
@@ -31,10 +30,6 @@ import chisel3.util.random._
 //产生寄生消息由Waiting
 //发生总线请求用valid
 //操作占用用stateOn
-
-
-
-
 
 
 
@@ -164,7 +159,7 @@ trait slv_grantData extends TLC_base{
   val slvGrantData_State_dnxt = Wire(UInt(3.W))
   val slvGrantData_State_qout = RegNext(slvGrantData_State_dnxt, 0.U)
   val is_slvGrantData_hit_clearen = cache_tag.tag_info_r(info_slvAcquire_cb) === slvGrantData_addr(31, 32-tag_w)
-  val is_slvGrantData_coh_clearen = cache_coh.coh_info_r(info_slvAcquire_cb) === Coher.TTIP
+  val is_slvGrantData_coh_clearen = cache_coh.coh_info_r(info_slvAcquire_cb) === Cat
   val is_slvGrantData_clearen = is_slvGrantData_hit_clearen & is_slvGrantData_coh_clearen
   val is_slvGrantData_addrend = slvGrantData_addr( mst_lsb-1, addr_lsb ).andR
 

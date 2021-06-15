@@ -23,6 +23,19 @@ import chisel3.util._
 import base._
 
 
+class Coher extends Bundle{
+  // def NONE = 0.U
+  // def TRNK = 1.U
+  // def TTIP = 2.U
+
+  val modified = Bool()
+  val exclusive = Bool()
+  val shared = false.B
+  val invalidn = Bool()
+
+
+}
+
 class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
   val addr_lsb = log2Ceil(dw*bk/8)
@@ -35,8 +48,8 @@ class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
   val coh_en_w = Wire( Vec(cb, Bool()) )
   val coh_en_r = Wire( Vec(cb, Bool()) )
 
-  val coh_info_w = Wire(UInt(4.W))
-  val coh_info_r = Wire( Vec(cb, UInt(4.W)) )
+  val coh_info_w = Wire(new Coher)
+  val coh_info_r = Wire( Vec(cb, new Coher) )
 
 
 
@@ -50,7 +63,7 @@ class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
   val bank_sel_r = coh_addr_r(addr_lsb-1, addr_lsb-log2Ceil(bk) )
   val data_sel_r = coh_addr_r(addr_lsb-log2Ceil(bk)-1,0)
 
-
+  val data_o = RegInit( VecInit ( Seq.fill(cb)(0.U.asTypeOf(new Coher)) ) )
 
   val coh_ram = {
     for ( i <- 0 until cb; j <- 0 until bk ) yield { 
@@ -60,26 +73,20 @@ class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
   }
 
 
-  for ( i <- 0 until cb ) yield {
-    for ( j <- 0 until bk ) yield {
+  def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
 
-      coh_ram(i*bk+j).io.addr_w := addr_sel_w
-      coh_ram(i*bk+j).io.addr_r := addr_sel_r
+  val ram = for ( i <- 0 until cb; j <- 0 until bk ) yield { Mem( dp, new Coher ) }
+  
+  for ( i <- 0 until cb; j <- 0 until bk ) yield {
 
-      coh_ram(i*bk+j).io.en_w := Mux( j.U === bank_sel_w, coh_en_w(i), false.B)
-      coh_ram(i*bk+j).io.en_r := Mux( j.U === bank_sel_r, coh_en_r(i), false.B)
-
-      coh_ram(i*bk+j).io.data_wstrb := "hff".U
-      coh_ram(i*bk+j).io.data_w := coh_info_w
-
+    when( coh_en_w(i) === true.B & j.U === bank_sel_w ) {
+      ram(i*bk+j).write(addr_sel_w, coh_info_w)
     }
 
+    when( coh_en_r(i) === true.B & j.U === bank_sel_r ){
+      data_o(i) := ram(i*bk+j).read(addr_sel_r)
+    }
   }
-
-
-
-
-
 
 
 
