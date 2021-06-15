@@ -30,9 +30,7 @@ class Coher extends Bundle{
 
   val modified = Bool()
   val exclusive = Bool()
-  val shared = false.B
-  val invalidn = Bool()
-
+  // val shared = false.B
 
 }
 

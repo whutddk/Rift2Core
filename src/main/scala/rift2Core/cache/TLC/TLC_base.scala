@@ -44,18 +44,7 @@ import rift2Core.cache._
 // }
 
 
-class Coher extends Bundle{
-  // def NONE = 0.U
-  // def TRNK = 1.U
-  // def TTIP = 2.U
 
-  val modified = Bool()
-  val exclusive = Bool()
-  val shared = false.B
-  val invalidn = Bool()
-
-
-}
 
 
 abstract class TLC_base extends MultiIOModule {
@@ -169,12 +158,27 @@ abstract class TLC_base extends MultiIOModule {
   val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
   val cache_tag = new Cache_tag( dw, aw, bk, cb, cl )
   val cache_coh = new Cache_coh( dw, aw, bk, cb, cl )
+  val cache_inv = RegInit( VecInit( Seq.fill(cl)( VecInit(Seq.fill(cb)( VecInit( Seq.fill(bk)(false.B)))))))
 
-
+  def is_cache_invalid(addr: UInt, cb: UInt) = {
+    val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
+    val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+    cache_inv(tmp_cl)(cb)(tmp_bk)
+  }
 
   val info_slvAcquire_cb = Wire( UInt(log2Ceil(cb).W) )
   val info_slvAcquire_address = Wire( UInt(64.W) )
   val info_slvAcquire_source  = Wire( UInt(8.W) )
+  val info_slvGrantData_cache_tag_ren   = Wire(Bool())
+  val info_slvGrantData_cache_tag_raddr = Wire(UInt(64.W))
+  val info_slvGrantData_cache_coh_ren   = Wire(Bool())
+  val info_slvGrantData_cache_coh_raddr = Wire(UInt(64.W))
+  val info_slvGrantData_cache_dat_ren   = Wire(Bool())
+  val info_slvGrantData_cache_dat_raddr = Wire(UInt(64.W))
+
+  val info_slvGrantAck_cache_coh_wen   = Wire(Bool())
+  val info_slvGrantAck_cache_coh_waddr = Wire(UInt(64.W))
+  val info_slvGrantAck_cache_coh_winfo = Wire(new Coher)
 
   val info_mstProbe_address = Wire( UInt(64.W) )
 }

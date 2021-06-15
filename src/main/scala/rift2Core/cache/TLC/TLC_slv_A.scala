@@ -159,17 +159,20 @@ trait slv_grantData extends TLC_base{
   val slvGrantData_State_dnxt = Wire(UInt(3.W))
   val slvGrantData_State_qout = RegNext(slvGrantData_State_dnxt, 0.U)
   val is_slvGrantData_hit_clearen = cache_tag.tag_info_r(info_slvAcquire_cb) === slvGrantData_addr(31, 32-tag_w)
-  val is_slvGrantData_coh_clearen = cache_coh.coh_info_r(info_slvAcquire_cb) === Cat
+  val is_slvGrantData_coh_clearen =
+    ~cache_coh.coh_info_r(info_slvAcquire_cb).exclusive &
+    ~is_cache_invalid(slvGrantData_addr, info_slvAcquire_cb)
+
   val is_slvGrantData_clearen = is_slvGrantData_hit_clearen & is_slvGrantData_coh_clearen
   val is_slvGrantData_addrend = slvGrantData_addr( mst_lsb-1, addr_lsb ).andR
 
-  val info_slvGrantData_cache_tag_ren   = slvGrantData_State_qout === 0.U & slvGrantData_State_dnxt === 1.U
-  val info_slvGrantData_cache_tag_raddr = info_slvAcquire_address
-  val info_slvGrantData_cache_coh_ren   = slvGrantData_State_qout === 0.U & slvGrantData_State_dnxt === 1.U
-  val info_slvGrantData_cache_coh_raddr = info_slvAcquire_address
+  info_slvGrantData_cache_tag_ren   := slvGrantData_State_qout === 0.U & slvGrantData_State_dnxt === 1.U
+  info_slvGrantData_cache_tag_raddr := info_slvAcquire_address
+  info_slvGrantData_cache_coh_ren   := slvGrantData_State_qout === 0.U & slvGrantData_State_dnxt === 1.U
+  info_slvGrantData_cache_coh_raddr := info_slvAcquire_address
 
-  val info_slvGrantData_cache_dat_ren   = slvGrantData_State_qout === 2.U
-  val info_slvGrantData_cache_dat_raddr = slvGrantData_addr
+  info_slvGrantData_cache_dat_ren   := slvGrantData_State_qout === 2.U
+  info_slvGrantData_cache_dat_raddr := slvGrantData_addr
 
   val d_valid = RegInit(false.B)
 
@@ -216,18 +219,18 @@ trait slv_grantData extends TLC_base{
 
 
   when( slvGrantData_State_qout === 1.U ) {
-    when( cache_coh.coh_info_r(info_slvAcquire_cb) === Coher.TRNK ) {
-      is_slvProbe_Waiting := true.B
+    when( is_cache_invalid(slvGrantData_addr, info_slvAcquire_cb) === true.B ) {
+      is_mstReleaseData_Waiting := true.B
     }
-    .elsewhen( cache_coh.coh_info_r(info_slvAcquire_cb) === Coher.TTIP ) {
-      when( cache_tag.tag_info_r(info_slvAcquire_cb) === slvGrantData_addr(31, 32-tag_w) ) {
+    .otherwise {
+      when( cache_coh.coh_info_r(info_slvAcquire_cb).exclusive ) {
+        is_slvProbe_Waiting := true.B
       }
-      .elsewhen( cache_tag.tag_info_r(info_slvAcquire_cb) =/= slvGrantData_addr(31, 32-tag_w) ) {
-        is_mstReleaseData_Waiting := true.B
+      .otherwise {
+        when( cache_tag.tag_info_r(info_slvAcquire_cb) =/= slvGrantData_addr(31, 32-tag_w) ) {
+          is_mstReleaseData_Waiting := true.B
+        }
       }
-    }
-    .elsewhen( cache_coh.coh_info_r(info_slvAcquire_cb) === Coher.NONE ) {
-      is_mstAcquire_Waiting := true.B
     }
   }
 
@@ -283,7 +286,9 @@ trait slv_grantAck extends TLC_base {
     is_slvGrantData_StateOn := false.B
   }
 
-
+  info_slvGrantAck_cache_coh_wen   := slv_chn_e.fire
+  info_slvGrantAck_cache_coh_waddr := info_slvAcquire_address
+  info_slvGrantAck_cache_coh_winfo := new Coher{ modified := false.B;  exclusive := true.B }
 
 
 }
