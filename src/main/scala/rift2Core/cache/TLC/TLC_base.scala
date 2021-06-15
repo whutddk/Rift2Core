@@ -25,7 +25,7 @@ import axi._
 import base._
 import rift2Core.cache._
 
-// class Cache_setting extends Bundle {
+// abstract class Cache_setting extends Bundle {
 //   val level: Int
 
 //   val dw: Int
@@ -43,7 +43,22 @@ import rift2Core.cache._
 //   val mst_lsb  = log2Ceil(dw)
 // }
 
-abstract class TLC_base( implicit level: Int, dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) extends MultiIOModule {
+
+object Coher {
+  def NONE = 0.U
+  def TRNK = 1.U
+  def TTIP = 2.U
+}
+
+
+abstract class TLC_base extends MultiIOModule {
+
+  val dw: Int
+  val aw: Int
+  val bk: Int
+  val cb: Int
+  val cl: Int
+
 
   val addr_lsb = log2Ceil(dw*bk/8)
   val line_w   = log2Ceil(cl)
@@ -51,7 +66,7 @@ abstract class TLC_base( implicit level: Int, dw: Int, aw: Int, bk: Int, cb: Int
   val bus_w    = 128
   val bus_lsb  = log2Ceil(bus_w/8)
 
-  val mst_lsb  = log2Ceil(dw)
+  val mst_lsb  = log2Ceil(dw/8)
 
 
 
@@ -78,75 +93,81 @@ abstract class TLC_base( implicit level: Int, dw: Int, aw: Int, bk: Int, cb: Int
 //操作占用用stateOn
 
   val is_slvAcquire_valid = Wire(Bool())
-  val is_slvAcquire_StateOn = Wire(Bool())
+  val is_slvAcquire_StateOn = RegInit(false.B)
   val is_slvAcquire_allowen = Wire(Bool())
 
-  val is_slvGrantData_Waiting = Wire(Bool())
-  val is_slvGrantData_StateOn = Wire(Bool())
+  val is_slvGrantData_Waiting = RegInit(false.B)
+  val is_slvGrantData_StateOn = RegInit(false.B)
   val is_slvGrantData_allowen = Wire(Bool())
 
   val is_slvGrantAck_valid = Wire(Bool())
-  val is_slvGrantAck_StateOn = Wire(Bool())
+  val is_slvGrantAck_StateOn = RegInit(false.B)
   val is_slvGrantAck_allowen = Wire(Bool())
 
-  val is_slvProbe_Waiting = Wire(Bool())
-  val is_slvProbe_StateOn = Wire(Bool())
+  val is_slvProbe_Waiting = RegInit(false.B)
+  val is_slvProbe_StateOn = RegInit(false.B)
   val is_slvProbe_allowen = Wire(Bool())
 
   val is_slvProbeAck_valid = Wire(Bool())
-  val is_slvProbeAck_StateOn = Wire(Bool())
+  val is_slvProbeAck_StateOn = RegInit(false.B)
   val is_slvProbeAck_allowen = Wire(Bool())
 
   val is_slvProbeData_valid = Wire(Bool())
-  val is_slvProbeData_StateOn = Wire(Bool())
+  val is_slvProbeData_StateOn = RegInit(false.B)
   val is_slvProbeData_allowen = Wire(Bool())
 
   val is_slvReleaseData_valid = Wire(Bool())
-  val is_slvReleaseData_StateOn = Wire(Bool())
+  val is_slvReleaseData_StateOn = RegInit(false.B)
   val is_slvReleaseData_allowen = Wire(Bool())
 
-  val is_slvReleaseAck_Waiting = Wire(Bool())
-  val is_slvReleaseAck_StateOn = Wire(Bool())
+  val is_slvReleaseAck_Waiting = RegInit(false.B)
+  val is_slvReleaseAck_StateOn = RegInit(false.B)
   val is_slvReleaseAck_allowen = Wire(Bool())
 
 
 
-  val is_mstAcquire_Waiting = Wire(Bool())
-  val is_mstAcquire_StateOn = Wire(Bool())
+  val is_mstAcquire_Waiting = RegInit(false.B)
+  val is_mstAcquire_StateOn = RegInit(false.B)
   val is_mstAcquire_allowen = Wire(Bool())
 
   val is_mstGrantData_valid = Wire(Bool())
-  val is_mstGrantData_StateOn = Wire(Bool())
+  val is_mstGrantData_StateOn = RegInit(false.B)
   val is_mstGrantData_allowen = Wire(Bool())
 
-  val is_mstGrantAck_Waiting = Wire(Bool())
-  val is_mstGrantAck_StateOn = Wire(Bool())
+  val is_mstGrantAck_Waiting = RegInit(false.B)
+  val is_mstGrantAck_StateOn = RegInit(false.B)
   val is_mstGrantAck_allowen = Wire(Bool())
 
   val is_mstProbe_valid = Wire(Bool())
-  val is_mstProbe_StateOn = Wire(Bool())
+  val is_mstProbe_StateOn = RegInit(false.B)
   val is_mstProbe_allowen = Wire(Bool())
 
-  val is_mstProbeAck_Waiting = Wire(Bool())
-  val is_mstProbeAck_StateOn = Wire(Bool())
+  val is_mstProbeAck_Waiting = RegInit(false.B)
+  val is_mstProbeAck_StateOn = RegInit(false.B)
   val is_mstProbeAck_allowen = Wire(Bool())
 
-  val is_mstProbeData_Waiting = Wire(Bool())
-  val is_mstProbeData_StateOn = Wire(Bool())
+  val is_mstProbeData_Waiting = RegInit(false.B)
+  val is_mstProbeData_StateOn = RegInit(false.B)
   val is_mstProbeData_allowen = Wire(Bool())
 
-  val is_mstReleaseData_Waiting = Wire(Bool())
-  val is_mstReleaseData_StateOn = Wire(Bool())
+  val is_mstReleaseData_Waiting = RegInit(false.B)
+  val is_mstReleaseData_StateOn = RegInit(false.B)
   val is_mstReleaseData_allowen = Wire(Bool())
 
   val is_mstReleaseAck_valid = Wire(Bool())
-  val is_mstReleaseAck_StateOn = Wire(Bool())
+  val is_mstReleaseAck_StateOn = RegInit(false.B)
   val is_mstReleaseAck_allowen = Wire(Bool())
 
 
   val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
   val cache_tag = new Cache_tag( dw, aw, bk, cb, cl )
   val cache_coh = new Cache_coh( dw, aw, bk, cb, cl )
+
+
+
+  val info_slvAcquire_cb = Wire( UInt(log2Ceil(cb).W) )
+  val info_slvAcquire_address = Wire( UInt(64.W) )
+  val info_slvAcquire_source  = Wire( UInt(8.W) )
 
 
 }

@@ -26,11 +26,7 @@ import axi._
 import base._
 
 
-object Coher {
-  def NONE = 0.U
-  def TRNK = 1.U
-  def TTIP = 2.U
-}
+
 
 
 
