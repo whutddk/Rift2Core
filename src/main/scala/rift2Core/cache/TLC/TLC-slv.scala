@@ -214,6 +214,7 @@ trait slv_acquire extends TLC_info{
   */
 trait slv_grantData extends TLC_info {
 
+  val cache_dat: Cache_dat
   val cache_tag: Cache_tag
   val cache_coh: Cache_coh
 
@@ -262,7 +263,40 @@ trait slv_grantData extends TLC_info {
   val is_slvGrantData_coh_clearen = cache_coh.coh_info_r(info_slvAcquire_cb) === Coher.TTIP
   val is_slvGrantData_clearen = is_slvGrantData_hit_clearen & is_slvGrantData_coh_clearen
   val is_slvGrantData_addrend = slvGrantData_addr( mst_lsb-1, addr_lsb ).andR
-  
+
+  val info_slvGrantData_cache_tag_ren   = slvGrantData_State_qout === 0.U & slvGrantData_State_dnxt === 1.U
+  val info_slvGrantData_cache_tag_raddr = info_slvAcquire_address
+  val info_slvGrantData_cache_coh_ren   = slvGrantData_State_qout === 0.U & slvGrantData_State_dnxt === 1.U
+  val info_slvGrantData_cache_coh_raddr = info_slvAcquire_address
+
+  val info_slvGrantData_cache_dat_ren   = slvGrantData_State_qout === 2.U
+  val info_slvGrantData_cache_dat_raddr = slvGrantData_addr
+
+  val d_valid = RegInit(false.B)
+
+
+
+  slv_chn_d.valid := d_valid
+
+  slv_chn_d.bits := Opcode.GrantData
+  slv_chn_d.bits := TLparam.toT
+  slv_chn_d.bits := log2Ceil(mst_size/8).U
+  slv_chn_d.bits := info_slvAcquire_source
+  slv_chn_d.bits := DontCare
+  slv_chn_d.bits := false.B
+  slv_chn_d.bits := cache_dat.dat_info_r(info_slvAcquire_cb)
+  slv_chn_d.bits := false.B
+
+  when( slvGrantData_State_qout === 2.U & slv_chn_d.valid === false.B ) {
+    d_valid := true.B
+  }
+  .elsewhen( slv_chn_d.fire ) {
+    d_valid := false.B
+  }
+
+
+
+
   val slvGrantData_addr = RegInit( 0.U(64.W) )
 
   when( slvGrantData_State_qout === 1.U & slvGrantData_State_dnxt === 2.U ) {
@@ -277,10 +311,10 @@ trait slv_grantData extends TLC_info {
     Mux1H(Seq(
       (slvGrantData_State_qout === 0.U) -> Mux( is_SlvGrantData_allowen, 1.U, 0.U ),
       (slvGrantData_State_qout === 1.U) -> Mux( is_slvGrantData_clearen, 2.U, 0.U ),
-      (slvGrantData_State_qout === 2.U) -> Mux( is_slvGrantData_addrend, 0.U, 2.U )
+      (slvGrantData_State_qout === 2.U) -> Mux( slv_chn_d.fire & is_slvGrantData_addrend, 0.U, 2.U )
     ))
 
-  override val is_SlvGrantData_StateOn = RegNext( slvGrantData_State_dnxt =/= 0.U, false.B )
+  override val is_slvGrantData_StateOn = RegNext( slvGrantData_State_dnxt =/= 0.U, false.B )
 
   when( slvGrantData_State_qout === 1.U ) {
     when( cache_coh.coh_info_r(info_slvAcquire_cb) === Coher.TRNK ) {
@@ -298,10 +332,65 @@ trait slv_grantData extends TLC_info {
     }
   }
 
+  when( slvGrantData_State_qout === 1.U & slvGrantData_State_dnxt === 2.U ) {
+    is_SlvGrantData_StateOn := true.B
+    is_SlvGrantData_Waiting := false.B
+  }
+}
+
 trait slv_grantack extends TLC_info {
-  override val is_pending_acquire: Bool
-  
-  when( slv_chn_e.fire ) { is_pending_acquire := false.B}
+  val slv_chn_e = IO(Flipped(new DecoupledIO( new TLchannel_e)))
+
+  val cache_coh: Cache_coh
+
+  val is_allowen_SlvGrantAck =
+    is_SlvAcquire_StateOn &
+    is_SlvGrantData_StateOn &
+    ~is_SlvGrantAck_StateOn &
+    ~is_SlvProbe_StateOn &
+    ~is_SlvProbeData_StateOn &
+    ~is_SlvProbeAck_StateOn &
+    ~is_SlvReleaseData_StateOn &
+    ~is_SlvReleaseAck_StateOn &
+
+    ~is_MstAcquire_StateOn &
+    ~is_MstGrantData_StateOn &
+    ~is_MstGrantAck_StateOn &
+    ~is_MstProbe_StateOn &
+    ~is_MstProbeData_StateOn &
+    ~is_MstProbeAck_StateOn &
+    ~is_MstReleaseData_StateOn &
+    ~is_MstReleaseAck_StateOn &
+
+    ~is_SlvGrantData_Waiting &
+    is_SlvGrantAck_valid &
+    // ~is_SlvProbe_Waiting &
+    // ~is_SlvProbeData_valid &
+    // ~is_SlvProbeAck_valid &
+    // ~is_SlvReleaseData_valid &
+    // ~is_SlvReleaseAck_Waiting &
+    ~is_MstAcquire_Waiting &
+    ~is_MstGrantData_valid &
+    ~is_MstGrantAck_Waiting &
+    ~is_MstProbe_valid &
+    ~is_MstProbeAck_Waiting &
+    ~is_MstProbeData_Waiting &
+    ~is_MstReleaseData_Waiting &
+    ~is_MstReleaseAck_valid
+
+  val e_ready = RegInit(false.B)
+  slv_chn_e.ready := e_ready
+
+  when( is_allowen_SlvGrantAck ) { e_ready := true.B }
+
+  when( slv_chn_e.fire ) {
+    is_SlvAcquire_StateOn   := false.B
+    is_SlvGrantData_StateOn := false.B
+  }
+
+
+
+
 }
 
 
