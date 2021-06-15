@@ -1,8 +1,3 @@
-package rift2Core.cache
-
-package rift2Core.cache
-
-
 
 /*
   Copyright (c) 2020 - 2021 Ruige Lee <m201772520@hust.edu.cn>
@@ -47,13 +42,13 @@ class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
 
 
-  val addr_sel_w = dat_addr_w(addr_lsb+line_w-1, addr_lsb)
-  val bank_sel_w = dat_addr_w(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-  val data_sel_w = dat_addr_w(addr_lsb-log2Ceil(bk)-1,0)
+  val addr_sel_w = coh_addr_w(addr_lsb+line_w-1, addr_lsb)
+  val bank_sel_w = coh_addr_w(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  val data_sel_w = coh_addr_w(addr_lsb-log2Ceil(bk)-1,0)
 
-  val addr_sel_r = dat_addr_r(addr_lsb+line_w-1, addr_lsb)
-  val bank_sel_r = dat_addr_r(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-  val data_sel_r = dat_addr_r(addr_lsb-log2Ceil(bk)-1,0)
+  val addr_sel_r = coh_addr_r(addr_lsb+line_w-1, addr_lsb)
+  val bank_sel_r = coh_addr_r(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  val data_sel_r = coh_addr_r(addr_lsb-log2Ceil(bk)-1,0)
 
 
 
@@ -75,7 +70,7 @@ class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
       coh_ram(i*bk+j).io.en_r := Mux( j.U === bank_sel_r, coh_en_r(i), false.B)
 
       coh_ram(i*bk+j).io.data_wstrb := "hff".U
-      coh_ram(i*bk+j).io.data_w := dat_info_w
+      coh_ram(i*bk+j).io.data_w := coh_info_w
 
     }
 

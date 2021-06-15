@@ -222,18 +222,18 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
     Mux1H( Seq(
       (l2c_slv.io.a.bits.opcode === Opcode.ArithmeticData) -> 
         Mux1H(Seq(
-          (l2c_slv.io.a.bits.param === Opcode.MIN)  -> Mux( amo.op32_1.asSInt > amo.op32_2.asSInt, amo.op32_2, amo.op32_1 ),
-          (l2c_slv.io.a.bits.param === Opcode.MAX)  -> Mux( amo.op32_1.asSInt > amo.op32_2.asSInt, amo.op32_1, amo.op32_2 ),
-          (l2c_slv.io.a.bits.param === Opcode.MINU) -> Mux( amo.op32_1        > amo.op32_2,        amo.op32_2, amo.op32_1 ),
-          (l2c_slv.io.a.bits.param === Opcode.MAXU) -> Mux( amo.op32_1        > amo.op32_2,        amo.op32_1, amo.op32_2 ),
-          (l2c_slv.io.a.bits.param === Opcode.ADD)  -> (amo.op32_1 + amo.op32_2)
+          (l2c_slv.io.a.bits.param === TLparam.MIN)  -> Mux( amo.op32_1.asSInt > amo.op32_2.asSInt, amo.op32_2, amo.op32_1 ),
+          (l2c_slv.io.a.bits.param === TLparam.MAX)  -> Mux( amo.op32_1.asSInt > amo.op32_2.asSInt, amo.op32_1, amo.op32_2 ),
+          (l2c_slv.io.a.bits.param === TLparam.MINU) -> Mux( amo.op32_1        > amo.op32_2,        amo.op32_2, amo.op32_1 ),
+          (l2c_slv.io.a.bits.param === TLparam.MAXU) -> Mux( amo.op32_1        > amo.op32_2,        amo.op32_1, amo.op32_2 ),
+          (l2c_slv.io.a.bits.param === TLparam.ADD)  -> (amo.op32_1 + amo.op32_2)
         )),
       (l2c_slv.io.a.bits.opcode === Opcode.LogicalData) ->
         Mux1H(Seq(
-          (l2c_slv.io.a.bits.param === Opcode.XOR)  -> ( amo.op32_1 ^ amo.op32_2 ),
-          (l2c_slv.io.a.bits.param === Opcode.OR)   -> ( amo.op32_1 | amo.op32_2 ),
-          (l2c_slv.io.a.bits.param === Opcode.AND)  -> ( amo.op32_1 & amo.op32_2 ),
-          (l2c_slv.io.a.bits.param === Opcode.SWAP) -> ( amo.op32_1 ),							
+          (l2c_slv.io.a.bits.param === TLparam.XOR)  -> ( amo.op32_1 ^ amo.op32_2 ),
+          (l2c_slv.io.a.bits.param === TLparam.OR)   -> ( amo.op32_1 | amo.op32_2 ),
+          (l2c_slv.io.a.bits.param === TLparam.AND)  -> ( amo.op32_1 & amo.op32_2 ),
+          (l2c_slv.io.a.bits.param === TLparam.SWAP) -> ( amo.op32_1 ),							
         ))
     ))
 
@@ -241,18 +241,18 @@ class L3Cache ( dw:Int = 1024, bk:Int = 4, cl:Int = 256 ) extends Module {
     Mux1H( Seq(
       (l2c_slv.io.a.bits.opcode === Opcode.ArithmeticData) -> 
         Mux1H(Seq(
-          (l2c_slv.io.a.bits.param === Opcode.MIN)  -> Mux( amo.op64_1.asSInt > amo.op64_2.asSInt, amo.op64_2, amo.op64_1 ),
-          (l2c_slv.io.a.bits.param === Opcode.MAX)  -> Mux( amo.op64_1.asSInt > amo.op64_2.asSInt, amo.op64_1, amo.op64_2 ),
-          (l2c_slv.io.a.bits.param === Opcode.MINU) -> Mux( amo.op64_1        > amo.op64_2,        amo.op64_2, amo.op64_1 ),
-          (l2c_slv.io.a.bits.param === Opcode.MAXU) -> Mux( amo.op64_1        > amo.op64_2,        amo.op64_1, amo.op64_2 ),
-          (l2c_slv.io.a.bits.param === Opcode.ADD)  -> (amo.op64_1 + amo.op64_2)
+          (l2c_slv.io.a.bits.param === TLparam.MIN)  -> Mux( amo.op64_1.asSInt > amo.op64_2.asSInt, amo.op64_2, amo.op64_1 ),
+          (l2c_slv.io.a.bits.param === TLparam.MAX)  -> Mux( amo.op64_1.asSInt > amo.op64_2.asSInt, amo.op64_1, amo.op64_2 ),
+          (l2c_slv.io.a.bits.param === TLparam.MINU) -> Mux( amo.op64_1        > amo.op64_2,        amo.op64_2, amo.op64_1 ),
+          (l2c_slv.io.a.bits.param === TLparam.MAXU) -> Mux( amo.op64_1        > amo.op64_2,        amo.op64_1, amo.op64_2 ),
+          (l2c_slv.io.a.bits.param === TLparam.ADD)  -> (amo.op64_1 + amo.op64_2)
         )),
       (l2c_slv.io.a.bits.opcode === Opcode.LogicalData) ->
         Mux1H(Seq(
-          (l2c_slv.io.a.bits.param === Opcode.XOR)  -> ( amo.op64_1 ^ amo.op64_2 ),
-          (l2c_slv.io.a.bits.param === Opcode.OR)   -> ( amo.op64_1 | amo.op64_2 ),
-          (l2c_slv.io.a.bits.param === Opcode.AND)  -> ( amo.op64_1 & amo.op64_2 ),
-          (l2c_slv.io.a.bits.param === Opcode.SWAP) -> ( amo.op64_1 ),							
+          (l2c_slv.io.a.bits.param === TLparam.XOR)  -> ( amo.op64_1 ^ amo.op64_2 ),
+          (l2c_slv.io.a.bits.param === TLparam.OR)   -> ( amo.op64_1 | amo.op64_2 ),
+          (l2c_slv.io.a.bits.param === TLparam.AND)  -> ( amo.op64_1 & amo.op64_2 ),
+          (l2c_slv.io.a.bits.param === TLparam.SWAP) -> ( amo.op64_1 ),							
         ))
     ))
 
