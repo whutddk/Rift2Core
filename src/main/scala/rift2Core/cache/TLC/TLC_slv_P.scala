@@ -201,7 +201,7 @@ trait slv_probe_Ack_Data extends TLC_base {
   slv_chn_c0.ready := c0_ready
 
   val slvProbeData_addr = RegInit(0.U(64.W))
-  val is_slvProbeData_addrend = slvProbeData_addr( mst_lsb-1, addr_lsb ).andR
+  val is_slvProbeData_addrend = slvProbeData_addr( mst_lsb-1, bus_lsb ).andR
 
   when( is_slvProbeAck_valid | is_slvProbeData_valid ) { c0_ready := true.B }
   .elsewhen( slv_chn_c0.fire ) {
@@ -221,8 +221,9 @@ trait slv_probe_Ack_Data extends TLC_base {
   }
 
 
-
-  info_slvProbeAck_Data_cache_coh_wen := is_slvProbeData_StateOn & slv_chn_c0.fire & is_slvProbeData_addrend
+  for ( i < 0 until cb ) yield {
+    info_slvProbeAck_Data_cache_coh_wen() := is_slvProbeData_StateOn & slv_chn_c0.fire & is_slvProbeData_addrend
+  }
   info_slvProbeAck_Data_cache_coh_waddr := info_slvProbe_addr
   info_slvProbeAck_Data_cache_coh_winfo := 0.U
 
@@ -231,8 +232,10 @@ trait slv_probe_Ack_Data extends TLC_base {
   }
 
 
+  for ( i < 0 until cb ) yield {
+    info_slvProbeAck_Data_cache_dat_wen()   := is_slvProbeData_StateOn & slv_chn_c0.fire    
+  }
 
-  info_slvProbeAck_Data_cache_dat_wen   := is_slvProbeData_StateOn & slv_chn_c0.fire
   info_slvProbeAck_Data_cache_dat_waddr := info_slvProbe_addr
   info_slvProbeAck_Data_cache_dat_wstrb := "hffff".U
   info_slvProbeAck_Data_cache_dat_winfo := slv_chn_c0.bits.data

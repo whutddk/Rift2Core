@@ -164,7 +164,7 @@ trait slv_grantData extends TLC_base{
     ~is_cache_invalid(slvGrantData_addr, info_slvAcquire_cb)
 
   val is_slvGrantData_clearen = is_slvGrantData_hit_clearen & is_slvGrantData_coh_clearen
-  val is_slvGrantData_addrend = slvGrantData_addr( mst_lsb-1, addr_lsb ).andR
+  val is_slvGrantData_addrend = slvGrantData_addr( mst_lsb-1, bus_lsb ).andR
 
   info_slvGrantData_cache_tag_ren   := slvGrantData_State_qout === 0.U & slvGrantData_State_dnxt === 1.U
   info_slvGrantData_cache_tag_raddr := info_slvAcquire_address
