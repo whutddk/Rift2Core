@@ -28,8 +28,8 @@ class Coher extends Bundle{
   // def TRNK = 1.U
   // def TTIP = 2.U
 
-  val modified = Bool()
-  val exclusive = Bool()
+  // val modified = Bool()
+  val exclusive = UInt(8.W)
   // val shared = false.B
 
 }

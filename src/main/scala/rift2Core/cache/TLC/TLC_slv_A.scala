@@ -160,7 +160,7 @@ trait slv_grantData extends TLC_base{
   val slvGrantData_State_qout = RegNext(slvGrantData_State_dnxt, 0.U)
   val is_slvGrantData_hit_clearen = cache_tag.tag_info_r(info_slvAcquire_cb) === slvGrantData_addr(31, 32-tag_w)
   val is_slvGrantData_coh_clearen =
-    ~cache_coh.coh_info_r(info_slvAcquire_cb).exclusive &
+    cache_coh.coh_info_r(info_slvAcquire_cb).exclusive =/= 0.U &
     ~is_cache_invalid(slvGrantData_addr, info_slvAcquire_cb)
 
   val is_slvGrantData_clearen = is_slvGrantData_hit_clearen & is_slvGrantData_coh_clearen
@@ -223,8 +223,9 @@ trait slv_grantData extends TLC_base{
       is_mstReleaseData_Waiting := true.B
     }
     .otherwise {
-      when( cache_coh.coh_info_r(info_slvAcquire_cb).exclusive ) {
+      when( cache_coh.coh_info_r(info_slvAcquire_cb).exclusive =/= 0.U ) {
         is_slvProbe_Waiting := true.B
+        info_slvGrantData_exclusive := cache_coh.coh_info_r(info_slvAcquire_cb).exclusive
       }
       .otherwise {
         when( cache_tag.tag_info_r(info_slvAcquire_cb) =/= slvGrantData_addr(31, 32-tag_w) ) {
@@ -288,7 +289,7 @@ trait slv_grantAck extends TLC_base {
 
   info_slvGrantAck_cache_coh_wen   := slv_chn_e.fire
   info_slvGrantAck_cache_coh_waddr := info_slvAcquire_address
-  info_slvGrantAck_cache_coh_winfo := new Coher{ modified := false.B;  exclusive := true.B }
+  info_slvGrantAck_cache_coh_winfo := info_slvAcquire_source
 
 
 }
