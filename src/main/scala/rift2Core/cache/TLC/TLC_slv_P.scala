@@ -25,7 +25,6 @@ import tilelink._
 
 import base._
 import rift2Core.cache._
-import chisel3.util.random._
 
 
 trait slv_probe extends TLC_base {
@@ -207,7 +206,6 @@ trait slv_probe_Ack_Data extends TLC_base {
   when( is_slvProbeAck_valid | is_slvProbeData_valid ) { c0_ready := true.B }
   .elsewhen( slv_chn_c0.fire ) {
     c0_ready := false.B
-    is_slvProbe_StateOn := false.B
   }
 
   when( is_slvProbeData_valid & ~is_slvProbeData_StateOn ) {
