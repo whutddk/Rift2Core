@@ -82,9 +82,11 @@ trait slv_acquire extends TLC_base{
   when( slv_chn_a.fire ) { a_ready := false.B }
   .elsewhen( is_slvAcquire_allowen ) { a_ready := true.B }
 
+  for( i <- 0 until cb ) yield {
+    info_slvAcquire_cache_tag_ren(i) := is_slvAcquire_allowen    
+  }
+  info_slvAcquire_cache_tag_raddr := slv_chn_a.bits.address
 
-  val info_slvAcquire_cache_tag_ren   = is_slvAcquire_allowen
-  val info_slvAcquire_cache_tag_raddr = slv_chn_a.bits.address
   info_slvAcquire_address := RegEnable( slv_chn_a.bits.address, is_slvAcquire_allowen )
   info_slvAcquire_source  := RegEnable( slv_chn_a.bits.source,  is_slvAcquire_allowen )
   info_slvAcquire_cb := {
