@@ -82,26 +82,28 @@ trait slv_release_release_data extends TLC_base {
     Mux1H(Seq(
       ( slvReleaseData_state_qout === 0.U ) -> Mux( is_slvReleaseData_valid, 1.U, 0.U ),
       ( slvReleaseData_state_qout === 1.U ) -> 2.U,
-      ( slvReleaseData_state_qout === 2.U ) -> Mux( is_slvReleaseData_addrend | (slv_chn_c1.bits.opcode === Opcode.ReleaseAck), 0.U, 2.U )
+      ( slvReleaseData_state_qout === 2.U ) -> Mux( is_slvReleaseData_addrend | (slv_chn_c1.bits.opcode === Opcode.ReleasePerm), 0.U, 2.U )
     ))
     
 
   when( slv_chn_c1.fire ) { c1_ready := false.B }
-  .elsewhen( slv_chn_c1.valid & slv_ReleaseData_state_qout === 2.U ) { c1_ready := true.B }
+  .elsewhen( slv_chn_c1.valid & slvReleaseData_state_qout === 2.U ) { c1_ready := true.B }
 
-  when( slv_ReleaseData_state_dnxt =/= 0.U ) { is_slvReleaseData_StateOn := true.B }
-  .otherwise { is_slvReleaseData_StateOn := false.B }
+  when( slvReleaseData_state_dnxt =/= 0.U ) { is_slvReleaseData_StateOn := true.B }
 
 
-  when( slv_ReleaseData_state_qout === 0.U & slv_ReleaseData_state_dnxt === 1.U ) {
+  info_slvReleaseData_source := RegEnable( slv_chn_c1.bits.source, slvReleaseData_state_dnxt === 1.U )
+
+  when( slvReleaseData_state_qout === 0.U & slvReleaseData_state_dnxt === 1.U ) {
     info_slvReleaseData_addr := slv_chn_c1.bits.address
   }
   .elsewhen( slv_chn_c1.fire ) {
     info_slvReleaseData_addr := info_slvReleaseData_addr + (1.U << bus_lsb)
   }
 
-  when( slv_ReleaseData_state_qout === 2.U & slv_ReleaseData_state_dnxt === 0.U ) {
+  when( slvReleaseData_state_qout === 2.U & slvReleaseData_state_dnxt === 0.U ) {
     apply_cache_modified(info_slvReleaseData_addr, info_slvReleaseData_cb, true.B)
+    is_slvReleaseAck_Waiting := true.B
   }
 
 
@@ -113,22 +115,26 @@ trait slv_release_release_data extends TLC_base {
           )
     val hit_cb = OHToUInt(is_cb_hit.asUInt)
 
-    RegEnable( hit_cb, slv_ReleaseData_state_qout === 1.U & slv_ReleaseData_state_dnxt === 2.U )
 
-    assert( ~(slv_ReleaseData_state_qout === 1.U & slv_ReleaseData_state_dnxt === 2.U &
+    assert( ~(slvReleaseData_state_qout === 1.U & slvReleaseData_state_dnxt === 2.U &
       is_cb_hit.forall((x:Bool) => (x === false.B))), "Assert Failed at TLC_slv_R.scala!! Your master agent release a missing block!"  )
     
+    RegEnable( hit_cb, slvReleaseData_state_qout === 1.U & slvReleaseData_state_dnxt === 2.U ) 
   }
 
   for ( i <- 0 until cb ) yield {
-      info_slvReleaseData_cache_coh_wen() := slv_ReleaseData_state_qout === 2.U & slv_ReleaseData_state_dnxt === 0.U
+      info_slvReleaseData_cache_coh_wen(i) := 
+        ( i.U === info_slvReleaseData_cb )
+        (slvReleaseData_state_qout === 2.U & slvReleaseData_state_dnxt === 0.U)
   }
 
   info_slvReleaseData_cache_coh_waddr := info_slvReleaseData_addr
   info_slvReleaseData_cache_coh_winfo := 0.U
 
   for ( i <- 0 until cb ) yield {
-    info_slvReleaseData_cache_dat_wen()   := slv_ReleaseData_state_qout === 2.U & slv_chn_c1.bits.opcode === Opcode.ReleaseData & slv_chn_c1.fire
+    info_slvReleaseData_cache_dat_wen(i)   := 
+      ( i.U === info_slvReleaseData_cb ) &
+      slvReleaseData_state_qout === 2.U & slv_chn_c1.bits.opcode === Opcode.ReleaseData & slv_chn_c1.fire
   }
   info_slvReleaseData_cache_dat_waddr := info_slvReleaseData_addr
   info_slvReleaseData_cache_dat_wstrb := "hffff".U
@@ -139,4 +145,59 @@ trait slv_release_release_data extends TLC_base {
 
 
 trait slv_releaseAck extends TLC_base {
+  val slv_chn_d1 = IO(new DecoupledIO( new TLchannel_d(128)))
+
+  is_slvReleaseAck_allowen :=
+    // ~is_slvAcquire_StateOn &
+    ~is_slvGrantData_StateOn &
+    ~is_slvGrantAck_StateOn &
+    // ~is_slvProbe_StateOn &
+    ~is_slvProbeData_StateOn &
+    ~is_slvProbeAck_StateOn &
+    ~is_slvReleaseData_StateOn &
+    ~is_slvReleaseAck_StateOn &
+    ~is_mstAcquire_StateOn &
+    ~is_mstGrantData_StateOn &
+    ~is_mstGrantAck_StateOn &
+    ~is_mstProbe_StateOn & 
+    ~is_mstProbeData_StateOn &
+    ~is_mstProbeAck_StateOn &
+    is_mstReleaseData_StateOn &
+    ~is_mstReleaseAck_StateOn &
+    // ~is_slvGrantData_Waiting &
+    // ~is_slvGrantAck_valid &
+    // ~is_slvProbe_Waiting &
+    // ~is_slvProbeData_valid &
+    // ~is_slvProbeAck_valid &
+    // ~is_slvReleaseData_valid &
+    is_slvReleaseAck_Waiting
+    // ~is_mstAcquire_Waiting &
+    // ~is_mstGrantData_valid &
+    // ~is_mstGrantAck_Waiting &
+    // ~is_mstProbe_valid &
+    // ~is_mstProbeAck_Waiting &
+    // ~is_mstProbeData_Waiting &
+    // ~is_mstReleaseData_Waiting &
+    // ~is_mstReleaseAck_valid
+
+  val d1_valid = RegInit(false.B)
+
+  when( slv_chn_d1.fire ) {
+    d1_valid := false.B;
+    is_slvReleaseData_StateOn := false.B
+  }
+  .elsewhen( is_slvReleaseAck_allowen ) {
+    d1_valid := true.B
+    is_slvReleaseAck_Waiting := false.B
+  }
+
+  slv_chn_d1.bits.corrupt := false.B
+  slv_chn_d1.bits.data := DontCare
+  slv_chn_d1.bits.denied := false.B
+  slv_chn_d1.bits.opcode := Opcode.ReleaseAck
+  slv_chn_d1.bits.param  := 0.U
+  slv_chn_d1.bits.sink   := DontCare
+  slv_chn_d1.bits.source := info_slvReleaseData_source
+
+
 }

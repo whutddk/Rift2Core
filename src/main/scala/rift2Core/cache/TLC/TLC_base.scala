@@ -218,7 +218,7 @@ abstract class TLC_base extends MultiIOModule {
   val info_slvReleaseData_cache_dat_wstrb = Wire(UInt(8.W))
   val info_slvReleaseData_cache_dat_winfo = Wire(UInt(128.W))
 
-
+  val info_slvReleaseData_source  = Wire( UInt(8.W) )
 
   val info_mstProbe_cb = Wire( UInt(log2Ceil(cb).W) )
   val info_mstProbe_address = Wire( UInt(64.W) )

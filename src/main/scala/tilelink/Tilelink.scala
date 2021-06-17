@@ -107,7 +107,7 @@ object Opcode {
   // def Grant         = 4.U
   def GrantData     = 5.U
 
-  // def ReleasePerm   = 6.U
+  def ReleasePerm   = 6.U
   def ReleaseData   = 7.U
   def ReleaseAck    = 6.U
 
