@@ -54,6 +54,7 @@ abstract class TLC_base extends MultiIOModule {
   val bk: Int
   val cb: Int
   val cl: Int
+  val agent_no : Int
 
 
   val addr_lsb = log2Ceil(dw*bk/8)
@@ -167,6 +168,12 @@ abstract class TLC_base extends MultiIOModule {
     cache_inv(tmp_cl)(cb)(tmp_bk)
   }
 
+  def apply_cache_invalid(addr: UInt, cb: UInt, in: Bool) = {
+    val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
+    val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+    cache_inv(tmp_cl)(cb)(tmp_bk) := in
+  } 
+
    def is_cache_modified(addr: UInt, cb: UInt) = {
     val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
     val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
@@ -219,6 +226,27 @@ abstract class TLC_base extends MultiIOModule {
   val info_slvReleaseData_cache_dat_winfo = Wire(UInt(128.W))
 
   val info_slvReleaseData_source  = Wire( UInt(8.W) )
+
+  // val info_mstAcquire_address = Wire( UInt(64.W) )
+  val info_mstGrantData_address = Wire( UInt(64.W) )
+
+
+  val info_mstGrantData_cache_coh_wen   = Wire(Vec(cb, Bool()))
+  val info_mstGrantData_cache_coh_waddr = Wire(UInt(64.W))
+  val info_mstGrantData_cache_coh_winfo = Wire(new Coher)
+
+  val info_mstGrantData_cache_dat_wen   = Wire(Vec(cb, Bool()))
+  val info_mstGrantData_cache_dat_waddr = Wire(UInt(64.W))
+  val info_mstGrantData_cache_dat_wstrb = Wire(UInt(8.W))
+  val info_mstGrantData_cache_dat_winfo = Wire(UInt(128.W))
+
+  val info_mstGrantData_cache_tag_wen   = Wire(Vec(cb, Bool()))
+  val info_mstGrantData_cache_tag_waddr = Wire(UInt(64.W))
+
+
+
+
+
 
   val info_mstProbe_cb = Wire( UInt(log2Ceil(cb).W) )
   val info_mstProbe_address = Wire( UInt(64.W) )
