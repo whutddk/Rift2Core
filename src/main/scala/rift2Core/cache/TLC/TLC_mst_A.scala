@@ -43,8 +43,7 @@ trait mst_Acquire extends TLC_base{
     ~is_mstGrantData_StateOn &
     ~is_mstGrantAck_StateOn &
     ~is_mstProbe_StateOn &
-    ~is_mstProbeData_StateOn &
-    ~is_mstProbeAck_StateOn &
+    ~is_mstProbeAck_Data_StateOn &
     ~is_mstReleaseData_StateOn &
     ~is_mstReleaseAck_StateOn &
     // ~is_slvAcquire_valid &
@@ -59,8 +58,7 @@ trait mst_Acquire extends TLC_base{
     ~is_mstGrantData_valid &
     ~is_mstGrantAck_Waiting &
     ~is_mstProbe_valid &
-    ~is_mstProbeAck_Waiting &
-    ~is_mstProbeData_Waiting &
+    ~is_mstProbeAck_Data_Waiting &
     ~is_mstReleaseData_Waiting &
     ~is_mstReleaseAck_valid
 
@@ -103,8 +101,7 @@ trait mst_grantData extends TLC_base{
     ~is_mstGrantData_StateOn &
     ~is_mstGrantAck_StateOn &
     ~is_mstProbe_StateOn &
-    ~is_mstProbeData_StateOn &
-    ~is_mstProbeAck_StateOn &
+    ~is_mstProbeAck_Data_StateOn &
     ~is_mstReleaseData_StateOn &
     ~is_mstReleaseAck_StateOn &
     ~is_slvGrantData_Waiting &
@@ -118,8 +115,7 @@ trait mst_grantData extends TLC_base{
     is_mstGrantData_valid &
     ~is_mstGrantAck_Waiting &
     ~is_mstProbe_valid &
-    ~is_mstProbeAck_Waiting &
-    ~is_mstProbeData_Waiting &
+    ~is_mstProbeAck_Data_Waiting &
     ~is_mstReleaseData_Waiting &
     ~is_mstReleaseAck_valid
 
@@ -189,8 +185,7 @@ trait mst_grantAck extends TLC_base{
     is_mstGrantData_StateOn &
     ~is_mstGrantAck_StateOn &
     ~is_mstProbe_StateOn &
-    ~is_mstProbeData_StateOn &
-    ~is_mstProbeAck_StateOn &
+    ~is_mstProbeAck_Data_StateOn &
     ~is_mstReleaseData_StateOn &
     ~is_mstReleaseAck_StateOn &
     ~is_slvGrantData_Waiting &

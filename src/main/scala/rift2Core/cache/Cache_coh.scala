@@ -43,25 +43,24 @@ class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
   val coh_addr_w = Wire(UInt(aw.W))
   val coh_addr_r = Wire(UInt(aw.W))
 
-  val coh_en_w = Wire( Vec(cb, Bool()) )
+  val coh_en_w = Wire( Vec(cb, Vec(bk, Bool()) ))
   val coh_en_r = Wire( Vec(cb, Bool()) )
 
-  val coh_info_w = Wire(new Coher)
-  val coh_info_r = Wire( Vec(cb, new Coher) )
+  val coh_info_w = Wire( UInt(8.W) ) 
+  val coh_info_r = Wire( Vec(bk, UInt(8.W)) )
 
 
 
 
 
   val addr_sel_w = coh_addr_w(addr_lsb+line_w-1, addr_lsb)
-  val bank_sel_w = coh_addr_w(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-  val data_sel_w = coh_addr_w(addr_lsb-log2Ceil(bk)-1,0)
+  // val bank_sel_w = coh_addr_w(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+
 
   val addr_sel_r = coh_addr_r(addr_lsb+line_w-1, addr_lsb)
-  val bank_sel_r = coh_addr_r(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-  val data_sel_r = coh_addr_r(addr_lsb-log2Ceil(bk)-1,0)
+  // val bank_sel_r = coh_addr_r(addr_lsb-1, addr_lsb-log2Ceil(bk) )
 
-  val data_o = RegInit( VecInit ( Seq.fill(cb)(0.U.asTypeOf(new Coher)) ) )
+  val data_o = Reg( Vec(bk, UInt(8.W)))
 
   val coh_ram = {
     for ( i <- 0 until cb; j <- 0 until bk ) yield { 
@@ -73,21 +72,21 @@ class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
   def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
 
-  val ram = for ( i <- 0 until cb; j <- 0 until bk ) yield { Mem( dp, new Coher ) }
+  val ram = for ( i <- 0 until cb; j <- 0 until bk ) yield { Mem( dp, UInt(8.W) ) }
   
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
 
-    when( coh_en_w(i) === true.B & j.U === bank_sel_w ) {
+    when( coh_en_w(i)(j) === true.B ) {
       ram(i*bk+j).write(addr_sel_w, coh_info_w)
     }
 
-    when( coh_en_r(i) === true.B & j.U === bank_sel_r ){
-      data_o(i) := ram(i*bk+j).read(addr_sel_r)
+    when( coh_en_r(i) === true.B ){
+      data_o(j) := ram(i*bk+j).read(addr_sel_r)
     }
   }
 
 
-
+ coh_info_r := data_o
 }
 
 

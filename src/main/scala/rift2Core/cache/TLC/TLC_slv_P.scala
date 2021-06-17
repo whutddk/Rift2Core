@@ -42,8 +42,7 @@ trait slv_probe extends TLC_base {
     ~is_mstAcquire_StateOn &
     ~is_mstGrantData_StateOn &
     ~is_mstGrantAck_StateOn &
-    ~is_mstProbeData_StateOn &
-    ~is_mstProbeAck_StateOn &
+    ~is_mstProbeAck_Data_StateOn &
     ~is_mstReleaseData_StateOn &
     ~is_mstReleaseAck_StateOn &
     ~is_slvGrantData_Waiting &
@@ -57,8 +56,7 @@ trait slv_probe extends TLC_base {
     ~is_mstGrantData_valid &
     ~is_mstGrantAck_Waiting &
     ~is_mstProbe_valid &
-    ~is_mstProbeAck_Waiting &
-    ~is_mstProbeData_Waiting &
+    ~is_mstProbeAck_Data_Waiting &
     ~is_mstReleaseData_Waiting &
     ~is_mstReleaseAck_valid
 
@@ -78,7 +76,7 @@ trait slv_probe extends TLC_base {
 
   slv_chn_b.bits.address :=
     MuxCase( DontCare, Array(
-      is_mstProbe_StateOn   -> info_mstProbe_address,
+      is_mstProbe_StateOn   -> info_mstRecProbe_address,
       is_slvAcquire_StateOn -> info_slvAcquire_address
     ))
 
@@ -90,14 +88,14 @@ trait slv_probe extends TLC_base {
   slv_chn_b.bits.size    := mst_lsb.U
   slv_chn_b.bits.source  :=
     MuxCase( DontCare, Array(
-      is_mstProbe_StateOn   -> info_mstProbe_exclusive,
+      is_mstProbe_StateOn   -> info_mstRecProbe_exclusive,
       is_slvAcquire_StateOn -> info_slvGrantData_exclusive
     ))
 
   info_slvProbe_cb :=
     RegEnable(
       MuxCase( DontCare, Array(
-        is_mstProbe_StateOn   -> info_mstProbe_cb,
+        is_mstProbe_StateOn   -> info_mstRecProbe_cb,
         is_slvAcquire_StateOn -> info_slvAcquire_cb
       )),
     slv_chn_b.fire
@@ -106,7 +104,7 @@ trait slv_probe extends TLC_base {
   info_slvProbe_addr :=
     RegEnable(
       MuxCase( DontCare, Array(
-        is_mstProbe_StateOn   -> info_mstProbe_address,
+        is_mstProbe_StateOn   -> info_mstRecProbe_address,
         is_slvAcquire_StateOn -> info_slvAcquire_address
       )),
     slv_chn_b.fire
@@ -115,7 +113,7 @@ trait slv_probe extends TLC_base {
   info_slvProbe_exclusive :=
     RegEnable(
       MuxCase( DontCare, Array(
-        is_mstProbe_StateOn   -> info_mstProbe_exclusive,
+        is_mstProbe_StateOn   -> info_mstRecProbe_exclusive,
         is_slvAcquire_StateOn -> info_slvGrantData_exclusive
       )),
     slv_chn_b.fire
@@ -140,8 +138,7 @@ trait slv_probe_Ack_Data extends TLC_base {
     ~is_mstAcquire_StateOn &
     ~is_mstGrantData_StateOn &
     ~is_mstGrantAck_StateOn &
-    ~is_mstProbeData_StateOn &
-    ~is_mstProbeAck_StateOn &
+    ~is_mstProbeAck_Data_StateOn &
     ~is_mstReleaseData_StateOn &
     ~is_mstReleaseAck_StateOn &
     ~is_slvGrantData_Waiting &
@@ -155,8 +152,7 @@ trait slv_probe_Ack_Data extends TLC_base {
     ~is_mstGrantData_valid &
     ~is_mstGrantAck_Waiting &
     ~is_mstProbe_valid &
-    ~is_mstProbeAck_Waiting &
-    ~is_mstProbeData_Waiting &
+    ~is_mstProbeAck_Data_Waiting &
     ~is_mstReleaseData_Waiting &
     ~is_mstReleaseAck_valid
 
@@ -173,8 +169,7 @@ trait slv_probe_Ack_Data extends TLC_base {
     ~is_mstAcquire_StateOn &
     ~is_mstGrantData_StateOn &
     ~is_mstGrantAck_StateOn &
-    ~is_mstProbeData_StateOn &
-    ~is_mstProbeAck_StateOn &
+    ~is_mstProbeAck_Data_StateOn &
     ~is_mstReleaseData_StateOn &
     ~is_mstReleaseAck_StateOn &
     ~is_slvGrantData_Waiting &
@@ -188,8 +183,7 @@ trait slv_probe_Ack_Data extends TLC_base {
     ~is_mstGrantData_valid &
     ~is_mstGrantAck_Waiting &
     ~is_mstProbe_valid &
-    ~is_mstProbeAck_Waiting &
-    ~is_mstProbeData_Waiting &
+    ~is_mstProbeAck_Data_Waiting &
     ~is_mstReleaseData_Waiting &
     ~is_mstReleaseAck_valid
 

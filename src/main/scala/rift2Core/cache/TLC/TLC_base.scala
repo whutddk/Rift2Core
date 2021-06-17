@@ -139,13 +139,9 @@ abstract class TLC_base extends MultiIOModule {
   val is_mstProbe_StateOn = RegInit(false.B)
   val is_mstProbe_allowen = Wire(Bool())
 
-  val is_mstProbeAck_Waiting = RegInit(false.B)
-  val is_mstProbeAck_StateOn = RegInit(false.B)
-  val is_mstProbeAck_allowen = Wire(Bool())
-
-  val is_mstProbeData_Waiting = RegInit(false.B)
-  val is_mstProbeData_StateOn = RegInit(false.B)
-  val is_mstProbeData_allowen = Wire(Bool())
+  val is_mstProbeAck_Data_Waiting = RegInit(false.B)
+  val is_mstProbeAck_Data_StateOn = RegInit(false.B)
+  val is_mstProbeAck_Data_allowen = Wire(Bool())
 
   val is_mstReleaseData_Waiting = RegInit(false.B)
   val is_mstReleaseData_StateOn = RegInit(false.B)
@@ -162,29 +158,29 @@ abstract class TLC_base extends MultiIOModule {
   val cache_inv = RegInit( VecInit( Seq.fill(cl)( VecInit(Seq.fill(cb)( VecInit( Seq.fill(bk)(false.B)))))))
   val cache_mdf = RegInit( VecInit( Seq.fill(cl)( VecInit(Seq.fill(cb)( VecInit( Seq.fill(bk)(false.B)))))))
 
-  def is_cache_invalid(addr: UInt, cb: UInt) = {
-    val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
-    val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-    cache_inv(tmp_cl)(cb)(tmp_bk)
-  }
+  // def is_cache_invalid(addr: UInt, cb: UInt) = {
+  //   val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
+  //   val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  //   cache_inv(tmp_cl)(cb)(tmp_bk)
+  // }
 
-  def apply_cache_invalid(addr: UInt, cb: UInt, in: Bool) = {
-    val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
-    val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-    cache_inv(tmp_cl)(cb)(tmp_bk) := in
-  } 
+  // def apply_cache_invalid(addr: UInt, cb: UInt, in: Bool) = {
+  //   val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
+  //   val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  //   cache_inv(tmp_cl)(cb)(tmp_bk) := in
+  // } 
 
-   def is_cache_modified(addr: UInt, cb: UInt) = {
-    val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
-    val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-    cache_mdf(tmp_cl)(cb)(tmp_bk)
-  } 
+  //  def is_cache_modified(addr: UInt, cb: UInt) = {
+  //   val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
+  //   val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  //   cache_mdf(tmp_cl)(cb)(tmp_bk)
+  // } 
 
-  def apply_cache_modified(addr: UInt, cb: UInt, in: Bool) = {
-    val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
-    val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-    cache_mdf(tmp_cl)(cb)(tmp_bk) := in
-  } 
+  // def apply_cache_modified(addr: UInt, cb: UInt, in: Bool) = {
+  //   val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
+  //   val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  //   cache_mdf(tmp_cl)(cb)(tmp_bk) := in
+  // } 
 
   val info_slvAcquire_cb = Wire( UInt(log2Ceil(cb).W) )
 
@@ -202,7 +198,7 @@ abstract class TLC_base extends MultiIOModule {
   val info_slvGrantData_cache_dat_ren   = Wire(Vec(cb, Bool()))
   val info_slvGrantData_cache_dat_raddr = Wire(UInt(64.W))
 
-  val info_slvGrantAck_cache_coh_wen   = Wire(Vec(cb, Bool()))
+  val info_slvGrantAck_cache_coh_wen   = Wire(Vec(cb, Vec(bk, Bool())))
   val info_slvGrantAck_cache_coh_waddr = Wire(UInt(64.W))
   val info_slvGrantAck_cache_coh_winfo = Wire(new Coher)
 
@@ -211,7 +207,7 @@ abstract class TLC_base extends MultiIOModule {
   val info_slvProbe_exclusive = Wire( UInt(8.W) )
 
 
-  val info_slvProbeAck_Data_cache_coh_wen   = Wire(Vec(cb, Bool()))
+  val info_slvProbeAck_Data_cache_coh_wen   = Wire(Vec(cb, Vec(bk, Bool())))
   val info_slvProbeAck_Data_cache_coh_waddr = Wire(UInt(64.W))
   val info_slvProbeAck_Data_cache_coh_winfo = Wire(new Coher)
 
@@ -220,7 +216,7 @@ abstract class TLC_base extends MultiIOModule {
   val info_slvProbeAck_Data_cache_dat_wstrb = Wire(UInt(8.W))
   val info_slvProbeAck_Data_cache_dat_winfo = Wire(UInt(128.W))
 
-  val info_slvReleaseData_cache_coh_wen   = Wire(Vec(cb, Bool()))
+  val info_slvReleaseData_cache_coh_wen   = Wire(Vec(cb, Vec(bk, Bool())))
   val info_slvReleaseData_cache_coh_waddr = Wire(UInt(64.W))
   val info_slvReleaseData_cache_coh_winfo = Wire(new Coher)
 
@@ -232,10 +228,10 @@ abstract class TLC_base extends MultiIOModule {
   val info_slvReleaseData_source  = Wire( UInt(8.W) )
 
   // val info_mstAcquire_address = Wire( UInt(64.W) )
-  val info_mstGrantData_address = Wire( UInt(64.W) )
+  val info_mstGrantData_address = RegInit( 0.U(64.W) )
 
 
-  val info_mstGrantData_cache_coh_wen   = Wire(Vec(cb, Bool()))
+  val info_mstGrantData_cache_coh_wen   = Wire(Vec(cb, Vec(bk, Bool())))
   val info_mstGrantData_cache_coh_waddr = Wire(UInt(64.W))
   val info_mstGrantData_cache_coh_winfo = Wire(new Coher)
 
@@ -252,8 +248,17 @@ abstract class TLC_base extends MultiIOModule {
   val info_mstProbe_cache_tag_raddr = Wire(UInt(64.W))
   val info_mstProbe_cb = Wire( UInt(log2Ceil(cb).W) )
 
+  val info_mstProbeData_address = RegInit( 0.U(64.W) )
 
-  val info_mstProbe_exclusive = RegInit( 0.U(8.W) )
+  val info_mstRecProbe_address = RegInit( 0.U(64.W) )
+  val info_mstRecProbe_exclusive = RegInit( 0.U(8.W) )
+  val info_mstRecProbe_cb = RegInit( 0.U(log2Ceil(cb).W) )
+
+  val info_mstReleaseData_address = RegInit( 0.U(64.W) )
+
+  val info_mstReleaseData_cache_dat_ren   = Wire(Vec(cb, Bool()))
+  val info_mstReleaseData_cache_dat_raddr = Wire(UInt(64.W))
+
 }
 
 

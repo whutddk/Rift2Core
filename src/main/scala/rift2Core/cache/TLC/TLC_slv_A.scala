@@ -57,8 +57,7 @@ trait slv_acquire extends TLC_base{
     ~is_mstGrantData_StateOn &
     ~is_mstGrantAck_StateOn &
     ~is_mstProbe_StateOn &
-    ~is_mstProbeData_StateOn &
-    ~is_mstProbeAck_StateOn &
+    ~is_mstProbeAck_Data_StateOn &
     ~is_mstReleaseData_StateOn &
     ~is_mstReleaseAck_StateOn &
      is_slvAcquire_valid &
@@ -73,8 +72,7 @@ trait slv_acquire extends TLC_base{
     ~is_mstGrantData_valid &
     ~is_mstGrantAck_Waiting &
     ~is_mstProbe_valid &
-    ~is_mstProbeAck_Waiting &
-    ~is_mstProbeData_Waiting &
+    ~is_mstProbeAck_Data_Waiting &
     ~is_mstReleaseData_Waiting &
     ~is_mstReleaseAck_valid
 
@@ -135,8 +133,7 @@ trait slv_grantData extends TLC_base{
     ~is_mstGrantData_StateOn &
     ~is_mstGrantAck_StateOn &
     ~is_mstProbe_StateOn &
-    ~is_mstProbeData_StateOn &
-    ~is_mstProbeAck_StateOn &
+    ~is_mstProbeAck_Data_StateOn &
     ~is_mstReleaseData_StateOn &
     ~is_mstReleaseAck_StateOn &
      is_slvGrantData_Waiting &
@@ -150,8 +147,7 @@ trait slv_grantData extends TLC_base{
     ~is_mstGrantData_valid &
     ~is_mstGrantAck_Waiting &
     ~is_mstProbe_valid &
-    ~is_mstProbeAck_Waiting &
-    ~is_mstProbeData_Waiting &
+    ~is_mstProbeAck_Data_Waiting &
     ~is_mstReleaseData_Waiting &
     ~is_mstReleaseAck_valid
 
@@ -162,7 +158,7 @@ trait slv_grantData extends TLC_base{
   val slvGrantData_State_qout = RegNext(slvGrantData_State_dnxt, 0.U)
   val is_slvGrantData_hit_clearen = cache_tag.tag_info_r(info_slvAcquire_cb) === slvGrantData_addr(31, 32-tag_w)
   val is_slvGrantData_coh_clearen =
-    cache_coh.coh_info_r(info_slvAcquire_cb).exclusive =/= 0.U &
+    cache_coh.coh_info_r( ).exclusive =/= 0.U &
     ~is_cache_invalid(slvGrantData_addr, info_slvAcquire_cb)
 
   val is_slvGrantData_clearen = is_slvGrantData_hit_clearen & is_slvGrantData_coh_clearen
@@ -225,7 +221,7 @@ trait slv_grantData extends TLC_base{
       is_mstReleaseData_Waiting := true.B
     }
     .otherwise {
-      when( cache_coh.coh_info_r(info_slvAcquire_cb).exclusive =/= 0.U ) {
+      when( cache_coh.coh_info_r( ).exclusive =/= 0.U ) {
         is_slvProbe_Waiting := true.B
         info_slvGrantData_exclusive := cache_coh.coh_info_r(info_slvAcquire_cb).exclusive
       }
@@ -259,8 +255,7 @@ trait slv_grantAck extends TLC_base {
     ~is_mstGrantData_StateOn &
     ~is_mstGrantAck_StateOn &
     ~is_mstProbe_StateOn &
-    ~is_mstProbeData_StateOn &
-    ~is_mstProbeAck_StateOn &
+    ~is_mstProbeAck_Data_StateOn &
     ~is_mstReleaseData_StateOn &
     ~is_mstReleaseAck_StateOn &
     ~is_slvGrantData_Waiting &
@@ -274,8 +269,7 @@ trait slv_grantAck extends TLC_base {
     ~is_mstGrantData_valid &
     ~is_mstGrantAck_Waiting &
     ~is_mstProbe_valid &
-    ~is_mstProbeAck_Waiting &
-    ~is_mstProbeData_Waiting &
+    ~is_mstProbeAck_Data_Waiting &
     ~is_mstReleaseData_Waiting &
     ~is_mstReleaseAck_valid
 

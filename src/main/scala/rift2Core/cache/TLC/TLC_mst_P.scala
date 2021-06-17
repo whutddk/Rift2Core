@@ -40,8 +40,7 @@ trait mst_Probe extends TLC_base {
     ~is_mstGrantData_StateOn &
     ~is_mstGrantAck_StateOn &
     ~is_mstProbe_StateOn &
-    ~is_mstProbeData_StateOn &
-    ~is_mstProbeAck_StateOn &
+    ~is_mstProbeAck_Data_StateOn &
     ~is_mstReleaseData_StateOn &
     ~is_mstReleaseAck_StateOn &
     // ~is_slvGrantData_Waiting &
@@ -55,8 +54,7 @@ trait mst_Probe extends TLC_base {
     // ~is_mstGrantData_valid &
     // ~is_mstGrantAck_Waiting &
     is_mstProbe_valid &
-    ~is_mstProbeAck_Waiting &
-    ~is_mstProbeData_Waiting
+    ~is_mstProbeAck_Data_Waiting
     // ~is_mstReleaseData_Waiting &
     // ~is_mstReleaseAck_valid
 
@@ -65,6 +63,8 @@ trait mst_Probe extends TLC_base {
 
   when( is_mstProbe_allowen ) { mst_chn_b_ready := true.B; is_mstProbe_StateOn := true.B }
   .elsewhen( mst_chn_b.fire ) { mst_chn_b_ready := false.B }
+
+  when( mst_chn_b.fire ) { is_mstProbeAck_Data_Waiting := true.B }
 
   info_mstProbe_address := RegEnable( mst_chn_b.bits.address, is_mstProbe_allowen )
   
@@ -88,37 +88,100 @@ trait mst_probe_Ack_Data extends TLC_base {
   val mst_chn_c0 = IO(new DecoupledIO(new TLchannel_c(128, 32)))
 
   is_mstProbeAck_Data_allowen :=
-    // (is_slvAcquire_StateOn | is_mstProbe_StateOn) &
-    // ~is_slvGrantData_StateOn &
-    // ~is_slvGrantAck_StateOn &
-    // is_slvProbe_StateOn &
-    // ~is_slvProbeData_StateOn &
-    // ~is_slvProbeAck_StateOn &
-    // ~is_slvReleaseData_StateOn &
-    // ~is_slvReleaseAck_StateOn &
-    // ~is_mstAcquire_StateOn &
-    // ~is_mstGrantData_StateOn &
-    // ~is_mstGrantAck_StateOn &
-    // ~is_mstProbeData_StateOn &
-    // ~is_mstProbeAck_StateOn &
-    // ~is_mstReleaseData_StateOn &
-    // ~is_mstReleaseAck_StateOn &
-    // ~is_slvGrantData_Waiting &
-    // ~is_slvGrantAck_valid &
-    // ~is_slvProbe_Waiting &
-    // ~is_slvProbeData_valid &
-    // is_slvProbeAck_valid &
-    // ~is_slvReleaseData_valid &
-    // ~is_slvReleaseAck_Waiting &
-    // ~is_mstAcquire_Waiting &
-    // ~is_mstGrantData_valid &
-    // ~is_mstGrantAck_Waiting &
-    // ~is_mstProbe_valid &
-    // ~is_mstProbeAck_Waiting &
-    // ~is_mstProbeData_Waiting &
-    // ~is_mstReleaseData_Waiting &
-    // ~is_mstReleaseAck_valid
+    // ~is_slvAcquire_StateOn &
+    ~is_slvGrantData_StateOn &
+    ~is_slvGrantAck_StateOn &
+    ~is_slvProbe_StateOn &
+    ~is_slvProbeData_StateOn &
+    ~is_slvProbeAck_StateOn &
+    ~is_slvReleaseData_StateOn &
+    ~is_slvReleaseAck_StateOn &
+    ~is_mstAcquire_StateOn &
+    ~is_mstGrantData_StateOn &
+    ~is_mstGrantAck_StateOn &
+    is_mstProbe_StateOn &
+    ~is_mstProbeAck_Data_StateOn &
+    ~is_mstReleaseData_StateOn &
+    ~is_mstReleaseAck_StateOn &
+    ~is_slvGrantData_Waiting &
+    ~is_slvGrantAck_valid &
+    ~is_slvProbe_Waiting &
+    ~is_slvProbeData_valid &
+    ~is_slvProbeAck_valid &
+    ~is_slvReleaseData_valid &
+    ~is_slvReleaseAck_Waiting &
+    ~is_mstAcquire_Waiting &
+    ~is_mstGrantData_valid &
+    ~is_mstGrantAck_Waiting &
+    ~is_mstProbe_valid &
+    is_mstProbeAck_Data_Waiting &
+    ~is_mstReleaseData_Waiting &
+    ~is_mstReleaseAck_valid
 
+
+  val mst_probe_Ack_Data_state_dnxt = Wire(UInt(2.W))
+  val mst_probe_Ack_Data_state_qout = RegNext(mst_probe_Ack_Data_state_dnxt, 0.U)
+
+
+  val is_mstProbeData_addrend = info_mstProbeData_address(addr_lsb-1, bus_lsb).andR
+  val is_mstProbeData_dirty =
+    RegEnable(
+      cache_mdf()().forall( (x:Bool) => (x === false.B) ),
+      mst_probe_Ack_Data_state_qout === 1.U & mst_probe_Ack_Data_state_dnxt === 2.U
+    )
+
+
+  val mst_chn_c0_valid = RegInit(false.B)
+
+  mst_probe_Ack_Data_state_dnxt := 
+    Mux1H(Seq(
+      (mst_probe_Ack_Data_state_qout === 0.U) -> Mux( is_mstProbeAck_Data_allowen, 1.U, 0.U ),
+      (mst_probe_Ack_Data_state_qout === 1.U) -> Mux( cache_coh.coh_info_r.forall( (x:UInt) => x === 0.U ), 2.U, 0.U )
+      (mst_probe_Ack_Data_state_qout === 2.U) -> Mux( mst_chn_c0.fire & (is_mstProbeData_addrend | ~is_mstProbeData_dirty), 0.U, 2.U )
+    ))
+
+  when( mst_probe_Ack_Data_state_dnxt === 2.U ) { is_mstProbeAck_Data_StateOn := true.B }
+  .elsewhen( mst_probe_Ack_Data_state_dnxt === 0.U ){ is_mstProbeAck_Data_StateOn := false.B }
+
+  when( mst_probe_Ack_Data_state_qout === 1.U & mst_probe_Ack_Data_state_dnxt === 2.U ) {
+    info_mstProbeData_address := info_mstProbe_address
+  }
+  .elsewhen( mst_chn_c0.fire & ~is_mstProbeData_addrend ){
+    info_mstProbeData_address := info_mstProbeData_address + (1.U << bus_lsb)
+  }
+
+  when( mst_probe_Ack_Data_state_qout === 2.U & ~mst_chn_c0.valid ) { mst_chn_c0_valid := true.B }
+  .elsewhen( mst_chn_c0.fire ) { mst_chn_c0_valid := false.B }
+
+  mst_chn_c0.bits.address := info_mstProbe_address
+  mst_chn_c0.bits.corrupt := false.B
+  mst_chn_c0.bits.data := cache_dat.dat_info_r( info_mstProbe_cb )
+  mst_chn_c0.bits.opcode := 
+    Mux( is_mstProbeData_dirty, Opcode.ProbeAckData, Opcode.ProbeAck )
+  mst_chn_c0.bits.param := TLparam.TtoN
+  mst_chn_c0.bits.size := addr_lsb.U
+  mst_chn_c0.bits.source := agent_no.U
+  
+  when( mst_probe_Ack_Data_state_qout === 2.U & mst_probe_Ack_Data_state_dnxt === 0.U ) {
+    for ( i <- 0 until bk ) yield {
+      cache_mdf()()(i) := false.B
+      cache_inv()()(i) := true.B
+    }
+    is_mstProbe_StateOn := false.B
+    is_mstProbeAck_Data_Waiting := false.B
+  }
+
+  val exclusive_bk = Wire( UInt(log2Ceil(bk).W) )
+  exclusive_bk := cache_coh.coh_info_r.indexWhere( (x:UInt) => x =/= 0.U )
+
+  when( (mst_probe_Ack_Data_state_qout === 1.U) & (mst_probe_Ack_Data_state_dnxt === 0.U) ) {
+    is_slvProbe_Waiting := true.B
+    
+    info_mstRecProbe_address := Cat( info_mstProbe_address(63,addr_lsb), exclusive_bk, Fill( addr_lsb-log2Ceil(bk), 0.U) )
+    info_mstRecProbe_exclusive := cache_coh.coh_info_r(exclusive_bk)
+    info_mstRecProbe_cb := info_mstProbe_cb
+
+  }
 
 }
 
