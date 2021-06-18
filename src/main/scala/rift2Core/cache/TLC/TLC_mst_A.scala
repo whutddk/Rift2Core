@@ -24,7 +24,7 @@ import tilelink._
 import base._
 import rift2Core.cache._
 
-trait mst_Acquire extends TLC_base{
+trait TLC_mst_Acquire extends TLC_base{
     val mst_chn_a = IO(new DecoupledIO(new TLchannel_a(128, 32)))
 
 
@@ -84,7 +84,7 @@ trait mst_Acquire extends TLC_base{
 }
 
 
-trait mst_grantData extends TLC_base{
+trait TLC_mst_grantData extends TLC_base{
   val mst_chn_d0 = IO(Flipped(new DecoupledIO( new TLchannel_d(128))))
 
 
@@ -122,7 +122,6 @@ trait mst_grantData extends TLC_base{
   val mst_chn_d0_ready = RegInit(false.B)
   mst_chn_d0.ready := mst_chn_d0_ready
 
-  val info_mstGrantData_addr = RegInit(0.U(64.W))
   val is_mstGrantData_addrend = info_slvAcquire_address(addr_lsb-1, bus_lsb).andR
 
   when( is_mstGrantData_allowen ) {
@@ -139,8 +138,12 @@ trait mst_grantData extends TLC_base{
 
   when( is_mstGrantData_addrend & mst_chn_d0.fire ) {
     is_mstGrantAck_Waiting := true.B
-    apply_cache_invalid(info_slvAcquire_address, info_slvAcquire_cb, false.B)
-    apply_cache_modified(info_slvAcquire_address, info_slvAcquire_cb, false.B)
+    for ( i <- 0 until bk ) yield {
+      cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := false.B
+      cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := false.B
+    }
+
+
   }
 
   for ( i <- 0 until cb ) yield {
@@ -169,7 +172,7 @@ trait mst_grantData extends TLC_base{
 }
 
 
-trait mst_grantAck extends TLC_base{
+trait TLC_mst_grantAck extends TLC_base{
   val mst_chn_e = IO(new DecoupledIO( new TLchannel_e))
 
   is_mstGrantAck_allowen :=
@@ -217,4 +220,6 @@ trait mst_grantAck extends TLC_base{
 
 }
 
+
+trait TLC_mst_A extends TLC_base with TLC_mst_Acquire with TLC_mst_grantAck with TLC_mst_grantData
 

@@ -27,7 +27,7 @@ import rift2Core.cache._
 
 
 
-trait mst_release_release_data extends TLC_base {
+trait TLC_mst_releaseReleaseData extends TLC_base {
   val mst_chn_c1 = IO(new DecoupledIO(new TLchannel_c(128, 32)))
 
   is_slvReleaseData_allowen :=
@@ -66,7 +66,7 @@ trait mst_release_release_data extends TLC_base {
 
 
 
-  val is_mstReleaseData_dirty = cache_mdf()().forall( (x:Bool) => (x === false.B) )
+  val is_mstReleaseData_dirty = cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb).forall( (x:Bool) => (x === false.B) )
   val is_mstReleaseData_addrend = info_mstReleaseData_address( addr_lsb-1, bus_lsb ).andR
 
   val is_mstReleaseData_state_dnxt = Wire( UInt(1.W) )
@@ -115,13 +115,14 @@ trait mst_release_release_data extends TLC_base {
   info_mstReleaseData_cache_dat_raddr := info_mstReleaseData_address
 
   when( mst_chn_c1.fire & ( is_mstReleaseData_addrend | is_mstReleaseData_dirty ) ) {
-    for ( i <- 0 until bk )
-    cache_inv()()(i) := true.B
-    cache_mdf()()(i) := false.B
+    for ( i <- 0 until bk ) yield {
+      cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := true.B
+      cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := false.B
+    }
   }
 }
 
-trait mst_releaseAck extends TLC_base {
+trait TLC_mst_releaseAck extends TLC_base {
   val mst_chn_d1 = IO(Flipped(new DecoupledIO( new TLchannel_d(128))))
 
   is_mstReleaseAck_allowen :=
@@ -169,4 +170,8 @@ trait mst_releaseAck extends TLC_base {
 
 
 }
+
+trait TLC_mst_R extends TLC_base with TLC_mst_releaseReleaseData with TLC_mst_releaseAck
+
+
 

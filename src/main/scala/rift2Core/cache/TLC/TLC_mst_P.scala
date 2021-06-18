@@ -24,7 +24,7 @@ import tilelink._
 import base._
 import rift2Core.cache._
 
-trait mst_Probe extends TLC_base {
+trait TLC_mst_Probe extends TLC_base {
   val mst_chn_b = IO(Flipped(new DecoupledIO(new TLchannel_b(128, 32))))
 
   is_mstProbe_allowen :=
@@ -68,6 +68,10 @@ trait mst_Probe extends TLC_base {
 
   info_mstProbe_address := RegEnable( mst_chn_b.bits.address, is_mstProbe_allowen )
   
+  info_mstProbe_cl := info_mstProbe_address(addr_lsb+line_w-1, addr_lsb)
+
+
+
   info_mstProbe_cache_tag_ren := is_mstProbe_allowen
   info_mstProbe_cache_tag_raddr := mst_chn_b.bits.address
   info_mstProbe_cb := {
@@ -84,7 +88,7 @@ trait mst_Probe extends TLC_base {
 }
 
 
-trait mst_probe_Ack_Data extends TLC_base {
+trait TLC_mst_probeAckData extends TLC_base {
   val mst_chn_c0 = IO(new DecoupledIO(new TLchannel_c(128, 32)))
 
   is_mstProbeAck_Data_allowen :=
@@ -126,7 +130,7 @@ trait mst_probe_Ack_Data extends TLC_base {
   val is_mstProbeData_addrend = info_mstProbeData_address(addr_lsb-1, bus_lsb).andR
   val is_mstProbeData_dirty =
     RegEnable(
-      cache_mdf()().forall( (x:Bool) => (x === false.B) ),
+      cache_mdf(info_mstProbe_cl)(info_mstProbe_cb).forall( (x:Bool) => (x === false.B) ),
       mst_probe_Ack_Data_state_qout === 1.U & mst_probe_Ack_Data_state_dnxt === 2.U
     )
 
@@ -136,7 +140,7 @@ trait mst_probe_Ack_Data extends TLC_base {
   mst_probe_Ack_Data_state_dnxt := 
     Mux1H(Seq(
       (mst_probe_Ack_Data_state_qout === 0.U) -> Mux( is_mstProbeAck_Data_allowen, 1.U, 0.U ),
-      (mst_probe_Ack_Data_state_qout === 1.U) -> Mux( cache_coh.coh_info_r.forall( (x:UInt) => x === 0.U ), 2.U, 0.U )
+      (mst_probe_Ack_Data_state_qout === 1.U) -> Mux( cache_coh.coh_info_r.forall( (x:UInt) => (x === 0.U) ), 2.U, 0.U ),
       (mst_probe_Ack_Data_state_qout === 2.U) -> Mux( mst_chn_c0.fire & (is_mstProbeData_addrend | ~is_mstProbeData_dirty), 0.U, 2.U )
     ))
 
@@ -164,8 +168,8 @@ trait mst_probe_Ack_Data extends TLC_base {
   
   when( mst_probe_Ack_Data_state_qout === 2.U & mst_probe_Ack_Data_state_dnxt === 0.U ) {
     for ( i <- 0 until bk ) yield {
-      cache_mdf()()(i) := false.B
-      cache_inv()()(i) := true.B
+      cache_mdf(info_mstProbe_cl)(info_mstProbe_cb)(i) := false.B
+      cache_inv(info_mstProbe_cl)(info_mstProbe_cb)(i) := true.B
     }
     is_mstProbe_StateOn := false.B
     is_mstProbeAck_Data_Waiting := false.B
@@ -185,7 +189,7 @@ trait mst_probe_Ack_Data extends TLC_base {
 
 }
 
-
+trait TLC_mst_P extends TLC_base with TLC_mst_Probe with TLC_mst_probeAckData
 
 
 

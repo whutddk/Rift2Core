@@ -27,7 +27,7 @@ import rift2Core.cache._
 
 
 
-trait slv_release_release_data extends TLC_base {
+trait TLC_slv_releaseReleaseData extends TLC_base {
   val slv_chn_c1 = IO(Flipped(new DecoupledIO(new TLchannel_c(128, 32))))
 
   is_slvReleaseData_allowen :=
@@ -68,9 +68,11 @@ trait slv_release_release_data extends TLC_base {
   val c1_ready = RegInit(false.B)
   slv_chn_c1.ready := c1_ready
 
-  val info_slvReleaseData_cb = Wire( UInt(log2Ceil(cb).W) )
-  val info_slvReleaseData_addr = RegInit(0.U(64.W))
-  val is_slvReleaseData_addrend = info_slvReleaseData_addr( mst_lsb-1, bus_lsb ).andR
+
+  val is_slvReleaseData_addrend = info_slvReleaseData_address( mst_lsb-1, bus_lsb ).andR
+
+  info_slvReleaseData_bk := info_slvReleaseData_address(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  info_slvReleaseData_cl := info_slvReleaseData_address(addr_lsb+line_w-1, addr_lsb)
 
 
   val slvReleaseData_state_dnxt = Wire(UInt(2.W))
@@ -93,14 +95,14 @@ trait slv_release_release_data extends TLC_base {
   info_slvReleaseData_source := RegEnable( slv_chn_c1.bits.source, slvReleaseData_state_dnxt === 1.U )
 
   when( slvReleaseData_state_qout === 0.U & slvReleaseData_state_dnxt === 1.U ) {
-    info_slvReleaseData_addr := slv_chn_c1.bits.address
+    info_slvReleaseData_address := slv_chn_c1.bits.address
   }
   .elsewhen( slv_chn_c1.fire ) {
-    info_slvReleaseData_addr := info_slvReleaseData_addr + (1.U << bus_lsb)
+    info_slvReleaseData_address := info_slvReleaseData_address + (1.U << bus_lsb)
   }
 
   when( slvReleaseData_state_qout === 2.U & slvReleaseData_state_dnxt === 0.U ) {
-    apply_cache_modified(info_slvReleaseData_addr, info_slvReleaseData_cb, true.B)
+    cache_mdf(info_slvReleaseData_cl)(info_slvReleaseData_cb)(info_slvReleaseData_bk) := true.B
     is_slvReleaseAck_Waiting := true.B
   }
 
@@ -126,7 +128,7 @@ trait slv_release_release_data extends TLC_base {
         (slvReleaseData_state_qout === 2.U & slvReleaseData_state_dnxt === 0.U)
   }
 
-  info_slvReleaseData_cache_coh_waddr := info_slvReleaseData_addr
+  info_slvReleaseData_cache_coh_waddr := info_slvReleaseData_address
   info_slvReleaseData_cache_coh_winfo := 0.U
 
   for ( i <- 0 until cb ) yield {
@@ -134,7 +136,7 @@ trait slv_release_release_data extends TLC_base {
       ( i.U === info_slvReleaseData_cb ) &
       slvReleaseData_state_qout === 2.U & slv_chn_c1.bits.opcode === Opcode.ReleaseData & slv_chn_c1.fire
   }
-  info_slvReleaseData_cache_dat_waddr := info_slvReleaseData_addr
+  info_slvReleaseData_cache_dat_waddr := info_slvReleaseData_address
   info_slvReleaseData_cache_dat_wstrb := "hffff".U
   info_slvReleaseData_cache_dat_winfo := slv_chn_c1.bits.data
 
@@ -142,7 +144,7 @@ trait slv_release_release_data extends TLC_base {
 }
 
 
-trait slv_releaseAck extends TLC_base {
+trait TLC_slv_releaseAck extends TLC_base {
   val slv_chn_d1 = IO(new DecoupledIO( new TLchannel_d(128)))
 
   is_slvReleaseAck_allowen :=
@@ -198,3 +200,9 @@ trait slv_releaseAck extends TLC_base {
 
 
 }
+
+trait TLC_slv_R extends TLC_base with TLC_slv_releaseReleaseData with TLC_slv_releaseAck
+
+
+
+

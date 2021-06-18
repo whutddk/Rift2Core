@@ -27,7 +27,7 @@ import base._
 import rift2Core.cache._
 
 
-trait slv_probe extends TLC_base {
+trait TLC_slv_probe extends TLC_base {
   val slv_chn_b = IO(new DecoupledIO(new TLchannel_b(128, 32)))
 
   is_slvProbe_allowen :=
@@ -101,7 +101,7 @@ trait slv_probe extends TLC_base {
     slv_chn_b.fire
     )
 
-  info_slvProbe_addr :=
+  info_slvProbe_address :=
     RegEnable(
       MuxCase( DontCare, Array(
         is_mstProbe_StateOn   -> info_mstRecProbe_address,
@@ -109,6 +109,9 @@ trait slv_probe extends TLC_base {
       )),
     slv_chn_b.fire
     )
+
+  info_slvProbe_bk := info_slvProbe_address(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  info_slvProbe_cl := info_slvProbe_address(addr_lsb+line_w-1, addr_lsb)
 
   info_slvProbe_exclusive :=
     RegEnable(
@@ -123,7 +126,7 @@ trait slv_probe extends TLC_base {
 }
 
 
-trait slv_probe_Ack_Data extends TLC_base {
+trait TLC_slv_probeAckData extends TLC_base {
   val slv_chn_c0 = IO(Flipped(new DecoupledIO(new TLchannel_c(128, 32))))
 
   is_slvProbeAck_allowen :=
@@ -204,7 +207,7 @@ trait slv_probe_Ack_Data extends TLC_base {
 
   when( is_slvProbeData_valid & ~is_slvProbeData_StateOn ) {
     is_slvProbeData_StateOn := true.B
-    slvProbeData_addr := info_slvProbe_addr
+    slvProbeData_addr := info_slvProbe_address
   }
   .elsewhen( slv_chn_c0.fire & is_slvProbeData_StateOn ) {
     slvProbeData_addr := slvProbeData_addr + (1.U << bus_lsb)
@@ -220,11 +223,11 @@ trait slv_probe_Ack_Data extends TLC_base {
     ( i.U === info_slvProbe_cb ) & 
     is_slvProbeData_StateOn & slv_chn_c0.fire & is_slvProbeData_addrend
   }
-  info_slvProbeAck_Data_cache_coh_waddr := info_slvProbe_addr
+  info_slvProbeAck_Data_cache_coh_waddr := info_slvProbe_address
   info_slvProbeAck_Data_cache_coh_winfo := 0.U
 
   when( is_slvProbeData_StateOn & slv_chn_c0.fire & is_slvProbeData_addrend ) {
-    apply_cache_modified(info_slvProbe_addr, info_slvProbe_cb, true.B)
+    cache_mdf(info_slvProbe_cl)(info_slvProbe_cb)(info_slvProbe_bk) := true.B
   }
 
 
@@ -234,13 +237,15 @@ trait slv_probe_Ack_Data extends TLC_base {
     is_slvProbeData_StateOn & slv_chn_c0.fire    
   }
 
-  info_slvProbeAck_Data_cache_dat_waddr := info_slvProbe_addr
+  info_slvProbeAck_Data_cache_dat_waddr := info_slvProbe_address
   info_slvProbeAck_Data_cache_dat_wstrb := "hffff".U
   info_slvProbeAck_Data_cache_dat_winfo := slv_chn_c0.bits.data
 
 
 
-
-
 }
+
+trait TLC_slv_P extends TLC_base with TLC_slv_probe with TLC_slv_probeAckData
+
+
 

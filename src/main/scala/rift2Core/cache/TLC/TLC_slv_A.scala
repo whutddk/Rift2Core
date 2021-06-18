@@ -37,7 +37,7 @@ import chisel3.util.random._
 /**
   * this operation will happen once when free
   */
-trait slv_acquire extends TLC_base{
+trait TLC_slv_acquire extends TLC_base{
   val slv_chn_a = IO(Flipped(new DecoupledIO(new TLchannel_a(128, 32))))
 
 
@@ -104,6 +104,10 @@ trait slv_acquire extends TLC_base{
     RegEnable( cb_sel, slv_chn_a.fire )
   }
 
+  info_slvAcquire_bk := info_slvAcquire_address(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  info_slvAcquire_cl := info_slvAcquire_address(addr_lsb+line_w-1, addr_lsb)
+
+
   val is_SlvAcquire_StateOn = RegInit( false.B )
 
   when( slv_chn_a.fire ) {
@@ -116,7 +120,7 @@ trait slv_acquire extends TLC_base{
 /**
   * this operation will happened every times when free and is_pending_slv_acquire
   */
-trait slv_grantData extends TLC_base{
+trait TLC_slv_grantData extends TLC_base{
   val slv_chn_d0 = IO(new DecoupledIO( new TLchannel_d(128)))
 
 
@@ -151,18 +155,22 @@ trait slv_grantData extends TLC_base{
     ~is_mstReleaseData_Waiting &
     ~is_mstReleaseAck_valid
 
-
+  // val info_slvAcquire_cl = Wire( UInt(log2Ceil(cl).W) )
+  // val info_slvAcquire_cb = Wire( UInt(log2Ceil(cb).W) )
+  // val info_slvAcquire_bk = Wire( UInt(log2Ceil(bk).W) )
 
 
   val slvGrantData_State_dnxt = Wire(UInt(3.W))
   val slvGrantData_State_qout = RegNext(slvGrantData_State_dnxt, 0.U)
-  val is_slvGrantData_hit_clearen = cache_tag.tag_info_r(info_slvAcquire_cb) === slvGrantData_addr(31, 32-tag_w)
+  val is_slvGrantData_hit_clearen = cache_tag.tag_info_r(info_slvAcquire_cb) === info_slvGrantData_address(31, 32-tag_w)
   val is_slvGrantData_coh_clearen =
-    cache_coh.coh_info_r( ).exclusive =/= 0.U &
-    ~is_cache_invalid(slvGrantData_addr, info_slvAcquire_cb)
+    cache_coh.coh_info_r( info_slvAcquire_bk ) =/= 0.U &
+    cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb)(info_slvAcquire_bk) === false.B
+    // cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb)(info_slvAcquire_bk) === false.B
+
 
   val is_slvGrantData_clearen = is_slvGrantData_hit_clearen & is_slvGrantData_coh_clearen
-  val is_slvGrantData_addrend = slvGrantData_addr( mst_lsb-1, bus_lsb ).andR
+  val is_slvGrantData_addrend = info_slvGrantData_address( mst_lsb-1, bus_lsb ).andR
 
   info_slvGrantData_cache_tag_ren   := slvGrantData_State_qout === 0.U & slvGrantData_State_dnxt === 1.U
   info_slvGrantData_cache_tag_raddr := info_slvAcquire_address
@@ -170,7 +178,7 @@ trait slv_grantData extends TLC_base{
   info_slvGrantData_cache_coh_raddr := info_slvAcquire_address
 
   info_slvGrantData_cache_dat_ren   := slvGrantData_State_qout === 2.U
-  info_slvGrantData_cache_dat_raddr := slvGrantData_addr
+  info_slvGrantData_cache_dat_raddr := info_slvGrantData_address
 
   val d_valid = RegInit(false.B)
 
@@ -197,13 +205,13 @@ trait slv_grantData extends TLC_base{
 
 
 
-  val slvGrantData_addr = RegInit( 0.U(64.W) )
+
 
   when( slvGrantData_State_qout === 1.U & slvGrantData_State_dnxt === 2.U ) {
-    slvGrantData_addr := info_slvAcquire_address
+    info_slvGrantData_address := info_slvAcquire_address
   }
   .elsewhen( slvGrantData_State_qout === 2.U ) {
-    slvGrantData_addr := Mux( slv_chn_d0.fire, slvGrantData_addr + (1.U << bus_lsb) , slvGrantData_addr )
+    info_slvGrantData_address := Mux( slv_chn_d0.fire, info_slvGrantData_address + (1.U << bus_lsb) , info_slvGrantData_address )
   }
 
 
@@ -217,16 +225,16 @@ trait slv_grantData extends TLC_base{
 
 
   when( slvGrantData_State_qout === 1.U ) {
-    when( is_cache_invalid(slvGrantData_addr, info_slvAcquire_cb) === true.B ) {
-      is_mstReleaseData_Waiting := true.B
+    when( cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb)(info_slvAcquire_bk) === true.B ) {
+      is_mstAcquire_Waiting := true.B
     }
     .otherwise {
-      when( cache_coh.coh_info_r( ).exclusive =/= 0.U ) {
+      when( cache_coh.coh_info_r(info_slvAcquire_bk) =/= 0.U ) {
         is_slvProbe_Waiting := true.B
-        info_slvGrantData_exclusive := cache_coh.coh_info_r(info_slvAcquire_cb).exclusive
+        info_slvGrantData_exclusive := cache_coh.coh_info_r(info_slvAcquire_bk)
       }
       .otherwise {
-        when( cache_tag.tag_info_r(info_slvAcquire_cb) =/= slvGrantData_addr(31, 32-tag_w) ) {
+        when( cache_tag.tag_info_r(info_slvAcquire_cb) =/= info_slvGrantData_address(31, 32-tag_w) ) {
           is_mstReleaseData_Waiting := true.B
         }
       }
@@ -239,7 +247,7 @@ trait slv_grantData extends TLC_base{
   }
 }
 
-trait slv_grantAck extends TLC_base {
+trait TLC_slv_grantAck extends TLC_base {
   val slv_chn_e = IO(Flipped(new DecoupledIO( new TLchannel_e)))
 
   is_slvGrantAck_allowen :=
@@ -291,7 +299,7 @@ trait slv_grantAck extends TLC_base {
 }
 
 
-
+trait TLC_slv_A extends TLC_base with TLC_slv_acquire with TLC_slv_grantAck with TLC_slv_grantData
 
 
 

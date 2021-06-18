@@ -180,9 +180,11 @@ abstract class TLC_base extends MultiIOModule {
   //   val tmp_cl = addr(addr_lsb+line_w-1, addr_lsb)
   //   val tmp_bk = addr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
   //   cache_mdf(tmp_cl)(cb)(tmp_bk) := in
-  // } 
+  // }
 
+  val info_slvAcquire_cl = Wire( UInt(log2Ceil(cl).W) )
   val info_slvAcquire_cb = Wire( UInt(log2Ceil(cb).W) )
+  val info_slvAcquire_bk = Wire( UInt(log2Ceil(bk).W) )
 
   val info_slvAcquire_address = Wire( UInt(64.W) )
   val info_slvAcquire_source  = Wire( UInt(8.W) )
@@ -191,6 +193,8 @@ abstract class TLC_base extends MultiIOModule {
   val info_slvAcquire_cache_tag_raddr = Wire(UInt(64.W))
 
   val info_slvGrantData_exclusive = RegInit( 0.U(8.W) )
+  val info_slvGrantData_address   = RegInit( 0.U(64.W) )
+
   val info_slvGrantData_cache_tag_ren   = Wire(Vec(cb, Bool()))
   val info_slvGrantData_cache_tag_raddr = Wire(UInt(64.W))
   val info_slvGrantData_cache_coh_ren   = Wire(Vec(cb, Bool()))
@@ -202,8 +206,10 @@ abstract class TLC_base extends MultiIOModule {
   val info_slvGrantAck_cache_coh_waddr = Wire(UInt(64.W))
   val info_slvGrantAck_cache_coh_winfo = Wire(new Coher)
 
+  val info_slvProbe_address = Wire( UInt(64.W) )
+  val info_slvProbe_cl = Wire( UInt(log2Ceil(cl).W) )
   val info_slvProbe_cb = Wire( UInt(log2Ceil(cb).W) )
-  val info_slvProbe_addr = Wire( UInt(64.W) )
+  val info_slvProbe_bk = Wire( UInt(log2Ceil(bk).W) )
   val info_slvProbe_exclusive = Wire( UInt(8.W) )
 
 
@@ -215,6 +221,11 @@ abstract class TLC_base extends MultiIOModule {
   val info_slvProbeAck_Data_cache_dat_waddr = Wire(UInt(64.W))
   val info_slvProbeAck_Data_cache_dat_wstrb = Wire(UInt(8.W))
   val info_slvProbeAck_Data_cache_dat_winfo = Wire(UInt(128.W))
+
+  val info_slvReleaseData_cl = Wire( UInt(log2Ceil(cl).W) )
+  val info_slvReleaseData_cb = Wire( UInt(log2Ceil(cb).W) )
+  val info_slvReleaseData_bk = Wire( UInt(log2Ceil(bk).W) )
+  val info_slvReleaseData_address = RegInit(0.U(64.W))
 
   val info_slvReleaseData_cache_coh_wen   = Wire(Vec(cb, Vec(bk, Bool())))
   val info_slvReleaseData_cache_coh_waddr = Wire(UInt(64.W))
@@ -244,9 +255,12 @@ abstract class TLC_base extends MultiIOModule {
   val info_mstGrantData_cache_tag_waddr = Wire(UInt(64.W))
 
   val info_mstProbe_address = Wire( UInt(64.W) )
+  val info_mstProbe_cl = Wire( UInt(log2Ceil(cl).W) )
+  val info_mstProbe_cb = Wire( UInt(log2Ceil(cb).W) )
+
   val info_mstProbe_cache_tag_ren   = Wire(Vec(cb, Bool()))
   val info_mstProbe_cache_tag_raddr = Wire(UInt(64.W))
-  val info_mstProbe_cb = Wire( UInt(log2Ceil(cb).W) )
+
 
   val info_mstProbeData_address = RegInit( 0.U(64.W) )
 
