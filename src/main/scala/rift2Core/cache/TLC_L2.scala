@@ -28,70 +28,54 @@ import rift2Core.cache._
 
 abstract class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with TLC_mst_A with TLC_mst_P with TLC_mst_R {
 
-
+  /**
+    * slvAcquire：passive
+    * 
+    */
   is_slvAcquire_allowen :=
-    ~is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeData_StateOn &
-    ~is_slvProbeAck_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn &
-    ~is_mstProbeAck_Data_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-     is_slvAcquire_valid &
-    ~is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    ~is_slvProbe_Waiting &
-    ~is_slvProbeData_valid &
-    ~is_slvProbeAck_valid &
-    ~is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    ~is_mstProbeAck_Data_Waiting &
-    ~is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
+    ~is_slvAcquire_StateOn       & ~is_slvGrantData_StateOn     & ~is_slvGrantAck_StateOn &
+    ~is_slvProbe_StateOn         & ~is_slvProbeData_StateOn     & ~is_slvProbeAck_StateOn &
+    ~is_slvReleaseData_StateOn   & ~is_slvReleaseAck_StateOn    & ~is_mstAcquire_StateOn &
+    ~is_mstGrantData_StateOn     & ~is_mstGrantAck_StateOn      & ~is_mstProbe_StateOn &
+    ~is_mstProbeAck_Data_StateOn & ~is_mstReleaseData_StateOn   & ~is_mstReleaseAck_StateOn &
+     is_slvAcquire_valid         & ~is_slvGrantData_Waiting     & ~is_slvGrantAck_valid &
+    ~is_slvProbe_Waiting         & ~is_slvProbeData_valid       & ~is_slvProbeAck_valid &
+    ~is_slvReleaseData_valid     & ~is_slvReleaseAck_Waiting    &
+    ~is_mstAcquire_Waiting       & ~is_mstGrantData_valid       & ~is_mstGrantAck_Waiting &
+    ~is_mstProbe_valid           & ~is_mstProbeAck_Data_Waiting &
+    ~is_mstReleaseData_Waiting   & ~is_mstReleaseAck_valid
 
 
+
+
+
+  /**
+    * slvGrantData：
+    * 
+    */  
   is_slvGrantData_allowen := 
-     is_slvAcquire_StateOn & 
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeData_StateOn &
-    ~is_slvProbeAck_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn &
-    ~is_mstProbeAck_Data_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-     is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    ~is_slvProbe_Waiting &
-    ~is_slvProbeData_valid &
-    ~is_slvProbeAck_valid &
-    ~is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    ~is_mstProbeAck_Data_Waiting &
-    ~is_mstReleaseData_Waiting &
+     // is_slvAcquire_StateOn     & 
+    ~is_slvGrantData_StateOn   & ~is_slvGrantAck_StateOn &
+    ~is_slvProbe_StateOn       & ~is_slvProbeData_StateOn     & ~is_slvProbeAck_StateOn &
+    ~is_slvReleaseData_StateOn & ~is_slvReleaseAck_StateOn    &
+    // ~is_mstAcquire_StateOn     & ~is_mstGrantData_StateOn     & ~is_mstGrantAck_StateOn &
+    ~is_mstProbe_StateOn       & ~is_mstProbeAck_Data_StateOn &
+    // ~is_mstReleaseData_StateOn & ~is_mstReleaseAck_StateOn    &
+     is_slvGrantData_Waiting   & ~is_slvGrantAck_valid        &
+    ~is_slvProbe_Waiting       & ~is_slvProbeData_valid       & ~is_slvProbeAck_valid   &
+    ~is_slvReleaseData_valid   & ~is_slvReleaseAck_Waiting  &
+    // ~is_mstAcquire_Waiting  &
+    ~is_mstGrantData_valid     &
+    // ~is_mstGrantAck_Waiting &
+    ~is_mstProbe_valid         & ~is_mstProbeAck_Data_Waiting &
+    // ~is_mstReleaseData_Waiting &
     ~is_mstReleaseAck_valid
+
+  assert( ~(is_slvGrantData_Waiting & ~is_slvAcquire_StateOn), "Assert Failed at TLC_L2, slvGrantData is requested without slv Acquire state, that's impossible" ) 
+  assert( ~(is_slvGrantData_Waiting & (is_mstAcquire_StateOn | is_mstGrantData_StateOn | is_mstGrantAck_StateOn | is_mstReleaseData_StateOn | is_mstReleaseAck_StateOn) ), "Assert Failed at TLC_L2, slvGrantData is requested with other parasitical state on, that's impossible" )
+  assert( ~(is_slvGrantData_Waiting & (is_mstAcquire_Waiting | is_mstGrantAck_Waiting | is_mstReleaseData_Waiting) ), "Assert Failed at TLC_L2, slvGrantData is requested with other parasitical messages, that's impossible" )
+
+
 
   is_slvGrantAck_allowen :=
     is_slvAcquire_StateOn &
