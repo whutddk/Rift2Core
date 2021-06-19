@@ -44,38 +44,6 @@ trait TLC_slv_acquire extends TLC_base{
   val a_ready = RegInit(false.B)
   slv_chn_a.ready := a_ready
 
-  is_slvAcquire_allowen :=
-    ~is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeData_StateOn &
-    ~is_slvProbeAck_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn &
-    ~is_mstProbeAck_Data_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-     is_slvAcquire_valid &
-    ~is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    ~is_slvProbe_Waiting &
-    ~is_slvProbeData_valid &
-    ~is_slvProbeAck_valid &
-    ~is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    ~is_mstProbeAck_Data_Waiting &
-    ~is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
-
 
   when( slv_chn_a.fire ) { a_ready := false.B }
   .elsewhen( is_slvAcquire_allowen ) { a_ready := true.B }
@@ -122,43 +90,6 @@ trait TLC_slv_acquire extends TLC_base{
   */
 trait TLC_slv_grantData extends TLC_base{
   val slv_chn_d0 = IO(new DecoupledIO( new TLchannel_d(128)))
-
-
-  is_slvGrantData_allowen := 
-     is_slvAcquire_StateOn & 
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeData_StateOn &
-    ~is_slvProbeAck_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn &
-    ~is_mstProbeAck_Data_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-     is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    ~is_slvProbe_Waiting &
-    ~is_slvProbeData_valid &
-    ~is_slvProbeAck_valid &
-    ~is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    ~is_mstProbeAck_Data_Waiting &
-    ~is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
-
-  // val info_slvAcquire_cl = Wire( UInt(log2Ceil(cl).W) )
-  // val info_slvAcquire_cb = Wire( UInt(log2Ceil(cb).W) )
-  // val info_slvAcquire_bk = Wire( UInt(log2Ceil(bk).W) )
-
 
   val slvGrantData_State_dnxt = Wire(UInt(3.W))
   val slvGrantData_State_qout = RegNext(slvGrantData_State_dnxt, 0.U)
@@ -249,37 +180,6 @@ trait TLC_slv_grantData extends TLC_base{
 
 trait TLC_slv_grantAck extends TLC_base {
   val slv_chn_e = IO(Flipped(new DecoupledIO( new TLchannel_e)))
-
-  is_slvGrantAck_allowen :=
-    is_slvAcquire_StateOn &
-    is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeData_StateOn &
-    ~is_slvProbeAck_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn &
-    ~is_mstProbeAck_Data_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    ~is_slvGrantData_Waiting &
-     is_slvGrantAck_valid &
-    // ~is_SlvProbe_Waiting &
-    // ~is_SlvProbeData_valid &
-    // ~is_SlvProbeAck_valid &
-    // ~is_SlvReleaseData_valid &
-    // ~is_SlvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    ~is_mstProbeAck_Data_Waiting &
-    ~is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
 
   val e_ready = RegInit(false.B)
   slv_chn_e.ready := e_ready

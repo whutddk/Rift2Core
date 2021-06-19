@@ -27,36 +27,7 @@ import rift2Core.cache._
 trait TLC_mst_Probe extends TLC_base {
   val mst_chn_b = IO(Flipped(new DecoupledIO(new TLchannel_b(128, 32))))
 
-  is_mstProbe_allowen :=
-    // ~is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeData_StateOn &
-    ~is_slvProbeAck_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    // ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn &
-    ~is_mstProbeAck_Data_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    // ~is_slvGrantData_Waiting &
-    // ~is_slvGrantAck_valid &
-    // ~is_slvProbe_Waiting &
-    // ~is_slvProbeData_valid &
-    // ~is_slvProbeAck_valid &
-    // ~is_slvReleaseData_valid &
-    // ~is_slvReleaseAck_Waiting &
-    // ~is_mstAcquire_Waiting &
-    // ~is_mstGrantData_valid &
-    // ~is_mstGrantAck_Waiting &
-    is_mstProbe_valid &
-    ~is_mstProbeAck_Data_Waiting
-    // ~is_mstReleaseData_Waiting &
-    // ~is_mstReleaseAck_valid
+
 
   val mst_chn_b_ready = RegInit(false.B)
   mst_chn_b.ready := mst_chn_b_ready
@@ -91,36 +62,7 @@ trait TLC_mst_Probe extends TLC_base {
 trait TLC_mst_probeAckData extends TLC_base {
   val mst_chn_c0 = IO(new DecoupledIO(new TLchannel_c(128, 32)))
 
-  is_mstProbeAck_Data_allowen :=
-    // ~is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeData_StateOn &
-    ~is_slvProbeAck_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    is_mstProbe_StateOn &
-    ~is_mstProbeAck_Data_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    ~is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    ~is_slvProbe_Waiting &
-    ~is_slvProbeData_valid &
-    ~is_slvProbeAck_valid &
-    ~is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    is_mstProbeAck_Data_Waiting &
-    ~is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
+
 
 
   val mst_probe_Ack_Data_state_dnxt = Wire(UInt(2.W))
