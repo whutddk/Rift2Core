@@ -42,8 +42,12 @@ trait TLC_mst_Probe extends TLC_base {
   info_mstProbe_cl := info_mstProbe_address(addr_lsb+line_w-1, addr_lsb)
 
 
+  for ( i <- 0 until cb ) yield {
+    info_mstProbe_cache_tag_ren(i) := 
+      // i.U === info_mstProbe_cb & 
+      is_mstProbe_allowen    
+  }
 
-  info_mstProbe_cache_tag_ren := is_mstProbe_allowen
   info_mstProbe_cache_tag_raddr := mst_chn_b.bits.address
   info_mstProbe_cb := {
     val tag_info = mst_chn_b.bits.address( 31, 32-tag_w )

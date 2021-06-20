@@ -36,6 +36,13 @@ class Coher extends Bundle{
 
 class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
+  println("dw is"+dw);
+  println("aw is"+aw);
+  println("bk is"+bk);
+  println("cb is"+cb);
+  println("cl is"+cl);
+
+
   val addr_lsb = log2Ceil(dw*bk/8)
   val line_w   = log2Ceil(cl)
 
@@ -70,9 +77,7 @@ class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
   }
 
 
-  def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
-
-  val ram = for ( i <- 0 until cb; j <- 0 until bk ) yield { Mem( dp, UInt(8.W) ) }
+  val ram = for ( i <- 0 until cb; j <- 0 until bk ) yield { Mem( cl, UInt(8.W) ) }
   
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
 

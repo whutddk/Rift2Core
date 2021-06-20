@@ -90,9 +90,9 @@ trait TLC_slv_releaseReleaseData extends TLC_base {
     RegEnable( hit_cb, slvReleaseData_state_qout === 1.U & slvReleaseData_state_dnxt === 2.U ) 
   }
 
-  for ( i <- 0 until cb ) yield {
-      info_slvReleaseData_cache_coh_wen(i) := 
-        ( i.U === info_slvReleaseData_cb )
+  for ( i <- 0 until cb; j <- 0 until bk ) yield {
+      info_slvReleaseData_cache_coh_wen(i)(j) := 
+        ( i.U === info_slvReleaseData_cb ) & ( j.U === info_slvReleaseData_bk ) &
         (slvReleaseData_state_qout === 2.U & slvReleaseData_state_dnxt === 0.U)
   }
 

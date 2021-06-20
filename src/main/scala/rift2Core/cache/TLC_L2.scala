@@ -16,7 +16,7 @@
    limitations under the License.
 */
 
-package rift2Core.cache.TLC
+package rift2Core.cache
 
 import chisel3._
 import chisel3.util._
@@ -25,8 +25,16 @@ import tilelink._
 
 import base._
 import rift2Core.cache._
+import rift2Core.cache.TLC._
 
-abstract class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with TLC_mst_A with TLC_mst_P with TLC_mst_R {
+class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with TLC_mst_A with TLC_mst_P with TLC_mst_R {
+
+  override def dw = 1024
+  override def aw = 32
+  override def bk = 4
+  override def cb = 4
+  override def cl = 64
+  override def agent_no = 4
 
   /**
     * slvAcquire：passive

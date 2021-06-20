@@ -131,9 +131,9 @@ trait TLC_slv_probeAckData extends TLC_base {
   }
 
 
-  for ( i <- 0 until cb ) yield {
-    info_slvProbeAck_Data_cache_coh_wen(i) := 
-    ( i.U === info_slvProbe_cb ) & 
+  for ( i <- 0 until cb; j <- 0 until bk ) yield {
+    info_slvProbeAck_Data_cache_coh_wen(i)(j) := 
+    ( i.U === info_slvProbe_cb ) & ( j.U === info_slvProbe_bk ) & 
     is_slvProbeData_StateOn & slv_chn_c0.fire & is_slvProbeData_addrend
   }
   info_slvProbeAck_Data_cache_coh_waddr := info_slvProbe_address
