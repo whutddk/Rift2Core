@@ -117,17 +117,18 @@ trait TLC_slv_releaseAck extends TLC_base {
 
 
 
-  val d1_valid = RegInit(false.B)
+  val slv_chn_d1_valid = RegInit(false.B)
 
   when( slv_chn_d1.fire ) {
-    d1_valid := false.B;
+    slv_chn_d1_valid := false.B;
     is_slvReleaseData_StateOn := false.B
   }
   .elsewhen( is_slvReleaseAck_allowen ) {
-    d1_valid := true.B
+    slv_chn_d1_valid := true.B
     is_slvReleaseAck_Waiting := false.B
   }
 
+  slv_chn_d1.valid := slv_chn_d1_valid
   slv_chn_d1.bits.corrupt := false.B
   slv_chn_d1.bits.data := DontCare
   slv_chn_d1.bits.denied := false.B
@@ -135,6 +136,7 @@ trait TLC_slv_releaseAck extends TLC_base {
   slv_chn_d1.bits.param  := 0.U
   slv_chn_d1.bits.sink   := DontCare
   slv_chn_d1.bits.source := info_slvReleaseData_source
+  slv_chn_d1.bits.size   := mst_lsb.U
 
 
 }

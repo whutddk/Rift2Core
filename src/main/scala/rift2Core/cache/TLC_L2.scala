@@ -435,7 +435,7 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     ~is_mstReleaseAck_valid
 
 
-  is_slvReleaseData_allowen :=
+  is_mstReleaseData_allowen :=
     is_slvAcquire_StateOn &
     ~is_slvGrantData_StateOn &
     ~is_slvGrantAck_StateOn &
@@ -496,6 +496,137 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     // ~is_mstProbeData_Waiting &
     // ~is_mstReleaseData_Waiting &
     is_mstReleaseAck_valid
+
+
+    is_slvAcquire_valid := slv_chn_a.valid
+    is_slvGrantAck_valid := slv_chn_e.valid
+    is_slvProbeData_valid := slv_chn_c0.valid & slv_chn_c0.bits.opcode === Opcode.ProbeAckData
+    is_slvProbeAck_valid := slv_chn_c0.valid & slv_chn_c0.bits.opcode === Opcode.ProbeAck
+    is_slvReleaseData_valid := slv_chn_c1.valid
+    is_mstGrantData_valid := mst_chn_d0.valid
+    is_mstProbe_valid := mst_chn_b.valid
+    is_mstReleaseAck_valid := mst_chn_d1.valid
+
+
+
+
+
+
+
+
+
+
+
+
+  for ( i <- 0 until cb ) yield {
+    cache_dat.dat_en_w(i) :=
+      info_slvProbeAck_Data_cache_dat_wen(i) |
+      info_slvReleaseData_cache_dat_wen(i) |
+      info_mstGrantData_cache_dat_wen(i)
+  }
+
+
+
+  cache_dat.dat_addr_w :=
+    Mux1H(Seq(
+      info_slvProbeAck_Data_cache_dat_wen.contains(true.B) -> info_slvProbeAck_Data_cache_dat_waddr,
+      info_slvReleaseData_cache_dat_wen.contains(true.B) -> info_slvReleaseData_cache_dat_waddr,
+      info_mstGrantData_cache_dat_wen.contains(true.B) -> info_mstGrantData_cache_dat_waddr,
+    ))
+
+  cache_dat.dat_info_wstrb := 
+    Mux1H(Seq(
+     info_slvProbeAck_Data_cache_dat_wen.contains(true.B) -> info_slvProbeAck_Data_cache_dat_wstrb,
+      info_slvReleaseData_cache_dat_wen.contains(true.B) -> info_slvReleaseData_cache_dat_wstrb,
+      info_mstGrantData_cache_dat_wen.contains(true.B) -> info_mstGrantData_cache_dat_wstrb,
+    ))
+
+  cache_dat.dat_info_w :=
+    Mux1H(Seq(
+      info_slvProbeAck_Data_cache_dat_wen.contains(true.B) -> info_slvProbeAck_Data_cache_dat_winfo,
+      info_slvReleaseData_cache_dat_wen.contains(true.B) -> info_slvReleaseData_cache_dat_winfo,
+      info_mstGrantData_cache_dat_wen.contains(true.B) -> info_mstGrantData_cache_dat_winfo
+
+    )) 
+
+  for ( i <- 0 until cb ) yield {
+    cache_dat.dat_en_r(i) :=
+      info_slvGrantData_cache_dat_ren(i) |
+      info_mstReleaseData_cache_dat_ren(i) |
+      info_mstProbeData_cache_dat_ren(i)   
+  }
+
+
+  cache_dat.dat_addr_r :=
+    Mux1H(Seq(
+      info_slvGrantData_cache_dat_ren.contains(true.B) -> info_slvGrantData_cache_dat_raddr,
+      info_mstReleaseData_cache_dat_ren.contains(true.B) -> info_mstReleaseData_cache_dat_raddr,
+      info_mstProbeData_cache_dat_ren.contains(true.B) -> info_mstProbeData_cache_dat_raddr
+    ))
+
+  for ( i <- 0 until cb ) yield {
+    cache_tag.tag_en_w(i) := info_mstGrantData_cache_tag_wen(i)    
+  }
+
+  cache_tag.tag_addr_w := info_mstGrantData_cache_tag_waddr
+
+  for ( i <- 0 until cb ) yield {
+    cache_tag.tag_en_r(i) :=
+      info_slvAcquire_cache_tag_ren(i) |
+      info_slvGrantData_cache_tag_ren(i) |
+      info_mstProbe_cache_tag_ren(i)
+  }
+
+
+  cache_tag.tag_addr_r :=
+    Mux1H(Seq(
+      info_slvAcquire_cache_tag_ren.contains(true.B)   -> info_slvAcquire_cache_tag_raddr,
+      info_slvGrantData_cache_tag_ren.contains(true.B) -> info_slvGrantData_cache_tag_raddr,
+      info_mstProbe_cache_tag_ren.contains(true.B) -> info_mstProbe_cache_tag_raddr
+    ))
+
+
+  for ( i <- 0 until cb; j <- 0 until bk ) yield {
+    cache_coh.coh_en_w(i)(j) :=
+      info_slvGrantAck_cache_coh_wen(i)(j) |
+      info_slvProbeAck_Data_cache_coh_wen(i)(j) |
+      info_slvReleaseData_cache_coh_wen(i)(j) |
+      info_mstGrantData_cache_coh_wen(i)(j)    
+  }
+
+
+
+  cache_coh.coh_addr_w :=
+    Mux1H(Seq(
+      info_slvGrantAck_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))      -> info_slvGrantAck_cache_coh_waddr,
+      info_slvProbeAck_Data_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)) -> info_slvProbeAck_Data_cache_coh_waddr,
+      info_slvReleaseData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)) -> info_slvReleaseData_cache_coh_waddr,
+      info_mstGrantData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)) -> info_mstGrantData_cache_coh_waddr,
+
+      ))
+
+  cache_coh.coh_info_w := 
+    Mux1H(Seq(
+      info_slvGrantAck_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))      -> info_slvGrantAck_cache_coh_winfo,
+      info_slvProbeAck_Data_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)) -> info_slvProbeAck_Data_cache_coh_winfo,
+      info_slvReleaseData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))   -> info_slvReleaseData_cache_coh_winfo,
+      info_mstGrantData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))     -> info_mstGrantData_cache_coh_winfo,
+      ))
+
+  for ( i <- 0 until cb ) yield {
+    cache_coh.coh_en_r(i) :=
+      info_slvGrantData_cache_coh_ren(i) |
+      info_mstProbeData_cache_coh_ren(i)    
+  }
+
+    
+
+  cache_coh.coh_addr_r :=
+    Mux1H(Seq(
+      info_slvGrantData_cache_coh_ren.contains(true.B) -> info_slvGrantData_cache_coh_raddr,
+      info_mstProbeData_cache_coh_ren.contains(true.B) -> info_mstProbeData_cache_coh_raddr
+    ))
+
 
 }
 

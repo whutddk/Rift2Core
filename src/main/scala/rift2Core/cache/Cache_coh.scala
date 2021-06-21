@@ -68,15 +68,7 @@ class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
   // val bank_sel_r = coh_addr_r(addr_lsb-1, addr_lsb-log2Ceil(bk) )
 
   val data_o = Reg( Vec(bk, UInt(8.W)))
-
-  val coh_ram = {
-    for ( i <- 0 until cb; j <- 0 until bk ) yield { 
-      val mdl = Module(new Sram( 4, line_w))
-      mdl
-    }
-  }
-
-
+  
   val ram = for ( i <- 0 until cb; j <- 0 until bk ) yield { Mem( cl, UInt(8.W) ) }
   
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
@@ -91,7 +83,7 @@ class Cache_coh( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
   }
 
 
- coh_info_r := data_o
+  coh_info_r := data_o
 }
 
 

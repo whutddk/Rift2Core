@@ -32,16 +32,16 @@ trait TLC_slv_probe extends TLC_base {
 
 
 
-  val b_valid = RegInit(false.B)
+  val slv_chn_b_valid = RegInit(false.B)
 
 
   when( slv_chn_b.fire ) {
-    b_valid := false.B
+    slv_chn_b_valid := false.B
 
 
   }
   when( is_slvProbe_allowen ) {
-    b_valid := true.B
+    slv_chn_b_valid := true.B
     is_slvProbe_Waiting := false.B
     is_slvProbe_StateOn := true.B
   }
@@ -52,6 +52,7 @@ trait TLC_slv_probe extends TLC_base {
       is_slvAcquire_StateOn -> info_slvAcquire_address
     ))
 
+  slv_chn_b.valid := slv_chn_b_valid
   slv_chn_b.bits.corrupt := false.B
   slv_chn_b.bits.data    := DontCare
   slv_chn_b.bits.mask    := DontCare

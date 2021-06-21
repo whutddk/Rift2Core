@@ -98,14 +98,16 @@ trait TLC_mst_releaseAck extends TLC_base {
 
 
 
-  val d1_ready = RegInit(false.B)
+  val mst_chn_d1_ready = RegInit(false.B)
+  mst_chn_d1.ready := mst_chn_d1_ready
+
 
   when( mst_chn_d1.fire ) {
-    d1_ready := false.B;
+    mst_chn_d1_ready := false.B;
     is_mstReleaseData_StateOn := false.B
   }
   .elsewhen( is_mstReleaseAck_allowen ) {
-    d1_ready := true.B
+    mst_chn_d1_ready := true.B
   }
 
 
@@ -114,6 +116,7 @@ trait TLC_mst_releaseAck extends TLC_base {
 }
 
 trait TLC_mst_R extends TLC_base with TLC_mst_releaseReleaseData with TLC_mst_releaseAck
+
 
 
 

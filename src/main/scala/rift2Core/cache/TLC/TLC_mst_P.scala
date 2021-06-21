@@ -103,6 +103,7 @@ trait TLC_mst_probeAckData extends TLC_base {
   when( mst_probe_Ack_Data_state_qout === 2.U & ~mst_chn_c0.valid ) { mst_chn_c0_valid := true.B }
   .elsewhen( mst_chn_c0.fire ) { mst_chn_c0_valid := false.B }
 
+  mst_chn_c0.valid := mst_chn_c0_valid
   mst_chn_c0.bits.address := info_mstProbe_address
   mst_chn_c0.bits.corrupt := false.B
   mst_chn_c0.bits.data := cache_dat.dat_info_r( info_mstProbe_cb )
@@ -132,6 +133,22 @@ trait TLC_mst_probeAckData extends TLC_base {
     info_mstRecProbe_cb := info_mstProbe_cb
 
   }
+
+  for ( i <- 0 until cb ) yield {
+    info_mstProbeData_cache_coh_ren(i) :=
+      i.U === info_mstProbe_cb &
+      mst_probe_Ack_Data_state_dnxt === 1.U & mst_probe_Ack_Data_state_qout === 0.U
+  }
+
+  info_mstProbeData_cache_coh_raddr := info_mstProbe_address
+
+  for ( i <- 0 until cb ) yield {
+    info_mstProbeData_cache_dat_ren(i) :=
+      i.U === info_mstProbe_cb & mst_probe_Ack_Data_state_qout === 2.U
+  }
+
+  info_mstProbeData_cache_dat_raddr := info_mstProbeData_address
+
 
 }
 

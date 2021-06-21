@@ -25,32 +25,7 @@ import axi._
 import base._
 import rift2Core.cache._
 
-// abstract class Cache_setting extends Bundle {
-//   val level: Int
 
-//   val dw: Int
-//   val aw: Int
-//   val bk: Int
-//   val cb: Int
-//   val cl: Int
-
-//   val addr_lsb = log2Ceil(dw*bk/8)
-//   val line_w   = log2Ceil(cl)
-//   val tag_w    = 32 - addr_lsb - line_w
-//   val bus_w    = 128
-//   val bus_lsb  = log2Ceil(bus_w/8)
-
-//   val mst_lsb  = log2Ceil(dw)
-// }
-
-// class Cache_param {
-//   val dw = Int
-//   val aw = Int
-//   val bk = Int
-//   val cb = Int
-//   val cl = Int
-//   val agent_no = Int 
-// }
 
 
 trait Lx_param {
@@ -60,25 +35,12 @@ trait Lx_param {
   def cb: Int
   def cl: Int
   def agent_no: Int 
-  // implicit val p: Cache_param
 
-  // val dw = p.dw
-  // val aw = p.aw
-  // val bk = p.bk
-  // val cb = p.cb
-  // val cl = p.cl
-  // val agent_no = p.agent_no
 }
 
 
 abstract class TLC_base extends MultiIOModule with Lx_param {
 
-  // val dw: Int
-  // val aw: Int
-  // val bk: Int
-  // val cb: Int
-  // val cl: Int
-  // val agent_no : Int
 
 
   val addr_lsb = log2Ceil(dw*bk/8)
@@ -249,6 +211,11 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
   val info_mstProbe_cache_tag_ren   = Wire(Vec(cb, Bool()))
   val info_mstProbe_cache_tag_raddr = Wire(UInt(64.W))
 
+  val info_mstProbeData_cache_coh_ren   = Wire(Vec(cb, Bool()))
+  val info_mstProbeData_cache_coh_raddr = Wire(UInt(64.W))
+  val info_mstProbeData_cache_dat_ren   = Wire(Vec(cb, Bool()))
+  val info_mstProbeData_cache_dat_raddr = Wire(UInt(64.W))
+
 
   val info_mstProbeData_address = RegInit( 0.U(64.W) )
 
@@ -260,6 +227,7 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
 
   val info_mstReleaseData_cache_dat_ren   = Wire(Vec(cb, Bool()))
   val info_mstReleaseData_cache_dat_raddr = Wire(UInt(64.W))
+
 
 }
 
