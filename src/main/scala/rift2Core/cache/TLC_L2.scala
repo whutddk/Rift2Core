@@ -260,246 +260,311 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
 
   is_slvReleaseAck_allowen :=
-    // ~is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    // ~is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn & 
-    ~is_mstProbeAckData_StateOn &
-    is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    // ~is_slvGrantData_Waiting &
-    // ~is_slvGrantAck_valid &
-    // ~is_slvProbe_Waiting &
-    // ~is_slvProbeData_valid &
-    // ~is_slvProbeAck_valid &
-    // ~is_slvReleaseData_valid &
-    is_slvReleaseAck_Waiting
-    // ~is_mstAcquire_Waiting &
-    // ~is_mstGrantData_valid &
-    // ~is_mstGrantAck_Waiting &
-    // ~is_mstProbe_valid &
-    // ~is_mstProbeAck_Waiting &
-    // ~is_mstProbeData_Waiting &
-    // ~is_mstReleaseData_Waiting &
-    // ~is_mstReleaseAck_valid
+    // ~is_slvAcquire_StateOn &  //不关心这个状态
+    // ~is_slvGrantData_StateOn &   //并行操作
+    // ~is_slvGrantAck_StateOn &   //并行操作
+    // ~is_slvProbe_StateOn &   //并行操作
+    // ~is_slvProbeAckData_StateOn &   //并行操作
+    ~is_slvReleaseData_StateOn &  //资源被占用
+    ~is_slvReleaseAck_StateOn & //资源被占用
+    // ~is_mstAcquire_StateOn & //并行操作
+    // ~is_mstGrantData_StateOn & //并行操作
+    // ~is_mstGrantAck_StateOn & //并行操作
+    // ~is_mstProbe_StateOn & //并行操作
+    // ~is_mstProbeAckData_StateOn & //并行操作
+    // is_mstReleaseData_StateOn & //并行操作
+    // ~is_mstReleaseAck_StateOn & //并行操作
+    // ~is_slvGrantData_Waiting & //并行操作
+    // ~is_slvGrantAck_valid & //并行操作
+    // ~is_slvProbe_Waiting & //并行操作
+    // ~is_slvProbeData_valid & //并行操作
+    // ~is_slvProbeAck_valid & //并行操作
+    // ~is_slvReleaseData_valid & //更高优先级
+    is_slvReleaseAck_Waiting //请求到来
+    // ~is_mstAcquire_Waiting & //并行操作
+    // ~is_mstGrantData_valid & //并行操作
+    // ~is_mstGrantAck_Waiting & //并行操作
+    // ~is_mstProbe_valid & //并行操作
+    // ~is_mstProbeAck_Waiting & //并行操作
+    // ~is_mstProbeData_Waiting & //并行操作
+    // ~is_mstReleaseData_Waiting & //并行操作
+    // ~is_mstReleaseAck_valid //并行操作
 
 
   is_mstAcquire_allowen :=
-    is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn &
-    ~is_mstProbeAckData_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
+    // is_slvAcquire_StateOn & //通过断言，必定打开
+    // ~is_slvGrantData_StateOn & //通过断言，必定关闭
+    // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
+    // ~is_slvProbe_StateOn & //并行操作，当slv Probe为mst Probe的寄生消息
+    // ~is_slvProbeAckData_StateOn & //并行操作
+    // ~is_slvReleaseData_StateOn & //并行操作
+    // ~is_slvReleaseAck_StateOn & //并行操作
+    ~is_mstAcquire_StateOn & //资源被占用
+    // ~is_mstGrantData_StateOn & //通过断言，必定关闭
+    // ~is_mstGrantAck_StateOn & //通过断言，必定关闭
+    // ~is_mstProbe_StateOn & //并行操作
+    // ~is_mstProbeAckData_StateOn & //并行操作
+    // ~is_mstReleaseData_StateOn & //并行操作
+    // ~is_mstReleaseAck_StateOn & //并行操作
     // ~is_slvAcquire_valid &
-    ~is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    ~is_slvProbe_Waiting &
-    ~is_slvProbeAckData_valid &
-    ~is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting &
-    is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    ~is_mstProbeAckData_Waiting &
-    ~is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
+    // is_slvGrantData_Waiting & //通过断言，必定打开
+    // ~is_slvGrantAck_valid &  //通过断言，必定关闭
+    // ~is_slvProbe_Waiting & //并行操作
+    // ~is_slvProbeAckData_valid & //并行操作
+    // ~is_slvReleaseData_valid & //并行操作
+    // ~is_slvReleaseAck_Waiting & //并行操作
+    is_mstAcquire_Waiting //请求到来
+    // ~is_mstGrantData_valid & //通过断言，必定关闭
+    // ~is_mstGrantAck_Waiting & //通过断言，必定关闭
+    // ~is_mstProbe_valid & //并行操作
+    // ~is_mstProbeAckData_Waiting & //并行操作
+    // ~is_mstReleaseData_Waiting & //并行操作
+    // ~is_mstReleaseAck_valid //并行操作
+
+  assert( ~(is_mstAcquire_Waiting & (~is_slvAcquire_StateOn | ~is_slvGrantData_Waiting | is_slvGrantAck_valid | is_slvGrantData_StateOn)), "Assert Failed at TLC_L2.scala, mst acquire is the parasitical messages of slv acquire" )
+  assert( ~(is_mstAcquire_Waiting & (is_slvGrantAck_StateOn | is_mstGrantData_StateOn | is_mstGrantAck_StateOn | is_mstGrantData_valid | is_mstGrantAck_Waiting)), "Assert Failed at TLC_L2.scala, mst acquire is the parasitical messages of slv acquire, but slv grantack is the resp messages of slv acquire" )
+
 
   is_mstGrantData_allowen := 
-     is_slvAcquire_StateOn & 
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn &
-    ~is_mstProbeAckData_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    ~is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    ~is_slvProbe_Waiting &
-    ~is_slvProbeAckData_valid &
-    ~is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    ~is_mstProbeAckData_Waiting &
-    ~is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
+    //  is_slvAcquire_StateOn & //通过断言，必定打开
+    // ~is_slvGrantData_StateOn & //通过断言，必定关闭
+    // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
+    // ~is_slvProbe_StateOn & //并行操作
+    ~is_slvProbeAckData_StateOn & //让出优先级
+    ~is_slvReleaseData_StateOn & //让出优先级
+    // ~is_slvReleaseAck_StateOn &  //并行操作
+    // is_mstAcquire_StateOn & //通过断言，必定打开
+    ~is_mstGrantData_StateOn & //资源占用
+    // ~is_mstGrantAck_StateOn & //通过断言，必定关闭
+    // ~is_mstProbe_StateOn & //通过断言，必定关闭 
+    // ~is_mstProbeAckData_StateOn & //通过断言，必定关闭 
+    // ~is_mstReleaseData_StateOn & //通过断言，必定关闭 
+    // ~is_mstReleaseAck_StateOn & //通过断言，必定关闭 
+    // ~is_slvAcquire_valid &
+    // is_slvGrantData_Waiting & //通过断言，必定打开
+    // ~is_slvGrantAck_valid &  //通过断言，必定关闭
+    // ~is_slvProbe_Waiting & //并行操作
+    ~is_slvProbeAckData_valid & //让出优先级
+    ~is_slvReleaseData_valid & //让出优先级
+    // ~is_slvReleaseAck_Waiting & //并行操作
+    // ~is_mstAcquire_Waiting & //通过断言，必定关闭 
+    is_mstGrantData_valid  //请求到来
+    // ~is_mstGrantAck_Waiting & //通过断言，必定关闭 
+    // ~is_mstProbe_valid & //通过断言，必定关闭 
+    // ~is_mstProbeAckData_Waiting & //通过断言，必定关闭 
+    // ~is_mstReleaseData_Waiting & //通过断言，必定关闭 
+    // ~is_mstReleaseAck_valid //通过断言，必定关闭 
+
+    assert( ~(is_mstGrantData_valid &
+      ( ~is_slvAcquire_StateOn |
+        is_slvGrantData_StateOn |
+        is_slvGrantAck_StateOn |
+        ~is_mstAcquire_StateOn |
+        is_mstGrantAck_StateOn |
+        is_mstProbe_StateOn |
+        is_mstProbeAckData_StateOn |
+        is_mstReleaseData_StateOn |
+        is_mstReleaseAck_StateOn |
+        ~is_slvGrantData_Waiting |
+        is_slvGrantAck_valid |
+        is_mstAcquire_Waiting |
+        is_mstGrantAck_Waiting |
+        is_mstProbe_valid |
+        is_mstProbeAckData_Waiting |
+        is_mstReleaseData_Waiting |
+        is_mstReleaseAck_valid 
+      )),
+      "Assert Failed at TLC-L2.scala, invalid state in mst GrantData" )
 
   is_mstGrantAck_allowen :=
-    is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    is_mstAcquire_StateOn &
-    is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn &
-    ~is_mstProbeAckData_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    ~is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    // ~is_SlvProbe_Waiting &
-    // ~is_SlvProbeData_valid &
-    // ~is_SlvProbeAck_valid &
-    // ~is_SlvReleaseData_valid &
-    // ~is_SlvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    is_mstGrantAck_Waiting
+    // is_slvAcquire_StateOn & //通过断言，必定打开
+    // ~is_slvGrantData_StateOn & //通过断言，必定关闭
+    // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
+    // ~is_slvProbe_StateOn & //并行操作
+    // ~is_slvProbeAckData_StateOn & //并行操作
+    // ~is_slvReleaseData_StateOn & //并行操作
+    // ~is_slvReleaseAck_StateOn & //并行操作
+    // is_mstAcquire_StateOn & //通过断言，必定打开
+    // is_mstGrantData_StateOn & //通过断言，必定打开
+    ~is_mstGrantAck_StateOn & //资源占用
+    // ~is_mstProbe_StateOn & //并行操作
+    ~is_mstProbeAckData_StateOn &  //并行操作
+    ~is_mstReleaseData_StateOn & //并行操作
+    ~is_mstReleaseAck_StateOn & //并行操作
+    // ~is_slvAcquire_valid &
+    // ~is_slvGrantData_Waiting & //通过断言，必定打开
+    // ~is_slvGrantAck_valid & //通过断言，必定关闭
+    // ~is_SlvProbe_Waiting & //并行操作
+    // ~is_SlvProbeData_valid & //并行操作
+    // ~is_SlvProbeAck_valid & //并行操作
+    // ~is_SlvReleaseData_valid & //并行操作
+    // ~is_SlvReleaseAck_Waiting & //并行操作
+    // ~is_mstAcquire_Waiting & //通过断言，必定关闭
+    // ~is_mstGrantData_valid & //通过断言，必定关闭
+    is_mstGrantAck_Waiting //请求操作
     // ~is_mstProbe_valid &
     // ~is_mstProbeAck_Waiting &
     // ~is_mstProbeData_Waiting &
     // ~is_mstReleaseData_Waiting &
     // ~is_mstReleaseAck_valid
 
+  assert(
+    is_mstGrantAck_Waiting & (
+      ~is_slvAcquire_StateOn | 
+      is_slvGrantData_StateOn |
+      is_slvGrantAck_StateOn |
+      ~is_mstAcquire_StateOn |
+      is_mstGrantData_StateOn |
+      ~is_slvGrantData_Waiting |
+      is_slvGrantAck_valid |
+      is_mstAcquire_Waiting |
+      is_mstGrantData_valid
+    ),
+    "Assert Failed at TLC_L2.scala, invalid state in mst Grant ACK"
+  )
+
+
   is_mstProbe_allowen :=
-    // ~is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    // ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn &
-    ~is_mstProbeAckData_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    // ~is_slvGrantData_Waiting &
-    // ~is_slvGrantAck_valid &
-    // ~is_slvProbe_Waiting &
-    // ~is_slvProbeData_valid &
-    // ~is_slvProbeAck_valid &
-    // ~is_slvReleaseData_valid &
-    // ~is_slvReleaseAck_Waiting &
-    // ~is_mstAcquire_Waiting &
-    // ~is_mstGrantData_valid &
-    // ~is_mstGrantAck_Waiting &
-    is_mstProbe_valid &
-    ~is_mstProbeAckData_Waiting
-    // ~is_mstReleaseData_Waiting &
-    // ~is_mstReleaseAck_valid
+    // ~is_slvAcquire_StateOn & //抢夺资源
+    ~is_slvGrantData_StateOn & //资源占用
+    // ~is_slvGrantAck_StateOn & //并行操作
+    // ~is_slvProbe_StateOn & //并行操作
+    ~is_slvProbeAckData_StateOn & //资源占用
+    ~is_slvReleaseData_StateOn & //资源占用
+    // ~is_slvReleaseAck_StateOn & //并行操作
+    // ~is_mstAcquire_StateOn & //抢夺资源
+    // ~is_mstGrantData_StateOn & //并行操作
+    // ~is_mstGrantAck_StateOn & //并行操作
+    ~is_mstProbe_StateOn & //资源占用
+    // ~is_mstProbeAckData_StateOn & //通过断言，必定关闭
+    ~is_mstReleaseData_StateOn & //资源占用
+    // ~is_mstReleaseAck_StateOn & //并行操作
+    // ~is_slvAcquire_valid & //抢夺资源
+    // ~is_slvGrantData_Waiting & //抢夺资源
+    // ~is_slvGrantAck_valid & //并行操作
+    // ~is_slvProbe_Waiting & //并行操作
+    // ~is_slvProbeData_valid & //并行操作
+    // ~is_slvProbeAck_valid & //并行操作
+    ~is_slvReleaseData_valid & //资源占用
+    // ~is_slvReleaseAck_Waiting & //并行操作
+    // ~is_mstAcquire_Waiting & //并行操作
+    // ~is_mstGrantData_valid & //并行操作
+    // ~is_mstGrantAck_Waiting & //并行操作
+    is_mstProbe_valid  //请求到来
+    // ~is_mstProbeAckData_Waiting //通过断言，必定关闭
+    // ~is_mstReleaseData_Waiting & //抢夺资源
+    // ~is_mstReleaseAck_valid //资源占用
+
+    assert( ~(is_mstProbe_valid & (is_mstProbeAckData_StateOn | is_mstProbeAckData_Waiting)), )
+
+
 
 
   is_mstProbeAckData_allowen :=
-    // ~is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    is_mstProbe_StateOn &
-    ~is_mstProbeAckData_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    ~is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    ~is_slvProbe_Waiting &
-    ~is_slvProbeAckData_valid &
-    ~is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    is_mstProbeAckData_Waiting &
-    ~is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
+    // ~is_slvAcquire_StateOn & //抢夺资源
+    ~is_slvGrantData_StateOn & //资源占用
+    // ~is_slvGrantAck_StateOn & //并行操作
+    // ~is_slvProbe_StateOn & //并行操作
+    ~is_slvProbeAckData_StateOn & //资源占用
+    ~is_slvReleaseData_StateOn & //资源占用
+    // ~is_slvReleaseAck_StateOn & //并行操作
+    // ~is_mstAcquire_StateOn & //抢夺资源
+    ~is_mstGrantData_StateOn & //资源占用
+    // ~is_mstGrantAck_StateOn & //并行操作
+    // is_mstProbe_StateOn & //通过断言，必定打开
+    ~is_mstProbeAckData_StateOn & //资源占用
+    ~is_mstReleaseData_StateOn & //资源占用
+    ~is_mstReleaseAck_StateOn & //资源占用
+    // is_slvAcquire_valid & //抢夺资源
+    // ~is_slvGrantData_Waiting & //抢夺资源
+    // ~is_slvGrantAck_valid & //并行操作
+    // ~is_slvProbe_Waiting & //并行操作
+    ~is_slvProbeAckData_valid & //资源占用,让步被动消息
+    ~is_slvReleaseData_valid & //资源占用,让步被动消息
+    // ~is_slvReleaseAck_Waiting & //并行操作
+    // ~is_mstAcquire_Waiting & //并行操作
+    ~is_mstGrantData_valid & //资源占用,让步被动消息
+    // ~is_mstGrantAck_Waiting & //并行操作
+    // ~is_mstProbe_valid & //通过断言，必定关闭
+    is_mstProbeAckData_Waiting //请求到来
+    // ~is_mstReleaseData_Waiting & //抢夺资源
+    // ~is_mstReleaseAck_valid //抢夺资源
 
+    assert( ~(is_mstProbeAckData_Waiting & (~is_mstProbe_StateOn | is_mstProbe_valid) ),
+      "Assert Failed at TLC_L2.scala, invalid state in mstProbeAckData"
+     )
 
   is_mstReleaseData_allowen :=
-    is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    // ~is_mstProbe_StateOn & 
-    ~is_mstProbeAckData_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    ~is_slvProbe_Waiting &
-    ~is_slvProbeAckData_valid &
-    is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    ~is_mstProbeAckData_Waiting &
-    is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
+    // is_slvAcquire_StateOn & //通过断言，必定打开
+    // ~is_slvGrantData_StateOn & //通过断言，必定关闭
+    // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
+    // ~is_slvProbe_StateOn & //并行操作
+    ~is_slvProbeAckData_StateOn & //资源占用,让步被动消息
+    ~is_slvReleaseData_StateOn & //资源占用,让步被动消息
+    // ~is_slvReleaseAck_StateOn & //并行操作
+    // ~is_mstAcquire_StateOn & //通过断言，必定关闭
+    ~is_mstGrantData_StateOn & //资源占用,让步被动消息
+    // ~is_mstGrantAck_StateOn & //并行操作
+    // ~is_mstProbe_StateOn & //并行操作
+    ~is_mstProbeAckData_StateOn & //资源占用
+    ~is_mstReleaseData_StateOn & //资源占用
+    // ~is_mstReleaseAck_StateOn & //并行操作
+    // is_slvAcquire_valid & //抢夺资源
+    // is_slvGrantData_Waiting & //通过断言，必定打开
+    // ~is_slvGrantAck_valid & //并行操作
+    // ~is_slvProbe_Waiting & //并行操作
+    ~is_slvProbeAckData_valid & //资源占用,让步被动消息
+    is_slvReleaseData_valid & //资源占用,让步被动消息
+    // ~is_slvReleaseAck_Waiting //并行操作
+    // ~is_mstAcquire_Waiting & //通过断言，必定关闭
+    // ~is_mstGrantData_valid & //通过断言，必定关闭
+    // ~is_mstGrantAck_Waiting & //并行操作
+    // ~is_mstProbe_valid & //并行操作
+    ~is_mstProbeAckData_Waiting & //资源占用
+    is_mstReleaseData_Waiting  //请求到来
+    // ~is_mstReleaseAck_valid //通过断言，必定关闭
+
+    assert(
+      ~(is_mstReleaseData_Waiting & (~is_slvAcquire_StateOn | is_slvGrantData_StateOn | is_slvGrantAck_StateOn | is_mstAcquire_StateOn | ~is_slvGrantData_Waiting | is_mstAcquire_Waiting | is_mstGrantData_valid | is_mstReleaseAck_valid))，
+      "Assert Failed TLC_L2.scala, invalid state in mst release Data"
+    )
 
   is_mstReleaseAck_allowen :=
-    is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn & 
-    ~is_mstProbeAckData_StateOn &
-    is_mstReleaseData_StateOn &
-    // ~is_slvGrantData_Waiting &
-    // ~is_slvGrantAck_valid &
-    // ~is_slvProbe_Waiting &
-    // ~is_slvProbeData_valid &
-    // ~is_slvProbeAck_valid &
-    // ~is_slvReleaseData_valid &
-    // ~is_slvReleaseAck_Waiting
-    // ~is_mstAcquire_Waiting &
-    // ~is_mstGrantData_valid &
-    // ~is_mstGrantAck_Waiting &
-    // ~is_mstProbe_valid &
-    // ~is_mstProbeAck_Waiting &
-    // ~is_mstProbeData_Waiting &
-    // ~is_mstReleaseData_Waiting &
-    is_mstReleaseAck_valid
+    // is_slvAcquire_StateOn & //通过断言，必定打开
+    // ~is_slvGrantData_StateOn & //通过断言，必定关闭
+    // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
+    // ~is_slvProbe_StateOn & //并行操作
+    // ~is_slvProbeAckData_StateOn & //并行操作
+    // ~is_slvReleaseData_StateOn & //并行操作
+    // ~is_slvReleaseAck_StateOn & //并行操作
+    // ~is_mstAcquire_StateOn & //并行操作
+    // ~is_mstGrantData_StateOn & //并行操作
+    // ~is_mstGrantAck_StateOn & //并行操作
+    // ~is_mstProbe_StateOn & //并行操作
+    // ~is_mstProbeAckData_StateOn & //并行操作
+    // is_mstReleaseData_StateOn & //通过断言，必定打开
+    // is_slvAcquire_valid & //并行操作
+    // ~is_slvGrantData_Waiting & //并行操作
+    // ~is_slvGrantAck_valid & //并行操作
+    // ~is_slvProbe_Waiting & //并行操作
+    // ~is_slvProbeData_valid & //并行操作
+    // ~is_slvProbeAck_valid & //并行操作
+    // ~is_slvReleaseData_valid & //并行操作
+    // ~is_slvReleaseAck_Waiting //并行操作
+    // ~is_mstAcquire_Waiting & //并行操作
+    // ~is_mstGrantData_valid & //并行操作
+    // ~is_mstGrantAck_Waiting & //并行操作
+    // ~is_mstProbe_valid & //并行操作
+    // ~is_mstProbeAck_Waiting & //并行操作
+    // ~is_mstProbeData_Waiting & //并行操作
+    // ~is_mstReleaseData_Waiting & //并行操作
+    is_mstReleaseAck_valid //请求到来
+
+  assert(
+    ~(is_mstReleaseAck_valid & (~is_slvAcquire_StateOn | is_slvGrantData_StateOn | is_slvGrantAck_StateOn | ~is_mstReleaseData_StateOn)),
+    "Assert Failed TLC_L2.scala, invalid state in mst ReleaseAck"
+  )
+
 
 
     is_slvAcquire_valid := slv_chn_a.valid
