@@ -36,6 +36,10 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
   override def cl = 64
   override def agent_no = 4
 
+
+
+
+  
   /**
     * slvAcquire：passive
     * 
@@ -512,20 +516,12 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
 
 
-
-
-
-
-
-
   for ( i <- 0 until cb ) yield {
     cache_dat.dat_en_w(i) :=
       info_slvProbeAck_Data_cache_dat_wen(i) |
       info_slvReleaseData_cache_dat_wen(i) |
       info_mstGrantData_cache_dat_wen(i)
   }
-
-
 
   cache_dat.dat_addr_w :=
     Mux1H(Seq(
@@ -546,8 +542,14 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       info_slvProbeAck_Data_cache_dat_wen.contains(true.B) -> info_slvProbeAck_Data_cache_dat_winfo,
       info_slvReleaseData_cache_dat_wen.contains(true.B) -> info_slvReleaseData_cache_dat_winfo,
       info_mstGrantData_cache_dat_wen.contains(true.B) -> info_mstGrantData_cache_dat_winfo
-
     )) 
+
+  assert(PopCount(Cat(
+    info_slvProbeAck_Data_cache_dat_wen.contains(true.B),
+    info_slvReleaseData_cache_dat_wen.contains(true.B),
+    info_mstGrantData_cache_dat_wen.contains(true.B)
+    )) <= 1.U, 
+    "Assert Failed at TLC_L2.scala cache_data_wen should be One-Hot" )
 
   for ( i <- 0 until cb ) yield {
     cache_dat.dat_en_r(i) :=
@@ -564,11 +566,21 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       info_mstProbeData_cache_dat_ren.contains(true.B) -> info_mstProbeData_cache_dat_raddr
     ))
 
+  assert(PopCount(Cat(
+    info_slvGrantData_cache_dat_ren.contains(true.B),
+    info_mstReleaseData_cache_dat_ren.contains(true.B),
+   info_mstProbeData_cache_dat_ren.contains(true.B)
+    )) <= 1.U, 
+    "Assert Failed at TLC_L2.scala cache_data_ren should be One-Hot" )
+
+
   for ( i <- 0 until cb ) yield {
     cache_tag.tag_en_w(i) := info_mstGrantData_cache_tag_wen(i)    
   }
 
   cache_tag.tag_addr_w := info_mstGrantData_cache_tag_waddr
+
+
 
   for ( i <- 0 until cb ) yield {
     cache_tag.tag_en_r(i) :=
@@ -585,6 +597,12 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       info_mstProbe_cache_tag_ren.contains(true.B) -> info_mstProbe_cache_tag_raddr
     ))
 
+  assert(PopCount(Cat(
+    info_slvAcquire_cache_tag_ren.contains(true.B),
+    info_slvGrantData_cache_tag_ren.contains(true.B),
+    info_mstProbe_cache_tag_ren.contains(true.B)
+    )) <= 1.U, 
+    "Assert Failed at TLC_L2.scala cache_tag_ren should be One-Hot" )
 
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
     cache_coh.coh_en_w(i)(j) :=
@@ -613,13 +631,21 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       info_mstGrantData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))     -> info_mstGrantData_cache_coh_winfo,
       ))
 
+  assert(PopCount(Cat(
+    info_slvGrantAck_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)),
+    info_slvProbeAck_Data_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)),
+    info_slvReleaseData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)),
+    info_mstGrantData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))
+    )) <= 1.U, 
+    "Assert Failed at TLC_L2.scala cache_coh_wen should be One-Hot" )
+
+
+
   for ( i <- 0 until cb ) yield {
     cache_coh.coh_en_r(i) :=
       info_slvGrantData_cache_coh_ren(i) |
       info_mstProbeData_cache_coh_ren(i)    
   }
-
-    
 
   cache_coh.coh_addr_r :=
     Mux1H(Seq(
@@ -627,6 +653,11 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       info_mstProbeData_cache_coh_ren.contains(true.B) -> info_mstProbeData_cache_coh_raddr
     ))
 
+  assert(PopCount(Cat(
+    info_slvGrantData_cache_coh_ren.contains(true.B),
+    info_mstProbeData_cache_coh_ren.contains(true.B)
+    )) <= 1.U, 
+    "Assert Failed at TLC_L2.scala cache_coh_ren should be One-Hot" )
 
 }
 
