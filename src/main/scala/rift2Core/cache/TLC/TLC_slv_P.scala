@@ -105,8 +105,8 @@ trait TLC_slv_probeAckData extends TLC_base {
 
 
 
-  is_slvProbeData_valid := slv_chn_c0.valid & slv_chn_c0.bits.opcode === Opcode.ProbeAckData
-  is_slvProbeAck_valid  := slv_chn_c0.valid & slv_chn_c0.bits.opcode === Opcode.ProbeAck
+  // is_slvProbeData_valid := slv_chn_c0.valid & slv_chn_c0.bits.opcode === Opcode.ProbeAckData
+  // is_slvProbeAckData_valid := slv_chn_c0.valid 
 
   val c0_ready = RegInit(false.B)
   slv_chn_c0.ready := c0_ready
@@ -114,20 +114,20 @@ trait TLC_slv_probeAckData extends TLC_base {
   val slvProbeData_addr = RegInit(0.U(64.W))
   val is_slvProbeData_addrend = slvProbeData_addr( mst_lsb-1, bus_lsb ).andR
 
-  when( is_slvProbeAck_valid | is_slvProbeData_valid ) { c0_ready := true.B }
+  when( is_slvProbeAckData_valid ) { c0_ready := true.B }
   .elsewhen( slv_chn_c0.fire ) {
     c0_ready := false.B
   }
 
-  when( is_slvProbeData_valid & ~is_slvProbeData_StateOn ) {
-    is_slvProbeData_StateOn := true.B
+  when( is_slvProbeAckData_allowen ) {
+    is_slvProbeAckData_StateOn := true.B
     slvProbeData_addr := info_slvProbe_address
   }
-  .elsewhen( slv_chn_c0.fire & is_slvProbeData_StateOn ) {
+  .elsewhen( slv_chn_c0.fire & is_slvProbeAckData_StateOn ) {
     slvProbeData_addr := slvProbeData_addr + (1.U << bus_lsb)
   }
-  .elsewhen( slv_chn_c0.fire & is_slvProbeData_addrend ) {
-    is_slvProbeData_StateOn := false.B
+  .elsewhen( slv_chn_c0.fire & (is_slvProbeData_addrend | slv_chn_c0.bits.opcode === Opcode.ProbeAck) ) {
+    is_slvProbeAckData_StateOn := false.B
     is_slvProbe_StateOn := false.B
   }
 
@@ -135,12 +135,12 @@ trait TLC_slv_probeAckData extends TLC_base {
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
     info_slvProbeAck_Data_cache_coh_wen(i)(j) := 
     ( i.U === info_slvProbe_cb ) & ( j.U === info_slvProbe_bk ) & 
-    is_slvProbeData_StateOn & slv_chn_c0.fire & is_slvProbeData_addrend
+    slv_chn_c0.fire & (is_slvProbeData_addrend | slv_chn_c0.bits.opcode === Opcode.ProbeAck)
   }
   info_slvProbeAck_Data_cache_coh_waddr := info_slvProbe_address
   info_slvProbeAck_Data_cache_coh_winfo := 0.U
 
-  when( is_slvProbeData_StateOn & slv_chn_c0.fire & is_slvProbeData_addrend ) {
+  when( slv_chn_c0.fire & (is_slvProbeData_addrend | slv_chn_c0.bits.opcode === Opcode.ProbeAck) ) {
     cache_mdf(info_slvProbe_cl)(info_slvProbe_cb)(info_slvProbe_bk) := true.B
   }
 
@@ -148,7 +148,7 @@ trait TLC_slv_probeAckData extends TLC_base {
   for ( i <- 0 until cb ) yield {
     info_slvProbeAck_Data_cache_dat_wen(i) :=
     ( i.U === info_slvProbe_cb ) & 
-    is_slvProbeData_StateOn & slv_chn_c0.fire    
+    is_slvProbeAckData_StateOn & slv_chn_c0.fire    
   }
 
   info_slvProbeAck_Data_cache_dat_waddr := info_slvProbe_address

@@ -77,13 +77,9 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
   val is_slvProbe_StateOn = RegInit(false.B)
   val is_slvProbe_allowen = Wire(Bool())
 
-  val is_slvProbeAck_valid = Wire(Bool())
-  val is_slvProbeAck_StateOn = RegInit(false.B)
-  val is_slvProbeAck_allowen = Wire(Bool())
-
-  val is_slvProbeData_valid = Wire(Bool())
-  val is_slvProbeData_StateOn = RegInit(false.B)
-  val is_slvProbeData_allowen = Wire(Bool())
+  val is_slvProbeAckData_valid = Wire(Bool())
+  val is_slvProbeAckData_StateOn = RegInit(false.B)
+  val is_slvProbeAckData_allowen = Wire(Bool())
 
   val is_slvReleaseData_valid = Wire(Bool())
   val is_slvReleaseData_StateOn = RegInit(false.B)
@@ -111,9 +107,9 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
   val is_mstProbe_StateOn = RegInit(false.B)
   val is_mstProbe_allowen = Wire(Bool())
 
-  val is_mstProbeAck_Data_Waiting = RegInit(false.B)
-  val is_mstProbeAck_Data_StateOn = RegInit(false.B)
-  val is_mstProbeAck_Data_allowen = Wire(Bool())
+  val is_mstProbeAckData_Waiting = RegInit(false.B)
+  val is_mstProbeAckData_StateOn = RegInit(false.B)
+  val is_mstProbeAckData_allowen = Wire(Bool())
 
   val is_mstReleaseData_Waiting = RegInit(false.B)
   val is_mstReleaseData_StateOn = RegInit(false.B)
@@ -152,9 +148,9 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
   val info_slvGrantData_cache_dat_ren   = Wire(Vec(cb, Bool()))
   val info_slvGrantData_cache_dat_raddr = Wire(UInt(64.W))
 
-  val info_slvGrantAck_cache_coh_wen   = Wire(Vec(cb, Vec(bk, Bool())))
-  val info_slvGrantAck_cache_coh_waddr = Wire(UInt(64.W))
-  val info_slvGrantAck_cache_coh_winfo = Wire(UInt(8.W))
+  val info_slvGrantData_cache_coh_wen   = Wire(Vec(cb, Vec(bk, Bool())))
+  val info_slvGrantData_cache_coh_waddr = Wire(UInt(64.W))
+  val info_slvGrantData_cache_coh_winfo = Wire(UInt(8.W))
 
   val info_slvProbe_address = Wire( UInt(64.W) )
   val info_slvProbe_cl = Wire( UInt(log2Ceil(cl).W) )
@@ -188,13 +184,17 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
 
   val info_slvReleaseData_source  = Wire( UInt(8.W) )
 
+
+
+
+
   // val info_mstAcquire_address = Wire( UInt(64.W) )
   val info_mstGrantData_address = RegInit( 0.U(64.W) )
 
 
-  val info_mstGrantData_cache_coh_wen   = Wire(Vec(cb, Vec(bk, Bool())))
-  val info_mstGrantData_cache_coh_waddr = Wire(UInt(64.W))
-  val info_mstGrantData_cache_coh_winfo = Wire(UInt(8.W))
+  val info_mstGrantAck_cache_coh_wen   = Wire(Vec(cb, Vec(bk, Bool())))
+  val info_mstGrantAck_cache_coh_waddr = Wire(UInt(64.W))
+  val info_mstGrantAck_cache_coh_winfo = Wire(UInt(8.W))
 
   val info_mstGrantData_cache_dat_wen   = Wire(Vec(cb, Bool()))
   val info_mstGrantData_cache_dat_waddr = Wire(UInt(64.W))

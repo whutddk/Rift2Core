@@ -128,6 +128,17 @@ trait TLC_slv_grantData extends TLC_base{
  
   info_slvGrantData_cache_dat_raddr := info_slvGrantData_address
 
+  for ( i <- 0 until cb; j <- 0 until bk ) yield {
+    info_slvGrantData_cache_coh_wen(i)(j) := 
+      (i.U === info_slvAcquire_cb) & (j.U === info_slvAcquire_bk) &
+      slvGrantData_State_qout === 2.U & slvGrantData_State_dnxt === 0.U
+  }
+
+  info_slvGrantData_cache_coh_waddr := info_slvAcquire_address
+  info_slvGrantData_cache_coh_winfo := info_slvAcquire_source
+
+
+
   val d_valid = RegInit(false.B)
 
 
@@ -193,6 +204,11 @@ trait TLC_slv_grantData extends TLC_base{
     is_slvGrantData_StateOn := true.B
     is_slvGrantData_Waiting := false.B
   }
+
+
+
+
+
 }
 
 trait TLC_slv_grantAck extends TLC_base {
@@ -207,14 +223,8 @@ trait TLC_slv_grantAck extends TLC_base {
     is_slvAcquire_StateOn   := false.B
     is_slvGrantData_StateOn := false.B
   }
-  for ( i <- 0 until cb; j <- 0 until bk ) yield {
-    info_slvGrantAck_cache_coh_wen(i)(j) := 
-      (i.U === info_slvAcquire_cb) & (j.U === info_slvAcquire_bk) &
-      slv_chn_e.fire
-  }
 
-  info_slvGrantAck_cache_coh_waddr := info_slvAcquire_address
-  info_slvGrantAck_cache_coh_winfo := info_slvAcquire_source
+
 
 
 }

@@ -80,14 +80,7 @@ trait TLC_mst_grantData extends TLC_base{
 
   }
 
-  for ( i <- 0 until cb; j <- 0 until bk ) yield {
-    info_mstGrantData_cache_coh_wen(i)(j) := 
-      ( i.U === info_slvAcquire_cb ) & ( j.U === info_slvAcquire_bk ) &
-      ( is_mstGrantData_addrend & mst_chn_d0.fire )
-  }
 
-  info_mstGrantData_cache_coh_waddr := info_slvAcquire_address & (Fill(64, 1.U) << addr_lsb)
-  info_mstGrantData_cache_coh_winfo := 0.U
 
   for ( i <- 0 until cb ) yield {
     info_mstGrantData_cache_dat_wen(i) := 
@@ -123,6 +116,14 @@ trait TLC_mst_grantAck extends TLC_base{
   when( is_mstGrantAck_allowen ) { is_mstGrantAck_Waiting := false.B }
   when( mst_chn_e.fire ) { is_mstGrantData_StateOn := false.B; is_mstAcquire_StateOn := false.B}
 
+  for ( i <- 0 until cb; j <- 0 until bk ) yield {
+    info_mstGrantAck_cache_coh_wen(i)(j) := 
+      ( i.U === info_slvAcquire_cb ) & ( j.U === info_slvAcquire_bk ) &
+      ( mst_chn_e.fire )
+  }
+
+  info_mstGrantAck_cache_coh_waddr := info_slvAcquire_address & (Fill(64, 1.U) << addr_lsb)
+  info_mstGrantAck_cache_coh_winfo := 0.U
 }
 
 
