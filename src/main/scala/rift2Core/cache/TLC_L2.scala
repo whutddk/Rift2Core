@@ -124,123 +124,139 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     // is_slvAcquire_StateOn & //通过断言，请求时必定是打开的
     // is_slvGrantData_StateOn & //通过断言，请求时必定是打开的
     ~is_slvGrantAck_StateOn & //请求有效时必定是关闭的
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbe_StateOn &
-    ~is_mstProbeAckData_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    ~is_slvGrantData_Waiting &
+    // ~is_slvProbe_StateOn & //优先级高于slvProbe
+    // ~is_slvProbeAckData_StateOn & //优先级高于slvProbe
+    // ~is_slvReleaseData_StateOn & //优先级高于slvRelease
+    // ~is_slvReleaseAck_StateOn & //优先级高于slvRelease
+    // ~is_mstAcquire_StateOn & //通过断言，请求时必定是关闭的
+    // ~is_mstGrantData_StateOn & //通过断言，请求时必定是关闭的
+    // ~is_mstGrantAck_StateOn & //通过断言，请求时必定是关闭的
+    // ~is_mstProbe_StateOn & //优先级高于mstProbe
+    // ~is_mstProbeAckData_StateOn & //优先级高于mstProbe
+    // ~is_mstReleaseData_StateOn & //通过断言，请求时必定是关闭的
+    // ~is_mstReleaseAck_StateOn & //通过断言，请求时必定是关闭的
     // ~is_slvAcquire_valid         & // 优先级高于slvAcquire
-     is_slvGrantAck_valid &
-    // ~is_SlvProbe_Waiting &
-    // ~is_SlvProbeData_valid &
-    // ~is_SlvProbeAck_valid &
-    // ~is_SlvReleaseData_valid &
-    // ~is_SlvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    ~is_mstProbeAckData_Waiting &
-    ~is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
+    // ~is_slvGrantData_Waiting & //通过断言，请求时必定是关闭的
+     is_slvGrantAck_valid 
+    // ~is_SlvProbe_Waiting & //优先级高于slvProbe
+    // ~is_SlvProbeAckData_valid & //优先级高于slvProbe
+    // ~is_SlvReleaseData_valid & //优先级高于slvRelease
+    // ~is_SlvReleaseAck_Waiting & //优先级高于slvRelease
+    // ~is_mstAcquire_Waiting & //通过断言，请求时必定是关闭的
+    // ~is_mstGrantData_valid & //通过断言，请求时必定是关闭的
+    // ~is_mstGrantAck_Waiting & //通过断言，请求时必定是关闭的
+    // ~is_mstProbe_valid & //优先级高于mstProbe
+    // ~is_mstProbeAckData_Waiting & //优先级高于mstProbe
+    // ~is_mstReleaseData_Waiting & //通过断言，请求时必定是关闭的
+    // ~is_mstReleaseAck_valid //通过断言，请求时必定是关闭的
 
   assert( ~(is_slvGrantAck_valid & (~is_slvAcquire_StateOn | ~is_slvGrantData_StateOn)), "Assert Failed at TLC-L2, when slv GrantAck in chn e, the slv acquire and slv grantdata is state-off, that's impossible!" )
-
+  assert( ~(is_slvGrantAck_valid &
+    ( is_mstAcquire_StateOn | is_mstGrantData_StateOn | is_mstGrantAck_StateOn |
+     is_mstReleaseData_StateOn | is_mstReleaseAck_StateOn |
+     is_slvGrantData_Waiting | is_mstAcquire_Waiting | is_mstGrantData_valid | 
+     is_mstGrantAck_Waiting | is_mstReleaseData_Waiting | is_mstReleaseAck_valid )),
+     "Assert Failed at TLC-L2, the and Parents/Parasitic message is not resolved when slv grant ack"
+  )
 
 
   is_slvProbe_allowen :=
-    (is_slvAcquire_StateOn | is_mstProbe_StateOn) &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    ~is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbeAckData_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    ~is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-     is_slvProbe_Waiting &
-    ~is_slvProbeAckData_valid &
-    ~is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    ~is_mstProbeAckData_Waiting &
-    ~is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
+    // is_slvAcquire_StateOn & //通过断言，必定打开一个
+    // ~is_slvGrantData_StateOn & //可以与slvGrantData并行处理
+    // ~is_slvGrantAck_StateOn & //可以与slvGrantack并行处理
+    ~is_slvProbe_StateOn & //占用,则不能请求
+    ~is_slvProbeAckData_StateOn & //被占用,可能是另一主消息的寄生消息
+    // ~is_slvReleaseData_StateOn & //可以与slvRelease并行处理
+    // ~is_slvReleaseAck_StateOn & //可以与slvRelease并行处理
+    // ~is_mstAcquire_StateOn & //可以与mstAcquire并行处理
+    // ~is_mstGrantData_StateOn & //可以与mstAcquire并行处理
+    // ~is_mstGrantAck_StateOn & //可以与mstAcquire并行处理
+    // is_mstProbe_StateOn & //通过断言，必定打开一个
+    // ~is_mstProbeAckData_StateOn & //可以并行处理
+    // ~is_mstReleaseData_StateOn  & //可以并行处理
+    // ~is_mstReleaseAck_StateOn   & //可以并行处理
+    // ~is_slvAcquire_valid        & //可以并行处理
+    // ~is_slvGrantData_Waiting & //可以与slvGrantData并行处理
+    // ~is_slvGrantAck_valid & //可以与slvGrantack并行处理
+     is_slvProbe_Waiting & //请求到来
+    ~is_slvProbeAckData_valid //占用
+    // ~is_slvReleaseData_valid & //可以与slvRelease并行处理
+    // ~is_slvReleaseAck_Waiting & //可以与slvRelease并行处理
+    // ~is_mstAcquire_Waiting & //可以与mstAcquire并行处理
+    // ~is_mstGrantData_valid & //可以与mstAcquire并行处理
+    // ~is_mstGrantAck_Waiting & //可以与mstAcquire并行处理
+    // ~is_mstProbe_valid & //可以并行处理
+    // ~is_mstProbeAckData_Waiting & //可以并行处理
+    // ~is_mstReleaseData_Waiting & //可以并行处理
+    // ~is_mstReleaseAck_valid //可以并行处理
+
+  assert( ~(is_slvProbe_Waiting & ( ~is_slvAcquire_StateOn & ~is_mstProbe_StateOn )), "Assert Failed at TLC-L2, slv Probe is request from slv acquire or mst rec probe" )
+// assert( ~(is_slvProbe_Waiting & (is_slvProbeAckData_StateOn | )), "Assert Failed at TLC-L2, slv Probe is request with l")
+
 
 
   is_slvProbeAckData_allowen :=
-    (is_slvAcquire_StateOn | is_mstProbe_StateOn) &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    ~is_mstProbeAckData_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    ~is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    ~is_slvProbe_Waiting &
-    ~is_slvProbeAckData_valid &
-    ~is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting &
-    ~is_mstAcquire_Waiting &
-    ~is_mstGrantData_valid &
-    ~is_mstGrantAck_Waiting &
-    ~is_mstProbe_valid &
-    ~is_mstProbeAckData_Waiting &
-    ~is_mstReleaseData_Waiting &
-    ~is_mstReleaseAck_valid
+    //  is_slvAcquire_StateOn &  //通过断言，必定打开一个
+    ~is_slvGrantData_StateOn & //资源被占用
+    // ~is_slvGrantAck_StateOn & //并行操作
+    // is_slvProbe_StateOn &  //通过断言，必定打开
+    ~is_slvProbeAckData_StateOn & //资源被占用
+    ~is_slvReleaseData_StateOn & //资源被占用
+    ~is_slvReleaseAck_StateOn & //资源被占用
+    ~is_mstAcquire_StateOn & //资源被占用
+    ~is_mstGrantData_StateOn & //资源被占用
+    ~is_mstGrantAck_StateOn & //资源被占用
+    //  is_mstProbe_StateOn & //通过断言，必定打开一个
+    ~is_mstProbeAckData_StateOn & //资源被占用
+    ~is_mstReleaseData_StateOn & //资源被占用
+    ~is_mstReleaseAck_StateOn & //资源被占用
+    // ~is_slvAcquire_valid        & //更高优先级
+    // ~is_slvGrantData_Waiting & //优先级高于slv Grant
+    // ~is_slvGrantAck_valid &  //并行操作
+    // ~is_slvProbe_Waiting & //比slvProbe优先级更高
+     is_slvProbeAckData_valid & //请求到来
+    ~is_slvReleaseData_valid & //资源被占用 ,release 优先级更高
+    ~is_slvReleaseAck_Waiting //资源被占用 ,release 优先级更高
+    // ~is_mstAcquire_Waiting & //优先级更高
+    // ~is_mstGrantData_valid & //优先级更高
+    // ~is_mstGrantAck_Waiting & //并行操作
+    // ~is_mstProbe_valid & //并行操作
+    // ~is_mstProbeAckData_Waiting & //被动优先级更高
+    // ~is_mstReleaseData_Waiting & //被动优先级更高
+    // ~is_mstReleaseAck_valid //并行操作
+
+  assert( ~(is_slvProbeAckData_valid & (( ~is_slvAcquire_StateOn & ~is_mstProbe_StateOn) | ~is_mstProbe_StateOn)), "Assert Failed, at TLC-L2, request probeack data at a woring state" )
 
 
   is_slvReleaseData_allowen :=
-    // ~is_slvAcquire_StateOn &
-    ~is_slvGrantData_StateOn &
-    ~is_slvGrantAck_StateOn &
-    // ~is_slvProbe_StateOn &
-    ~is_slvProbeAckData_StateOn &
-    ~is_slvReleaseData_StateOn &
-    ~is_slvReleaseAck_StateOn &
-    // ~is_mstAcquire_StateOn &
-    ~is_mstGrantData_StateOn &
-    ~is_mstGrantAck_StateOn &
-    // ~is_mstProbe_StateOn & 
-    ~is_mstProbeAckData_StateOn &
-    ~is_mstReleaseData_StateOn &
-    ~is_mstReleaseAck_StateOn &
-    // ~is_slvGrantData_Waiting &
-    ~is_slvGrantAck_valid &
-    // ~is_slvProbe_Waiting &
-    ~is_slvProbeAckData_valid &
-    is_slvReleaseData_valid &
-    ~is_slvReleaseAck_Waiting
-    // ~is_mstAcquire_Waiting &
-    // ~is_mstGrantData_valid &
-    // ~is_mstGrantAck_Waiting &
-    // ~is_mstProbe_valid &
-    // ~is_mstProbeAck_Data_Waiting &
-    // ~is_mstReleaseData_Waiting &
-    // ~is_mstReleaseAck_valid
+    // ~is_slvAcquire_StateOn & //不关心这个状态
+    ~is_slvGrantData_StateOn & //资源被占用
+    // ~is_slvGrantAck_StateOn & //并行操作
+    // ~is_slvProbe_StateOn & //并行操作
+    ~is_slvProbeAckData_StateOn & //资源被占用
+    ~is_slvReleaseData_StateOn & //资源被占用
+    ~is_slvReleaseAck_StateOn & //资源被占用
+    // ~is_mstAcquire_StateOn & //并行操作
+    ~is_mstGrantData_StateOn &  //资源被占用
+    // ~is_mstGrantAck_StateOn & //并行操作
+    ~is_mstProbe_StateOn &   //资源被占用
+    ~is_mstProbeAckData_StateOn & //资源被占用
+    ~is_mstReleaseData_StateOn & //资源被占用
+    ~is_mstReleaseAck_StateOn & //并行操作
+    // ~is_slvAcquire_valid        & //更高优先级
+    // ~is_slvGrantData_Waiting & //更高优先级
+    // ~is_slvGrantAck_valid & //并行操作
+    // ~is_slvProbe_Waiting &  //并行操作
+    // ~is_slvProbeAckData_valid & //更高优先级
+    is_slvReleaseData_valid & //请求到来
+    ~is_slvReleaseAck_Waiting //资源被占用
+    // ~is_mstAcquire_Waiting & //更高优先级
+    // ~is_mstGrantData_valid & //更高优先级
+    // ~is_mstGrantAck_Waiting & //并行操作
+    // ~is_mstProbe_valid & //并行操作
+    // ~is_mstProbeAck_Data_Waiting & //更高优先级
+    // ~is_mstReleaseData_Waiting &  //更高优先级
+    // ~is_mstReleaseAck_valid  //并行操作
 
 
   is_slvReleaseAck_allowen :=
@@ -592,7 +608,7 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       info_slvGrantData_cache_coh_wen(i)(j) |
       info_slvProbeAck_Data_cache_coh_wen(i)(j) |
       info_slvReleaseData_cache_coh_wen(i)(j) |
-      info_mstGrantAck_cache_coh_wen(i)(j)    
+      info_mstGrantData_cache_coh_wen(i)(j)    
   }
 
 
@@ -602,7 +618,7 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       info_slvGrantData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))      -> info_slvGrantData_cache_coh_waddr,
       info_slvProbeAck_Data_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)) -> info_slvProbeAck_Data_cache_coh_waddr,
       info_slvReleaseData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)) -> info_slvReleaseData_cache_coh_waddr,
-      info_mstGrantAck_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)) -> info_mstGrantAck_cache_coh_waddr,
+      info_mstGrantData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)) -> info_mstGrantData_cache_coh_waddr,
 
       ))
 
@@ -611,14 +627,14 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       info_slvGrantData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))      -> info_slvGrantData_cache_coh_winfo,
       info_slvProbeAck_Data_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)) -> info_slvProbeAck_Data_cache_coh_winfo,
       info_slvReleaseData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))   -> info_slvReleaseData_cache_coh_winfo,
-      info_mstGrantAck_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))     -> info_mstGrantAck_cache_coh_winfo,
+      info_mstGrantData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))     -> info_mstGrantData_cache_coh_winfo,
       ))
 
   assert(PopCount(Cat(
     info_slvGrantData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)),
     info_slvProbeAck_Data_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)),
     info_slvReleaseData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B)),
-    info_mstGrantAck_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))
+    info_mstGrantData_cache_coh_wen.exists((x:Vec[Bool]) => x.contains(true.B))
     )) <= 1.U, 
     "Assert Failed at TLC_L2.scala cache_coh_wen should be One-Hot" )
 

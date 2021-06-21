@@ -192,9 +192,9 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
   val info_mstGrantData_address = RegInit( 0.U(64.W) )
 
 
-  val info_mstGrantAck_cache_coh_wen   = Wire(Vec(cb, Vec(bk, Bool())))
-  val info_mstGrantAck_cache_coh_waddr = Wire(UInt(64.W))
-  val info_mstGrantAck_cache_coh_winfo = Wire(UInt(8.W))
+  val info_mstGrantData_cache_coh_wen   = Wire(Vec(cb, Vec(bk, Bool())))
+  val info_mstGrantData_cache_coh_waddr = Wire(UInt(64.W))
+  val info_mstGrantData_cache_coh_winfo = Wire(UInt(8.W))
 
   val info_mstGrantData_cache_dat_wen   = Wire(Vec(cb, Bool()))
   val info_mstGrantData_cache_dat_waddr = Wire(UInt(64.W))
