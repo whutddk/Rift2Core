@@ -124,8 +124,8 @@ trait AXI_mst_releaseAck extends TLC_base {
   }
 
 
-
-
 }
 
+
+trait AXI_mst_R extends TLC_base with AXI_mst_releaseReleaseData with AXI_mst_releaseAck
 

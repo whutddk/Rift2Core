@@ -112,6 +112,8 @@ trait AXI_mst_grantData extends TLC_base {
   override val is_mstGrantAck_allowen = false.B
 
 
-
-  
 }
+
+
+trait AXI_mst_A extends TLC_base with AXI_mst_Acquire with AXI_mst_grantData
+

@@ -22,19 +22,20 @@ import chisel3._
 import chisel3.util._
 
 import tilelink._
+import axi._
 
 import base._
 import rift2Core.cache._
 import rift2Core.cache.TLC._
 
-class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with TLC_mst_A with TLC_mst_P with TLC_mst_R {
+class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with AXI_mst_A with AXI_mst_R with AXI_mst_fence {
 
-  override def dw = 512
+  override def dw = 1024
   override def aw = 32
-  override def bk = 2
-  override def cb = 4
-  override def cl = 512
-  override def agent_no = 4
+  override def bk = 4
+  override def cb = 1
+  override def cl = 256
+  override def agent_no = 16
 
 
 
