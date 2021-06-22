@@ -409,7 +409,7 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     // ~is_mstReleaseAck_valid
 
   assert(
-    is_mstGrantAck_Waiting & (
+    ~(is_mstGrantAck_Waiting & (
       ~is_slvAcquire_StateOn | 
       is_slvGrantData_StateOn |
       is_slvGrantAck_StateOn |
@@ -419,7 +419,7 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       is_slvGrantAck_valid |
       is_mstAcquire_Waiting |
       is_mstGrantData_valid
-    ),
+    )),
     "Assert Failed at TLC_L2.scala, invalid state in mst Grant ACK"
   )
 
@@ -455,7 +455,9 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     // ~is_mstReleaseData_Waiting & //抢夺资源
     // ~is_mstReleaseAck_valid //资源占用
 
-    assert( ~(is_mstProbe_valid & (is_mstProbeAckData_StateOn | is_mstProbeAckData_Waiting)), )
+    assert( ~(is_mstProbe_valid & (is_mstProbeAckData_StateOn | is_mstProbeAckData_Waiting)), 
+      "Assert Failed at TLC-L2.scala, invalid mstProbe state"
+    )
 
 
 
@@ -525,7 +527,7 @@ class TLC_L2 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     // ~is_mstReleaseAck_valid //通过断言，必定关闭
 
     assert(
-      ~(is_mstReleaseData_Waiting & (~is_slvAcquire_StateOn | is_slvGrantData_StateOn | is_slvGrantAck_StateOn | is_mstAcquire_StateOn | ~is_slvGrantData_Waiting | is_mstAcquire_Waiting | is_mstGrantData_valid | is_mstReleaseAck_valid))，
+      ~(is_mstReleaseData_Waiting & (~is_slvAcquire_StateOn | is_slvGrantData_StateOn | is_slvGrantAck_StateOn | is_mstAcquire_StateOn | ~is_slvGrantData_Waiting | is_mstAcquire_Waiting | is_mstGrantData_valid | is_mstReleaseAck_valid)),
       "Assert Failed TLC_L2.scala, invalid state in mst release Data"
     )
 
