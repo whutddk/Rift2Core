@@ -114,9 +114,9 @@ trait TLC_mst_probeAckData extends TLC_base {
   mst_chn_c0.bits.source := agent_no.U
   
   when( mst_probe_Ack_Data_state_qout === 2.U & mst_probe_Ack_Data_state_dnxt === 0.U ) {
+    cache_inv(info_mstProbe_cl)(info_mstProbe_cb) := true.B
     for ( i <- 0 until bk ) yield {
       cache_mdf(info_mstProbe_cl)(info_mstProbe_cb)(i) := false.B
-      cache_inv(info_mstProbe_cl)(info_mstProbe_cb)(i) := true.B
     }
     is_mstProbe_StateOn := false.B
     is_mstProbeAckData_Waiting := false.B

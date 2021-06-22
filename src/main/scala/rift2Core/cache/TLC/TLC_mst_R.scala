@@ -86,8 +86,9 @@ trait TLC_mst_releaseReleaseData extends TLC_base {
   info_mstReleaseData_cache_dat_raddr := info_mstReleaseData_address
 
   when( mst_chn_c1.fire & ( is_mstReleaseData_addrend | is_mstReleaseData_dirty ) ) {
+    cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb) := true.B
     for ( i <- 0 until bk ) yield {
-      cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := true.B
+
       cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := false.B
     }
   }

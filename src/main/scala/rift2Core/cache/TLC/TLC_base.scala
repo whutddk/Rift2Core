@@ -123,7 +123,7 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
   val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
   val cache_tag = new Cache_tag( dw, aw, bk, cb, cl )
   val cache_coh = new Cache_coh( dw, aw, bk, cb, cl )
-  val cache_inv = RegInit( VecInit( Seq.fill(cl)( VecInit(Seq.fill(cb)( VecInit( Seq.fill(bk)(false.B)))))))
+  val cache_inv = RegInit( VecInit( Seq.fill(cl)( VecInit(Seq.fill(cb)(false.B)))))
   val cache_mdf = RegInit( VecInit( Seq.fill(cl)( VecInit(Seq.fill(cb)( VecInit( Seq.fill(bk)(false.B)))))))
 
 

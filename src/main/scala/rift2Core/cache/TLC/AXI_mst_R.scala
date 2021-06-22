@@ -97,8 +97,9 @@ trait AXI_mst_releaseReleaseData extends TLC_base {
   info_mstReleaseData_cache_dat_raddr := info_mstReleaseData_address
 
   when( is_mstReleaseData_state_qout =/= 0.U & is_mstReleaseData_state_dnxt === 0.U ) {
+      cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb) := true.B
     for ( i <- 0 until bk ) yield {
-      cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := true.B
+
       cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := false.B
     }
   }

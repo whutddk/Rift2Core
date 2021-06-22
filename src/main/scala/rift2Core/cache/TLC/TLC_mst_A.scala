@@ -72,8 +72,8 @@ trait TLC_mst_grantData extends TLC_base{
 
   when( is_mstGrantData_addrend & mst_chn_d0.fire ) {
     is_mstGrantAck_Waiting := true.B
+    cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb) := false.B
     for ( i <- 0 until bk ) yield {
-      cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := false.B
       cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := false.B
     }
 

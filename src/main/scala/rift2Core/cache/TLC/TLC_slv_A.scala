@@ -96,7 +96,7 @@ trait TLC_slv_grantData extends TLC_base{
   val is_slvGrantData_hit_clearen = cache_tag.tag_info_r(info_slvAcquire_cb) === info_slvGrantData_address(31, 32-tag_w)
   val is_slvGrantData_coh_clearen =
     cache_coh.coh_info_r( info_slvAcquire_bk ) =/= 0.U &
-    cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb)(info_slvAcquire_bk) === false.B
+    cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb) === false.B
     // cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb)(info_slvAcquire_bk) === false.B
 
 
@@ -184,7 +184,7 @@ trait TLC_slv_grantData extends TLC_base{
 
 
   when( slvGrantData_State_qout === 1.U ) {
-    when( cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb)(info_slvAcquire_bk) === true.B ) {
+    when( cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb) === true.B ) {
       is_mstAcquire_Waiting := true.B
     }
     .otherwise {
