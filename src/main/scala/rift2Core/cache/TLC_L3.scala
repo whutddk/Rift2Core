@@ -452,6 +452,7 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
   is_mstReleaseData_allowen :=
     ~fence.valid &
+    ~is_mstProbe_StateOn &
     ~is_mstFence_stateOn &
     // is_slvAcquire_StateOn & //通过断言，必定打开
     // ~is_slvGrantData_StateOn & //通过断言，必定关闭
@@ -489,6 +490,7 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
   is_mstReleaseAck_allowen :=
     // ~fence.valid & //并行操作
+    // ~is_mstProbe_StateOn &
     // ~is_mstFence_stateOn & //并行操作
     // is_slvAcquire_StateOn & //通过断言，必定打开
     // ~is_slvGrantData_StateOn & //通过断言，必定关闭

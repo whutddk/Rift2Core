@@ -96,13 +96,12 @@ trait AXI_mst_fence extends TLC_base {
 
 
 
-  override val is_mstProbe_valid = false.B
-  override val is_mstProbe_StateOn = false.B
-  override val is_mstProbe_allowen = false.B
+  is_mstProbe_valid := false.B
+  is_mstProbe_allowen := false.B
 
-  override val is_mstProbeAckData_Waiting = false.B
-  override val is_mstProbeAckData_StateOn = false.B
-  override val is_mstProbeAckData_allowen = false.B
+  is_mstProbeAckData_Waiting := false.B
+  is_mstProbeAckData_StateOn := false.B
+  is_mstProbeAckData_allowen := false.B
 
   for ( i <- 0 until cb ) yield {
     info_mstProbe_cache_tag_ren := 
@@ -148,8 +147,8 @@ trait AXI_mst_fence extends TLC_base {
     info_mstProbeData_address := info_mstProbeData_address + (1.U << bus_lsb)
   }
 
-
-
+  when(  mstFence_state_qout === 0.U & mstFence_state_dnxt === 1.U  ) { is_mstProbe_StateOn := true.B }
+  .elsewhen( fence.fire  )  { is_mstProbe_StateOn := false.B }
 }
 
 
