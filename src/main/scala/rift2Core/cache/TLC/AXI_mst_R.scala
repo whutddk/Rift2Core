@@ -26,43 +26,21 @@ import rift2Core.cache._
 
 trait AXI_mst_releaseReleaseData extends TLC_base {
 
-
-
   val is_mstReleaseData_invalid = cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb) === true.B
   val is_mstReleaseData_clean = cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb).forall( (x:Bool) => (x === false.B) )
- 
-
-  val is_mstReleaseData_state_dnxt = Wire( UInt(2.W) )
-  val is_mstReleaseData_state_qout = RegNext( is_mstReleaseData_state_dnxt, 0.U )
-
-  is_mstReleaseData_state_dnxt := 
-    Mux1H(Seq(
-      ( is_mstReleaseData_state_qout === 0.U ) -> Mux( is_slvReleaseData_allowen, 1.U, 0.U ),
-      ( is_mstReleaseData_state_qout === 1.U ) -> Mux( (is_mstReleaseData_clean | is_mstReleaseData_invalid), 0.U, Mux( mst_chn_aw0.fire, 2.U, 1.U )),
-      ( is_mstReleaseData_state_qout === 2.U ) -> Mux( is_mstReleaseData_addrend & mst_chn_w0.fire, 0.U, 2.U )
-    ))
-
-  when( is_mstReleaseData_state_qout === 0.U & is_mstReleaseData_state_dnxt === 1.U ) {
+   
+  when( is_slvReleaseData_allowen ) {
     is_mstReleaseData_Waiting := false.B
-  }
-  
 
-
-
-
-  when( is_mstReleaseData_state_qout =/= 0.U & is_mstReleaseData_state_dnxt === 0.U ) {
+    when( (is_mstReleaseData_clean | is_mstReleaseData_invalid) ) {
       cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb) := true.B
-    for ( i <- 0 until bk ) yield {
-
-      cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := false.B
+      // for ( i <- 0 until bk ) yield { cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb)(i) := false.B }
+    }
+    .otherwise {
+      is_mstEvict_stateOn_Waiting := true.B
+      is_mstReleaseData_StateOn   := true.B
     }
   }
-
-
-is_mstReleaseData_StateOn := false.B
-
-
-
 
 }
 
@@ -75,26 +53,6 @@ trait AXI_mst_releaseAck extends TLC_base {
 
 
 trait AXI_mst_R extends TLC_base with AXI_mst_releaseReleaseData with AXI_mst_releaseAck
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

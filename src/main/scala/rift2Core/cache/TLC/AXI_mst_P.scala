@@ -25,7 +25,7 @@ import base._
 import rift2Core.cache._
 
 
-trait AXI_mst_fence extends TLC_base {
+trait AXI_mst_Probe extends TLC_base {
 
   val fence = IO( new DecoupledIO(Bool()) )
 
