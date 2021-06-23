@@ -278,6 +278,7 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
   is_slvReleaseAck_allowen :=
     // ~fence.valid & //并行操作
+        // ~is_mstProbe_StateOn &
     // ~is_mstFence_stateOn & //并行操作
     // ~is_slvAcquire_StateOn &  //不关心这个状态
     // ~is_slvGrantData_StateOn &   //并行操作
@@ -312,6 +313,7 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
   is_mstAcquire_allowen :=
     ~fence.valid &
+    ~is_mstProbe_StateOn &
     ~is_mstFence_stateOn &
     // is_slvAcquire_StateOn & //通过断言，必定打开
     // ~is_slvGrantData_StateOn & //通过断言，必定关闭
@@ -541,22 +543,24 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
 
 
-  mst_chn_aw0.valid := Mux( is_mstFence_stateOn, mst_chn_aw.valid, false.B )
-  mst_chn_aw1.valid := Mux( is_mstFence_stateOn, false.B, mst_chn_aw.valid )
-  mst_chn_aw0.bits  := mst_chn_aw.bits
-  mst_chn_aw1.bits  := mst_chn_aw.bits
-  mst_chn_aw.ready  := Mux( is_mstFence_stateOn, mst_chn_aw0.ready, mst_chn_aw1.ready )
+  mst_chn_aw.valid := Mux( is_mstFence_stateOn, mst_chn_aw0.valid, mst_chn_aw1.valid)
+  mst_chn_aw.bits  := Mux( is_mstFence_stateOn, mst_chn_aw0.bits,  mst_chn_aw1.bits )
+  mst_chn_aw0.ready  := Mux( is_mstFence_stateOn, mst_chn_aw0.ready, false.B)
+  mst_chn_aw1.ready  := Mux( is_mstFence_stateOn, false.B, mst_chn_aw1.ready)
 
-  mst_chn_w0.valid := Mux( is_mstFence_stateOn, mst_chn_w.valid, false.B )
-  mst_chn_w1.valid := Mux( is_mstFence_stateOn, false.B, mst_chn_w.valid )
-  mst_chn_w0.bits  := mst_chn_w.bits
-  mst_chn_w1.bits  := mst_chn_w.bits
-  mst_chn_w.ready  := Mux( is_mstFence_stateOn, mst_chn_w0.ready, mst_chn_w1.ready )
+  mst_chn_w.valid := Mux( is_mstFence_stateOn, mst_chn_w0.valid, mst_chn_w1.valid)
+  mst_chn_w.bits  := Mux( is_mstFence_stateOn, mst_chn_w0.bits,  mst_chn_w1.bits )
+  mst_chn_w0.ready  := Mux( is_mstFence_stateOn, mst_chn_w0.ready, false.B)
+  mst_chn_w1.ready  := Mux( is_mstFence_stateOn, false.B, mst_chn_w1.ready)
 
-  mst_chn_b.valid :=  Mux( is_mstFence_stateOn, mst_chn_b0.valid, mst_chn_b1.valid )
-  mst_chn_b.bits  :=  Mux( is_mstFence_stateOn, mst_chn_b0.bits,  mst_chn_b1.bits )
-  mst_chn_b0.ready := Mux( is_mstFence_stateOn, mst_chn_b.ready, false.B )
-  mst_chn_b1.ready := Mux( is_mstFence_stateOn, false.B, mst_chn_b.ready )
+  mst_chn_b0.valid :=  Mux( is_mstFence_stateOn, mst_chn_b0.valid, false.B )
+  mst_chn_b1.valid :=  Mux( is_mstFence_stateOn, false.B, mst_chn_b1.valid )
+
+  mst_chn_b0.bits  :=  mst_chn_b.bits
+  mst_chn_b1.bits  :=  mst_chn_b.bits
+
+  mst_chn_b.ready := Mux( is_mstFence_stateOn, mst_chn_b0.ready, mst_chn_b1.ready )
+
 
 
 
