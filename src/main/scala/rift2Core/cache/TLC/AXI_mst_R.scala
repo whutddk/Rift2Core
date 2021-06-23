@@ -35,8 +35,8 @@ trait AXI_mst_releaseReleaseData extends TLC_base {
   mst_chn_aw0.valid := mst_chn_aw0_valid
   mst_chn_w0.valid  := mst_chn_w0_valid
 
-
-  val is_mstReleaseData_dirty = cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb).forall( (x:Bool) => (x === false.B) )
+  val is_mstReleaseData_invalid = cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb) === true.B
+  val is_mstReleaseData_clean = cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb).forall( (x:Bool) => (x === false.B) )
   val is_mstReleaseData_addrend = info_mstReleaseData_address( addr_lsb-1, bus_lsb ).andR
 
   val is_mstReleaseData_state_dnxt = Wire( UInt(2.W) )
@@ -45,7 +45,7 @@ trait AXI_mst_releaseReleaseData extends TLC_base {
   is_mstReleaseData_state_dnxt := 
     Mux1H(Seq(
       ( is_mstReleaseData_state_qout === 0.U ) -> Mux( is_slvReleaseData_allowen, 1.U, 0.U ),
-      ( is_mstReleaseData_state_qout === 1.U ) -> Mux( ~is_mstReleaseData_dirty, 0.U, Mux( mst_chn_aw0.fire, 2.U, 1.U )),
+      ( is_mstReleaseData_state_qout === 1.U ) -> Mux( (is_mstReleaseData_clean | is_mstReleaseData_invalid), 0.U, Mux( mst_chn_aw0.fire, 2.U, 1.U )),
       ( is_mstReleaseData_state_qout === 2.U ) -> Mux( is_mstReleaseData_addrend & mst_chn_w0.fire, 0.U, 2.U )
     ))
 
@@ -57,7 +57,7 @@ trait AXI_mst_releaseReleaseData extends TLC_base {
   }
 
   when( is_mstReleaseData_state_qout === 0.U & is_mstReleaseData_state_dnxt === 1.U ) {
-    when( is_mstReleaseData_dirty ) {
+    when( ~is_mstReleaseData_clean & ~is_mstReleaseData_invalid ) {
       mst_chn_aw0_valid := true.B
     }
   }

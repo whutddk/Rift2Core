@@ -29,6 +29,10 @@ import rift2Core.cache._
 import rift2Core.cache.TLC._
 
 class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with AXI_mst_A with AXI_mst_R with AXI_mst_fence {
+  val mst_chn_aw = IO(new DecoupledIO(new AXI_chn_a( 64, 1, 1 )))
+  val mst_chn_w  = IO(new DecoupledIO(new AXI_chn_w( 128, 1 )) )
+  val mst_chn_b  = IO(Flipped(new DecoupledIO( new AXI_chn_b( 1, 1 ))))
+
 
   override def dw = 1024
   override def aw = 32
@@ -38,6 +42,8 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
   override def agent_no = 16
 
 
+// is_mstFence_stateOn
+// fence.valid
 
 
   
@@ -46,6 +52,8 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     * 
     */
   is_slvAcquire_allowen :=
+    // ~fence.valid & //并行操作
+     ~is_mstFence_stateOn &
     ~is_slvAcquire_StateOn       & //上一个slvAcquire必须已经解决
     ~is_slvGrantData_StateOn     & //上一个slvAcquire的寄生消息必须已经解决
     ~is_slvGrantAck_StateOn      & //上一个slvAcquire的响应消息必须已经解决
@@ -86,7 +94,8 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     * slvGrantData：
     * 主动操作，轮询类
     */  
-  is_slvGrantData_allowen := 
+  is_slvGrantData_allowen :=
+    ~fence.valid & ~is_mstFence_stateOn &
     // is_slvAcquire_StateOn     & //通过断言，请求时必定是打开的
     ~is_slvGrantData_StateOn     & //请求有效时必定是关闭的
     // ~is_slvGrantAck_StateOn      & //通过断言，请求时必定是关闭的
@@ -122,6 +131,7 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
 
   is_slvGrantAck_allowen :=
+    // ~fence.valid & ~is_mstFence_stateOn &
     // is_slvAcquire_StateOn & //通过断言，请求时必定是打开的
     // is_slvGrantData_StateOn & //通过断言，请求时必定是打开的
     ~is_slvGrantAck_StateOn & //请求有效时必定是关闭的
@@ -162,6 +172,8 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
 
   is_slvProbe_allowen :=
+    // ~fence.valid & //通过断言，必定打开一个
+    // ~is_mstFence_stateOn & 
     // is_slvAcquire_StateOn & //通过断言，必定打开一个
     // ~is_slvGrantData_StateOn & //可以与slvGrantData并行处理
     // ~is_slvGrantAck_StateOn & //可以与slvGrantack并行处理
@@ -172,7 +184,7 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     // ~is_mstAcquire_StateOn & //可以与mstAcquire并行处理
     // ~is_mstGrantData_StateOn & //可以与mstAcquire并行处理
     // ~is_mstGrantAck_StateOn & //可以与mstAcquire并行处理
-    // is_mstProbe_StateOn & //通过断言，必定打开一个
+    // is_mstProbe_StateOn & 
     // ~is_mstProbeAckData_StateOn & //可以并行处理
     // ~is_mstReleaseData_StateOn  & //可以并行处理
     // ~is_mstReleaseAck_StateOn   & //可以并行处理
@@ -191,12 +203,14 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     // ~is_mstReleaseData_Waiting & //可以并行处理
     // ~is_mstReleaseAck_valid //可以并行处理
 
-  assert( ~(is_slvProbe_Waiting & ( ~is_slvAcquire_StateOn & ~is_mstProbe_StateOn )), "Assert Failed at TLC-L2, slv Probe is request from slv acquire or mst rec probe" )
+  assert( ~(is_slvProbe_Waiting & ( ~is_slvAcquire_StateOn & ~fence.valid )), "Assert Failed at TLC-L2, slv Probe is request from slv acquire or mst rec probe" )
 // assert( ~(is_slvProbe_Waiting & (is_slvProbeAckData_StateOn | )), "Assert Failed at TLC-L2, slv Probe is request with l")
 
 
 
   is_slvProbeAckData_allowen :=
+    // ~fence.valid & //通过断言，必定打开一个
+    ~is_mstFence_stateOn & 
     //  is_slvAcquire_StateOn &  //通过断言，必定打开一个
     ~is_slvGrantData_StateOn & //资源被占用
     // ~is_slvGrantAck_StateOn & //并行操作
@@ -207,7 +221,7 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     ~is_mstAcquire_StateOn & //资源被占用
     ~is_mstGrantData_StateOn & //资源被占用
     ~is_mstGrantAck_StateOn & //资源被占用
-    //  is_mstProbe_StateOn & //通过断言，必定打开一个
+    //  is_mstProbe_StateOn & 
     ~is_mstProbeAckData_StateOn & //资源被占用
     ~is_mstReleaseData_StateOn & //资源被占用
     ~is_mstReleaseAck_StateOn & //资源被占用
@@ -226,10 +240,12 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     // ~is_mstReleaseData_Waiting & //被动优先级更高
     // ~is_mstReleaseAck_valid //并行操作
 
-  assert( ~(is_slvProbeAckData_valid & (( ~is_slvAcquire_StateOn & ~is_mstProbe_StateOn) | ~is_mstProbe_StateOn)), "Assert Failed, at TLC-L2, request probeack data at a woring state" )
+  assert( ~(is_slvProbeAckData_valid & (( ~is_slvAcquire_StateOn & ~fence.valid) | ~is_mstProbe_StateOn)), "Assert Failed, at TLC-L2, request probeack data at a woring state" )
 
 
   is_slvReleaseData_allowen :=
+    // ~fence.valid & 
+    ~is_mstFence_stateOn & 
     // ~is_slvAcquire_StateOn & //不关心这个状态
     ~is_slvGrantData_StateOn & //资源被占用
     // ~is_slvGrantAck_StateOn & //并行操作
@@ -261,6 +277,8 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
 
   is_slvReleaseAck_allowen :=
+    // ~fence.valid & //并行操作
+    // ~is_mstFence_stateOn & //并行操作
     // ~is_slvAcquire_StateOn &  //不关心这个状态
     // ~is_slvGrantData_StateOn &   //并行操作
     // ~is_slvGrantAck_StateOn &   //并行操作
@@ -293,6 +311,8 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
 
   is_mstAcquire_allowen :=
+    ~fence.valid &
+    ~is_mstFence_stateOn &
     // is_slvAcquire_StateOn & //通过断言，必定打开
     // ~is_slvGrantData_StateOn & //通过断言，必定关闭
     // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
@@ -327,6 +347,8 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
 
   is_mstGrantData_allowen := 
+    // ~fence.valid & //并行操作
+    ~is_mstFence_stateOn &
     //  is_slvAcquire_StateOn & //通过断言，必定打开
     // ~is_slvGrantData_StateOn & //通过断言，必定关闭
     // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
@@ -378,6 +400,8 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       "Assert Failed at TLC-L2.scala, invalid state in mst GrantData" )
 
   is_mstGrantAck_allowen :=
+    // ~fence.valid & //并行操作
+    // ~is_mstFence_stateOn & //并行操作
     // is_slvAcquire_StateOn & //通过断言，必定打开
     // ~is_slvGrantData_StateOn & //通过断言，必定关闭
     // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
@@ -425,79 +449,10 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
   )
 
 
-  is_mstProbe_allowen :=
-    // ~is_slvAcquire_StateOn & //抢夺资源
-    ~is_slvGrantData_StateOn & //资源占用
-    // ~is_slvGrantAck_StateOn & //并行操作
-    // ~is_slvProbe_StateOn & //并行操作
-    ~is_slvProbeAckData_StateOn & //资源占用
-    ~is_slvReleaseData_StateOn & //资源占用
-    // ~is_slvReleaseAck_StateOn & //并行操作
-    // ~is_mstAcquire_StateOn & //抢夺资源
-    // ~is_mstGrantData_StateOn & //并行操作
-    // ~is_mstGrantAck_StateOn & //并行操作
-    ~is_mstProbe_StateOn & //资源占用
-    // ~is_mstProbeAckData_StateOn & //通过断言，必定关闭
-    ~is_mstReleaseData_StateOn & //资源占用
-    // ~is_mstReleaseAck_StateOn & //并行操作
-    // ~is_slvAcquire_valid & //抢夺资源
-    // ~is_slvGrantData_Waiting & //抢夺资源
-    // ~is_slvGrantAck_valid & //并行操作
-    // ~is_slvProbe_Waiting & //并行操作
-    // ~is_slvProbeData_valid & //并行操作
-    // ~is_slvProbeAck_valid & //并行操作
-    ~is_slvReleaseData_valid & //资源占用
-    // ~is_slvReleaseAck_Waiting & //并行操作
-    // ~is_mstAcquire_Waiting & //并行操作
-    // ~is_mstGrantData_valid & //并行操作
-    // ~is_mstGrantAck_Waiting & //并行操作
-    is_mstProbe_valid  //请求到来
-    // ~is_mstProbeAckData_Waiting //通过断言，必定关闭
-    // ~is_mstReleaseData_Waiting & //抢夺资源
-    // ~is_mstReleaseAck_valid //资源占用
-
-    assert( ~(is_mstProbe_valid & (is_mstProbeAckData_StateOn | is_mstProbeAckData_Waiting)), 
-      "Assert Failed at TLC-L2.scala, invalid mstProbe state"
-    )
-
-
-
-
-  is_mstProbeAckData_allowen :=
-    // ~is_slvAcquire_StateOn & //抢夺资源
-    ~is_slvGrantData_StateOn & //资源占用
-    // ~is_slvGrantAck_StateOn & //并行操作
-    // ~is_slvProbe_StateOn & //并行操作
-    ~is_slvProbeAckData_StateOn & //资源占用
-    ~is_slvReleaseData_StateOn & //资源占用
-    // ~is_slvReleaseAck_StateOn & //并行操作
-    // ~is_mstAcquire_StateOn & //抢夺资源
-    ~is_mstGrantData_StateOn & //资源占用
-    // ~is_mstGrantAck_StateOn & //并行操作
-    // is_mstProbe_StateOn & //通过断言，必定打开
-    ~is_mstProbeAckData_StateOn & //资源占用
-    ~is_mstReleaseData_StateOn & //资源占用
-    ~is_mstReleaseAck_StateOn & //资源占用
-    // is_slvAcquire_valid & //抢夺资源
-    // ~is_slvGrantData_Waiting & //抢夺资源
-    // ~is_slvGrantAck_valid & //并行操作
-    // ~is_slvProbe_Waiting & //并行操作
-    ~is_slvProbeAckData_valid & //资源占用,让步被动消息
-    ~is_slvReleaseData_valid & //资源占用,让步被动消息
-    // ~is_slvReleaseAck_Waiting & //并行操作
-    // ~is_mstAcquire_Waiting & //并行操作
-    ~is_mstGrantData_valid & //资源占用,让步被动消息
-    // ~is_mstGrantAck_Waiting & //并行操作
-    // ~is_mstProbe_valid & //通过断言，必定关闭
-    is_mstProbeAckData_Waiting //请求到来
-    // ~is_mstReleaseData_Waiting & //抢夺资源
-    // ~is_mstReleaseAck_valid //抢夺资源
-
-    assert( ~(is_mstProbeAckData_Waiting & (~is_mstProbe_StateOn | is_mstProbe_valid) ),
-      "Assert Failed at TLC_L2.scala, invalid state in mstProbeAckData"
-     )
 
   is_mstReleaseData_allowen :=
+    ~fence.valid &
+    ~is_mstFence_stateOn &
     // is_slvAcquire_StateOn & //通过断言，必定打开
     // ~is_slvGrantData_StateOn & //通过断言，必定关闭
     // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
@@ -533,6 +488,8 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     )
 
   is_mstReleaseAck_allowen :=
+    // ~fence.valid & //并行操作
+    // ~is_mstFence_stateOn & //并行操作
     // is_slvAcquire_StateOn & //通过断言，必定打开
     // ~is_slvGrantData_StateOn & //通过断言，必定关闭
     // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
@@ -574,10 +531,30 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     is_slvGrantAck_valid := slv_chn_e.valid
     is_slvProbeAckData_valid := slv_chn_c0.valid
     is_slvReleaseData_valid := slv_chn_c1.valid
-    is_mstGrantData_valid := mst_chn_d0.valid
-    is_mstProbe_valid := mst_chn_b.valid
-    is_mstReleaseAck_valid := mst_chn_d1.valid
+    is_mstGrantData_valid := mst_chn_r.valid
 
+
+
+    is_mstReleaseAck_valid := mst_chn_b.valid
+
+
+
+  mst_chn_aw0.valid := Mux( is_mstFence_stateOn, mst_chn_aw.valid, false.B )
+  mst_chn_aw1.valid := Mux( is_mstFence_stateOn, false.B, mst_chn_aw.valid )
+  mst_chn_aw0.bits  := mst_chn_aw.bits
+  mst_chn_aw1.bits  := mst_chn_aw.bits
+  mst_chn_aw.ready  := Mux( is_mstFence_stateOn, mst_chn_aw0.ready, mst_chn_aw1.ready )
+
+  mst_chn_w0.valid := Mux( is_mstFence_stateOn, mst_chn_w.valid, false.B )
+  mst_chn_w1.valid := Mux( is_mstFence_stateOn, false.B, mst_chn_w.valid )
+  mst_chn_w0.bits  := mst_chn_w.bits
+  mst_chn_w1.bits  := mst_chn_w.bits
+  mst_chn_w.ready  := Mux( is_mstFence_stateOn, mst_chn_w0.ready, mst_chn_w1.ready )
+
+  mst_chn_b.valid :=  Mux( is_mstFence_stateOn, mst_chn_b0.valid, mst_chn_b1.valid )
+  mst_chn_b.bits  :=  Mux( is_mstFence_stateOn, mst_chn_b0.bits,  mst_chn_b1.bits )
+  mst_chn_b0.ready := Mux( is_mstFence_stateOn, mst_chn_b.ready, false.B )
+  mst_chn_b1.ready := Mux( is_mstFence_stateOn, false.B, mst_chn_b.ready )
 
 
 

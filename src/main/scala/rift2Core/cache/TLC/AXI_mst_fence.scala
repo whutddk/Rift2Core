@@ -32,11 +32,27 @@ trait AXI_mst_fence extends TLC_base {
 
   val fence = IO( new DecoupledIO(Bool()) )
 
-  // assert( cb == 1, "Assert Failed at AXI_fence, invalid configuration of cb" )
+  
+  val is_mstFence_stateOn = RegInit(false.B)
+  val is_mstFence_allowen = 
+    ~is_slvAcquire_StateOn       &
+    ~is_slvGrantData_StateOn     &
+    ~is_slvGrantAck_StateOn      &
+    ~is_slvProbe_StateOn         &
+    ~is_slvProbeAckData_StateOn  &
+    ~is_slvReleaseData_StateOn   &
+    ~is_slvReleaseAck_StateOn    &
+    ~is_mstAcquire_StateOn       &
+    ~is_mstGrantData_StateOn     &
+    ~is_mstGrantAck_StateOn      &
+    ~is_mstProbe_StateOn         &
+    ~is_mstProbeAckData_StateOn  &
+    ~is_mstReleaseData_StateOn   &
+    ~is_mstReleaseAck_StateOn    &
+    ~is_slvProbe_Waiting         &
+    fence.valid
 
-  // val cache_inv = RegInit( VecInit( Seq.fill(cl)( VecInit(Seq.fill(cb)(false.B)))))))
-  // val cache_mdf = RegInit( VecInit( Seq.fill(cl)( VecInit(Seq.fill(cb)( VecInit( Seq.fill(bk)(false.B)))))))
-
+  is_mstFence_stateOn := mstFence_state_dnxt =/= 0.U | mstFence_state_qout =/= 0.U
 
   val is_mstfence_cache_inv = cache_inv.exists( (x:Vec[Bool]) => x.contains(false.B) )
  
@@ -72,7 +88,7 @@ trait AXI_mst_fence extends TLC_base {
 
   mstFence_state_dnxt := 
     Mux1H(Seq(
-      (mstFence_state_qout === 0.U) -> Mux( fence.valid & is_mstfence_cache_inv & ~is_slvProbe_Waiting & ~is_slvProbe_StateOn, 1.U, 0.U ), //read coh to get source
+      (mstFence_state_qout === 0.U) -> Mux( is_mstFence_allowen & is_mstfence_cache_inv, 1.U, 0.U ), //read coh to get source
       (mstFence_state_qout === 1.U) -> Mux( cache_coh.coh_info_r.exists( (x:UInt) => (x =/= 0.U) ), 0.U, 2.U ),
       (mstFence_state_qout === 2.U) -> Mux( cache_mdf(info_mstProbe_cl)(info_mstProbe_cb).contains(true.B), 2.U, 0.U ),
       (mstFence_state_qout === 3.U) -> Mux( mst_chn_b1.fire, 0.U, 3.U ) //mstpobe data
@@ -114,14 +130,14 @@ trait AXI_mst_fence extends TLC_base {
 
 
 
-  when( mstFence_state_qout === 1.U & mstFence_state_dnxt := 0.U ) { is_slvProbe_Waiting := true.B }
-  when( mstFence_state_qout === 1.U & mstFence_state_dnxt := 0.U ) { info_mstRecProbe_address := Cat( cache_tag.tag_info_r(cb), info_mstProbe_cl, info_mstProbe_bk, 0.U(mst_lsb.W) ) }
-  when( mstFence_state_qout === 1.U & mstFence_state_dnxt := 0.U ) { info_mstRecProbe_exclusive := cache_coh.coh_info_r(info_mstProbe_bk) }
-  when( mstFence_state_qout === 1.U & mstFence_state_dnxt := 0.U ) { info_mstRecProbe_cb := info_mstProbe_cb }
+  when( mstFence_state_qout === 1.U & mstFence_state_dnxt === 0.U ) { is_slvProbe_Waiting := true.B }
+  when( mstFence_state_qout === 1.U & mstFence_state_dnxt === 0.U ) { info_mstRecProbe_address := Cat( cache_tag.tag_info_r(cb), info_mstProbe_cl, info_mstProbe_bk, 0.U(mst_lsb.W) ) }
+  when( mstFence_state_qout === 1.U & mstFence_state_dnxt === 0.U ) { info_mstRecProbe_exclusive := cache_coh.coh_info_r(info_mstProbe_bk) }
+  when( mstFence_state_qout === 1.U & mstFence_state_dnxt === 0.U ) { info_mstRecProbe_cb := info_mstProbe_cb }
 
 
-  when( mstFence_state_qout === 2.U & mstFence_state_dnxt := 0.U ) { cache_inv(info_mstProbe_cl)(info_mstProbe_cb) := true.B }
-  when( mstFence_state_qout === 3.U & mstFence_state_dnxt := 0.U ) { cache_inv(info_mstProbe_cl)(info_mstProbe_cb) := true.B }
+  when( mstFence_state_qout === 2.U & mstFence_state_dnxt === 0.U ) { cache_inv(info_mstProbe_cl)(info_mstProbe_cb) := true.B }
+  when( mstFence_state_qout === 3.U & mstFence_state_dnxt === 0.U ) { cache_inv(info_mstProbe_cl)(info_mstProbe_cb) := true.B }
 
 
 

@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package rift2Core.cache.AXI
+package rift2Core.cache.TLC
 
 import chisel3._
 import chisel3.util._
@@ -23,7 +23,6 @@ import axi._
 
 import base._
 import rift2Core.cache._
-import rift2Core.cache.TLC.TLC_base
 
 
 trait AXI_mst_Acquire extends TLC_base {

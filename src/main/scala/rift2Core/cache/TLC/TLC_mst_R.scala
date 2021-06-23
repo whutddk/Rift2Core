@@ -36,8 +36,8 @@ trait TLC_mst_releaseReleaseData extends TLC_base {
   mst_chn_c1.valid := mst_chn_c1_valid
 
 
-
-  val is_mstReleaseData_dirty = cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb).forall( (x:Bool) => (x === false.B) )
+  val is_mstReleaseData_invalid = cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb) === true.B
+  val is_mstReleaseData_clean = cache_mdf(info_slvAcquire_cl)(info_slvAcquire_cb).forall( (x:Bool) => (x === false.B) )
   val is_mstReleaseData_addrend = info_mstReleaseData_address( addr_lsb-1, bus_lsb ).andR
 
   val is_mstReleaseData_state_dnxt = Wire( UInt(1.W) )
@@ -46,7 +46,7 @@ trait TLC_mst_releaseReleaseData extends TLC_base {
   is_mstReleaseData_state_dnxt := 
     Mux1H(Seq(
       ( is_mstReleaseData_state_qout === 0.U ) -> Mux( is_slvReleaseData_allowen, 1.U, 0.U ),
-      ( is_mstReleaseData_state_qout === 1.U ) -> Mux( mst_chn_c1.fire & ( is_mstReleaseData_addrend | is_mstReleaseData_dirty ), 0.U, 1.U) 
+      ( is_mstReleaseData_state_qout === 1.U ) -> Mux( mst_chn_c1.fire & ( is_mstReleaseData_addrend | is_mstReleaseData_clean | is_mstReleaseData_invalid ), 0.U, 1.U) 
     ))
 
   when( is_mstReleaseData_state_qout === 0.U & is_mstReleaseData_state_dnxt === 1.U ) {
@@ -71,7 +71,7 @@ trait TLC_mst_releaseReleaseData extends TLC_base {
   mst_chn_c1.bits.corrupt := false.B
   mst_chn_c1.bits.data := cache_dat.dat_addr_r(info_slvAcquire_cb)
   mst_chn_c1.bits.opcode := 
-    Mux( is_mstReleaseData_dirty, Opcode.ReleaseData, Opcode.ReleaseAck )
+    Mux( is_mstReleaseData_clean, Opcode.ReleaseAck, Opcode.ReleaseData )
   mst_chn_c1.bits.param := TLparam.TtoN
   mst_chn_c1.bits.size := addr_lsb.U
   mst_chn_c1.bits.source := agent_no.U
@@ -85,7 +85,7 @@ trait TLC_mst_releaseReleaseData extends TLC_base {
 
   info_mstReleaseData_cache_dat_raddr := info_mstReleaseData_address
 
-  when( mst_chn_c1.fire & ( is_mstReleaseData_addrend | is_mstReleaseData_dirty ) ) {
+  when( mst_chn_c1.fire & ( is_mstReleaseData_addrend | is_mstReleaseData_clean | is_mstReleaseData_invalid ) ) {
     cache_inv(info_slvAcquire_cl)(info_slvAcquire_cb) := true.B
     for ( i <- 0 until bk ) yield {
 
@@ -110,9 +110,6 @@ trait TLC_mst_releaseAck extends TLC_base {
   .elsewhen( is_mstReleaseAck_allowen ) {
     mst_chn_d1_ready := true.B
   }
-
-
-
 
 }
 

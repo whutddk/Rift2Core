@@ -40,7 +40,7 @@ import chisel3.util.experimental._
 
 
 
-class WaveformTester(dut: TLC_L2) extends PeekPokeTester(dut){
+class WaveformTester(dut: TLC_L3) extends PeekPokeTester(dut){
 
   
     // dut.io.if_mmu.bits := 0.U
@@ -66,7 +66,7 @@ class WaveformTester(dut: TLC_L2) extends PeekPokeTester(dut){
 
 class WaveformSpec extends FlatSpec with Matchers {
   "WaveformSpec" should "pass" in {
-    chisel3.iotesters.Driver.execute(Array("--generate-vcd-output", "on","--target-dir", "generated"), () => new TLC_L2()){
+    chisel3.iotesters.Driver.execute(Array("--generate-vcd-output", "on","--target-dir", "generated"), () => new TLC_L3()){
       c => new WaveformTester(c)
     } should be (true)
   }
