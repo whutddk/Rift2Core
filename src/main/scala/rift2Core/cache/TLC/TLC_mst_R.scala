@@ -58,7 +58,7 @@ trait TLC_mst_releaseReleaseData extends TLC_base {
 
   when( is_mstReleaseData_state_qout === 0.U & is_mstReleaseData_state_dnxt === 1.U ) {
     is_mstReleaseData_StateOn := true.B;
-    is_slvGrantData_Waiting := false.B
+    is_mstReleaseData_Waiting := false.B
   }
   
 
