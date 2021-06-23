@@ -111,9 +111,9 @@ trait TLC_slv_grantData extends TLC_base{
  
   info_slvGrantData_cache_tag_raddr := info_slvAcquire_address
 
-  for ( i <- 0 until bk ) yield {
+  for ( i <- 0 until cb ) yield {
     info_slvGrantData_cache_coh_ren(i) :=
-      i.U === info_slvAcquire_bk & 
+      i.U === info_slvAcquire_cb & 
       slvGrantData_State_qout === 0.U & slvGrantData_State_dnxt === 1.U
   }
   
