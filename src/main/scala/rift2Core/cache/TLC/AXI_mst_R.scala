@@ -67,8 +67,7 @@ trait AXI_mst_evict extends TLC_base {
 
 
 
-  is_mstReleaseData_allowen
-  is_mstProbeAckData_allowen
+
 
   when( is_mstReleaseData_allowen | is_mstProbeAckData_allowen ) { is_mstEvict_stateOn_StateOn := true.B }
   .elsewhen( mst_chn_b.fire ) { is_mstEvict_stateOn_StateOn := false.B }

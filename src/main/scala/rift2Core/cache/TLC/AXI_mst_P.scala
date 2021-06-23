@@ -49,9 +49,10 @@ trait AXI_mst_Probe extends TLC_base {
     ~is_slvProbe_Waiting         &
     is_mstProbe_valid 
 
-  is_mstProbe_valid := fence.valid
+
   fence.ready := fence.valid & ~is_mstfence_cache_inv
 
+  val is_mstFence_stateOn = RegInit(false.B)
   val is_mstfence_cache_inv = cache_inv.exists( (x:Vec[Bool]) => x.contains(false.B) )
   val info_mstProbe_bk = cache_coh.coh_info_r.indexWhere( (x:UInt) => (x =/= 0.U) )
 
@@ -110,9 +111,16 @@ trait AXI_mst_Probe extends TLC_base {
       )
   }
 
-  when( mstProbe_state_qout === 0.U & mstProbe_state_dnxt === 1.U ) { is_mstProbe_StateOn := true.B }
-  .elsewhen( fence.fire )  { is_mstProbe_StateOn := false.B }
+  when( mstProbe_state_qout === 0.U & mstProbe_state_dnxt === 1.U ) { is_mstFence_stateOn := true.B }
+  .elsewhen( fence.fire )  { is_mstFence_stateOn := false.B }
 
+  when( mstProbe_state_dnxt =/= 0.U  ) {is_mstProbe_stateOn := true.B}
+  .otherwise {is_mstProbe_stateOn := false.B}
+  
+
+  when( fence.fire ) {
+
+  }
 }
 
 
