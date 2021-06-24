@@ -28,22 +28,9 @@ import base._
 import rift2Core.cache._
 import rift2Core.cache.TLC._
 
-class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with AXI_mst_A with AXI_mst_R with AXI_mst_P {
 
-  override def dw = 1024
-  override def aw = 32
-  override def bk = 4
-  override def cb = 1
-  override def cl = 256
-  override def agent_no = 16
-
-
-// is_mstFence_stateOn
-// fence.valid
-
-
-  
-  /**
+trait L3_scheduling extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with AXI_mst_A with AXI_mst_R with AXI_mst_P{
+   /**
     * slvAcquire：passive
     * 
     */
@@ -480,6 +467,23 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       ~(is_mstReleaseData_Waiting & (~is_slvAcquire_StateOn | is_slvGrantData_StateOn | is_slvGrantAck_StateOn | is_mstAcquire_StateOn | ~is_slvGrantData_Waiting | is_mstAcquire_Waiting | is_mstGrantData_valid | is_mstReleaseAck_valid)),
       "Assert Failed TLC_L3.scala, invalid state in mst release Data"
     )
+}
+
+
+
+class TLC_L3_single extends TLC_base with L3_scheduling {
+
+  override def dw = 1024
+  override def aw = 32
+  override def bk = 4
+  override def cb = 1
+  override def cl = 256
+  override def agent_no = 16
+
+
+
+  
+ 
 
   
 
@@ -638,5 +642,32 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     "Assert Failed at TLC_L3.scala cache_coh_ren should be One-Hot" )
 
 }
+
+
+// class TLC_L3(mst_num: Int) extends Module {
+//   val io = IO( new Bundle{
+//     val slv_chn_a  = Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_a(128, 32))))
+//     val slv_chn_b  = Vec(mst_num, new DecoupledIO(new TLchannel_b(128, 32)))
+//     val slv_chn_d0 = Vec(mst_num, new DecoupledIO( new TLchannel_d(128)))
+//     val slv_chn_e  = Vec(mst_num, Flipped(new DecoupledIO( new TLchannel_e)))
+//     val slv_chn_c0 = Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_c(128, 32))))
+//     val slv_chn_c1 = Vec(mst_num, Flipped(new DecoupledIO(new TLchannel_c(128, 32))))
+//     val slv_chn_d1 = Vec(mst_num, new DecoupledIO( new TLchannel_d(128)))
+
+//     val mst_chn_ar = IO(new DecoupledIO( new AXI_chn_a( 64, 1, 1 ) ))
+//     val mst_chn_r  = IO( Flipped( new DecoupledIO(new AXI_chn_r( 128, 1, 1 )) ))
+//     val mst_chn_aw = IO( new DecoupledIO(new AXI_chn_a( 64, 1, 1 )) )
+//     val mst_chn_w  = IO(new DecoupledIO(new AXI_chn_w( 128, 1 )) )
+//     val mst_chn_b  = IO(Flipped(new DecoupledIO( new AXI_chn_b( 1, 1 ))))
+
+//   })
+
+
+//   val L3_s = Module(new TLC_L3_single)
+
+
+
+
+// }
 
 
