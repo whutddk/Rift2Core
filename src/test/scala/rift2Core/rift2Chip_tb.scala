@@ -36,7 +36,7 @@ import rift2Core.privilege._
 
 object testMain extends App {
 
-  Driver.execute(args, () => new TLC_L3 )
+  Driver.execute(args, () => new rift2Chip )
 }
 
 
