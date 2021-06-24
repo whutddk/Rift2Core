@@ -152,9 +152,9 @@ trait AXI_mst_evict extends TLC_base {
   val mst_chn_w_valid = RegInit(false.B)
   val mst_chn_b_ready = RegInit(false.B)
 
-  mst_chn_aw_valid := mst_chn_aw_valid
-  mst_chn_w_valid  := mst_chn_w_valid
-  mst_chn_b_ready  := mst_chn_b_ready
+  mst_chn_aw.valid := mst_chn_aw_valid
+  mst_chn_w.valid  := mst_chn_w_valid
+  mst_chn_b.ready  := mst_chn_b_ready
 
   when( mstEvict_state_qout === 0.U & mstEvict_state_dnxt === 1.U ) { mst_chn_aw_valid := true.B }
   .elsewhen( mst_chn_aw.fire ) { mst_chn_aw_valid := false.B }

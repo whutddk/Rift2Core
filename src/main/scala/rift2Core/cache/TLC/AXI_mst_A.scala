@@ -106,9 +106,9 @@ trait AXI_mst_grantData extends TLC_base {
   info_mstGrantData_cache_coh_winfo := 0.U
 
 
-  override val is_mstGrantAck_Waiting = false.B
-  override val is_mstGrantAck_StateOn = false.B
-  override val is_mstGrantAck_allowen = false.B
+  is_mstGrantAck_Waiting := false.B
+  is_mstGrantAck_StateOn := false.B
+  is_mstGrantAck_allowen := false.B
 
 
 }

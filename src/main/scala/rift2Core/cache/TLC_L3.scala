@@ -374,53 +374,9 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
       )),
       "Assert Failed at TLC-L3.scala, invalid state in mst GrantData" )
 
-  is_mstGrantAck_allowen :=
-    // ~fence.valid & //并行操作
-    // ~is_mstFence_stateOn & //并行操作
-    // is_slvAcquire_StateOn & //通过断言，必定打开
-    // ~is_slvGrantData_StateOn & //通过断言，必定关闭
-    // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
-    // ~is_slvProbe_StateOn & //并行操作
-    // ~is_slvProbeAckData_StateOn & //并行操作
-    // ~is_slvReleaseData_StateOn & //并行操作
-    // ~is_slvReleaseAck_StateOn & //并行操作
-    // is_mstAcquire_StateOn & //通过断言，必定打开
-    // is_mstGrantData_StateOn & //通过断言，必定打开
-    ~is_mstGrantAck_StateOn & //资源占用
-    // ~is_mstProbe_StateOn & //并行操作
-    ~is_mstProbeAckData_StateOn &  //并行操作
-    ~is_mstReleaseData_StateOn & //并行操作
-    // ~is_slvAcquire_valid &
-    // ~is_slvGrantData_Waiting & //通过断言，必定打开
-    // ~is_slvGrantAck_valid & //通过断言，必定关闭
-    // ~is_SlvProbe_Waiting & //并行操作
-    // ~is_SlvProbeData_valid & //并行操作
-    // ~is_SlvProbeAck_valid & //并行操作
-    // ~is_SlvReleaseData_valid & //并行操作
-    // ~is_SlvReleaseAck_Waiting & //并行操作
-    // ~is_mstAcquire_Waiting & //通过断言，必定关闭
-    // ~is_mstGrantData_valid & //通过断言，必定关闭
-    is_mstGrantAck_Waiting //请求操作
-    // ~is_mstProbe_valid &
-    // ~is_mstProbeAck_Waiting &
-    // ~is_mstProbeData_Waiting &
-    // ~is_mstReleaseData_Waiting &
 
 
-  assert(
-    ~(is_mstGrantAck_Waiting & (
-      ~is_slvAcquire_StateOn | 
-      is_slvGrantData_StateOn |
-      is_slvGrantAck_StateOn |
-      ~is_mstAcquire_StateOn |
-      is_mstGrantData_StateOn |
-      ~is_slvGrantData_Waiting |
-      is_slvGrantAck_valid |
-      is_mstAcquire_Waiting |
-      is_mstGrantData_valid
-    )),
-    "Assert Failed at TLC_L3.scala, invalid state in mst Grant ACK"
-  )
+
 
 
 

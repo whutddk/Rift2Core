@@ -27,7 +27,7 @@ import rift2Core.cache._
 
 trait AXI_mst_P extends TLC_base {
 
-  val fence = IO( new DecoupledIO(Bool()) )
+  val fence = IO( Flipped(new DecoupledIO(Bool()) ))
 
   
 
@@ -50,7 +50,7 @@ trait AXI_mst_P extends TLC_base {
     is_mstProbe_valid 
 
 
-  fence.ready := fence.valid & ~is_mstfence_cache_inv
+
 
   val is_mstFence_stateOn = RegInit(false.B)
   val is_mstfence_cache_inv = cache_inv.exists( (x:Vec[Bool]) => x.contains(false.B) )
@@ -58,6 +58,9 @@ trait AXI_mst_P extends TLC_base {
 
   val mstProbe_state_dnxt = Wire( UInt(3.W) )
   val mstProbe_state_qout = RegNext( mstProbe_state_dnxt, 0.U )
+
+
+  fence.ready := fence.valid & ~is_mstfence_cache_inv
 
   mstProbe_state_dnxt := 
     Mux1H(Seq(
@@ -81,14 +84,19 @@ trait AXI_mst_P extends TLC_base {
     )    
   }
 
-  info_mstProbe_address := 
+  info_mstProbe_address := {
+  
+    val mix_addr = Cat( cache_tag.tag_info_r(info_mstProbe_cb), info_mstProbe_cl, 0.U(addr_lsb.W) )
     RegEnable(
-      Cat( cache_tag.tag_info_r(cb), info_mstProbe_cl, 0.U(addr_lsb.W) ),
+      mix_addr,
+      0.U(64.W),
       mstProbe_state_qout === 1.U
-    )
+    )    
+  }
+
 
      
-  for ( i <- 0 until cb ) yield { info_mstProbe_cache_tag_ren := i.U === info_mstProbe_cb & mstProbe_state_qout === 0.U & mstProbe_state_dnxt === 1.U }
+  for ( i <- 0 until cb ) yield { info_mstProbe_cache_tag_ren(i) := i.U === info_mstProbe_cb & mstProbe_state_qout === 0.U & mstProbe_state_dnxt === 1.U }
   info_mstProbe_cache_tag_raddr := Cat( info_mstProbe_cl, 0.U(addr_lsb.U)  )
 
   for ( i <- 0 until cb ) yield { info_mstProbeData_cache_coh_ren(i) := mstProbe_state_qout === 0.U & mstProbe_state_dnxt === 1.U }
@@ -96,7 +104,7 @@ trait AXI_mst_P extends TLC_base {
 
   when( mstProbe_state_qout === 1.U & mstProbe_state_dnxt === 0.U ) {
     is_slvProbe_Waiting := true.B
-    info_mstRecProbe_address := Cat( cache_tag.tag_info_r(cb), info_mstProbe_cl, info_mstProbe_bk, 0.U(mst_lsb.W) )
+    info_mstRecProbe_address := Cat( cache_tag.tag_info_r(info_mstProbe_cb), info_mstProbe_cl, info_mstProbe_bk, 0.U(mst_lsb.W) )
     info_mstRecProbe_exclusive := cache_coh.coh_info_r(info_mstProbe_bk)
     info_mstRecProbe_cb := info_mstProbe_cb
   }
