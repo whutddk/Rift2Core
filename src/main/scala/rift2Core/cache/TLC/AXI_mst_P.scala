@@ -25,7 +25,7 @@ import base._
 import rift2Core.cache._
 
 
-trait AXI_mst_Probe extends TLC_base {
+trait AXI_mst_P extends TLC_base {
 
   val fence = IO( new DecoupledIO(Bool()) )
 
@@ -114,13 +114,9 @@ trait AXI_mst_Probe extends TLC_base {
   when( mstProbe_state_qout === 0.U & mstProbe_state_dnxt === 1.U ) { is_mstFence_stateOn := true.B }
   .elsewhen( fence.fire )  { is_mstFence_stateOn := false.B }
 
-  when( mstProbe_state_dnxt =/= 0.U  ) {is_mstProbe_stateOn := true.B}
-  .otherwise {is_mstProbe_stateOn := false.B}
+  when( mstProbe_state_dnxt =/= 0.U  ) {is_mstProbe_StateOn := true.B}
+  .otherwise {is_mstProbe_StateOn := false.B}
   
-
-  when( fence.fire ) {
-
-  }
 }
 
 

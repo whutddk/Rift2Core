@@ -28,11 +28,7 @@ import base._
 import rift2Core.cache._
 import rift2Core.cache.TLC._
 
-class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with AXI_mst_A with AXI_mst_R with AXI_mst_fence {
-  val mst_chn_aw = IO(new DecoupledIO(new AXI_chn_a( 64, 1, 1 )))
-  val mst_chn_w  = IO(new DecoupledIO(new AXI_chn_w( 128, 1 )) )
-  val mst_chn_b  = IO(Flipped(new DecoupledIO( new AXI_chn_b( 1, 1 ))))
-
+class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with AXI_mst_A with AXI_mst_R with AXI_mst_P {
 
   override def dw = 1024
   override def aw = 32
@@ -117,7 +113,7 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     ~is_mstGrantAck_Waiting      & //轮询发现需要请求寄生消息，先请求
     ~is_mstProbe_valid           & //被动消息,更高优先级
     ~is_mstProbeAckData_Waiting  & //主动消息,更高优先级
-    ~is_mstReleaseData_Waiting   & //轮询发现需要请求寄生消息，先请求
+    ~is_mstReleaseData_Waiting    //轮询发现需要请求寄生消息，先请求
 
   assert( ~(is_slvGrantData_Waiting & ~is_slvAcquire_StateOn), "Assert Failed at TLC_L3, slvGrantData is requested without slv Acquire state, that's impossible" ) 
   assert( ~(is_slvGrantData_Waiting & (is_slvGrantAck_StateOn | is_slvGrantAck_valid) ), "Assert Failed at TLC_L3, slvGrantData is requested with its ack message state on, that's impossible" )
@@ -196,7 +192,6 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
 
   assert( ~(is_slvProbe_Waiting & ( ~is_slvAcquire_StateOn & ~is_mstFence_stateOn )), "Assert Failed at TLC-L3, slv Probe is request from slv acquire or mst rec probe" )
 // assert( ~(is_slvProbe_Waiting & (is_slvProbeAckData_StateOn | )), "Assert Failed at TLC-L3, slv Probe is request with l")
-
 
 
   is_slvProbeAckData_allowen :=
@@ -428,6 +423,7 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
   )
 
 
+
   is_mstProbeAckData_allowen :=
     // ~is_slvAcquire_StateOn & //抢夺资源
     ~is_slvGrantData_StateOn & //资源占用
@@ -454,8 +450,9 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     ~is_mstGrantData_valid & //资源占用,让步被动消息
     // ~is_mstGrantAck_Waiting & //并行操作
     // ~is_mstProbe_valid & //通过断言，必定关闭
-    is_mstProbeAckData_Waiting //请求到来
+    is_mstProbeAckData_Waiting &//请求到来
     ~is_mstReleaseData_Waiting & //资源占用
+    ~is_mstReleaseEvict_Waiting
     // ~is_mstReleaseAck_valid //抢夺资源
 
     assert( ~(is_mstProbeAckData_Waiting & (~is_mstProbe_StateOn | is_mstProbe_valid) ),
@@ -482,7 +479,7 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     // ~is_slvGrantAck_valid & //并行操作
     // ~is_slvProbe_Waiting & //并行操作
     ~is_slvProbeAckData_valid & //资源占用,让步被动消息
-    is_slvReleaseData_valid & //资源占用,让步被动消息
+    ~is_slvReleaseData_valid & //资源占用,让步被动消息
     // ~is_slvReleaseAck_Waiting //并行操作
     // ~is_mstAcquire_Waiting & //通过断言，必定关闭
     // ~is_mstGrantData_valid & //通过断言，必定关闭
@@ -490,6 +487,37 @@ class TLC_L3 extends TLC_base with TLC_slv_A with TLC_slv_P with TLC_slv_R with 
     // ~is_mstProbe_valid & //并行操作
     // ~is_mstProbeAckData_Waiting & //抢夺资源
     is_mstReleaseData_Waiting  //请求到来
+
+
+    is_mstReleaseEvict_allowen :=
+    // ~is_mstFence_stateOn &
+    // is_slvAcquire_StateOn & //通过断言，必定打开
+    // ~is_slvGrantData_StateOn & //通过断言，必定关闭
+    // ~is_slvGrantAck_StateOn & //通过断言，必定关闭
+    // ~is_slvProbe_StateOn & //并行操作
+    ~is_slvProbeAckData_StateOn & //资源占用,让步被动消息
+    ~is_slvReleaseData_StateOn & //资源占用,让步被动消息
+    // ~is_slvReleaseAck_StateOn & //并行操作
+    // ~is_mstAcquire_StateOn & //通过断言，必定关闭
+    ~is_mstGrantData_StateOn & //资源占用,让步被动消息
+    // ~is_mstGrantAck_StateOn & //并行操作
+    // ~is_mstProbe_StateOn & //并行操作
+    ~is_mstProbeAckData_StateOn & //资源占用
+    ~is_mstReleaseData_StateOn & //资源占用
+    // is_slvAcquire_valid & //抢夺资源
+    // is_slvGrantData_Waiting & //通过断言，必定打开
+    // ~is_slvGrantAck_valid & //并行操作
+    // ~is_slvProbe_Waiting & //并行操作
+    ~is_slvProbeAckData_valid & //资源占用,让步被动消息
+    ~is_slvReleaseData_valid & //资源占用,让步被动消息
+    // ~is_slvReleaseAck_Waiting //并行操作
+    // ~is_mstAcquire_Waiting & //通过断言，必定关闭
+    // ~is_mstGrantData_valid & //通过断言，必定关闭
+    // ~is_mstGrantAck_Waiting & //并行操作
+    // ~is_mstProbe_valid & //并行操作
+    // ~is_mstProbeAckData_Waiting & //抢夺资源
+    ~is_mstReleaseData_Waiting  &
+    is_mstReleaseEvict_Waiting//请求到来
 
 
     assert(

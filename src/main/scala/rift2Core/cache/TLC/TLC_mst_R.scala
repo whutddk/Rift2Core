@@ -45,7 +45,7 @@ trait TLC_mst_releaseReleaseData extends TLC_base {
 
   is_mstReleaseData_state_dnxt := 
     Mux1H(Seq(
-      ( is_mstReleaseData_state_qout === 0.U ) -> Mux( is_slvReleaseData_allowen, 1.U, 0.U ),
+      ( is_mstReleaseData_state_qout === 0.U ) -> Mux( is_mstReleaseData_allowen, 1.U, 0.U ),
       ( is_mstReleaseData_state_qout === 1.U ) -> Mux( mst_chn_c1.fire & ( is_mstReleaseData_addrend | is_mstReleaseData_clean | is_mstReleaseData_invalid ), 0.U, 1.U) 
     ))
 
