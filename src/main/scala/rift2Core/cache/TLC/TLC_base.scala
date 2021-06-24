@@ -36,6 +36,17 @@ trait Lx_param {
   def cl: Int
   def agent_no: Int 
 
+  def cb_w: Int = {
+    val res = log2Ceil(cb)
+    if (res == 0) {
+      return 1
+    }
+    else {
+      return res
+    }
+  }
+
+
 }
 
 
@@ -129,7 +140,7 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
 
 
   val info_slvAcquire_cl = Wire( UInt(log2Ceil(cl).W) )
-  val info_slvAcquire_cb = Wire( UInt(log2Ceil(cb).W) )
+  val info_slvAcquire_cb = Wire( UInt(cb_w.W) )
   val info_slvAcquire_bk = Wire( UInt(log2Ceil(bk).W) )
 
   val info_slvAcquire_address = Wire( UInt(64.W) )
@@ -154,7 +165,7 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
 
   val info_slvProbe_address = Wire( UInt(64.W) )
   val info_slvProbe_cl = Wire( UInt(log2Ceil(cl).W) )
-  val info_slvProbe_cb = Wire( UInt(log2Ceil(cb).W) )
+  val info_slvProbe_cb = Wire( UInt(cb_w.W) )
   val info_slvProbe_bk = Wire( UInt(log2Ceil(bk).W) )
   val info_slvProbe_exclusive = Wire( UInt(8.W) )
 
@@ -169,7 +180,7 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
   val info_slvProbeAck_Data_cache_dat_winfo = Wire(UInt(128.W))
 
   val info_slvReleaseData_cl = Wire( UInt(log2Ceil(cl).W) )
-  val info_slvReleaseData_cb = Wire( UInt(log2Ceil(cb).W) )
+  val info_slvReleaseData_cb = Wire( UInt(cb_w.W) )
   val info_slvReleaseData_bk = Wire( UInt(log2Ceil(bk).W) )
   val info_slvReleaseData_address = RegInit(0.U(64.W))
 
@@ -206,7 +217,7 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
 
   val info_mstProbe_address = Wire( UInt(64.W) )
   val info_mstProbe_cl = Wire( UInt(log2Ceil(cl).W) )
-  val info_mstProbe_cb = Wire( UInt(log2Ceil(cb).W) )
+  val info_mstProbe_cb = Wire( UInt(cb_w.W) )
 
   val info_mstProbe_cache_tag_ren   = Wire(Vec(cb, Bool()))
   val info_mstProbe_cache_tag_raddr = Wire(UInt(64.W))
@@ -221,7 +232,7 @@ abstract class TLC_base extends MultiIOModule with Lx_param {
 
   val info_mstRecProbe_address = RegInit( 0.U(64.W) )
   val info_mstRecProbe_exclusive = RegInit( 0.U(8.W) )
-  val info_mstRecProbe_cb = RegInit( 0.U(log2Ceil(cb).W) )
+  val info_mstRecProbe_cb = RegInit( 0.U(cb_w.W) )
 
   val info_mstReleaseData_address = RegInit( 0.U(64.W) )
 
