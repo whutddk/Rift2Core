@@ -1,6 +1,3 @@
-
-
-
 /*
   Copyright (c) 2020 - 2021 Ruige Lee <m201772520@hust.edu.cn>
 
@@ -28,28 +25,28 @@ import freechips.rocketchip.tilelink._
 
 import base._
 
-trait L1CacheParameters {
-  def dw: Int
-  def bk: Int
-  def cb: Int
-  def cl: Int
+
+
+case class DcacheParameters(
+  dw: Int,
+  bk: Int,
+  cb: Int,
+  cl: Int,
+  dataECC: Option[String] = None
+) extends L1CacheParameters
+
+trait HasDcacheParameters extends HasL1CacheParameters {
+  val cacheParams = dcacheParameters
 }
 
-trait HasL1CacheParameters extends HasCacheParameters{
-  val cacheParams: L1CacheParameters
+abstract class DCacheModule(implicit p: Parameters) extends L1CacheModule
+  with HasDcacheParameters
 
-  def dw = cacheParams.dw
-  def bk = cacheParams.bk
-  def cb = cacheParams.cb
-  def cl = cacheParams.cl
+abstract class DcacheBundle(implicit p: Parameters) extends L1CacheBundle
+  with HasDcacheParameters
+
+
+class L1Metadata(implicit p: Parameters) extends DcacheBundle {
+  val tag = UInt(32.W)
 }
-
-abstract class CacheModule(implicit val p: Parameters) extends MultiIOModule with HasCacheParameters
-abstract class CacheBundle(implicit val p: Parameters) extends Bundle with HasCacheParameters
-
-abstract class L1CacheModule(implicit p: Parameters) extends CacheModule with HasL1CacheParameters
-abstract class L1CacheBundle(implicit p: Parameters) extends CacheBundle with HasL1CacheParameters
-
-
-
 

@@ -1,6 +1,3 @@
-
-
-
 /*
   Copyright (c) 2020 - 2021 Ruige Lee <m201772520@hust.edu.cn>
 
@@ -21,35 +18,36 @@ package rift2Core.L1Cache
 
 import chisel3._
 import chisel3.util._
-import chipsalliance.rocketchip.config.Parameters
+
 
 import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp, TransferSizes}
 import freechips.rocketchip.tilelink._
 
 import base._
 
-trait L1CacheParameters {
-  def dw: Int
-  def bk: Int
-  def cb: Int
-  def cl: Int
+import chipsalliance.rocketchip.config.{Field, Parameters}
+
+
+
+case object CacheParamsKey extends Field[CacheParameters]
+
+case class CacheParameters(
+  l1DcacheParameters: DcacheParameters = DcacheParameters(
+    dw = 64,
+    bk = 4,
+    cb = 4,
+    cl = 4
+  ),
+){
+
 }
 
-trait HasL1CacheParameters extends HasCacheParameters{
-  val cacheParams: L1CacheParameters
+trait HasCacheParameters {
+  implicit val p: Parameters
 
-  def dw = cacheParams.dw
-  def bk = cacheParams.bk
-  def cb = cacheParams.cb
-  def cl = cacheParams.cl
+  val cacheSetting = p(CacheParamsKey)
+
+  val dcacheParameters = cacheSetting.l1DcacheParameters
+
 }
-
-abstract class CacheModule(implicit val p: Parameters) extends MultiIOModule with HasCacheParameters
-abstract class CacheBundle(implicit val p: Parameters) extends Bundle with HasCacheParameters
-
-abstract class L1CacheModule(implicit p: Parameters) extends CacheModule with HasL1CacheParameters
-abstract class L1CacheBundle(implicit p: Parameters) extends CacheBundle with HasL1CacheParameters
-
-
-
 
