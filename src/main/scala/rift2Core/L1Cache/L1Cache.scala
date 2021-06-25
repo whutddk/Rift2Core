@@ -47,6 +47,12 @@ trait HasL1CacheParameters extends HasCacheParameters{
 
   def addr_lsb = log2Ceil(dw*bk/8)
   def line_w   = log2Ceil(cl)
+  def cb_w: Int = {
+    val res = log2Ceil(cb)
+    if ( res == 0 ) {return 0}
+    else {return res}
+  }
+  // def bk_w = log2Ceil(bk)
   def tag_w    = aw - addr_lsb - line_w
 
 }
