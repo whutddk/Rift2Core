@@ -32,6 +32,7 @@ case class DcacheParameters(
   bk: Int,
   cb: Int,
   cl: Int,
+  aw: Int = 32,
   dataECC: Option[String] = None
 ) extends L1CacheParameters
 

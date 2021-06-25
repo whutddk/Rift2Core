@@ -33,6 +33,7 @@ trait L1CacheParameters {
   def bk: Int
   def cb: Int
   def cl: Int
+  def aw: Int
 }
 
 trait HasL1CacheParameters extends HasCacheParameters{
@@ -42,6 +43,12 @@ trait HasL1CacheParameters extends HasCacheParameters{
   def bk = cacheParams.bk
   def cb = cacheParams.cb
   def cl = cacheParams.cl
+  def aw = cacheParams.aw
+
+  def addr_lsb = log2Ceil(dw*bk/8)
+  def line_w   = log2Ceil(cl)
+  def tag_w    = aw - addr_lsb - line_w
+
 }
 
 abstract class CacheModule(implicit val p: Parameters) extends MultiIOModule with HasCacheParameters
