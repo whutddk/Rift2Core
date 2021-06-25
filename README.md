@@ -20,5 +20,5 @@ Rift2Core is going to be a 9-stage, dual-issue superscalar, out-of-order 64-bits
 ![LTC](https://img.shields.io/badge/LTC-LakQ8AL2JeLGKmjanYrpq6Hq7fW4NySXYA-green)
 ![ETH](https://img.shields.io/badge/ETH-0x2f8aeb5f9dfe2936632f47363a42d7f71810c62b-lightgrey)
 ![DOGE](https://img.shields.io/badge/DOGE-DJSv3BgtfPtjc3LzL5PaooAvs9xn8n4tbX-blue)
-![XMR](https://img.shields.io/badge/XMR-43xzb6WgP7gNRDj9WDzCAybFCfNSXbAZsdkzfYQZw5eF83bFpsFDq7T4HA8wkRdP9oJ3wrEPbWA1F6s3odsAwtUPSVZpPfW-yellow)
+![XMR](https://img.shields.io/badge/XMR-4Agg4swWX39L3aCp12L2kob7AdzGZVJxG5jdWCxHioZS5MiWPFUF56z94QekEYCUhtdV6Y4QXzVgTUwgymTmiowDECvZ55A-yellow)
 
