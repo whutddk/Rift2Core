@@ -32,30 +32,25 @@ class SRAMBundleA(val cl: Int) extends Bundle {
   }
 }
 
-class SRAMBundleR[T <: Data](private val gen: T, val cb: Int = 1) extends Bundle {
-  val data = Output(Vec(cb,gen))
+class SRAMBundleR[T <: Data](private val gen: T) extends Bundle {
+  val data = Output(gen)
 }
 
-class SRAMBundleAW[T <: Data](private val gen: T, cl: Int, val cb: Int = 1) extends SRAMBundleA(cl) {
-  val data = Output(Vec(cb, gen))
-  val cb_sel = if (cb > 1 ) Some(Output(UInt(cb.W))) else None
+class SRAMBundleAW[T <: Data](private val gen: T, cl: Int) extends SRAMBundleA(cl) {
+  val data = Output( gen )
 
-  def apply(data: Vec[T], cl_sel: UInt, cb_sel: UInt):SRAMBundleAW[T] = {
+  def apply(data: T, cl_sel: UInt): SRAMBundleAW[T] = {
     super.apply(cl_sel)
     this.data := data
-    this.cb_sel.map(_ := cbMask)
     this
   }
 
-  def apply(data: T, cl_sel: UInt, cb_sel: UInt): SRAMBundleAW[T] = {
-    apply(VecInit(Seq.fill(cb)(data)), cl_sel, cb_sel)
-  }
 
 }
 
-class SRAMReadBus[T <: Data](private val gen: T, val cl: Int, val cb: Int = 1) extends Bundle {
+class SRAMReadBus[T <: Data](private val gen: T, val cl: Int) extends Bundle {
   val req = Decoupled(new SRAMBundleA(cl))
-  val resp = Flipped(new SRAMBundleR(gen, cb))
+  val resp = Flipped(new SRAMBundleR(gen))
 
   def apply(valid: Bool, cl: UInt) = {
     this.req.bits.apply(cl)
@@ -64,67 +59,61 @@ class SRAMReadBus[T <: Data](private val gen: T, val cl: Int, val cb: Int = 1) e
   }
 }
 
-class SRAMWriteBus[T <: Data](private val gen: T, val cl: Int, val cb: Int = 1) extends Bundle {
+class SRAMWriteBus[T <: Data](private val gen: T, val cl: Int) extends Bundle {
   val req = Decoupled(new SRAMBundleAW())
 
-  def apply(valid: Bool, data: Vec[T], cl_sel: UInt, cb_sel: UInt): SRAMWriteBus[T] = {
-    this.req.bits.apply(data, cl_sel, cb_sel)
+  def apply(valid: Bool, data: T, cl_sel: UInt): SRAMWriteBus[T] = {
+    this.req.bits.apply(data, cl_sel)
     this.req.valid := valid
-    this
-  }
-
-  def apply(valid: Bool, data: T, cl_sel: UInt, cb_sel: UInt): SRAMWriteBus[T] = {
-    apply(valid,VecInit(Seq.fill(cb)(data)), cl_sel, cb_sel)
     this
   }
 
 }
 
-class Cache_mem[T <: Data](gen: T, cl: Int, cb: Int) extends Module {
+class Cache_mem[T <: Data](gen: T, cl: Int) extends Module {
   val io = IO(new Bundle{
-    val r = Flipped(new SRAMReadBus(gen, cl, cb))
-    val w = Flipped(new SRAMWriteBus(gen, cl, cb))
+    val r = Flipped(new SRAMReadBus(gen, cl))
+    val w = Flipped(new SRAMWriteBus(gen, cl))
   })
 
   val wordType = UInt(gen.getWidth.W)
-  val array = SyncReadMem( cl, Vec(cb, wordType))
+  val array = SyncReadMem( cl, wordType )
 
   val (ren, wen) = ( io.r.req.valid, io.w.req.valid )
 
   {
     val cl_sel = io.w.req.bits.cl_sel
-    val wdata = VecInit((io.w.req.bits.data).map(_.asTypeOf(wordType)))
-    val cb_sel = io.w.req.bits.cb_sel.getOrElse("b1".U)
-    when(wen) { array.write(cl_sel, wdata, cb_sel.asBools) }   
+    val wdata = (io.w.req.bits.data).asTypeOf(wordType)
+
+    when(wen) { array.write(cl_sel, wdata) }   
   }
 
   val raw_rdata = array.read(io.r.req.bits.cl_sel, ren)
 
-  def need_bypass(wen: Bool, waddr: UInt, wmask: UInt, ren: Bool, raddr: UInt): UInt ={
+  def need_bypass(wen: Bool, waddr: UInt, ren: Bool, raddr: UInt): UInt ={
     val need_check = RegNext(ren & wen)
     val waddr_reg = RegNext(waddr)
     val raddr_reg = RegNext(raddr)
-    require(wmask.getWidth == way)
-    val bypass = Fill(cb, need_check & waddr_reg === raddr_reg) & RegNext(wmask)
-    bypass.asTypeOf(UInt(cb.W))
+
+    val bypass = need_check & waddr_reg === raddr_reg 
+    bypass
   }
 
-  val bypass_wdata = VecInit(RegNext(io.w.req.bits.data).map(_.asTypeOf(wordType)))
-  val bypass_mask  = need_bypass(io.w.req.valid, io.w.req.bits.cl_sel, io.w.req.bits.cb_sel.getOrElse("b1.U"), io.r.req.valid, io.r.req.bits.cl_sel)
+  val bypass_wdata = RegNext(io.w.req.bits.data).asTypeOf(wordType)
+  val bypass_mask  = need_bypass(io.w.req.valid, io.w.req.bits.cl_sel, io.r.req.valid, io.r.req.bits.cl_sel)
 
   val mem_rdata =
-    VecInit(bypass_mask.asBools.zip(raw_rdata).zip(bypass_wdata).map {
-      case((a,b),c) => Mux(a, b, c)
-    })
+    Mux( bypass_mask.asBools, bypass_wdata, raw_rdata )
+
 
   val rdata = 
     Mux(
       RegNext(ren),
       mem_rdata,
       RegEnable(mem_rdata, 0.U.asTypeOf(mem_rdata), RegNext(ren))
-    ).map(_.asTypeOf(gen))
+    ).asTypeOf(gen)
 
-  io.r.resp.data := VecInit(rdata)
+  io.r.resp.data := rdata
   io.r.req.ready := true.B
   io.w.req.ready := true.B
 

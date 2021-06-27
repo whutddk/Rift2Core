@@ -94,7 +94,6 @@ abstract class AbstractDataArray(implicit p: Parameters) extends DCacheModule {
     val read = Vec( 2, Flipped(DecoupledIO(new L1DataReadReq)) )
     val write = Flipped(DecoupledIO(new L1DataWriteReq))
     val resp = Output(Vec(2, Vec(bk, Bits(dw.W))))
-    val nacks = Output(Vec(2, Bool()))
   })
 
   def pipieMap[T <: Data](f: Int => T) = VecInit((0 until 2).map(f))
@@ -113,7 +112,80 @@ class DuplicatedDataArray(implicit p: Parameters) extends AbstractDataArray {
       val cb_en_wr, cb_en_rd = Input(UInt(cb.W))
       val rdata = Output(UInt()) 
     })
+
+    val cb_en_rd_reg = RegNext(io.cb_en_rd)
+    val data_array = Array.fill(cb) {
+      Module(new Cache_mem(
+        Bits(dw.W),
+        cl
+      ))
+    }
+
+    for ( i <- 0 until cb ) yield {
+      val wen = io.wen & io.cb_en_wr(i)
+      data_array(i).io.w.req.valid := wen
+      data_array(i).io.w.req.bits.apply(
+        data = io.wdata,
+        cl_sel = io.waddr
+      )
+      data_array(i).io.r.req.valid := io.ren3
+      data_array(i).io.r.req.bits.apply( io.raddr )
+    }
+
+    // val half = nWays / 2
+    val data_read = data_array.map(_.io.r.resp.data)
+    // val data_left = Mux1H(r_way_en_reg.tail(half), data_read.take(half))
+    // val data_right = Mux1H(r_way_en_reg.head(half), data_read.drop(half))
+
+    // val sel_low = r_way_en_reg.tail(half).orR()
+    // val row_data = Mux(sel_low, data_left, data_right)
+
+    io.rdata := Mux1H( cb_en_rd_reg, data_read)
+
   }
+
+  for ( i <- 0 until 2 ) yield {
+    val raddr = raddrs(i)
+    val cb_sel = io.read(i).bits.cb_sel
+
+    val rwhazard = io.write.valid & waddr === raddr
+    io.read(j).ready := ~rwhazard
+
+    assert(~(RegNext(io.read(i).fire & PopCount(io.read(i).bits.cb_sel) > 1.U)))
+    val cb_sel = RegNext(io.read(i).bits.cb_sel)
+
+    val row_error = Wire( Vec(bk, Vec(dw, Bool())) )
+    val dataGroup = Moudle(new DataSRAMGroup)
+
+    for ( j <- 0 until bk ) yield {
+      dataGroup.io.wen      := io.write.valid & io.write.bits.bk_sel_wr(j)
+      dataGroup.io.cb_en_wr := io.write.bits.cb_sel
+      dataGroup.io.waddr    := waddr
+      dataGroup.io.wdata    := io.write.bits.data(j)
+      dataGroup.io.ren      := io.read(i).valid & io.read(i).bits.bk_sel_rd(j)
+      dataGroup.io.cb_en_rd := io.read(i).bits.cb_sel
+      dataGroup.io.raddr    := raddr
+
+
+      val data_resp_chosen = Wire( Vec(dw/64, Bits(64.W)) )
+      data_resp_chosen := dataGroup.io.rdata.asTypeOf(data_resp_chosen)
+
+      io.resp(i)(j) := Cat( 0 until dw/64 ) reverseMap {
+        k => data_resp_chosen(k)
+      }
+    }
+  }
+}
+
+class L1MetadataArray()(implicit p: Parameters) extends DCacheModule {
+
+
+  val io = IO(new Bundle {
+    val read = Flipped(DecoupledIO(new L1MetaReadReq))
+    val write = Flipped(DecoupledIO(new L1MetaWriteReq))
+    val resp = Output(Vec(cb, UInt(encMetaBits.W)))
+  })
+}
 
 
 
