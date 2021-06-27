@@ -32,12 +32,12 @@ import chipsalliance.rocketchip.config.{Field, Parameters}
 case object CacheParamsKey extends Field[CacheParameters]
 
 case class CacheParameters(
-  l1DcacheParameters: DcacheParameters = DcacheParameters(
-    dw = 64,
-    bk = 4,
-    cb = 4,
-    cl = 4
-  ),
+  // l1DcacheParameters: DcacheParameters = DcacheParameters(
+  //   dw = 64,
+  //   bk = 4,
+  //   cb = 4,
+  //   cl = 4
+  // ),
 ){
 
 }
@@ -47,7 +47,7 @@ trait HasCacheParameters {
 
   val cacheSetting = p(CacheParamsKey)
 
-  val dcacheParameters = cacheSetting.l1DcacheParameters
+  // val dcacheParameters = cacheSetting.l1DcacheParameters
 
 }
 
