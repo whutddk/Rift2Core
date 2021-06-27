@@ -6,7 +6,7 @@ import chisel3._
 import chisel3.util._
 import base._
 import freechips.rocketchip.tilelink._
-import tilelink.TLparam
+
 
 class Info_mshr_req extends Bundle {
   val addr = UInt(32.W)
@@ -17,7 +17,7 @@ class Info_mshr_rsp extends Bundle{
   val data = UInt(256.W)
 }
 
-class MSHR(edge: TLEdgeOut, entry: Int = 8) extends Module {
+class MissUnit(edge: TLEdgeOut, entry: Int = 8) extends Module {
   val io = IO(new Bundle{
     val req = Flipped(DecoupledIO(new Info_mshr_req))
     val rsp = DecoupledIO(new Info_mshr_rsp)
@@ -27,7 +27,7 @@ class MSHR(edge: TLEdgeOut, entry: Int = 8) extends Module {
     val dcache_grantAck  = Decoupled(new TLBundleE(edge.bundle))
 
     val probe_req = ValidIO(UInt(32.W))
-    val probe_block = Output(Bool())
+    val block_probe_req = Output(Bool())
 
   })
 
