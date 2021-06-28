@@ -1,6 +1,3 @@
-[submodule "rocket-chip"]
-	path = rocket-chip
-	url = git@github.com:chipsalliance/rocket-chip.git
 [submodule "block-inclusivecache-sifive"]
 	path = block-inclusivecache-sifive
 	url = git@github.com:sifive/block-inclusivecache-sifive.git
