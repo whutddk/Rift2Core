@@ -6,25 +6,25 @@ ThisBuild / scalaVersion     := "2.12.12"
 ThisBuild / version          := "0.8.0"
 ThisBuild / organization     := "WUT"
 
-// lazy val rocket = (project in file("./rocket-chip"))
-//   .settings(
-//     name := "%NAME%",
-//     libraryDependencies ++= Seq(
-//       "edu.berkeley.cs" %% "chisel3" % "3.4.2",
-//       "edu.berkeley.cs" %% "chiseltest" % "0.3.2" % "test",
-//       "edu.berkeley.cs" %% "firrtl-interpreter" % "1.4.3",
-//       "edu.berkeley.cs" %% "chisel-iotesters" % "1.5.3"
-//     ),
-//     scalacOptions ++= Seq(
-//       "-Xsource:2.11",
-//       "-language:reflectiveCalls",
-//       "-deprecation",
-//       "-feature",
-//       "-Xcheckinit"
-//     ),
-//     addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.4.2" cross CrossVersion.full),
-//     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
-// )
+lazy val rocketchip = (project in file("./rocket-chip"))
+  .settings(
+    name := "rocketchip",
+    libraryDependencies ++= Seq(
+      "edu.berkeley.cs" %% "chisel3" % "3.4.2",
+      "edu.berkeley.cs" %% "chiseltest" % "0.3.2" % "test",
+      "edu.berkeley.cs" %% "firrtl-interpreter" % "1.4.3",
+      "edu.berkeley.cs" %% "chisel-iotesters" % "1.5.3"
+    ),
+    scalacOptions ++= Seq(
+      "-Xsource:2.11",
+      "-language:reflectiveCalls",
+      "-deprecation",
+      "-feature",
+      "-Xcheckinit"
+    ),
+    addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.4.2" cross CrossVersion.full),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
+)
 
 lazy val inclusiveCache = (project in file("./design/craft/inclusivecache"))
   .settings(
@@ -51,11 +51,11 @@ lazy val inclusiveCache = (project in file("./design/craft/inclusivecache"))
 
 lazy val root = (project in file("."))
   .dependsOn(inclusiveCache)
+  .dependsOn(rocketchip)
   .settings(
     name := "%NAME%",
     libraryDependencies ++= Seq(
       "edu.berkeley.cs" %% "chisel3" % "3.4.2",
-      "edu.berkeley.cs" %% "rocketchip" % "1.2.6",
       "edu.berkeley.cs" %% "chiseltest" % "0.3.2" % "test",
       "edu.berkeley.cs" %% "firrtl-interpreter" % "1.4.3",
       "edu.berkeley.cs" %% "chisel-iotesters" % "1.5.3"
