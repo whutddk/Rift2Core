@@ -14,9 +14,9 @@ class Info_writeBack_req extends Bundle {
   val is_releaseData = Bool()
   val is_release = Bool()
   val is_probe = Bool()
-  val is_prboeData = Bool()
+  val is_probeData = Bool()
 
-  assert( PopCount(Cat(is_releaseData, is_release, is_probe, is_prboeData)) === 1.U )
+  assert( PopCount(Cat(is_releaseData, is_release, is_probe, is_probeData)) === 1.U )
 }
 
 
@@ -26,8 +26,9 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
     val dcache_release = DecoupledIO(new TLBundleC(edge.bundle))
     val dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge.bundle)))
 
-    val miss_req = Flipped(ValidIO(UInt(32.W)))
-    val block_miss_req = Output(Bool())
+
+    val release_ban = Input(Bool())
+    val miss_ban = Output(Bool())
   })
 
   val wb_fifo = Module(new Queue(new Info_writeBack_req, 8, false, false))
@@ -48,10 +49,10 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
 
   wb_state_dnxt :=
     Mux1H(Seq(
-      (wb_state_qout === 0.U) -> Mux(wb_fifo.io.deq.valid, 1.U, 0.U),
+      (wb_state_qout === 0.U) -> Mux(wb_fifo.io.deq.valid & ~io.release_ban, 1.U, 0.U),
       (wb_state_qout === 1.U) ->
         Mux(~is_release_done, 1.U,
-          Mux( wb_fifo.io.deq.bits.is_prboeData | wb_fifo.io.deq.bits.is_prboe, 0.U, 2.U ),
+          Mux( wb_fifo.io.deq.bits.is_probeData | wb_fifo.io.deq.bits.is_probe, 0.U, 2.U )),
       (wb_state_qout === 2.U) -> Mux( io.dcache_grant.fire, 0.U, 2.U )
     ))
 
@@ -93,8 +94,8 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
 
 
     Mux1H(Seq(
-      wb_fifo.io.deq.bits.is_prbeo       -> info_probe,
-      wb_fifo.io.deq.bits.is_prbeoData   -> info_probeData,
+      wb_fifo.io.deq.bits.is_probe       -> info_probe,
+      wb_fifo.io.deq.bits.is_probeData   -> info_probeData,
       wb_fifo.io.deq.bits.is_release     -> info_release,
       wb_fifo.io.deq.bits.is_releaseData -> info_releaseData,
     ))    
@@ -110,6 +111,9 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
 
   wb_fifo.io.deq.ready := 
     wb_state_qout =/= 0.U & wb_state_dnxt === 0.U
+
+  io.miss_ban := wb_state_qout === 1.U | wb_state_qout === 2.U
+
 
 }
 

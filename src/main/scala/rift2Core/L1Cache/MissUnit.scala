@@ -26,8 +26,8 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8) extends Module {
     val dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge.bundle)))
     val dcache_grantAck  = Decoupled(new TLBundleE(edge.bundle))
 
-    val probe_req = ValidIO(UInt(32.W))
-    val block_probe_req = Output(Bool())
+    val miss_ban = Input(Bool())
+    val release_ban = Output(Bool())
 
   })
 
@@ -55,7 +55,7 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8) extends Module {
 
   mshr_state_dnxt := 
     Mux1H(Seq(
-      (mshr_state_qout === 0.U) -> Mux(miss_valid.contains(true.B), 1.U, 0.U) ,//cfree
+      (mshr_state_qout === 0.U) -> Mux(miss_valid.contains(true.B) & ~io.miss_ban, 1.U, 0.U) ,//cfree
       (mshr_state_qout === 1.U) -> Mux(io.dcache_acquire.fire, 2.U, 1.U),//acquire
       (mshr_state_qout === 2.U) -> Mux(is_trans_done, 3.U, 2.U),//grant
       (mshr_state_qout === 3.U) -> Mux(io.dcache_grantAck.fire, 0.U, 3.U)//grantack
@@ -101,10 +101,8 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8) extends Module {
 
 
 
-  io.probe_block :=
-    io.probe_req.valid &
-    mshr_state_dnxt === 0.U &
-    io.probe_req.bits === miss_queue(acquire_sel).addr
+  io.release_ban := mshr_state_qout === 1.U | mshr_state_qout === 2.U
+
 
 
 
@@ -113,9 +111,14 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8) extends Module {
   val load_sel = miss_valid.indexWhere( (x:Bool) => (x === false.B) )
   io.req.ready := ~is_missQueue_full
 
+  val is_merge_addr  = miss_queue.exists((x: Info_mshr_req) => (x.addr === io.req.bits.addr) )
+  val merge_idx      = miss_queue.indexWhere((x: Info_mshr_req) => (x.addr === io.req.bits.addr) )
+  val is_merge_valid = miss_valid(merge_idx) === true.B
   when(io.req.fire) {
-    miss_queue(load_sel) := io.req.bits.addr
-    miss_valid(load_sel) := true.B
+    when( ~is_merge_addr | ~is_merge_valid ) {
+      miss_queue(load_sel) := io.req.bits.addr
+      miss_valid(load_sel) := true.B      
+    }
   }
 
 }
