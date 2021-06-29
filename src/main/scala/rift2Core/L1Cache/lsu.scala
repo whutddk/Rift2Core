@@ -10,12 +10,23 @@ import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp, Trans
 import freechips.rocketchip.tilelink._
 
 
+/**
+  * @note all info iss in lsu can be executed out-of-order
+  */ 
 
+class Lsu_iss_info extends Bundle {
+  val paddr    = UInt(64.W)
+  val mask    = UInt(8.W)
+  val data = UInt(64.W)
+  val op = UInt(8.W)
 
+  val rd0_phy = UInt(6.W)
+}
 
-
-
-
+class Info_pd extends Lsu_iss_info {
+  val tag = UInt(tag_w.W)
+  val is_valid = Bool()
+}
 
 
 
@@ -39,17 +50,9 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer) {
 
   val io = IO(new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+    val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
 
-    // val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
-    // val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
 
-    // val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-    // val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
-
-    // val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-    // val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
-    // val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
 
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
@@ -66,7 +69,8 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer) {
   io.lsu_exe_iwb <> lsu_exe_iwb_fifo.io.deq
   lsu_exe_iwb_fifo.reset := reset.asBool | io.flush
 
-
+  val ls_queue = Module(new Queue(new Lsu_iss_info,  16, true, false))
+  val pd_queue = Module(new Queue(new Info_pd,  1, false, true))
 
   val cache_dat = Module(new Cache_dat())
   val cache_tag = Module(new Cache_tag())
@@ -95,6 +99,9 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer) {
 
 
 
+
+
+
   missUnit.req 
   missUnit.rsp
 
@@ -112,23 +119,59 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer) {
 
 
 
-  cache_dat.dat_addr_w
-  cache_dat.dat_addr_r = Wire(UInt(aw.W))
-  cache_dat.dat_en_w = Wire( Vec(cb, Bool()) )
-  cache_dat.dat_en_r = Wire( Vec(cb, Bool()) )
-  cache_dat.dat_info_wstrb = Wire(UInt((128/8).W))
-  cache_dat.dat_info_w = Wire(UInt(128.W))
-  cache_dat.dat_info_r = Wire( Vec(cb, UInt(128.W)) )
+  cache_tag.tag_addr_r := ls_queue.io.deq.bits.paddr
+  cache_tag.tag_en_r   := ls_queue.io.deq.valid & pd_queue.io.enq.ready
+  pd_queue.io.enq.bits.tag := cache_tag.tag_info_r
 
 
-  cache_tag.tag_addr_r = Wire(UInt(aw.W))
-  cache_tag.tag_addr_w = Wire(UInt(aw.W))
-  cache_tag.tag_en_w = Wire( Vec(cb, Bool()) )
-  cache_tag.tag_en_r = Wire( Vec(cb, Bool()) )  
-  cache_tag.tag_info_r = Wire( Vec(cb, UInt(tag_w.W)) )
-  cache_tag.addr_sel_w = tag_addr_w(addr_lsb+line_w-1, addr_lsb)
-  cache_tag.addr_sel_r = tag_addr_r(addr_lsb+line_w-1, addr_lsb)
-  cache_tag.tag_info_w = tag_addr_w(31, 32-tag_w)
+  cache_dat.dat_addr_r := ls_queue.io.deq.bits.paddr
+  cache_dat.dat_en_r   := op === Read & ls_queue.io.deq.valid & pd_queue.io.enq.ready
+  pd_queue.io.enq.bits.data := cache_dat.dat_info_r 
+
+
+
+  cache_dat.dat_addr_w :=
+    Mux(
+      ,
+      ,
+      pd_queue.io.deq.bits.paddr
+    )
+  cache_dat.dat_en_w :=
+    Mux(
+      ,
+      ,
+      is_hit & pd_queue.io.deq.bits.op === write | atom
+    )
+  cache_dat.dat_info_wstrb :=
+    Mux(
+      ,
+      "hFFFF".U,
+      pd_queue.io.deq.bits.mask
+    )
+  cache_dat.dat_info_w :=
+     Mux(
+      ,
+      ,
+      pd_queue.io.deq.bits.data
+    )   
+
+
+
+
+  cache_tag.tag_addr_w :=
+  cache_tag.tag_en_w
+  cache_tag.addr_sel_w
+  cache_tag.tag_info_w
+
+  when() {
+    ls_queue.io.enq <> io.lsu_iss_exe
+  } .elsewhen {
+    ls_queue.io.enq <> pd_queue.io.deq
+  } .otherwise {
+    
+  }
+
+
 
 
 }
