@@ -5,6 +5,7 @@ import chisel3._
 import chisel3.util._
 
 import base._
+import rift2Core.cache._
 import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp, TransferSizes}
 import freechips.rocketchip.tilelink._
 
@@ -22,8 +23,8 @@ class Lsu()(implicit p: Parameters) extends LazyModule {
   val clientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "dcache",
-      sourceId = IdRange(0, cfg.nMissEntries+1),
-      supportsProbe = TransferSizes(cfg.blockBytes)
+      sourceId = IdRange(0, 1),
+      supportsProbe = TransferSizes(32)
     ))
   )
 
@@ -70,9 +71,9 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer) {
   val cache_dat = Module(new Cache_dat())
   val cache_tag = Module(new Cache_tag())
 
-  val missUnit = MissUnit(edge = edge, entry = 8)
-  val probeUnit = ProbeUnit(edge = edge)
-  val writeBackUnit = WriteBackUnit(edge = edge)
+  val missUnit = Module(new MissUnit(edge = edge, entry = 8))
+  val probeUnit =  Module(new ProbeUnit(edge = edge))
+  val writeBackUnit =  Module(new WriteBackUnit(edge = edge))
 
   when( bus.d.bits.opcode === TLMessages.Grant || bus.d.bits.opcode === TLMessages.GrantData ) {
     bus.d <> missUnit.io.dcache_grant
