@@ -52,10 +52,13 @@ class Cache_op extends Bundle {
   )
   
   def is_atom = swap | add | and | or | xor | max | maxu | min | minu
+  def is_access = is_atom | load | store | lr | sc
   def is_tag_r = is_atom | load | store | lr | sc
   def is_dat_r = is_atom | load | probe | lr
   def is_tag_w = grant
   def is_dat_w = is_atom | store | sc | grant
+  def is_dirtyOp = is_atom | store | sc
+  def is_wb = is_atom | load | lr
 }
   
   /**
@@ -167,7 +170,7 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasDcacheParameters 
 
   cache_tag.tag_addr_r := 
     PriorityMux(Seq(
-      probeUnit.io.req.valid -> probeUnit.io.req.paddr,
+      probeUnit.io.req.valid -> probeUnit.io.req.bits.paddr,
       (ls_queue.io.deq.valid & pd_queue.io.enq.ready) -> ls_queue.io.deq.bits.paddr
     ))
 
@@ -279,7 +282,7 @@ class Info_lsu_s0s1(implicit p: Parameters) extends DcacheBundle {
   // def get_tag(paddr: UInt) = paddr(31,32-tag_w)
   // def get_cl(paddr:  UInt) = paddr(addr_lsb+line_w-1, addr_lsb)
   // def get_bk(paddr:  UInt) = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-  def get_bk = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  def bk_sel = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
 }
 
 class Info_cache_rd(implicit p: Parameters) extends DcacheBundle {
@@ -298,9 +301,9 @@ class Info_lsu_s1s2(implicit p: Parameters) extends DcacheBundle {
   val rdata = Vec(cb, Vec(bk, UInt(64.W)))
   val tag   = Vec(cb, UInt(tag_w.W))
 
-  def get_tag = paddr(31,32-tag_w)
-  def get_cl  = paddr(addr_lsb+line_w-1, addr_lsb)
-  def get_bk  = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+  def tag_sel = paddr(31,32-tag_w)
+  def cl_sel  = paddr(addr_lsb+line_w-1, addr_lsb)
+  def bk_sel  = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
 
 }
 
@@ -315,7 +318,7 @@ class L1_rd_stage( cache_dat: Cache_dat, cache_tag: Cache_tag )(implicit p: Para
 
   val s1s2_pipe = Module( new Queue(new Info_cache_rd, 1, true, true) )
 
-  val bk_sel = io.rd_in.bits.get_bk
+  val bk_sel = io.rd_in.bits.bk_sel
 
 
   cache_tag.tag_addr_r := io.rd_in.bits.paddr
@@ -348,8 +351,10 @@ class L1_rd_stage( cache_dat: Cache_dat, cache_tag: Cache_tag )(implicit p: Para
   for ( i <- 0 until cb )                  yield { s1s2_pipe.io.enq.bits.tag(i) := cache_tag.tag_info_r(i) }
   
   io.rd_out.valid := s1s2_pipe.io.deq.valid
-  io.rd_out.bits.rdata(i)(j) := s1s2_pipe.io.deq.bits.rdata(i)(j)
-  io.rd_out.bits.tag(i)      := s1s2_pipe.io.deq.bits.tag(i)
+
+  for( i <- 0 until cb; j <- 0 until bk ) yield { io.rd_out.bits.rdata(i)(j) := s1s2_pipe.io.deq.bits.rdata(i)(j) } 
+  for( i <- 0 until cb )                  yield { io.rd_out.bits.tag(i)      := s1s2_pipe.io.deq.bits.tag(i) }
+
   
   io.rd_out.bits.paddr    := RegEnable(io.rd_in.bits.paddr, io.rd_in.fire)
   io.rd_out.bits.wmask    := RegEnable(io.rd_in.bits.wmask, io.rd_in.fire)
@@ -369,57 +374,62 @@ class L1_wr_stage( cache_dat: Cache_dat, cache_tag: Cache_tag, missUnit: MissUni
     val wr_in  = Flipped(new DecoupledIO(new Info_lsu_s1s2))    
   })
 
+  val bk_sel = io.wr_in.bits.bk_sel
+  val cl_sel = io.wr_in.bits.cl_sel
+  val tag_sel = io.wr_in.bits.tag_sel
 
 
-  val is_hit = Wire(Bool())
   val is_hit_oh = Wire(Vec(cb, Bool()))
+  val is_hit = is_hit_oh.asUInt.orR
+  // val hit_cb_sel = OHToUInt(is_hit_oh)
+
   val is_valid = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
   val is_dirty = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
 
   is_hit_oh := {
-    val cl_sel   = get_cl(pd_queue.io.deq.bits.paddr)
-    val tag_info = get_tag(pd_queue.io.deq.bits.paddr)
     val res = 
       for( i <- 0 until cb ) yield {
-        pd_queue.io.deq.bits.tag(i) === tag_info & is_valid(cl_sel)(i)        
+        (io.wr_in.bits.tag(i) === tag_sel) & is_valid(cl_sel)(i)        
       }
     assert(PopCount(res) <= 1.U)
     VecInit(res)
   }
-  val hit_cb_sel = OHToUInt(is_hit_oh)
-  is_hit := is_hit_oh.orR
-  
-  val rpl_sel = Wire(UInt(log2Ceil(cb).W))
-  
-  rpl_sel := {
-    val cl_sel = get_cl(io.wr_in.bits.paddr)
+
+  val rpl_sel = {
     val is_emptyBlock_exist = is_valid(cl_sel).contains(false.B)
     val emptyBlock_sel = is_valid(cl_sel).indexWhere( (x:Bool) => (x === false.B) )
     Mux( is_emptyBlock_exist, emptyBlock_sel, LFSR(16) )
   }
   
+  val cb_sel = 
+    Mux1H(Seq(
+      io.wr_in.bits.op.is_access -> Mux( is_hit, OHToUInt(is_hit_oh), rpl_sel ),
+      io.wr_in.bits.op.probe -> OHToUInt(is_hit_oh),
+      io.wr_in.bits.op.grant -> rpl_sel
+    ))
 
+    when( io.wr_in.fire ) {
+      when( io.wr_in.bits.op.probe ) { assert(is_hit) }
+      when( io.wr_in.bits.op.grant ) { assert(is_valid(cl_sel).contains(false.B)) }
+    }
 
   cache_dat.dat_addr_w := io.wr_in.bits.paddr
 
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
     cache_dat.dat_en_w(i)(j) :=
       io.wr_in.valid &
-      Mux( io.wr_in.bits.op === write | raed | atom,  i.U === hit_cb_sel, i.U === rpl_sel) &
-      Mux1H(Seq(
-        (io.wr_in.bits.op === grantData) -> true.B,
-        (io.wr_in.bits.op === store    ) -> j.U === get_bk(io.wr_in.bits.paddr),
-        (io.wr_in.bits.op === atom     ) -> j.U === get_bk(io.wr_in.bits.paddr),
-        (io.wr_in.bits.op === read    ) -> false.B
-      ))
+      i.U === cb_sel &
+      io.wr_in.bits.op.is_dat_w & (
+        io.wr_in.bits.op.grant |
+        j.U === bk_sel
+      )
   }
 
   for ( j <- 0 until bk ) yield {
     cache_dat.dat_info_wstrb(j) :=
       Mux1H(Seq(
-        (io.wr_in.bits.op === grantData) -> "hFF".U,
-        (io.wr_in.bits.op === store    ) -> io.wr_in.bits.wmask,
-        (io.wr_in.bits.op === atom     ) -> io.wr_in.bits.wmask,
+        (io.wr_in.bits.op.grant) -> "hFF".U,
+        (io.wr_in.bits.op.is_access) -> io.wr_in.bits.wmask
       ))    
   }
 
@@ -431,18 +441,18 @@ class L1_wr_stage( cache_dat: Cache_dat, cache_tag: Cache_tag, missUnit: MissUni
 
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
     cache_tag.tag_en_w(i)(j) :=
-      (i.U === rpl_sel) & io.wr_in.valid & io.wr_in.op === grantData
+      (i.U === cb_sel) & io.wr_in.valid & io.wr_in.op.grant
   }
 
   when( io.wr_in.fire ) {
-    when( io.wr_in.bits.op === grantData ) {
+    when( io.wr_in.bits.op.grant ) {
       is_valid(cl_sel)(cb_sel) := true.B
       is_dirty(cl_sel)(cb_sel) := false.B
     }
-    when( io.wr_in.bits.op === write | atom ) {
+    when( io.wr_in.bits.op.is_dirtyOp ) {
       is_dirty(cl_sel)(cb_sel) := true.B
     }
-    when( (io.wr_in.bits.op === read | write | atom) & ~is_hit ) {
+    when( (io.wr_in.bits.op.is_access) & ~is_hit ) {
       is_valid(cl_sel)(cb_sel) := false.B
     }
 
@@ -451,18 +461,18 @@ class L1_wr_stage( cache_dat: Cache_dat, cache_tag: Cache_tag, missUnit: MissUni
 
 
 
-  missUnit.io.req.valid := io.wr_in.fire & io.wr_in.bits.op === load | write | atom & is_hit
+  missUnit.io.req.valid := io.wr_in.fire & io.wr_in.bits.op.is_access & is_hit
   missUnit.io.req.bits.paddr := io.wr_in.bits.paddr
 
-  writeBackUnit.io.req.valid := io.wr_in.fire & io.wr_in.bits.op === load | write | atom & ~is_hit
+  writeBackUnit.io.req.valid := io.wr_in.fire & ((io.wr_in.bits.op.is_access & ~is_hit) | io.wr_in.bits.op.probe)
   writeBackUnit.io.req.bits.addr := io.wr_in.bits.paddr
-  writeBackUnit.io.req.bits.data := Cat(io.wr_in.bits.rdata.map.reserve)
-  writeBackUnit.io.req.bits.is_releaseData := io.wr_in.bits.op === load | write | atom & ~is_hit & is_dirty(cl_sel)(cb_sel)
-  writeBackUnit.io.req.bits.is_release := io.wr_in.bits.op === load | write | atom & ~is_hit & ~is_dirty(cl_sel)(cb_sel)
-  writeBackUnit.io.req.bits.is_probe := io.wr_in.bits.op === probe & ~is_hit & ~is_dirty(cl_sel)(cb_sel)
-  writeBackUnit.io.req.bits.is_probeData := io.wr_in.bits.op === probe & ~is_hit & is_dirty(cl_sel)(cb_sel)
+  writeBackUnit.io.req.bits.data := Cat(io.wr_in.bits.rdata(cb_sel).reserve)
+  writeBackUnit.io.req.bits.is_releaseData := io.wr_in.bits.op.is_access & ~is_hit & is_dirty(cl_sel)(cb_sel)
+  writeBackUnit.io.req.bits.is_release := io.wr_in.bits.op.is_access & ~is_hit & ~is_dirty(cl_sel)(cb_sel)
+  writeBackUnit.io.req.bits.is_probe := io.wr_in.bits.op.probe & ~is_dirty(cl_sel)(cb_sel)
+  writeBackUnit.io.req.bits.is_probeData := io.wr_in.bits.op.probe & is_dirty(cl_sel)(cb_sel)
 
-  lu_exe_iwb.valid := io.wr_in.fire & io.wr_in.bits.op === load | atom & is_hit
+  lu_exe_iwb.valid := io.wr_in.fire & io.wr_in.bits.op.is_wb & is_hit
   
   lu_exe_iwb.bits.res := io.wr_in.bits.rdata(cb_sel)(bk_sel)
 
