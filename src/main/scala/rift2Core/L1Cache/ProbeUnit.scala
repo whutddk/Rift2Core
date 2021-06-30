@@ -8,7 +8,7 @@ import base._
 import freechips.rocketchip.tilelink._
 
 class Info_probe_req extends Bundle {
-  val addr = UInt(32.W)
+  val paddr = UInt(32.W)
 }
 
 
@@ -23,7 +23,7 @@ class ProbeUnit(edge: TLEdgeOut) extends Module {
   io.req <> probe_fifo.io.deq
 
   probe_fifo.io.enq.valid := io.dcache_probe.valid
-  probe_fifo.io.enq.bits.addr := io.dcache_probe.bits.address
+  probe_fifo.io.enq.bits.paddr := io.dcache_probe.bits.address
   io.dcache_probe.ready := probe_fifo.io.enq.ready
 
 }

@@ -15,7 +15,7 @@
    limitations under the License.
 */
 
-package rift2Core.cache
+package rift2Core.L1Cache
 
 
 import chisel3._
@@ -55,13 +55,19 @@ class Cache_tag( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
     tag_ram(i).io.en_r   := tag_en_r(i)
     tag_ram(i).io.en_w   := tag_en_w(i)
 
-    tag_ram(i).io.data_wstrb := Fill((tag_w+7)/8,1.U)
+    tag_ram(i).io.data_wstrb := "hFFFFFFFF".U
     tag_ram(i).io.data_w := tag_info_w
-    tag_info_r(i)     := tag_ram(i).io.data_r
 
+    tag_info_r(i)     :=
+      Mux(
+        tag_addr_r === tag_addr_w &
+        tag_en_w(i) & tag_en_r(i),
+        tag_info_w,
+        tag_ram(i).io.data_r
+      )
   }
 
-
+  assert(PopCount(tag_en_w) <= 1.U)
 
 
 

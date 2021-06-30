@@ -9,11 +9,11 @@ import freechips.rocketchip.tilelink._
 
 
 class Info_mshr_req extends Bundle {
-  val addr = UInt(32.W)
+  val paddr = UInt(32.W)
 }
 
 class Info_mshr_rsp extends Bundle{
-  val addr = UInt(32.W)
+  val paddr = UInt(32.W)
   val data = UInt(256.W)
 }
 
@@ -71,7 +71,7 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8) extends Module {
   io.dcache_acquire.bits := {
     edge.AcquireBlock(
       fromSource = 65.U,
-      toAddress = miss_queue(acquire_sel).addr,
+      toAddress = miss_queue(acquire_sel).paddr,
       lgSize = log2Ceil(256/8).U,
       growPermissions = TLPermissions.NtoT
     )._2
@@ -96,7 +96,7 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8) extends Module {
     assert(mshr_state_qout === 3.U)
   }
 
-  io.rsp.bits.addr := miss_queue(acquire_sel).addr
+  io.rsp.bits.paddr := miss_queue(acquire_sel).paddr
   io.rsp.bits.data := Cat(miss_rsp(1), miss_rsp(0))
 
 
@@ -111,12 +111,12 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8) extends Module {
   val load_sel = miss_valid.indexWhere( (x:Bool) => (x === false.B) )
   io.req.ready := ~is_missQueue_full
 
-  val is_merge_addr  = miss_queue.exists((x: Info_mshr_req) => (x.addr === io.req.bits.addr) )
-  val merge_idx      = miss_queue.indexWhere((x: Info_mshr_req) => (x.addr === io.req.bits.addr) )
+  val is_merge_addr  = miss_queue.exists((x: Info_mshr_req) => (x.paddr === io.req.bits.paddr) )
+  val merge_idx      = miss_queue.indexWhere((x: Info_mshr_req) => (x.paddr === io.req.bits.paddr) )
   val is_merge_valid = miss_valid(merge_idx) === true.B
   when(io.req.fire) {
     when( ~is_merge_addr | ~is_merge_valid ) {
-      miss_queue(load_sel) := io.req.bits.addr
+      miss_queue(load_sel) := io.req.bits.paddr
       miss_valid(load_sel) := true.B      
     }
   }

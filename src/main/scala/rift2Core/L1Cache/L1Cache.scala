@@ -59,25 +59,7 @@ abstract class CacheBundle(implicit val p: Parameters) extends Bundle with HasCa
 abstract class L1CacheModule(implicit p: Parameters) extends CacheModule with HasL1CacheParameters
 abstract class L1CacheBundle(implicit p: Parameters) extends CacheBundle with HasL1CacheParameters
 
-// class read_req(implicit p: Parameters) extends L1CacheBundle {
-//   val paddr = UInt(64.W)
-// }
 
-// class read_rsp(implicit p: Parameters) extends L1CacheBundle {
-
-// }
-
-// class write_req(implicit p: Parameters) extends L1CacheBundle {
-
-// }
-
-// class atom_req(implicit p: Parameters) extends L1CacheBundle {
-
-// }
-
-// class atom_rsp(implicit p: Parameters) extends L1CacheBundle {
-
-// }
 
 
 

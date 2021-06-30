@@ -1,11 +1,3 @@
-/*
-* @File name: cache
-* @Author: Ruige Lee
-* @Email: wut.ruigeli@gmail.com
-* @Date:   2021-03-11 19:52:35
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-11 19:52:39
-*/
 
 
 /*
