@@ -12,15 +12,12 @@ class Info_mshr_req extends Bundle {
   val paddr = UInt(32.W)
 }
 
-class Info_mshr_rsp extends Bundle{
-  val paddr = UInt(32.W)
-  val data = UInt(256.W)
-}
 
-class MissUnit(edge: TLEdgeOut, entry: Int = 8) extends Module {
+
+class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends L1CacheModule {
   val io = IO(new Bundle{
     val req = Flipped(DecoupledIO(new Info_mshr_req))
-    val rsp = DecoupledIO(new Info_mshr_rsp)
+    val rsp = DecoupledIO(new Info_cache_s1s2)
 
     val dcache_acquire = Decoupled(new TLBundleA(edge.bundle))
     val dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge.bundle)))
@@ -97,9 +94,27 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8) extends Module {
   }
 
   io.rsp.bits.paddr := miss_queue(acquire_sel).paddr
-  io.rsp.bits.data := Cat(miss_rsp(1), miss_rsp(0))
-
-
+  io.rsp.bits.wdata := Cat(miss_rsp(1), miss_rsp(0))
+  io.rsp.bits.wmask := "hFF".U
+  io.rsp.bits.op.grant := true.B
+  io.rsp.bits.op.load  := false.B
+  io.rsp.bits.op.store := false.B
+  io.rsp.bits.op.probe := false.B
+  io.rsp.bits.op.grant := false.B
+  io.rsp.bits.op.lr    := false.B
+  io.rsp.bits.op.sc    := false.B
+  io.rsp.bits.op.swap  := false.B
+  io.rsp.bits.op.add   := false.B
+  io.rsp.bits.op.and   := false.B
+  io.rsp.bits.op.or    := false.B
+  io.rsp.bits.op.xor   := false.B
+  io.rsp.bits.op.max   := false.B
+  io.rsp.bits.op.maxu  := false.B
+  io.rsp.bits.op.min   := false.B
+  io.rsp.bits.op.minu  := false.B
+  io.rsp.bits.rd0_phy  := DontCare
+  io.rsp.bits.rdata    := DontCare
+  io.rsp.bits.tag      := DontCare
 
   io.release_ban := mshr_state_qout === 1.U | mshr_state_qout === 2.U
 
