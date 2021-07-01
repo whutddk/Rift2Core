@@ -12,26 +12,26 @@ import freechips.rocketchip.tilelink._
 // import freechips.rocketchip.diplomaticobjectmodel.model.M
 
 
-case class DcacheParameters(
-  dw: Int,
-  bk: Int,
-  cb: Int,
-  cl: Int,
-  aw: Int = 32
-) extends L1CacheParameters
+// case class DcacheParameters(
+//   dw: Int,
+//   bk: Int,
+//   cb: Int,
+//   cl: Int,
+//   aw: Int = 32
+// ) extends L1CacheParameters
 
-trait HasDcacheParameters extends HasL1CacheParameters {
-  val cacheParams = dcacheParameters
-}
+// trait HasDcacheParameters extends HasL1CacheParameters {
+//   val cacheParams = dcacheParameters
+// }
 
-abstract class DcacheModule(implicit p: Parameters) extends L1CacheModule
-  with HasDcacheParameters
+// abstract class DcacheModule(implicit p: Parameters) extends L1CacheModule
+//   with HasDcacheParameters
 
-abstract class DcacheBundle(implicit p: Parameters) extends L1CacheBundle
-  with HasDcacheParameters
+// abstract class DcacheBundle(implicit p: Parameters) extends L1CacheBundle
+//   with HasDcacheParameters
 
 
-class Lsu()(implicit p: Parameters) extends LazyModule with HasDcacheParameters{
+class Lsu()(implicit p: Parameters) extends LazyModule with HasL1CacheParameters{
   val clientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "dcache",
@@ -45,7 +45,7 @@ class Lsu()(implicit p: Parameters) extends LazyModule with HasDcacheParameters{
   lazy val module = new LsuImp(this)
 }
 
-class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasDcacheParameters {
+class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasL1CacheParameters {
 
   val ( bus, edge ) = outer.clientNode.out.head
 

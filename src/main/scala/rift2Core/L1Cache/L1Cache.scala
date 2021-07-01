@@ -38,7 +38,14 @@ trait L1CacheParameters {
   def aw: Int
 }
 
-
+case class L1cacheSetting(
+  dw: Int,
+  bk: Int,
+  cb: Int,
+  cl: Int,
+  aw: Int = 32,
+  dataECC: Option[String] = None
+) extends L1CacheParameters
 
 trait HasL1CacheParameters extends HasCacheParameters{
   val cacheParams: L1CacheParameters
@@ -223,7 +230,7 @@ class L1_rd_stage( cache_dat: Cache_dat, cache_tag: Cache_tag )(implicit p: Para
 }
 
 
-class L1_wr_stage( cache_dat: Cache_dat, cache_tag: Cache_tag, missUnit: MissUnit, writeBackUnit: WriteBackUnit ) (implicit p: Parameters) extends DcacheModule {
+class L1_wr_stage( cache_dat: Cache_dat, cache_tag: Cache_tag, missUnit: MissUnit, writeBackUnit: WriteBackUnit ) (implicit p: Parameters) extends L1CacheModule {
   val io = IO(new Bundle{
     val wr_in  = Flipped(new DecoupledIO(new Info_cache_s1s2))
     val wr_lsReload = new DecoupledIO(new Info_cache_s0s1)
