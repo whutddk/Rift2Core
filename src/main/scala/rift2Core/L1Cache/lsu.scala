@@ -7,7 +7,7 @@ import rift2Core.define._
 
 
 import base._
-import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp, TransferSizes}
+import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 // import freechips.rocketchip.diplomaticobjectmodel.model.M
 
@@ -121,9 +121,8 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasL1CacheParameters
 }
 
 
-class wrapper_lsu(implicit p: Parameters) extends LazyModule {
-  // implicit val p: Parameters
 
+class wrapper_lsu(implicit p: Parameters) extends LazyModule {
   
   val mdl = LazyModule(new Lsu()) 
 
@@ -137,12 +136,16 @@ class wrapper_lsu(implicit p: Parameters) extends LazyModule {
     io <> mdl.module.io
   } 
 
-  val l2xbar = TLXbar()
-  val memory_port = TLIdentityNode()
+  // val l2xbar = TLXbar()
+  // val memory_port = TLIdentityNode()
 
 
-  l2xbar := TLBuffer() := mdl.clientNode
-  memory_port := l2xbar
+  // l2xbar := TLBuffer() := mdl.clientNode
+  // memory_port := l2xbar
+
+  val memory = InModuleBody {
+    mdl.clientNode.makeIOs()
+  }
 }
 
 
