@@ -121,26 +121,26 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasL1CacheParameters
 }
 
 
-// class wrapper_lsu(implicit p: Parameters) extends LazyModule with HasDcacheParameters{
-//   // implicit val p: Parameters
+class wrapper_lsu(implicit p: Parameters) extends LazyModule {
+  // implicit val p: Parameters
 
   
-//   val mdl = LazyModule(new Lsu()) 
+  val mdl = LazyModule(new Lsu()) 
 
-//   lazy val module = new LazyModuleImp(this) {
-//     val io = IO(new Bundle{
-//       val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-//       val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
-//       val flush = Input(Bool())
-//     })   
+  lazy val module = new LazyModuleImp(this) {
+    val io = IO(new Bundle{
+      val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
+      val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+      val flush = Input(Bool())
+    })   
 
-//     io <> mdl.module.io
-//   } 
-
-
+    io <> mdl.module.io
+  } 
 
 
-// }
+
+
+}
 
 
 

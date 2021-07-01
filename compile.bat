@@ -6,7 +6,7 @@
 
 
 
-sbt "testOnly test.WaveformSpec"
+@REM sbt "testOnly test.WaveformSpec"
 
-@REM sbt "test:runMain test.testMain --target-dir generated --split-modules --full-stacktrace"
+sbt "test:runMain test.testMain --target-dir generated --split-modules --full-stacktrace"
 
