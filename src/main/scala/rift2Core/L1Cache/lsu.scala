@@ -137,9 +137,12 @@ class wrapper_lsu(implicit p: Parameters) extends LazyModule {
     io <> mdl.module.io
   } 
 
+  val l2xbar = TLXbar()
+  val memory_port = TLIdentityNode()
 
 
-
+  l2xbar := TLBuffer() := mdl.clientNode
+  memory_port := l2xbar
 }
 
 
