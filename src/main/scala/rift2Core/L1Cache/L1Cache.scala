@@ -38,6 +38,8 @@ trait L1CacheParameters {
   def aw: Int
 }
 
+
+
 trait HasL1CacheParameters extends HasCacheParameters{
   val cacheParams: L1CacheParameters
 
