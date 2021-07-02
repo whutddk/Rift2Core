@@ -16,7 +16,7 @@ class Info_writeBack_req extends Bundle {
   val is_probe = Bool()
   val is_probeData = Bool()
 
-  assert( PopCount(Cat(is_releaseData, is_release, is_probe, is_probeData)) === 1.U )
+  // assert( PopCount(Cat(is_releaseData, is_release, is_probe, is_probeData)) === 1.U )
 }
 
 

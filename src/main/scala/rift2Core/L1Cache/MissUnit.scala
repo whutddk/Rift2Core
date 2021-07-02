@@ -28,10 +28,10 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
 
   })
 
-  val miss_queue = Vec( entry, new Info_mshr_req )
-  val miss_valid = Vec( entry, Bool() )
+  val miss_queue = RegInit(VecInit( Seq.fill(entry)( 0.U.asTypeOf(new Info_mshr_req) )))
+  val miss_valid = RegInit(VecInit( Seq.fill(entry)( false.B )))
 
-  val miss_rsp = Reg(Vec( 256/128, UInt(128.W) ))
+  val miss_rsp = RegInit(VecInit( Seq.fill(2)(0.U(128.W))  ))
 
   val mshr_state_dnxt = Wire(UInt(3.W))
   val mshr_state_qout = RegNext(mshr_state_dnxt, 0.U)
@@ -66,6 +66,7 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
   }
 
   io.dcache_acquire.bits := {
+    // val grow_param = ClientMetadata(ClientStates.Nothing).onAccess(MemoryOpCategories.wr)._2
     edge.AcquireBlock(
       fromSource = 65.U,
       toAddress = miss_queue(acquire_sel).paddr,
@@ -94,7 +95,14 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
   }
 
   io.rsp.bits.paddr := miss_queue(acquire_sel).paddr
-  io.rsp.bits.wdata := Cat(miss_rsp(1), miss_rsp(0))
+
+
+  io.rsp.bits.wdata(0) := miss_rsp(0)(63,0)
+  io.rsp.bits.wdata(1) := miss_rsp(0)(127,64)
+  io.rsp.bits.wdata(2) := miss_rsp(1)(63,0)
+  io.rsp.bits.wdata(3) := miss_rsp(1)(127,64)
+
+
   io.rsp.bits.wmask := "hFF".U
   io.rsp.bits.op.grant := true.B
   io.rsp.bits.op.load  := false.B
@@ -131,7 +139,7 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
   val is_merge_valid = miss_valid(merge_idx) === true.B
   when(io.req.fire) {
     when( ~is_merge_addr | ~is_merge_valid ) {
-      miss_queue(load_sel) := io.req.bits.paddr
+      miss_queue(load_sel) := io.req.bits
       miss_valid(load_sel) := true.B      
     }
   }

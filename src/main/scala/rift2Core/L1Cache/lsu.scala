@@ -9,6 +9,7 @@ import rift2Core.define._
 import base._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
+import freechips.rocketchip.amba.axi4._
 // import freechips.rocketchip.diplomaticobjectmodel.model.M
 
 
@@ -52,21 +53,8 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasL1CacheParameters
   val io = IO(new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
     val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
-
-
-
-    // val cmm_lsu = Input(new Info_cmm_lsu)
-    // val lsu_cmm = Output( new Info_lsu_cmm )
-
-    // val il1_fence_req = Output(Bool())
-
-
     val flush = Input(Bool())
   })
-
-  // io.lsu_exe_iwb <> lsu_exe_iwb_fifo.io.deq
-  // lsu_exe_iwb_fifo.reset := reset.asBool | io.flush
-
 
   val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
   val cache_tag = new Cache_tag( dw, aw, bk, cb, cl ) 
@@ -74,7 +62,7 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasL1CacheParameters
   val probeUnit = Module(new ProbeUnit(edge = edge))
   val writeBackUnit = Module(new WriteBackUnit(edge = edge))
 
-  val lsEntry = new LS_entry()
+  val lsEntry = Module(new LS_entry())
   val rd_stage = Module(new L1_rd_stage( cache_dat, cache_tag ))
   val wr_stage = Module(new L1_wr_stage( cache_dat, cache_tag, missUnit, writeBackUnit ))
 
@@ -132,20 +120,55 @@ class wrapper_lsu(implicit p: Parameters) extends LazyModule {
       val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
       val flush = Input(Bool())
     })   
-
-    io <> mdl.module.io
+    io <> mdl.module.io   
   } 
 
+  // val memory = LazyModule(new TLRAM(AddressSet(0x80000000L, 0x0ffff), beatBytes = 4))
   // val l2xbar = TLXbar()
-  // val memory_port = TLIdentityNode()
-
 
   // l2xbar := TLBuffer() := mdl.clientNode
-  // memory_port := l2xbar
+  // memory := l2xbar
 
-  val memory = InModuleBody {
-    mdl.clientNode.makeIOs()
+  // val memory1 = InModuleBody {
+  //   mdl.clientNode.makeIOs()
+  // }
+
+  // val xbar = LazyModule(new TLXbar)
+
+  val managerParameters = TLSlavePortParameters.v1(
+      managers = Seq(TLSlaveParameters.v1(
+        address = Seq(AddressSet(0x1000, 0xfff)),
+        regionType = RegionType.CACHED,
+        supportsAcquireT = TransferSizes(32),
+        supportsAcquireB = TransferSizes(32),
+        alwaysGrantsT = true
+      )),
+      beatBytes = 256/8,
+      endSinkId = 1
+  )
+
+  val managerNode = TLManagerNode(portParams = Seq(managerParameters))
+
+  val memory1 = InModuleBody {
+    managerNode.makeIOs()
   }
+      
+
+
+
+  managerNode := TLXbar() := mdl.clientNode
+  
+
+
+  // val tlram = LazyModule(new TLRAM(
+  //   address = AddressSet(0x1000, 0xfff)))
+
+
+
+  // val memory1 = InModuleBody {
+  //   axiram.node.makeIOs()
+  // }
+
 }
 
 

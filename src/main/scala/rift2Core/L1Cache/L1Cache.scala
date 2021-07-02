@@ -64,7 +64,7 @@ trait HasL1CacheParameters extends HasCacheParameters{
 
 }
 
-abstract class CacheModule(implicit val p: Parameters) extends MultiIOModule with HasCacheParameters
+abstract class CacheModule(implicit val p: Parameters) extends MultiIOModule with HasCacheParameters { def io: Record }
 abstract class CacheBundle(implicit val p: Parameters) extends Bundle with HasCacheParameters
 
 abstract class L1CacheModule(implicit p: Parameters) extends CacheModule with HasL1CacheParameters
@@ -90,9 +90,9 @@ class Cache_op extends Bundle {
   val min   = Bool()
   val minu  = Bool()
 
-  assert(  
-    PopCount(Seq(load, store, probe, grant, lr, sc, swap, add, and, or, xor, max, maxu, min, minu)) === 1.U
-  )
+  // assert(  
+  //   PopCount(Seq(load, store, probe, grant, lr, sc, swap, add, and, or, xor, max, maxu, min, minu)) === 1.U
+  // )
   
   def is_atom = swap | add | and | or | xor | max | maxu | min | minu
   def is_access = is_atom | load | store | lr | sc
@@ -131,7 +131,7 @@ class Info_cache_s1s2(implicit p: Parameters) extends Info_cache_rd with Info_ca
 
 // }
 
-
+abstract class cache_base() (implicit p: Parameters) extends L1CacheModule 
 
 
 class LS_entry() (implicit p: Parameters) extends L1CacheModule {

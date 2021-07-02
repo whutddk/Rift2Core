@@ -2,7 +2,7 @@
 
 // See README.md for license details.
 
-ThisBuild / scalaVersion     := "2.12.14"
+ThisBuild / scalaVersion     := "2.12.13"
 ThisBuild / version          := "0.8.0"
 ThisBuild / organization     := "WUT"
 
