@@ -10,7 +10,7 @@ lazy val rocketchip = (project in file("./rocket-chip"))
   .settings(
     name := "rocketchip",
     libraryDependencies ++= Seq(
-      "edu.berkeley.cs" %% "chisel3" % "3.4.2",
+      "edu.berkeley.cs" %% "chisel3" % "3.4.3",
       "edu.berkeley.cs" %% "chiseltest" % "0.3.2" % "test",
       "edu.berkeley.cs" %% "firrtl-interpreter" % "1.4.3",
       "edu.berkeley.cs" %% "chisel-iotesters" % "1.5.3"
@@ -30,7 +30,7 @@ lazy val inclusiveCache = (project in file("./design/craft/inclusivecache"))
   .settings(
     name := "inclusiveCache",
     libraryDependencies ++= Seq(
-      "edu.berkeley.cs" %% "chisel3" % "3.4.2",
+      "edu.berkeley.cs" %% "chisel3" % "3.4.3",
       "edu.berkeley.cs" %% "chiseltest" % "0.3.2" % "test",
       "edu.berkeley.cs" %% "firrtl-interpreter" % "1.4.3",
       "edu.berkeley.cs" %% "chisel-iotesters" % "1.5.3"
@@ -55,7 +55,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "%NAME%",
     libraryDependencies ++= Seq(
-      "edu.berkeley.cs" %% "chisel3" % "3.4.2",
+      "edu.berkeley.cs" %% "chisel3" % "3.4.3",
       "edu.berkeley.cs" %% "chiseltest" % "0.3.2" % "test",
       "edu.berkeley.cs" %% "firrtl-interpreter" % "1.4.3",
       "edu.berkeley.cs" %% "chisel-iotesters" % "1.5.3"

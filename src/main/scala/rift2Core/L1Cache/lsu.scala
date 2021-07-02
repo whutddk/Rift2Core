@@ -51,7 +51,7 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasL1CacheParameters
   val ( bus, edge ) = outer.clientNode.out.head
 
   val io = IO(new Bundle{
-    val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
+    val lsu_iss_exe = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
     val flush = Input(Bool())
   })
@@ -63,8 +63,29 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasL1CacheParameters
   val writeBackUnit = Module(new WriteBackUnit(edge = edge))
 
   val lsEntry = Module(new LS_entry())
-  val rd_stage = Module(new L1_rd_stage( cache_dat, cache_tag ))
-  val wr_stage = Module(new L1_wr_stage( cache_dat, cache_tag, missUnit, writeBackUnit ))
+  val rd_stage = Module(new L1_rd_stage())
+  val wr_stage = Module(new L1_wr_stage())
+
+
+
+  rd_stage.io.dat_addr_r <> cache_dat.dat_addr_r
+  rd_stage.io.dat_en_r   <> cache_dat.dat_en_r
+  cache_dat.dat_info_r   <> rd_stage.io.dat_info_r
+  rd_stage.io.tag_addr_r <> cache_tag.tag_addr_r
+  rd_stage.io.tag_en_r   <> cache_tag.tag_en_r
+  cache_tag.tag_info_r   <> rd_stage.io.tag_info_r
+
+  wr_stage.io.tag_addr_w        <> cache_tag.tag_addr_w
+  wr_stage.io.tag_en_w          <> cache_tag.tag_en_w
+  wr_stage.io.dat_addr_w        <> cache_dat.dat_addr_w
+  wr_stage.io.dat_en_w          <> cache_dat.dat_en_w
+  wr_stage.io.dat_info_wstrb    <> cache_dat.dat_info_wstrb
+  wr_stage.io.dat_info_w        <> cache_dat.dat_info_w
+  wr_stage.io.missUnit_req      <> missUnit.io.req
+  wr_stage.io.writeBackUnit_req <> writeBackUnit.io.req
+
+
+
 
   val lsu_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
 
@@ -116,7 +137,7 @@ class wrapper_lsu(implicit p: Parameters) extends LazyModule {
 
   lazy val module = new LazyModuleImp(this) {
     val io = IO(new Bundle{
-      val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
+      val lsu_iss_exe = Flipped(new DecoupledIO(new Info_cache_s0s1))
       val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
       val flush = Input(Bool())
     })   
