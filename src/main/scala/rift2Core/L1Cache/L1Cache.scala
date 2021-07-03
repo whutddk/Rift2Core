@@ -161,11 +161,12 @@ class LS_entry() (implicit p: Parameters) extends L1CacheModule {
   io.out.bits := entry_info(rd_ptr(entry_w-1,0))
 
   io.in.ready :=
-    ~full & (
-      VecInit(entry_valid.zip(entry_info).map{
-        case(a,b) => (a === false.B | b.paddr =/= io.in.bits.paddr)
-      }
-    )).asUInt.andR
+    ~full 
+    // & (
+    //   VecInit(entry_valid.zip(entry_info).map{
+    //     case(a,b) => (a === false.B | b.paddr =/= io.in.bits.paddr)
+    //   }
+    // )).asUInt.andR
 }
 
 

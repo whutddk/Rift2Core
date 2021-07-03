@@ -48,6 +48,7 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
   io.dcache_acquire.valid := dcache_acquire_vaild
   io.dcache_grant.ready   := dcache_grant_ready
   io.dcache_grantAck.valid := dcache_grantAck_valid
+  io.dcache_grantAck.bits  := edge.GrantAck(io.dcache_grant.bits)
   io.rsp.valid := rsp_valid
 
   mshr_state_dnxt := 

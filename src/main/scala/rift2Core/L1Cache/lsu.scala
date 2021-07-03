@@ -87,18 +87,40 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasL1CacheParameters
 
 
 
-  val lsu_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
+  // val lsu_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
 
-  when( bus.d.bits.opcode === TLMessages.Grant || bus.d.bits.opcode === TLMessages.GrantData ) {
-    bus.d <> missUnit.io.dcache_grant
-  } .elsewhen ( bus.d.bits.opcode === TLMessages.ReleaseAck ) {
-    bus.d <> writeBackUnit.io.dcache_grant
-  } .otherwise {
-    assert(~bus.d.fire)
-  }
+
+
+  missUnit.io.dcache_grant.bits := bus.d.bits
+  missUnit.io.dcache_grant.valid := bus.d.valid & ( bus.d.bits.opcode === TLMessages.Grant | bus.d.bits.opcode === TLMessages.GrantData )
+
+  writeBackUnit.io.dcache_grant.bits := bus.d.bits
+  writeBackUnit.io.dcache_grant.valid := bus.d.valid & ( bus.d.bits.opcode === TLMessages.ReleaseAck )
+
+  bus.d.ready := 
+    Mux1H(Seq(
+      ( bus.d.bits.opcode === TLMessages.Grant || bus.d.bits.opcode === TLMessages.GrantData ) -> missUnit.io.dcache_grant.ready,
+      ( bus.d.bits.opcode === TLMessages.ReleaseAck ) -> writeBackUnit.io.dcache_grant.ready
+    ))
+
+  // when( bus.d.bits.opcode === TLMessages.Grant || bus.d.bits.opcode === TLMessages.GrantData ) {
+  //   bus.d.ready <> missUnit.io.dcache_grant.ready
+  // } .elsewhen ( bus.d.bits.opcode === TLMessages.ReleaseAck ) {
+  //   bus.d <> writeBackUnit.io.dcache_grant
+  // } .otherwise {
+  //   assert(~bus.d.fire)
+  // }
 
   bus.a <> missUnit.io.dcache_acquire
-  bus.b <> probeUnit.io.dcache_probe 
+
+  probeUnit.io.dcache_probe <> bus.b
+
+  //  probeUnit.io.dcache_probe.valid := bus.b.valid
+  //  probeUnit.io.dcache_probe.bits := bus.b.bits
+  //  bus.b.ready := probeUnit.io.dcache_probe.ready
+
+
+
   bus.c <> writeBackUnit.io.dcache_release
   bus.e <> missUnit.io.dcache_grantAck
 
@@ -177,7 +199,7 @@ class wrapper_lsu(implicit p: Parameters) extends LazyModule {
 
 
 
-  managerNode := TLXbar() := mdl.clientNode
+  managerNode := mdl.clientNode
   
 
 
