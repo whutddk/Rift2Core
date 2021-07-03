@@ -55,52 +55,34 @@ class Cache_dat( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
   val dat_ram = {
     for ( i <- 0 until cb; j <- 0 until bk ) yield { 
-      val mdl = Module(new Sram(dw, line_w))
+      val mdl = Mem( cl, Vec( dw/8, UInt(8.W) ) )
       mdl
     }
   }
 
-
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
+    val data_i = VecInit(for ( k <- 0 until dw/8 ) yield dat_info_w(j)(8*k+7, 8*k))
+    val data_o = Cat( for ( k <- 0 until dw/8 ) yield { dat_ram(i*bk+j).read(addr_sel_r)(dw/8-1-k) } )
 
-
-    dat_ram(i*bk+j).io.addr_w := addr_sel_w
-    dat_ram(i*bk+j).io.addr_r := addr_sel_r
-
-    dat_ram(i*bk+j).io.en_w := dat_en_w(i)(j)
-    dat_ram(i*bk+j).io.en_r := dat_en_r(i)(j)
-
-    dat_ram(i*bk+j).io.data_wstrb := dat_info_wstrb(j)
-    dat_ram(i*bk+j).io.data_w := dat_info_w(j)
-
-    dat_info_r(i)(j) :=
-      Mux(
-        (dat_ram(i*bk+j).io.addr_w === dat_ram(i*bk+j).io.addr_r) &
-        dat_en_w(i)(j) === true.B & dat_en_r(i)(j) === true.B,
-        dat_info_w(j), // bypass write req to read
-        dat_ram( i*bk+j ).io.data_r        
-      )
-
-    {
-      val chk_oh = for ( i <- 0 until cb ) yield { dat_en_w(i).contains(true.B) }
-      assert( PopCount(chk_oh) <= 1.U )
+    when( dat_en_w(i)(j) ) {
+      dat_ram(i*bk+j).write(addr_sel_w, data_i, dat_info_wstrb(j).asBools)
     }
 
+    dat_info_r(i)(j) := {
+      val mask = dat_info_wstrb(j).asBools
+      val ext_mask = Cat( for ( k <- 0 until dw/8 ) yield Fill(8, mask(dw/8-1-k)) )
 
-
-    // dat_info_r(i) := {
-    //   val bank_num = for ( j <- 0 until bk ) yield { j.U === bank_sel_r }
-    //   val dat_bank = for ( j <- 0 until bk ) yield { dat_ram( i*bk+j).io.data_r }
-    //   val data_bank_sel = MuxCase(0.U, bank_num zip dat_bank )
-    //   data_bank_sel >> ( data_sel_r << 3 )
-
+      RegEnable(
+        Mux(
+          addr_sel_r === addr_sel_w & dat_en_w(i)(j) & dat_en_r(i)(j),
+          (dat_info_w(j) & ext_mask) | (data_o & ~ext_mask),
+          data_o
+        ),
+        0.U(dw.W),
+        dat_en_r(i)(j)
+      )    
+    }    
   }
-
-
-
-
-
-
 
 
 }

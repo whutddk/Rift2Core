@@ -45,27 +45,25 @@ class Cache_tag( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
 
 
   val tag_ram = {
-    for ( i <- 0 until cb ) yield { val mdl = Module(new Sram(tag_w,line_w)); mdl }
+    for ( i <- 0 until cb ) yield { val ram = Mem( cl, UInt(tag_w.W) ); ram }
   }
 
   for ( i <- 0 until cb ) yield {
-    tag_ram(i).io.addr_r := addr_sel_r
-    tag_ram(i).io.addr_w := addr_sel_w
+    when( tag_en_w(i) ) {
+      tag_ram(i).write(addr_sel_w, tag_info_w)
+    }
 
-    tag_ram(i).io.en_r   := tag_en_r(i)
-    tag_ram(i).io.en_w   := tag_en_w(i)
 
-    tag_ram(i).io.data_wstrb := "hFFFFFFFF".U
-    tag_ram(i).io.data_w := tag_info_w
-
-    tag_info_r(i)     :=
-      Mux(
-        tag_addr_r === tag_addr_w &
-        tag_en_w(i) & tag_en_r(i),
-        tag_info_w,
-        tag_ram(i).io.data_r
+    tag_info_r(i) := 
+      RegEnable(
+        Mux( addr_sel_r === addr_sel_w & tag_en_w(i) & tag_en_r(i), tag_info_w, tag_ram(i).read(addr_sel_r)),
+        0.U(tag_w.W),
+        tag_en_r(i)
       )
-  }
+
+    }
+
+  
 
   assert(PopCount(tag_en_w) <= 1.U)
 
