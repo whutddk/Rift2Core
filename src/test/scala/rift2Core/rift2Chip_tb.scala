@@ -39,7 +39,7 @@ import rift2Core.L1Cache._
 
 
 class miniCfg extends Config((site, here, up) => {
-  case CacheParamsKey => CacheParameters()
+  case CacheParamsKey => CacheSetting()
 
   
 })

@@ -166,23 +166,11 @@ class wrapper_lsu(implicit p: Parameters) extends LazyModule {
     io <> mdl.module.io   
   } 
 
-val l2cache = LazyModule(new InclusiveCache(
-    CacheParameters(
-      level = 2,
-      ways = L2NWays,
-      sets = L2NSets,
-      blockBytes = L2BlockSize,
-      beatBytes = L1BusWidth / 8, // beatBytes = l1BusDataWidth / 8
-      cacheName = s"L2",
-      uncachedGet = true,
-      enablePerf = false
-    ),
-    InclusiveCacheMicroParameters(
-      memCycles = 25,
-      writeBytes = 32
-    ),
-    fpga = debugOpts.FPGAPlatform
-  ))
+  val l2cache = LazyModule(new InclusiveCache(
+      cache = CacheParameters( level = 2, ways = 4, sets = 64, blockBytes = 256*4/8, beatBytes = 128/8 ),
+      micro = InclusiveCacheMicroParameters( writeBytes = 128/8, memCycles = 40, portFactor = 4),
+      control = None
+    ))
 
   val managerParameters = TLSlavePortParameters.v1(
       managers = Seq(TLSlaveParameters.v1(
@@ -197,7 +185,8 @@ val l2cache = LazyModule(new InclusiveCache(
   )
 
   val managerNode = TLManagerNode(portParams = Seq(managerParameters))
-
+  val l2xbar = TLXbar()
+  
   val memory1 = InModuleBody {
     managerNode.makeIOs()
   }
@@ -205,7 +194,7 @@ val l2cache = LazyModule(new InclusiveCache(
 
 
 
-  managerNode := mdl.clientNode
+  managerNode := l2xbar := TLBuffer() := mdl.clientNode
   
 
 

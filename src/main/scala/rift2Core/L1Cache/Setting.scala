@@ -29,9 +29,9 @@ import chipsalliance.rocketchip.config.{Field, Parameters}
 
 
 
-case object CacheParamsKey extends Field[CacheParameters]
+case object CacheParamsKey extends Field[CacheSetting]
 
-case class CacheParameters(
+case class CacheSetting(
   l1cacheParameters: L1CacheParameters = L1cacheSetting(
     dw = 64,
     bk = 4,
