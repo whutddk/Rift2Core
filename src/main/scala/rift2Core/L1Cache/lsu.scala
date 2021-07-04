@@ -10,7 +10,7 @@ import base._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.amba.axi4._
-// import freechips.rocketchip.diplomaticobjectmodel.model.M
+import sifive.blocks.inclusivecache._
 
 
 // case class DcacheParameters(
@@ -166,17 +166,23 @@ class wrapper_lsu(implicit p: Parameters) extends LazyModule {
     io <> mdl.module.io   
   } 
 
-  // val memory = LazyModule(new TLRAM(AddressSet(0x80000000L, 0x0ffff), beatBytes = 4))
-  // val l2xbar = TLXbar()
-
-  // l2xbar := TLBuffer() := mdl.clientNode
-  // memory := l2xbar
-
-  // val memory1 = InModuleBody {
-  //   mdl.clientNode.makeIOs()
-  // }
-
-  // val xbar = LazyModule(new TLXbar)
+val l2cache = LazyModule(new InclusiveCache(
+    CacheParameters(
+      level = 2,
+      ways = L2NWays,
+      sets = L2NSets,
+      blockBytes = L2BlockSize,
+      beatBytes = L1BusWidth / 8, // beatBytes = l1BusDataWidth / 8
+      cacheName = s"L2",
+      uncachedGet = true,
+      enablePerf = false
+    ),
+    InclusiveCacheMicroParameters(
+      memCycles = 25,
+      writeBytes = 32
+    ),
+    fpga = debugOpts.FPGAPlatform
+  ))
 
   val managerParameters = TLSlavePortParameters.v1(
       managers = Seq(TLSlaveParameters.v1(
