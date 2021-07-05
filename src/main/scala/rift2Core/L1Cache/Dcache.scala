@@ -43,16 +43,16 @@ class Dcache()(implicit p: Parameters) extends LazyModule with HasDcacheParamete
 
   val clientNode = TLClientNode(Seq(clientParameters))
 
-  lazy val module = new LsuImp(this)
+  lazy val module = new DcacheImp(this)
 }
 
-class LsuImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParameters {
+class DcacheImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParameters {
 
   val ( bus, edge ) = outer.clientNode.out.head
 
   val io = IO(new Bundle{
-    val lsu_iss_exe = Flipped(new DecoupledIO(new Info_cache_s0s1))
-    val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+    val dcache_push = Flipped(new DecoupledIO(new Info_cache_s0s1))
+    val dcache_pop = new DecoupledIO(new Info_cache_retn)
   })
 
   val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
@@ -116,7 +116,7 @@ class LsuImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParameter
   val wr_arb = Module(new Arbiter( new Info_cache_s1s2, 2))
 
   wr_stage.io.wr_lsReload <> ls_arb.io.in(0)
-  io.lsu_iss_exe <> ls_arb.io.in(1)
+  io.dcache_push <> ls_arb.io.in(1)
   ls_arb.io.out <> lsEntry.io.enq 
 
   probeUnit.io.req <> rd_arb.io.in(0)
@@ -129,7 +129,7 @@ class LsuImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParameter
 
 
 
-  wr_stage.io.lu_exe_iwb <> io.lu_exe_iwb
+  wr_stage.io.dcache_pop <> io.dcache_pop
 
 }
 
@@ -141,8 +141,8 @@ class wrapper_lsu(implicit p: Parameters) extends LazyModule {
 
   lazy val module = new LazyModuleImp(this) {
     val io = IO(new Bundle{
-      val lsu_iss_exe = Flipped(new DecoupledIO(new Info_cache_s0s1))
-      val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+      val dcache_push = Flipped(new DecoupledIO(new Info_cache_s0s1))
+      val dcache_pop = new DecoupledIO(new Info_cache_retn)
     })   
     io <> mdl.module.io   
   } 

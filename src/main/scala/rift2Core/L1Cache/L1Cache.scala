@@ -113,33 +113,29 @@ trait Info_cache_raw extends L1CacheBundle {
   val wdata  = Vec(bk,UInt(64.W))
   val op    = new Cache_op
 
-
   def tag_sel = paddr(31,32-tag_w)
   def bk_sel  = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
   def cl_sel  = paddr(addr_lsb+line_w-1, addr_lsb)
 }
 
 
-class Info_cache_rd(implicit p: Parameters) extends L1CacheBundle {
+trait Info_tag_dat_rd extends L1CacheBundle {
   val rdata = Vec(cb, Vec(bk, UInt(64.W)))
   val tag   = Vec(cb, UInt(tag_w.W))
 }
 
+trait Info_sc_idx extends L1CacheBundle { val chk_idx = UInt(8.W) }
 
-class Info_cache_s0s1(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw {
-  val chk_idx = UInt(8.W)
-}
-class Info_cache_s1s2(implicit p: Parameters) extends Info_cache_rd with Info_cache_raw {
-  val chk_idx = UInt(8.W)
-}
+class Info_cache_rd(implicit p: Parameters) extends Info_tag_dat_rd
+class Info_cache_s0s1(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw with Info_sc_idx
+class Info_cache_s1s2(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw with Info_sc_idx with Info_tag_dat_rd
 
 
 class Info_cache_sb(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw {
   val rd0_phy = UInt(6.W)
 }
 
-class Info_cache_retn(implicit p: Parameters) extends L1CacheBundle {
-  val chk_idx = UInt(8.W)
+class Info_cache_retn(implicit p: Parameters) extends L1CacheBundle with Info_sc_idx {
   val res = UInt(64.W)
   val is_load_amo = Bool()
 }
@@ -243,7 +239,7 @@ class L1_rd_stage()(implicit p: Parameters) extends L1CacheModule {
   io.rd_out.bits.wmask    := RegEnable(io.rd_in.bits.wmask, io.rd_in.fire)
   io.rd_out.bits.wdata    := RegEnable(io.rd_in.bits.wdata, io.rd_in.fire)
   io.rd_out.bits.op       := RegEnable(io.rd_in.bits.op,    io.rd_in.fire)
-  io.rd_out.bits.rd0_phy  := RegEnable(io.rd_in.bits.rd0_phy, io.rd_in.fire)
+  io.rd_out.bits.chk_idx  := RegEnable(io.rd_in.bits.chk_idx, io.rd_in.fire)
   s1s2_pipe.io.deq.ready := io.rd_out.ready
 
   io.rd_in.ready := s1s2_pipe.io.enq.ready
@@ -256,7 +252,7 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   val io = IO(new Bundle{
     val wr_in  = Flipped(new DecoupledIO(new Info_cache_s1s2))
     val wr_lsReload = new DecoupledIO(new Info_cache_s0s1)
-    val lu_exe_iwb = DecoupledIO(new Exe_iwb_info)
+    val dcache_pop = DecoupledIO(new Info_cache_retn)
 
     val tag_addr_w = Output(UInt(aw.W))
     val tag_en_w = Output( Vec(cb, Bool()) )
@@ -392,11 +388,62 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   io.wr_lsReload.bits.op.maxu  := io.wr_in.bits.op.maxu
   io.wr_lsReload.bits.op.min   := io.wr_in.bits.op.min
   io.wr_lsReload.bits.op.minu  := io.wr_in.bits.op.minu
-  io.wr_lsReload.bits.rd0_phy  := io.wr_in.bits.rd0_phy
+  io.wr_lsReload.bits.chk_idx  := io.wr_in.bits.chk_idx
 
-  io.lu_exe_iwb.valid := io.wr_in.fire & io.wr_in.bits.op.is_wb & is_hit
-  io.lu_exe_iwb.bits.res := io.wr_in.bits.rdata(cb_sel)(bk_sel)
-  io.lu_exe_iwb.bits.rd0_phy := io.wr_in.bits.rd0_phy
+  io.dcache_pop.valid := io.wr_in.fire & io.wr_in.bits.op.is_wb & is_hit
+  io.dcache_pop.bits.res := {
+    val rdata = io.wr_in.bits.rdata(cb_sel)(bk_sel)
+    val mask = io.wr_in.bits.wmask
+    val paddr = io.wr_in.bits.paddr
+    val is_usi = io.wr_in.bits.is_usi
+
+    get_loadRes( is_usi, rdata, mask, paddr )
+  }
+  
+
+  io.dcache_pop.bits.chk_idx := io.wr_in.bits.chk_idx
+  io.dcache_pop.bits.is_load_amo := io.wr_in.bits.op.is_wb
+
+
+
+
+
+
+
+
+
+
+
+
+  def get_loadRes( is_usi: Bool, rdata: UInt, mask: UInt, paddr: UInt ): Unit = {
+    val res = Wire(UInt(64.W))
+
+    def reAlign(rdata: UInt, paddr: UInt): Unit = {
+      val res = Wire(UInt(64.W))
+      res := MuxLookup(paddr(2,0), 0.U, Array(
+        "b000".U -> rdata(63,0),  "b001".U -> rdata(63,8),  "b010".U -> rdata(63,16), "b011".U -> rdata(63,24),
+        "b100".U -> rdata(63,32), "b101".U -> rdata(63,40), "b110".U -> rdata(63,48), "b111".U -> rdata(63,56)))    
+      res
+    }
+
+    def load_byte(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(56, Mux(is_usi, 0.U, rdata(7)) ),  rdata(7,0)  )
+    def load_half(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(48, Mux(is_usi, 0.U, rdata(15)) ), rdata(15,0) )
+    def load_word(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(32, Mux(is_usi, 0.U, rdata(31)) ), rdata(31,0) )
+
+    val fun = PopCount(mask)
+    assert( (fun === 1.U | fun === 2.U | fun === 4.U | fun === 8.U), "Assert Failed at L1cache.scala, unexpect read condition" )
+    
+    val align = reAlign(rdata, paddr)
+
+    res := Mux1H(Seq(
+      (fun === 1.U) -> load_byte(align, paddr),
+      (fun === 2.U) -> load_half(align, paddr),
+      (fun === 4.U) -> load_word(align, paddr),
+      (fun === 8.U) -> align
+    ))  
+
+    res
+  }
 
 
 }

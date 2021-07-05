@@ -41,7 +41,7 @@ class LsuPendingIO[T <: Data](private val gen: T, val entries: Int) extends Queu
   val cmm = Flipped(EnqIO(Bool()))
 }
 
-class lsu_pending_fifo extends Queue(val gen: T, entries = 16) {
+class lsu_pending_fifo[T <: Data](val gen: T) extends Queue(gen, entries = 16) {
   override val io = IO(new LsuPendingIO(genType, entries))
 
 
@@ -148,7 +148,7 @@ class Lsu_new_imp extends Module {
 
   // val (dtlb) = DTLB()
 
-  val pending_fifo = Module(new Queue(16, new Info_cache_sb))
+  val pending_fifo = Module(new lsu_pending_fifo(16, new Info_cache_sb))
   val lsu_scoreBoard = Module(new lsu_scoreBoard)
   val dcache = LazyModule(new Dcache())
 
@@ -325,21 +325,6 @@ class Lsu_new_imp extends Module {
 
 
 
-  def reAlign8(rdata: UInt): UInt = MuxLookup(op1(2,0), 0.U, Array(
-      "b000".U -> rdata(7,0),   "b001".U -> rdata(15,8),  "b010".U -> rdata(23,16), "b011".U -> rdata(31,24),
-      "b100".U -> rdata(39,32), "b101".U -> rdata(47,40), "b110".U -> rdata(55,48), "b111".U -> rdata(63,56)))
-
-  def reAlign16(rdata: UInt): UInt = MuxLookup(op1(2,1), 0.U, Array(
-      "b00".U -> rdata(15,0), "b01".U -> rdata(31,16),
-      "b10".U -> rdata(47,32), "b11".U -> rdata(63,48)))
-
-  def reAlign32(rdata: UInt): UInt = MuxLookup(op1(2), 0.U, Array(
-                  0.U -> rdata(31,0), 1.U -> rdata(63,32)))
-
-
-  def load_byte(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(56, Mux(is_usi, 0.U, rdata(7)) ),  rdata(7,0)  )
-  def load_half(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(48, Mux(is_usi, 0.U, rdata(15)) ), rdata(15,0) )
-  def load_word(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(32, Mux(is_usi, 0.U, rdata(31)) ), rdata(31,0) )
 
 
   lsu_exe_iwb_fifo.io.enq.bits.rd0_phy := io.lsu_iss_exe.bits.param.rd0_phy
@@ -624,185 +609,6 @@ class Lsu_new_imp extends Module {
             (stateReg === Dl1_state.wwait) -> dl1_state_dnxt_in_wwait ,
             (stateReg === Dl1_state.pread) -> dl1_state_dnxt_in_pread ,
           ))
-
-
-
-
-
-
-
-
-
-
-
-
-// BBBBBBBBBBBBBBBBB   RRRRRRRRRRRRRRRRR                  AAA               MMMMMMMM               MMMMMMMM
-// B::::::::::::::::B  R::::::::::::::::R                A:::A              M:::::::M             M:::::::M
-// B::::::BBBBBB:::::B R::::::RRRRRR:::::R              A:::::A             M::::::::M           M::::::::M
-// BB:::::B     B:::::BRR:::::R     R:::::R            A:::::::A            M:::::::::M         M:::::::::M
-//   B::::B     B:::::B  R::::R     R:::::R           A:::::::::A           M::::::::::M       M::::::::::M
-//   B::::B     B:::::B  R::::R     R:::::R          A:::::A:::::A          M:::::::::::M     M:::::::::::M
-//   B::::BBBBBB:::::B   R::::RRRRRR:::::R          A:::::A A:::::A         M:::::::M::::M   M::::M:::::::M
-//   B:::::::::::::BB    R:::::::::::::RR          A:::::A   A:::::A        M::::::M M::::M M::::M M::::::M
-//   B::::BBBBBB:::::B   R::::RRRRRR:::::R        A:::::A     A:::::A       M::::::M  M::::M::::M  M::::::M
-//   B::::B     B:::::B  R::::R     R:::::R      A:::::AAAAAAAAA:::::A      M::::::M   M:::::::M   M::::::M
-//   B::::B     B:::::B  R::::R     R:::::R     A:::::::::::::::::::::A     M::::::M    M:::::M    M::::::M
-//   B::::B     B:::::B  R::::R     R:::::R    A:::::AAAAAAAAAAAAA:::::A    M::::::M     MMMMM     M::::::M
-// BB:::::BBBBBB::::::BRR:::::R     R:::::R   A:::::A             A:::::A   M::::::M               M::::::M
-// B:::::::::::::::::B R::::::R     R:::::R  A:::::A               A:::::A  M::::::M               M::::::M
-// B::::::::::::::::B  R::::::R     R:::::R A:::::A                 A:::::A M::::::M               M::::::M
-// BBBBBBBBBBBBBBBBB   RRRRRRRR     RRRRRRRAAAAAAA                   AAAAAAAMMMMMMMM               MMMMMMMM
-
-
-
-
-
-
-
-  println("the dcache has "+dw+"*"+bk+" bit,with "+cb+"cache block, and "+cl+" cache line")
-  println("Toltal size is "+dw*bk*cb*cl/8/1024.0+" KB")
-
-
-
-  when( stateReg =/= Dl1_state.cmiss & stateDnxt === Dl1_state.cmiss ) {
-    op1_dl1_req := op1_align512
-  }
-  .elsewhen( stateDnxt === Dl1_state.cmiss ) {
-    when ( dl1_mst.io.d.fire === true.B ) {
-      op1_dl1_req := op1_dl1_req + ( 1.U << log2Ceil(dw/8).U )
-    }
-  }
-
-  mem.cache_addr := Mux1H( Seq(
-              (stateReg === Dl1_state.cfree) -> op1_align128,
-              (stateReg === Dl1_state.cread) -> op1_align128,
-              // (stateReg === Dl1_state.mwait) -> op1_align128,
-              (stateReg === Dl1_state.cmiss) -> op1_dl1_req,
-              (stateReg === Dl1_state.write) -> op1_align128,
-              (stateReg === Dl1_state.wwait) -> op1_align128,
-              (stateReg === Dl1_state.pread) -> 0.U,
-              (stateReg === Dl1_state.fence) -> 0.U
-              ))
-
-  mem.dat_info_w := Mux1H( Seq(
-              (stateReg === Dl1_state.cfree) -> 0.U,
-              (stateReg === Dl1_state.cread) -> 0.U,
-              // (stateReg === Dl1_state.mwait) -> 0.U,
-              (stateReg === Dl1_state.cmiss) -> dl1_mst.io.d.bits.data,
-              (stateReg === Dl1_state.write) -> Mux( op1(3) === 0.U, Cat(0.U(64.W), lsu_wdata_align(63,0)), Cat(lsu_wdata_align(63,0), 0.U(64.W))),
-              (stateReg === Dl1_state.wwait) -> Mux( op1(3) === 0.U, Cat(0.U(64.W), lsu_wdata_align(63,0)), Cat(lsu_wdata_align(63,0), 0.U(64.W))),
-              (stateReg === Dl1_state.pread) -> 0.U,
-              (stateReg === Dl1_state.fence) -> 0.U
-              ))
-
-  mem.dat_info_wstrb := Mux1H( Seq(
-              (stateReg === Dl1_state.cfree) -> 0.U,
-              (stateReg === Dl1_state.cread) -> 0.U,
-              // (stateReg === Dl1_state.mwait) -> 0.U,
-              (stateReg === Dl1_state.cmiss) -> "b1111111111111111".U,
-              (stateReg === Dl1_state.write) -> Mux( op1(3) === 0.U, Cat(0.U(8.W), lsu_wstrb_align(7,0)), Cat(lsu_wstrb_align(7,0), 0.U(8.W))),
-              (stateReg === Dl1_state.wwait) -> Mux( op1(3) === 0.U, Cat(0.U(8.W), lsu_wstrb_align(7,0)), Cat(lsu_wstrb_align(7,0), 0.U(8.W))),
-              (stateReg === Dl1_state.pread) -> 0.U,
-              (stateReg === Dl1_state.fence) -> 0.U
-              ))
-
-  for ( i <- 0 until cb ) yield {
-    mem.dat_en_w(i) := Mux1H( Seq(
-              (stateReg === Dl1_state.cfree) -> false.B,
-              (stateReg === Dl1_state.cread) -> false.B,
-              // (stateReg === Dl1_state.mwait) -> false.B,
-              (stateReg === Dl1_state.cmiss) -> (is_cb_vhit(i) & dl1_mst.io.d.fire),
-              (stateReg === Dl1_state.write & dl1_mst.io.d.fire ) -> is_cb_vhit(i),
-              (stateReg === Dl1_state.wwait) -> false.B,
-              (stateReg === Dl1_state.pread) -> false.B,
-              (stateReg === Dl1_state.fence) -> false.B
-              ))
-              
-    mem.dat_en_r(i) := Mux1H( Seq(
-              (stateReg === Dl1_state.cfree) -> ((stateDnxt === Dl1_state.cread) & is_memory),
-              (stateReg === Dl1_state.cread) -> false.B,
-              // (stateReg === Dl1_state.mwait) -> false.B,
-              (stateReg === Dl1_state.cmiss) -> false.B,
-              (stateReg === Dl1_state.write) -> false.B,
-              (stateReg === Dl1_state.wwait) -> false.B,
-              (stateReg === Dl1_state.pread) -> false.B,
-              (stateReg === Dl1_state.fence) -> false.B
-              ))	
-
-    mem.tag_en_w(i) := Mux1H( Seq(
-              (stateReg === Dl1_state.cfree) -> false.B,
-              (stateReg === Dl1_state.cread) -> ((stateDnxt === Dl1_state.cmiss) & is_block_replace(i.U)),
-              // (stateReg === Dl1_state.mwait) -> ((stateDnxt === Dl1_state.cmiss) & is_block_replace(i.U)),
-              (stateReg === Dl1_state.cmiss) -> false.B,
-              (stateReg === Dl1_state.write) -> false.B,
-              (stateReg === Dl1_state.wwait) -> false.B,
-              (stateReg === Dl1_state.pread) -> false.B,
-              (stateReg === Dl1_state.fence) -> false.B
-              ))	
-
-    mem.tag_en_r(i) := Mux1H( Seq(
-              (stateReg === Dl1_state.cfree) -> ((stateDnxt === Dl1_state.cread) | ( stateDnxt === Dl1_state.wwait & is_memory )),
-              (stateReg === Dl1_state.cread) -> false.B,
-              // (stateReg === Dl1_state.mwait) -> false.B,
-              (stateReg === Dl1_state.cmiss) -> dl1_mst.io.a.fire,
-              (stateReg === Dl1_state.write) -> false.B,
-              (stateReg === Dl1_state.wwait) -> false.B,
-              (stateReg === Dl1_state.pread) -> false.B,
-              (stateReg === Dl1_state.fence) -> false.B
-              ))				
-  }
-
-
-
-
-
-  when ( reset.asBool ) {
-    for ( i <- 0 until cl; j <- 0 until cb ) yield cache_valid(i)(j) := false.B
-  }
-  .elsewhen(
-         ( stateReg === Dl1_state.cread & stateDnxt === Dl1_state.cmiss)
-        // |( stateReg === Dl1_state.mwait & stateDnxt === Dl1_state.cmiss )
-      ) {
-    cache_valid(cl_sel)(replace_sel) := true.B
-  }
-  .elsewhen(stateReg === Dl1_state.fence & stateDnxt === Dl1_state.cfree & ~trans_kill) {
-    for ( i <- 0 until cl; j <- 0 until cb ) yield cache_valid(i)(j) := false.B
-  }
-
-  
-  for ( i <- 0 until cb ) yield { is_cb_vhit(i) := cache_valid(cl_sel)(i) & ( mem.tag_info_r(i) === op1_tag ) }
-
-
-
-
-
-  def replace_sel = 
-    Mux(
-      cache_valid(cl_sel).contains(false.B),
-      cache_valid(cl_sel).indexWhere((a: Bool) => (a === false.B)),
-      random_res
-    )
-  
-  
-  
-
-  
-
-
-  def is_block_replace(i:UInt) = UIntToOH(replace_sel)(i).asBool
-
-
-
-  def mem_dat = {
-    val cb_num = for ( i <- 0 until cb ) yield { is_cb_vhit(i) === true.B }
-    val dat_sel = for ( i <- 0 until cb ) yield { mem.dat_info_r(i) }
-    MuxCase( 0.U, cb_num zip dat_sel )		
-  }
-
-  
-
-
-
 
 
 
