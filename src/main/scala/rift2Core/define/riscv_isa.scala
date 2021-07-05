@@ -134,13 +134,25 @@ class Lsu_isa extends Bundle {
   val fld = Bool()
   val fsd = Bool()
 
+  def sc = sc_d | sc_w
+  def lr = lr_d | lr_w
+
   def is_lu  = lb | lh | lw | ld | lbu | lhu | lwu | lr_w | lr_d | flw | fld 
   def is_su  = sb | sh | sw | sd | sc_w | sc_d | fsw | fsd
   def is_nls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd | fence | fence_i
-  def is_lrsc = lr_w | sc_w | lr_d | sc_d
+  def is_lrsc = sc | lr
   def is_amo = amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
   def is_fls = flw | fsw | fld | fsd
   def is_lsu = is_nls | is_lrsc | is_amo | is_fls
+
+  def is_byte = lb | lbu | sb
+  def is_half = lh | lhu | sh
+  def is_word = lw | lwu | sw | amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | flw | fsw | lr_w | sc_w
+  def is_dubl = ld | lr_d | fld | sd | sc_d | fsd | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
+
+  def is_usi = lbu | lhu | lwu
+  def is_fence = fence | fence_i
+
 }
 
 class Csr_isa extends Bundle {

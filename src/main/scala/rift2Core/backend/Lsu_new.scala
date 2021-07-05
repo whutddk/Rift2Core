@@ -83,24 +83,47 @@ class lsu_scoreBoard extends Moudle {
   val empty_idx = valid.indexWhere((x:Bool) => (x === false.B))
 
   val full = valid.forall((x:Bool) => (x === true.B))
-  val hazard = valid.zip(paddr).map( (a,b) => (a === true.B) & (b === io.lsu_push.bits.paddr) )
+  val hazard = valid.zip(paddr).map( (a,b) => (a === true.B) & (b === io.lsu_push.bits.param.op1) )
 
 
   when( io.lsu_push.fire ) {
     valid(empty_idx)  := true.B
-    paddr(empty_idx)  := io.lsu_push.bits.paddr
-    rd0(empty_idx)    := io.lsu_push.bits.rd0_phy
+    paddr(empty_idx)  := io.lsu_push.bits.param.op1
+    rd0(empty_idx)    := io.lsu_push.bits.param.rd0_phy
   }
   when( io.dcache_pop.fire ) {
     valid(io.dcache_pop.bits.chk_idx) := false.B  
   }
 
 
-  io.dcache_push.bits.paddr   = io.lsu_push.bits.paddr
-  io.dcache_push.bits.wmask   = io.lsu_push.bits.wmask
-  io.dcache_push.bits.wdata   = io.lsu_push.bits.wdata
-  io.dcache_push.bits.op      = io.lsu_push.bits.op
-  io.dcache_push.bits.chk_idx = empty_idx
+  io.dcache_push.bits.paddr   := io.lsu_push.bits.param.op1
+  io.dcache_push.bits.wmask   := {
+    val paddr = io.lsu_push.bits.param.op1
+    val op = io.lsu_push.bits.fun
+    val lsu_wstrb_align = (Mux1H( Seq(
+          op.is_byte -> "b00000001".U,
+          op.is_half -> "b00000011".U,
+          op.is_word -> "b00001111".U,
+          op.is_dubl -> "b11111111".U
+          )) << paddr(2,0))
+    lsu_wstrb_align
+  }
+  io.dcache_push.bits.wdata   := {
+    val res = Wire(UInt(64.W))
+    val paddr = io.lsu_push.bits.param.op1
+    val shift = {
+      val res = Wire(UInt(6.W))
+      res := Cat( paddr(2,0), 0.U(3.W) )
+      res
+    }
+
+    res := io.lsu_push.bits.param.op2 << shift
+    res
+  }
+  io.dcache_push.bits.op      <> io.lsu_push.bits.fun
+  io.dcache_push.bits.op.grant := false.B
+  io.dcache_push.bits.op.probe := false.B
+  io.dcache_push.bits.chk_idx := empty_idx
 
   io.dcache_pop.bits.rd0_phy := rd0(io.lsu_push.bits.chk_idx)
   io.dcache_pop.bits.res := io.lsu_push.bits.res
@@ -149,60 +172,39 @@ class Lsu_new_imp extends Module {
   // val (dtlb) = DTLB()
 
   val pending_fifo = Module(new lsu_pending_fifo(16, new Info_cache_sb))
+  val scoreBoard_arb = Module(new Arbiter(new Info_cache_sb, 2 ))
   val lsu_scoreBoard = Module(new lsu_scoreBoard)
   val dcache = LazyModule(new Dcache())
 
 
+  io.su_exe_iwb.valid := pending_fifo.io.enq.fire
+  io.su_exe_iwb.bits.rd0_phy := io.lsu_iss_exe.bits.param.rd0_phy
+  io.su_exe_iwb.bits.res     := DontCare
+
+
+
+  pending_fifo.io.enq.valid := io.lsu_iss_exe.valid & (io.lsu_iss_exe.bits.op.is_su | io.lsu_iss_exe.bits.op.is_amo | is_fence)
+  pending_fifo.io.enq.bits <> io.lsu_iss_exe.bits
+  io.lsu_iss_exe.ready := (pending_fifo.io.enq.fire & io.su_exe_iwb.ready) | scoreBoard_arb.io.in(1).fire
+
+  pending_fifo.io.cmm.valid := io.cmm_lsu.is_store_commit | io.cmm_lsu.is_fence_commit
+
+
+  pending_fifo.io.deq <> scoreBoard_arb.io.in(0)
+  scoreBoard_arb.io.in(1).valid := io.lsu_iss_exe.valid
+  scoreBoard_arb.io.in(1).bits := io.lsu_iss_exe.bits
+  scoreBoard_arb.io.out <> lsu_scoreBoard.io.lsu_push
+
+
+  io.lu_exe_iwb <> lsu_scoreBoard.io.lsu_pop
+
+  lsu_scoreBoard.io.dcache_push <> dcache.module.io.dcache_push
+  lsu_scoreBoard.io.dcache_pop <> dcache.module.io.dcache_pop
 
 
 
 
 
-
-
-
-
-    io.lsu_iss_exe.bits.fun.lb        -> load_byte(false.B, reAlign8 (rsp_data)),
-    io.lsu_iss_exe.bits.fun.lh        -> load_half(false.B, reAlign16(rsp_data)),
-    io.lsu_iss_exe.bits.fun.lw        -> load_word(false.B, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.ld        -> rsp_data,
-    io.lsu_iss_exe.bits.fun.lbu       -> load_byte(true.B, reAlign8 (rsp_data)),
-    io.lsu_iss_exe.bits.fun.lhu       -> load_half(true.B, reAlign16(rsp_data)),
-    io.lsu_iss_exe.bits.fun.lwu       -> load_word(true.B, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.sb        -> 0.U,
-    io.lsu_iss_exe.bits.fun.sh        -> 0.U,
-    io.lsu_iss_exe.bits.fun.sw        -> 0.U,
-    io.lsu_iss_exe.bits.fun.sd        -> 0.U,
-    io.lsu_iss_exe.bits.fun.fence     -> 0.U,
-    io.lsu_iss_exe.bits.fun.fence_i   -> 0.U,
-
-    io.lsu_iss_exe.bits.fun.lr_w      -> load_word(is_usi, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.sc_w      -> 0.U,
-    io.lsu_iss_exe.bits.fun.amoswap_w -> load_word(is_usi, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.amoadd_w  -> load_word(is_usi, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.amoxor_w  -> load_word(is_usi, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.amoand_w  -> load_word(is_usi, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.amoor_w   -> load_word(is_usi, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.amomin_w  -> load_word(is_usi, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.amomax_w  -> load_word(is_usi, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.amominu_w -> load_word(is_usi, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.amomaxu_w -> load_word(is_usi, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.lr_d      -> rsp_data,
-    io.lsu_iss_exe.bits.fun.sc_d      -> 0.U,
-    io.lsu_iss_exe.bits.fun.amoswap_d -> rsp_data,
-    io.lsu_iss_exe.bits.fun.amoadd_d  -> rsp_data,
-    io.lsu_iss_exe.bits.fun.amoxor_d  -> rsp_data,
-    io.lsu_iss_exe.bits.fun.amoand_d  -> rsp_data,
-    io.lsu_iss_exe.bits.fun.amoor_d   -> rsp_data,
-    io.lsu_iss_exe.bits.fun.amomin_d  -> rsp_data,
-    io.lsu_iss_exe.bits.fun.amomax_d  -> rsp_data,
-    io.lsu_iss_exe.bits.fun.amominu_d -> rsp_data,
-    io.lsu_iss_exe.bits.fun.amomaxu_d -> rsp_data,
-
-    io.lsu_iss_exe.bits.fun.flw       -> load_word(is_usi, reAlign32(rsp_data)),
-    io.lsu_iss_exe.bits.fun.fsw       -> 0.U,
-    io.lsu_iss_exe.bits.fun.fld       -> rsp_data,
-    io.lsu_iss_exe.bits.fun.fsd       -> 0.U,
 
 
 
@@ -211,8 +213,7 @@ class Lsu_new_imp extends Module {
 
 
   val lsu_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
-  io.lsu_exe_iwb <> lsu_exe_iwb_fifo.io.deq
-  lsu_exe_iwb_fifo.reset := reset.asBool | io.flush
+
 
   def dw = 128
   def bk = 4
@@ -274,12 +275,7 @@ class Lsu_new_imp extends Module {
   val cl_sel = op1(addr_lsb+line_w-1, addr_lsb)
 
 
-  val lsu_wstrb_align = (MuxCase( 0.U, Array(
-            lsu_sb -> "b00000001".U,
-            lsu_sh -> "b00000011".U,
-            lsu_sw -> "b00001111".U,
-            lsu_sd -> "b11111111".U
-            )) << op1(2,0))
+
 
   val lsu_wdata_align = op2 << (op1(2,0) << 3)
 

@@ -73,35 +73,21 @@ abstract class L1CacheBundle(implicit p: Parameters) extends CacheBundle with Ha
 
 
 
-class Cache_op extends Bundle {
-  val load  = Bool()
-  val store = Bool()
+class Cache_op extends Lsu_isa {
+
   val probe = Bool()
   val grant = Bool()
-  val lr    = Bool()
-  val sc    = Bool()
-  val swap  = Bool()
-  val add   = Bool()
-  val and   = Bool()
-  val or    = Bool()
-  val xor   = Bool()
-  val max   = Bool()
-  val maxu  = Bool()
-  val min   = Bool()
-  val minu  = Bool()
 
-  // assert(  
-  //   PopCount(Seq(load, store, probe, grant, lr, sc, swap, add, and, or, xor, max, maxu, min, minu)) === 1.U
-  // )
-  
-  def is_atom = swap | add | and | or | xor | max | maxu | min | minu
-  def is_access = is_atom | load | store | lr | sc
-  def is_tag_r = is_atom | load | store | lr | sc
-  def is_dat_r = is_atom | load | probe | lr
+
+
+  def is_atom = is_amo
+  def is_access = is_atom | is_lu | is_su | lr | sc
+  def is_tag_r = is_atom | is_lu | is_su | lr | sc
+  def is_dat_r = is_atom | is_lu | probe | lr
   def is_tag_w = grant
-  def is_dat_w = is_atom | store | sc | grant
-  def is_dirtyOp = is_atom | store | sc
-  def is_wb = is_atom | load | lr
+  def is_dat_w = is_atom | is_su | sc | grant
+  def is_dirtyOp = is_atom | is_su | sc
+  def is_wb = is_atom | is_lu | lr
 
 }
 
@@ -131,9 +117,7 @@ class Info_cache_s0s1(implicit p: Parameters) extends L1CacheBundle with Info_ca
 class Info_cache_s1s2(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw with Info_sc_idx with Info_tag_dat_rd
 
 
-class Info_cache_sb(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw {
-  val rd0_phy = UInt(6.W)
-}
+class Info_cache_sb extends Lsu_iss_info
 
 class Info_cache_retn(implicit p: Parameters) extends L1CacheBundle with Info_sc_idx {
   val res = UInt(64.W)
@@ -141,42 +125,6 @@ class Info_cache_retn(implicit p: Parameters) extends L1CacheBundle with Info_sc
 }
 
 
-
-
-class LS_entry() (implicit p: Parameters) extends L1CacheModule {
-  val io = IO(new Bundle{
-    val in = Flipped(new DecoupledIO(new Info_cache_s0s1))
-    val out = new DecoupledIO(new Info_cache_s0s1)
-  })
-  def entry_num = 16
-  def entry_w = log2Ceil(entry_num)
-
-  val entry_info  = RegInit( VecInit( Seq.fill(entry_num)(0.U.asTypeOf(new Info_cache_s0s1))))
-  val entry_valid = RegInit( VecInit( Seq.fill(entry_num)(false.B)))
-
-  val wr_ptr = RegInit(0.U((entry_w+1).W))
-  val rd_ptr = RegInit(0.U((entry_w+1).W))
-
-  val full  = (wr_ptr(entry_w-1,0) === rd_ptr(entry_w-1,0)) & (wr_ptr(entry_w) =/= rd_ptr(entry_w))
-  val empty = wr_ptr(entry_w,0) === rd_ptr(entry_w,0)
-
-  when( io.in.fire ) { wr_ptr := wr_ptr + 1.U }
-  when( io.out.fire ) { rd_ptr := rd_ptr + 1.U }
-
-  when( io.in.fire ) { entry_info(wr_ptr(entry_w-1,0)) := io.in.bits }
-
-
-  io.out.valid := ~empty
-  io.out.bits := entry_info(rd_ptr(entry_w-1,0))
-
-  io.in.ready :=
-    ~full 
-    // & (
-    //   VecInit(entry_valid.zip(entry_info).map{
-    //     case(a,b) => (a === false.B | b.paddr =/= io.in.bits.paddr)
-    //   }
-    // )).asUInt.andR
-}
 
 
 
@@ -326,7 +274,24 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   }
 
   for ( j <- 0 until bk ) yield {
-    io.dat_info_w(j) := io.wr_in.bits.wdata(j)
+    val op = io.wr_in.bits.op
+    
+    io.dat_info_w(j) := 
+      Mux1H(Seq(
+        op.grant -> io.wr_in.bits.wdata(j),
+        op.is_su -> io.wr_in.bits.wdata(bk_sel),
+        (op.amoswap_w | op.amoswap_d) -> io.wr_in.bits.wdata(bk_sel),
+        (op.amoadd_w  | op.amoadd_d ) -> (io.wr_in.bits.wdata(bk_sel) + io.wr_in.bits.rdata(bk_sel)),
+        (op.amoxor_w  | op.amoxor_d ) -> (io.wr_in.bits.wdata(bk_sel) ^ io.wr_in.bits.rdata(bk_sel)),
+        (op.amoand_w  | op.amoand_d ) -> (io.wr_in.bits.wdata(bk_sel) & io.wr_in.bits.rdata(bk_sel)),
+        (op.amoor_w   | op.amoor_d  ) -> (io.wr_in.bits.wdata(bk_sel) | io.wr_in.bits.rdata(bk_sel)),
+        (op.amomin_w  | op.amomin_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(bk_sel).asSInt, io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(bk_sel)),
+        (op.amomax_w  | op.amomax_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(bk_sel).asSInt, io.wr_in.bits.rdata(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (op.amominu_w | op.amominu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(bk_sel), io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(bk_sel)),
+        (op.amomaxu_w | op.amomaxu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(bk_sel), io.wr_in.bits.rdata(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+              
+      ))
+
   }
 
   io.tag_addr_w := io.wr_in.bits.paddr
@@ -369,35 +334,16 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   io.wr_lsReload.valid := io.wr_in.fire & io.wr_in.bits.op.is_wb & ~is_hit
   assert( ~(io.wr_lsReload.valid & ~io.wr_lsReload.ready), "Assert Failed at wr_state 2, reload failed!" )
 
-  io.wr_lsReload.bits.paddr    := io.wr_in.bits.paddr
-  io.wr_lsReload.bits.wdata    := io.wr_in.bits.wdata
-  io.wr_lsReload.bits.wmask    := io.wr_in.bits.wmask
-  io.wr_lsReload.bits.op.grant := io.wr_in.bits.op.grant
-  io.wr_lsReload.bits.op.load  := io.wr_in.bits.op.load
-  io.wr_lsReload.bits.op.store := io.wr_in.bits.op.store
-  io.wr_lsReload.bits.op.probe := io.wr_in.bits.op.probe
-  io.wr_lsReload.bits.op.grant := io.wr_in.bits.op.grant
-  io.wr_lsReload.bits.op.lr    := io.wr_in.bits.op.lr
-  io.wr_lsReload.bits.op.sc    := io.wr_in.bits.op.sc
-  io.wr_lsReload.bits.op.swap  := io.wr_in.bits.op.swap
-  io.wr_lsReload.bits.op.add   := io.wr_in.bits.op.add
-  io.wr_lsReload.bits.op.and   := io.wr_in.bits.op.and
-  io.wr_lsReload.bits.op.or    := io.wr_in.bits.op.or
-  io.wr_lsReload.bits.op.xor   := io.wr_in.bits.op.xor
-  io.wr_lsReload.bits.op.max   := io.wr_in.bits.op.max
-  io.wr_lsReload.bits.op.maxu  := io.wr_in.bits.op.maxu
-  io.wr_lsReload.bits.op.min   := io.wr_in.bits.op.min
-  io.wr_lsReload.bits.op.minu  := io.wr_in.bits.op.minu
-  io.wr_lsReload.bits.chk_idx  := io.wr_in.bits.chk_idx
+  io.wr_lsReload.bits <> io.wr_in.bits.paddr
+
 
   io.dcache_pop.valid := io.wr_in.fire & io.wr_in.bits.op.is_wb & is_hit
   io.dcache_pop.bits.res := {
     val rdata = io.wr_in.bits.rdata(cb_sel)(bk_sel)
-    val mask = io.wr_in.bits.wmask
     val paddr = io.wr_in.bits.paddr
-    val is_usi = io.wr_in.bits.is_usi
+    val op = io.wr_in.bits.op
 
-    get_loadRes( is_usi, rdata, mask, paddr )
+    get_loadRes( op, paddr, rdata )
   }
   
 
@@ -415,14 +361,14 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
 
 
 
-  def get_loadRes( is_usi: Bool, rdata: UInt, mask: UInt, paddr: UInt ): Unit = {
+  def get_loadRes( op: Cache_op, paddr: UInt, rdata: UInt ): Unit = {
     val res = Wire(UInt(64.W))
 
     def reAlign(rdata: UInt, paddr: UInt): Unit = {
       val res = Wire(UInt(64.W))
-      res := MuxLookup(paddr(2,0), 0.U, Array(
-        "b000".U -> rdata(63,0),  "b001".U -> rdata(63,8),  "b010".U -> rdata(63,16), "b011".U -> rdata(63,24),
-        "b100".U -> rdata(63,32), "b101".U -> rdata(63,40), "b110".U -> rdata(63,48), "b111".U -> rdata(63,56)))    
+      val shift = Wire(UInt(6.W))
+      shift := Cat( paddr(2,0), 0.U(3.W) )
+      res := rdata >> shift
       res
     }
 
@@ -430,16 +376,15 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
     def load_half(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(48, Mux(is_usi, 0.U, rdata(15)) ), rdata(15,0) )
     def load_word(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(32, Mux(is_usi, 0.U, rdata(31)) ), rdata(31,0) )
 
-    val fun = PopCount(mask)
-    assert( (fun === 1.U | fun === 2.U | fun === 4.U | fun === 8.U), "Assert Failed at L1cache.scala, unexpect read condition" )
+
     
     val align = reAlign(rdata, paddr)
 
     res := Mux1H(Seq(
-      (fun === 1.U) -> load_byte(align, paddr),
-      (fun === 2.U) -> load_half(align, paddr),
-      (fun === 4.U) -> load_word(align, paddr),
-      (fun === 8.U) -> align
+      op.is_byte -> load_byte(op.is_usi, align),
+      op.is_half -> load_half(op.is_usi, align),
+      op.is_word -> load_word(op.is_usi, align),
+      op.is_dubl -> align
     ))  
 
     res
