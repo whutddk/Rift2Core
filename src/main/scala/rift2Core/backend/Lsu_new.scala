@@ -34,8 +34,36 @@ import axi._
 import chisel3.experimental.ChiselEnum
 import rift2Core.L1Cache.Info_cache_s0s1
 
+import chisel3.experimental.{DataMirror, Direction, requireIsChiselType}
+import chisel3.internal.naming._
 
-class Dcache_addr_chk extends Moudle {
+class LsuPendingIO[T <: Data](private val gen: T, val entries: Int) extends QueueIO {
+  val cmm = Flipped(EnqIO(Bool()))
+}
+
+class lsu_pending_fifo extends Queue(val gen: T, entries = 16) {
+  override val io = IO(new LsuPendingIO(genType, entries))
+
+
+  val cmm_ptr = Counter(entries)
+
+  when( io.cmm.fire ) { cmm_ptr.inc() }
+
+  val cmm_maybe_full = RegInit(false.B)
+  val do_cmm         = WireDefault( io.cmm.fire )
+  when( do_cmm =/= do_deq ) { cmm_maybe_full := do_cmm }
+
+  val cmm_empty = cmm_ptr === deq_ptr & ~cmm_maybe_full
+  val cmm_full  = cmm_ptr === deq_ptr &  cmm_maybe_full
+
+  io.cmm.ready := true.B
+  io.deq.valid := !empty & !cmm_empty
+
+  assert( ~(cmm_full & do_cmm) )
+}
+
+
+class lsu_scoreBoard extends Moudle {
 
   val io = IO(new Bundle{
     val lsu_push = Flipped(new DecoupledIO(new Info_cache_sb))
@@ -44,6 +72,8 @@ class Dcache_addr_chk extends Moudle {
     val dcache_push = new DecoupledIO(new Info_cache_s0s1)
     val dcache_pop = Flipped(new DecoupledIO(new Info_cache_retn))
 
+    // val periph_push = new DecoupledIO(new Info_cache_s0s1)
+    // val periph_pop = Flipped(new DecoupledIO(new Info_cache_retn))
   })
 
   val paddr = RegInit(VecInit(16,0.U(64.W)) )
@@ -116,8 +146,13 @@ class Lsu_new_imp extends Module {
     val flush = Input(Bool())
   })
 
-  val (dtlb) = DTLB()
-  val ls_addr_chk 
+  // val (dtlb) = DTLB()
+
+  val pending_fifo = Module(new Queue(16, new Info_cache_sb))
+  val lsu_scoreBoard = Module(new lsu_scoreBoard)
+  val dcache = LazyModule(new Dcache())
+
+
 
 
 
