@@ -13,26 +13,26 @@ import freechips.rocketchip.amba.axi4._
 import sifive.blocks.inclusivecache._
 
 
-// case class DcacheParameters(
-//   dw: Int,
-//   bk: Int,
-//   cb: Int,
-//   cl: Int,
-//   aw: Int = 32
-// ) extends L1CacheParameters
+case class DcacheParameters(
+  dw: Int,
+  bk: Int,
+  cb: Int,
+  cl: Int,
+  aw: Int = 32
+) extends L1CacheParameters
 
-// trait HasDcacheParameters extends HasL1CacheParameters {
-//   val cacheParams = dcacheParameters
-// }
+trait HasDcacheParameters extends HasL1CacheParameters {
+  // val cacheParams = dcacheParameters
+}
 
-// abstract class DcacheModule(implicit p: Parameters) extends L1CacheModule
-//   with HasDcacheParameters
+abstract class DcacheModule(implicit p: Parameters) extends L1CacheModule
+  with HasDcacheParameters
 
-// abstract class DcacheBundle(implicit p: Parameters) extends L1CacheBundle
-//   with HasDcacheParameters
+abstract class DcacheBundle(implicit p: Parameters) extends L1CacheBundle
+  with HasDcacheParameters
 
 
-class Lsu()(implicit p: Parameters) extends LazyModule with HasL1CacheParameters{
+class Dcache()(implicit p: Parameters) extends LazyModule with HasDcacheParameters{
   val clientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "dcache",
@@ -46,7 +46,7 @@ class Lsu()(implicit p: Parameters) extends LazyModule with HasL1CacheParameters
   lazy val module = new LsuImp(this)
 }
 
-class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasL1CacheParameters {
+class LsuImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParameters {
 
   val ( bus, edge ) = outer.clientNode.out.head
 
@@ -155,7 +155,7 @@ class LsuImp(outer: Lsu) extends LazyModuleImp(outer)  with HasL1CacheParameters
 
 class wrapper_lsu(implicit p: Parameters) extends LazyModule {
   
-  val mdl = LazyModule(new Lsu()) 
+  val mdl = LazyModule(new Dcache()) 
 
   lazy val module = new LazyModuleImp(this) {
     val io = IO(new Bundle{
