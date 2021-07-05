@@ -53,7 +53,6 @@ class LsuImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParameter
   val io = IO(new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
-    val flush = Input(Bool())
   })
 
   val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
@@ -62,7 +61,7 @@ class LsuImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParameter
   val probeUnit = Module(new ProbeUnit(edge = edge))
   val writeBackUnit = Module(new WriteBackUnit(edge = edge))
 
-  val lsEntry = Module(new LS_entry())
+  val lsEntry = Module(new Queue(new Info_cache_s0s1, 16))
   val rd_stage = Module(new L1_rd_stage())
   val wr_stage = Module(new L1_wr_stage())
 
@@ -84,13 +83,6 @@ class LsuImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParameter
   wr_stage.io.missUnit_req      <> missUnit.io.req
   wr_stage.io.writeBackUnit_req <> writeBackUnit.io.req
 
-
-
-
-  // val lsu_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
-
-
-
   missUnit.io.dcache_grant.bits := bus.d.bits
   missUnit.io.dcache_grant.valid := bus.d.valid & ( bus.d.bits.opcode === TLMessages.Grant | bus.d.bits.opcode === TLMessages.GrantData )
 
@@ -103,21 +95,11 @@ class LsuImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParameter
       ( bus.d.bits.opcode === TLMessages.ReleaseAck ) -> writeBackUnit.io.dcache_grant.ready
     ))
 
-  // when( bus.d.bits.opcode === TLMessages.Grant || bus.d.bits.opcode === TLMessages.GrantData ) {
-  //   bus.d.ready <> missUnit.io.dcache_grant.ready
-  // } .elsewhen ( bus.d.bits.opcode === TLMessages.ReleaseAck ) {
-  //   bus.d <> writeBackUnit.io.dcache_grant
-  // } .otherwise {
-  //   assert(~bus.d.fire)
-  // }
-
   bus.a <> missUnit.io.dcache_acquire
 
-  probeUnit.io.dcache_probe <> bus.b
-
-  //  probeUnit.io.dcache_probe.valid := bus.b.valid
-  //  probeUnit.io.dcache_probe.bits := bus.b.bits
-  //  bus.b.ready := probeUnit.io.dcache_probe.ready
+  probeUnit.io.dcache_probe.valid := bus.b.valid
+  probeUnit.io.dcache_probe.bits := bus.b.bits
+  bus.b.ready := probeUnit.io.dcache_probe.ready
 
 
 
@@ -135,10 +117,10 @@ class LsuImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParameter
 
   wr_stage.io.wr_lsReload <> ls_arb.io.in(0)
   io.lsu_iss_exe <> ls_arb.io.in(1)
-  ls_arb.io.out <> lsEntry.io.in 
+  ls_arb.io.out <> lsEntry.io.enq 
 
   probeUnit.io.req <> rd_arb.io.in(0)
-  lsEntry.io.out <> rd_arb.io.in(1)
+  lsEntry.io.deq <> rd_arb.io.in(1)
   rd_arb.io.out <> rd_stage.io.rd_in
 
   missUnit.io.rsp <> wr_arb.io.in(0)
@@ -161,7 +143,6 @@ class wrapper_lsu(implicit p: Parameters) extends LazyModule {
     val io = IO(new Bundle{
       val lsu_iss_exe = Flipped(new DecoupledIO(new Info_cache_s0s1))
       val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
-      val flush = Input(Bool())
     })   
     io <> mdl.module.io   
   } 

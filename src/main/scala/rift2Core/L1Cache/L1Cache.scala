@@ -108,10 +108,11 @@ class Cache_op extends Bundle {
 
 trait Info_cache_raw extends L1CacheBundle {
   val paddr = UInt(64.W)
+  val is_usi = Bool()
   val wmask  = UInt(8.W)
   val wdata  = Vec(bk,UInt(64.W))
   val op    = new Cache_op
-  val rd0_phy = UInt(6.W)
+
 
   def tag_sel = paddr(31,32-tag_w)
   def bk_sel  = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
@@ -125,11 +126,23 @@ class Info_cache_rd(implicit p: Parameters) extends L1CacheBundle {
 }
 
 
-class Info_cache_s0s1(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw
-class Info_cache_s1s2(implicit p: Parameters) extends Info_cache_rd with Info_cache_raw
-// class Info_cache_retn(implicit p: Parameters) extends L1CacheBundle {
+class Info_cache_s0s1(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw {
+  val chk_idx = UInt(8.W)
+}
+class Info_cache_s1s2(implicit p: Parameters) extends Info_cache_rd with Info_cache_raw {
+  val chk_idx = UInt(8.W)
+}
 
-// }
+
+class Info_cache_sb(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw {
+  val rd0_phy = UInt(6.W)
+}
+
+class Info_cache_retn(implicit p: Parameters) extends L1CacheBundle {
+  val chk_idx = UInt(8.W)
+  val res = UInt(64.W)
+  val is_load_amo = Bool()
+}
 
 
 
