@@ -40,13 +40,75 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.amba.axi4._
 
-class LsuPendingIO[T <: Data](private val gen_0: T, val entries_0: Int) extends QueueIO(gen_0, entries_0) {
+class LsuPendingIO[T <: Data](private val gen: T, val entries: Int) extends Bundle {
+  val enq = Flipped(EnqIO(gen))
+  /** I/O to dequeue data (client is consumer and Queue object is producer), is [[Chisel.DecoupledIO]]*/
+  val deq = Flipped(DeqIO(gen))
+  /** The current amount of data in the queue */
+  val count = Output(UInt(log2Ceil(entries + 1).W))
+
   val cmm = Flipped(EnqIO(Bool()))
   val flush = Input(Bool())
 }
 
-class lsu_pending_fifo[T <: Data](val gen_0: T, val entries_0: Int) extends Queue(gen_0, entries_0) {
-  override val io = IO(new LsuPendingIO(gen_0, entries_0))
+class lsu_pending_fifo[T <: Data](val gen: T, val entries: Int)(implicit compileOptions: chisel3.CompileOptions) extends Module{
+
+
+require(entries > -1, "Queue must have non-negative number of entries")
+  require(entries != 0, "Use companion object Queue.apply for zero entries")
+  val genType = if (compileOptions.declaredTypeMustBeUnbound) {
+    requireIsChiselType(gen)
+    gen
+  } else {
+    if (DataMirror.internal.isSynthesizable(gen)) {
+      chiselTypeOf(gen)
+    } else {
+      gen
+    }
+  }
+
+  val io = IO(new LsuPendingIO(genType, entries))
+
+  val ram = Mem(entries, genType)
+  val enq_ptr = Counter(entries)
+  val deq_ptr = Counter(entries)
+  val maybe_full = RegInit(false.B)
+
+  val ptr_match = enq_ptr.value === deq_ptr.value
+  val empty = ptr_match && !maybe_full
+  val full = ptr_match && maybe_full
+  val do_enq = WireDefault(io.enq.fire())
+  val do_deq = WireDefault(io.deq.fire())
+
+  when (do_enq) {
+    ram(enq_ptr.value) := io.enq.bits
+    enq_ptr.inc()
+  }
+  when (do_deq) {
+    deq_ptr.inc()
+  }
+  when (do_enq =/= do_deq) {
+    maybe_full := do_enq
+  }
+
+  io.deq.valid := !empty
+  io.enq.ready := !full
+  io.deq.bits := ram(deq_ptr.value)
+
+
+
+  val ptr_diff = enq_ptr.value - deq_ptr.value
+  if (isPow2(entries)) {
+    io.count := Mux(maybe_full && ptr_match, entries.U, 0.U) | ptr_diff
+  } else {
+    io.count := Mux(ptr_match,
+                    Mux(maybe_full,
+                      entries.asUInt, 0.U),
+                    Mux(deq_ptr.value > enq_ptr.value,
+                      entries.asUInt + ptr_diff, ptr_diff))
+  }
+
+
 
 
   val cmm_ptr = Counter(entries)
