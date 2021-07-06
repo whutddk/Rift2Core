@@ -33,8 +33,8 @@ import rift2Core._
 // import rift2Core.cache._
 import rift2Core.privilege._
 import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.config.{Parameters, Config}
-import chisel3.stage.ChiselGeneratorAnnotation
+import freechips.rocketchip.config._
+import chisel3.stage._
 import rift2Core.L1Cache._
 
 
@@ -56,7 +56,7 @@ object testMain extends App {
 
   (new chisel3.stage.ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => {
-    val soc = LazyModule(new wrapper_lsu()(cfg))
+    val soc = LazyModule(new Rift2Chip()(cfg))
     soc.module
   })
   ))

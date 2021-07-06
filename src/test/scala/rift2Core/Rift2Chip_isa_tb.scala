@@ -36,11 +36,13 @@ import chiseltest._
 import org.scalatest._
 import chisel3.iotesters._
 import chisel3.util.experimental._
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.config._
+import chisel3.stage._
 
 
 
-
-class WaveformTester(dut: Rift2Chip) extends PeekPokeTester(dut){
+// class WaveformTester(dut: Rift2Chip) extends PeekPokeTester(dut){
 
   
     // dut.io.if_mmu.bits := 0.U
@@ -60,17 +62,23 @@ class WaveformTester(dut: Rift2Chip) extends PeekPokeTester(dut){
     // val flush = Input(Bool())
 
 
-  step(1000)
+//   step(1000)
 
-}
+// }
 
-class WaveformSpec extends FlatSpec with Matchers {
-  "WaveformSpec" should "pass" in {
-    chisel3.iotesters.Driver.execute(Array("--generate-vcd-output", "on","--target-dir", "generated"), () => new Rift2Chip()){
-      c => new WaveformTester(c)
-    } should be (true)
-  }
-}
+// class WaveformSpec extends FlatSpec with Matchers {
+//   val cfg = new miniCfg
+
+//   "WaveformSpec" should "pass" in {
+//     chisel3.iotesters.Driver.execute(Array("--generate-vcd-output", "on","--target-dir", "generated"), () => {
+//       val mdl = LazyModule(new Rift2Chip()(cfg))
+//       mdl.module
+//       })
+//     {
+//       c => new WaveformTester(c)
+//     } should be (true)
+//   }
+// }
 
 
 

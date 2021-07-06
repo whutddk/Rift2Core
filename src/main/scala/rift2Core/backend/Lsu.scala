@@ -158,15 +158,13 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
   val io = IO( new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val su_exe_iwb = new DecoupledIO(new Exe_iwb_info)
-    val lu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
-
+    val lsu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
 
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
 
     val icache_fence_req = Output(Bool())
-    val dcache_fence_req = Output(Bool())
+    // val dcache_fence_req = Output(Bool())
 
 
     val missUnit_dcache_acquire = Decoupled(new TLBundleA(tlc_edge.bundle))
@@ -191,20 +189,32 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
 
   val trans_kill = RegInit(false.B)
+  val is_fence_i  = RegInit(false.B)
   val fence_op  = RegInit(false.B)
+
+  val iwb_arb = Module(new Arbiter(new Exe_iwb_info, 2))
+  iwb_arb.io.in(0) <> su_exe_iwb_fifo.io.deq
+  iwb_arb.io.in(1) <> lu_exe_iwb_fifo.io.deq
+  iwb_arb.io.out <> io.lsu_exe_iwb
 
   when( io.flush ) { trans_kill := true.B }
   .elsewhen( lsu_scoreBoard.io.empty ) { trans_kill := false.B }
 
-  when( io.lsu_iss_exe.fire & io.lsu_iss_exe.bits.fun.is_fence ) { fence_op := true.B }
-  .elsewhen( lsu_scoreBoard.io.empty ) { fence_op := false.B }
+  when( io.lsu_iss_exe.fire & io.lsu_iss_exe.bits.fun.is_fence ) {
+    fence_op := true.B
+    is_fence_i := io.lsu_iss_exe.bits.fun.fence_i
+  }
+  .elsewhen( lsu_scoreBoard.io.empty ) {
+    fence_op := false.B
+    is_fence_i := false.B
+  }
 
+  io.icache_fence_req := fence_op === true.B & lsu_scoreBoard.io.empty & is_fence_i
 
-  io.su_exe_iwb <> su_exe_iwb_fifo.io.deq
 
   su_exe_iwb_fifo.io.enq.valid := pending_fifo.io.enq.fire | (io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence)
   su_exe_iwb_fifo.io.enq.bits.rd0_phy := io.lsu_iss_exe.bits.param.rd0_phy
-  su_exe_iwb_fifo.io.enq.bits.res     := DontCare
+  su_exe_iwb_fifo.io.enq.bits.res     := 0.U
 
 
 
@@ -233,7 +243,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   lsu_scoreBoard.io.dcache_push <> dcache.io.dcache_push
   lsu_scoreBoard.io.dcache_pop <> dcache.io.dcache_pop
 
-  io.lu_exe_iwb <> lu_exe_iwb_fifo.io.deq
+
 
 
 
