@@ -29,23 +29,14 @@ class ProbeUnit(edge: TLEdgeOut)(implicit p: Parameters) extends L1CacheModule {
   io.req.bits.paddr := probe_fifo.io.deq.bits
   io.req.bits.wdata := DontCare
   io.req.bits.wmask := DontCare
-  io.req.bits.op.grant := false.B
-  io.req.bits.op.load  := false.B
-  io.req.bits.op.store := false.B
-  io.req.bits.op.probe := true.B
-  io.req.bits.op.grant := false.B
-  io.req.bits.op.lr    := false.B
-  io.req.bits.op.sc    := false.B
-  io.req.bits.op.swap  := false.B
-  io.req.bits.op.add   := false.B
-  io.req.bits.op.and   := false.B
-  io.req.bits.op.or    := false.B
-  io.req.bits.op.xor   := false.B
-  io.req.bits.op.max   := false.B
-  io.req.bits.op.maxu  := false.B
-  io.req.bits.op.min   := false.B
-  io.req.bits.op.minu  := false.B
-  io.req.bits.rd0_phy  := DontCare
+
+  {
+    io.req.bits.op := 0.U.asTypeOf(new Cache_op)
+    io.req.bits.op.probe := true.B    
+  }
+
+
+  io.req.bits.chk_idx  := DontCare
 
 
 }

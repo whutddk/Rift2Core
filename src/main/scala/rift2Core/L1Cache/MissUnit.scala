@@ -105,23 +105,13 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
 
 
   io.rsp.bits.wmask := "hFF".U
-  io.rsp.bits.op.grant := true.B
-  io.rsp.bits.op.load  := false.B
-  io.rsp.bits.op.store := false.B
-  io.rsp.bits.op.probe := false.B
-  io.rsp.bits.op.grant := false.B
-  io.rsp.bits.op.lr    := false.B
-  io.rsp.bits.op.sc    := false.B
-  io.rsp.bits.op.swap  := false.B
-  io.rsp.bits.op.add   := false.B
-  io.rsp.bits.op.and   := false.B
-  io.rsp.bits.op.or    := false.B
-  io.rsp.bits.op.xor   := false.B
-  io.rsp.bits.op.max   := false.B
-  io.rsp.bits.op.maxu  := false.B
-  io.rsp.bits.op.min   := false.B
-  io.rsp.bits.op.minu  := false.B
-  io.rsp.bits.rd0_phy  := DontCare
+
+  {
+    io.rsp.bits.op := 0.U.asTypeOf(new Cache_op)
+    io.rsp.bits.op.grant := true.B
+  }
+  
+  io.rsp.bits.chk_idx  := DontCare
   io.rsp.bits.rdata    := DontCare
   io.rsp.bits.tag      := DontCare
 
