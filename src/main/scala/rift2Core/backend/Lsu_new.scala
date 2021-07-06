@@ -32,16 +32,19 @@ import rift2Core.cache._
 import tilelink._
 import axi._
 import chisel3.experimental.ChiselEnum
-import rift2Core.L1Cache.Info_cache_s0s1
+import rift2Core.L1Cache._
 
-import chisel3.experimental.{DataMirror, Direction, requireIsChiselType}
-import chisel3.internal.naming._
+import chisel3.experimental._
+import chipsalliance.rocketchip.config.Parameters
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.tilelink._
+import freechips.rocketchip.amba.axi4._
 
-class LsuPendingIO[T <: Data](private val gen: T, val entries: Int) extends QueueIO {
+class LsuPendingIO[T <: Data](private val gen: T, val entries: Int) extends QueueIO(gen,entries) {
   val cmm = Flipped(EnqIO(Bool()))
 }
 
-class lsu_pending_fifo[T <: Data](val gen: T) extends Queue(gen, entries = 16) {
+class lsu_pending_fifo[T <: Data](val gen: T, val entries: Int) extends Queue(gen, entries) {
   override val io = IO(new LsuPendingIO(genType, entries))
 
 
@@ -53,8 +56,8 @@ class lsu_pending_fifo[T <: Data](val gen: T) extends Queue(gen, entries = 16) {
   val do_cmm         = WireDefault( io.cmm.fire )
   when( do_cmm =/= do_deq ) { cmm_maybe_full := do_cmm }
 
-  val cmm_empty = cmm_ptr === deq_ptr & ~cmm_maybe_full
-  val cmm_full  = cmm_ptr === deq_ptr &  cmm_maybe_full
+  val cmm_empty = cmm_ptr.value === deq_ptr.value & ~cmm_maybe_full
+  val cmm_full  = cmm_ptr.value === deq_ptr.value &  cmm_maybe_full
 
   io.cmm.ready := true.B
   io.deq.valid := !empty & !cmm_empty
@@ -63,7 +66,7 @@ class lsu_pending_fifo[T <: Data](val gen: T) extends Queue(gen, entries = 16) {
 }
 
 
-class lsu_scoreBoard extends Moudle {
+class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
 
   val io = IO(new Bundle{
     val lsu_push = Flipped(new DecoupledIO(new Info_cache_sb))
@@ -76,14 +79,14 @@ class lsu_scoreBoard extends Moudle {
     // val periph_pop = Flipped(new DecoupledIO(new Info_cache_retn))
   })
 
-  val paddr = RegInit(VecInit(16,0.U(64.W)) )
-  val rd0 = RegInit(VecInit(16,0.U(6.W)) )
-  val valid = RegInit(VecInit(16, false.B))
+  val paddr = RegInit(VecInit(Seq.fill(16)(0.U(64.W)) ))
+  val rd0 = RegInit(VecInit(Seq.fill(16)(0.U(6.W)) ))
+  val valid = RegInit(VecInit(Seq.fill(16)(false.B)))
 
   val empty_idx = valid.indexWhere((x:Bool) => (x === false.B))
 
   val full = valid.forall((x:Bool) => (x === true.B))
-  val hazard = valid.zip(paddr).map( (a,b) => (a === true.B) & (b === io.lsu_push.bits.param.op1) )
+  val hazard = valid.zip(paddr).map{ case(a,b) => (a === true.B) & (b === io.lsu_push.bits.param.op1) }.reduce(_|_)  
 
 
   when( io.lsu_push.fire ) {
@@ -125,22 +128,23 @@ class lsu_scoreBoard extends Moudle {
   io.dcache_push.bits.op.probe := false.B
   io.dcache_push.bits.chk_idx := empty_idx
 
-  io.dcache_pop.bits.rd0_phy := rd0(io.lsu_push.bits.chk_idx)
-  io.dcache_pop.bits.res := io.lsu_push.bits.res
 
-  io.lsu_push.valid = Flipped(new DecoupledIO(new Info_cache_sb))
-  io.lsu_pop.valid = io.dcache_pop.fire & io.dcache_pop.bits.is_load_amo
-  io.dcache_push.valid = io.lsu_push.fire
+  io.lsu_pop.bits.rd0_phy := rd0(io.dcache_pop.bits.chk_idx)
+  io.lsu_pop.bits.res := io.dcache_pop.bits.res
 
-  io.lsu_push.ready = ~full & io.dcache_push.ready & ~hazard
-  io.dcache_pop.ready = io.lsu_pop.ready
+
+  io.lsu_pop.valid := io.dcache_pop.fire & io.dcache_pop.bits.is_load_amo
+  io.dcache_push.valid := io.lsu_push.fire
+
+  io.lsu_push.ready := ~full & io.dcache_push.ready & ~hazard
+  io.dcache_pop.ready := io.lsu_pop.ready
 
 }
 
 
 
 
-class Lsu_new_imp extends Module {
+class Lsu_new_imp(implicit p: Parameters) extends DcacheModule {
   val io = IO( new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
     val su_exe_iwb = new DecoupledIO(new Exe_iwb_info)
@@ -171,7 +175,7 @@ class Lsu_new_imp extends Module {
 
   // val (dtlb) = DTLB()
 
-  val pending_fifo = Module(new lsu_pending_fifo(16, new Info_cache_sb))
+  val pending_fifo = Module(new lsu_pending_fifo( new Info_cache_sb, 16))
   val scoreBoard_arb = Module(new Arbiter(new Info_cache_sb, 2 ))
   val lsu_scoreBoard = Module(new lsu_scoreBoard)
   val dcache = LazyModule(new Dcache())

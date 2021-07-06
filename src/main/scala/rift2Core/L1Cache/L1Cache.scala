@@ -281,14 +281,14 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
         op.grant -> io.wr_in.bits.wdata(j),
         op.is_su -> io.wr_in.bits.wdata(bk_sel),
         (op.amoswap_w | op.amoswap_d) -> io.wr_in.bits.wdata(bk_sel),
-        (op.amoadd_w  | op.amoadd_d ) -> (io.wr_in.bits.wdata(bk_sel) + io.wr_in.bits.rdata(bk_sel)),
-        (op.amoxor_w  | op.amoxor_d ) -> (io.wr_in.bits.wdata(bk_sel) ^ io.wr_in.bits.rdata(bk_sel)),
-        (op.amoand_w  | op.amoand_d ) -> (io.wr_in.bits.wdata(bk_sel) & io.wr_in.bits.rdata(bk_sel)),
-        (op.amoor_w   | op.amoor_d  ) -> (io.wr_in.bits.wdata(bk_sel) | io.wr_in.bits.rdata(bk_sel)),
-        (op.amomin_w  | op.amomin_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(bk_sel).asSInt, io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(bk_sel)),
-        (op.amomax_w  | op.amomax_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(bk_sel).asSInt, io.wr_in.bits.rdata(bk_sel), io.wr_in.bits.wdata(bk_sel)),
-        (op.amominu_w | op.amominu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(bk_sel), io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(bk_sel)),
-        (op.amomaxu_w | op.amomaxu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(bk_sel), io.wr_in.bits.rdata(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (op.amoadd_w  | op.amoadd_d ) -> (io.wr_in.bits.wdata(bk_sel) + io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.amoxor_w  | op.amoxor_d ) -> (io.wr_in.bits.wdata(bk_sel) ^ io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.amoand_w  | op.amoand_d ) -> (io.wr_in.bits.wdata(bk_sel) & io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.amoor_w   | op.amoor_d  ) -> (io.wr_in.bits.wdata(bk_sel) | io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.amomin_w  | op.amomin_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.amomax_w  | op.amomax_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (op.amominu_w | op.amominu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.amomaxu_w | op.amomaxu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
               
       ))
 
@@ -316,7 +316,7 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   }
 
 
-  io.wr_in.ready := io.wr_lsReload.ready | io.lu_exe_iwb.ready
+  io.wr_in.ready := io.wr_lsReload.ready & io.dcache_pop.ready
 
 
   io.missUnit_req.valid := io.wr_in.fire & io.wr_in.bits.op.is_access & is_hit
@@ -361,10 +361,10 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
 
 
 
-  def get_loadRes( op: Cache_op, paddr: UInt, rdata: UInt ): Unit = {
+  def get_loadRes( op: Cache_op, paddr: UInt, rdata: UInt ) = {
     val res = Wire(UInt(64.W))
 
-    def reAlign(rdata: UInt, paddr: UInt): Unit = {
+    def reAlign(rdata: UInt, paddr: UInt) = {
       val res = Wire(UInt(64.W))
       val shift = Wire(UInt(6.W))
       shift := Cat( paddr(2,0), 0.U(3.W) )
