@@ -72,7 +72,6 @@ abstract class L1CacheBundle(implicit p: Parameters) extends CacheBundle with Ha
 
 
 
-
 class Cache_op extends Lsu_isa {
 
   val probe = Bool()

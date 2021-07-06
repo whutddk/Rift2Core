@@ -26,6 +26,12 @@
 package rift2Core.define
 
 import chisel3._
+import chisel3.util._
+
+
+
+
+
 
 
 class Alu_isa extends Bundle{
@@ -515,6 +521,14 @@ class Lsu_param extends Bundle {
 class Lsu_iss_info extends Bundle {
   val fun = new Lsu_isa
   val param = new Lsu_param
+
+  def is_misAlign =
+    Mux1H( Seq(
+      fun.is_half -> (param.op1(0) =/= 0.U),
+      fun.is_word -> (param.op1(1,0) =/= 0.U),
+      fun.is_dubl -> (param.op1(2,0) =/= 0.U)	
+    ))
+
 }
 
 

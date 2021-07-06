@@ -34,9 +34,12 @@ import rift2Core.backend._
 import rift2Core.privilege.csrFiles._
 import tilelink._
 import axi._
+import base._
+import chipsalliance.rocketchip.config._
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.tilelink._
 
-
-class Execute extends Module {
+class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
     val alu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
@@ -80,7 +83,7 @@ class Execute extends Module {
 
   val alu = Module(new Alu)
   val bru = Module(new Bru)
-  val lsu = Module(new Lsu)
+  val lsu = Module(new Lsu((tlc_edge)))
   val csr = Module(new Csr)
   val mul = Module(new Mul)
 

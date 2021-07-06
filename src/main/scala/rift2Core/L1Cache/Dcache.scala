@@ -32,27 +32,36 @@ abstract class DcacheBundle(implicit p: Parameters) extends L1CacheBundle
   with HasDcacheParameters
 
 
-class Dcache()(implicit p: Parameters) extends LazyModule with HasDcacheParameters{
-  val clientParameters = TLMasterPortParameters.v1(
-    Seq(TLMasterParameters.v1(
-      name = "dcache",
-      sourceId = IdRange(0, 1),
-      supportsProbe = TransferSizes(32)
-    ))
-  )
+// class Dcache()(implicit p: Parameters) extends LazyModule with HasDcacheParameters{
+//   val clientParameters = TLMasterPortParameters.v1(
+//     Seq(TLMasterParameters.v1(
+//       name = "dcache",
+//       sourceId = IdRange(0, 1),
+//       supportsProbe = TransferSizes(32)
+//     ))
+//   )
 
-  val clientNode = TLClientNode(Seq(clientParameters))
+//   val clientNode = TLClientNode(Seq(clientParameters))
 
-  lazy val module = new DcacheImp(this)
-}
+//   lazy val module = new DcacheImp(this)
+// }
 
-class DcacheImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParameters {
+class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
 
-  val ( bus, edge ) = outer.clientNode.out.head
+  // val ( bus, edge ) = outer.clientNode.out.head
 
   val io = IO(new Bundle{
     val dcache_push = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val dcache_pop = new DecoupledIO(new Info_cache_retn)
+
+    val missUnit_dcache_acquire = Decoupled(new TLBundleA(edge.bundle))
+    val missUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge.bundle)))
+    val missUnit_dcache_grantAck  = Decoupled(new TLBundleE(edge.bundle))
+
+    val probeUnit_dcache_probe = Flipped(DecoupledIO(new TLBundleB(edge.bundle)))
+
+    val writeBackUnit_dcache_release = DecoupledIO(new TLBundleC(edge.bundle))
+    val writeBackUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge.bundle)))
   })
 
   val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
@@ -64,6 +73,14 @@ class DcacheImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParame
   val lsEntry = Module(new Queue(new Info_cache_s0s1, 16))
   val rd_stage = Module(new L1_rd_stage())
   val wr_stage = Module(new L1_wr_stage())
+
+
+  io.missUnit_dcache_acquire  <> missUnit.io.dcache_acquire
+  io.missUnit_dcache_grant    <> missUnit.io.dcache_grant
+  io.missUnit_dcache_grantAck <> missUnit.io.dcache_grantAck
+  io.probeUnit_dcache_probe <> probeUnit.io.dcache_probe
+  io.writeBackUnit_dcache_release <> writeBackUnit.io.dcache_release
+  io.writeBackUnit_dcache_grant   <> writeBackUnit.io.dcache_grant
 
 
 
@@ -83,30 +100,7 @@ class DcacheImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParame
   wr_stage.io.missUnit_req      <> missUnit.io.req
   wr_stage.io.writeBackUnit_req <> writeBackUnit.io.req
 
-  missUnit.io.dcache_grant.bits := bus.d.bits
-  missUnit.io.dcache_grant.valid := bus.d.valid & ( bus.d.bits.opcode === TLMessages.Grant | bus.d.bits.opcode === TLMessages.GrantData )
 
-  writeBackUnit.io.dcache_grant.bits := bus.d.bits
-  writeBackUnit.io.dcache_grant.valid := bus.d.valid & ( bus.d.bits.opcode === TLMessages.ReleaseAck )
-
-  bus.d.ready := 
-    Mux1H(Seq(
-      ( bus.d.bits.opcode === TLMessages.Grant || bus.d.bits.opcode === TLMessages.GrantData ) -> missUnit.io.dcache_grant.ready,
-      ( bus.d.bits.opcode === TLMessages.ReleaseAck ) -> writeBackUnit.io.dcache_grant.ready
-    ))
-
-  bus.a <> missUnit.io.dcache_acquire
-
-  probeUnit.io.dcache_probe.valid := bus.b.valid
-  probeUnit.io.dcache_probe.bits := bus.b.bits
-  bus.b.ready := probeUnit.io.dcache_probe.ready
-
-
-
-  bus.c <> writeBackUnit.io.dcache_release
-  bus.e <> missUnit.io.dcache_grantAck
-
-  
   missUnit.io.miss_ban := writeBackUnit.io.miss_ban
   writeBackUnit.io.release_ban := missUnit.io.release_ban
 
@@ -135,60 +129,60 @@ class DcacheImp(outer: Dcache) extends LazyModuleImp(outer) with HasDcacheParame
 
 
 
-class wrapper_lsu(implicit p: Parameters) extends LazyModule {
+// class wrapper_lsu(implicit p: Parameters) extends LazyModule {
   
-  val mdl = LazyModule(new Dcache()) 
+//   val mdl = LazyModule(new Dcache()) 
 
-  lazy val module = new LazyModuleImp(this) {
-    val io = IO(new Bundle{
-      val dcache_push = Flipped(new DecoupledIO(new Info_cache_s0s1))
-      val dcache_pop = new DecoupledIO(new Info_cache_retn)
-    })   
-    io <> mdl.module.io   
-  } 
+//   lazy val module = new LazyModuleImp(this) {
+//     val io = IO(new Bundle{
+//       val dcache_push = Flipped(new DecoupledIO(new Info_cache_s0s1))
+//       val dcache_pop = new DecoupledIO(new Info_cache_retn)
+//     })   
+//     io <> mdl.module.io   
+//   } 
 
-  val l2cache = LazyModule(new InclusiveCache(
-      cache = CacheParameters( level = 2, ways = 4, sets = 64, blockBytes = 256*4/8, beatBytes = 128/8 ),
-      micro = InclusiveCacheMicroParameters( writeBytes = 128/8, memCycles = 40, portFactor = 4),
-      control = None
-    ))
+//   val l2cache = LazyModule(new InclusiveCache(
+//       cache = CacheParameters( level = 2, ways = 4, sets = 64, blockBytes = 256*4/8, beatBytes = 128/8 ),
+//       micro = InclusiveCacheMicroParameters( writeBytes = 128/8, memCycles = 40, portFactor = 4),
+//       control = None
+//     ))
 
-  val managerParameters = TLSlavePortParameters.v1(
-      managers = Seq(TLSlaveParameters.v1(
-        address = Seq(AddressSet(0x1000, 0xfff)),
-        regionType = RegionType.CACHED,
-        supportsAcquireT = TransferSizes(32),
-        supportsAcquireB = TransferSizes(32),
-        alwaysGrantsT = true
-      )),
-      beatBytes = 256/8,
-      endSinkId = 1
-  )
+//   val managerParameters = TLSlavePortParameters.v1(
+//       managers = Seq(TLSlaveParameters.v1(
+//         address = Seq(AddressSet(0x1000, 0xfff)),
+//         regionType = RegionType.CACHED,
+//         supportsAcquireT = TransferSizes(32),
+//         supportsAcquireB = TransferSizes(32),
+//         alwaysGrantsT = true
+//       )),
+//       beatBytes = 256/8,
+//       endSinkId = 1
+//   )
 
-  val managerNode = TLManagerNode(portParams = Seq(managerParameters))
-  val l2xbar = TLXbar()
+//   val managerNode = TLManagerNode(portParams = Seq(managerParameters))
+//   val l2xbar = TLXbar()
   
-  val memory1 = InModuleBody {
-    managerNode.makeIOs()
-  }
+//   val memory1 = InModuleBody {
+//     managerNode.makeIOs()
+//   }
       
 
 
 
-  managerNode := l2xbar := TLBuffer() := mdl.clientNode
+//   managerNode := l2xbar := TLBuffer() := mdl.clientNode
   
 
 
-  // val tlram = LazyModule(new TLRAM(
-  //   address = AddressSet(0x1000, 0xfff)))
+//   // val tlram = LazyModule(new TLRAM(
+//   //   address = AddressSet(0x1000, 0xfff)))
 
 
 
-  // val memory1 = InModuleBody {
-  //   axiram.node.makeIOs()
-  // }
+//   // val memory1 = InModuleBody {
+//   //   axiram.node.makeIOs()
+//   // }
 
-}
+// }
 
 
 
