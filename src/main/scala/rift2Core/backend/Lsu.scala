@@ -186,17 +186,16 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
           )) << paddr(2,0))
     lsu_wstrb_align
   }
-  io.dcache_push.bits.wdata   := {
-    val res = Wire(UInt(64.W))
-    val paddr = io.lsu_push.bits.param.op1
-    val shift = {
-      val res = Wire(UInt(6.W))
-      res := Cat( paddr(2,0), 0.U(3.W) )
+  for ( j <- 0 until bk ) yield {
+    io.dcache_push.bits.wdata(j) := {
+      val res = Wire(UInt(64.W))
+      val paddr = io.lsu_push.bits.param.op1
+      val shift = Wire(UInt(6.W))
+      shift := Cat( paddr(2,0), 0.U(3.W) )
+
+      res := io.lsu_push.bits.param.op2 << shift
       res
     }
-
-    res := io.lsu_push.bits.param.op2 << shift
-    res
   }
   io.dcache_push.bits.op      <> io.lsu_push.bits.fun
   io.dcache_push.bits.op.grant := false.B
