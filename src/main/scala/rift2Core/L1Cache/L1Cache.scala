@@ -313,13 +313,17 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   }
 
 
-  io.wr_in.ready := io.wr_lsReload.ready & io.dcache_pop.ready & io.writeBackUnit_req.ready
+  io.wr_in.ready :=
+    (io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & io.writeBackUnit_req.ready) |
+    (io.wr_in.bits.op.is_access &  is_hit & io.dcache_pop.ready) |
+    (io.wr_in.bits.op.probe & io.writeBackUnit_req.ready)        |
+    (io.wr_in.bits.op.grant)
 
 
-  io.missUnit_req.valid := io.wr_in.fire & io.wr_in.bits.op.is_access & ~is_hit
+  io.missUnit_req.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & io.writeBackUnit_req.ready
   io.missUnit_req.bits.paddr := io.wr_in.bits.paddr
 
-  io.writeBackUnit_req.valid := io.wr_in.fire & ((io.wr_in.bits.op.is_access & ~is_hit) | io.wr_in.bits.op.probe)
+  io.writeBackUnit_req.valid := io.wr_in.valid & ((io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready) | io.wr_in.bits.op.probe)
   io.writeBackUnit_req.bits.addr := io.wr_in.bits.paddr
   io.writeBackUnit_req.bits.data := Cat( for( j <- 0 until bk ) yield { io.wr_in.bits.rdata(cb_sel)(bk-1-j) } )
 
@@ -328,7 +332,7 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   io.writeBackUnit_req.bits.is_probe := io.wr_in.bits.op.probe & ~is_dirty(cl_sel)(cb_sel)
   io.writeBackUnit_req.bits.is_probeData := io.wr_in.bits.op.probe & is_dirty(cl_sel)(cb_sel)
 
-  io.wr_lsReload.valid := io.wr_in.fire & io.wr_in.bits.op.is_access & ~is_hit
+  io.wr_lsReload.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.writeBackUnit_req.ready
   assert( ~(io.wr_lsReload.valid & ~io.wr_lsReload.ready), "Assert Failed at wr_state 2, reload failed!" )
 
   
@@ -338,7 +342,7 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   io.wr_lsReload.bits.op      := io.wr_in.bits.op
   io.wr_lsReload.bits.chk_idx := io.wr_in.bits.chk_idx
 
-  io.dcache_pop.valid := io.wr_in.fire & io.wr_in.bits.op.is_access & is_hit
+  io.dcache_pop.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & is_hit
   io.dcache_pop.bits.res := {
     val rdata = io.wr_in.bits.rdata(cb_sel)(bk_sel)
     val paddr = io.wr_in.bits.paddr

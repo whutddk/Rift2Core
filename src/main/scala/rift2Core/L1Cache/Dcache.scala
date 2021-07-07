@@ -109,10 +109,10 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   val rd_arb = Module(new Arbiter( new Info_cache_s0s1, 2))
   val wr_arb = Module(new Arbiter( new Info_cache_s1s2, 2))
 
-  val reload_byFifo = Module( new Queue( new Info_cache_s0s1, 1, false, true) )
+  val reload_fifo = Module( new Queue( new Info_cache_s0s1, 1, false, true) )
 
-  wr_stage.io.wr_lsReload <> reload_byFifo.io.enq
-  reload_byFifo.io.deq <> ls_arb.io.in(0)
+  wr_stage.io.wr_lsReload <> reload_fifo.io.enq
+  reload_fifo.io.deq <> ls_arb.io.in(0)
   io.dcache_push <> ls_arb.io.in(1)
   ls_arb.io.out <> lsEntry.io.enq 
 
