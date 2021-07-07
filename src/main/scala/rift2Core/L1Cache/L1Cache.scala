@@ -75,12 +75,8 @@ abstract class L1CacheBundle(implicit p: Parameters) extends CacheBundle with Ha
 class Cache_op extends Bundle {
   val fun = new Lsu_isa
 
-
-
   val probe = Bool()
   val grant = Bool()
-
-
 
   def is_atom = fun.is_amo
   def is_access = is_atom | fun.is_lu | fun.is_su | fun.lr | fun.sc
@@ -90,7 +86,6 @@ class Cache_op extends Bundle {
   def is_dat_w = is_atom | fun.is_su | fun.sc | grant
   def is_dirtyOp = is_atom | fun.is_su | fun.sc
   def is_wb = is_atom | fun.is_lu | fun.lr
-
 
 }
 
@@ -107,16 +102,16 @@ trait Info_cache_raw extends L1CacheBundle {
 }
 
 
-trait Info_tag_dat_rd extends L1CacheBundle {
+trait Info_tag_dat extends L1CacheBundle {
   val rdata = Vec(cb, Vec(bk, UInt(64.W)))
   val tag   = Vec(cb, UInt(tag_w.W))
 }
 
 trait Info_sc_idx extends L1CacheBundle { val chk_idx = UInt(8.W) }
 
-class Info_cache_rd(implicit p: Parameters) extends Info_tag_dat_rd
+class Info_cache_rd(implicit p: Parameters) extends Info_tag_dat
 class Info_cache_s0s1(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw with Info_sc_idx
-class Info_cache_s1s2(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw with Info_sc_idx with Info_tag_dat_rd
+class Info_cache_s1s2(implicit p: Parameters) extends L1CacheBundle with Info_cache_raw with Info_sc_idx with Info_tag_dat
 
 
 class Info_cache_sb extends Lsu_iss_info
@@ -129,7 +124,7 @@ class Info_cache_retn(implicit p: Parameters) extends L1CacheBundle with Info_sc
 
 
 
-
+/** the fisrt stage to read out the data */
 class L1_rd_stage()(implicit p: Parameters) extends L1CacheModule {
   val io = IO(new Bundle {
     val rd_in  = Flipped(DecoupledIO(new Info_cache_s0s1))
@@ -144,9 +139,8 @@ class L1_rd_stage()(implicit p: Parameters) extends L1CacheModule {
     val tag_info_r = Input( Vec(cb, UInt(tag_w.W)) )
   })
 
-
-
-  val s1s2_pipe = Module( new Queue(new Info_cache_rd, 1, true, true) )
+  /** a bypass fifo to store the read out result */
+  // val s1s2_pipe = Module( new Queue(new Info_cache_rd, 1, false, true) )
 
   val bk_sel = io.rd_in.bits.bk_sel
 
@@ -156,14 +150,14 @@ class L1_rd_stage()(implicit p: Parameters) extends L1CacheModule {
 
   for ( i <- 0 until cb ) yield {
     io.tag_en_r(i) :=
-      io.rd_in.fire & io.rd_in.bits.op.is_tag_r
+      io.rd_in.valid & io.rd_in.bits.op.is_tag_r
   }
 
 
 
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
     io.dat_en_r(i)(j) := 
-      io.rd_in.fire &
+      io.rd_in.valid &
       io.rd_in.bits.op.is_dat_r & (
         io.rd_in.bits.op.probe |
         j.U === bk_sel
@@ -171,33 +165,23 @@ class L1_rd_stage()(implicit p: Parameters) extends L1CacheModule {
   }
 
 
+  io.rd_out.valid := RegNext(io.rd_in.valid, false.B)
 
-
-
-  s1s2_pipe.io.enq.valid := io.rd_in.fire
-
-  for ( i <- 0 until cb; j <- 0 until bk ) yield { s1s2_pipe.io.enq.bits.rdata(i)(j) := io.dat_info_r(i)(j)}
-  for ( i <- 0 until cb )                  yield { s1s2_pipe.io.enq.bits.tag(i) := io.tag_info_r(i) }
-  
-  io.rd_out.valid := s1s2_pipe.io.deq.valid
-
-  for( i <- 0 until cb; j <- 0 until bk ) yield { io.rd_out.bits.rdata(i)(j) := s1s2_pipe.io.deq.bits.rdata(i)(j) } 
-  for( i <- 0 until cb )                  yield { io.rd_out.bits.tag(i)      := s1s2_pipe.io.deq.bits.tag(i) }
+  for( i <- 0 until cb; j <- 0 until bk ) yield { io.rd_out.bits.rdata(i)(j) := io.dat_info_r(i)(j) } 
+  for( i <- 0 until cb )                  yield { io.rd_out.bits.tag(i)      := io.tag_info_r(i) }
 
   
-  io.rd_out.bits.paddr    := RegEnable(io.rd_in.bits.paddr, io.rd_in.fire)
-  io.rd_out.bits.wmask    := RegEnable(io.rd_in.bits.wmask, io.rd_in.fire)
-  io.rd_out.bits.wdata    := RegEnable(io.rd_in.bits.wdata, io.rd_in.fire)
-  io.rd_out.bits.op       := RegEnable(io.rd_in.bits.op,    io.rd_in.fire)
-  io.rd_out.bits.chk_idx  := RegEnable(io.rd_in.bits.chk_idx, io.rd_in.fire)
-  s1s2_pipe.io.deq.ready := io.rd_out.ready
+  io.rd_out.bits.paddr    := RegEnable(io.rd_in.bits.paddr,   io.rd_in.valid)
+  io.rd_out.bits.wmask    := RegEnable(io.rd_in.bits.wmask,   io.rd_in.valid)
+  io.rd_out.bits.wdata    := RegEnable(io.rd_in.bits.wdata,   io.rd_in.valid)
+  io.rd_out.bits.op       := RegEnable(io.rd_in.bits.op,      io.rd_in.valid)
+  io.rd_out.bits.chk_idx  := RegEnable(io.rd_in.bits.chk_idx, io.rd_in.valid)
 
-  io.rd_in.ready := s1s2_pipe.io.enq.ready
-
+  io.rd_in.ready := io.rd_out.fire
 
 }
 
-
+/** stage 2 will write the cache */
 class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   val io = IO(new Bundle{
     val wr_in  = Flipped(new DecoupledIO(new Info_cache_s1s2))
@@ -220,12 +204,19 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   val cl_sel = io.wr_in.bits.cl_sel
   val tag_sel = io.wr_in.bits.tag_sel
 
-
+  /** one hot code indicated which blcok is hit */
   val is_hit_oh = Wire(Vec(cb, Bool()))
-  val is_hit = is_hit_oh.asUInt.orR
-  // val hit_cb_sel = OHToUInt(is_hit_oh)
 
+  /** flag that indicated that if there is a cache block hit */
+  val is_hit = is_hit_oh.asUInt.orR
+
+  /** convert one hot hit to UInt */
+  val hit_sel = WireDefault(OHToUInt(is_hit_oh))
+
+  /** flag that indicated that if a cache block is valid */
   val is_valid = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
+
+  /** flag that indicated that if a cache block is dirty */
   val is_dirty = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
 
   is_hit_oh := {
@@ -237,33 +228,37 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
     VecInit(res)
   }
 
+  /** when no block is hit or a new grant req comes, we should 1) find out an empty block 2) evict a valid block */
   val rpl_sel = {
+    val res = Wire(UInt(cb_w.W))
     val is_emptyBlock_exist = is_valid(cl_sel).contains(false.B)
     val emptyBlock_sel = is_valid(cl_sel).indexWhere( (x:Bool) => (x === false.B) )
-    Mux( is_emptyBlock_exist, emptyBlock_sel, LFSR(16) )
+    res := Mux( is_emptyBlock_exist, emptyBlock_sel, LFSR(16) )
+    res
   }
   
-  val cb_sel = 
-    Mux1H(Seq(
-      io.wr_in.bits.op.is_access -> Mux( is_hit, OHToUInt(is_hit_oh), rpl_sel ),
-      io.wr_in.bits.op.probe -> OHToUInt(is_hit_oh),
-      io.wr_in.bits.op.grant -> rpl_sel
-    ))
+  val cb_sel = WireDefault(
+      Mux1H(Seq(
+        io.wr_in.bits.op.is_access -> Mux( is_hit, hit_sel, rpl_sel ),
+        io.wr_in.bits.op.probe -> hit_sel,
+        io.wr_in.bits.op.grant -> rpl_sel
+      ))
+    )
 
-    when( io.wr_in.fire ) {
-      when( io.wr_in.bits.op.probe ) { assert(is_hit) }
-      when( io.wr_in.bits.op.grant ) { assert(is_valid(cl_sel).contains(false.B)) }
-    }
+  when( io.wr_in.fire ) {
+    when( io.wr_in.bits.op.probe ) { assert(is_hit) } //l2 will never request a empty probe
+    when( io.wr_in.bits.op.grant ) { assert(is_valid(cl_sel).contains(false.B)) } //grant palce is invalid
+  }
 
   io.dat_addr_w := io.wr_in.bits.paddr
 
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
     io.dat_en_w(i)(j) :=
-      io.wr_in.valid &
+      io.wr_in.fire &
       i.U === cb_sel &
       io.wr_in.bits.op.is_dat_w & (
         io.wr_in.bits.op.grant |
-        j.U === bk_sel
+        (j.U === bk_sel & is_hit)
       )
   }
 
@@ -300,7 +295,7 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
 
   for ( i <- 0 until cb ) yield {
     io.tag_en_w(i) :=
-      (i.U === cb_sel) & io.wr_in.valid & io.wr_in.bits.op.grant
+      (i.U === cb_sel) & io.wr_in.fire & io.wr_in.bits.op.grant
   }
 
   when( io.wr_in.fire ) {
@@ -318,22 +313,22 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   }
 
 
-  io.wr_in.ready := io.wr_lsReload.ready & io.dcache_pop.ready
+  io.wr_in.ready := io.wr_lsReload.ready & io.dcache_pop.ready & io.writeBackUnit_req.ready
 
 
-  io.missUnit_req.valid := io.wr_in.fire & io.wr_in.bits.op.is_access & is_hit
+  io.missUnit_req.valid := io.wr_in.fire & io.wr_in.bits.op.is_access & ~is_hit
   io.missUnit_req.bits.paddr := io.wr_in.bits.paddr
 
   io.writeBackUnit_req.valid := io.wr_in.fire & ((io.wr_in.bits.op.is_access & ~is_hit) | io.wr_in.bits.op.probe)
   io.writeBackUnit_req.bits.addr := io.wr_in.bits.paddr
   io.writeBackUnit_req.bits.data := Cat( for( j <- 0 until bk ) yield { io.wr_in.bits.rdata(cb_sel)(bk-1-j) } )
 
-  io.writeBackUnit_req.bits.is_releaseData := io.wr_in.bits.op.is_access & ~is_hit & is_dirty(cl_sel)(cb_sel)
-  io.writeBackUnit_req.bits.is_release := io.wr_in.bits.op.is_access & ~is_hit & ~is_dirty(cl_sel)(cb_sel)
+  io.writeBackUnit_req.bits.is_releaseData := io.wr_in.bits.op.is_access & is_dirty(cl_sel)(cb_sel)
+  io.writeBackUnit_req.bits.is_release := io.wr_in.bits.op.is_access & ~is_dirty(cl_sel)(cb_sel)
   io.writeBackUnit_req.bits.is_probe := io.wr_in.bits.op.probe & ~is_dirty(cl_sel)(cb_sel)
   io.writeBackUnit_req.bits.is_probeData := io.wr_in.bits.op.probe & is_dirty(cl_sel)(cb_sel)
 
-  io.wr_lsReload.valid := io.wr_in.fire & io.wr_in.bits.op.is_wb & ~is_hit
+  io.wr_lsReload.valid := io.wr_in.fire & io.wr_in.bits.op.is_access & ~is_hit
   assert( ~(io.wr_lsReload.valid & ~io.wr_lsReload.ready), "Assert Failed at wr_state 2, reload failed!" )
 
   
@@ -343,7 +338,7 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   io.wr_lsReload.bits.op      := io.wr_in.bits.op
   io.wr_lsReload.bits.chk_idx := io.wr_in.bits.chk_idx
 
-  io.dcache_pop.valid := io.wr_in.fire & io.wr_in.bits.op.is_wb & is_hit
+  io.dcache_pop.valid := io.wr_in.fire & io.wr_in.bits.op.is_access & is_hit
   io.dcache_pop.bits.res := {
     val rdata = io.wr_in.bits.rdata(cb_sel)(bk_sel)
     val paddr = io.wr_in.bits.paddr
