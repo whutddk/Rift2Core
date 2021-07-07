@@ -7,7 +7,7 @@ import chisel3.util._
 import base._
 import freechips.rocketchip.tilelink._
 
-
+/** the operation infomation of writeback Unit */
 class Info_writeBack_req extends Bundle {
   val addr = UInt(32.W)
   val data = UInt(256.W)
@@ -19,7 +19,9 @@ class Info_writeBack_req extends Bundle {
   // assert( PopCount(Cat(is_releaseData, is_release, is_probe, is_probeData)) === 1.U )
 }
 
-
+/**
+  * a writeBack Unit accept data and paddr from l1cache and write it back to l2cache
+  */
 class WriteBackUnit(edge: TLEdgeOut) extends Module {
   val io = IO(new Bundle {
     val req = Flipped(new DecoupledIO(new Info_writeBack_req))
@@ -31,6 +33,7 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
     val miss_ban = Output(Bool())
   })
 
+  /** a tiny fifo that temporarily store the writeback info from l1cache */
   val wb_fifo = Module(new Queue(new Info_writeBack_req, 8, false, false))
 
   io.req <> wb_fifo.io.enq
@@ -38,9 +41,13 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
   val wb_state_dnxt = Wire(UInt(2.W))
   val wb_state_qout = RegNext(wb_state_dnxt, 0.U)
 
+  /** a last flag of release transmision */
   val is_release_done = edge.count(io.dcache_release)._3
 
+  /** a register of io.dcache_release.valid */
   val dcache_release_valid = RegInit(false.B)
+
+  /** a register of io.dcache_grant.ready */
   val dcache_grant_ready   = RegInit(false.B)
 
   io.dcache_release.valid := dcache_release_valid
@@ -56,10 +63,16 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
       (wb_state_qout === 2.U) -> Mux( io.dcache_grant.fire, 0.U, 2.U )
     ))
 
-  when( wb_state_qout === 0.U & wb_state_dnxt === 1.U ) {
+  /** a 2 step counter to select data */
+  val beatCnt = RegInit(false.B)
+  when( wb_state_qout === 0.U & wb_state_dnxt === 1.U ) { beatCnt := false.B }
+  .elsewhen( io.dcache_release.fire ) { beatCnt := ~beatCnt }
+    
+  when( wb_state_qout === 1.U ) {
     when( io.dcache_release.fire ) { dcache_release_valid := false.B }
     .elsewhen( ~io.dcache_release.valid ) { dcache_release_valid := true.B }
   }
+
 
   io.dcache_release.bits := {
     val info_probe = edge.ProbeAck(
@@ -74,7 +87,7 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
       toAddress = wb_fifo.io.deq.bits.addr,
       lgSize = log2Ceil(256/8).U,
       reportPermissions = TLPermissions.TtoN,
-      data = wb_fifo.io.deq.bits.data
+      data = Mux(beatCnt, wb_fifo.io.deq.bits.data(255,128), wb_fifo.io.deq.bits.data(127,0))
     )
 
     val info_release = edge.Release(
@@ -89,7 +102,7 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
       toAddress = wb_fifo.io.deq.bits.addr,
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = TLPermissions.TtoN,
-      data = wb_fifo.io.deq.bits.data
+      data = Mux(beatCnt, wb_fifo.io.deq.bits.data(255,128), wb_fifo.io.deq.bits.data(127,0))
     )._2
 
 
@@ -114,6 +127,8 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
 
   io.miss_ban := wb_state_qout === 1.U | wb_state_qout === 2.U
 
+
+  assert( ~(io.miss_ban & io.release_ban), "Assert Failed at wb unit, dead lock of ban" )
 
 }
 
