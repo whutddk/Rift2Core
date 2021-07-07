@@ -7,13 +7,16 @@ import chisel3.util._
 import base._
 import freechips.rocketchip.tilelink._
 
-
+/**
+  * ProbeUnit will accept probe request from l2cache and forward it to l1cache to resp data
+  */
 class ProbeUnit(edge: TLEdgeOut)(implicit p: Parameters) extends L1CacheModule {
   val io = IO(new Bundle {
     val dcache_probe = Flipped(new DecoupledIO(new TLBundleB(edge.bundle)))
     val req = new DecoupledIO(new Info_cache_s0s1)
   })
 
+  /** a tiny fifo that buffer the probe request from l2cache */
   val probe_fifo = Module(new Queue(UInt(32.W), 4, true, false))
 
 
