@@ -40,96 +40,55 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.amba.axi4._
 
-class LsuPendingIO[T <: Data](private val gen: T, val entries: Int) extends Bundle {
-  val enq = Flipped(EnqIO(gen))
-  /** I/O to dequeue data (client is consumer and Queue object is producer), is [[Chisel.DecoupledIO]]*/
-  val deq = Flipped(DeqIO(gen))
-  /** The current amount of data in the queue */
-  val count = Output(UInt(log2Ceil(entries + 1).W))
 
-  val cmm = Flipped(EnqIO(Bool()))
-  val flush = Input(Bool())
-}
+class lsu_pending_fifo(val entries: Int) extends Module{
 
-class lsu_pending_fifo[T <: Data](val gen: T, val entries: Int)(implicit compileOptions: chisel3.CompileOptions) extends Module{
+  val io = IO(new Bundle{
+    val enq = Flipped(new DecoupledIO(new Info_cache_sb))
+    val deq = new DecoupledIO(new Info_cache_sb)
+    val cmm = Flipped(new DecoupledIO(Bool()))
+    val flush = Input(Bool())
+  })
 
-  require(entries > -1, "Queue must have non-negative number of entries")
-  require(entries != 0, "Use companion object Queue.apply for zero entries")
-  val genType = if (compileOptions.declaredTypeMustBeUnbound) {
-    requireIsChiselType(gen)
-    gen
-  } else {
-    if (DataMirror.internal.isSynthesizable(gen)) {
-      chiselTypeOf(gen)
-    } else {
-      gen
-    }
-  }
+  def cnt_w = log2Ceil(entries)
 
-  val io = IO(new LsuPendingIO(genType, entries))
+  val buf = RegInit(VecInit(Seq.fill(entries)(0.U.asTypeOf(new Info_cache_sb))))
 
-  val ram = Mem(entries, genType)
-  val enq_ptr = Counter(entries)
-  val deq_ptr = Counter(entries)
-  val maybe_full = RegInit(false.B)
+  val enq_ptr = RegInit(UInt((cnt_w+1).W))
+  val deq_ptr = RegInit(UInt((cnt_w+1).W))
+  val cmm_ptr = RegInit(UInt((cnt_w+1).W))
 
-  val ptr_match = enq_ptr.value === deq_ptr.value
-  val empty = ptr_match && !maybe_full
-  val full = ptr_match && maybe_full
+
+  val empty = deq_ptr === cmm_ptr
+  val full = deq_ptr(cnt_w-1,0) === enq_ptr(cnt_w-1,0) & deq_ptr(cnt_w) === enq_ptr(cnt_w)
+
   val do_enq = WireDefault(io.enq.fire())
   val do_deq = WireDefault(io.deq.fire())
+  val do_cmm = WireDefault( io.cmm.fire )
 
   when (do_enq) {
-    ram(enq_ptr.value) := io.enq.bits
-    enq_ptr.inc()
+    buf(enq_ptr(cnt_w-1,0)) := io.enq.bits
+    enq_ptr := enq_ptr + 1.U
   }
   when (do_deq) {
-    deq_ptr.inc()
+    deq_ptr := deq_ptr + 1.U
   }
-  when (do_enq =/= do_deq) {
-    maybe_full := do_enq
+  when( do_cmm ) {
+    cmm_ptr := cmm_ptr + Mux(io.cmm.bits, 2.U, 1.U)
+    assert( cmm_ptr =/= enq_ptr )
+  }
+  when( io.flush ) {
+    enq_ptr := cmm_ptr
+    assert (!do_enq)
   }
 
   io.deq.valid := !empty
   io.enq.ready := !full
-  io.deq.bits := ram(deq_ptr.value)
+  io.deq.bits := buf(deq_ptr(cnt_w-1,0))
 
-
-
-  val ptr_diff = enq_ptr.value - deq_ptr.value
-  if (isPow2(entries)) {
-    io.count := Mux(maybe_full && ptr_match, entries.U, 0.U) | ptr_diff
-  } else {
-    io.count := Mux(ptr_match,
-                    Mux(maybe_full,
-                      entries.asUInt, 0.U),
-                    Mux(deq_ptr.value > enq_ptr.value,
-                      entries.asUInt + ptr_diff, ptr_diff))
-  }
-
-
-
-
-  val cmm_ptr = Counter(entries)
-
-  when( io.cmm.fire ) { cmm_ptr.value := cmm_ptr.value + Mux(io.cmm.bits, 2.U, 1.U) }
-
-  val cmm_maybe_full = RegInit(false.B)
-  val do_cmm         = WireDefault( io.cmm.fire )
-  when( do_cmm =/= do_deq ) { cmm_maybe_full := do_cmm }
-
-  val cmm_empty = cmm_ptr.value === deq_ptr.value & ~cmm_maybe_full
-  val cmm_full  = cmm_ptr.value === deq_ptr.value &  cmm_maybe_full
 
   io.cmm.ready := true.B
-  io.deq.valid := !empty & !cmm_empty
 
-  when( io.flush ) {
-    enq_ptr.value := cmm_ptr.value
-    assert (!do_enq )
-  }
-
-  assert( ~(cmm_full & do_cmm) )
 }
 
 
@@ -148,16 +107,26 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
     val empty = Output(Bool())
   })
 
-
-
+  /** a paddr buff that store out-standing info */
   val paddr = RegInit(VecInit(Seq.fill(16)(0.U(64.W)) ))
+
+  /** a rd0 buff that store out-standing info */
   val rd0 = RegInit(VecInit(Seq.fill(16)(0.U(6.W)) ))
+
+  /** a flag indicated whether the buff is valid */
   val valid = RegInit(VecInit(Seq.fill(16)(false.B)))
 
+  /** indexed an empty buff */
   val empty_idx = valid.indexWhere((x:Bool) => (x === false.B))
 
+  /** indicated whether all buff in used */
   val full = valid.forall((x:Bool) => (x === true.B))
-  io.empty := valid.forall((x:Bool) => (x === false.B))
+
+  /** indicated whether none buff in used */
+  val empty = valid.forall((x:Bool) => (x === false.B))
+  io.empty := empty
+
+  /** indicated whether a paddr in a valid buff is equal to input */
   val hazard = valid.zip(paddr).map{ case(a,b) => (a === true.B) & (b === io.lsu_push.bits.param.op1) }.reduce(_|_)  
 
 
@@ -177,12 +146,13 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
   io.dcache_push.bits.wmask   := {
     val paddr = io.lsu_push.bits.param.op1
     val op = io.lsu_push.bits.fun
-    val lsu_wstrb_align = (Mux1H( Seq(
-          op.is_byte -> "b00000001".U,
-          op.is_half -> "b00000011".U,
-          op.is_word -> "b00001111".U,
-          op.is_dubl -> "b11111111".U
-          )) << paddr(2,0))
+    val lsu_wstrb_align =
+      (Mux1H( Seq(
+        op.is_byte -> "b00000001".U,
+        op.is_half -> "b00000011".U,
+        op.is_word -> "b00001111".U,
+        op.is_dubl -> "b11111111".U
+        )) << paddr(2,0))
     lsu_wstrb_align
   }
   for ( j <- 0 until bk ) yield {
@@ -241,7 +211,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
     val flush = Input(Bool())
   })
 
-  val pending_fifo = Module(new lsu_pending_fifo( new Info_cache_sb, 16))
+  val pending_fifo = Module(new lsu_pending_fifo(16))
   val scoreBoard_arb = Module(new Arbiter(new Info_cache_sb, 2 ))
   val lsu_scoreBoard = Module(new lsu_scoreBoard)
   val dcache = Module(new Dcache(tlc_edge))
