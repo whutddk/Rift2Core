@@ -170,26 +170,28 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-  exe_stage.io.missUnit_dcache_grant.bits := tlc_bus.d.bits
-  exe_stage.io.missUnit_dcache_grant.valid := tlc_bus.d.valid & ( tlc_bus.d.bits.opcode === TLMessages.Grant | tlc_bus.d.bits.opcode === TLMessages.GrantData )
+  // exe_stage.io.missUnit_dcache_grant.bits := tlc_bus.d.bits
+  // exe_stage.io.missUnit_dcache_grant.valid := tlc_bus.d.valid & ( tlc_bus.d.bits.opcode === TLMessages.Grant | tlc_bus.d.bits.opcode === TLMessages.GrantData )
 
-  exe_stage.io.writeBackUnit_dcache_grant.bits := tlc_bus.d.bits
-  exe_stage.io.writeBackUnit_dcache_grant.valid := tlc_bus.d.valid & ( tlc_bus.d.bits.opcode === TLMessages.ReleaseAck )
+  // exe_stage.io.writeBackUnit_dcache_grant.bits := tlc_bus.d.bits
+  // exe_stage.io.writeBackUnit_dcache_grant.valid := tlc_bus.d.valid & ( tlc_bus.d.bits.opcode === TLMessages.ReleaseAck )
 
-  tlc_bus.d.ready := 
-    Mux1H(Seq(
-      ( tlc_bus.d.bits.opcode === TLMessages.Grant || tlc_bus.d.bits.opcode === TLMessages.GrantData ) -> exe_stage.io.missUnit_dcache_grant.ready,
-      ( tlc_bus.d.bits.opcode === TLMessages.ReleaseAck ) -> exe_stage.io.writeBackUnit_dcache_grant.ready
-    ))
+  // tlc_bus.d.ready := 
+  //   Mux1H(Seq(
+  //     ( tlc_bus.d.bits.opcode === TLMessages.Grant || tlc_bus.d.bits.opcode === TLMessages.GrantData ) -> exe_stage.io.missUnit_dcache_grant.ready,
+  //     ( tlc_bus.d.bits.opcode === TLMessages.ReleaseAck ) -> exe_stage.io.writeBackUnit_dcache_grant.ready
+  //   ))
 
-  tlc_bus.a <> exe_stage.io.missUnit_dcache_acquire
+  // tlc_bus.a.valid := exe_stage.io.missUnit_dcache_acquire.valid
+  // tlc_bus.a.bits := exe_stage.io.missUnit_dcache_acquire.bits
+  // exe_stage.io.missUnit_dcache_acquire.ready := tlc_bus.a.ready
 
-  exe_stage.io.probeUnit_dcache_probe.valid := tlc_bus.b.valid
-  exe_stage.io.probeUnit_dcache_probe.bits := tlc_bus.b.bits
-  tlc_bus.b.ready := exe_stage.io.probeUnit_dcache_probe.ready
+  // exe_stage.io.probeUnit_dcache_probe.valid := tlc_bus.b.valid
+  // exe_stage.io.probeUnit_dcache_probe.bits := tlc_bus.b.bits
+  // tlc_bus.b.ready := exe_stage.io.probeUnit_dcache_probe.ready
   
-  tlc_bus.c <> exe_stage.io.writeBackUnit_dcache_release
-  tlc_bus.e <> exe_stage.io.missUnit_dcache_grantAck
+  // tlc_bus.c <> exe_stage.io.writeBackUnit_dcache_release
+  // tlc_bus.e <> exe_stage.io.missUnit_dcache_grantAck
 
 
 

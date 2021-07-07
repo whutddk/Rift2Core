@@ -54,14 +54,14 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
     val dcache_push = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val dcache_pop = new DecoupledIO(new Info_cache_retn)
 
-    val missUnit_dcache_acquire = Decoupled(new TLBundleA(edge.bundle))
-    val missUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge.bundle)))
-    val missUnit_dcache_grantAck  = Decoupled(new TLBundleE(edge.bundle))
+    val missUnit_dcache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
+    val missUnit_dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
+    val missUnit_dcache_grantAck  = DecoupledIO(new TLBundleE(edge.bundle))
 
-    val probeUnit_dcache_probe = Flipped(DecoupledIO(new TLBundleB(edge.bundle)))
+    val probeUnit_dcache_probe = Flipped(new DecoupledIO(new TLBundleB(edge.bundle)))
 
-    val writeBackUnit_dcache_release = DecoupledIO(new TLBundleC(edge.bundle))
-    val writeBackUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge.bundle)))
+    val writeBackUnit_dcache_release = new DecoupledIO(new TLBundleC(edge.bundle))
+    val writeBackUnit_dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
   })
 
   val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
@@ -76,11 +76,11 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
 
 
   io.missUnit_dcache_acquire  <> missUnit.io.dcache_acquire
-  io.missUnit_dcache_grant    <> missUnit.io.dcache_grant
+  missUnit.io.dcache_grant <> io.missUnit_dcache_grant
   io.missUnit_dcache_grantAck <> missUnit.io.dcache_grantAck
-  io.probeUnit_dcache_probe <> probeUnit.io.dcache_probe
+  probeUnit.io.dcache_probe <> io.probeUnit_dcache_probe
   io.writeBackUnit_dcache_release <> writeBackUnit.io.dcache_release
-  io.writeBackUnit_dcache_grant   <> writeBackUnit.io.dcache_grant
+  writeBackUnit.io.dcache_grant <> io.writeBackUnit_dcache_grant
 
 
 

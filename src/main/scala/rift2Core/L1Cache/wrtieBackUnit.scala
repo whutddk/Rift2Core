@@ -22,9 +22,9 @@ class Info_writeBack_req extends Bundle {
 
 class WriteBackUnit(edge: TLEdgeOut) extends Module {
   val io = IO(new Bundle {
-    val req = Flipped(DecoupledIO(new Info_writeBack_req))
-    val dcache_release = DecoupledIO(new TLBundleC(edge.bundle))
-    val dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge.bundle)))
+    val req = Flipped(new DecoupledIO(new Info_writeBack_req))
+    val dcache_release = new DecoupledIO(new TLBundleC(edge.bundle))
+    val dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
 
 
     val release_ban = Input(Bool())

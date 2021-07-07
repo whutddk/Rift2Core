@@ -197,7 +197,8 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
       res
     }
   }
-  io.dcache_push.bits.op      <> io.lsu_push.bits.fun
+
+  io.dcache_push.bits.op.fun <> io.lsu_push.bits.fun
   io.dcache_push.bits.op.grant := false.B
   io.dcache_push.bits.op.probe := false.B
   io.dcache_push.bits.chk_idx := empty_idx

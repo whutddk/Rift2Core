@@ -72,28 +72,31 @@ abstract class L1CacheBundle(implicit p: Parameters) extends CacheBundle with Ha
 
 
 
-class Cache_op extends Lsu_isa {
+class Cache_op extends Bundle {
+  val fun = new Lsu_isa
+
+
 
   val probe = Bool()
   val grant = Bool()
 
 
 
-  def is_atom = is_amo
-  def is_access = is_atom | is_lu | is_su | lr | sc
-  def is_tag_r = is_atom | is_lu | is_su | lr | sc
-  def is_dat_r = is_atom | is_lu | probe | lr
+  def is_atom = fun.is_amo
+  def is_access = is_atom | fun.is_lu | fun.is_su | fun.lr | fun.sc
+  def is_tag_r = is_atom | fun.is_lu | fun.is_su | fun.lr | fun.sc
+  def is_dat_r = is_atom | fun.is_lu | probe | fun.lr
   def is_tag_w = grant
-  def is_dat_w = is_atom | is_su | sc | grant
-  def is_dirtyOp = is_atom | is_su | sc
-  def is_wb = is_atom | is_lu | lr
+  def is_dat_w = is_atom | fun.is_su | fun.sc | grant
+  def is_dirtyOp = is_atom | fun.is_su | fun.sc
+  def is_wb = is_atom | fun.is_lu | fun.lr
+
 
 }
 
 
 trait Info_cache_raw extends L1CacheBundle {
   val paddr = UInt(64.W)
-  val is_usi = Bool()
   val wmask  = UInt(8.W)
   val wdata  = Vec(bk,UInt(64.W))
   val op    = new Cache_op
@@ -278,16 +281,16 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
     io.dat_info_w(j) := 
       Mux1H(Seq(
         op.grant -> io.wr_in.bits.wdata(j),
-        op.is_su -> io.wr_in.bits.wdata(bk_sel),
-        (op.amoswap_w | op.amoswap_d) -> io.wr_in.bits.wdata(bk_sel),
-        (op.amoadd_w  | op.amoadd_d ) -> (io.wr_in.bits.wdata(bk_sel) + io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.amoxor_w  | op.amoxor_d ) -> (io.wr_in.bits.wdata(bk_sel) ^ io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.amoand_w  | op.amoand_d ) -> (io.wr_in.bits.wdata(bk_sel) & io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.amoor_w   | op.amoor_d  ) -> (io.wr_in.bits.wdata(bk_sel) | io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.amomin_w  | op.amomin_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.amomax_w  | op.amomax_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
-        (op.amominu_w | op.amominu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.amomaxu_w | op.amomaxu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        op.fun.is_su -> io.wr_in.bits.wdata(bk_sel),
+        (op.fun.amoswap_w | op.fun.amoswap_d) -> io.wr_in.bits.wdata(bk_sel),
+        (op.fun.amoadd_w  | op.fun.amoadd_d ) -> (io.wr_in.bits.wdata(bk_sel) + io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.fun.amoxor_w  | op.fun.amoxor_d ) -> (io.wr_in.bits.wdata(bk_sel) ^ io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.fun.amoand_w  | op.fun.amoand_d ) -> (io.wr_in.bits.wdata(bk_sel) & io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.fun.amoor_w   | op.fun.amoor_d  ) -> (io.wr_in.bits.wdata(bk_sel) | io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.fun.amomin_w  | op.fun.amomin_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.fun.amomax_w  | op.fun.amomax_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (op.fun.amominu_w | op.fun.amominu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.fun.amomaxu_w | op.fun.amomaxu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
               
       ))
 
@@ -333,8 +336,12 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   io.wr_lsReload.valid := io.wr_in.fire & io.wr_in.bits.op.is_wb & ~is_hit
   assert( ~(io.wr_lsReload.valid & ~io.wr_lsReload.ready), "Assert Failed at wr_state 2, reload failed!" )
 
-  io.wr_lsReload.bits <> io.wr_in.bits.paddr
-
+  
+  io.wr_lsReload.bits.paddr   := io.wr_in.bits.paddr
+  io.wr_lsReload.bits.wmask   := io.wr_in.bits.wmask
+  io.wr_lsReload.bits.wdata   := io.wr_in.bits.wdata
+  io.wr_lsReload.bits.op      := io.wr_in.bits.op
+  io.wr_lsReload.bits.chk_idx := io.wr_in.bits.chk_idx
 
   io.dcache_pop.valid := io.wr_in.fire & io.wr_in.bits.op.is_wb & is_hit
   io.dcache_pop.bits.res := {
@@ -380,10 +387,10 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
     val align = reAlign(rdata, paddr)
 
     res := Mux1H(Seq(
-      op.is_byte -> load_byte(op.is_usi, align),
-      op.is_half -> load_half(op.is_usi, align),
-      op.is_word -> load_word(op.is_usi, align),
-      op.is_dubl -> align
+      op.fun.is_byte -> load_byte(op.fun.is_usi, align),
+      op.fun.is_half -> load_half(op.fun.is_usi, align),
+      op.fun.is_word -> load_word(op.fun.is_usi, align),
+      op.fun.is_dubl -> align
     ))  
 
     res

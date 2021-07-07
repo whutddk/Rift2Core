@@ -19,9 +19,9 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
     val req = Flipped(DecoupledIO(new Info_mshr_req))
     val rsp = DecoupledIO(new Info_cache_s1s2)
 
-    val dcache_acquire = Decoupled(new TLBundleA(edge.bundle))
-    val dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge.bundle)))
-    val dcache_grantAck  = Decoupled(new TLBundleE(edge.bundle))
+    val dcache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
+    val dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
+    val dcache_grantAck  = new DecoupledIO(new TLBundleE(edge.bundle))
 
     val miss_ban = Input(Bool())
     val release_ban = Output(Bool())
