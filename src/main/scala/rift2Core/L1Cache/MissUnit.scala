@@ -13,7 +13,7 @@ class Info_mshr_req extends Bundle {
 }
 
 
-
+/** The Queue of cache to request acquire and waiting for grant and ack grant */
 class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends L1CacheModule {
   val io = IO(new Bundle{
     val req = Flipped(DecoupledIO(new Info_mshr_req))
@@ -28,21 +28,37 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
 
   })
 
+  /** a parallel buff of *paddr* miss request, when a duplicated request comes, it will be acked but dismiss */
   val miss_queue = RegInit(VecInit( Seq.fill(entry)( 0.U.asTypeOf(new Info_mshr_req) )))
+
+  /** a valid flag indicated whether a buff is in-used */
   val miss_valid = RegInit(VecInit( Seq.fill(entry)( false.B )))
 
+  /** a grant will complete in 2 beat, and get 256-bits data */ 
   val miss_rsp = RegInit(VecInit( Seq.fill(2)(0.U(128.W))  ))
 
   val mshr_state_dnxt = Wire(UInt(3.W))
   val mshr_state_qout = RegNext(mshr_state_dnxt, 0.U)
 
+  /**
+    * @param is_trans_done indicated whether the trans is in last beat
+    * @param transCnt shows the beats count
+    */
   val (_, _, is_trans_done, transCnt) = edge.count(io.dcache_grant)
 
+  /** when the bus is free, a valid paddr will be selected to emit */
   val acquire_sel = miss_valid.indexWhere( (x: Bool) => (x === true.B) )
+
+  /** a register of io.dcache_acquire.valid */
   val dcache_acquire_vaild  = RegInit(false.B)
+
+  /** a wire of io.dcache_grant.ready */
   val dcache_grant_ready    = Wire(Bool())
+
+  /** a register of io.dcache_grantAck.valid */
   val dcache_grantAck_valid = RegInit(false.B)
 
+  /** a register of io.rsp.valid */
   val rsp_valid = RegInit(false.B)
 
   io.dcache_acquire.valid := dcache_acquire_vaild
@@ -66,15 +82,14 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
     assert(mshr_state_qout === 1.U)
   }
 
-  io.dcache_acquire.bits := {
-    // val grow_param = ClientMetadata(ClientStates.Nothing).onAccess(MemoryOpCategories.wr)._2
+  io.dcache_acquire.bits := 
     edge.AcquireBlock(
       fromSource = 65.U,
       toAddress = miss_queue(acquire_sel).paddr,
       lgSize = log2Ceil(256/8).U,
       growPermissions = TLPermissions.NtoT
     )._2
-  }
+  
 
   dcache_grant_ready := (mshr_state_qout === 2.U)
   when( io.dcache_grant.fire ) {
@@ -120,16 +135,24 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
 
 
 
-
+  /** when all missQueue BUFF is in used, miss req will be bypassed */
   val is_missQueue_full = miss_valid.forall( (x:Bool) => (x === true.B) )
-  val load_sel = miss_valid.indexWhere( (x:Bool) => (x === false.B) )
-  io.req.ready := ~is_missQueue_full
 
-  val is_merge_addr  = miss_queue.exists((x: Info_mshr_req) => (x.paddr === io.req.bits.paddr) )
-  val merge_idx      = miss_queue.indexWhere((x: Info_mshr_req) => (x.paddr === io.req.bits.paddr) )
-  val is_merge_valid = miss_valid(merge_idx) === true.B
+  /** select an empty buff to load paddr, except when *buff full* or *can merge* */
+  val load_sel = miss_valid.indexWhere( (x:Bool) => (x === false.B) )
+
+  io.req.ready := true.B
+
+  /** findout if there is no buff is valid and has the same paddr, or merge it! */
+  val is_merge = {
+    for ( i <- 0 until entry ) yield {
+      (miss_queue(i).paddr === io.req.bits.paddr) & miss_valid(i) === true.B
+    }
+  }.reduce(_|_)
+
+
   when(io.req.fire) {
-    when( ~is_merge_addr | ~is_merge_valid ) {
+    when( ~is_merge & ~is_missQueue_full ) {
       miss_queue(load_sel) := io.req.bits
       miss_valid(load_sel) := true.B      
     }

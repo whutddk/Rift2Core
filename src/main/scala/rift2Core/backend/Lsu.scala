@@ -53,7 +53,6 @@ class LsuPendingIO[T <: Data](private val gen: T, val entries: Int) extends Bund
 
 class lsu_pending_fifo[T <: Data](val gen: T, val entries: Int)(implicit compileOptions: chisel3.CompileOptions) extends Module{
 
-
 require(entries > -1, "Queue must have non-negative number of entries")
   require(entries != 0, "Use companion object Queue.apply for zero entries")
   val genType = if (compileOptions.declaredTypeMustBeUnbound) {
