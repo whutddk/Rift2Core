@@ -259,6 +259,8 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   iwb_arb.io.in(1) <> lu_exe_iwb_fifo.io.deq
   iwb_arb.io.out <> io.lsu_exe_iwb
 
+  pending_fifo.io.flush := io.flush
+
   when( io.flush ) { trans_kill := true.B }
   .elsewhen( lsu_scoreBoard.io.empty ) { trans_kill := false.B }
 
@@ -289,7 +291,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
 
   pending_fifo.io.cmm.valid := io.cmm_lsu.is_store_commit | io.cmm_lsu.is_fence_commit
-
+  pending_fifo.io.cmm.bits := io.cmm_lsu.is_store_commit & io.cmm_lsu.is_fence_commit
 
   pending_fifo.io.deq <> scoreBoard_arb.io.in(0)
   scoreBoard_arb.io.in(1).valid := io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_lu & ~trans_kill & ~fence_op
@@ -381,11 +383,11 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
 
   io.missUnit_dcache_acquire  <> dcache.io.missUnit_dcache_acquire
-  io.missUnit_dcache_grant    <> dcache.io.missUnit_dcache_grant
+  dcache.io.missUnit_dcache_grant <> io.missUnit_dcache_grant
   io.missUnit_dcache_grantAck <> dcache.io.missUnit_dcache_grantAck
-  io.probeUnit_dcache_probe <> dcache.io.probeUnit_dcache_probe
+  dcache.io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe
   io.writeBackUnit_dcache_release <> dcache.io.writeBackUnit_dcache_release
-  io.writeBackUnit_dcache_grant   <> dcache.io.writeBackUnit_dcache_grant
+  dcache.io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
 
 
 }

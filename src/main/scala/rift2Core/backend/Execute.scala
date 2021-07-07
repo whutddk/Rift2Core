@@ -108,11 +108,11 @@ class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   lsu.io.lsu_exe_iwb <> io.lsu_exe_iwb
 
   io.missUnit_dcache_acquire      <> lsu.io.missUnit_dcache_acquire
-  io.missUnit_dcache_grant        <> lsu.io.missUnit_dcache_grant
+  lsu.io.missUnit_dcache_grant <> io.missUnit_dcache_grant
   io.missUnit_dcache_grantAck     <> lsu.io.missUnit_dcache_grantAck
-  io.probeUnit_dcache_probe       <> lsu.io.probeUnit_dcache_probe
+  lsu.io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe
   io.writeBackUnit_dcache_release <> lsu.io.writeBackUnit_dcache_release
-  io.writeBackUnit_dcache_grant   <> lsu.io.writeBackUnit_dcache_grant
+  lsu.io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
 
   lsu.io.cmm_lsu <> io.cmm_lsu
   lsu.io.lsu_cmm <> io.lsu_cmm
