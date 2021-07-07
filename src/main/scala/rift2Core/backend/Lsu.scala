@@ -54,9 +54,9 @@ class lsu_pending_fifo(val entries: Int) extends Module{
 
   val buf = RegInit(VecInit(Seq.fill(entries)(0.U.asTypeOf(new Info_cache_sb))))
 
-  val enq_ptr = RegInit(UInt((cnt_w+1).W))
-  val deq_ptr = RegInit(UInt((cnt_w+1).W))
-  val cmm_ptr = RegInit(UInt((cnt_w+1).W))
+  val enq_ptr = RegInit(0.U((cnt_w+1).W))
+  val deq_ptr = RegInit(0.U((cnt_w+1).W))
+  val cmm_ptr = RegInit(0.U((cnt_w+1).W))
 
 
   val empty = deq_ptr === cmm_ptr
