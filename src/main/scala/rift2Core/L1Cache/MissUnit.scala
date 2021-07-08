@@ -85,7 +85,7 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
   io.dcache_acquire.bits := 
     edge.AcquireBlock(
       fromSource = 0.U,
-      toAddress = miss_queue(acquire_sel).paddr,
+      toAddress = miss_queue(acquire_sel).paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       growPermissions = TLPermissions.NtoT
     )._2

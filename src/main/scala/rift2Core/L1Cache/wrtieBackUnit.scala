@@ -77,14 +77,14 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
   io.dcache_release.bits := {
     val info_probe = edge.ProbeAck(
       fromSource = 66.U,
-      toAddress = wb_fifo.io.deq.bits.addr,
+      toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       reportPermissions = TLPermissions.TtoN
     )
 
     val info_probeData = edge.ProbeAck(
       fromSource = 66.U,
-      toAddress = wb_fifo.io.deq.bits.addr,
+      toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       reportPermissions = TLPermissions.TtoN,
       data = Mux(beatCnt, wb_fifo.io.deq.bits.data(255,128), wb_fifo.io.deq.bits.data(127,0))
@@ -92,14 +92,14 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
 
     val info_release = edge.Release(
       fromSource = 0.U,
-      toAddress = wb_fifo.io.deq.bits.addr,
+      toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = TLPermissions.TtoN
     )._2
 
     val info_releaseData = edge.Release(
       fromSource = 0.U,
-      toAddress = wb_fifo.io.deq.bits.addr,
+      toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = TLPermissions.TtoN,
       data = Mux(beatCnt, wb_fifo.io.deq.bits.data(255,128), wb_fifo.io.deq.bits.data(127,0))
