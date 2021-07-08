@@ -91,14 +91,14 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
     )
 
     val info_release = edge.Release(
-      fromSource = 66.U,
+      fromSource = 0.U,
       toAddress = wb_fifo.io.deq.bits.addr,
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = TLPermissions.TtoN
     )._2
 
     val info_releaseData = edge.Release(
-      fromSource = 66.U,
+      fromSource = 0.U,
       toAddress = wb_fifo.io.deq.bits.addr,
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = TLPermissions.TtoN,
