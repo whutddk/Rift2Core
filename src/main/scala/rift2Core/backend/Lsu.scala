@@ -101,8 +101,8 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
     val dcache_push = new DecoupledIO(new Info_cache_s0s1)
     val dcache_pop = Flipped(new DecoupledIO(new Info_cache_retn))
 
-    // val periph_push = new DecoupledIO(new Info_cache_s0s1)
-    // val periph_pop = Flipped(new DecoupledIO(new Info_cache_retn))
+    val periph_push = new DecoupledIO(new Info_cache_s0s1)
+    val periph_pop = Flipped(new DecoupledIO(new Info_cache_retn))
 
     val empty = Output(Bool())
   })
@@ -138,11 +138,17 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
   when( io.dcache_pop.fire ) {
     valid(io.dcache_pop.bits.chk_idx) := false.B  
   }
+  .elsewhen( io.periph_pop.fire ) {
+    valid(io.periph_pop.bits.chk_idx) := false.B
+  }
 
 
 
 
   io.dcache_push.bits.paddr   := io.lsu_push.bits.param.op1
+  io.periph_push.bits.paddr   := io.lsu_push.bits.param.op1
+
+  io.periph_push.bits.wmask   := io.dcache_push.bits.wmask
   io.dcache_push.bits.wmask   := {
     val paddr = io.lsu_push.bits.param.op1
     val op = io.lsu_push.bits.fun
@@ -157,6 +163,7 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
   }
 
   for ( j <- 0 until bk ) yield {
+    io.periph_push.bits.wdata(j) := io.dcache_push.bits.wdata(j)
     io.dcache_push.bits.wdata(j) := {
       val res = Wire(UInt(64.W))
       val paddr = io.lsu_push.bits.param.op1
@@ -168,21 +175,35 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
     }
   }
 
+  io.periph_push.bits.op.fun <> io.lsu_push.bits.fun
   io.dcache_push.bits.op.fun <> io.lsu_push.bits.fun
+
+  io.periph_push.bits.op.grant := false.B
   io.dcache_push.bits.op.grant := false.B
+
+  io.periph_push.bits.op.probe := false.B
   io.dcache_push.bits.op.probe := false.B
+
+  io.periph_push.bits.chk_idx := empty_idx
   io.dcache_push.bits.chk_idx := empty_idx
 
 
-  io.lsu_pop.bits.rd0_phy := rd0(io.dcache_pop.bits.chk_idx)
-  io.lsu_pop.bits.res := io.dcache_pop.bits.res
+
+  io.lsu_pop.bits.rd0_phy := rd0( Mux( io.dcache_pop.valid, io.dcache_pop.bits.chk_idx, io.periph_pop.bits.chk_idx))
+  io.lsu_pop.bits.res := Mux( io.dcache_pop.valid, io.dcache_pop.bits.res, io.periph_pop.bits.res )
 
 
-  io.lsu_pop.valid := io.dcache_pop.fire & io.dcache_pop.bits.is_load_amo
-  io.dcache_push.valid := io.lsu_push.fire
+  io.lsu_pop.valid :=
+    (io.dcache_pop.fire & io.dcache_pop.bits.is_load_amo) |
+    (io.periph_pop.fire & io.periph_pop.bits.is_load_amo)
 
-  io.lsu_push.ready := ~full & io.dcache_push.ready & ~hazard
+
+  io.periph_push.valid := io.lsu_push.fire & io.lsu_push.bits.param.op1(31,30) === "b01".U
+  io.dcache_push.valid := io.lsu_push.fire & io.lsu_push.bits.param.op1(31) === 1.U
+
+  io.lsu_push.ready := ~full & io.dcache_push.ready & io.periph_push.ready & ~hazard
   io.dcache_pop.ready := io.lsu_pop.ready
+  io.periph_pop.ready := io.lsu_pop.ready & ~io.dcache_pop.valid
 
 }
 
@@ -206,7 +227,11 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
     val writeBackUnit_dcache_release = DecoupledIO(new TLBundleC(tlc_edge.bundle))
     val writeBackUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(tlc_edge.bundle)))
 
-
+    val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+    val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
+    val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+    val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
+    val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
 
 
     val flush = Input(Bool())
@@ -219,8 +244,13 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   val scoreBoard_arb = Module(new Arbiter(new Info_cache_sb, 2 ))
   val lsu_scoreBoard = Module(new lsu_scoreBoard)
   val dcache = Module(new Dcache(tlc_edge))
+  val periph = Module(new periph_mst()) 
+
   val su_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
   val lu_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
+
+  su_exe_iwb_fifo.reset := reset.asBool | io.flush
+  lu_exe_iwb_fifo.reset := reset.asBool | io.flush
 
   /** when a flush comes, flush all uncommit write & amo request in pending-fifo, and block all request from issue until scoreboard is empty */
   val trans_kill = RegInit(false.B)
@@ -301,9 +331,8 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   lsu_scoreBoard.io.dcache_push <> dcache.io.dcache_push
   lsu_scoreBoard.io.dcache_pop <> dcache.io.dcache_pop
 
-
-
-
+  lsu_scoreBoard.io.periph_push <> periph.io.periph_push
+  lsu_scoreBoard.io.periph_pop <> periph.io.periph_pop
 
 
   def is_accessFault = 
@@ -382,6 +411,12 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   dcache.io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe
   io.writeBackUnit_dcache_release <> dcache.io.writeBackUnit_dcache_release
   dcache.io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
+
+  periph.io.sys_chn_ar <> io.sys_chn_ar
+  periph.io.sys_chn_r  <> io.sys_chn_r
+  periph.io.sys_chn_aw <> io.sys_chn_aw
+  periph.io.sys_chn_w  <> io.sys_chn_w
+  periph.io.sys_chn_b  <> io.sys_chn_b
 
 
 }

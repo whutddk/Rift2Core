@@ -323,7 +323,7 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
   io.missUnit_req.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & io.writeBackUnit_req.ready
   io.missUnit_req.bits.paddr := io.wr_in.bits.paddr
 
-  io.writeBackUnit_req.valid := io.wr_in.valid & ((io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready) | io.wr_in.bits.op.probe)
+  io.writeBackUnit_req.valid := io.wr_in.valid & ((io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & is_valid(cl_sel)(cb_sel)) | io.wr_in.bits.op.probe)
   io.writeBackUnit_req.bits.addr := io.wr_in.bits.paddr
   io.writeBackUnit_req.bits.data := Cat( for( j <- 0 until bk ) yield { io.wr_in.bits.rdata(cb_sel)(bk-1-j) } )
 

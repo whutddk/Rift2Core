@@ -126,6 +126,12 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
       val mem_chn_w = new DecoupledIO(new AXI_chn_w( 128, 1 ))
       val mem_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
 
+      val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+      val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
+      val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+      val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
+      val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
+
       val rtc_clock = Input(Bool())
     })
 
@@ -134,6 +140,11 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     val l2cache = Module( new L2Cache )
     val l3cache = Module( new L3Cache )
 
+    i_rift2Core.module.io.sys_chn_ar <> io.sys_chn_ar
+    i_rift2Core.module.io.sys_chn_r  <> io.sys_chn_r
+    i_rift2Core.module.io.sys_chn_aw <> io.sys_chn_aw
+    i_rift2Core.module.io.sys_chn_w  <> io.sys_chn_w
+    i_rift2Core.module.io.sys_chn_b  <> io.sys_chn_b
 
 
     l2cache.io.il1_chn_a <> i_rift2Core.module.io.il1_chn_a

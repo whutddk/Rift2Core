@@ -11,7 +11,7 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.amba.axi4._
 import sifive.blocks.inclusivecache._
-
+import axi._
 
 case class DcacheParameters(
   dw: Int,
@@ -187,6 +187,95 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
 
 // }
 
+class periph_mst(implicit p: Parameters) extends DcacheModule {
+  val io = IO(new Bundle{
+    val periph_push = Flipped(new DecoupledIO(new Info_cache_s0s1))
+    val periph_pop = new DecoupledIO(new Info_cache_retn)
 
+    val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+    val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
+
+    val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+    val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
+    val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
+
+  })
+
+  val ar_valid = RegInit(false.B)
+  val r_ready  = Wire(Bool())
+
+  val aw_valid = RegInit(false.B)
+  val w_valid  = RegInit(false.B)
+  val b_ready  = Wire(Bool())
+
+
+  io.sys_chn_ar.valid := ar_valid
+  io.sys_chn_ar.bits.addr := RegEnable(io.periph_push.bits.paddr, io.periph_push.fire)
+  io.sys_chn_ar.bits.burst := 0.U
+  io.sys_chn_ar.bits.cache := 0.U
+  io.sys_chn_ar.bits.id := 0.U
+  io.sys_chn_ar.bits.len := 1.U
+  io.sys_chn_ar.bits.lock := 0.U
+  io.sys_chn_ar.bits.port := 0.U
+  io.sys_chn_ar.bits.qos := 0.U
+  io.sys_chn_ar.bits.size := 3.U
+  io.sys_chn_ar.bits.user := 0.U
+  io.sys_chn_r.ready := r_ready
+
+  io.sys_chn_aw.valid := aw_valid
+  io.sys_chn_aw.bits.addr := RegEnable(io.periph_push.bits.paddr, io.periph_push.fire)
+  io.sys_chn_aw.bits.burst := 0.U
+  io.sys_chn_aw.bits.cache := 0.U
+  io.sys_chn_aw.bits.id := 0.U
+  io.sys_chn_aw.bits.len := 1.U
+  io.sys_chn_aw.bits.lock := 0.U
+  io.sys_chn_aw.bits.port := 0.U
+  io.sys_chn_aw.bits.qos := 0.U
+  io.sys_chn_aw.bits.size := 3.U
+  io.sys_chn_aw.bits.user := 0.U
+
+  io.sys_chn_w.valid := w_valid
+  io.sys_chn_w.bits.data := RegEnable(io.periph_push.bits.wdata(0), io.periph_push.fire)
+  io.sys_chn_w.bits.last := true.B
+  io.sys_chn_w.bits.strb := RegEnable(io.periph_push.bits.wmask, io.periph_push.fire)
+  io.sys_chn_w.bits.user := 0.U
+
+  io.sys_chn_b.ready := b_ready
+
+  val wop_fifo = Module(new Queue(UInt(8.W), 1))
+  val rop_fifo = Module(new Queue(UInt(8.W), 1))
+
+  wop_fifo.io.enq.valid := io.periph_push.valid & io.periph_push.bits.op.fun.is_su
+  rop_fifo.io.enq.valid := io.periph_push.valid & io.periph_push.bits.op.fun.is_lu
+  wop_fifo.io.enq.bits := io.periph_push.bits.chk_idx
+  rop_fifo.io.enq.bits := io.periph_push.bits.chk_idx
+
+  io.periph_push.ready := 
+    (wop_fifo.io.enq.ready & io.periph_push.bits.op.fun.is_su) |
+    (rop_fifo.io.enq.ready & io.periph_push.bits.op.fun.is_lu)
+
+  when( rop_fifo.io.enq.fire ) { ar_valid := true.B }
+  .elsewhen( io.sys_chn_ar.fire ) { ar_valid := false.B }
+
+  when( wop_fifo.io.enq.fire ) { aw_valid := true.B }
+  .elsewhen( io.sys_chn_aw.fire ) { aw_valid := false.B }
+
+  when( wop_fifo.io.enq.fire ) { w_valid := true.B }
+  .elsewhen( io.sys_chn_w.fire ) { w_valid := false.B }
+
+
+  r_ready := io.periph_pop.ready & ~io.sys_chn_b.valid
+  b_ready := io.periph_pop.ready
+
+
+  io.periph_pop.bits.is_load_amo := ~io.sys_chn_b.valid
+  io.periph_pop.bits.res := io.sys_chn_r.bits.data
+  io.periph_pop.bits.chk_idx := Mux(io.sys_chn_b.valid, wop_fifo.io.deq.bits, rop_fifo.io.deq.bits)
+
+  io.periph_pop.valid := io.sys_chn_b.valid | io.sys_chn_r.valid
+  wop_fifo.io.deq.ready := io.periph_pop.ready
+  rop_fifo.io.deq.ready := io.periph_pop.ready & ~io.sys_chn_b.valid
+
+}
 
 

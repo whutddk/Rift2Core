@@ -59,6 +59,12 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
     val il1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
     val il1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
 
+    val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+    val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
+    val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+    val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
+    val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
+
     val rtc_clock = Input(Bool())
   })
 
@@ -202,7 +208,11 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-
+  exe_stage.io.sys_chn_ar <> io.sys_chn_ar
+  exe_stage.io.sys_chn_r  <> io.sys_chn_r
+  exe_stage.io.sys_chn_aw <> io.sys_chn_aw
+  exe_stage.io.sys_chn_w  <> io.sys_chn_w
+  exe_stage.io.sys_chn_b  <> io.sys_chn_b
 
 
 }

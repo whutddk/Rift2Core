@@ -74,6 +74,12 @@ class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val writeBackUnit_dcache_release = DecoupledIO(new TLBundleC(tlc_edge.bundle))
     val writeBackUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(tlc_edge.bundle)))
 
+    val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+    val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
+    val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+    val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
+    val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
+
     val flush = Input(Bool())
 
 
@@ -113,6 +119,15 @@ class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   lsu.io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe
   io.writeBackUnit_dcache_release <> lsu.io.writeBackUnit_dcache_release
   lsu.io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
+
+  lsu.io.sys_chn_ar <> io.sys_chn_ar
+  lsu.io.sys_chn_r  <> io.sys_chn_r
+  lsu.io.sys_chn_aw <> io.sys_chn_aw
+  lsu.io.sys_chn_w  <> io.sys_chn_w
+  lsu.io.sys_chn_b  <> io.sys_chn_b
+
+
+
 
   lsu.io.cmm_lsu <> io.cmm_lsu
   lsu.io.lsu_cmm <> io.lsu_cmm
