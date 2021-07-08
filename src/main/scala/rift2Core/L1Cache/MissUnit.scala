@@ -130,7 +130,7 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
   io.rsp.bits.rdata    := DontCare
   io.rsp.bits.tag      := DontCare
 
-  io.release_ban := mshr_state_qout === 1.U | mshr_state_qout === 2.U
+  io.release_ban := mshr_state_dnxt === 2.U | mshr_state_qout === 2.U
 
 
 

@@ -128,7 +128,6 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
   io.miss_ban := wb_state_qout === 1.U | wb_state_qout === 2.U
 
 
-  assert( ~(io.miss_ban & io.release_ban), "Assert Failed at wb unit, dead lock of ban" )
 
 }
 
