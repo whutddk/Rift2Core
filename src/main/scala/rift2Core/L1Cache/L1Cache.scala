@@ -143,21 +143,21 @@ class L1_rd_stage()(implicit p: Parameters) extends L1CacheModule {
   // val s1s2_pipe = Module( new Queue(new Info_cache_rd, 1, false, true) )
 
   val bk_sel = io.rd_in.bits.bk_sel
-
+  val info_bypass_fifo = Module(new Queue(new Info_cache_s0s1, 1, true, false))
 
   io.tag_addr_r := io.rd_in.bits.paddr
   io.dat_addr_r := io.rd_in.bits.paddr
 
   for ( i <- 0 until cb ) yield {
     io.tag_en_r(i) :=
-      io.rd_in.valid & io.rd_in.bits.op.is_tag_r
+      info_bypass_fifo.io.enq.fire & io.rd_in.bits.op.is_tag_r
   }
 
 
 
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
     io.dat_en_r(i)(j) := 
-      io.rd_in.valid &
+      info_bypass_fifo.io.enq.fire &
       io.rd_in.bits.op.is_dat_r & (
         io.rd_in.bits.op.probe |
         j.U === bk_sel
@@ -171,13 +171,22 @@ class L1_rd_stage()(implicit p: Parameters) extends L1CacheModule {
   for( i <- 0 until cb )                  yield { io.rd_out.bits.tag(i)      := io.tag_info_r(i) }
 
   
-  io.rd_out.bits.paddr    := RegEnable(io.rd_in.bits.paddr,   io.rd_in.valid)
-  io.rd_out.bits.wmask    := RegEnable(io.rd_in.bits.wmask,   io.rd_in.valid)
-  io.rd_out.bits.wdata    := RegEnable(io.rd_in.bits.wdata,   io.rd_in.valid)
-  io.rd_out.bits.op       := RegEnable(io.rd_in.bits.op,      io.rd_in.valid)
-  io.rd_out.bits.chk_idx  := RegEnable(io.rd_in.bits.chk_idx, io.rd_in.valid)
 
-  io.rd_in.ready := io.rd_out.fire
+  info_bypass_fifo.io.enq <> io.rd_in
+
+  io.rd_out.bits.paddr    := info_bypass_fifo.io.deq.bits.paddr
+  io.rd_out.bits.wmask    := info_bypass_fifo.io.deq.bits.wmask
+  io.rd_out.bits.wdata    := info_bypass_fifo.io.deq.bits.wdata
+  io.rd_out.bits.op       := info_bypass_fifo.io.deq.bits.op
+  io.rd_out.bits.chk_idx  := info_bypass_fifo.io.deq.bits.chk_idx
+  io.rd_out.valid := info_bypass_fifo.io.deq.valid
+  info_bypass_fifo.io.deq.ready := io.rd_out.ready
+
+  // io.rd_out.bits.paddr    := RegEnable(io.rd_in.bits.paddr,   io.rd_in.valid)
+  // io.rd_out.bits.wmask    := RegEnable(io.rd_in.bits.wmask,   io.rd_in.valid)
+  // io.rd_out.bits.wdata    := RegEnable(io.rd_in.bits.wdata,   io.rd_in.valid)
+  // io.rd_out.bits.op       := RegEnable(io.rd_in.bits.op,      io.rd_in.valid)
+  // io.rd_out.bits.chk_idx  := RegEnable(io.rd_in.bits.chk_idx, io.rd_in.valid)
 
 }
 
