@@ -60,7 +60,7 @@ class lsu_pending_fifo(val entries: Int) extends Module{
 
 
   val empty = deq_ptr === cmm_ptr
-  val full = deq_ptr(cnt_w-1,0) === enq_ptr(cnt_w-1,0) & deq_ptr(cnt_w) === enq_ptr(cnt_w)
+  val full = deq_ptr(cnt_w-1,0) === enq_ptr(cnt_w-1,0) & deq_ptr(cnt_w) =/= enq_ptr(cnt_w)
 
   val do_enq = WireDefault(io.enq.fire())
   val do_deq = WireDefault(io.deq.fire())
