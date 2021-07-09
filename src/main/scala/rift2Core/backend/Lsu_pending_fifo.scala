@@ -41,6 +41,7 @@ class lsu_pending_fifo(val entries: Int) extends Module{
     val enq = Flipped(new DecoupledIO(new Info_cache_sb))
     val deq = new DecoupledIO(new Info_cache_sb)
     val cmm = Flipped(new DecoupledIO(Bool()))
+    val is_hazard = Output(Bool())
     val flush = Input(Bool())
   })
 
@@ -60,11 +61,16 @@ class lsu_pending_fifo(val entries: Int) extends Module{
   val do_deq = WireDefault(io.deq.fire())
   val do_cmm = WireDefault( io.cmm.fire )
 
+  /** indicated whether a paddr in a valid buff is equal to input */
+  val is_hazard = buf.exists( (x:Info_cache_sb) => (x.param.op1 === io.enq.bits.param.op1) )
+  io.is_hazard := is_hazard
+
   when (do_enq) {
     buf(enq_ptr(cnt_w-1,0)) := io.enq.bits
     enq_ptr := enq_ptr + 1.U
   }
   when (do_deq) {
+    buf(enq_ptr(cnt_w-1,0)) := 0.U.asTypeOf(new Info_cache_sb)
     deq_ptr := deq_ptr + 1.U
   }
   when( do_cmm ) {

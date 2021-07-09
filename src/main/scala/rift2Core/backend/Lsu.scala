@@ -78,8 +78,8 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   val dcache = Module(new Dcache(tlc_edge))
   val periph = Module(new periph_mst()) 
 
-  val su_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
-  val lu_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
+  val su_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, false, true ) )
+  val lu_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, false, true ) )
 
   su_exe_iwb_fifo.reset := reset.asBool | io.flush
   lu_exe_iwb_fifo.reset := reset.asBool | io.flush
@@ -102,18 +102,18 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   pending_fifo.io.flush := io.flush
 
   when( io.flush ) { trans_kill := true.B }
-  .elsewhen( lsu_scoreBoard.io.empty ) { trans_kill := false.B }
+  .elsewhen( lsu_scoreBoard.io.is_empty ) { trans_kill := false.B }
 
   when( io.lsu_iss_exe.fire & io.lsu_iss_exe.bits.fun.is_fence ) {
     fence_op := true.B
     is_fence_i := io.lsu_iss_exe.bits.fun.fence_i
   }
-  .elsewhen( lsu_scoreBoard.io.empty ) {
+  .elsewhen( lsu_scoreBoard.io.is_empty ) {
     fence_op := false.B
     is_fence_i := false.B
   }
 
-  io.icache_fence_req := fence_op === true.B & lsu_scoreBoard.io.empty & is_fence_i
+  io.icache_fence_req := fence_op === true.B & lsu_scoreBoard.io.is_empty & is_fence_i
 
 
   su_exe_iwb_fifo.io.enq.valid :=
@@ -134,14 +134,14 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
       (io.lsu_iss_exe.bits.fun.is_amo )                                //when is atom, don't care wb fifo
     )
     
-  pending_fifo.io.enq.bits <> io.lsu_iss_exe.bits
+  pending_fifo.io.enq.bits := io.lsu_iss_exe.bits
 
   io.lsu_iss_exe.ready :=
     ~trans_kill & ~fence_op & ~is_Fault & (
-      (io.lsu_iss_exe.bits.fun.is_su    & pending_fifo.io.enq.ready & su_exe_iwb_fifo.io.enq.ready) | //when store, both pending fifo and store wb should ready
-      (io.lsu_iss_exe.bits.fun.is_lu    & scoreBoard_arb.io.in(1).ready) |                            //when load, scoreBoard should ready
-      (io.lsu_iss_exe.bits.fun.is_amo   & pending_fifo.io.enq.ready) |                                //when amo, the pending fifo should ready
-      (io.lsu_iss_exe.bits.fun.is_fence & su_exe_iwb_fifo.io.enq.ready)                               //when fence, the store wb shoudl ready      
+      ( io.lsu_iss_exe.bits.fun.is_su  & pending_fifo.io.enq.ready & su_exe_iwb_fifo.io.enq.ready) | //when store, both pending fifo and store wb should ready
+      ( ~pending_fifo.io.is_hazard & io.lsu_iss_exe.bits.fun.is_lu  & scoreBoard_arb.io.in(1).ready) | //when load, scoreBoard should ready
+      ( io.lsu_iss_exe.bits.fun.is_amo & pending_fifo.io.enq.ready) |                                //when amo, the pending fifo should ready
+      ( io.lsu_iss_exe.bits.fun.is_fence & su_exe_iwb_fifo.io.enq.ready)                               //when fence, the store wb shoudl ready      
     )
 
 
@@ -149,8 +149,13 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   pending_fifo.io.cmm.valid := io.cmm_lsu.is_store_commit
   pending_fifo.io.cmm.bits := false.B
 
-  pending_fifo.io.deq <> scoreBoard_arb.io.in(0)
-  scoreBoard_arb.io.in(1).valid := io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_lu & ~trans_kill & ~fence_op & ~is_Fault
+  pending_fifo.io.deq.ready := scoreBoard_arb.io.in(0).ready
+  scoreBoard_arb.io.in(0).bits := pending_fifo.io.deq.bits
+  scoreBoard_arb.io.in(0).valid := pending_fifo.io.deq.valid
+
+
+
+  scoreBoard_arb.io.in(1).valid := io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_lu & ~trans_kill & ~fence_op & ~is_Fault & ~pending_fifo.io.is_hazard
   scoreBoard_arb.io.in(1).bits := io.lsu_iss_exe.bits
 
   scoreBoard_arb.io.out <> lsu_scoreBoard.io.lsu_push

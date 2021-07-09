@@ -49,7 +49,8 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
     val periph_push = new DecoupledIO(new Info_cache_s0s1)
     val periph_pop = Flipped(new DecoupledIO(new Info_cache_retn))
 
-    val empty = Output(Bool())
+    // val is_hazard = Output(Bool())
+    val is_empty = Output(Bool())
   })
 
   /** a paddr buff that store out-standing info */
@@ -68,12 +69,12 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
   val full = valid.forall((x:Bool) => (x === true.B))
 
   /** indicated whether none buff in used */
-  val empty = valid.forall((x:Bool) => (x === false.B))
-  io.empty := empty
+  val is_empty = valid.forall((x:Bool) => (x === false.B))
+  io.is_empty := is_empty
 
   /** indicated whether a paddr in a valid buff is equal to input */
-  val hazard = valid.zip(paddr).map{ case(a,b) => (a === true.B) & (b === io.lsu_push.bits.param.op1) }.reduce(_|_)  
-
+  val is_hazard = valid.zip(paddr).map{ case(a,b) => (a === true.B) & (b === io.lsu_push.bits.param.op1) }.reduce(_|_)  
+//  io.is_hazard := is_hazard
 
   when( io.lsu_push.fire ) {
     valid(empty_idx)  := true.B
@@ -146,7 +147,7 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
   io.periph_push.valid := io.lsu_push.fire & io.lsu_push.bits.param.op1(31,30) === "b01".U
   io.dcache_push.valid := io.lsu_push.fire & io.lsu_push.bits.param.op1(31) === 1.U
 
-  io.lsu_push.ready := ~full & io.dcache_push.ready & io.periph_push.ready & ~hazard
+  io.lsu_push.ready := ~full & io.dcache_push.ready & io.periph_push.ready & ~is_hazard
   io.dcache_pop.ready := io.lsu_pop.ready
   io.periph_pop.ready := io.lsu_pop.ready & ~io.dcache_pop.valid
 
