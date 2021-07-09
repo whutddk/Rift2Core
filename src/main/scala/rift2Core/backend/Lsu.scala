@@ -174,7 +174,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
   def is_accessFault = 
       (io.lsu_iss_exe.bits.fun.is_lu | io.lsu_iss_exe.bits.fun.is_su | io.lsu_iss_exe.bits.fun.is_amo) & 
-      (io.lsu_iss_exe.bits.param.op1(63,32) =/= 0.U ) 
+     ( (io.lsu_iss_exe.bits.param.op1(63,32) =/= 0.U ) | (io.lsu_iss_exe.bits.param.op1(31,30) =/= "b01".U & io.lsu_iss_exe.bits.param.op1(31) =/= 1.U))
 
   def is_Fault = is_accessFault | io.lsu_iss_exe.bits.is_misAlign
 
