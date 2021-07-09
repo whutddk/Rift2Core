@@ -48,6 +48,8 @@ class lsu_pending_fifo(val entries: Int) extends Module{
   def cnt_w = log2Ceil(entries)
 
   val buf = RegInit(VecInit(Seq.fill(entries)(0.U.asTypeOf(new Info_cache_sb))))
+  val valid = RegInit(VecInit(Seq.fill(entries)(false.B)))
+  val commit = RegInit(VecInit(Seq.fill(entries)((false.B))))
 
   val enq_ptr = RegInit(0.U((cnt_w+1).W))
   val deq_ptr = RegInit(0.U((cnt_w+1).W))
@@ -67,19 +69,31 @@ class lsu_pending_fifo(val entries: Int) extends Module{
 
   when (do_enq) {
     buf(enq_ptr(cnt_w-1,0)) := io.enq.bits
+    valid(enq_ptr(cnt_w-1,0)) := true.B
+
     enq_ptr := enq_ptr + 1.U
   }
   when (do_deq) {
-    buf(enq_ptr(cnt_w-1,0)) := 0.U.asTypeOf(new Info_cache_sb)
+    buf(deq_ptr(cnt_w-1,0)) := 0.U.asTypeOf(new Info_cache_sb)
+    valid(deq_ptr(cnt_w-1,0)) := false.B
+    commit(deq_ptr(cnt_w-1,0)) := false.B
+
     deq_ptr := deq_ptr + 1.U
   }
   when( do_cmm ) {
+    commit(cmm_ptr(cnt_w-1,0)) := true.B
+
     cmm_ptr := cmm_ptr + Mux(io.cmm.bits, 2.U, 1.U)
     assert( cmm_ptr =/= enq_ptr )
   }
   when( io.flush ) {
     enq_ptr := cmm_ptr
     assert (!do_enq)
+
+    for ( i <- 0 until entries ) yield {
+      buf(i) := Mux( commit(i), buf(i), 0.U.asTypeOf(new Info_cache_sb))
+      valid(i) := Mux( commit(i), valid(i), false.B)
+    }
   }
 
   io.deq.valid := !empty
