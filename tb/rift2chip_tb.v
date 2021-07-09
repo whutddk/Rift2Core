@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-07-08 19:11:22
+* @Last Modified time: 2021-07-09 14:30:47
 */
 
 
@@ -76,7 +76,8 @@ module rift2chip_tb (
 	wire [1:0]   io_mem_chn_ar_bits_burst_1;
 	wire         io_mem_chn_r_ready_1;
 	wire         io_mem_chn_r_valid_1;
-	wire         io_mem_chn_r_bits_id_1;
+	wire [3:0]   io_mem_chn_ar_bits_id_1;
+	wire [3:0]   io_mem_chn_r_bits_id_1;
 	wire [127:0] io_mem_chn_r_bits_data_1;
 	wire [1:0]   io_mem_chn_r_bits_rsp_1;
 	wire         io_mem_chn_r_bits_last_1;
@@ -139,6 +140,8 @@ module rift2chip_tb (
 	wire [1:0]   io_sys_chn_b_bits_rsp;
 	wire         io_sys_chn_b_bits_user;
 
+wire [3:0] io_mem_chn_aw_bits_id_1;
+wire [3:0] io_mem_chn_b_bits_id_1;
 
 Rift2Chip s_Rift2Chip(
 	.clock(CLK),
@@ -232,7 +235,7 @@ Rift2Chip s_Rift2Chip(
 
   .memory_0_aw_ready(io_mem_chn_aw_ready_1),
   .memory_0_aw_valid(io_mem_chn_aw_valid_1),
-  .memory_0_aw_bits_id(),
+  .memory_0_aw_bits_id(io_mem_chn_aw_bits_id_1),
   .memory_0_aw_bits_addr(io_mem_chn_aw_bits_addr_1),
   .memory_0_aw_bits_len(io_mem_chn_aw_bits_len_1),
   .memory_0_aw_bits_size(io_mem_chn_aw_bits_size_1),
@@ -248,12 +251,12 @@ Rift2Chip s_Rift2Chip(
   .memory_0_w_bits_last(io_mem_chn_w_bits_last_1),
   .memory_0_b_ready(io_mem_chn_b_ready_1),
   .memory_0_b_valid(io_mem_chn_b_valid_1),
-  .memory_0_b_bits_id(4'b0),
+  .memory_0_b_bits_id(io_mem_chn_b_bits_id_1),
   .memory_0_b_bits_resp(io_mem_chn_b_bits_rsp_1),
 
   .memory_0_ar_ready(io_mem_chn_ar_ready_1),
   .memory_0_ar_valid(io_mem_chn_ar_valid_1),
-  .memory_0_ar_bits_id(),
+  .memory_0_ar_bits_id(io_mem_chn_ar_bits_id_1),
   .memory_0_ar_bits_addr(io_mem_chn_ar_bits_addr_1),
   .memory_0_ar_bits_len(io_mem_chn_ar_bits_len_1),
   .memory_0_ar_bits_size(io_mem_chn_ar_bits_size_1),
@@ -264,7 +267,7 @@ Rift2Chip s_Rift2Chip(
   .memory_0_ar_bits_qos(),
   .memory_0_r_ready(io_mem_chn_r_ready_1),
   .memory_0_r_valid(io_mem_chn_r_valid_1),
-  .memory_0_r_bits_id(4'b0),
+  .memory_0_r_bits_id(io_mem_chn_r_bits_id_1),
   .memory_0_r_bits_data(io_mem_chn_r_bits_data_1),
   .memory_0_r_bits_resp(io_mem_chn_r_bits_rsp_1),
   .memory_0_r_bits_last(io_mem_chn_r_bits_last_1),
@@ -278,6 +281,11 @@ Rift2Chip s_Rift2Chip(
 
 axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram 
 (
+
+	.MEM_AWID   ({4'b0,io_mem_chn_aw_bits_id}),
+	.MEM_BID    (io_mem_chn_b_bits_id),
+	.MEM_ARID   ({4'b0,io_mem_chn_ar_bits_id}),
+	.MEM_RID    (io_mem_chn_ar_bits_id),
 
 	.MEM_AWADDR(io_mem_chn_aw_bits_addr),
 	.MEM_AWLEN(io_mem_chn_aw_bits_len),
@@ -317,6 +325,11 @@ axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram
 
 axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram_1
 (
+
+	.MEM_BID    (io_mem_chn_b_bits_id_1),
+	.MEM_RID    (io_mem_chn_r_bits_id_1),
+	.MEM_ARID   ({4'b0,io_mem_chn_ar_bits_id_1}),
+	.MEM_AWID   ({4'b0,io_mem_chn_aw_bits_id_1}),
 
 	.MEM_AWADDR(io_mem_chn_aw_bits_addr_1),
 	.MEM_AWLEN(io_mem_chn_aw_bits_len_1),

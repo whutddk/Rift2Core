@@ -60,57 +60,58 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
 
 
 
-  // val memRange = AddressSet(0x00000000L, 0xffffffffL).subtract(AddressSet(0x0L, 0x7fffffffL))
-  // val memAXI4SlaveNode = AXI4SlaveNode(Seq(
-  //   AXI4SlavePortParameters(
-  //     slaves = Seq(
-  //       AXI4SlaveParameters(
-  //         address = memRange,
-  //         regionType = RegionType.UNCACHED,
-  //         executable = true,
-  //         supportsRead = TransferSizes(1, 256/8),
-  //         supportsWrite = TransferSizes(1, 256/8)
-  //       )
-  //     ),
-  //     beatBytes = 128 / 8
-  //   )
-  // ))
-
-  val axiRam =
-    AXI4RAM(
-      address = AddressSet(0x80000000L, 0x0fffffffL),
-      cacheable = true,
-      parentLogicalTreeNode = None,
-      executable = true,
-      beatBytes = 128/8,
-      devName = Some("ddr"),
-      errors  = Nil,
-      wcorrupt = false
+  val memRange = AddressSet(0x00000000L, 0xffffffffL).subtract(AddressSet(0x0L, 0x7fffffffL))
+  val memAXI4SlaveNode = AXI4SlaveNode(Seq(
+    AXI4SlavePortParameters(
+      slaves = Seq(
+        AXI4SlaveParameters(
+          address = memRange,
+          regionType = RegionType.UNCACHED,
+          executable = true,
+          supportsRead = TransferSizes(1, 256/8),
+          supportsWrite = TransferSizes(1, 256/8)
+        )
+      ),
+      beatBytes = 128 / 8
     )
+  ))
+
+  // val axiRam =
+  //   AXI4RAM(
+  //     address = AddressSet(0x80000000L, 0x0fffffffL),
+  //     cacheable = true,
+  //     parentLogicalTreeNode = None,
+  //     executable = true,
+  //     beatBytes = 128/8,
+  //     devName = Some("ddr"),
+  //     errors  = Nil,
+  //     wcorrupt = false
+  //   )
 
 
 
   val mem_xbar = TLXbar()
-
-
-  sifiveCache.node := TLBuffer() := TLXbar() := TLBuffer() := i_rift2Core.clientNode
-
   val tlcork = TLCacheCork()
 
 
-  mem_xbar :=* TLBuffer() :=* tlcork := sifiveCache.node
-
-  axiRam := 
+  memAXI4SlaveNode := 
     AXI4UserYanker() := 
     AXI4IdIndexer(4) :=
     AXI4Deinterleaver(256/8) :=
     TLToAXI4() :=
     TLWidthWidget(128 / 8) :=
-    mem_xbar
+    mem_xbar :=* 
+    TLBuffer() :=* 
+    tlcork := 
+    sifiveCache.node :=
+    TLBuffer() := 
+    TLXbar() := 
+    TLBuffer() := 
+    i_rift2Core.clientNode
 
-  // val memory = InModuleBody {
-  //   memAXI4SlaveNode.makeIOs()
-  // }
+  val memory = InModuleBody {
+    memAXI4SlaveNode.makeIOs()
+  }
 
 
   
