@@ -35,7 +35,7 @@ import freechips.rocketchip.tilelink._
 import freechips.rocketchip.amba.axi4._
 
 
-class lsu_pending_fifo(val entries: Int) extends Module{
+class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheModule{
 
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Info_cache_sb))
@@ -64,7 +64,7 @@ class lsu_pending_fifo(val entries: Int) extends Module{
   val do_cmm = WireDefault( io.cmm.fire )
 
   /** indicated whether a paddr in a valid buff is equal to input */
-  val is_hazard = buf.exists( (x:Info_cache_sb) => (x.param.op1 === io.enq.bits.param.op1) )
+  val is_hazard = buf.exists( (x:Info_cache_sb) => (x.param.op1(31, addr_lsb) === io.enq.bits.param.op1(31, addr_lsb)) )
   io.is_hazard := is_hazard
 
   when (do_enq & ~io.flush) {
@@ -88,7 +88,7 @@ class lsu_pending_fifo(val entries: Int) extends Module{
   }
   when( io.flush ) {
     enq_ptr := cmm_ptr
-    // assert (!do_cmm)
+    // assert (!do_enq)
 
     for ( i <- 0 until entries ) yield {
       buf(i) := Mux( commit(i), buf(i), 0.U.asTypeOf(new Info_cache_sb))

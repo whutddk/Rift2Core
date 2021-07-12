@@ -549,8 +549,8 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	// $readmemh("./ci/rv64ui-p-sb.verilog", mem);
-	$readmemh(testName, mem);
+	$readmemh("./ci/rv64ua-p-amoadd_d.verilog", mem);
+	// $readmemh(testName, mem);
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
 		for ( by = 0; by < 16; by = by + 1 ) begin

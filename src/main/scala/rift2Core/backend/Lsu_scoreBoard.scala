@@ -73,7 +73,7 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
   io.is_empty := is_empty
 
   /** indicated whether a paddr in a valid buff is equal to input */
-  val is_hazard = valid.zip(paddr).map{ case(a,b) => (a === true.B) & (b === io.lsu_push.bits.param.op1) }.reduce(_|_)  
+  val is_hazard = valid.zip(paddr).map{ case(a,b) => (a === true.B) & (b(31,addr_lsb) === io.lsu_push.bits.param.op1(31,addr_lsb)) }.reduce(_|_)  
 //  io.is_hazard := is_hazard
 
   when( io.lsu_push.fire & (io.lsu_push.bits.param.op1(31,30) === "b01".U | io.lsu_push.bits.param.op1(31) === 1.U)) {
@@ -147,7 +147,13 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
   io.periph_push.valid := io.lsu_push.fire & io.lsu_push.bits.param.op1(31,30) === "b01".U
   io.dcache_push.valid := io.lsu_push.fire & io.lsu_push.bits.param.op1(31) === 1.U
 
-  io.lsu_push.ready := ~full & io.dcache_push.ready & io.periph_push.ready & ~is_hazard
+  io.lsu_push.ready :=
+    ~full & ~is_hazard &
+    Mux1H(Seq(
+      (io.lsu_push.bits.param.op1(31,30) === "b01".U) -> io.periph_push.ready,
+      (io.lsu_push.bits.param.op1(31) === 1.U)        -> io.dcache_push.ready
+    ))
+
   io.dcache_pop.ready := io.lsu_pop.ready
   io.periph_pop.ready := io.lsu_pop.ready & ~io.dcache_pop.valid
 
