@@ -145,9 +145,9 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
     )
 
 
-
-  pending_fifo.io.cmm.valid := io.cmm_lsu.is_store_commit(0) | io.cmm_lsu.is_store_commit(1) | io.cmm_lsu.is_amo_pending
-  pending_fifo.io.cmm.bits := PopCount(Seq(io.cmm_lsu.is_store_commit(0), io.cmm_lsu.is_store_commit(1), io.cmm_lsu.is_amo_pending)) === 2.U
+  pending_fifo.io.amo := io.cmm_lsu.is_amo_pending
+  pending_fifo.io.cmm.valid := io.cmm_lsu.is_store_commit(0) | io.cmm_lsu.is_store_commit(1) 
+  pending_fifo.io.cmm.bits := io.cmm_lsu.is_store_commit(0) & io.cmm_lsu.is_store_commit(1)
 
   pending_fifo.io.deq.ready := scoreBoard_arb.io.in(0).ready
   scoreBoard_arb.io.in(0).bits := pending_fifo.io.deq.bits

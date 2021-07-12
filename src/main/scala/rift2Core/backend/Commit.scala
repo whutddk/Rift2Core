@@ -199,12 +199,8 @@ class Commit extends Privilege with Superscalar {
   io.rod_i(0).ready := is_commit_comfirm(0)
   io.rod_i(1).ready := is_commit_comfirm(1)
 
-  io.cmm_lsu.is_amo_pending := {
-    val real_info = (io.rod_i(0).bits.is_amo & ~is_commit_comfirm(0)) //only pending amo in rod0 is send out
-    val record = RegNext(real_info)
+  io.cmm_lsu.is_amo_pending := io.rod_i(0).valid & io.rod_i(0).bits.is_amo & ~is_commit_comfirm(0) //only pending amo in rod0 is send out
 
-    (record === false.B) & (real_info === true.B)
-  }
 
     //  |
     // (io.rod_i(1).bits.is_amo & ~is_commit_comfirm(1) ~is_1st_solo )

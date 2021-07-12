@@ -41,6 +41,7 @@ class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheM
     val enq = Flipped(new DecoupledIO(new Info_cache_sb))
     val deq = new DecoupledIO(new Info_cache_sb)
     val cmm = Flipped(new DecoupledIO(Bool()))
+    val amo = Input(Bool())
     val is_hazard = Output(Bool())
     val flush = Input(Bool())
   })
@@ -62,6 +63,10 @@ class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheM
   val do_enq = WireDefault(io.enq.fire())
   val do_deq = WireDefault(io.deq.fire())
   val do_cmm = WireDefault( io.cmm.fire )
+  val do_amo = RegInit(false.B)
+
+  when( ~do_amo & io.amo ) { do_amo := true.B }
+  .elsewhen( buf(cmm_ptr(cnt_w-1,0)).fun.is_amo & valid(cmm_ptr(cnt_w-1,0)) === true.B ) { do_amo := false.B }
 
   /** indicated whether a paddr in a valid buff is equal to input */
   val is_hazard = buf.exists( (x:Info_cache_sb) => (x.param.op1(31, addr_lsb) === io.enq.bits.param.op1(31, addr_lsb)) )
@@ -85,6 +90,13 @@ class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheM
 
     cmm_ptr := cmm_ptr + Mux(io.cmm.bits, 2.U, 1.U)
     assert( cmm_ptr =/= enq_ptr )
+    assert( ~io.amo & ~do_amo )
+  } 
+  when( buf(cmm_ptr(cnt_w-1,0)).fun.is_amo & valid(cmm_ptr(cnt_w-1,0)) === true.B ) {
+    commit(cmm_ptr(cnt_w-1,0)) := true.B
+    cmm_ptr := cmm_ptr + 1.U
+    assert( cmm_ptr =/= enq_ptr )
+    assert( ~do_cmm )
   }
   when( io.flush ) {
     enq_ptr := cmm_ptr
