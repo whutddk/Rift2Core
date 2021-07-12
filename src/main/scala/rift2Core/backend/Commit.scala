@@ -199,11 +199,18 @@ class Commit extends Privilege with Superscalar {
   io.rod_i(0).ready := is_commit_comfirm(0)
   io.rod_i(1).ready := is_commit_comfirm(1)
 
-  io.cmm_lsu.is_fence_commit := 	(io.rod_i(0).bits.is_fence & is_commit_comfirm(0)) |
-                  (io.rod_i(1).bits.is_fence & is_commit_comfirm(1))
+  io.cmm_lsu.is_amo_pending := {
+    val real_info = (io.rod_i(0).bits.is_amo & ~is_commit_comfirm(0)) //only pending amo in rod0 is send out
+    val record = RegNext(real_info)
 
-  io.cmm_lsu.is_store_commit := 	(io.rod_i(0).bits.is_su & is_commit_comfirm(0)) |
-                  (io.rod_i(1).bits.is_su & is_commit_comfirm(1))
+    (record === false.B) & (real_info === true.B)
+  }
+
+    //  |
+    // (io.rod_i(1).bits.is_amo & ~is_commit_comfirm(1) ~is_1st_solo )
+
+  io.cmm_lsu.is_store_commit(0) := io.rod_i(0).bits.is_su & is_commit_comfirm(0)
+  io.cmm_lsu.is_store_commit(1) := io.rod_i(1).bits.is_su & is_commit_comfirm(1)
 
 
 
@@ -230,7 +237,7 @@ class Commit extends Privilege with Superscalar {
     val is_retired_v = 
       VecInit(
         is_commit_comfirm(0) | io.is_commit_abort(0),
-        is_commit_comfirm(1) | io.is_commit_abort(1)
+        is_commit_comfirm(1) 
       )
 
 
