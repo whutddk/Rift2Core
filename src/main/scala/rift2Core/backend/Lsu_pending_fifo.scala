@@ -67,7 +67,7 @@ class lsu_pending_fifo(val entries: Int) extends Module{
   val is_hazard = buf.exists( (x:Info_cache_sb) => (x.param.op1 === io.enq.bits.param.op1) )
   io.is_hazard := is_hazard
 
-  when (do_enq) {
+  when (do_enq & ~io.flush) {
     buf(enq_ptr(cnt_w-1,0)) := io.enq.bits
     valid(enq_ptr(cnt_w-1,0)) := true.B
 
@@ -88,7 +88,7 @@ class lsu_pending_fifo(val entries: Int) extends Module{
   }
   when( io.flush ) {
     enq_ptr := cmm_ptr
-    assert (!do_enq)
+    // assert (!do_cmm)
 
     for ( i <- 0 until entries ) yield {
       buf(i) := Mux( commit(i), buf(i), 0.U.asTypeOf(new Info_cache_sb))
