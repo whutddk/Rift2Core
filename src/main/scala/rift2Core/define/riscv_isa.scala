@@ -433,6 +433,7 @@ class Info_reorder_i extends Bundle {
   val is_branch = Bool()
   val is_lu = Bool()
   val is_su = Bool()
+  val is_amo = Bool()
   val is_fence = Bool()
   val is_fence_i = Bool()
   val is_csr = Bool()
@@ -629,8 +630,8 @@ class Info_cmm_pc extends Bundle {
 // }
 
 class Info_cmm_lsu extends Bundle {
-  val is_fence_commit = Bool()
-  val is_store_commit = Bool()
+  val is_amo_pending = Bool()
+  val is_store_commit = Vec(2, Bool())
 }
 
 class Info_lsu_cmm extends Bundle {
