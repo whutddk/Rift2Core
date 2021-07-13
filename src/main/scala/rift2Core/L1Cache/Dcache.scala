@@ -100,7 +100,7 @@ class Info_cache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc_
 
 
 /** the fisrt stage to read out the data */
-class L1_rd_stage()(implicit p: Parameters) extends DcacheModule {
+class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle {
     val rd_in  = Flipped(DecoupledIO(new Info_cache_s0s1))
     val rd_out = DecoupledIO(new Info_cache_s1s2)
@@ -166,7 +166,7 @@ class L1_rd_stage()(implicit p: Parameters) extends DcacheModule {
 }
 
 /** stage 2 will write the cache */
-class L1_wr_stage() (implicit p: Parameters) extends DcacheModule {
+class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle{
     val wr_in  = Flipped(new DecoupledIO(new Info_cache_s1s2))
     val wr_lsReload = new DecoupledIO(new Info_cache_s0s1)
@@ -422,8 +422,8 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   val writeBackUnit = Module(new WriteBackUnit(edge = edge))
 
   val lsEntry = Module(new Queue(new Info_cache_s0s1, 16))
-  val rd_stage = Module(new L1_rd_stage())
-  val wr_stage = Module(new L1_wr_stage())
+  val rd_stage = Module(new L1d_rd_stage())
+  val wr_stage = Module(new L1d_wr_stage())
 
 
   io.missUnit_dcache_acquire  <> missUnit.io.cache_acquire
