@@ -65,7 +65,16 @@ class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheM
   val do_cmm = WireDefault( io.cmm.fire )
   val do_amo = RegInit(false.B)
 
-  when( ~do_amo & io.amo ) { do_amo := true.B }
+  val amo_pending_pluse = {
+    val one_setp = RegInit(false.B)
+    when( io.flush ) { one_setp := false.B }
+    .otherwise { one_setp := io.amo }
+
+    io.amo === true.B & one_setp === false.B
+  }
+
+  when(io.flush) { do_amo := false.B }
+  .elsewhen( amo_pending_pluse ) { do_amo := true.B; assert(do_amo === false.B) }
   .elsewhen( buf(cmm_ptr(cnt_w-1,0)).fun.is_amo & valid(cmm_ptr(cnt_w-1,0)) === true.B ) { do_amo := false.B }
 
   /** indicated whether a paddr in a valid buff is equal to input */
