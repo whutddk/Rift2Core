@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package rift2Core.L1Cache
+package rift
 
 import chisel3._
 import chisel3.util._
@@ -22,10 +22,9 @@ import chisel3.util._
 
 import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp, TransferSizes}
 import freechips.rocketchip.tilelink._
-
-import base._
-
 import chipsalliance.rocketchip.config.{Field, Parameters}
+
+import rift2Core.L1Cache._
 
 
 
@@ -51,3 +50,11 @@ trait HasCacheParameters {
 
 }
 
+trait HasBackEndParameters {
+  
+}
+
+
+
+
+trait HasRiftParameters extends HasCacheParameters with HasBackEndParameters

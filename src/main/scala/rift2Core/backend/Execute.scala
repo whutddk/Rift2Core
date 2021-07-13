@@ -34,7 +34,7 @@ import rift2Core.backend._
 import rift2Core.privilege.csrFiles._
 import tilelink._
 import axi._
-import base._
+import rift._
 import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._

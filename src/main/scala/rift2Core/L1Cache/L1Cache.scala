@@ -26,7 +26,7 @@ import chipsalliance.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp, TransferSizes}
 import freechips.rocketchip.tilelink._
 
-import base._
+import rift._
 import chisel3.util.random._
 import rift2Core.define._
 
