@@ -31,7 +31,7 @@ import rift2Core.L1Cache._
 case object CacheParamsKey extends Field[CacheSetting]
 
 case class CacheSetting(
-  dcacheParameters: L1CacheParameters = L1cacheSetting(
+  dcacheParameters: L1CacheParameters = DcacheParameters(
     dw = 64,
     bk = 4,
     cb = 4,
@@ -46,7 +46,7 @@ trait HasCacheParameters {
 
   val cacheSetting = p(CacheParamsKey)
 
-  val cacheParams = cacheSetting.dcacheParameters
+  val dcacheParams = cacheSetting.dcacheParameters
 
 }
 

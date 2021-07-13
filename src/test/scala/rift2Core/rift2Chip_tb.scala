@@ -31,6 +31,7 @@ import rift2Core._
 // import rift2Core.frontend._
 // import rift2Core.backend._
 // import rift2Core.cache._
+import rift._
 import rift2Core.privilege._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.config._
