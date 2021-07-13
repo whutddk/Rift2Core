@@ -2,7 +2,7 @@
 # @Author: Ruige Lee
 # @Date:   2020-11-18 15:37:18
 # @Last Modified by:   Ruige Lee
-# @Last Modified time: 2021-07-13 11:52:23
+# @Last Modified time: 2021-07-13 14:32:33
 
 
 import sys
@@ -33,16 +33,16 @@ testList = [
 	# "rv64ui-p-or",
 	# "rv64ui-p-ori",
 	# "rv64ui-p-auipc",
-	"rv64ui-p-lb",
-	"rv64ui-p-lbu",
-	"rv64ui-p-ld",
-	"rv64ui-p-lh",
-	"rv64ui-p-lw",
-	"rv64ui-p-lwu",
-	"rv64ui-p-sb",
-	"rv64ui-p-sd",
-	"rv64ui-p-sh",
-	"rv64ui-p-sw",
+	# "rv64ui-p-lb",
+	# "rv64ui-p-lbu",
+	# "rv64ui-p-ld",
+	# "rv64ui-p-lh",
+	# "rv64ui-p-lw",
+	# "rv64ui-p-lwu",
+	# "rv64ui-p-sb",
+	# "rv64ui-p-sd",
+	# "rv64ui-p-sh",
+	# "rv64ui-p-sw",
 	# "rv64ui-p-sll",
 	# "rv64ui-p-slli",
 	# "rv64ui-p-slliw",

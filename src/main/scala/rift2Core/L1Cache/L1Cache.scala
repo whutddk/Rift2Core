@@ -281,6 +281,14 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
 
   for ( j <- 0 until bk ) yield {
     val op = io.wr_in.bits.op
+
+
+    val high_sel  = io.wr_in.bits.paddr(2) === 1.U
+    // val is_usi = op.fun.is_usi
+    // val is_32w = op.fun.is_word
+    val cmp_a_sel = Mux(high_sel, io.wr_in.bits.wdata(bk_sel)(63,32), io.wr_in.bits.wdata(bk_sel)(31,0))
+    val cmp_b_sel = Mux(high_sel, io.wr_in.bits.rdata(cb_sel)(bk_sel)(63,32), io.wr_in.bits.rdata(cb_sel)(bk_sel)(31,0))
+     
     
     io.dat_info_w(j) := 
       Mux1H(Seq(
@@ -291,10 +299,17 @@ class L1_wr_stage() (implicit p: Parameters) extends L1CacheModule {
         (op.fun.amoxor_w  | op.fun.amoxor_d ) -> (io.wr_in.bits.wdata(bk_sel) ^ io.wr_in.bits.rdata(cb_sel)(bk_sel)),
         (op.fun.amoand_w  | op.fun.amoand_d ) -> (io.wr_in.bits.wdata(bk_sel) & io.wr_in.bits.rdata(cb_sel)(bk_sel)),
         (op.fun.amoor_w   | op.fun.amoor_d  ) -> (io.wr_in.bits.wdata(bk_sel) | io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.fun.amomin_w  | op.fun.amomin_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.fun.amomax_w  | op.fun.amomax_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
-        (op.fun.amominu_w | op.fun.amominu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.fun.amomaxu_w | op.fun.amomaxu_d) -> Mux(io.wr_in.bits.wdata(bk_sel) < io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+
+
+
+        (op.fun.amomin_w ) -> Mux(cmp_a_sel.asSInt                   < cmp_b_sel.asSInt,                           io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.fun.amomin_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.fun.amomax_w ) -> Mux(cmp_a_sel.asSInt                   < cmp_b_sel.asSInt,                           io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (op.fun.amomax_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (op.fun.amominu_w) -> Mux(cmp_a_sel                          < cmp_b_sel,                                  io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.fun.amominu_d) -> Mux(io.wr_in.bits.wdata(bk_sel)        < io.wr_in.bits.rdata(cb_sel)(bk_sel),        io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (op.fun.amomaxu_w) -> Mux(cmp_a_sel                          < cmp_b_sel,                                  io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (op.fun.amomaxu_d) -> Mux(io.wr_in.bits.wdata(bk_sel)        < io.wr_in.bits.rdata(cb_sel)(bk_sel),        io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
               
       ))
 
