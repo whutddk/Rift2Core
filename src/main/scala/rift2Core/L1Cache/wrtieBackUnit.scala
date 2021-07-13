@@ -25,8 +25,8 @@ class Info_writeBack_req extends Bundle {
 class WriteBackUnit(edge: TLEdgeOut) extends Module {
   val io = IO(new Bundle {
     val req = Flipped(new DecoupledIO(new Info_writeBack_req))
-    val dcache_release = new DecoupledIO(new TLBundleC(edge.bundle))
-    val dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
+    val cache_release = new DecoupledIO(new TLBundleC(edge.bundle))
+    val cache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
 
 
     val release_ban = Input(Bool())
@@ -42,16 +42,16 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
   val wb_state_qout = RegNext(wb_state_dnxt, 0.U)
 
   /** a last flag of release transmision */
-  val is_release_done = edge.count(io.dcache_release)._3
+  val is_release_done = edge.count(io.cache_release)._3
 
-  /** a register of io.dcache_release.valid */
-  val dcache_release_valid = RegInit(false.B)
+  /** a register of io.cache_release.valid */
+  val cache_release_valid = RegInit(false.B)
 
-  /** a register of io.dcache_grant.ready */
-  val dcache_grant_ready   = RegInit(false.B)
+  /** a register of io.cache_grant.ready */
+  val cache_grant_ready   = RegInit(false.B)
 
-  io.dcache_release.valid := dcache_release_valid
-  io.dcache_grant.ready   := dcache_grant_ready
+  io.cache_release.valid := cache_release_valid
+  io.cache_grant.ready   := cache_grant_ready
 
 
   wb_state_dnxt :=
@@ -60,21 +60,21 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
       (wb_state_qout === 1.U) ->
         Mux(~is_release_done, 1.U,
           Mux( wb_fifo.io.deq.bits.is_probeData | wb_fifo.io.deq.bits.is_probe, 0.U, 2.U )),
-      (wb_state_qout === 2.U) -> Mux( io.dcache_grant.fire, 0.U, 2.U )
+      (wb_state_qout === 2.U) -> Mux( io.cache_grant.fire, 0.U, 2.U )
     ))
 
   /** a 2 step counter to select data */
   val beatCnt = RegInit(false.B)
   when( wb_state_qout === 0.U & wb_state_dnxt === 1.U ) { beatCnt := false.B }
-  .elsewhen( io.dcache_release.fire ) { beatCnt := ~beatCnt }
+  .elsewhen( io.cache_release.fire ) { beatCnt := ~beatCnt }
     
   when( wb_state_qout === 1.U ) {
-    when( io.dcache_release.fire ) { dcache_release_valid := false.B }
-    .elsewhen( ~io.dcache_release.valid ) { dcache_release_valid := true.B }
+    when( io.cache_release.fire ) { cache_release_valid := false.B }
+    .elsewhen( ~io.cache_release.valid ) { cache_release_valid := true.B }
   }
 
 
-  io.dcache_release.bits := {
+  io.cache_release.bits := {
     val info_probe = edge.ProbeAck(
       fromSource = 66.U,
       toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
@@ -114,11 +114,11 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
     ))    
   }
 
-  when( io.dcache_grant.valid ) {
-    dcache_grant_ready := true.B
+  when( io.cache_grant.valid ) {
+    cache_grant_ready := true.B
     assert( wb_state_qout === 2.U )
-  } .elsewhen( io.dcache_grant.ready ) {
-    dcache_grant_ready := false.B
+  } .elsewhen( io.cache_grant.ready ) {
+    cache_grant_ready := false.B
     assert( wb_state_qout === 2.U )   
   }
 

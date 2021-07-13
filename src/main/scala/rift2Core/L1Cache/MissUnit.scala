@@ -8,20 +8,25 @@ import base._
 import freechips.rocketchip.tilelink._
 
 
-class Info_mshr_req extends Bundle {
+class Info_miss_req extends Bundle {
   val paddr = UInt(32.W)
+}
+
+class Info_miss_rsp extends Bundle {
+  val paddr = UInt(64.W)
+  val wdata = UInt(256.W)
 }
 
 
 /** The Queue of cache to request acquire and waiting for grant and ack grant */
 class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends L1CacheModule {
   val io = IO(new Bundle{
-    val req = Flipped(DecoupledIO(new Info_mshr_req))
-    val rsp = DecoupledIO(new Info_cache_s1s2)
+    val req = Flipped(DecoupledIO(new Info_miss_req))
+    val rsp = DecoupledIO(new Info_miss_rsp)
 
-    val dcache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
-    val dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
-    val dcache_grantAck  = new DecoupledIO(new TLBundleE(edge.bundle))
+    val cache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
+    val cache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
+    val cache_grantAck  = new DecoupledIO(new TLBundleE(edge.bundle))
 
     val miss_ban = Input(Bool())
     val release_ban = Output(Bool())
@@ -29,7 +34,7 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
   })
 
   /** a parallel buff of *paddr* miss request, when a duplicated request comes, it will be acked but dismiss */
-  val miss_queue = RegInit(VecInit( Seq.fill(entry)( 0.U.asTypeOf(new Info_mshr_req) )))
+  val miss_queue = RegInit(VecInit( Seq.fill(entry)( 0.U.asTypeOf(new Info_miss_req) )))
 
   /** a valid flag indicated whether a buff is in-used */
   val miss_valid = RegInit(VecInit( Seq.fill(entry)( false.B )))
@@ -44,45 +49,45 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
     * @param is_trans_done indicated whether the trans is in last beat
     * @param transCnt shows the beats count
     */
-  val (_, _, is_trans_done, transCnt) = edge.count(io.dcache_grant)
+  val (_, _, is_trans_done, transCnt) = edge.count(io.cache_grant)
 
   /** when the bus is free, a valid paddr will be selected to emit */
   val acquire_sel = miss_valid.indexWhere( (x: Bool) => (x === true.B) )
 
-  /** a register of io.dcache_acquire.valid */
-  val dcache_acquire_vaild  = RegInit(false.B)
+  /** a register of io.cache_acquire.valid */
+  val cache_acquire_vaild  = RegInit(false.B)
 
-  /** a wire of io.dcache_grant.ready */
-  val dcache_grant_ready    = Wire(Bool())
+  /** a wire of io.cache_grant.ready */
+  val cache_grant_ready    = Wire(Bool())
 
-  /** a register of io.dcache_grantAck.valid */
-  val dcache_grantAck_valid = RegInit(false.B)
+  /** a register of io.cache_grantAck.valid */
+  val cache_grantAck_valid = RegInit(false.B)
 
   /** a register of io.rsp.valid */
   val rsp_valid = RegInit(false.B)
 
-  io.dcache_acquire.valid := dcache_acquire_vaild
-  io.dcache_grant.ready   := dcache_grant_ready
-  io.dcache_grantAck.valid := dcache_grantAck_valid
-  io.dcache_grantAck.bits  := edge.GrantAck(io.dcache_grant.bits)
+  io.cache_acquire.valid := cache_acquire_vaild
+  io.cache_grant.ready   := cache_grant_ready
+  io.cache_grantAck.valid := cache_grantAck_valid
+  io.cache_grantAck.bits  := edge.GrantAck(io.cache_grant.bits)
   io.rsp.valid := rsp_valid
 
   mshr_state_dnxt := 
     Mux1H(Seq(
       (mshr_state_qout === 0.U) -> Mux(miss_valid.contains(true.B) & ~io.miss_ban, 1.U, 0.U) ,//cfree
-      (mshr_state_qout === 1.U) -> Mux(io.dcache_acquire.fire, 2.U, 1.U),//acquire
+      (mshr_state_qout === 1.U) -> Mux(io.cache_acquire.fire, 2.U, 1.U),//acquire
       (mshr_state_qout === 2.U) -> Mux(is_trans_done, 3.U, 2.U),//grant
-      (mshr_state_qout === 3.U) -> Mux(io.dcache_grantAck.fire, 0.U, 3.U)//grantack
+      (mshr_state_qout === 3.U) -> Mux(io.cache_grantAck.fire, 0.U, 3.U)//grantack
     ))
 
   when( mshr_state_qout === 0.U & mshr_state_dnxt === 1.U ) {
-    dcache_acquire_vaild := true.B
-  } .elsewhen( io.dcache_acquire.fire ) {
-    dcache_acquire_vaild := false.B
+    cache_acquire_vaild := true.B
+  } .elsewhen( io.cache_acquire.fire ) {
+    cache_acquire_vaild := false.B
     assert(mshr_state_qout === 1.U)
   }
 
-  io.dcache_acquire.bits := 
+  io.cache_acquire.bits := 
     edge.AcquireBlock(
       fromSource = 0.U,
       toAddress = miss_queue(acquire_sel).paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
@@ -91,10 +96,10 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
     )._2
   
 
-  dcache_grant_ready := (mshr_state_qout === 2.U)
-  when( io.dcache_grant.fire ) {
-    when(~is_trans_done) { miss_rsp(0) := io.dcache_grant.bits.data }
-    .otherwise { miss_rsp(1) := io.dcache_grant.bits.data }
+  cache_grant_ready := (mshr_state_qout === 2.U)
+  when( io.cache_grant.fire ) {
+    when(~is_trans_done) { miss_rsp(0) := io.cache_grant.bits.data }
+    .otherwise { miss_rsp(1) := io.cache_grant.bits.data }
     assert( mshr_state_qout === 2.U )
   }
 
@@ -102,33 +107,17 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
     rsp_valid := true.B
   } .elsewhen(io.rsp.fire) {
     rsp_valid := false.B
-    dcache_grantAck_valid := true.B
+    cache_grantAck_valid := true.B
     assert(mshr_state_qout === 3.U)
-  } .elsewhen( io.dcache_grantAck.fire ) {
-    dcache_grantAck_valid := false.B
+  } .elsewhen( io.cache_grantAck.fire ) {
+    cache_grantAck_valid := false.B
     miss_valid( acquire_sel ) := false.B
     assert(mshr_state_qout === 3.U)
   }
 
   io.rsp.bits.paddr := miss_queue(acquire_sel).paddr
+  io.rsp.bits.wdata := Cat( miss_rsp(1), miss_rsp(0))
 
-
-  io.rsp.bits.wdata(0) := miss_rsp(0)(63,0)
-  io.rsp.bits.wdata(1) := miss_rsp(0)(127,64)
-  io.rsp.bits.wdata(2) := miss_rsp(1)(63,0)
-  io.rsp.bits.wdata(3) := miss_rsp(1)(127,64)
-
-
-  io.rsp.bits.wmask := "hFF".U
-
-  {
-    io.rsp.bits.op := 0.U.asTypeOf(new Cache_op)
-    io.rsp.bits.op.grant := true.B
-  }
-  
-  io.rsp.bits.chk_idx  := DontCare
-  io.rsp.bits.rdata    := DontCare
-  io.rsp.bits.tag      := DontCare
 
   io.release_ban := mshr_state_dnxt === 2.U | mshr_state_qout === 2.U
 

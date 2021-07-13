@@ -180,7 +180,7 @@ class L1_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val dat_info_wstrb = Output( Vec(bk, UInt((dw/8).W)) )
     val dat_info_w = Output( Vec(bk, UInt(dw.W)))
 
-    val missUnit_req = new DecoupledIO(new Info_mshr_req)
+    val missUnit_req = new DecoupledIO(new Info_miss_req)
     val writeBackUnit_req = DecoupledIO(new Info_writeBack_req)
   })
 
@@ -426,12 +426,12 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   val wr_stage = Module(new L1_wr_stage())
 
 
-  io.missUnit_dcache_acquire  <> missUnit.io.dcache_acquire
-  missUnit.io.dcache_grant <> io.missUnit_dcache_grant
-  io.missUnit_dcache_grantAck <> missUnit.io.dcache_grantAck
-  probeUnit.io.dcache_probe <> io.probeUnit_dcache_probe
-  io.writeBackUnit_dcache_release <> writeBackUnit.io.dcache_release
-  writeBackUnit.io.dcache_grant <> io.writeBackUnit_dcache_grant
+  io.missUnit_dcache_acquire  <> missUnit.io.cache_acquire
+  missUnit.io.cache_grant <> io.missUnit_dcache_grant
+  io.missUnit_dcache_grantAck <> missUnit.io.cache_grantAck
+  probeUnit.io.cache_probe <> io.probeUnit_dcache_probe
+  io.writeBackUnit_dcache_release <> writeBackUnit.io.cache_release
+  writeBackUnit.io.cache_grant <> io.writeBackUnit_dcache_grant
 
 
 
@@ -467,11 +467,19 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   io.dcache_push <> ls_arb.io.in(1)
   ls_arb.io.out <> lsEntry.io.enq 
 
-  probeUnit.io.req <> rd_arb.io.in(0)
+  rd_arb.io.in(0).bits := pkg_Info_cache_s0s1(probeUnit.io.req.bits) 
+  rd_arb.io.in(0).valid := probeUnit.io.req.valid
+  probeUnit.io.req.ready := rd_arb.io.in(0).ready
+
+
   lsEntry.io.deq <> rd_arb.io.in(1)
   rd_arb.io.out <> rd_stage.io.rd_in
 
-  missUnit.io.rsp <> wr_arb.io.in(0)
+  wr_arb.io.in(0).bits := pkg_Info_cache_s1s2( missUnit.io.rsp.bits )
+  wr_arb.io.in(0).valid := missUnit.io.rsp.valid
+  missUnit.io.rsp.ready := wr_arb.io.in(0).ready
+
+
   rd_stage.io.rd_out <> wr_arb.io.in(1)
   wr_arb.io.out <> wr_stage.io.wr_in
 
@@ -479,6 +487,41 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
 
   wr_stage.io.dcache_pop <> io.dcache_pop
 
+  def pkg_Info_cache_s1s2( ori: Info_miss_rsp ) = {
+    val res = Wire(new Info_cache_s1s2)
+
+    res.paddr := ori.paddr
+    res.wmask := "hFF".U
+    res.wdata(0) := ori.wdata(63,0)
+    res.wdata(1) := ori.wdata(127,64)
+    res.wdata(2) := ori.wdata(191,128)
+    res.wdata(3) := ori.wdata(255,192)
+
+    {
+      res.op := 0.U.asTypeOf(new Cache_op)
+      res.op.grant := true.B      
+    }
+
+    res.rdata := DontCare
+    res.tag   := DontCare
+    res.chk_idx := DontCare
+
+    res
+  }
+
+  def pkg_Info_cache_s0s1( ori: Info_probe_req ) = {
+    val res = Wire(new Info_cache_s0s1)
+
+    res.paddr := ori.paddr
+    res.wmask := DontCare
+    res.wdata := DontCare
+
+    res.op := 0.U.asTypeOf(new Cache_op)
+    res.op.probe := true.B
+    res.chk_idx := DontCare
+
+    res
+  }
 }
 
 
