@@ -12,6 +12,9 @@ import freechips.rocketchip.tilelink._
 import freechips.rocketchip.amba.axi4._
 import sifive.blocks.inclusivecache._
 import axi._
+import chisel3.util.random._
+
+
 
 case class IcacheParameters(
   dw: Int,
@@ -69,6 +72,8 @@ class Info_icache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc
   val res = UInt(64.W)
 }
 
+
+
 /** the fisrt stage to read out the data */
 class L1i_rd_stage()(implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle {
@@ -76,8 +81,8 @@ class L1i_rd_stage()(implicit p: Parameters) extends DcacheModule {
     val probe_req = Flipped(DecoupledIO())
     val grant_req = Flipped(DecoupledIO())
 
-    val rd_in  = Flipped(DecoupledIO(new Info_icache_s0s1))
-    val rd_out = DecoupledIO(new Info_icache_s1s2)
+    // val rd_in  = Flipped(DecoupledIO(new Info_icache_s0s1))
+    // val rd_out = DecoupledIO(new Info_icache_s1s2)
 
     val dat_addr_r = Output(UInt(aw.W))
     val dat_en_r   = Output( Vec(cb, Vec(bk, Bool()) ))
@@ -90,17 +95,60 @@ class L1i_rd_stage()(implicit p: Parameters) extends DcacheModule {
 
 
 
-  val bk_sel = io.rd_in.bits.bk_sel
+  val bk_sel  = io.rd_in.bits.bk_sel
+  val cl_sel  = io.rd_in.bits.cl_sel
+  val tag_sel = io.rd_in.bits.tag_sel
 
   val icache_state_dnxt = Wire(UInt(4.W))
   val icache_state_qout = RegNext( icache_state_dnxt, 0.U )
+
+
+   /** one hot code indicated which blcok is hit */
+  val is_hit_oh = Wire(Vec(cb, Bool()))
+
+  /** flag that indicated that if there is a cache block hit */
+  val is_hit = is_hit_oh.asUInt.orR
+
+  /** convert one hot hit to UInt */
+  val hit_sel = WireDefault(OHToUInt(is_hit_oh))
+
+  /** flag that indicated that if a cache block is valid */
+  val is_valid = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
+
+  is_hit_oh := {
+    val res = 
+      for( i <- 0 until cb ) yield {
+        (io.tag_info_r(i) === tag_sel) & is_valid(cl_sel)(i)        
+      }
+    assert(PopCount(res) <= 1.U)
+    VecInit(res)
+  }
+
+  /** when no block is hit or a new grant req comes, we should 1) find out an empty block 2) evict a valid block */
+  val rpl_sel = {
+    val res = Wire(UInt(cb_w.W))
+    val is_emptyBlock_exist = is_valid(cl_sel).contains(false.B)
+    val emptyBlock_sel = is_valid(cl_sel).indexWhere( (x:Bool) => (x === false.B) )
+    res := Mux( is_emptyBlock_exist, emptyBlock_sel, LFSR(16) )
+    res
+  }
+  
+  val cb_sel = WireDefault(
+    Mux1H(Seq(
+      (icache_state_qout === 0.U) -> rpl_sel, //for grant
+      (icache_state_qout === 1.U) -> hit_sel, //for probe
+      (icache_state_qout === 2.U) -> Mux( is_hit, hit_sel, rpl_sel ), // for fetch
+    ))
+  )
+
+
 
   icache_state_dnxt := 
     Mux1H(Seq(
       (icache_state_qout === 0.U) -> 
         MuxCase( 0.U, Array(
-          probe_req.valid -> 1.U
-          fetch_req.valid -> 2.U
+          io.probe_req.valid -> 1.U,
+          io.fetch_req.valid -> 2.U
         )),
       (icache_state_qout === 1.U) -> 0.U
       (icache_state_qout === 2.U) ->
@@ -173,43 +221,7 @@ class L1i_wr_stage() (implicit p: Parameters) extends IcacheModule {
   val cl_sel = io.wr_in.bits.cl_sel
   val tag_sel = io.wr_in.bits.tag_sel
 
-  /** one hot code indicated which blcok is hit */
-  val is_hit_oh = Wire(Vec(cb, Bool()))
-
-  /** flag that indicated that if there is a cache block hit */
-  val is_hit = is_hit_oh.asUInt.orR
-
-  /** convert one hot hit to UInt */
-  val hit_sel = WireDefault(OHToUInt(is_hit_oh))
-
-  /** flag that indicated that if a cache block is valid */
-  val is_valid = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
-
-  is_hit_oh := {
-    val res = 
-      for( i <- 0 until cb ) yield {
-        (io.wr_in.bits.tag(i) === tag_sel) & is_valid(cl_sel)(i)        
-      }
-    assert(PopCount(res) <= 1.U)
-    VecInit(res)
-  }
-
-  /** when no block is hit or a new grant req comes, we should 1) find out an empty block 2) evict a valid block */
-  val rpl_sel = {
-    val res = Wire(UInt(cb_w.W))
-    val is_emptyBlock_exist = is_valid(cl_sel).contains(false.B)
-    val emptyBlock_sel = is_valid(cl_sel).indexWhere( (x:Bool) => (x === false.B) )
-    res := Mux( is_emptyBlock_exist, emptyBlock_sel, LFSR(16) )
-    res
-  }
-  
-  val cb_sel = WireDefault(
-      Mux1H(Seq(
-        io.wr_in.bits.is_fetch -> Mux( is_hit, hit_sel, rpl_sel ),
-        io.wr_in.bits.is_probe -> hit_sel,
-        io.wr_in.bits.is_grant -> rpl_sel
-      ))
-    )
+ 
 
   when( io.wr_in.fire ) {
     when( io.wr_in.bits.is_probe ) { assert(is_hit) } //l2 will never request a empty probe
