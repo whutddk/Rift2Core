@@ -319,7 +319,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     (io.wr_in.bits.op.grant)
 
 
-  io.missUnit_req.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & io.writeBackUnit_req.ready
+  io.missUnit_req.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & (io.writeBackUnit_req.ready | ~is_valid(cl_sel)(cb_sel))
   io.missUnit_req.bits.paddr := io.wr_in.bits.paddr
 
   io.writeBackUnit_req.valid := io.wr_in.valid & ((io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & is_valid(cl_sel)(cb_sel)) | io.wr_in.bits.op.probe)

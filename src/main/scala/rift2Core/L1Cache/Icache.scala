@@ -47,15 +47,15 @@ abstract class IcacheBundle(implicit p: Parameters) extends L1CacheBundle
   with HasIcacheParameters
 
 
-trait Info_icache_raw extends IcacheBundle {
-  val paddr = UInt(64.W)
-  val is_probe = Bool()
-  val is_fetch = Bool()
+// trait Info_icache_raw extends IcacheBundle {
+//   val paddr = UInt(64.W)
+//   val is_probe = Bool()
+//   val is_fetch = Bool()
 
-  def tag_sel = paddr(31,32-tag_w)
-  def bk_sel  = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-  def cl_sel  = paddr(addr_lsb+line_w-1, addr_lsb)
-}
+//   def tag_sel = paddr(31,32-tag_w)
+//   def bk_sel  = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
+//   def cl_sel  = paddr(addr_lsb+line_w-1, addr_lsb)
+// }
 
 trait Info_icache_tagDat extends IcacheBundle {
   val rdata = Vec(cb, Vec(bk, UInt(64.W)))
@@ -77,12 +77,40 @@ class Info_icache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc
 /** the fisrt stage to read out the data */
 class L1i_rd_stage()(implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle {
-    val fetch_req = Flipped(DecoupledIO())
-    val probe_req = Flipped(DecoupledIO())
-    val grant_req = Flipped(DecoupledIO())
 
+
+    val pc_if = Flipped(new DecoupledIO( UInt(64.W) ))
+    val if_iq = Vec(4, new DecoupledIO(UInt(16.W)) )
     // val rd_in  = Flipped(DecoupledIO(new Info_icache_s0s1))
     // val rd_out = DecoupledIO(new Info_icache_s1s2)
+
+    val missUnit_icache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
+    val missUnit_icache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
+    val missUnit_icache_grantAck  = DecoupledIO(new TLBundleE(edge.bundle))
+
+    val probeUnit_icache_probe = Flipped(new DecoupledIO(new TLBundleB(edge.bundle)))
+
+    val writeBackUnit_icache_release = new DecoupledIO(new TLBundleC(edge.bundle))
+    val writeBackUnit_icache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
+
+
+
+
+  })
+
+  val req_arb = Module(new Arbiter(UInt(64.W), 3))
+  val ibuf = Module(new MultiPortFifo( UInt(16.W), 4, 8, 4 ) )
+
+  val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
+  val cache_tag = new Cache_tag( dw, aw, bk, cb, cl ) 
+  val missUnit = Module(new MissUnit(edge = edge, entry = 8))
+  val probeUnit = Module(new ProbeUnit(edge = edge))
+  val writeBackUnit = Module(new WriteBackUnit(edge = edge))
+
+
+    val fetch_req = Flipped(DecoupledIO(UInt(64.W)))
+    val probe_req = Flipped(DecoupledIO(UInt(64.W)))
+    val grant_req = Flipped(DecoupledIO(UInt(64.W)))
 
     val dat_addr_r = Output(UInt(aw.W))
     val dat_en_r   = Output( Vec(cb, Vec(bk, Bool()) ))
@@ -91,13 +119,23 @@ class L1i_rd_stage()(implicit p: Parameters) extends DcacheModule {
     val tag_addr_r = Output(UInt(aw.W))
     val tag_en_r   = Output( Vec(cb, Bool()) )  
     val tag_info_r = Input( Vec(cb, UInt(tag_w.W)) )
-  })
 
 
+  io.missUnit_icache_acquire  <> missUnit.io.cache_acquire
+  missUnit.io.cache_grant <> io.missUnit_icache_grant
+  io.missUnit_icache_grantAck <> missUnit.io.cache_grantAck
+  probeUnit.io.cache_probe <> io.probeUnit_icache_probe
+  io.writeBackUnit_icache_release <> writeBackUnit.io.cache_release
+  writeBackUnit.io.cache_grant <> io.writeBackUnit_icache_grant
+  req_arb.io.in(0) <> io.grant_req
+  req_arb.io.in(1) <> io.probe_req
+  req_arb.io.in(2) <> io.fetch_req
 
-  val bk_sel  = io.rd_in.bits.bk_sel
-  val cl_sel  = io.rd_in.bits.cl_sel
-  val tag_sel = io.rd_in.bits.tag_sel
+
+  val bk_sel  = req_arb.io.out.bits(addr_lsb-1, addr_lsb-log2Ceil(bk))
+  val cl_sel  = req_arb.io.out.bits(addr_lsb+line_w-1, addr_lsb)
+  val tag_sel = req_arb.io.out.bits(31,32-tag_w)
+
 
   val icache_state_dnxt = Wire(UInt(4.W))
   val icache_state_qout = RegNext( icache_state_dnxt, 0.U )
@@ -124,12 +162,12 @@ class L1i_rd_stage()(implicit p: Parameters) extends DcacheModule {
     VecInit(res)
   }
 
+  val is_emptyBlock_exist = is_valid(cl_sel).contains(false.B)
+  val cb_em = is_valid(cl_sel).indexWhere( (x:Bool) => (x === false.B) )
   /** when no block is hit or a new grant req comes, we should 1) find out an empty block 2) evict a valid block */
   val rpl_sel = {
     val res = Wire(UInt(cb_w.W))
-    val is_emptyBlock_exist = is_valid(cl_sel).contains(false.B)
-    val emptyBlock_sel = is_valid(cl_sel).indexWhere( (x:Bool) => (x === false.B) )
-    res := Mux( is_emptyBlock_exist, emptyBlock_sel, LFSR(16) )
+    res := Mux( is_emptyBlock_exist, cb_em, LFSR(16) )
     res
   }
   
@@ -153,48 +191,77 @@ class L1i_rd_stage()(implicit p: Parameters) extends DcacheModule {
       (icache_state_qout === 1.U) -> 0.U
       (icache_state_qout === 2.U) ->
       Mux(
-         is_hit & icache_pop.ready |
-        ~is_hit & writeBackUnit_req.ready,
+        (is_hit & ibuf.io.enq(3).ready) |
+        (~is_hit & writeBackUnit.io.ready),
         0.U, 2.U
       )
     ))
 
 
 
-  io.tag_addr_r := io.rd_in.bits.paddr
-  io.dat_addr_r := io.rd_in.bits.paddr
+  cache_tag.addr_sel_r := req_arb.io.out.bits
+  cache_dat.addr_sel_r := req_arb.io.out.bits
+
 
   for ( i <- 0 until cb ) yield {
-    io.tag_en_r(i) := info_bypass_fifo.io.enq.fire 
+    cache_tag.tag_en_r(i) :=
+      icache_state_qout === 0.U & 
+      ~missUnit.io.rsp.valid &
+      (io.pc_if.valid | probeUnit.io.rsp.valid)
   }
 
-
-
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
-    io.dat_en_r(i)(j) := 
-      info_bypass_fifo.io.enq.fire &
-      io.rd_in.bits.is_fetch & 
+    cache_dat.dat_en_r(i)(j) := 
+      icache_state_qout === 0.U & 
+      ~missUnit.io.rsp.valid &
+      ~probeUnit.io.rsp.valid &
+      io.pc_if.valid &
       j.U === bk_sel
   }
 
 
-  io.rd_out.valid := RegNext(io.rd_in.valid, false.B)
 
-  for( i <- 0 until cb; j <- 0 until bk ) yield { io.rd_out.bits.rdata(i)(j) := io.dat_info_r(i)(j) } 
-  for( i <- 0 until cb )                  yield { io.rd_out.bits.tag(i)      := io.tag_info_r(i) }
+
+  ibuf.io.enq(0).bits := cache_dat.dat_info_r(cb_sel)(bk_sel)(15,0)
+  ibuf.io.enq(1).bits := cache_dat.dat_info_r(cb_sel)(bk_sel)(31,16)
+  ibuf.io.enq(2).bits := cache_dat.dat_info_r(cb_sel)(bk_sel)(47,32)
+  ibuf.io.enq(3).bits := cache_dat.dat_info_r(cb_sel)(bk_sel)(63,48)
+
+  ibuf.io.enq(0).valid := icache_state_qout === 2.U & is_hit
+  ibuf.io.enq(1).valid := icache_state_qout === 2.U & is_hit
+  ibuf.io.enq(2).valid := icache_state_qout === 2.U & is_hit
+  ibuf.io.enq(3).valid := icache_state_qout === 2.U & is_hit
+  
+  missUnit.io.req.bits.paddr := req_arb.io.out.bits
+  missUnit.io.req.valid      := icache_state_qout === 2.U & ~is_hit & ( ~is_valid(cl_sel)(cb_sel) | writeBackUnit.io.req.ready)
+  writeBackUnit.io.req.bits.addr := req_arb.io.out.bits
+  writeBackUnit.io.req.bits.data := DontCare
+  writeBackUnit.io.req.bits.is_probe := icache_state_qout === 1.U
+  writeBackUnit.io.req.bits.is_probeData := false.B
+  writeBackUnit.io.req.bits.is_release := icache_state_qout === 2.U
+  writeBackUnit.io.req.bits.is_releaseData := false.B
+  writeBackUnit.io.req.valid := 
+    (icache_state_qout === 2.U & ~is_hit & is_valid(cl_sel)(cb_sel)) |
+    (icache_state_qout === 1.U)
 
   
+  cache_tag.addr_sel_w := missUnit.io.rsp.bits.paddr
+  cache_dat.addr_sel_w := missUnit.io.rsp.bits.paddr
 
-  info_bypass_fifo.io.enq <> io.rd_in
 
-  io.rd_out.bits.paddr    := info_bypass_fifo.io.deq.bits.paddr
-  io.rd_out.bits.wdata    := DontCare
-  io.rd_out.bits.is_probe := info_bypass_fifo.io.deq.bits.is_probe
-  io.rd_out.bits.is_fetch := info_bypass_fifo.io.deq.bits.is_fetch
-  io.rd_out.bits.is_grant := false.B
+  cache_tag.tag_en_w(cb_em) := missUnit.io.rsp.valid
+  assert( ~(missUnit.io.rsp.valid & ~is_emptyBlock_exist) )
 
-  io.rd_out.valid := info_bypass_fifo.io.deq.valid
-  info_bypass_fifo.io.deq.ready := io.rd_out.ready
+
+  for ( j <- 0 until bk ) yield {
+    cache_dat.dat_en_w(cb_em)(j) := missUnit.io.rsp.valid
+  }
+
+  for ( j <- 0 until bk ) yield {
+    cache_dat.dat_info_w(j) := missUnit.io.rsp.bits.wdata(dw*(j+1)-1, dw*j)
+    cache_dat.dat_info_wstrb(j) := "hFFFFFFFF".U
+  }
+
 
 
 }
