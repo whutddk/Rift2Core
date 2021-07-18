@@ -91,6 +91,7 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
 
 
   val mem_xbar = TLXbar()
+  val l1_xbar = TLXbar()
   val tlcork = TLCacheCork()
 
 
@@ -105,9 +106,15 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     tlcork := 
     sifiveCache.node :=
     TLBuffer() := 
-    TLXbar() := 
+    l1_xbar
+
+    l1_xbar :=
     TLBuffer() := 
-    i_rift2Core.clientNode
+    i_rift2Core.icacheClientNode
+
+    l1_xbar :=
+    TLBuffer() := 
+    i_rift2Core.dcacheClientNode
 
   val memory = InModuleBody {
     memAXI4SlaveNode.makeIOs()
@@ -144,11 +151,11 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
 
   lazy val module = new LazyModuleImp(this) {
     val io = IO( new Bundle{
-      val mem_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-      val mem_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 128, 1, 1)) )
-      val mem_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-      val mem_chn_w = new DecoupledIO(new AXI_chn_w( 128, 1 ))
-      val mem_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
+      // val mem_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+      // val mem_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 128, 1, 1)) )
+      // val mem_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+      // val mem_chn_w = new DecoupledIO(new AXI_chn_w( 128, 1 ))
+      // val mem_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
 
       val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
       val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
@@ -161,8 +168,8 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
 
 
 
-    val l2cache = Module( new L2Cache )
-    val l3cache = Module( new L3Cache )
+    // val l2cache = Module( new L2Cache )
+    // val l3cache = Module( new L3Cache )
 
     i_rift2Core.module.io.sys_chn_ar <> io.sys_chn_ar
     i_rift2Core.module.io.sys_chn_r  <> io.sys_chn_r
@@ -171,25 +178,25 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     i_rift2Core.module.io.sys_chn_b  <> io.sys_chn_b
 
 
-    l2cache.io.il1_chn_a <> i_rift2Core.module.io.il1_chn_a
-    l2cache.io.il1_chn_d <> i_rift2Core.module.io.il1_chn_d
+    // l2cache.io.il1_chn_a <> i_rift2Core.module.io.il1_chn_a
+    // l2cache.io.il1_chn_d <> i_rift2Core.module.io.il1_chn_d
 
-    l2cache.io.dl1_chn_a.valid := false.B
-    l2cache.io.dl1_chn_a.bits  := DontCare
-    l2cache.io.dl1_chn_d.ready := false.B
+    // l2cache.io.dl1_chn_a.valid := false.B
+    // l2cache.io.dl1_chn_a.bits  := DontCare
+    // l2cache.io.dl1_chn_d.ready := false.B
 
-    l2cache.io.l2c_chn_a <> l3cache.io.l2c_chn_a
-    l2cache.io.l2c_chn_d <> l3cache.io.l2c_chn_d
-    l2cache.io.l2c_fence_req := false.B
+    // l2cache.io.l2c_chn_a <> l3cache.io.l2c_chn_a
+    // l2cache.io.l2c_chn_d <> l3cache.io.l2c_chn_d
+    // l2cache.io.l2c_fence_req := false.B
 
 
 
-    l3cache.io.mem_chn_ar <> io.mem_chn_ar
-    l3cache.io.mem_chn_r  <> io.mem_chn_r
-    l3cache.io.mem_chn_aw <> io.mem_chn_aw
-    l3cache.io.mem_chn_w  <> io.mem_chn_w
-    l3cache.io.mem_chn_b  <> io.mem_chn_b
-    l3cache.io.l3c_fence_req := false.B
+    // l3cache.io.mem_chn_ar <> io.mem_chn_ar
+    // l3cache.io.mem_chn_r  <> io.mem_chn_r
+    // l3cache.io.mem_chn_aw <> io.mem_chn_aw
+    // l3cache.io.mem_chn_w  <> io.mem_chn_w
+    // l3cache.io.mem_chn_b  <> io.mem_chn_b
+    // l3cache.io.l3c_fence_req := false.B
     
 
     i_rift2Core.module.io.rtc_clock := io.rtc_clock

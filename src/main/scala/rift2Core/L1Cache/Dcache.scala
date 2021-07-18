@@ -305,7 +305,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     when( io.wr_in.bits.op.is_dirtyOp ) {
       is_dirty(cl_sel)(cb_sel) := true.B
     }
-    when( (io.wr_in.bits.op.is_access) & ~is_hit ) {
+    when( (io.wr_in.bits.op.is_access) & ~is_hit & is_valid(cl_sel)(cb_sel) === true.B) {
       is_valid(cl_sel)(cb_sel) := false.B
     }
 

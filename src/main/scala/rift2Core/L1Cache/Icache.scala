@@ -1,17 +1,16 @@
 package rift2Core.L1Cache
 
-import chipsalliance.rocketchip.config.Parameters
+
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
 
 
 import base._
+import chipsalliance.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
-import freechips.rocketchip.amba.axi4._
-import sifive.blocks.inclusivecache._
-import axi._
+
 import chisel3.util.random._
 
 
@@ -47,39 +46,14 @@ abstract class IcacheBundle(implicit p: Parameters) extends L1CacheBundle
   with HasIcacheParameters
 
 
-// trait Info_icache_raw extends IcacheBundle {
-//   val paddr = UInt(64.W)
-//   val is_probe = Bool()
-//   val is_fetch = Bool()
-
-//   def tag_sel = paddr(31,32-tag_w)
-//   def bk_sel  = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-//   def cl_sel  = paddr(addr_lsb+line_w-1, addr_lsb)
-// }
-
-trait Info_icache_tagDat extends IcacheBundle {
-  val rdata = Vec(cb, Vec(bk, UInt(64.W)))
-  val tag   = Vec(cb, UInt(tag_w.W))
-}
-
-// class Info_icache_s0s1(implicit p: Parameters) extends IcacheBundle with Info_icache_raw
-// class Info_icache_s1s2(implicit p: Parameters) extends IcacheBundle with Info_icache_raw with Info_icache_tagDat {
-//   val is_grant = Bool()
-//   val wdata = Vec(bk,UInt(64.W))
-// }
-
-// class Info_icache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc_idx {
-//   val res = UInt(64.W)
-// }
 
 
-
-/** the fisrt stage to read out the data */
 class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val io = IO(new Bundle {
 
     val pc_if = Flipped(new DecoupledIO( UInt(64.W) ))
     val if_iq = Vec(4, new DecoupledIO(UInt(16.W)) )
+
 
 
     val missUnit_icache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
@@ -91,10 +65,9 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     val writeBackUnit_icache_release = new DecoupledIO(new TLBundleC(edge.bundle))
     val writeBackUnit_icache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
 
-
-
-
+    val flush = Input(Bool())
   })
+
 
 
   val ibuf = Module(new MultiPortFifo( UInt(16.W), 4, 8, 4 ) )
@@ -105,6 +78,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val probeUnit = Module(new ProbeUnit(edge = edge))
   val writeBackUnit = Module(new WriteBackUnit(edge = edge))
 
+  ibuf.io.reset := reset.asBool | io.flush
 
   io.pc_if.ready := ibuf.io.enq(0).fire
   io.if_iq <> ibuf.io.deq
@@ -198,7 +172,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
       (icache_state_qout === 0.U) -> 
         MuxCase( 0.U, Array(
           probeUnit.io.req.valid -> 1.U,
-          io.pc_if.valid -> 2.U
+          io.pc_if.valid & ~flush -> 2.U
         )),
       (icache_state_qout === 1.U) -> 0.U,
       (icache_state_qout === 2.U) ->
@@ -274,7 +248,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   }
 
 
-  assert( ~(missUnit.io.rsp.valid & ~is_emptyBlock_exist_w) )
+
   missUnit.io.rsp.ready := true.B
 
   for ( j <- 0 until bk ) yield {
@@ -286,7 +260,13 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     cache_dat.dat_info_wstrb(j) := "hFFFFFFFF".U
   }
 
-
+  when( missUnit.io.rsp.fire ) {
+    assert( is_emptyBlock_exist_w )
+    is_valid(cl_sel_w)(cb_em_w) := true.B
+  }
+  when( writeBackUnit.io.req.fire & is_valid(cl_sel_r)(cb_sel) === true.B) {
+    is_valid(cl_sel_r)(cb_sel) := false.B
+  }
 
 }
 
