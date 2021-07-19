@@ -32,8 +32,8 @@ case object CacheParamsKey extends Field[CacheSetting]
 
 case class CacheSetting(
   icacheParameters: L1CacheParameters = IcacheParameters(
-    dw = 64,
-    bk = 4,
+    dw = 128,
+    bk = 2,
     cb = 4,
     cl = 4
   ),

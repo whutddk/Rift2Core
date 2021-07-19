@@ -78,7 +78,10 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val probeUnit = Module(new ProbeUnit(edge = edge))
   val writeBackUnit = Module(new WriteBackUnit(edge = edge))
 
-  ibuf.io.reset := reset.asBool | io.flush
+  val icache_state_dnxt = Wire(UInt(4.W))
+  val icache_state_qout = RegNext( icache_state_dnxt, 0.U )
+
+  ibuf.io.flush := io.flush
 
   io.pc_if.ready := ibuf.io.enq(0).fire
   io.if_iq <> ibuf.io.deq
@@ -103,8 +106,8 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   val cl_sel_r = 
     Mux1H(Seq(
-      (icache_state_dnxt === 1.U & icache_state_qout === 1.U) -> probeUnit.io.req.bits.paddr(addr_lsb+line_w-1, addr_lsb),
-      (icache_state_dnxt === 2.U & icache_state_qout === 2.U) -> io.pc_if.bits(addr_lsb+line_w-1, addr_lsb),
+      (icache_state_qout === 1.U) -> probeUnit.io.req.bits.paddr(addr_lsb+line_w-1, addr_lsb),
+      (icache_state_qout === 2.U) -> io.pc_if.bits(addr_lsb+line_w-1, addr_lsb),
     ))
 
   val cl_sel_w = missUnit.io.rsp.bits.paddr(addr_lsb+line_w-1, addr_lsb)
@@ -112,13 +115,12 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   val tag_sel_r =
       Mux1H(Seq(
-      (icache_state_dnxt === 1.U & icache_state_qout === 1.U) -> probeUnit.io.req.bits.paddr(31,32-tag_w),
-      (icache_state_dnxt === 2.U & icache_state_qout === 2.U) -> io.pc_if.bits(31,32-tag_w),
+      (icache_state_qout === 1.U) -> probeUnit.io.req.bits.paddr(31,32-tag_w),
+      (icache_state_qout === 2.U) -> io.pc_if.bits(31,32-tag_w),
     ))
 
 
-  val icache_state_dnxt = Wire(UInt(4.W))
-  val icache_state_qout = RegNext( icache_state_dnxt, 0.U )
+
 
 
    /** one hot code indicated which blcok is hit */
@@ -172,26 +174,26 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
       (icache_state_qout === 0.U) -> 
         MuxCase( 0.U, Array(
           probeUnit.io.req.valid -> 1.U,
-          io.pc_if.valid & ~flush -> 2.U
+          (io.pc_if.valid & ~io.flush) -> 2.U
         )),
       (icache_state_qout === 1.U) -> 0.U,
       (icache_state_qout === 2.U) ->
         Mux(
-          (is_hit & ibuf.io.enq(3).ready) |
+          (is_hit & ibuf.io.enq(7).ready) |
           (~is_hit & ~is_hazard & writeBackUnit.io.req.ready), //when miss, we may evict a block which may ruobt by grant
           0.U, 2.U
         )
     ))
 
+    probeUnit.io.req.ready := true.B
 
-
-  cache_tag.addr_sel_r := 
+  cache_tag.tag_addr_r := 
     Mux1H(Seq(
       (icache_state_dnxt === 1.U) -> probeUnit.io.req.bits.paddr,
       (icache_state_dnxt === 2.U) -> io.pc_if.bits,
     ))
     
-  cache_dat.addr_sel_r := 
+  cache_dat.dat_addr_r := 
     Mux1H(Seq(
       (icache_state_dnxt === 1.U) -> probeUnit.io.req.bits.paddr,
       (icache_state_dnxt === 2.U) -> io.pc_if.bits,
@@ -216,12 +218,21 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   ibuf.io.enq(1).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(31,16)
   ibuf.io.enq(2).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(47,32)
   ibuf.io.enq(3).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(63,48)
+  ibuf.io.enq(4).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(79,64)
+  ibuf.io.enq(5).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(95,80)
+  ibuf.io.enq(6).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(111,96)
+  ibuf.io.enq(7).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(127,112)
 
   ibuf.io.enq(0).valid := icache_state_qout === 2.U & is_hit
   ibuf.io.enq(1).valid := icache_state_qout === 2.U & is_hit
   ibuf.io.enq(2).valid := icache_state_qout === 2.U & is_hit
   ibuf.io.enq(3).valid := icache_state_qout === 2.U & is_hit
-  
+  ibuf.io.enq(4).valid := icache_state_qout === 2.U & is_hit
+  ibuf.io.enq(5).valid := icache_state_qout === 2.U & is_hit
+  ibuf.io.enq(6).valid := icache_state_qout === 2.U & is_hit
+  ibuf.io.enq(7).valid := icache_state_qout === 2.U & is_hit 
+
+
   missUnit.io.req.bits.paddr := io.pc_if.bits
   missUnit.io.req.valid      := icache_state_qout === 2.U & ~is_hit & ~is_hazard & ( ~is_valid(cl_sel_r)(cb_sel) | writeBackUnit.io.req.ready)
   writeBackUnit.io.req.bits.addr :=
@@ -240,8 +251,8 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     (icache_state_qout === 1.U)
 
   
-  cache_tag.addr_sel_w := missUnit.io.rsp.bits.paddr
-  cache_dat.addr_sel_w := missUnit.io.rsp.bits.paddr
+  cache_tag.tag_addr_w := missUnit.io.rsp.bits.paddr
+  cache_dat.dat_addr_w := missUnit.io.rsp.bits.paddr
 
   for ( i <- 0 until cb ) yield {
     cache_tag.tag_en_w(i) := Mux( cb_em_w === i.U, missUnit.io.rsp.valid, false.B )   
@@ -251,8 +262,8 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   missUnit.io.rsp.ready := true.B
 
-  for ( j <- 0 until bk ) yield {
-    cache_dat.dat_en_w(cb_em_w)(j) := missUnit.io.rsp.valid
+  for ( i <- 0 until cb; j <- 0 until bk ) yield {
+    cache_dat.dat_en_w(i)(j) := Mux(i.U === cb_em_w, missUnit.io.rsp.valid, false.B)
   }
 
   for ( j <- 0 until bk ) yield {
@@ -267,6 +278,9 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   when( writeBackUnit.io.req.fire & is_valid(cl_sel_r)(cb_sel) === true.B) {
     is_valid(cl_sel_r)(cb_sel) := false.B
   }
+
+  missUnit.io.miss_ban := writeBackUnit.io.miss_ban
+  writeBackUnit.io.release_ban := missUnit.io.release_ban
 
 }
 

@@ -95,8 +95,8 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val i_regfiles = Module(new Regfiles)
 
 
-  if_stage.io.il1_chn_a <> io.il1_chn_a
-  if_stage.io.il1_chn_d <> io.il1_chn_d
+  // if_stage.io.il1_chn_a <> io.il1_chn_a
+  // if_stage.io.il1_chn_d <> io.il1_chn_d
 
   pc_stage.io.bd_pc <> bd_stage.io.bd_pc
   
@@ -129,7 +129,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   exe_stage.io.mul_exe_iwb <>	iwb_stage.io.exe_iwb(4)
 
 
-  if_stage.io.is_il1_fence_req := exe_stage.io.icache_fence_req
+  // if_stage.io.is_il1_fence_req := exe_stage.io.icache_fence_req
 
   
 
