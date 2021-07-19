@@ -19,7 +19,7 @@ class Info_miss_rsp extends Bundle {
 
 
 /** The Queue of cache to request acquire and waiting for grant and ack grant */
-class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends L1CacheModule {
+class MissUnit(edge: TLEdgeOut, entry: Int = 8, setting: Int)(implicit p: Parameters) extends L1CacheModule {
   val io = IO(new Bundle{
     val req = Flipped(DecoupledIO(new Info_miss_req))
     val rsp = DecoupledIO(new Info_miss_rsp)
@@ -87,13 +87,27 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8)(implicit p: Parameters) extends 
     assert(mshr_state_qout === 1.U)
   }
 
-  io.cache_acquire.bits := 
+  io.cache_acquire.bits := {
+    def permit: UInt = {
+      var res = 0.U
+      if ( setting == 0 ) {
+        res = TLPermissions.NtoB
+      } else if ( setting == 2 ) {
+        res = TLPermissions.NtoT
+      }
+      res
+    }
+
+
     edge.AcquireBlock(
       fromSource = 0.U,
       toAddress = miss_queue(acquire_sel).paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
-      growPermissions = TLPermissions.NtoT
+      growPermissions = permit
+
     )._2
+  }
+
   
 
   cache_grant_ready := (mshr_state_qout === 2.U)

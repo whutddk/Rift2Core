@@ -74,9 +74,9 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
   val cache_tag = new Cache_tag( dw, aw, bk, cb, cl ) 
-  val missUnit = Module(new MissUnit(edge = edge, entry = 8))
+  val missUnit = Module(new MissUnit(edge = edge, entry = 8, setting = 0))
   val probeUnit = Module(new ProbeUnit(edge = edge))
-  val writeBackUnit = Module(new WriteBackUnit(edge = edge))
+  val writeBackUnit = Module(new WriteBackUnit(edge = edge, setting = 0))
 
   val icache_state_dnxt = Wire(UInt(4.W))
   val icache_state_qout = RegNext( icache_state_dnxt, 0.U )

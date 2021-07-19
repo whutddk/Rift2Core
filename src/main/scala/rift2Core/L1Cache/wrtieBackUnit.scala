@@ -22,7 +22,7 @@ class Info_writeBack_req extends Bundle {
 /**
   * a writeBack Unit accept data and paddr from l1cache and write it back to l2cache
   */
-class WriteBackUnit(edge: TLEdgeOut) extends Module {
+class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
   val io = IO(new Bundle {
     val req = Flipped(new DecoupledIO(new Info_writeBack_req))
     val cache_release = new DecoupledIO(new TLBundleC(edge.bundle))
@@ -75,18 +75,28 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
 
 
   io.cache_release.bits := {
+    def permit: UInt = {
+      var res = 0.U
+      if ( setting == 0 ) {
+        res = TLPermissions.BtoN
+      } else if ( setting == 2 ) {
+        res = TLPermissions.TtoN
+      }
+      res
+    }
+
     val info_probe = edge.ProbeAck(
-      fromSource = 66.U,
+      fromSource = 0.U,
       toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
-      reportPermissions = TLPermissions.TtoN
+      reportPermissions = permit,    
     )
 
     val info_probeData = edge.ProbeAck(
-      fromSource = 66.U,
+      fromSource = 0.U,
       toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
-      reportPermissions = TLPermissions.TtoN,
+      reportPermissions = permit,
       data = Mux(beatCnt, wb_fifo.io.deq.bits.data(255,128), wb_fifo.io.deq.bits.data(127,0))
     )
 
@@ -94,14 +104,14 @@ class WriteBackUnit(edge: TLEdgeOut) extends Module {
       fromSource = 0.U,
       toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
-      shrinkPermissions = TLPermissions.TtoN
+      shrinkPermissions = permit
     )._2
 
     val info_releaseData = edge.Release(
       fromSource = 0.U,
       toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
-      shrinkPermissions = TLPermissions.TtoN,
+      shrinkPermissions = permit,
       data = Mux(beatCnt, wb_fifo.io.deq.bits.data(255,128), wb_fifo.io.deq.bits.data(127,0))
     )._2
 
