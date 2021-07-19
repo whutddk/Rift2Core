@@ -57,7 +57,11 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
       control = None
     ))
 
-
+  val sifiveCache2 = LazyModule(new InclusiveCache(
+      cache = CacheParameters( level = 2, ways = 4, sets = 64, blockBytes = 256/8, beatBytes = 128/8 ),
+      micro = InclusiveCacheMicroParameters( writeBytes = 128/8, memCycles = 40, portFactor = 4),
+      control = None
+    ))
 
 
   val memRange = AddressSet(0x00000000L, 0xffffffffL).subtract(AddressSet(0x0L, 0x7fffffffL))
@@ -100,19 +104,25 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     AXI4IdIndexer(4) :=
     AXI4Deinterleaver(256/8) :=
     TLToAXI4() :=
-    TLWidthWidget(128 / 8) :=
+    TLWidthWidget(128 / 8) := mem_xbar
+
     mem_xbar :=* 
     TLBuffer() :=* 
-    tlcork := 
+    TLCacheCork() := 
     sifiveCache.node :=
     TLBuffer() := 
-    l1_xbar
-
-    l1_xbar :=
+    // l1_xbar
+    TLXbar() :=
     TLBuffer() := 
     i_rift2Core.icacheClientNode
 
-    l1_xbar :=
+    mem_xbar :=* 
+    TLBuffer() :=* 
+    TLCacheCork() := 
+    sifiveCache2.node :=
+    TLBuffer() := 
+    // l1_xbar
+    TLXbar() :=
     TLBuffer() := 
     i_rift2Core.dcacheClientNode
 
