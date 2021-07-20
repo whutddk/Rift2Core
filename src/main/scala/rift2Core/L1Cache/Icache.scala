@@ -166,7 +166,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     ))
   )
 
-  val is_hazard = missUnit.io.rsp.valid & ( cl_sel_r === cl_sel_w )
+  // val is_hazard = missUnit.io.rsp.valid & ( cl_sel_r === cl_sel_w )
 
 
   icache_state_dnxt := 
@@ -180,7 +180,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
       (icache_state_qout === 2.U) ->
         Mux(
           (is_hit & ibuf.io.enq(7).ready) |
-          (~is_hit & ~is_hazard & writeBackUnit.io.req.ready), //when miss, we may evict a block which may ruobt by grant
+          (~is_hit & writeBackUnit.io.req.ready), //when miss, we may evict a block which may ruobt by grant
           0.U, 2.U
         )
     ))
@@ -263,7 +263,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
 
   missUnit.io.req.bits.paddr := io.pc_if.bits & ("hffffffff".U << addr_lsb.U)
-  missUnit.io.req.valid      := icache_state_qout === 2.U & ~is_hit & ~is_hazard & ( ~is_valid(cl_sel_r)(cb_sel) | writeBackUnit.io.req.ready)
+  missUnit.io.req.valid      := icache_state_qout === 2.U & ~is_hit & ( ~is_valid(cl_sel_r)(cb_sel) | writeBackUnit.io.req.ready)
   writeBackUnit.io.req.bits.addr :=
     Mux1H(Seq(
       (icache_state_qout === 1.U) -> (probeUnit.io.req.bits.paddr & ("hffffffff".U << addr_lsb.U)),
@@ -276,7 +276,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   writeBackUnit.io.req.bits.is_release := icache_state_qout === 2.U
   writeBackUnit.io.req.bits.is_releaseData := false.B
   writeBackUnit.io.req.valid := 
-    (icache_state_qout === 2.U & ~is_hit & ~is_hazard & is_valid(cl_sel_r)(cb_sel)) |
+    (icache_state_qout === 2.U & ~is_hit & is_valid(cl_sel_r)(cb_sel)) |
     (icache_state_qout === 1.U)
 
   
