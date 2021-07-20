@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-07-19 19:54:06
+* @Last Modified time: 2021-07-20 11:20:57
 */
 
 
@@ -49,7 +49,7 @@ module rift2chip_tb (
 	wire [1:0]   io_mem_chn_ar_bits_burst;
 	wire         io_mem_chn_r_ready;
 	wire         io_mem_chn_r_valid;
-	wire [3:0]   io_mem_chn_r_bits_id;
+
 	wire [127:0] io_mem_chn_r_bits_data;
 	wire [1:0]   io_mem_chn_r_bits_rsp;
 	wire         io_mem_chn_r_bits_last;
@@ -114,6 +114,8 @@ module rift2chip_tb (
 	wire [1:0]   io_sys_chn_b_bits_rsp;
 	wire         io_sys_chn_b_bits_user;
 
+wire [3:0] io_mem_chn_ar_bits_id;
+wire [3:0] io_mem_chn_r_bits_id;
 wire [3:0] io_mem_chn_aw_bits_id;
 wire [3:0] io_mem_chn_b_bits_id;
 
@@ -437,8 +439,8 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	// $readmemh("./ci/rv64ua-p-amoadd_d.verilog", mem);
-	$readmemh(testName, mem);
+	$readmemh("./ci/rv64ui-p-simple.verilog", mem);
+	// $readmemh(testName, mem);
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
 		for ( by = 0; by < 16; by = by + 1 ) begin
