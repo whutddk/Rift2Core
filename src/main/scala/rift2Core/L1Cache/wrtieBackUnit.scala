@@ -124,7 +124,7 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
     ))    
   }
 
-  when( io.cache_grant.valid ) {
+  when( io.cache_grant.valid & ~io.cache_grant.ready ) {
     cache_grant_ready := true.B
     assert( wb_state_qout === 2.U )
   } .elsewhen( io.cache_grant.ready ) {
