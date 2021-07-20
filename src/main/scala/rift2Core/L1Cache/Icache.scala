@@ -212,33 +212,62 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   }
 
 
+  // align_instr := Mux1H(Seq(
+  //   (pc(3,1) === 0.U) -> instr(127,0),
+  //   (pc(3,1) === 1.U) -> instr(127,16),
+  //   (pc(3,1) === 2.U) -> instr(127,32),
+  //   (pc(3,1) === 3.U) -> instr(127,48),
+  //   (pc(3,1) === 4.U) -> instr(127,64),
+  //   (pc(3,1) === 5.U) -> instr(127,80),
+  //   (pc(3,1) === 6.U) -> instr(127,96),
+  //   (pc(3,1) === 7.U) -> instr(127,112),
+  // ))
+
+  // align_mask := Mux1H(Seq(
+  //   (pc(3,1) === 0.U) -> Fill(8,1.U),
+  //   (pc(3,1) === 1.U) -> Fill(7,1.U),
+  //   (pc(3,1) === 2.U) -> Fill(6,1.U),
+  //   (pc(3,1) === 3.U) -> Fill(5,1.U),
+  //   (pc(3,1) === 4.U) -> Fill(4,1.U),
+  //   (pc(3,1) === 5.U) -> Fill(3,1.U),
+  //   (pc(3,1) === 6.U) -> Fill(2,1.U),
+  //   (pc(3,1) === 7.U) -> Fill(1,1.U),
+  // ))
+
+  val reAlign_instr = {
+    val res = Wire(UInt(128.W))
+    val shift = Wire(UInt(7.W))
+    shift := Cat(io.pc_if.bits(3,0), 0.U(3.W))
+    res := cache_dat.dat_info_r(cb_sel)(bk_sel_r) >> shift
+
+    res
+  }
+
+  ibuf.io.enq(0).bits := reAlign_instr >> 0.U
+  ibuf.io.enq(1).bits := reAlign_instr >> 16.U
+  ibuf.io.enq(2).bits := reAlign_instr >> 32.U
+  ibuf.io.enq(3).bits := reAlign_instr >> 48.U
+  ibuf.io.enq(4).bits := reAlign_instr >> 64.U
+  ibuf.io.enq(5).bits := reAlign_instr >> 80.U
+  ibuf.io.enq(6).bits := reAlign_instr >> 96.U
+  ibuf.io.enq(7).bits := reAlign_instr >> 112.U
+
+  ibuf.io.enq(0).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 7.U )
+  ibuf.io.enq(1).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 6.U )
+  ibuf.io.enq(2).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 5.U )
+  ibuf.io.enq(3).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 4.U )
+  ibuf.io.enq(4).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 3.U )
+  ibuf.io.enq(5).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 2.U )
+  ibuf.io.enq(6).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 1.U )
+  ibuf.io.enq(7).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) === 0.U )
 
 
-  ibuf.io.enq(0).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(15,0)
-  ibuf.io.enq(1).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(31,16)
-  ibuf.io.enq(2).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(47,32)
-  ibuf.io.enq(3).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(63,48)
-  ibuf.io.enq(4).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(79,64)
-  ibuf.io.enq(5).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(95,80)
-  ibuf.io.enq(6).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(111,96)
-  ibuf.io.enq(7).bits := cache_dat.dat_info_r(cb_sel)(bk_sel_r)(127,112)
-
-  ibuf.io.enq(0).valid := icache_state_qout === 2.U & is_hit
-  ibuf.io.enq(1).valid := icache_state_qout === 2.U & is_hit
-  ibuf.io.enq(2).valid := icache_state_qout === 2.U & is_hit
-  ibuf.io.enq(3).valid := icache_state_qout === 2.U & is_hit
-  ibuf.io.enq(4).valid := icache_state_qout === 2.U & is_hit
-  ibuf.io.enq(5).valid := icache_state_qout === 2.U & is_hit
-  ibuf.io.enq(6).valid := icache_state_qout === 2.U & is_hit
-  ibuf.io.enq(7).valid := icache_state_qout === 2.U & is_hit 
-
-
-  missUnit.io.req.bits.paddr := io.pc_if.bits
+  missUnit.io.req.bits.paddr := io.pc_if.bits & ("hffffffff".U << addr_lsb.U)
   missUnit.io.req.valid      := icache_state_qout === 2.U & ~is_hit & ~is_hazard & ( ~is_valid(cl_sel_r)(cb_sel) | writeBackUnit.io.req.ready)
   writeBackUnit.io.req.bits.addr :=
     Mux1H(Seq(
-      (icache_state_qout === 1.U) -> probeUnit.io.req.bits.paddr,
-      (icache_state_qout === 2.U) -> io.pc_if.bits,
+      (icache_state_qout === 1.U) -> (probeUnit.io.req.bits.paddr & ("hffffffff".U << addr_lsb.U)),
+      (icache_state_qout === 2.U) -> (io.pc_if.bits & ("hffffffff".U << addr_lsb.U)),
     ))
 
   writeBackUnit.io.req.bits.data := DontCare
