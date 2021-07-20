@@ -104,13 +104,12 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     ))
 
 
-  val cl_sel_r = 
+  val cl_sel = 
     Mux1H(Seq(
       (icache_state_qout === 1.U) -> probeUnit.io.req.bits.paddr(addr_lsb+line_w-1, addr_lsb),
       (icache_state_qout === 2.U) -> io.pc_if.bits(addr_lsb+line_w-1, addr_lsb),
+      (icache_state_qout === 3.U) -> missUnit.io.rsp.bits.paddr(addr_lsb+line_w-1, addr_lsb)
     ))
-
-  val cl_sel_w = missUnit.io.rsp.bits.paddr(addr_lsb+line_w-1, addr_lsb)
     
 
   val tag_sel_r =
@@ -138,31 +137,30 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   is_hit_oh := {
     val res = 
       for( i <- 0 until cb ) yield {
-        (cache_tag.tag_info_r(i) === tag_sel_r) & is_valid(cl_sel_r)(i)        
+        (cache_tag.tag_info_r(i) === tag_sel_r) & is_valid(cl_sel)(i)        
       }
     assert(PopCount(res) <= 1.U)
     VecInit(res)
   }
 
   
-  val is_emptyBlock_exist_r = is_valid(cl_sel_r).contains(false.B)
-  val is_emptyBlock_exist_w = is_valid(cl_sel_w).contains(false.B)
+  val is_emptyBlock_exist_r = is_valid(cl_sel).contains(false.B)
 
-  val cb_em_r = is_valid(cl_sel_r).indexWhere( (x:Bool) => (x === false.B) )
-  val cb_em_w = is_valid(cl_sel_w).indexWhere( (x:Bool) => (x === false.B) )
+  val cb_em_r = is_valid(cl_sel).indexWhere( (x:Bool) => (x === false.B) )
+  // val cb_em_w = is_valid(cl_sel_w).indexWhere( (x:Bool) => (x === false.B) )
   
   /** when no block is hit or a new grant req comes, we should 1) find out an empty block 2) evict a valid block */
   val rpl_sel = {
     val res = Wire(UInt(cb_w.W))
-    res := Mux( is_emptyBlock_exist_r, cb_em_r, LFSR(16) )
+    res := Mux( is_emptyBlock_exist_r, cb_em_r, LFSR(16,icache_state_qout =/= 3.U) )
     res
   }
   
   val cb_sel = WireDefault(
     Mux1H(Seq(
-      // (icache_state_qout === 0.U) -> rpl_sel, //for grant
       (icache_state_qout === 1.U) -> hit_sel, //for probe
       (icache_state_qout === 2.U) -> Mux( is_hit, hit_sel, rpl_sel ), // for fetch
+      (icache_state_qout === 3.U) -> rpl_sel, // for grant
     ))
   )
 
@@ -173,15 +171,17 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     Mux1H(Seq(
       (icache_state_qout === 0.U) -> 
         MuxCase( 0.U, Array(
+          missUnit.io.rsp.valid -> 3.U,
           probeUnit.io.req.valid -> 1.U,
           (io.pc_if.valid & ~io.flush) -> 2.U
         )),
+      (icache_state_qout === 3.U) -> Mux(writeBackUnit.io.req.ready, 0.U, 3.U),
       (icache_state_qout === 1.U) -> 0.U,
       (icache_state_qout === 2.U) ->
         Mux(
           (is_hit & ibuf.io.enq(7).ready) |
-          (~is_hit & writeBackUnit.io.req.ready) |
-          io.flush, //when miss, we may evict a block which may ruobt by grant
+          (~is_hit) |
+          io.flush, 
           0.U, 2.U
         )
     ))
@@ -190,15 +190,12 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   cache_tag.tag_addr_r := 
     Mux1H(Seq(
+      (icache_state_dnxt === 3.U) -> missUnit.io.rsp.bits.paddr,
       (icache_state_dnxt === 1.U) -> probeUnit.io.req.bits.paddr,
       (icache_state_dnxt === 2.U) -> io.pc_if.bits,
     ))
     
-  cache_dat.dat_addr_r := 
-    Mux1H(Seq(
-      (icache_state_dnxt === 1.U) -> probeUnit.io.req.bits.paddr,
-      (icache_state_dnxt === 2.U) -> io.pc_if.bits,
-    ))
+  cache_dat.dat_addr_r := io.pc_if.bits
 
 
   for ( i <- 0 until cb ) yield {
@@ -212,28 +209,6 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
       j.U === bk_sel_r
   }
 
-
-  // align_instr := Mux1H(Seq(
-  //   (pc(3,1) === 0.U) -> instr(127,0),
-  //   (pc(3,1) === 1.U) -> instr(127,16),
-  //   (pc(3,1) === 2.U) -> instr(127,32),
-  //   (pc(3,1) === 3.U) -> instr(127,48),
-  //   (pc(3,1) === 4.U) -> instr(127,64),
-  //   (pc(3,1) === 5.U) -> instr(127,80),
-  //   (pc(3,1) === 6.U) -> instr(127,96),
-  //   (pc(3,1) === 7.U) -> instr(127,112),
-  // ))
-
-  // align_mask := Mux1H(Seq(
-  //   (pc(3,1) === 0.U) -> Fill(8,1.U),
-  //   (pc(3,1) === 1.U) -> Fill(7,1.U),
-  //   (pc(3,1) === 2.U) -> Fill(6,1.U),
-  //   (pc(3,1) === 3.U) -> Fill(5,1.U),
-  //   (pc(3,1) === 4.U) -> Fill(4,1.U),
-  //   (pc(3,1) === 5.U) -> Fill(3,1.U),
-  //   (pc(3,1) === 6.U) -> Fill(2,1.U),
-  //   (pc(3,1) === 7.U) -> Fill(1,1.U),
-  // ))
 
   val reAlign_instr = {
     val res = Wire(UInt(128.W))
@@ -264,20 +239,22 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
 
   missUnit.io.req.bits.paddr := io.pc_if.bits & ("hffffffff".U << addr_lsb.U)
-  missUnit.io.req.valid      := icache_state_qout === 2.U & ~is_hit & ( ~is_valid(cl_sel_r)(cb_sel) | writeBackUnit.io.req.ready)
+  missUnit.io.req.valid      := icache_state_qout === 2.U & ~is_hit
+  
   writeBackUnit.io.req.bits.addr :=
     Mux1H(Seq(
       (icache_state_qout === 1.U) -> (probeUnit.io.req.bits.paddr & ("hffffffff".U << addr_lsb.U)),
-      (icache_state_qout === 2.U) -> (io.pc_if.bits & ("hffffffff".U << addr_lsb.U)),
+      (icache_state_qout === 3.U) -> ( missUnit.io.rsp.bits.paddr & ("hffffffff".U << addr_lsb.U)),
     ))
 
   writeBackUnit.io.req.bits.data := DontCare
   writeBackUnit.io.req.bits.is_probe := icache_state_qout === 1.U
   writeBackUnit.io.req.bits.is_probeData := false.B
-  writeBackUnit.io.req.bits.is_release := icache_state_qout === 2.U
+  writeBackUnit.io.req.bits.is_release := icache_state_qout === 3.U
   writeBackUnit.io.req.bits.is_releaseData := false.B
+
   writeBackUnit.io.req.valid := 
-    (icache_state_qout === 2.U & ~is_hit & is_valid(cl_sel_r)(cb_sel)) |
+    (icache_state_qout === 3.U & ~is_emptyBlock_exist_r) |
     (icache_state_qout === 1.U)
 
   
@@ -285,15 +262,17 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   cache_dat.dat_addr_w := missUnit.io.rsp.bits.paddr
 
   for ( i <- 0 until cb ) yield {
-    cache_tag.tag_en_w(i) := Mux( cb_em_w === i.U, missUnit.io.rsp.valid, false.B )   
+    cache_tag.tag_en_w(i) := 
+      (icache_state_qout === 3.U) & (cb_sel === i.U)  
   }
 
 
-
-  missUnit.io.rsp.ready := true.B
+  missUnit.io.rsp.ready :=
+    icache_state_qout === 3.U & icache_state_dnxt === 0.U
 
   for ( i <- 0 until cb; j <- 0 until bk ) yield {
-    cache_dat.dat_en_w(i)(j) := Mux(i.U === cb_em_w, missUnit.io.rsp.valid, false.B)
+    cache_dat.dat_en_w(i)(j) :=
+      (icache_state_qout === 3.U) & (cb_sel === i.U)
   }
 
   for ( j <- 0 until bk ) yield {
@@ -301,12 +280,11 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     cache_dat.dat_info_wstrb(j) := "hFFFFFFFF".U
   }
 
-  when( missUnit.io.rsp.fire ) {
-    assert( is_emptyBlock_exist_w )
-    is_valid(cl_sel_w)(cb_em_w) := true.B
+  when( icache_state_qout === 3.U & icache_state_dnxt === 0.U ) {
+    is_valid(cl_sel)(cb_sel) := true.B
   }
-  when( writeBackUnit.io.req.fire & is_valid(cl_sel_r)(cb_sel) === true.B) {
-    is_valid(cl_sel_r)(cb_sel) := false.B
+  when( icache_state_qout === 1.U & icache_state_dnxt === 0.U ) {
+    is_valid(cl_sel)(cb_sel) := false.B
   }
 
   missUnit.io.miss_ban := writeBackUnit.io.miss_ban
