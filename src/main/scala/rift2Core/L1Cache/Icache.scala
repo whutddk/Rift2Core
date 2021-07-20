@@ -99,8 +99,8 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   val bk_sel_r = 
     Mux1H(Seq(
-      (icache_state_dnxt === 1.U & icache_state_qout === 1.U) -> probeUnit.io.req.bits.paddr(addr_lsb-1, addr_lsb-log2Ceil(bk)),
-      (icache_state_dnxt === 2.U & icache_state_qout === 2.U) -> io.pc_if.bits(addr_lsb-1, addr_lsb-log2Ceil(bk)),
+      (icache_state_dnxt === 1.U | icache_state_qout === 1.U) -> probeUnit.io.req.bits.paddr(addr_lsb-1, addr_lsb-log2Ceil(bk)),
+      (icache_state_dnxt === 2.U | icache_state_qout === 2.U) -> io.pc_if.bits(addr_lsb-1, addr_lsb-log2Ceil(bk)),
     ))
 
 
