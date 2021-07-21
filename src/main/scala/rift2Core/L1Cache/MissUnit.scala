@@ -52,7 +52,11 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8, setting: Int)(implicit p: Parame
   val (_, _, is_trans_done, transCnt) = edge.count(io.cache_grant)
 
   /** when the bus is free, a valid paddr will be selected to emit */
-  val acquire_sel = miss_valid.indexWhere( (x: Bool) => (x === true.B) )
+  val acquire_sel = {
+    val sel = miss_valid.indexWhere( (x: Bool) => (x === true.B) )
+    Mux( mshr_state_qout === 0.U, sel, RegEnable(sel, mshr_state_qout === 0.U & mshr_state_dnxt === 1.U) )
+  }
+
 
   /** a register of io.cache_acquire.valid */
   val cache_acquire_vaild  = RegInit(false.B)
