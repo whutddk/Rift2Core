@@ -267,6 +267,29 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   }
 
 
+  // for ( i <- 0 until cb; k <- 0 until cl ) yield {
+  //   assert( 
+  //     ~(
+  //       cache_tag.tag_ram(i).read(k)
+  //     )
+
+  //    )
+  // }
+  assert( {
+    val chk_tag = {
+      for ( i <- 0 until cb ) yield {
+        cache_tag.tag_ram(i).read(cl_sel) === missUnit.io.rsp.bits.paddr(31,32-tag_w)
+      }
+    }
+
+    val chk_all = VecInit(chk_tag.zip(is_valid(cl_sel)).map{case(x,y) => x & y})
+
+    ~( cache_tag.tag_en_w.contains(true.B) & chk_all.contains(true.B) )
+  }
+  )
+
+
+
   missUnit.io.rsp.ready :=
     icache_state_qout === 3.U & icache_state_dnxt === 0.U
 
