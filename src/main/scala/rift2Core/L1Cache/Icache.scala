@@ -228,14 +228,14 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   ibuf.io.enq(6).bits := reAlign_instr >> 96.U
   ibuf.io.enq(7).bits := reAlign_instr >> 112.U
 
-  ibuf.io.enq(0).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 7.U )
-  ibuf.io.enq(1).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 6.U )
-  ibuf.io.enq(2).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 5.U )
-  ibuf.io.enq(3).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 4.U )
-  ibuf.io.enq(4).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 3.U )
-  ibuf.io.enq(5).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 2.U )
-  ibuf.io.enq(6).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) <= 1.U )
-  ibuf.io.enq(7).valid := icache_state_qout === 2.U & is_hit & ( io.pc_if.bits(3,1) === 0.U )
+  ibuf.io.enq(0).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 7.U )
+  ibuf.io.enq(1).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 6.U )
+  ibuf.io.enq(2).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 5.U )
+  ibuf.io.enq(3).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 4.U )
+  ibuf.io.enq(4).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 3.U )
+  ibuf.io.enq(5).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 2.U )
+  ibuf.io.enq(6).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 1.U )
+  ibuf.io.enq(7).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) === 0.U )
 
 
   missUnit.io.req.bits.paddr := io.pc_if.bits & ("hffffffff".U << addr_lsb.U)
