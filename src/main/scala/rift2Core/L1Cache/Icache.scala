@@ -239,7 +239,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
 
   missUnit.io.req.bits.paddr := io.pc_if.bits & ("hffffffff".U << addr_lsb.U)
-  missUnit.io.req.valid      := icache_state_qout === 2.U & ~is_hit
+  missUnit.io.req.valid      := icache_state_qout === 2.U & ~is_hit & ~io.flush
   
   writeBackUnit.io.req.bits.addr :=
     Mux1H(Seq(
