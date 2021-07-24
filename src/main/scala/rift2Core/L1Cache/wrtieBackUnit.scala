@@ -44,8 +44,9 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
   wb_fifo.io.enq.valid := io.req.valid & (io.req.bits.is_release | io.req.bits.is_releaseData)
   pb_fifo.io.enq.valid := io.req.valid & (io.req.bits.is_probe | io.req.bits.is_probeData)
 
-  io.req.ready := wb_fifo.io.enq.ready & (io.req.bits.is_release | io.req.bits.is_releaseData)
-  io.req.ready := pb_fifo.io.enq.ready & (io.req.bits.is_probe | io.req.bits.is_probeData)
+  io.req.ready :=
+    (wb_fifo.io.enq.ready & (io.req.bits.is_release | io.req.bits.is_releaseData)) |
+    (pb_fifo.io.enq.ready & (io.req.bits.is_probe | io.req.bits.is_probeData))
 
   fun_arb.io.in(0) <> pb_fifo.io.deq
   fun_arb.io.in(1) <> wb_fifo.io.deq
