@@ -186,7 +186,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
         )
     ))
 
-    probeUnit.io.req.ready := true.B
+    probeUnit.io.req.ready := icache_state_qout === 1.U & icache_state_dnxt === 0.U
 
   cache_tag.tag_addr_r := 
     Mux1H(Seq(
