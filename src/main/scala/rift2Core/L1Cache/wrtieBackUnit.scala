@@ -34,9 +34,22 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
   })
 
   /** a tiny fifo that temporarily store the writeback info from l1cache */
-  val wb_fifo = Module(new Queue(new Info_writeBack_req, 8, false, false))
+  val wb_fifo = Module(new Queue(new Info_writeBack_req, 4, false, false))
+  val pb_fifo = Module(new Queue(new Info_writeBack_req, 4, false, false))
+  val fun_arb = Module(new Arbiter(new Info_writeBack_req, 2))
 
-  io.req <> wb_fifo.io.enq
+  io.req.bits <> wb_fifo.io.enq.bits
+  io.req.bits <> pb_fifo.io.enq.bits
+
+  wb_fifo.io.enq.valid := io.req.valid & (io.req.bits.is_release | io.req.bits.is_releaseData)
+  pb_fifo.io.enq.valid := io.req.valid & (io.req.bits.is_probe | io.req.bits.is_probeData)
+
+  io.req.ready := wb_fifo.io.enq.ready & (io.req.bits.is_release | io.req.bits.is_releaseData)
+  io.req.ready := pb_fifo.io.enq.ready & (io.req.bits.is_probe | io.req.bits.is_probeData)
+
+  fun_arb.io.in(0) <> pb_fifo.io.deq
+  fun_arb.io.in(1) <> wb_fifo.io.deq
+
 
   val wb_state_dnxt = Wire(UInt(2.W))
   val wb_state_qout = RegNext(wb_state_dnxt, 0.U)
@@ -56,10 +69,15 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
 
   wb_state_dnxt :=
     Mux1H(Seq(
-      (wb_state_qout === 0.U) -> Mux(wb_fifo.io.deq.valid & ~io.release_ban, 1.U, 0.U),
+      (wb_state_qout === 0.U) -> Mux(
+        fun_arb.io.out.valid & (
+          (~io.release_ban & ( fun_arb.io.out.bits.is_release | fun_arb.io.out.bits.is_releaseData )) |
+          ( fun_arb.io.out.bits.is_probe | fun_arb.io.out.bits.is_probeData )
+        )
+        , 1.U, 0.U),
       (wb_state_qout === 1.U) ->
         Mux(~is_release_done, 1.U,
-          Mux( wb_fifo.io.deq.bits.is_probeData | wb_fifo.io.deq.bits.is_probe, 0.U, 2.U )),
+          Mux( fun_arb.io.out.bits.is_probeData | fun_arb.io.out.bits.is_probe, 0.U, 2.U )),
       (wb_state_qout === 2.U) -> Mux( io.cache_grant.fire, 0.U, 2.U )
     ))
 
@@ -87,40 +105,40 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
 
     val info_probe = edge.ProbeAck(
       fromSource = 0.U,
-      toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
+      toAddress = fun_arb.io.out.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       reportPermissions = permit,    
     )
 
     val info_probeData = edge.ProbeAck(
       fromSource = 0.U,
-      toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
+      toAddress = fun_arb.io.out.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       reportPermissions = permit,
-      data = Mux(beatCnt, wb_fifo.io.deq.bits.data(255,128), wb_fifo.io.deq.bits.data(127,0))
+      data = Mux(beatCnt, fun_arb.io.out.bits.data(255,128), fun_arb.io.out.bits.data(127,0))
     )
 
     val info_release = edge.Release(
       fromSource = 0.U,
-      toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
+      toAddress = fun_arb.io.out.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = permit
     )._2
 
     val info_releaseData = edge.Release(
       fromSource = 0.U,
-      toAddress = wb_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
+      toAddress = fun_arb.io.out.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = permit,
-      data = Mux(beatCnt, wb_fifo.io.deq.bits.data(255,128), wb_fifo.io.deq.bits.data(127,0))
+      data = Mux(beatCnt, fun_arb.io.out.bits.data(255,128), fun_arb.io.out.bits.data(127,0))
     )._2
 
 
     Mux1H(Seq(
-      wb_fifo.io.deq.bits.is_probe       -> info_probe,
-      wb_fifo.io.deq.bits.is_probeData   -> info_probeData,
-      wb_fifo.io.deq.bits.is_release     -> info_release,
-      wb_fifo.io.deq.bits.is_releaseData -> info_releaseData,
+      fun_arb.io.out.bits.is_probe       -> info_probe,
+      fun_arb.io.out.bits.is_probeData   -> info_probeData,
+      fun_arb.io.out.bits.is_release     -> info_release,
+      fun_arb.io.out.bits.is_releaseData -> info_releaseData,
     ))    
   }
 
@@ -132,7 +150,7 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
     assert( wb_state_qout === 2.U )   
   }
 
-  wb_fifo.io.deq.ready := 
+  fun_arb.io.out.ready := 
     wb_state_qout =/= 0.U & wb_state_dnxt === 0.U
 
   io.miss_ban := wb_state_qout === 1.U | wb_state_qout === 2.U
