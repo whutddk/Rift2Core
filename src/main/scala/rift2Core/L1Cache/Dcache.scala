@@ -328,7 +328,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
   io.writeBackUnit_req.bits.addr := 
     Mux1H(Seq(
-      io.wr_in.bits.op.grant -> Cat(tag_sel, cl_sel, 0.U(addr_lsb.W)),
+      io.wr_in.bits.op.grant -> Cat(io.wr_in.bits.tag(cb_sel), cl_sel, 0.U(addr_lsb.W)),
       io.wr_in.bits.op.probe -> (io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)),
     ))
     

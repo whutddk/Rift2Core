@@ -244,7 +244,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   writeBackUnit.io.req.bits.addr :=
     Mux1H(Seq(
       (icache_state_qout === 1.U) -> ( probeUnit.io.req.bits.paddr & ("hffffffff".U << addr_lsb.U)),
-      (icache_state_qout === 3.U) -> (  Cat(tag_sel_r, cl_sel, 0.U(addr_lsb.W)) ),
+      (icache_state_qout === 3.U) -> (  Cat(  cache_tag.tag_info_r(cb_sel), cl_sel, 0.U(addr_lsb.W)) ),
     ))
 
   writeBackUnit.io.req.bits.data := DontCare
