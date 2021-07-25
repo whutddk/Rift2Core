@@ -144,8 +144,8 @@ class Commit extends Privilege with Superscalar {
 
     val is_fence_i_v =
       VecInit(
-        io.rod_i(0).bits.is_fence_i ,
-        io.rod_i(1).bits.is_fence_i & ~is_1st_solo
+        io.rod_i(0).bits.is_fence_i & is_wb_v(0),
+        io.rod_i(1).bits.is_fence_i & is_wb_v(1) & ~is_1st_solo
       )
 
 
