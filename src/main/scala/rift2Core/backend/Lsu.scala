@@ -105,13 +105,13 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   pending_fifo.io.flush := io.flush
 
   when( io.flush ) { trans_kill := true.B }
-  .elsewhen( lsu_scoreBoard.io.is_empty ) { trans_kill := false.B }
+  .elsewhen( lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty ) { trans_kill := false.B }
 
   when( io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & ~fence_op ) {
     fence_op := true.B
     is_fence_i := io.lsu_iss_exe.bits.fun.fence_i
   }
-  .elsewhen( lsu_scoreBoard.io.is_empty & fence_op ) {
+  .elsewhen( lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty & fence_op ) {
     fence_op := false.B
     is_fence_i := false.B
   }
@@ -130,7 +130,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   su_exe_iwb_fifo.io.enq.bits.res     := 0.U
 
   fe_exe_iwb_fifo.io.enq.valid :=
-    io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & lsu_scoreBoard.io.is_empty
+    io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty
 
   fe_exe_iwb_fifo.io.enq.bits.rd0_phy := io.lsu_iss_exe.bits.param.rd0_phy
   fe_exe_iwb_fifo.io.enq.bits.res     := 0.U
@@ -199,56 +199,6 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
 
 
-
-//    SSSSSSSSSSSSSSS YYYYYYY       YYYYYYY   SSSSSSSSSSSSSSS 
-//  SS:::::::::::::::SY:::::Y       Y:::::Y SS:::::::::::::::S
-// S:::::SSSSSS::::::SY:::::Y       Y:::::YS:::::SSSSSS::::::S
-// S:::::S     SSSSSSSY::::::Y     Y::::::YS:::::S     SSSSSSS
-// S:::::S            YYY:::::Y   Y:::::YYYS:::::S            
-// S:::::S               Y:::::Y Y:::::Y   S:::::S            
-//  S::::SSSS             Y:::::Y:::::Y     S::::SSSS         
-//   SS::::::SSSSS         Y:::::::::Y       SS::::::SSSSS    
-//     SSS::::::::SS        Y:::::::Y          SSS::::::::SS  
-//        SSSSSS::::S        Y:::::Y              SSSSSS::::S 
-//             S:::::S       Y:::::Y                   S:::::S
-//             S:::::S       Y:::::Y                   S:::::S
-// SSSSSSS     S:::::S       Y:::::Y       SSSSSSS     S:::::S
-// S::::::SSSSSS:::::S    YYYY:::::YYYY    S::::::SSSSSS:::::S
-// S:::::::::::::::SS     Y:::::::::::Y    S:::::::::::::::SS 
-//  SSSSSSSSSSSSSSS       YYYYYYYYYYYYY     SSSSSSSSSSSSSSS 
-  
-
-
-
-//mem
-
-
-
-
-
-
-  // dcache.io.missUnit_dcache_grant.bits := tlc_bus.d.bits
-  // dcache.io.missUnit_dcache_grant.valid := tlc_bus.d.valid & ( tlc_bus.d.bits.opcode === TLMessages.Grant | tlc_bus.d.bits.opcode === TLMessages.GrantData )
-
-  // dcache.io.writeBackUnit_dcache_grant.bits := tlc_bus.d.bits
-  // dcache.io.writeBackUnit_dcache_grant.valid := tlc_bus.d.valid & ( tlc_bus.d.bits.opcode === TLMessages.ReleaseAck )
-
-  // tlc_bus.d.ready := 
-  //   Mux1H(Seq(
-  //     ( tlc_bus.d.bits.opcode === TLMessages.Grant || tlc_bus.d.bits.opcode === TLMessages.GrantData ) -> dcache.io.missUnit_dcache_grant.ready,
-  //     ( tlc_bus.d.bits.opcode === TLMessages.ReleaseAck ) -> dcache.io.writeBackUnit_dcache_grant.ready
-  //   ))
-
-  // tlc_bus.a <> dcache.io.missUnit_dcache_acquire
-
-  // dcache.io.probeUnit_dcache_probe.valid := tlc_bus.b.valid
-  // dcache.io.probeUnit_dcache_probe.bits := tlc_bus.b.bits
-  // tlc_bus.b.ready := dcache.io.probeUnit_dcache_probe.ready
-
-
-
-  // tlc_bus.c <> dcache.io.writeBackUnit_dcache_release
-  // tlc_bus.e <> dcache.io.missUnit_dcache_grantAck
 
 
 

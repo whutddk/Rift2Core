@@ -43,6 +43,7 @@ class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheM
     val cmm = Flipped(new DecoupledIO(Bool()))
     val amo = Input(Bool())
     val is_hazard = Output(Bool())
+    val is_empty = Output(Bool())
     val flush = Input(Bool())
   })
 
@@ -57,7 +58,8 @@ class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheM
   val cmm_ptr = RegInit(0.U((cnt_w+1).W))
 
 
-  val empty = deq_ptr === cmm_ptr
+  val is_empty = deq_ptr === enq_ptr
+  io.is_empty := is_empty
   val full = deq_ptr(cnt_w-1,0) === enq_ptr(cnt_w-1,0) & deq_ptr(cnt_w) =/= enq_ptr(cnt_w)
 
   val do_enq = WireDefault(io.enq.fire())
@@ -117,7 +119,7 @@ class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheM
     }
   }
 
-  io.deq.valid := !empty
+  io.deq.valid := deq_ptr =/= cmm_ptr
   io.enq.ready := !full
   io.deq.bits := buf(deq_ptr(cnt_w-1,0))
 
