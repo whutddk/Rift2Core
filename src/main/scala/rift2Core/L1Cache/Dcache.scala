@@ -326,7 +326,13 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
         io.wr_in.bits.op.probe
     )
 
-  io.writeBackUnit_req.bits.addr := io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)
+  io.writeBackUnit_req.bits.addr := 
+    Mux1H(Seq(
+      io.wr_in.bits.op.grant -> Cat(tag_sel, cl_sel, 0.U(addr_lsb.W)),
+      io.wr_in.bits.op.probe -> (io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)),
+    ))
+    
+    
   io.writeBackUnit_req.bits.data := Cat( for( j <- 0 until bk ) yield { io.wr_in.bits.rdata(cb_sel)(bk-1-j) } )
 
   io.writeBackUnit_req.bits.is_releaseData := io.wr_in.bits.op.grant & is_dirty(cl_sel)(cb_sel)
@@ -356,6 +362,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
   io.dcache_pop.bits.chk_idx := io.wr_in.bits.chk_idx
   io.dcache_pop.bits.is_load_amo := io.wr_in.bits.op.is_wb
+
+
 
 
 
