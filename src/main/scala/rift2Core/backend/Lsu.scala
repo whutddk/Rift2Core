@@ -145,10 +145,10 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   pending_fifo.io.enq.bits := io.lsu_iss_exe.bits
 
   io.lsu_iss_exe.ready :=
-    ~trans_kill & ~fence_op & ~is_Fault & (
-      ( io.lsu_iss_exe.bits.fun.is_su  & pending_fifo.io.enq.ready & su_exe_iwb_fifo.io.enq.ready) | //when store, both pending fifo and store wb should ready
-      ( ~pending_fifo.io.is_hazard & io.lsu_iss_exe.bits.fun.is_lu  & scoreBoard_arb.io.in(1).ready) | //when load, scoreBoard should ready
-      ( io.lsu_iss_exe.bits.fun.is_amo & pending_fifo.io.enq.ready) |                                //when amo, the pending fifo should ready
+    ~trans_kill &  ~is_Fault & (
+      ( ~fence_op & io.lsu_iss_exe.bits.fun.is_su  & pending_fifo.io.enq.ready & su_exe_iwb_fifo.io.enq.ready) | //when store, both pending fifo and store wb should ready
+      ( ~fence_op & ~pending_fifo.io.is_hazard & io.lsu_iss_exe.bits.fun.is_lu  & scoreBoard_arb.io.in(1).ready) | //when load, scoreBoard should ready
+      ( ~fence_op & io.lsu_iss_exe.bits.fun.is_amo & pending_fifo.io.enq.ready) |                                //when amo, the pending fifo should ready
       ( io.lsu_iss_exe.bits.fun.is_fence & fe_exe_iwb_fifo.io.enq.fire)                               //when fence, the store wb shoudl ready      
     )
 
