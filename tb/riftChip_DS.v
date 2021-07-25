@@ -49,7 +49,7 @@ module rift2chip_tb (
 	wire [1:0]   io_mem_chn_ar_bits_burst;
 	wire         io_mem_chn_r_ready;
 	wire         io_mem_chn_r_valid;
-	wire         io_mem_chn_r_bits_id;
+
 	wire [127:0] io_mem_chn_r_bits_data;
 	wire [1:0]   io_mem_chn_r_bits_rsp;
 	wire         io_mem_chn_r_bits_last;
@@ -67,6 +67,9 @@ module rift2chip_tb (
 	wire         io_mem_chn_b_ready;
 	wire         io_mem_chn_b_valid;
 	wire [1:0]   io_mem_chn_b_bits_rsp;
+
+
+
 
 	wire         io_sys_chn_ar_ready;
 	wire         io_sys_chn_ar_valid;
@@ -111,54 +114,14 @@ module rift2chip_tb (
 	wire [1:0]   io_sys_chn_b_bits_rsp;
 	wire         io_sys_chn_b_bits_user;
 
-
+wire [3:0] io_mem_chn_ar_bits_id;
+wire [3:0] io_mem_chn_r_bits_id;
+wire [3:0] io_mem_chn_aw_bits_id;
+wire [3:0] io_mem_chn_b_bits_id;
 
 Rift2Chip s_Rift2Chip(
 	.clock(CLK),
 	.reset(~RSTn),
-
-	.io_mem_chn_ar_ready     (io_mem_chn_ar_ready),
-	.io_mem_chn_ar_valid     (io_mem_chn_ar_valid),
-	.io_mem_chn_ar_bits_id   (),
-	.io_mem_chn_ar_bits_addr (io_mem_chn_ar_bits_addr),
-	.io_mem_chn_ar_bits_len  (io_mem_chn_ar_bits_len),
-	.io_mem_chn_ar_bits_size (io_mem_chn_ar_bits_size),
-	.io_mem_chn_ar_bits_burst(io_mem_chn_ar_bits_burst),
-	.io_mem_chn_ar_bits_lock (),
-	.io_mem_chn_ar_bits_cache(),
-	.io_mem_chn_ar_bits_port (),
-	.io_mem_chn_ar_bits_qos  (),
-	.io_mem_chn_ar_bits_user (),
-	.io_mem_chn_r_ready      (io_mem_chn_r_ready),
-	.io_mem_chn_r_valid      (io_mem_chn_r_valid),
-	.io_mem_chn_r_bits_id    (1'b0),
-	.io_mem_chn_r_bits_data  (io_mem_chn_r_bits_data),
-	.io_mem_chn_r_bits_rsp   (io_mem_chn_r_bits_rsp),
-	.io_mem_chn_r_bits_last  (io_mem_chn_r_bits_last),
-	.io_mem_chn_r_bits_user  (1'b0),
-	.io_mem_chn_aw_ready     (io_mem_chn_aw_ready),
-	.io_mem_chn_aw_valid     (io_mem_chn_aw_valid),
-	.io_mem_chn_aw_bits_id   (),
-	.io_mem_chn_aw_bits_addr (io_mem_chn_aw_bits_addr),
-	.io_mem_chn_aw_bits_len  (io_mem_chn_aw_bits_len),
-	.io_mem_chn_aw_bits_size (io_mem_chn_aw_bits_size),
-	.io_mem_chn_aw_bits_burst(io_mem_chn_aw_bits_burst),
-	.io_mem_chn_aw_bits_lock (),
-	.io_mem_chn_aw_bits_cache(),
-	.io_mem_chn_aw_bits_port (),
-	.io_mem_chn_aw_bits_qos  (),
-	.io_mem_chn_aw_bits_user (),
-	.io_mem_chn_w_ready      (io_mem_chn_w_ready),
-	.io_mem_chn_w_valid      (io_mem_chn_w_valid),
-	.io_mem_chn_w_bits_data  (io_mem_chn_w_bits_data),
-	.io_mem_chn_w_bits_strb  (io_mem_chn_w_bits_strb),
-	.io_mem_chn_w_bits_last  (io_mem_chn_w_bits_last),
-	.io_mem_chn_w_bits_user  (),
-	.io_mem_chn_b_ready      (io_mem_chn_b_ready),
-	.io_mem_chn_b_valid      (io_mem_chn_b_valid),
-	.io_mem_chn_b_bits_id    (1'b0),
-	.io_mem_chn_b_bits_rsp   (io_mem_chn_b_bits_rsp),
-	.io_mem_chn_b_bits_user  (1'b0),
 
 	.io_sys_chn_ar_ready     (io_sys_chn_ar_ready),
 	.io_sys_chn_ar_valid     (io_sys_chn_ar_valid),
@@ -203,14 +166,59 @@ Rift2Chip s_Rift2Chip(
 	.io_sys_chn_b_bits_rsp   (io_sys_chn_b_bits_rsp),
 	.io_sys_chn_b_bits_user  (1'b0),
 
+  .memory_0_aw_ready(io_mem_chn_aw_ready),
+  .memory_0_aw_valid(io_mem_chn_aw_valid),
+  .memory_0_aw_bits_id(io_mem_chn_aw_bits_id),
+  .memory_0_aw_bits_addr(io_mem_chn_aw_bits_addr),
+  .memory_0_aw_bits_len(io_mem_chn_aw_bits_len),
+  .memory_0_aw_bits_size(io_mem_chn_aw_bits_size),
+  .memory_0_aw_bits_burst(io_mem_chn_aw_bits_burst),
+  .memory_0_aw_bits_lock(),
+  .memory_0_aw_bits_cache(),
+  .memory_0_aw_bits_prot(),
+  .memory_0_aw_bits_qos(),
+  .memory_0_w_ready(io_mem_chn_w_ready),
+  .memory_0_w_valid(io_mem_chn_w_valid),
+  .memory_0_w_bits_data(io_mem_chn_w_bits_data),
+  .memory_0_w_bits_strb(io_mem_chn_w_bits_strb),
+  .memory_0_w_bits_last(io_mem_chn_w_bits_last),
+  .memory_0_b_ready(io_mem_chn_b_ready),
+  .memory_0_b_valid(io_mem_chn_b_valid),
+  .memory_0_b_bits_id(io_mem_chn_b_bits_id),
+  .memory_0_b_bits_resp(io_mem_chn_b_bits_rsp),
+
+  .memory_0_ar_ready(io_mem_chn_ar_ready),
+  .memory_0_ar_valid(io_mem_chn_ar_valid),
+  .memory_0_ar_bits_id(io_mem_chn_ar_bits_id),
+  .memory_0_ar_bits_addr(io_mem_chn_ar_bits_addr),
+  .memory_0_ar_bits_len(io_mem_chn_ar_bits_len),
+  .memory_0_ar_bits_size(io_mem_chn_ar_bits_size),
+  .memory_0_ar_bits_burst(io_mem_chn_ar_bits_burst),
+  .memory_0_ar_bits_lock(),
+  .memory_0_ar_bits_cache(),
+  .memory_0_ar_bits_prot(),
+  .memory_0_ar_bits_qos(),
+  .memory_0_r_ready(io_mem_chn_r_ready),
+  .memory_0_r_valid(io_mem_chn_r_valid),
+  .memory_0_r_bits_id(io_mem_chn_r_bits_id),
+  .memory_0_r_bits_data(io_mem_chn_r_bits_data),
+  .memory_0_r_bits_resp(io_mem_chn_r_bits_rsp),
+  .memory_0_r_bits_last(io_mem_chn_r_bits_last),
+
+
 	.io_rtc_clock            (rtc_clock)
 );
 
 
 
 
-axi_full_slv_sram # ( .DW(128), .AW(16) ) s_axi_full_slv_sram 
+axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram 
 (
+
+	.MEM_AWID   ({4'b0,io_mem_chn_aw_bits_id}),
+	.MEM_BID    (io_mem_chn_b_bits_id),
+	.MEM_ARID   ({4'b0,io_mem_chn_ar_bits_id}),
+	.MEM_RID    (io_mem_chn_r_bits_id),
 
 	.MEM_AWADDR(io_mem_chn_aw_bits_addr),
 	.MEM_AWLEN(io_mem_chn_aw_bits_len),

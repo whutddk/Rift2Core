@@ -55,8 +55,8 @@ class Cache_op extends Bundle {
 
   def is_atom = fun.is_amo
   def is_access = is_atom | fun.is_lu | fun.is_su | fun.lr | fun.sc
-  def is_tag_r = is_atom | fun.is_lu | fun.is_su | fun.lr | fun.sc
-  def is_dat_r = is_atom | fun.is_lu | probe | fun.lr
+  def is_tag_r = is_atom | fun.is_lu | fun.is_su | fun.lr | fun.sc | grant | probe
+  def is_dat_r = is_atom | fun.is_lu | fun.lr | grant | probe
   def is_tag_w = grant
   def is_dat_w = is_atom | fun.is_su | fun.sc | grant
   def is_dirtyOp = is_atom | fun.is_su | fun.sc
