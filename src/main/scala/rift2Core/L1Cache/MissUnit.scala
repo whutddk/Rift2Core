@@ -148,7 +148,7 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8, setting: Int)(implicit p: Parame
   /** select an empty buff to load paddr, except when *buff full* or *can merge* */
   val load_sel = miss_valid.indexWhere( (x:Bool) => (x === false.B) )
 
-  io.req.ready := true.B
+  io.req.ready := miss_valid.exists((x:Bool) => (x === false.B))
 
   /** findout if there is no buff is valid and has the same paddr, or merge it! */
   val is_merge = {

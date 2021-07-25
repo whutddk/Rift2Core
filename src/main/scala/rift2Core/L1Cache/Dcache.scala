@@ -223,7 +223,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
   
   val cb_sel = WireDefault(
       Mux1H(Seq(
-        io.wr_in.bits.op.is_access -> Mux( is_hit, hit_sel, rpl_sel ),
+        io.wr_in.bits.op.is_access -> hit_sel,
         io.wr_in.bits.op.probe -> hit_sel,
         io.wr_in.bits.op.grant -> rpl_sel
       ))
@@ -231,7 +231,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
   when( io.wr_in.fire ) {
     when( io.wr_in.bits.op.probe ) { assert(is_hit) } //l2 will never request a empty probe
-    when( io.wr_in.bits.op.grant ) { assert(is_valid(cl_sel).contains(false.B)) } //grant palce is invalid
+    when( io.wr_in.bits.op.grant ) {  } 
   }
 
   io.dat_addr_w := io.wr_in.bits.paddr
@@ -241,8 +241,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
       io.wr_in.fire &
       i.U === cb_sel &
       io.wr_in.bits.op.is_dat_w & (
-        io.wr_in.bits.op.grant |
-        (j.U === bk_sel & is_hit)
+        (io.wr_in.bits.op.grant) |
+        (io.wr_in.bits.op.is_access & j.U === bk_sel & is_hit)
       )
   }
 
@@ -305,33 +305,35 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     when( io.wr_in.bits.op.is_dirtyOp ) {
       is_dirty(cl_sel)(cb_sel) := true.B
     }
-    when( (io.wr_in.bits.op.is_access) & ~is_hit & is_valid(cl_sel)(cb_sel) === true.B) {
-      is_valid(cl_sel)(cb_sel) := false.B
-    }
 
   }
 
 
   io.wr_in.ready :=
-    (io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & io.writeBackUnit_req.ready) |
-    (io.wr_in.bits.op.is_access &  is_hit & io.dcache_pop.ready) |
-    (io.wr_in.bits.op.probe & io.writeBackUnit_req.ready)        |
-    (io.wr_in.bits.op.grant)
+    (io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & io.missUnit_req.ready) |
+    (io.wr_in.bits.op.is_access &  is_hit & io.dcache_pop.ready ) |
+    (io.wr_in.bits.op.probe & io.writeBackUnit_req.fire )        |
+    (io.wr_in.bits.op.grant & io.writeBackUnit_req.fire )
 
 
-  io.missUnit_req.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & (io.writeBackUnit_req.ready | ~is_valid(cl_sel)(cb_sel))
+  io.missUnit_req.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & io.missUnit_req.ready
   io.missUnit_req.bits.paddr := io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)
 
-  io.writeBackUnit_req.valid := io.wr_in.valid & ((io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & is_valid(cl_sel)(cb_sel)) | io.wr_in.bits.op.probe)
+  io.writeBackUnit_req.valid :=
+    io.wr_in.valid & (
+      ( io.wr_in.bits.op.grant & ~is_valid(cl_sel).contains(false.B) ) |
+        io.wr_in.bits.op.probe
+    )
+
   io.writeBackUnit_req.bits.addr := io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)
   io.writeBackUnit_req.bits.data := Cat( for( j <- 0 until bk ) yield { io.wr_in.bits.rdata(cb_sel)(bk-1-j) } )
 
-  io.writeBackUnit_req.bits.is_releaseData := io.wr_in.bits.op.is_access & is_dirty(cl_sel)(cb_sel)
-  io.writeBackUnit_req.bits.is_release := io.wr_in.bits.op.is_access & ~is_dirty(cl_sel)(cb_sel)
-  io.writeBackUnit_req.bits.is_probe := io.wr_in.bits.op.probe & ~is_dirty(cl_sel)(cb_sel)
+  io.writeBackUnit_req.bits.is_releaseData := io.wr_in.bits.op.grant & is_dirty(cl_sel)(cb_sel)
+  io.writeBackUnit_req.bits.is_release := io.wr_in.bits.op.grant & ~is_dirty(cl_sel)(cb_sel)
   io.writeBackUnit_req.bits.is_probeData := io.wr_in.bits.op.probe & is_dirty(cl_sel)(cb_sel)
+  io.writeBackUnit_req.bits.is_probe := io.wr_in.bits.op.probe & ~is_dirty(cl_sel)(cb_sel)
 
-  io.wr_lsReload.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.writeBackUnit_req.ready
+  io.wr_lsReload.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.missUnit_req.ready & io.wr_lsReload.ready
   assert( ~(io.wr_lsReload.valid & ~io.wr_lsReload.ready), "Assert Failed at wr_state 2, reload failed!" )
 
   
@@ -457,8 +459,8 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
 
 
   val ls_arb = Module(new Arbiter( new Info_cache_s0s1, 2))
-  val rd_arb = Module(new Arbiter( new Info_cache_s0s1, 2))
-  val wr_arb = Module(new Arbiter( new Info_cache_s1s2, 2))
+  val rd_arb = Module(new Arbiter( new Info_cache_s0s1, 3))
+  // val wr_arb = Module(new Arbiter( new Info_cache_s1s2, 2))
 
   val reload_fifo = Module( new Queue( new Info_cache_s0s1, 1, false, true) )
 
@@ -467,28 +469,25 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   io.dcache_push <> ls_arb.io.in(1)
   ls_arb.io.out <> lsEntry.io.enq 
 
-  rd_arb.io.in(0).bits := pkg_Info_cache_s0s1(probeUnit.io.req.bits) 
-  rd_arb.io.in(0).valid := probeUnit.io.req.valid
-  probeUnit.io.req.ready := rd_arb.io.in(0).ready
+  rd_arb.io.in(0).bits := pkg_Info_cache_s0s1( missUnit.io.rsp.bits )
+  rd_arb.io.in(0).valid := missUnit.io.rsp.valid
+  missUnit.io.rsp.ready := rd_arb.io.in(0).ready
 
+  rd_arb.io.in(1).bits := pkg_Info_cache_s0s1(probeUnit.io.req.bits) 
+  rd_arb.io.in(1).valid := probeUnit.io.req.valid
+  probeUnit.io.req.ready := rd_arb.io.in(1).ready
 
-  lsEntry.io.deq <> rd_arb.io.in(1)
+  lsEntry.io.deq <> rd_arb.io.in(2)
   rd_arb.io.out <> rd_stage.io.rd_in
 
-  wr_arb.io.in(0).bits := pkg_Info_cache_s1s2( missUnit.io.rsp.bits )
-  wr_arb.io.in(0).valid := missUnit.io.rsp.valid
-  missUnit.io.rsp.ready := wr_arb.io.in(0).ready
-
-
-  rd_stage.io.rd_out <> wr_arb.io.in(1)
-  wr_arb.io.out <> wr_stage.io.wr_in
+  rd_stage.io.rd_out <> wr_stage.io.wr_in
 
 
 
   wr_stage.io.dcache_pop <> io.dcache_pop
 
-  def pkg_Info_cache_s1s2( ori: Info_miss_rsp ) = {
-    val res = Wire(new Info_cache_s1s2)
+  def pkg_Info_cache_s0s1( ori: Info_miss_rsp ) = {
+    val res = Wire(new Info_cache_s0s1)
 
     res.paddr := ori.paddr
     res.wmask := "hFF".U
@@ -502,8 +501,6 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
       res.op.grant := true.B      
     }
 
-    res.rdata := DontCare
-    res.tag   := DontCare
     res.chk_idx := DontCare
 
     res
@@ -516,8 +513,11 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
     res.wmask := DontCare
     res.wdata := DontCare
 
-    res.op := 0.U.asTypeOf(new Cache_op)
-    res.op.probe := true.B
+    {
+      res.op := 0.U.asTypeOf(new Cache_op)
+      res.op.probe := true.B      
+    }
+
     res.chk_idx := DontCare
 
     res

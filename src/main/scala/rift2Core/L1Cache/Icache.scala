@@ -180,7 +180,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
       (icache_state_qout === 2.U) ->
         Mux(
           (is_hit & ibuf.io.enq(7).ready) |
-          (~is_hit) |
+          (~is_hit) & missUnit.io.req.fire |
           io.flush, 
           0.U, 2.U
         )
