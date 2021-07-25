@@ -134,8 +134,9 @@ class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
     io.dat_en_r(i)(j) := 
       info_bypass_fifo.io.enq.fire &
       io.rd_in.bits.op.is_dat_r & (
-        io.rd_in.bits.op.probe |
-        j.U === bk_sel
+        (io.rd_in.bits.op.probe) |
+        (io.rd_in.bits.op.grant) |
+        (io.rd_in.bits.op.is_access & j.U === bk_sel)
       )
   }
 
@@ -313,7 +314,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     (io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & io.missUnit_req.ready) |
     (io.wr_in.bits.op.is_access &  is_hit & io.dcache_pop.ready ) |
     (io.wr_in.bits.op.probe & io.writeBackUnit_req.fire )        |
-    (io.wr_in.bits.op.grant & io.writeBackUnit_req.fire )
+    (io.wr_in.bits.op.grant & io.writeBackUnit_req.ready )
 
 
   io.missUnit_req.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & io.missUnit_req.ready
