@@ -61,11 +61,8 @@ class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val csr_cmm_op = DecoupledIO( new Exe_Port ) 
 
 
-
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
-
-    val icache_fence_req = Output(Bool())
 
     val missUnit_dcache_acquire = Decoupled(new TLBundleA(tlc_edge.bundle))
     val missUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(tlc_edge.bundle)))
@@ -131,8 +128,6 @@ class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   lsu.io.cmm_lsu <> io.cmm_lsu
   lsu.io.lsu_cmm <> io.lsu_cmm
-
-  lsu.io.icache_fence_req <> io.icache_fence_req
 
   lsu.io.flush <> io.flush
 

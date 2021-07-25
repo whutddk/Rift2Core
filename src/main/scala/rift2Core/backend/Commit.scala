@@ -142,7 +142,11 @@ class Commit extends Privilege with Superscalar {
         io.rod_i(1).bits.privil.sret & ~is_1st_solo
       )
 
-
+    val is_fence_i_v =
+      VecInit(
+        io.rod_i(0).bits.is_fence_i ,
+        io.rod_i(1).bits.is_fence_i & ~is_1st_solo
+      )
 
 
 
@@ -167,10 +171,10 @@ class Commit extends Privilege with Superscalar {
 
 
   io.is_commit_abort(1) :=
-    (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) ) & ~is_1st_solo
+    (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) | is_fence_i_v(1) ) & ~is_1st_solo
   
   io.is_commit_abort(0) :=
-    (io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet_v(0) | is_trap_v(0) )
+    (io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet_v(0) | is_trap_v(0) | is_fence_i_v(0) )
 
 
   //only one privilege can commit once
@@ -179,11 +183,6 @@ class Commit extends Privilege with Superscalar {
     is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo
   )
 
-  // for ( i <- 0 until 32; j <- 0 until 4 ) yield {
-  //   io.cm_op(i)(j) := 
-  //     (is_commit_comfirm(0) & rd0_raw(0) === i.U & rd0_phy(0) === j.U) | 
-  //     (is_commit_comfirm(1) & rd0_raw(1) === i.U & rd0_phy(1) === j.U)
-  // }
 
   io.cm_op(0).valid := is_commit_comfirm(0)
   io.cm_op(1).valid := is_commit_comfirm(1)
@@ -213,21 +212,44 @@ class Commit extends Privilege with Superscalar {
 
   
 
-  val is_fence_i_v = VecInit( 	io.rod_i(0).bits.is_fence_i & is_commit_comfirm(0),
-                io.rod_i(1).bits.is_fence_i & is_commit_comfirm(1)
-              )
 
-  io.cmm_pc.valid := is_xRet_v.contains(true.B) | is_trap_v.contains(true.B) | is_fence_i_v.contains(true.B)
-  io.cmm_pc.bits.addr := MuxCase(0.U, Array(
-    is_xRet_v(0) -> mepc,
-    is_trap_v(0) -> mtvec,
-    is_xRet_v(1) -> mepc,
-    is_trap_v(1) -> mtvec,
-    is_fence_i_v(0) -> (io.rod_i(0).bits.pc + 4.U),
-    is_fence_i_v(1) -> (io.rod_i(1).bits.pc + 4.U)
+
+  io.cmm_pc.valid :=
+  (    
+    (io.rod_i(0).valid & is_xRet_v(0)) |
+    (io.rod_i(0).valid & is_trap_v(0)) |
+    (io.rod_i(0).valid & is_fence_i_v(0)) 
+  ) |
+  (
+
+    (io.rod_i(1).valid & is_xRet_v(1)) |
+    (io.rod_i(1).valid & is_trap_v(1)) |
+    (io.rod_i(1).valid & is_fence_i_v(1))      
+
+  )
+    
+  io.cmm_pc.bits.addr := Mux1H(Seq(
+    (io.rod_i(0).valid & is_xRet_v(0)) -> mepc,
+    (io.rod_i(0).valid & is_trap_v(0)) -> mtvec,
+    (io.rod_i(0).valid & is_fence_i_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
+
+    (io.rod_i(1).valid & is_xRet_v(1)) -> mepc,
+    (io.rod_i(1).valid & is_trap_v(1)) -> mtvec,
+    (io.rod_i(1).valid & is_fence_i_v(1)) -> (io.rod_i(1).bits.pc + 4.U)
   ))
 
+  assert(
+    PopCount(Seq(
+      (io.rod_i(0).valid & is_xRet_v(0)),
+      (io.rod_i(0).valid & is_trap_v(0)),
+      (io.rod_i(0).valid & is_fence_i_v(0)),
+      (io.rod_i(1).valid & is_xRet_v(1)),
+      (io.rod_i(1).valid & is_trap_v(1)),
+      (io.rod_i(1).valid & is_fence_i_v(1))     
+    )) <= 1.U
+  )
 
+  assert( ~(io.cmm_pc.valid & ~io.is_commit_abort(0) & ~io.is_commit_abort(1)) )
 
 
     val is_retired_v = 

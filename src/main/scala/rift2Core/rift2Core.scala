@@ -140,8 +140,8 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
   if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | bd_stage.io.bd_pc.valid | exe_stage.io.bru_pd_j.valid
-  pd_stage.io.flush  := exe_stage.io.icache_fence_req
-  bd_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | exe_stage.io.bru_pd_j.valid | exe_stage.io.icache_fence_req
+  // pd_stage.io.flush  := exe_stage.io.icache_fence_req
+  bd_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | exe_stage.io.bru_pd_j.valid 
   // id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) 
   dpt_stage.io.flush := cmm_stage.io.is_commit_abort(0)
   iss_stage.io.flush := cmm_stage.io.is_commit_abort(0)

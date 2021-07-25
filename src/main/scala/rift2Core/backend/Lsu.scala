@@ -48,7 +48,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
 
-    val icache_fence_req = Output(Bool())
+    // val icache_fence_req = Output(Bool())
     // val dcache_fence_req = Output(Bool())
 
 
@@ -80,9 +80,11 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
   val su_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, false, true ) )
   val lu_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, false, true ) )
+  val fe_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, false, true ) )
 
   su_exe_iwb_fifo.reset := reset.asBool | io.flush
   lu_exe_iwb_fifo.reset := reset.asBool | io.flush
+  fe_exe_iwb_fifo.reset := reset.asBool | io.flush
 
   /** when a flush comes, flush all uncommit write & amo request in pending-fifo, and block all request from issue until scoreboard is empty */
   val trans_kill = RegInit(false.B)
@@ -94,9 +96,10 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   val fence_op  = RegInit(false.B)
 
   /** merge load write-back and store write-back port together */ 
-  val iwb_arb = Module(new Arbiter(new Exe_iwb_info, 2))
-  iwb_arb.io.in(0) <> su_exe_iwb_fifo.io.deq
-  iwb_arb.io.in(1) <> lu_exe_iwb_fifo.io.deq
+  val iwb_arb = Module(new Arbiter(new Exe_iwb_info, 3))
+  iwb_arb.io.in(0) <> fe_exe_iwb_fifo.io.deq
+  iwb_arb.io.in(1) <> su_exe_iwb_fifo.io.deq
+  iwb_arb.io.in(2) <> lu_exe_iwb_fifo.io.deq
   iwb_arb.io.out <> io.lsu_exe_iwb
 
   pending_fifo.io.flush := io.flush
@@ -104,28 +107,33 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   when( io.flush ) { trans_kill := true.B }
   .elsewhen( lsu_scoreBoard.io.is_empty ) { trans_kill := false.B }
 
-  when( io.lsu_iss_exe.fire & io.lsu_iss_exe.bits.fun.is_fence ) {
+  when( io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & ~fence_op ) {
     fence_op := true.B
     is_fence_i := io.lsu_iss_exe.bits.fun.fence_i
   }
-  .elsewhen( lsu_scoreBoard.io.is_empty ) {
+  .elsewhen( lsu_scoreBoard.io.is_empty & fence_op ) {
     fence_op := false.B
     is_fence_i := false.B
   }
 
-  io.icache_fence_req := fence_op === true.B & lsu_scoreBoard.io.is_empty & is_fence_i
+  // io.icache_fence_req := fence_op === true.B & lsu_scoreBoard.io.is_empty & is_fence_i
 
 
   su_exe_iwb_fifo.io.enq.valid :=
     io.lsu_iss_exe.valid & ~trans_kill & ~fence_op & ~is_Fault & (
-      (pending_fifo.io.enq.ready & io.lsu_iss_exe.bits.fun.is_su) | //when is store, the pending fifo should ready
-      (io.lsu_iss_exe.bits.fun.is_fence)                            //when is fence, don't care about pending fifo 
+      (pending_fifo.io.enq.ready & io.lsu_iss_exe.bits.fun.is_su) //when is store, the pending fifo should ready
+      
     )
 
 
   su_exe_iwb_fifo.io.enq.bits.rd0_phy := io.lsu_iss_exe.bits.param.rd0_phy
   su_exe_iwb_fifo.io.enq.bits.res     := 0.U
 
+  fe_exe_iwb_fifo.io.enq.valid :=
+    io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & lsu_scoreBoard.io.is_empty
+
+  fe_exe_iwb_fifo.io.enq.bits.rd0_phy := io.lsu_iss_exe.bits.param.rd0_phy
+  fe_exe_iwb_fifo.io.enq.bits.res     := 0.U
 
 
   pending_fifo.io.enq.valid :=
@@ -141,7 +149,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
       ( io.lsu_iss_exe.bits.fun.is_su  & pending_fifo.io.enq.ready & su_exe_iwb_fifo.io.enq.ready) | //when store, both pending fifo and store wb should ready
       ( ~pending_fifo.io.is_hazard & io.lsu_iss_exe.bits.fun.is_lu  & scoreBoard_arb.io.in(1).ready) | //when load, scoreBoard should ready
       ( io.lsu_iss_exe.bits.fun.is_amo & pending_fifo.io.enq.ready) |                                //when amo, the pending fifo should ready
-      ( io.lsu_iss_exe.bits.fun.is_fence & su_exe_iwb_fifo.io.enq.ready)                               //when fence, the store wb shoudl ready      
+      ( io.lsu_iss_exe.bits.fun.is_fence & fe_exe_iwb_fifo.io.enq.fire)                               //when fence, the store wb shoudl ready      
     )
 
 
