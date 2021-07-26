@@ -80,10 +80,7 @@ class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheM
   .elsewhen( buf(cmm_ptr(cnt_w-1,0)).fun.is_amo & valid(cmm_ptr(cnt_w-1,0)) === true.B ) { do_amo := false.B }
 
   /** indicated whether a paddr in a valid buff is equal to input */
-  val is_hazard =
-    buf.zip(valid).map{ case(a,b) => (a.param.op1(31, addr_lsb) === io.enq.bits.param.op1(31, addr_lsb)) & b === true.B }.reduce(_|_)
-
-    // buf.exists( (x:Info_cache_sb) => (x.param.op1(31, addr_lsb) === io.enq.bits.param.op1(31, addr_lsb)) )
+  val is_hazard = buf.exists( (x:Info_cache_sb) => (x.param.op1(31, addr_lsb) === io.enq.bits.param.op1(31, addr_lsb)) )
   io.is_hazard := is_hazard
 
   when (do_enq & ~io.flush) {
