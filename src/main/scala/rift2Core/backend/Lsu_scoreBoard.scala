@@ -76,7 +76,7 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
   val is_hazard = valid.zip(paddr).map{ case(a,b) => (a === true.B) & (b(31,addr_lsb) === io.lsu_push.bits.param.op1(31,addr_lsb)) }.reduce(_|_)  
 //  io.is_hazard := is_hazard
 
-  when( io.lsu_push.fire & (io.lsu_push.bits.param.op1(31,30) === "b01".U | io.lsu_push.bits.param.op1(31) === 1.U)) {
+  when( io.lsu_push.fire & (io.lsu_push.bits.param.op1(31,29) === "b001".U | io.lsu_push.bits.param.op1(31) === 1.U)) {
     valid(empty_idx)  := true.B
     paddr(empty_idx)  := io.lsu_push.bits.param.op1
     rd0(empty_idx)    := io.lsu_push.bits.param.rd0_phy
@@ -144,7 +144,7 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
     (io.periph_pop.fire & io.periph_pop.bits.is_load_amo)
 
 
-  io.periph_push.valid := io.lsu_push.fire & io.lsu_push.bits.param.op1(31,30) === "b01".U
+  io.periph_push.valid := io.lsu_push.fire & io.lsu_push.bits.param.op1(31,29) === "b001".U
   io.dcache_push.valid := io.lsu_push.fire & io.lsu_push.bits.param.op1(31) === 1.U
 
   io.lsu_push.ready :=
