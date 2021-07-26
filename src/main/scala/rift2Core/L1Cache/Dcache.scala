@@ -182,7 +182,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val dat_info_w = Output( Vec(bk, UInt(dw.W)))
 
     val missUnit_req = new DecoupledIO(new Info_miss_req)
-    val writeBackUnit_req = DecoupledIO(new Info_writeBack_req)
+    val wb_req = DecoupledIO(new Info_writeBack_req)
+    val pb_req = DecoupledIO(new Info_writeBack_req)
   })
 
   val bk_sel = io.wr_in.bits.bk_sel
@@ -317,32 +318,41 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
   io.wr_in.ready :=
     (io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & io.missUnit_req.ready) |
     (io.wr_in.bits.op.is_access &  is_hit & io.dcache_pop.ready ) |
-    (io.wr_in.bits.op.probe & io.writeBackUnit_req.fire )        |
-    (io.wr_in.bits.op.grant & io.writeBackUnit_req.ready )
+    (io.wr_in.bits.op.probe & io.pb_req.fire )        |
+    (io.wr_in.bits.op.grant & io.wb_req.ready )
 
 
   io.missUnit_req.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.wr_lsReload.ready & io.missUnit_req.ready
   io.missUnit_req.bits.paddr := io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)
 
-  io.writeBackUnit_req.valid :=
+  io.wb_req.valid :=
+    io.wr_in.valid &
+      ( io.wr_in.bits.op.grant & ~is_valid(cl_sel).contains(false.B) )
+
+  io.pb_req.valid :=
     io.wr_in.valid & (
-      ( io.wr_in.bits.op.grant & ~is_valid(cl_sel).contains(false.B) ) |
         io.wr_in.bits.op.probe
     )
 
-  io.writeBackUnit_req.bits.addr := 
-    Mux1H(Seq(
-      io.wr_in.bits.op.grant -> Cat(io.wr_in.bits.tag(cb_sel), cl_sel, 0.U(addr_lsb.W)),
-      io.wr_in.bits.op.probe -> (io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)),
-    ))
+  io.wb_req.bits.addr := 
+      Cat(io.wr_in.bits.tag(cb_sel), cl_sel, 0.U(addr_lsb.W))
     
-    
-  io.writeBackUnit_req.bits.data := Cat( for( j <- 0 until bk ) yield { io.wr_in.bits.rdata(cb_sel)(bk-1-j) } )
+   io.pb_req.bits.addr := 
+      (io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U))
 
-  io.writeBackUnit_req.bits.is_releaseData := io.wr_in.bits.op.grant & is_dirty(cl_sel)(cb_sel)
-  io.writeBackUnit_req.bits.is_release := io.wr_in.bits.op.grant & ~is_dirty(cl_sel)(cb_sel)
-  io.writeBackUnit_req.bits.is_probeData := io.wr_in.bits.op.probe & is_dirty(cl_sel)(cb_sel)
-  io.writeBackUnit_req.bits.is_probe := io.wr_in.bits.op.probe & ~is_dirty(cl_sel)(cb_sel)
+
+  io.wb_req.bits.data := Cat( for( j <- 0 until bk ) yield { io.wr_in.bits.rdata(cb_sel)(bk-1-j) } )
+  io.pb_req.bits.data := Cat( for( j <- 0 until bk ) yield { io.wr_in.bits.rdata(cb_sel)(bk-1-j) } )
+
+  io.wb_req.bits.is_releaseData := io.wr_in.bits.op.grant & is_dirty(cl_sel)(cb_sel)
+  io.wb_req.bits.is_release := io.wr_in.bits.op.grant & ~is_dirty(cl_sel)(cb_sel)
+  io.wb_req.bits.is_probeData := false.B
+  io.wb_req.bits.is_probe := false.B
+
+  io.pb_req.bits.is_releaseData := false.B
+  io.pb_req.bits.is_release := false.B
+  io.pb_req.bits.is_probeData := io.wr_in.bits.op.probe & is_dirty(cl_sel)(cb_sel)
+  io.pb_req.bits.is_probe := io.wr_in.bits.op.probe & ~is_dirty(cl_sel)(cb_sel)
 
   io.wr_lsReload.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & ~is_hit & io.missUnit_req.ready & io.wr_lsReload.ready
   assert( ~(io.wr_lsReload.valid & ~io.wr_lsReload.ready), "Assert Failed at wr_state 2, reload failed!" )
@@ -464,7 +474,8 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   wr_stage.io.dat_info_wstrb    <> cache_dat.dat_info_wstrb
   wr_stage.io.dat_info_w        <> cache_dat.dat_info_w
   wr_stage.io.missUnit_req      <> missUnit.io.req
-  wr_stage.io.writeBackUnit_req <> writeBackUnit.io.req
+  wr_stage.io.wb_req <> writeBackUnit.io.wb_req
+  wr_stage.io.pb_req <> writeBackUnit.io.pb_req
 
 
   missUnit.io.miss_ban := writeBackUnit.io.miss_ban

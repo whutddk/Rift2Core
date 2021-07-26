@@ -24,7 +24,8 @@ class Info_writeBack_req extends Bundle {
   */
 class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
   val io = IO(new Bundle {
-    val req = Flipped(new DecoupledIO(new Info_writeBack_req))
+    val wb_req = Flipped(new DecoupledIO(new Info_writeBack_req))
+    val pb_req = Flipped(new DecoupledIO(new Info_writeBack_req))
     val cache_release = new DecoupledIO(new TLBundleC(edge.bundle))
     val cache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
 
@@ -39,16 +40,8 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
   val fun_arb = Module(new Arbiter(new Info_writeBack_req, 2))
   val op_fifo = Module(new Queue(new Info_writeBack_req, 1, true, false))
 
-  io.req.bits <> wb_fifo.io.enq.bits
-  io.req.bits <> pb_fifo.io.enq.bits
-
-  wb_fifo.io.enq.valid := io.req.valid & (io.req.bits.is_release | io.req.bits.is_releaseData)
-  pb_fifo.io.enq.valid := io.req.valid & (io.req.bits.is_probe | io.req.bits.is_probeData)
-
-  io.req.ready :=
-    (wb_fifo.io.enq.ready & (io.req.bits.is_release | io.req.bits.is_releaseData)) |
-    (pb_fifo.io.enq.ready & (io.req.bits.is_probe | io.req.bits.is_probeData))
-
+  io.wb_req <> wb_fifo.io.enq
+  io.pb_req <> pb_fifo.io.enq
 
   fun_arb.io.in(0) <> pb_fifo.io.deq
   fun_arb.io.in(1) <> wb_fifo.io.deq

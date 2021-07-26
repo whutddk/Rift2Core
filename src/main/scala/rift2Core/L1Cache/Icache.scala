@@ -171,12 +171,12 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     Mux1H(Seq(
       (icache_state_qout === 0.U) -> 
         MuxCase( 0.U, Array(
-          missUnit.io.rsp.valid -> 3.U,
+          (missUnit.io.rsp.valid & writeBackUnit.io.wb_req.ready) -> 3.U,
           probeUnit.io.req.valid -> 1.U,
-          (io.pc_if.valid & ~io.flush) -> 2.U
+          (io.pc_if.valid & ~io.flush & ibuf.io.enq(7).ready & missUnit.io.req.ready) -> 2.U
         )),
-      (icache_state_qout === 3.U) -> Mux(writeBackUnit.io.req.ready, 0.U, 3.U),
-      (icache_state_qout === 1.U) -> 0.U,
+      (icache_state_qout === 3.U) -> Mux(writeBackUnit.io.wb_req.ready, 0.U, 3.U),
+      (icache_state_qout === 1.U) -> Mux(writeBackUnit.io.pb_req.ready, 0.U, 1.U),
       (icache_state_qout === 2.U) ->
         Mux(
           (is_hit & ibuf.io.enq(7).ready) |
@@ -241,22 +241,31 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   missUnit.io.req.bits.paddr := io.pc_if.bits & ("hffffffff".U << addr_lsb.U)
   missUnit.io.req.valid      := icache_state_qout === 2.U & ~is_hit & ~io.flush
   
-  writeBackUnit.io.req.bits.addr :=
-    Mux1H(Seq(
-      (icache_state_qout === 1.U) -> ( probeUnit.io.req.bits.paddr & ("hffffffff".U << addr_lsb.U)),
-      (icache_state_qout === 3.U) -> (  Cat(  cache_tag.tag_info_r(cb_sel), cl_sel, 0.U(addr_lsb.W)) ),
-    ))
+  writeBackUnit.io.wb_req.bits.addr :=
+    Cat(  cache_tag.tag_info_r(cb_sel), cl_sel, 0.U(addr_lsb.W))
 
-  writeBackUnit.io.req.bits.data := DontCare
-  writeBackUnit.io.req.bits.is_probe := icache_state_qout === 1.U
-  writeBackUnit.io.req.bits.is_probeData := false.B
-  writeBackUnit.io.req.bits.is_release := icache_state_qout === 3.U
-  writeBackUnit.io.req.bits.is_releaseData := false.B
+  writeBackUnit.io.pb_req.bits.addr :=
+    probeUnit.io.req.bits.paddr & ("hffffffff".U << addr_lsb.U)
 
-  writeBackUnit.io.req.valid := 
-    (icache_state_qout === 3.U & ~is_emptyBlock_exist_r) |
+
+
+  writeBackUnit.io.wb_req.bits.data := DontCare
+  writeBackUnit.io.wb_req.bits.is_probe := false.B
+  writeBackUnit.io.wb_req.bits.is_probeData := false.B
+  writeBackUnit.io.wb_req.bits.is_release := true.B
+  writeBackUnit.io.wb_req.bits.is_releaseData := false.B
+
+  writeBackUnit.io.pb_req.bits.data := DontCare
+  writeBackUnit.io.pb_req.bits.is_probe := true.B
+  writeBackUnit.io.pb_req.bits.is_probeData := false.B
+  writeBackUnit.io.pb_req.bits.is_release := false.B
+  writeBackUnit.io.pb_req.bits.is_releaseData := false.B
+
+  writeBackUnit.io.wb_req.valid := 
+    (icache_state_qout === 3.U & ~is_emptyBlock_exist_r)
+
+  writeBackUnit.io.pb_req.valid := 
     (icache_state_qout === 1.U)
-
   
   cache_tag.tag_addr_w := missUnit.io.rsp.bits.paddr
   cache_dat.dat_addr_w := missUnit.io.rsp.bits.paddr
