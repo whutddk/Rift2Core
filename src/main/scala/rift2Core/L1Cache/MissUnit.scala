@@ -70,10 +70,12 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8, setting: Int)(implicit p: Parame
   /** a register of io.rsp.valid */
   val rsp_valid = RegInit(false.B)
 
+  val cache_grant_reg = RegEnable(io.cache_grant.bits, io.cache_grant.fire)
+
   io.cache_acquire.valid := cache_acquire_vaild
   io.cache_grant.ready   := cache_grant_ready
   io.cache_grantAck.valid := cache_grantAck_valid
-  io.cache_grantAck.bits  := edge.GrantAck(io.cache_grant.bits)
+  io.cache_grantAck.bits  := edge.GrantAck(cache_grant_reg)
   io.rsp.valid := rsp_valid
 
   mshr_state_dnxt := 
