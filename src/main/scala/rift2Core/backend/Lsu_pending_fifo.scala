@@ -98,12 +98,13 @@ class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheM
   }
   when( do_cmm ) {
     commit(cmm_ptr(cnt_w-1,0)) := true.B
+    commit(cmm_ptr(cnt_w-1,0) + 1.U) := io.cmm.bits
 
     cmm_ptr := cmm_ptr + Mux(io.cmm.bits, 2.U, 1.U)
     assert( cmm_ptr =/= enq_ptr )
     assert( ~io.amo & ~do_amo )
   } 
-  when( buf(cmm_ptr(cnt_w-1,0)).fun.is_amo & valid(cmm_ptr(cnt_w-1,0)) === true.B ) {
+  when( buf(cmm_ptr(cnt_w-1,0)).fun.is_amo & valid(cmm_ptr(cnt_w-1,0)) === true.B & do_amo) {
     commit(cmm_ptr(cnt_w-1,0)) := true.B
     cmm_ptr := cmm_ptr + 1.U
     assert( cmm_ptr =/= enq_ptr )
@@ -111,7 +112,6 @@ class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheM
   }
   when( io.flush ) {
     enq_ptr := cmm_ptr
-    // assert (!do_enq)
 
     for ( i <- 0 until entries ) yield {
       buf(i) := Mux( commit(i), buf(i), 0.U.asTypeOf(new Info_cache_sb))
