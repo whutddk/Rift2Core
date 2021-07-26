@@ -101,23 +101,52 @@ class lsu_pending_fifo(val entries: Int)(implicit p: Parameters) extends DcacheM
     commit(cmm_ptr(cnt_w-1,0) + 1.U) := io.cmm.bits
 
     cmm_ptr := cmm_ptr + Mux(io.cmm.bits, 2.U, 1.U)
+
+    when( io.flush ) {
+      enq_ptr := cmm_ptr + Mux(io.cmm.bits, 2.U, 1.U)
+
+      for ( i <- 0 until entries ) yield {
+        buf(i) := 
+          Mux( commit(i) | (i.U === cmm_ptr(cnt_w-1,0)) | (i.U === (cmm_ptr(cnt_w-1,0) + 1.U) & io.cmm.bits), buf(i), 0.U.asTypeOf(new Info_cache_sb))
+
+        valid(i) := 
+          Mux( commit(i) | (i.U === cmm_ptr(cnt_w-1,0)) | (i.U === (cmm_ptr(cnt_w-1,0) + 1.U) & io.cmm.bits), valid(i), false.B)
+      }
+    }
+
+
     assert( cmm_ptr =/= enq_ptr )
     assert( ~io.amo & ~do_amo )
   } 
-  when( buf(cmm_ptr(cnt_w-1,0)).fun.is_amo & valid(cmm_ptr(cnt_w-1,0)) === true.B & do_amo) {
+  .elsewhen( buf(cmm_ptr(cnt_w-1,0)).fun.is_amo & valid(cmm_ptr(cnt_w-1,0)) === true.B & do_amo) {
     commit(cmm_ptr(cnt_w-1,0)) := true.B
     cmm_ptr := cmm_ptr + 1.U
+
+    when( io.flush ) {
+      enq_ptr := cmm_ptr + 1.U
+
+      for ( i <- 0 until entries ) yield {
+        buf(i) :=
+          Mux( commit(i) | (i.U === cmm_ptr(cnt_w-1,0)), buf(i), 0.U.asTypeOf(new Info_cache_sb))
+        valid(i) :=
+          Mux( commit(i) | (i.U === cmm_ptr(cnt_w-1,0)), valid(i), false.B)
+      }      
+    }
+
+
     assert( cmm_ptr =/= enq_ptr )
     assert( ~do_cmm )
   }
-  when( io.flush ) {
-    enq_ptr := cmm_ptr
 
-    for ( i <- 0 until entries ) yield {
-      buf(i) := Mux( commit(i), buf(i), 0.U.asTypeOf(new Info_cache_sb))
-      valid(i) := Mux( commit(i), valid(i), false.B)
-    }
-  }
+
+  // when( io.flush ) {
+  //   enq_ptr := cmm_ptr
+
+  //   for ( i <- 0 until entries ) yield {
+  //     buf(i) := Mux( commit(i), buf(i), 0.U.asTypeOf(new Info_cache_sb))
+  //     valid(i) := Mux( commit(i), valid(i), false.B)
+  //   }
+  // }
 
   io.deq.valid := deq_ptr =/= cmm_ptr
   io.enq.ready := !full
