@@ -150,7 +150,7 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
   io.lsu_push.ready :=
     ~full & ~is_hazard &
     Mux1H(Seq(
-      (io.lsu_push.bits.param.op1(31,30) === "b01".U) -> io.periph_push.ready,
+      (io.lsu_push.bits.param.op1(31,29) === "b001".U) -> io.periph_push.ready,
       (io.lsu_push.bits.param.op1(31) === 1.U)        -> io.dcache_push.ready
     ))
 
