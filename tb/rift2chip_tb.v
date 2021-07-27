@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-07-22 19:53:36
+* @Last Modified time: 2021-07-27 09:58:40
 */
 
 
@@ -439,7 +439,7 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	// $readmemh("./ci/rv64ui-p-fence_i.verilog", mem);
+	// $readmemh("./ci/rv64ui-p-sb.verilog", mem);
 	$readmemh(testName, mem);
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
