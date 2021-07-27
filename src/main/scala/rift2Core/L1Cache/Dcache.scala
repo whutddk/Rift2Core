@@ -54,13 +54,13 @@ class Cache_op extends Bundle {
   val grant = Bool()
 
   def is_atom = fun.is_amo
-  def is_access = is_atom | fun.is_lu | fun.is_su | fun.lr | fun.sc
-  def is_tag_r = is_atom | fun.is_lu | fun.is_su | fun.lr | fun.sc | grant | probe
-  def is_dat_r = is_atom | fun.is_lu | fun.lr | grant | probe
+  def is_access = is_atom | fun.is_lu | fun.is_su | fun.is_lr | fun.is_sc
+  def is_tag_r = is_atom | fun.is_lu | fun.is_su | fun.is_lr | fun.is_sc | grant | probe
+  def is_dat_r = is_atom | fun.is_lu | fun.is_lr | grant | probe
   def is_tag_w = grant
-  def is_dat_w = is_atom | fun.is_su | fun.sc | grant
-  def is_dirtyOp = is_atom | fun.is_su | fun.sc
-  def is_wb = is_atom | fun.is_lu | fun.lr
+  def is_dat_w = is_atom | fun.is_su | fun.is_sc | grant
+  def is_dirtyOp = is_atom | fun.is_su | fun.is_sc
+  def is_wb = is_atom | fun.is_lu | fun.is_lr
 
 }
 
@@ -95,6 +95,7 @@ class Info_cache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc_
   val res = UInt(64.W)
   val is_load_amo = Bool()
 }
+
 
 
 
@@ -379,6 +380,20 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
 
 
+  val is_pending_lr = RegInit(false.B)
+  val is_lr_64_32n = RegInit(false.B)
+  val lr_addr = Reg(UInt(64.W))
+
+  when( io.flush ) { is_pending_lr := false.B }
+  .elsewhen( io.dcache_pop.fire & io.wr_in.bits.op.fun.is_lr ) {
+    is_pending_lr := true.B
+  }
+  .elsewhen( io.dcache_pop.fire & io.wr_in.bits.op.fun.is_sc ) {
+    is_pending_lr := false.B
+  }
+  .elsewhen( io.wr_in.fire & io.wr_in.bits.op.probe ) {
+
+  }
 
 
 
@@ -509,6 +524,11 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
 
 
   wr_stage.io.dcache_pop <> io.dcache_pop
+
+
+
+
+
 
   def pkg_Info_cache_s0s1( ori: Info_miss_rsp ) = {
     val res = Wire(new Info_cache_s0s1)

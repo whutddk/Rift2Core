@@ -104,6 +104,13 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
   pending_fifo.io.flush := io.flush
 
+  val is_pending_lr = RegInit(false.B)
+
+  when( io.flush ) { is_pending_lr := false.B }
+  .elsewhen( io.lsu_iss_exe.fire & io.lsu_iss_exe.bits.fun.is_lr ) { is_pending_lr := true.B }
+  .elsewhen( io.lsu_iss_exe.fire & io.lsu_iss_exe.bits.fun.is_sc ) { is_pending_lr := false.B }
+
+
   when( io.flush ) { trans_kill := true.B }
   .elsewhen( lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty ) { trans_kill := false.B }
 

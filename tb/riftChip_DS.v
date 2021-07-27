@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-06-01 14:18:52
+* @Last Modified time: 2021-07-27 15:57:35
 */
 
 
@@ -432,7 +432,7 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	$readmemh("./ci/dhrystone5.riscv.verilog", mem);
+	$readmemh("./ci/dhrystone500.riscv.verilog", mem);
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
 		for ( by = 0; by < 16; by = by + 1 ) begin
