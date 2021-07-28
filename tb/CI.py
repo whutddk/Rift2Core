@@ -2,7 +2,7 @@
 # @Author: Ruige Lee
 # @Date:   2020-11-18 15:37:18
 # @Last Modified by:   Ruige Lee
-# @Last Modified time: 2021-07-27 16:00:26
+# @Last Modified time: 2021-07-28 20:04:23
 
 
 import sys
@@ -101,7 +101,7 @@ testList = [
     "rv64ua-p-amoswap_w",
     "rv64ua-p-amoxor_d",
     "rv64ua-p-amoxor_w",
-    # "rv64ua-p-lrsc",
+    "rv64ua-p-lrsc",
 			]
 
 

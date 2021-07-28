@@ -35,13 +35,13 @@ case class CacheSetting(
     dw = 128,
     bk = 2,
     cb = 4,
-    cl = 32*8
+    cl = 32*16
   ),
   dcacheParameters: L1CacheParameters = DcacheParameters(
     dw = 64,
     bk = 4,
     cb = 4,
-    cl = 64*8
+    cl = 64*16
   ),
 ){
 
