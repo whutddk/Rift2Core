@@ -104,11 +104,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
   pending_fifo.io.flush := io.flush
 
-  val is_pending_lr = RegInit(false.B)
 
-  when( io.flush ) { is_pending_lr := false.B }
-  .elsewhen( io.lsu_iss_exe.fire & io.lsu_iss_exe.bits.fun.is_lr ) { is_pending_lr := true.B }
-  .elsewhen( io.lsu_iss_exe.fire & io.lsu_iss_exe.bits.fun.is_sc ) { is_pending_lr := false.B }
 
 
   when( io.flush ) { trans_kill := true.B }
@@ -215,6 +211,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   dcache.io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe
   io.writeBackUnit_dcache_release <> dcache.io.writeBackUnit_dcache_release
   dcache.io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
+  dcache.io.is_lr_clear := io.cmm_lsu.is_lr_clear
 
   periph.io.sys_chn_ar <> io.sys_chn_ar
   periph.io.sys_chn_r  <> io.sys_chn_r

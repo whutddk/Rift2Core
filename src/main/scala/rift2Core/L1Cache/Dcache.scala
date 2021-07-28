@@ -174,6 +174,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val wr_lsReload = new DecoupledIO(new Info_cache_s0s1)
     val dcache_pop = DecoupledIO(new Info_cache_retn)
 
+    val is_lr_clear = Input(Bool())
+
     val tag_addr_w = Output(UInt(aw.W))
     val tag_en_w = Output( Vec(cb, Bool()) )
 
@@ -205,6 +207,17 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
   /** flag that indicated that if a cache block is dirty */
   val is_dirty = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
+
+  val is_pending_lr = RegInit(false.B)
+  val is_lr_64_32n = RegInit(false.B)
+  val lr_addr = Reg(UInt(64.W))
+
+  val is_sc_fail = 
+    is_pending_lr | 
+    (is_lr_64_32n & io.wr_in.bits.op.fun.is_word) |
+    (~is_lr_64_32n & io.wr_in.bits.op.fun.is_dubl) |
+    lr_addr =/= io.wr_in.bits.paddr
+
 
   is_hit_oh := {
     val res = 
@@ -244,8 +257,13 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
       io.wr_in.fire &
       i.U === cb_sel &
       io.wr_in.bits.op.is_dat_w & (
-        (io.wr_in.bits.op.grant) |
-        (io.wr_in.bits.op.is_access & j.U === bk_sel & is_hit)
+        (
+          io.wr_in.bits.op.grant
+        ) |
+        (
+          io.wr_in.bits.op.is_access & j.U === bk_sel & is_hit &
+          Mux( io.wr_in.bits.op.fun.is_sc, ~is_sc_fail, true.B)
+        )
       )
   }
 
@@ -371,7 +389,11 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val paddr = io.wr_in.bits.paddr
     val op = io.wr_in.bits.op
 
-    get_loadRes( op, paddr, rdata )
+    Mux(
+      io.wr_in.bits.op.fun.is_sc,
+      Mux( is_sc_fail, 1.U, 0.U ),
+      get_loadRes( op, paddr, rdata )
+    )
   }
   
 
@@ -380,19 +402,31 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
 
 
-  val is_pending_lr = RegInit(false.B)
-  val is_lr_64_32n = RegInit(false.B)
-  val lr_addr = Reg(UInt(64.W))
 
-  when( io.flush ) { is_pending_lr := false.B }
+
+
+  when( io.is_lr_clear ) {
+    is_pending_lr := false.B
+  }
   .elsewhen( io.dcache_pop.fire & io.wr_in.bits.op.fun.is_lr ) {
     is_pending_lr := true.B
+    is_lr_64_32n := io.wr_in.bits.op.fun.is_dubl
+    lr_addr := io.wr_in.bits.paddr
+
+    assert( io.wr_in.bits.op.fun.is_dubl | io.wr_in.bits.op.fun.is_word )
   }
   .elsewhen( io.dcache_pop.fire & io.wr_in.bits.op.fun.is_sc ) {
     is_pending_lr := false.B
   }
   .elsewhen( io.wr_in.fire & io.wr_in.bits.op.probe ) {
-
+    when( tag_sel === lr_addr(31,32-tag_w) ) {
+      is_pending_lr := false.B
+    }
+  }
+  .elsewhen( io.dcache_pop.fire & (io.wr_in.bits.op.fun.is_su | io.wr_in.bits.op.fun.is_amo) ) {
+    when( tag_sel === lr_addr(31,32-tag_w) ) {
+      is_pending_lr := false.B
+    }   
   }
 
 
@@ -444,6 +478,7 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle{
     val dcache_push = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val dcache_pop = new DecoupledIO(new Info_cache_retn)
+    val is_lr_clear = Input(Bool())
 
     val missUnit_dcache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
     val missUnit_dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
@@ -491,7 +526,7 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   wr_stage.io.missUnit_req      <> missUnit.io.req
   wr_stage.io.wb_req <> writeBackUnit.io.wb_req
   wr_stage.io.pb_req <> writeBackUnit.io.pb_req
-
+  wr_stage.io.is_lr_clear := io.is_lr_clear
 
   missUnit.io.miss_ban := writeBackUnit.io.miss_ban
   writeBackUnit.io.release_ban := missUnit.io.release_ban

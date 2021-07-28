@@ -632,6 +632,7 @@ class Info_cmm_pc extends Bundle {
 // }
 
 class Info_cmm_lsu extends Bundle {
+  val is_lr_clear = Bool()
   val is_amo_pending = Bool()
   val is_store_commit = Vec(2, Bool())
 }

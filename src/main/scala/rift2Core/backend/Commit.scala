@@ -102,8 +102,8 @@ class Commit extends Privilege with Superscalar {
 
     val is_store_misAlign_ack_v =
       VecInit(
-        io.lsu_cmm.is_misAlign & io.rod_i(0).bits.is_su & ~is_wb_v(0),
-        io.lsu_cmm.is_misAlign & io.rod_i(1).bits.is_su & ~is_wb_v(1) & ~is_1st_solo
+        io.lsu_cmm.is_misAlign & (io.rod_i(0).bits.is_su | io.rod_i(0).bits.is_amo) & ~is_wb_v(0),
+        io.lsu_cmm.is_misAlign & (io.rod_i(1).bits.is_su | io.rod_i(1).bits.is_amo) & ~is_wb_v(1) & ~is_1st_solo
       )
 
     val is_ecall_v  =
@@ -199,7 +199,9 @@ class Commit extends Privilege with Superscalar {
   io.rod_i(1).ready := is_commit_comfirm(1)
 
   io.cmm_lsu.is_amo_pending := io.rod_i(0).valid & io.rod_i(0).bits.is_amo & ~is_commit_comfirm(0) //only pending amo in rod0 is send out
-
+  io.cmm_lsu.is_lr_clear := 
+    ((io.rod_i(1).valid) & ( is_xRet_v(1) | is_trap_v(1) ) & ~is_1st_solo) |
+    ((io.rod_i(0).valid) & ( is_xRet_v(0) | is_trap_v(0) ))
 
     //  |
     // (io.rod_i(1).bits.is_amo & ~is_commit_comfirm(1) ~is_1st_solo )
