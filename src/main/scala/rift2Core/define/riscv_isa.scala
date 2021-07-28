@@ -26,6 +26,12 @@
 package rift2Core.define
 
 import chisel3._
+import chisel3.util._
+
+
+
+
+
 
 
 class Alu_isa extends Bundle{
@@ -134,13 +140,27 @@ class Lsu_isa extends Bundle {
   val fld = Bool()
   val fsd = Bool()
 
-  def is_lu  = lb | lh | lw | ld | lbu | lhu | lwu | lr_w | lr_d | flw | fld 
-  def is_su  = sb | sh | sw | sd | sc_w | sc_d | fsw | fsd
+  def is_sc = sc_d | sc_w
+  def is_lr = lr_d | lr_w
+
+  def is_lu  = lb | lh | lw | ld | lbu | lhu | lwu |  flw | fld 
+  def is_su  = sb | sh | sw | sd | fsw | fsd
   def is_nls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd | fence | fence_i
-  def is_lrsc = lr_w | sc_w | lr_d | sc_d
-  def is_amo = amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
+  def is_lrsc = is_sc | is_lr
+  def is_amo =
+    amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d |
+    lr_w | lr_d | sc_w | sc_d 
   def is_fls = flw | fsw | fld | fsd
   def is_lsu = is_nls | is_lrsc | is_amo | is_fls
+
+  def is_byte = lb | lbu | sb
+  def is_half = lh | lhu | sh
+  def is_word = lw | lwu | sw | amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | flw | fsw | lr_w | sc_w
+  def is_dubl = ld | lr_d | fld | sd | sc_d | fsd | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
+
+  def is_usi = lbu | lhu | lwu
+  def is_fence = fence | fence_i
+
 }
 
 class Csr_isa extends Bundle {
@@ -415,6 +435,7 @@ class Info_reorder_i extends Bundle {
   val is_branch = Bool()
   val is_lu = Bool()
   val is_su = Bool()
+  val is_amo = Bool()
   val is_fence = Bool()
   val is_fence_i = Bool()
   val is_csr = Bool()
@@ -503,6 +524,14 @@ class Lsu_param extends Bundle {
 class Lsu_iss_info extends Bundle {
   val fun = new Lsu_isa
   val param = new Lsu_param
+
+  def is_misAlign =
+    Mux1H( Seq(
+      fun.is_half -> (param.op1(0) =/= 0.U),
+      fun.is_word -> (param.op1(1,0) =/= 0.U),
+      fun.is_dubl -> (param.op1(2,0) =/= 0.U)	
+    ))
+
 }
 
 
@@ -603,8 +632,9 @@ class Info_cmm_pc extends Bundle {
 // }
 
 class Info_cmm_lsu extends Bundle {
-  val is_fence_commit = Bool()
-  val is_store_commit = Bool()
+  val is_lr_clear = Bool()
+  val is_amo_pending = Bool()
+  val is_store_commit = Vec(2, Bool())
 }
 
 class Info_lsu_cmm extends Bundle {

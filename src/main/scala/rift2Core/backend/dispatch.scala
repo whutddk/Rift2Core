@@ -53,6 +53,7 @@ trait ReOrder {
     reorder_i_info.is_branch      := bd_dpt_info.info.bru_isa.is_branch
     reorder_i_info.is_lu          := bd_dpt_info.info.lsu_isa.is_lu
     reorder_i_info.is_su          := bd_dpt_info.info.lsu_isa.is_su
+    reorder_i_info.is_amo         := bd_dpt_info.info.lsu_isa.is_amo
     reorder_i_info.is_fence       := bd_dpt_info.info.lsu_isa.fence
     reorder_i_info.is_fence_i     := bd_dpt_info.info.lsu_isa.fence_i
     reorder_i_info.is_csr         := bd_dpt_info.info.csr_isa.is_csr

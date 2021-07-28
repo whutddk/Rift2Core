@@ -33,17 +33,40 @@ import rift2Core.cache._
 import tilelink._
 import axi._
 
+import chipsalliance.rocketchip.config._
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.tilelink._
 
-class Rift2Core extends Module {
+
+
+
+class Rift2Core()(implicit p: Parameters) extends LazyModule{
+  val dcacheClientParameters = TLMasterPortParameters.v1(
+    Seq(TLMasterParameters.v1(
+      name = "dcache",
+      sourceId = IdRange(0, 1),
+      supportsProbe = TransferSizes(32)
+    ))
+  )
+
+  val icacheClientParameters = TLMasterPortParameters.v1(
+    Seq(TLMasterParameters.v1(
+      name = "icache",
+      sourceId = IdRange(0, 1),
+      supportsProbe = TransferSizes(32)
+    ))
+  )
+
+  val icacheClientNode = TLClientNode(Seq(icacheClientParameters))
+  val dcacheClientNode = TLClientNode(Seq(dcacheClientParameters))
+
+  lazy val module = new Rift2CoreImp(this)
+}
+ 
+class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val io = IO(new Bundle{
     val il1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
     val il1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
-
-    val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
-    val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
-
-    val l2c_fence_req = Output(Bool())
-    val l3c_fence_req = Output(Bool())
 
     val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
     val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
@@ -54,48 +77,26 @@ class Rift2Core extends Module {
     val rtc_clock = Input(Bool())
   })
 
-  lazy val pc_stage = Module(new Pc_gen)
-  lazy val if_stage = Module(new Ifetch)
-  lazy val pd_stage = Module(new Predecode_ss)
-  lazy val bd_stage = Module(new BP_ID_ss)
-  // lazy val id_stage = Module(new BranchPredict_ss)
+  val ( icache_bus, icache_edge ) = outer.icacheClientNode.out.head
+  val ( dcache_bus, dcache_edge ) = outer.dcacheClientNode.out.head
 
-  lazy val dpt_stage = Module(new Dispatch_ss)
-  lazy val iss_stage = Module(new Issue)
-  lazy val exe_stage = Module(new Execute)
-  lazy val iwb_stage = Module(new WriteBack)
-  lazy val cmm_stage = Module(new Commit)
-
-  lazy val i_regfiles = Module(new Regfiles)
-
-///////////////////////////////////////////////////////////////////////////
+  val pc_stage = Module(new Pc_gen)
+  val if_stage = Module(new Ifetch(icache_edge))
+  val pd_stage = Module(new Predecode_ss)
+  val bd_stage = Module(new BP_ID_ss)
 
 
+  val dpt_stage = Module(new Dispatch_ss)
+  val iss_stage = Module(new Issue)
+  val exe_stage = Module(new Execute(dcache_edge))
+  val iwb_stage = Module(new WriteBack)
+  val cmm_stage = Module(new Commit)
+
+  val i_regfiles = Module(new Regfiles)
 
 
-
-
-
-  io.l2c_fence_req := exe_stage.io.l2c_fence_req
-  io.l3c_fence_req := exe_stage.io.l3c_fence_req
-
-
-
-////////////////////////////////////////////////////////////////////////////
-
-
-
-
-  if_stage.io.il1_chn_a <> io.il1_chn_a
-  if_stage.io.il1_chn_d <> io.il1_chn_d
-
-  exe_stage.io.dl1_chn_a <> io.dl1_chn_a
-  exe_stage.io.dl1_chn_d <> io.dl1_chn_d
-  exe_stage.io.sys_chn_ar <> io.sys_chn_ar
-  exe_stage.io.sys_chn_r  <> io.sys_chn_r
-  exe_stage.io.sys_chn_aw <> io.sys_chn_aw
-  exe_stage.io.sys_chn_w  <> io.sys_chn_w
-  exe_stage.io.sys_chn_b  <> io.sys_chn_b
+  // if_stage.io.il1_chn_a <> io.il1_chn_a
+  // if_stage.io.il1_chn_d <> io.il1_chn_d
 
   pc_stage.io.bd_pc <> bd_stage.io.bd_pc
   
@@ -128,7 +129,7 @@ class Rift2Core extends Module {
   exe_stage.io.mul_exe_iwb <>	iwb_stage.io.exe_iwb(4)
 
 
-  if_stage.io.is_il1_fence_req := exe_stage.io.il1_fence_req
+  // if_stage.io.is_il1_fence_req := exe_stage.io.icache_fence_req
 
   
 
@@ -138,14 +139,14 @@ class Rift2Core extends Module {
   
 
 
-  if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | bd_stage.io.bd_pc.valid | exe_stage.io.bru_pd_j.valid
-  pd_stage.io.flush  := exe_stage.io.il1_fence_req
-  bd_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | exe_stage.io.bru_pd_j.valid | exe_stage.io.il1_fence_req
-  // id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
-  dpt_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
-  iss_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
-  exe_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
-  i_regfiles.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+  if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | bd_stage.io.bd_pc.valid | exe_stage.io.bru_pd_j.valid
+  // pd_stage.io.flush  := exe_stage.io.icache_fence_req
+  bd_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | exe_stage.io.bru_pd_j.valid 
+  // id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) 
+  dpt_stage.io.flush := cmm_stage.io.is_commit_abort(0)
+  iss_stage.io.flush := cmm_stage.io.is_commit_abort(0)
+  exe_stage.io.flush := cmm_stage.io.is_commit_abort(0)
+  i_regfiles.io.flush := cmm_stage.io.is_commit_abort(0)
 
   cmm_stage.io.is_misPredict := bd_stage.io.is_misPredict_taken
 
@@ -173,6 +174,83 @@ class Rift2Core extends Module {
 
   cmm_stage.io.rtc_clock := io.rtc_clock
   
+
+
+
+  if_stage.io.missUnit_icache_grant.bits := icache_bus.d.bits
+  if_stage.io.missUnit_icache_grant.valid := icache_bus.d.valid & ( icache_bus.d.bits.opcode === TLMessages.Grant | icache_bus.d.bits.opcode === TLMessages.GrantData )
+
+  if_stage.io.writeBackUnit_icache_grant.bits := icache_bus.d.bits
+  if_stage.io.writeBackUnit_icache_grant.valid := icache_bus.d.valid & ( icache_bus.d.bits.opcode === TLMessages.ReleaseAck )
+
+  icache_bus.d.ready := 
+    Mux1H(Seq(
+      ( icache_bus.d.bits.opcode === TLMessages.Grant || icache_bus.d.bits.opcode === TLMessages.GrantData ) -> if_stage.io.missUnit_icache_grant.ready,
+      ( icache_bus.d.bits.opcode === TLMessages.ReleaseAck ) -> if_stage.io.writeBackUnit_icache_grant.ready
+    ))
+
+  icache_bus.a.valid := if_stage.io.missUnit_icache_acquire.valid
+  icache_bus.a.bits := if_stage.io.missUnit_icache_acquire.bits
+  if_stage.io.missUnit_icache_acquire.ready := icache_bus.a.ready
+
+  if_stage.io.probeUnit_icache_probe.valid := icache_bus.b.valid
+  if_stage.io.probeUnit_icache_probe.bits := icache_bus.b.bits
+  icache_bus.b.ready := if_stage.io.probeUnit_icache_probe.ready
+  
+  icache_bus.c.valid := if_stage.io.writeBackUnit_icache_release.valid
+  icache_bus.c.bits := if_stage.io.writeBackUnit_icache_release.bits
+  if_stage.io.writeBackUnit_icache_release.ready := icache_bus.c.ready
+  
+  icache_bus.e.valid := if_stage.io.missUnit_icache_grantAck.valid
+  icache_bus.e.bits := if_stage.io.missUnit_icache_grantAck.bits
+  if_stage.io.missUnit_icache_grantAck.ready := icache_bus.e.ready 
+
+
+
+
+
+
+
+
+  exe_stage.io.missUnit_dcache_grant.bits := dcache_bus.d.bits
+  exe_stage.io.missUnit_dcache_grant.valid := dcache_bus.d.valid & ( dcache_bus.d.bits.opcode === TLMessages.Grant | dcache_bus.d.bits.opcode === TLMessages.GrantData )
+
+  exe_stage.io.writeBackUnit_dcache_grant.bits := dcache_bus.d.bits
+  exe_stage.io.writeBackUnit_dcache_grant.valid := dcache_bus.d.valid & ( dcache_bus.d.bits.opcode === TLMessages.ReleaseAck )
+
+  dcache_bus.d.ready := 
+    Mux1H(Seq(
+      ( dcache_bus.d.bits.opcode === TLMessages.Grant || dcache_bus.d.bits.opcode === TLMessages.GrantData ) -> exe_stage.io.missUnit_dcache_grant.ready,
+      ( dcache_bus.d.bits.opcode === TLMessages.ReleaseAck ) -> exe_stage.io.writeBackUnit_dcache_grant.ready
+    ))
+
+  dcache_bus.a.valid := exe_stage.io.missUnit_dcache_acquire.valid
+  dcache_bus.a.bits := exe_stage.io.missUnit_dcache_acquire.bits
+  exe_stage.io.missUnit_dcache_acquire.ready := dcache_bus.a.ready
+
+  exe_stage.io.probeUnit_dcache_probe.valid := dcache_bus.b.valid
+  exe_stage.io.probeUnit_dcache_probe.bits := dcache_bus.b.bits
+  dcache_bus.b.ready := exe_stage.io.probeUnit_dcache_probe.ready
+  
+  dcache_bus.c.valid := exe_stage.io.writeBackUnit_dcache_release.valid
+  dcache_bus.c.bits := exe_stage.io.writeBackUnit_dcache_release.bits
+  exe_stage.io.writeBackUnit_dcache_release.ready := dcache_bus.c.ready
+  
+  dcache_bus.e.valid := exe_stage.io.missUnit_dcache_grantAck.valid
+  dcache_bus.e.bits := exe_stage.io.missUnit_dcache_grantAck.bits
+  exe_stage.io.missUnit_dcache_grantAck.ready := dcache_bus.e.ready 
+
+
+
+
+
+  exe_stage.io.sys_chn_ar <> io.sys_chn_ar
+  exe_stage.io.sys_chn_r  <> io.sys_chn_r
+  exe_stage.io.sys_chn_aw <> io.sys_chn_aw
+  exe_stage.io.sys_chn_w  <> io.sys_chn_w
+  exe_stage.io.sys_chn_b  <> io.sys_chn_b
+
+
 }
 
 

@@ -188,7 +188,7 @@ class PTW extends Module {
   ptw_mst.io.a_info.corrupt := false.B
   ptw_mst.io.a_info.data := DontCare
   ptw_mst.io.a_info.mask := DontCare
-  ptw_mst.io.a_info.opcode := ptw_mst.Get
+  ptw_mst.io.a_info.opcode := Opcode.Get
   ptw_mst.io.a_info.param := DontCare
   ptw_mst.io.a_info.size := 3.U
   ptw_mst.io.a_info.source := 2.U

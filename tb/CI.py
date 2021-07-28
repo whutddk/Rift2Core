@@ -2,7 +2,7 @@
 # @Author: Ruige Lee
 # @Date:   2020-11-18 15:37:18
 # @Last Modified by:   Ruige Lee
-# @Last Modified time: 2021-05-11 17:47:16
+# @Last Modified time: 2021-07-28 20:04:23
 
 
 import sys
@@ -23,25 +23,26 @@ testList = [
 	"rv64ui-p-blt",
 	"rv64ui-p-bltu",
 	"rv64ui-p-bne",
+	"rv64ui-p-lhu",
+	"rv64ui-p-lui",
 	"rv64ui-p-add",
 	"rv64ui-p-addiw",
 	"rv64ui-p-addw",
 	"rv64ui-p-and",
 	"rv64ui-p-andi",
+	"rv64ui-p-or",
+	"rv64ui-p-ori",
 	"rv64ui-p-auipc",
 	"rv64ui-p-lb",
 	"rv64ui-p-lbu",
 	"rv64ui-p-ld",
 	"rv64ui-p-lh",
-	"rv64ui-p-lhu",
-	"rv64ui-p-lui",
 	"rv64ui-p-lw",
 	"rv64ui-p-lwu",
-	"rv64ui-p-or",
-	"rv64ui-p-ori",
 	"rv64ui-p-sb",
 	"rv64ui-p-sd",
 	"rv64ui-p-sh",
+	"rv64ui-p-sw",
 	"rv64ui-p-sll",
 	"rv64ui-p-slli",
 	"rv64ui-p-slliw",
@@ -60,7 +61,6 @@ testList = [
 	"rv64ui-p-srlw",
 	"rv64ui-p-sub",
 	"rv64ui-p-subw",
-	"rv64ui-p-sw",
 	"rv64ui-p-xor",
 	"rv64ui-p-xori",
 	"rv64mi-p-access",
@@ -82,15 +82,33 @@ testList = [
 	"rv64um-p-rem",
 	"rv64um-p-remu",
 	"rv64um-p-remuw",
-	"rv64um-p-remw"
-
+	"rv64um-p-remw",
+    "rv64ua-p-amoadd_d",
+    "rv64ua-p-amoadd_w",
+    "rv64ua-p-amoand_d",
+    "rv64ua-p-amoand_w",
+    "rv64ua-p-amomaxu_d",
+    "rv64ua-p-amomaxu_w",
+    "rv64ua-p-amomax_d",
+    "rv64ua-p-amomax_w",
+    "rv64ua-p-amominu_d",
+    "rv64ua-p-amominu_w",
+    "rv64ua-p-amomin_d",
+    "rv64ua-p-amomin_w",
+    "rv64ua-p-amoor_d",
+    "rv64ua-p-amoor_w",
+    "rv64ua-p-amoswap_d",
+    "rv64ua-p-amoswap_w",
+    "rv64ua-p-amoxor_d",
+    "rv64ua-p-amoxor_w",
+    "rv64ua-p-lrsc",
 			]
 
 
 
 
 
-res = os.system("iverilog.exe -Wall -o ./build/wave.iverilog  -y ./ -y ./vtb/ -y ../src/test/resources -y ../generated/ -I ../generated/ -D RANDOMIZE_MEM_INIT ../tb/rift2chip_tb.v ")
+res = os.system("iverilog.exe -Wall -o ./build/wave.iverilog  -y ./ -y ./vtb/ -y ../src/test/resources -y ../generated/ -I ../generated/ -D RANDOMIZE_MEM_INIT ../tb/rift2chip_CI.v ")
 
 if ( res == 0 ):
 	print ("compile pass!")

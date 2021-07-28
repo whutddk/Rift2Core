@@ -34,9 +34,12 @@ import rift2Core.backend._
 import rift2Core.privilege.csrFiles._
 import tilelink._
 import axi._
+import rift._
+import chipsalliance.rocketchip.config._
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.tilelink._
 
-
-class Execute extends Module {
+class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
     val alu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
@@ -58,20 +61,21 @@ class Execute extends Module {
     val csr_cmm_op = DecoupledIO( new Exe_Port ) 
 
 
-    val dl1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
-    val dl1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
+    val cmm_lsu = Input(new Info_cmm_lsu)
+    val lsu_cmm = Output( new Info_lsu_cmm )
+
+    val missUnit_dcache_acquire = Decoupled(new TLBundleA(tlc_edge.bundle))
+    val missUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(tlc_edge.bundle)))
+    val missUnit_dcache_grantAck  = Decoupled(new TLBundleE(tlc_edge.bundle))
+    val probeUnit_dcache_probe = Flipped(DecoupledIO(new TLBundleB(tlc_edge.bundle)))
+    val writeBackUnit_dcache_release = DecoupledIO(new TLBundleC(tlc_edge.bundle))
+    val writeBackUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(tlc_edge.bundle)))
+
     val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
     val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
     val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
     val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
     val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
-    val cmm_lsu = Input(new Info_cmm_lsu)
-    val lsu_cmm = Output( new Info_lsu_cmm )
-
-    val il1_fence_req = Output(Bool())
-    val l2c_fence_req = Output(Bool())
-    val l3c_fence_req = Output(Bool())
-
 
     val flush = Input(Bool())
 
@@ -80,7 +84,7 @@ class Execute extends Module {
 
   val alu = Module(new Alu)
   val bru = Module(new Bru)
-  val lsu = Module(new Lsu)
+  val lsu = Module(new Lsu((tlc_edge)))
   val csr = Module(new Csr)
   val mul = Module(new Mul)
 
@@ -105,20 +109,25 @@ class Execute extends Module {
 
   lsu.io.lsu_iss_exe <> io.lsu_iss_exe
   lsu.io.lsu_exe_iwb <> io.lsu_exe_iwb
-  lsu.io.dl1_chn_a <> io.dl1_chn_a
-  lsu.io.dl1_chn_d <> io.dl1_chn_d
+
+  io.missUnit_dcache_acquire      <> lsu.io.missUnit_dcache_acquire
+  lsu.io.missUnit_dcache_grant <> io.missUnit_dcache_grant
+  io.missUnit_dcache_grantAck     <> lsu.io.missUnit_dcache_grantAck
+  lsu.io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe
+  io.writeBackUnit_dcache_release <> lsu.io.writeBackUnit_dcache_release
+  lsu.io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
+
   lsu.io.sys_chn_ar <> io.sys_chn_ar
   lsu.io.sys_chn_r  <> io.sys_chn_r
   lsu.io.sys_chn_aw <> io.sys_chn_aw
   lsu.io.sys_chn_w  <> io.sys_chn_w
   lsu.io.sys_chn_b  <> io.sys_chn_b
 
+
+
+
   lsu.io.cmm_lsu <> io.cmm_lsu
   lsu.io.lsu_cmm <> io.lsu_cmm
-
-  lsu.io.il1_fence_req <> io.il1_fence_req
-  lsu.io.l2c_fence_req <> io.l2c_fence_req
-  lsu.io.l3c_fence_req <> io.l3c_fence_req
 
   lsu.io.flush <> io.flush
 

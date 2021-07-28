@@ -116,8 +116,6 @@ class Predecode_ss extends Module with Superscalar{
 
     val pc_pd = Flipped(new ValidIO( UInt(64.W) ))
 
-    val flush = Input(Bool())
-
   })
 
   val pd_bd_fifo = Module(new MultiPortFifo( new Info_pd_bd, 4, 2, 2 ))
@@ -238,7 +236,7 @@ class Predecode_ss extends Module with Superscalar{
 
 
 
-  pd_bd_fifo.io.flush := io.pc_pd.valid | io.flush
+  pd_bd_fifo.io.flush := io.pc_pd.valid
 
 
 
