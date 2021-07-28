@@ -199,9 +199,7 @@ class Commit extends Privilege with Superscalar {
   io.rod_i(1).ready := is_commit_comfirm(1)
 
   io.cmm_lsu.is_amo_pending := io.rod_i(0).valid & io.rod_i(0).bits.is_amo & ~is_commit_comfirm(0) //only pending amo in rod0 is send out
-  io.cmm_lsu.is_lr_clear := 
-    ((io.rod_i(1).valid) & ( is_xRet_v(1) | is_trap_v(1) ) & ~is_1st_solo) |
-    ((io.rod_i(0).valid) & ( is_xRet_v(0) | is_trap_v(0) ))
+  io.cmm_lsu.is_lr_clear := io.is_commit_abort(1) | io.is_commit_abort(0)
 
     //  |
     // (io.rod_i(1).bits.is_amo & ~is_commit_comfirm(1) ~is_1st_solo )

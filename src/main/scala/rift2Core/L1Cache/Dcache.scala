@@ -424,7 +424,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
       is_pending_lr := false.B
     }
   }
-  .elsewhen( io.dcache_pop.fire & (io.wr_in.bits.op.fun.is_su | io.wr_in.bits.op.fun.is_amo) ) {
+  .elsewhen( io.dcache_pop.fire & (io.wr_in.bits.op.fun.is_su | (io.wr_in.bits.op.fun.is_amo & ~io.wr_in.bits.op.fun.is_lrsc)) ) {
     when( tag_sel === lr_addr(31,32-tag_w) ) {
       is_pending_lr := false.B
     }   
