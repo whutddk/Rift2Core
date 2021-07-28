@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-07-28 17:43:14
+* @Last Modified time: 2021-07-28 18:54:31
 */
 
 
@@ -309,7 +309,7 @@ initial begin
 
 	RSTn <= 1;
 
-	#50000
+	#500000
 			$display("Time Out !!!");
 	$stop;
 end

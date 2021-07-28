@@ -210,10 +210,10 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
   val is_pending_lr = RegInit(false.B)
   val is_lr_64_32n = RegInit(false.B)
-  val lr_addr = Reg(UInt(64.W))
+  val lr_addr = RegInit(0.U(64.W))
 
   val is_sc_fail = 
-    is_pending_lr | 
+    ~is_pending_lr | 
     (is_lr_64_32n & io.wr_in.bits.op.fun.is_word) |
     (~is_lr_64_32n & io.wr_in.bits.op.fun.is_dubl) |
     lr_addr =/= io.wr_in.bits.paddr
@@ -290,6 +290,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
       Mux1H(Seq(
         op.grant -> io.wr_in.bits.wdata(j),
         op.fun.is_su -> io.wr_in.bits.wdata(bk_sel),
+        op.fun.is_sc -> io.wr_in.bits.wdata(bk_sel),
         (op.fun.amoswap_w | op.fun.amoswap_d) -> io.wr_in.bits.wdata(bk_sel),
         (op.fun.amoadd_w  | op.fun.amoadd_d ) -> (io.wr_in.bits.wdata(bk_sel) + io.wr_in.bits.rdata(cb_sel)(bk_sel)),
         (op.fun.amoxor_w  | op.fun.amoxor_d ) -> (io.wr_in.bits.wdata(bk_sel) ^ io.wr_in.bits.rdata(cb_sel)(bk_sel)),
