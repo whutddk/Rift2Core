@@ -1,10 +1,10 @@
 /*
-* @File name: riftChip_DS
+* @File name: rift2chip_tb
 * @Author: Ruige Lee
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-07-27 15:57:35
+* @Last Modified time: 2021-07-28 20:04:37
 */
 
 
@@ -37,7 +37,7 @@ module rift2chip_tb (
 );
 
 	reg CLK;
-  reg rtc_clock;
+	reg rtc_clock;
 	reg RSTn;
 
 
@@ -256,6 +256,7 @@ axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram
 );
 
 
+
 debuger i_debuger(
 
 	.DEBUGER_AWADDR(io_sys_chn_aw_bits_addr),
@@ -301,12 +302,16 @@ end
 
 initial begin
 	CLK = 0;
+	rtc_clock = 0;
 	RSTn = 0;
 
 	#20
 
 	RSTn <= 1;
 
+	#500000
+			$display("Time Out !!!");
+	$stop;
 end
 
 
@@ -324,6 +329,8 @@ initial begin
 	end
 end
 
+
+
 // initial
 // begin
 // 	$dumpfile("./build/wave.vcd"); //生成的vcd文件名称
@@ -333,8 +340,8 @@ end
 wire isEcall = 
 	( s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_0_bits_privil_ecall & s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_0_valid ) | 
 	( s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_1_bits_privil_ecall & s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_1_valid & s_Rift2Chip.i_rift2Core.cmm_stage.io_rod_i_0_ready );
-wire [63:0] x3 = 	
-  s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd0  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_0  :
+wire [63:0] x3 = 
+	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd0  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_0  :
 	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd1  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_1  :
 	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd2  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_2  :
 	s_Rift2Chip.i_rift2Core.i_regfiles.archit_ptr_3 == 6'd3  ? s_Rift2Chip.i_rift2Core.i_regfiles.files_3  :
@@ -432,7 +439,8 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	$readmemh("./ci/dhrystone500.riscv.verilog", mem);
+
+	$readmemh(testName, mem);
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
 		for ( by = 0; by < 16; by = by + 1 ) begin
@@ -452,6 +460,7 @@ end
 
 
 endmodule
+
 
 
 

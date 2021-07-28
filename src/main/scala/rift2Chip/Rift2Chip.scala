@@ -52,7 +52,7 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
 
 
   val sifiveCache = LazyModule(new InclusiveCache(
-      cache = CacheParameters( level = 2, ways = 16, sets = 4096, blockBytes = 256/8, beatBytes = 128/8 ),
+      cache = CacheParameters( level = 2, ways = 8, sets = 2048, blockBytes = 256/8, beatBytes = 128/8 ),
       micro = InclusiveCacheMicroParameters( writeBytes = 128/8, memCycles = 40, portFactor = 4),
       control = None
     ))
