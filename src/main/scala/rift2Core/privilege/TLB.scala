@@ -52,7 +52,10 @@ class TLB( entry: Int = 32 ) extends Module {
     val flush = Input(Bool())
   })
 
+  /** The tag including *is_valid*, *asid*, and *vpn[8:0]* X 3 */
   val tag = RegInit( VecInit( Seq.fill(entry)(0.U.asTypeOf( new Info_tlb_tag  ))))
+
+  /** The PTE info of page */
   val pte = RegInit( VecInit( Seq.fill(entry)(0.U.asTypeOf( new Info_pte_sv39 ))))
 
   when( io.flush ) {
@@ -88,15 +91,19 @@ class TLB( entry: Int = 32 ) extends Module {
 
 
 
-
+  /** check whether the tlb is hit in
+   * @note lvl2_hit
+   * @note lvl1_hit
+   * @note lvl0_hit 
+   */
   val tlb_hit = VecInit(
-      for ( i <- 0 until entry ) yield {
-          val lvl2 = tag(i).is_valid & io.asid_i === tag(i).asid & io.vaddr.bits(38,30) === tag(i).vpn(2)
-          val lvl1 = io.vaddr.bits(29,21) === tag(i).vpn(1)
-          val lvl0 = io.vaddr.bits(20,12) === tag(i).vpn(0)
+    for ( i <- 0 until entry ) yield {
+      val lvl2 = tag(i).is_valid & io.asid_i === tag(i).asid & io.vaddr.bits(38,30) === tag(i).vpn(2)
+      val lvl1 = io.vaddr.bits(29,21) === tag(i).vpn(1)
+      val lvl0 = io.vaddr.bits(20,12) === tag(i).vpn(0)
 
-          lvl2 & ( pte(i).is_giga_page | ( lvl1 & (pte(i).is_mega_page | lvl0 ) ) )
-      }
+      lvl2 & ( pte(i).is_giga_page | ( lvl1 & (pte(i).is_mega_page | lvl0 ) ) )
+    }
   )
   
   assert( PopCount( tlb_hit.asUInt ) <= 1.U, "Assert Fail at tlb, more than 1 entry hit!"  )
