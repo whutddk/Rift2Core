@@ -29,8 +29,6 @@ import chisel3._
 import chisel3.util._
 import rift2Core.frontend._
 import rift2Core.backend._
-import rift2Core.cache._
-import tilelink._
 import axi._
 
 import chipsalliance.rocketchip.config._
@@ -65,8 +63,6 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
  
 class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val io = IO(new Bundle{
-    val il1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
-    val il1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
 
     val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
     val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
@@ -95,8 +91,6 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val i_regfiles = Module(new Regfiles)
 
 
-  // if_stage.io.il1_chn_a <> io.il1_chn_a
-  // if_stage.io.il1_chn_d <> io.il1_chn_d
 
   pc_stage.io.bd_pc <> bd_stage.io.bd_pc
   
@@ -129,7 +123,6 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   exe_stage.io.mul_exe_iwb <>	iwb_stage.io.exe_iwb(4)
 
 
-  // if_stage.io.is_il1_fence_req := exe_stage.io.icache_fence_req
 
   
 
