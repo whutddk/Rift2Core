@@ -36,6 +36,8 @@ trait HasIcacheParameters extends HasL1CacheParameters {
   def line_w   = log2Ceil(cl)
   def cb_w = log2Ceil(cb)
 
+  require( (addr_lsb + line_w) == 12 )
+ 
   def tag_w    = aw - addr_lsb - line_w
 }
 
