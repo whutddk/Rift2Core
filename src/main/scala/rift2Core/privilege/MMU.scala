@@ -22,7 +22,11 @@ import chisel3.util._
 
 import chisel3.util.random._
 
-import tilelink._
+import rift._
+
+import chipsalliance.rocketchip.config.Parameters
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.tilelink._
 
 class Info_pte_sv39 extends Bundle {
   val value = UInt(64.W)
@@ -92,7 +96,7 @@ class Info_csr_mmu extends Bundle {
   * including page-table-walker with physical-memory-protection
   *
   */
-class MMU extends Module {
+class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val if_mmu = Flipped(ValidIO(new Info_mmu_req))
     val mmu_if = ValidIO(new Info_mmu_rsp)
@@ -102,8 +106,9 @@ class MMU extends Module {
 
     val csr_mmu = Input( new Info_csr_mmu )
 
-    val mmu_chn_a = new DecoupledIO(new TLchannel_a(64, 32))
-    val mmu_chn_d = Flipped(new DecoupledIO(new TLchannel_d(64)))
+
+    val ptw_get    = new DecoupledIO(new TLBundleA(edge.bundle))
+    val ptw_access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
 
 
     val flush = Input(Bool())
@@ -111,7 +116,7 @@ class MMU extends Module {
 
   val itlb = Module( new TLB(32) )
   val dtlb = Module( new TLB(32) )
-  val ptw  = Module( new PTW )
+  val ptw  = Module( new PTW(edge) )
 
   val pmpcfg_vec = VecInit(
      io.csr_mmu.pmpcfg(0)(7,0).asTypeOf(new Info_pmpcfg),   io.csr_mmu.pmpcfg(0)(15,8).asTypeOf(new Info_pmpcfg),
@@ -152,8 +157,8 @@ class MMU extends Module {
   }
 
   val is_ptw_pmp_fault = RegEnable(
-    PMP( pmp_addr_vec, pmpcfg_vec, ptw.io.ptw_chn_a.bits.address, io.csr_mmu.priv_lvl , Cat(false.B, false.B, true.B)),
-    ptw.io.ptw_chn_a.valid
+    PMP( pmp_addr_vec, pmpcfg_vec, ptw.io.ptw_get.bits.address, io.csr_mmu.priv_lvl , Cat(false.B, false.B, true.B)),
+    ptw.io.ptw_get.valid
     )
 
 
@@ -226,11 +231,11 @@ class MMU extends Module {
       (ptw_req_no_dnxt === 2.U) -> io.iss_mmu.bits.vaddr
     ))
 
+  
 
 
-
-  ptw.io.ptw_chn_a <> io.mmu_chn_a
-  ptw.io.ptw_chn_d <> io.mmu_chn_d
+  ptw.io.ptw_get    <> io.ptw_get
+  ptw.io.ptw_access <> io.ptw_access
 
 
   def is_chk_page_fault(
