@@ -4,7 +4,7 @@ package rift2Core.L1Cache
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
-
+import rift2Core.privilege._
 
 import base._
 import chipsalliance.rocketchip.config.Parameters
@@ -56,7 +56,8 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     val pc_if = Flipped(new DecoupledIO( UInt(64.W) ))
     val if_iq = Vec(4, new DecoupledIO(UInt(16.W)) )
 
-
+    val if_mmu = ValidIO(new Info_mmu_req)
+    val mmu_if = Flipped(ValidIO(new Info_mmu_rsp))
 
     val missUnit_icache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
     val missUnit_icache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
@@ -83,6 +84,31 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val icache_state_dnxt = Wire(UInt(4.W))
   val icache_state_qout = RegNext( icache_state_dnxt, 0.U )
 
+
+
+
+  io.if_mmu.valid := io.pc_if.valid
+  io.if_mmu.bits.vaddr := io.pc_if.bits
+  io.if_mmu.bits.is_R := true.B
+  io.if_mmu.bits.is_W := false.B
+  io.if_mmu.bits.is_X := true.B
+  
+
+
+
+  assert( io.mmu_if.bits.is_page_fault === false.B )
+  assert( io.mmu_if.bits.is_pmp_fault === false.B )
+  
+  
+
+
+
+
+
+
+
+
+
   ibuf.io.flush := io.flush
 
   io.pc_if.ready := ibuf.io.enq(0).fire
@@ -102,14 +128,14 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val bk_sel_r = 
     Mux1H(Seq(
       (icache_state_dnxt === 1.U | icache_state_qout === 1.U) -> probeUnit.io.req.bits.paddr(addr_lsb-1, addr_lsb-log2Ceil(bk)),
-      (icache_state_dnxt === 2.U | icache_state_qout === 2.U) -> io.pc_if.bits(addr_lsb-1, addr_lsb-log2Ceil(bk)),
+      (icache_state_dnxt === 2.U | icache_state_qout === 2.U) -> io.mmu_if.bits.paddr(addr_lsb-1, addr_lsb-log2Ceil(bk)),
     ))
 
 
   val cl_sel = 
     Mux1H(Seq(
       (icache_state_qout === 1.U) -> probeUnit.io.req.bits.paddr(addr_lsb+line_w-1, addr_lsb),
-      (icache_state_qout === 2.U) -> io.pc_if.bits(addr_lsb+line_w-1, addr_lsb),
+      (icache_state_qout === 2.U) -> io.mmu_if.bits.paddr(addr_lsb+line_w-1, addr_lsb),
       (icache_state_qout === 3.U) -> missUnit.io.rsp.bits.paddr(addr_lsb+line_w-1, addr_lsb)
     ))
     
@@ -117,7 +143,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val tag_sel_r =
       Mux1H(Seq(
       (icache_state_qout === 1.U) -> probeUnit.io.req.bits.paddr(31,32-tag_w),
-      (icache_state_qout === 2.U) -> io.pc_if.bits(31,32-tag_w),
+      (icache_state_qout === 2.U) -> io.mmu_if.bits.paddr(31,32-tag_w),
     ))
 
 
@@ -175,7 +201,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
         MuxCase( 0.U, Array(
           (missUnit.io.rsp.valid & writeBackUnit.io.wb_req.ready) -> 3.U,
           probeUnit.io.req.valid -> 1.U,
-          (io.pc_if.valid & ~io.flush & ibuf.io.enq(7).ready & missUnit.io.req.ready) -> 2.U
+          (io.mmu_if.valid & ~io.flush & ibuf.io.enq(7).ready & missUnit.io.req.ready) -> 2.U
         )),
       (icache_state_qout === 3.U) -> Mux(writeBackUnit.io.wb_req.ready, 0.U, 3.U),
       (icache_state_qout === 1.U) -> Mux(writeBackUnit.io.pb_req.ready, 0.U, 1.U),
@@ -194,10 +220,10 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     Mux1H(Seq(
       (icache_state_dnxt === 3.U) -> missUnit.io.rsp.bits.paddr,
       (icache_state_dnxt === 1.U) -> probeUnit.io.req.bits.paddr,
-      (icache_state_dnxt === 2.U) -> io.pc_if.bits,
+      (icache_state_dnxt === 2.U) -> io.mmu_if.bits.paddr,
     ))
     
-  cache_dat.dat_addr_r := io.pc_if.bits
+  cache_dat.dat_addr_r := io.mmu_if.bits.paddr
 
 
   for ( i <- 0 until cb ) yield {
@@ -215,7 +241,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val reAlign_instr = {
     val res = Wire(UInt(128.W))
     val shift = Wire(UInt(7.W))
-    shift := Cat(io.pc_if.bits(3,0), 0.U(3.W))
+    shift := Cat(io.mmu_if.bits.paddr(3,0), 0.U(3.W))
     res := cache_dat.dat_info_r(cb_sel)(bk_sel_r) >> shift
 
     res
@@ -230,17 +256,17 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   ibuf.io.enq(6).bits := reAlign_instr >> 96.U
   ibuf.io.enq(7).bits := reAlign_instr >> 112.U
 
-  ibuf.io.enq(0).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 7.U )
-  ibuf.io.enq(1).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 6.U )
-  ibuf.io.enq(2).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 5.U )
-  ibuf.io.enq(3).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 4.U )
-  ibuf.io.enq(4).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 3.U )
-  ibuf.io.enq(5).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 2.U )
-  ibuf.io.enq(6).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) <= 1.U )
-  ibuf.io.enq(7).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.pc_if.bits(3,1) === 0.U )
+  ibuf.io.enq(0).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 7.U )
+  ibuf.io.enq(1).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 6.U )
+  ibuf.io.enq(2).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 5.U )
+  ibuf.io.enq(3).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 4.U )
+  ibuf.io.enq(4).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 3.U )
+  ibuf.io.enq(5).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 2.U )
+  ibuf.io.enq(6).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 1.U )
+  ibuf.io.enq(7).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) === 0.U )
 
 
-  missUnit.io.req.bits.paddr := io.pc_if.bits & ("hffffffff".U << addr_lsb.U)
+  missUnit.io.req.bits.paddr := io.mmu_if.bits.paddr & ("hffffffff".U << addr_lsb.U)
   missUnit.io.req.valid      := icache_state_qout === 2.U & ~is_hit & ~io.flush
   
   writeBackUnit.io.wb_req.bits.addr :=

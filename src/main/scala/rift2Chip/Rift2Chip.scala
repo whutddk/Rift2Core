@@ -130,6 +130,10 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     TLBuffer() := 
     i_rift2Core.dcacheClientNode
 
+    l1_xbar :=
+    TLBuffer() := 
+    i_rift2Core.mmuClientNode
+
   val memory = InModuleBody {
     memAXI4SlaveNode.makeIOs()
   }

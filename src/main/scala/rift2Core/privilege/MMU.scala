@@ -68,7 +68,7 @@ class Info_mmu_rsp extends Bundle {
 }
 
 
-class Info_csr_mmu extends Bundle {
+class Info_cmm_mmu extends Bundle {
   val satp = UInt(64.W)
 
 	val pmpcfg = Vec(16, UInt(64.W))
@@ -101,10 +101,10 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val if_mmu = Flipped(ValidIO(new Info_mmu_req))
     val mmu_if = ValidIO(new Info_mmu_rsp)
 
-    val iss_mmu = Flipped(ValidIO(new Info_mmu_req))
-    val mmu_iss = ValidIO(new Info_mmu_rsp)
+    val lsu_mmu = Flipped(ValidIO(new Info_mmu_req))
+    val mmu_lsu = ValidIO(new Info_mmu_rsp)
 
-    val csr_mmu = Input( new Info_csr_mmu )
+    val cmm_mmu = Input( new Info_cmm_mmu )
 
 
     val ptw_get    = new DecoupledIO(new TLBundleA(edge.bundle))
@@ -119,35 +119,35 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val ptw  = Module( new PTW(edge) )
 
   val pmpcfg_vec = VecInit(
-     io.csr_mmu.pmpcfg(0)(7,0).asTypeOf(new Info_pmpcfg),   io.csr_mmu.pmpcfg(0)(15,8).asTypeOf(new Info_pmpcfg),
-     io.csr_mmu.pmpcfg(0)(23,16).asTypeOf(new Info_pmpcfg), io.csr_mmu.pmpcfg(0)(31,24).asTypeOf(new Info_pmpcfg),
-     io.csr_mmu.pmpcfg(0)(39,32).asTypeOf(new Info_pmpcfg), io.csr_mmu.pmpcfg(0)(47,40).asTypeOf(new Info_pmpcfg),
-     io.csr_mmu.pmpcfg(0)(55,48).asTypeOf(new Info_pmpcfg), io.csr_mmu.pmpcfg(0)(63,56).asTypeOf(new Info_pmpcfg)
+     io.cmm_mmu.pmpcfg(0)(7,0).asTypeOf(new Info_pmpcfg),   io.cmm_mmu.pmpcfg(0)(15,8).asTypeOf(new Info_pmpcfg),
+     io.cmm_mmu.pmpcfg(0)(23,16).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(31,24).asTypeOf(new Info_pmpcfg),
+     io.cmm_mmu.pmpcfg(0)(39,32).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(47,40).asTypeOf(new Info_pmpcfg),
+     io.cmm_mmu.pmpcfg(0)(55,48).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(63,56).asTypeOf(new Info_pmpcfg)
   )
 
-  val pmp_addr_vec = VecInit( Seq(0.U(64.W)) ++ (for ( i <- 0 until 8 ) yield io.csr_mmu.pmpaddr(i)) )
+  val pmp_addr_vec = VecInit( Seq(0.U(64.W)) ++ (for ( i <- 0 until 8 ) yield io.cmm_mmu.pmpaddr(i)) )
 
   itlb.io.vaddr.valid := io.if_mmu.valid
   itlb.io.vaddr.bits  := io.if_mmu.bits.vaddr
-  itlb.io.asid_i  := io.csr_mmu.satp(59,44)
+  itlb.io.asid_i  := io.cmm_mmu.satp(59,44)
 
-  dtlb.io.vaddr.valid := io.iss_mmu.valid
-  dtlb.io.vaddr.bits  := io.iss_mmu.bits.vaddr
-  dtlb.io.asid_i  := io.csr_mmu.satp(59,44)
+  dtlb.io.vaddr.valid := io.lsu_mmu.valid
+  dtlb.io.vaddr.bits  := io.lsu_mmu.bits.vaddr
+  dtlb.io.asid_i  := io.cmm_mmu.satp(59,44)
 
-  ptw.io.satp_ppn := io.csr_mmu.satp(43,0)
+  ptw.io.satp_ppn := io.cmm_mmu.satp(43,0)
 
-  val is_mmu_bypass_if = io.csr_mmu.satp(63,60) === 0.U | io.csr_mmu.priv_lvl === "b11".U
+  val is_mmu_bypass_if = io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl === "b11".U
 
-  val is_mmu_bypass_ls = (io.csr_mmu.satp(63,60) === 0.U | io.csr_mmu.priv_lvl === "b11".U) & 
-                        ~(io.csr_mmu.mstatus(17) === 1.U & io.csr_mmu.priv_lvl === "b11".U)
+  val is_mmu_bypass_ls = (io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl === "b11".U) & 
+                        ~(io.cmm_mmu.mstatus(17) === 1.U & io.cmm_mmu.priv_lvl === "b11".U)
 
   val ptw_req_no_dnxt = Wire(UInt(2.W))
   val ptw_req_no_qout = RegNext(ptw_req_no_dnxt, 0.U(2.W))
 
   ptw_req_no_dnxt := {
     val is_iptw = (io.if_mmu.valid  & ~is_mmu_bypass_if  & ~itlb.io.pte_o.valid)
-    val is_dptw = (io.iss_mmu.valid & ~is_mmu_bypass_ls & ~dtlb.io.pte_o.valid)
+    val is_dptw = (io.lsu_mmu.valid & ~is_mmu_bypass_ls & ~dtlb.io.pte_o.valid)
     
     MuxCase( ptw_req_no_qout, Array(
       (ptw_req_no_qout === 0.U & is_iptw) -> 1.U,
@@ -157,7 +157,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   }
 
   val is_ptw_pmp_fault = RegEnable(
-    PMP( pmp_addr_vec, pmpcfg_vec, ptw.io.ptw_get.bits.address, io.csr_mmu.priv_lvl , Cat(false.B, false.B, true.B)),
+    PMP( pmp_addr_vec, pmpcfg_vec, ptw.io.ptw_get.bits.address, io.cmm_mmu.priv_lvl , Cat(false.B, false.B, true.B)),
     ptw.io.ptw_get.valid
     )
 
@@ -174,9 +174,9 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val d_paddr = {
     val dpte = Mux( dtlb.io.pte_o.valid, dtlb.io.pte_o.bits, ptw.io.ptw_o.bits )
     val pa_ppn_2 = dpte.ppn(2)
-    val pa_ppn_1 = Mux( (dpte.is_giga_page ), io.iss_mmu.bits.vaddr(29,21), dpte.ppn(1) )
-    val pa_ppn_0 = Mux( (dpte.is_giga_page | dpte.is_mega_page), io.iss_mmu.bits.vaddr(20,12), dpte.ppn(0) )
-    val pa_pgoff = io.iss_mmu.bits.vaddr(11,0)
+    val pa_ppn_1 = Mux( (dpte.is_giga_page ), io.lsu_mmu.bits.vaddr(29,21), dpte.ppn(1) )
+    val pa_ppn_0 = Mux( (dpte.is_giga_page | dpte.is_mega_page), io.lsu_mmu.bits.vaddr(20,12), dpte.ppn(0) )
+    val pa_pgoff = io.lsu_mmu.bits.vaddr(11,0)
     Cat( pa_ppn_2, pa_ppn_1, pa_ppn_0, pa_pgoff )
   }
 
@@ -186,23 +186,23 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   
   io.mmu_if.bits.is_page_fault := {
     val ipte = Mux( itlb.io.pte_o.valid, itlb.io.pte_o.bits, ptw.io.ptw_o.bits )
-    ~is_mmu_bypass_if & is_chk_page_fault( ipte, io.if_mmu.bits.vaddr, io.csr_mmu.priv_lvl, "b100".U)
+    ~is_mmu_bypass_if & is_chk_page_fault( ipte, io.if_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, "b100".U)
   }
   
   io.mmu_if.bits.is_pmp_fault := 
-    PMP( pmp_addr_vec, pmpcfg_vec, io.mmu_if.bits.paddr, io.csr_mmu.priv_lvl , Cat(io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R)) | 
+    PMP( pmp_addr_vec, pmpcfg_vec, io.mmu_if.bits.paddr, io.cmm_mmu.priv_lvl , Cat(io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R)) | 
     (is_ptw_pmp_fault & ptw_req_no_qout === 1.U)
 
-  io.mmu_iss.valid := Mux( is_mmu_bypass_ls, io.iss_mmu.valid, (dtlb.io.pte_o.valid | (ptw.io.ptw_o.valid & ptw_req_no_qout === 2.U )) )
-  io.mmu_iss.bits.paddr := Mux( is_mmu_bypass_ls, io.iss_mmu.bits.vaddr, d_paddr )
+  io.mmu_lsu.valid := Mux( is_mmu_bypass_ls, io.lsu_mmu.valid, (dtlb.io.pte_o.valid | (ptw.io.ptw_o.valid & ptw_req_no_qout === 2.U )) )
+  io.mmu_lsu.bits.paddr := Mux( is_mmu_bypass_ls, io.lsu_mmu.bits.vaddr, d_paddr )
 
-  io.mmu_iss.bits.is_page_fault := {
+  io.mmu_lsu.bits.is_page_fault := {
     val dpte = Mux( dtlb.io.pte_o.valid, dtlb.io.pte_o.bits, ptw.io.ptw_o.bits )
-    ~is_mmu_bypass_ls & is_chk_page_fault( dpte, io.iss_mmu.bits.vaddr, io.csr_mmu.priv_lvl, Cat(io.if_mmu.bits.is_X, io.iss_mmu.bits.is_W, io.iss_mmu.bits.is_R ))
+    ~is_mmu_bypass_ls & is_chk_page_fault( dpte, io.lsu_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, Cat(io.if_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R ))
   }
 
-  io.mmu_iss.bits.is_pmp_fault := 
-    PMP( pmp_addr_vec, pmpcfg_vec, io.mmu_iss.bits.paddr, io.csr_mmu.priv_lvl , Cat(io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R) ) | 
+  io.mmu_lsu.bits.is_pmp_fault := 
+    PMP( pmp_addr_vec, pmpcfg_vec, io.mmu_lsu.bits.paddr, io.cmm_mmu.priv_lvl , Cat(io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R) ) | 
     (is_ptw_pmp_fault & ptw_req_no_qout === 2.U)
 
 
@@ -228,7 +228,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     MuxCase( DontCare, Array(
       (ptw_req_no_dnxt === 0.U) -> DontCare,
       (ptw_req_no_dnxt === 1.U) -> io.if_mmu.bits.vaddr,
-      (ptw_req_no_dnxt === 2.U) -> io.iss_mmu.bits.vaddr
+      (ptw_req_no_dnxt === 2.U) -> io.lsu_mmu.bits.vaddr
     ))
 
   
@@ -247,11 +247,11 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
       val is_vaddr_illegal = chk_vaddr(63,39) =/= Fill(25,chk_vaddr(38))
       val is_U_access_ilegal =
         (chk_priv === "b00".U & pte.U === false.B) |
-        (chk_priv === "b01".U & pte.U === true.B & (io.csr_mmu.sstatus(18) === false.B) | chk_type(2) === true.B )
+        (chk_priv === "b01".U & pte.U === true.B & (io.cmm_mmu.sstatus(18) === false.B) | chk_type(2) === true.B )
 
       val is_A_illegal = pte.A === false.B
       val is_D_illegal = pte.D === false.B & chk_type(1) === true.B
-      val is_MXR_illegal = io.csr_mmu.mstatus(19) === false.B & pte.R === false.B
+      val is_MXR_illegal = io.cmm_mmu.mstatus(19) === false.B & pte.R === false.B
 
       return is_vaddr_illegal | is_U_access_ilegal | is_A_illegal | is_D_illegal | is_MXR_illegal
     }

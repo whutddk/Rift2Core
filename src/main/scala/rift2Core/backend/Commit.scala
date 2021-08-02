@@ -61,6 +61,8 @@ class Commit extends Privilege with Superscalar {
 
     val cmm_pc = new ValidIO(new Info_cmm_pc)
 
+    val cmm_mmu = Output( new Info_cmm_mmu )
+
     val rtc_clock = Input(Bool())
   })
 
@@ -319,4 +321,10 @@ class Commit extends Privilege with Superscalar {
 
 
 
+  io.cmm_mmu.satp := satp
+  io.cmm_mmu.pmpcfg := pmpcfg
+  io.cmm_mmu.pmpaddr := pmpaddr
+  io.cmm_mmu.priv_lvl := priv_lvl_qout
+  io.cmm_mmu.mstatus := mstatus
+  io.cmm_mmu.sstatus := sstatus
 }
