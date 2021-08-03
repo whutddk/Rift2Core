@@ -122,6 +122,11 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val cache_dat = new Cache_dat( 64, 56, 4, 1, 128 )
   val cache_tag = new Cache_tag( 64, 56, 4, 1, 128 ){ require ( tag_w == 44 ) } 
 
+  val (_, _, is_trans_done, transCnt) = edge.count(io.ptw_access)
+
+  val ptw_get_valid = RegInit(false.B)
+  val ptw_access_ready = RegInit(false.B)
+  val ptw_access_data = RegInit( 0.U(256.W) )
 
   cache_dat.dat_addr_r := walk.addr_dnxt
   cache_tag.tag_addr_r := walk.addr_dnxt
@@ -270,12 +275,10 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 //       TTTTTTTTTTT      iiiiiiiillllllll    eeeeeeeeeeeeeeLLLLLLLLLLLLLLLLLLLLLLLLiiiiiiii nnnnnn    nnnnnnkkkkkkkk    kkkkkkk
 
 
-  val ptw_get_valid = RegInit(false.B)
-  val ptw_access_ready = RegInit(false.B)
-  val ptw_access_data = RegInit( 0.U(256.W) )
-  io.ptw_get.valid := ptw_get_valid
 
-  val (_, _, is_trans_done, transCnt) = edge.count(io.ptw_access)
+  io.ptw_get.valid := ptw_get_valid
+  io.ptw_access.ready := ptw_access_ready
+
 
   when( (fsm.state_qout === state.lvl2 | fsm.state_qout === state.lvl1 | fsm.state_qout === state.lvl0) & ~is_hit & ~io.ptw_get.valid ) {
     ptw_get_valid := true.B

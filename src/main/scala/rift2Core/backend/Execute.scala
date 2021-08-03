@@ -124,8 +124,8 @@ class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   lsu.io.sys_chn_w  <> io.sys_chn_w
   lsu.io.sys_chn_b  <> io.sys_chn_b
 
-
-
+  lsu.io.lsu_mmu <> io.lsu_mmu
+  lsu.io.mmu_lsu <> io.mmu_lsu
 
   lsu.io.cmm_lsu <> io.cmm_lsu
   lsu.io.lsu_cmm <> io.lsu_cmm

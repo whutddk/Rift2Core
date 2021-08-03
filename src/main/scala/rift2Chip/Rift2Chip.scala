@@ -28,7 +28,6 @@ package rift2Chip
 import chisel3._
 import chisel3.util._
 import rift2Core._
-import cache._
 import axi._
 
 import chipsalliance.rocketchip.config._

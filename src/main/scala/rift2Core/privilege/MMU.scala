@@ -234,7 +234,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   
 
 
-  ptw.io.ptw_get    <> io.ptw_get
+  io.ptw_get <> ptw.io.ptw_get
   ptw.io.ptw_access <> io.ptw_access
 
 

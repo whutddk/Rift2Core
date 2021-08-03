@@ -114,7 +114,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   // val lsu_mmu = ValidIO(new Info_mmu_req)
   // val mmu_lsu = Flipped(ValidIO(new Info_mmu_rsp))
 
-  io.lsu_mmu.valid := io.mmu_lsu.valid
+  io.lsu_mmu.valid := io.lsu_iss_exe.valid
   io.lsu_mmu.bits.vaddr := io.lsu_iss_exe.bits.param.op1
   io.lsu_mmu.bits.is_R := io.lsu_iss_exe.bits.fun.is_R
   io.lsu_mmu.bits.is_W := io.lsu_iss_exe.bits.fun.is_W

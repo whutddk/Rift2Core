@@ -41,7 +41,7 @@ class Cache_tag( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
   val addr_sel_w = tag_addr_w(addr_lsb+line_w-1, addr_lsb)
   val addr_sel_r = tag_addr_r(addr_lsb+line_w-1, addr_lsb)
 
-  val tag_info_w = tag_addr_w(31, 32-tag_w)
+  val tag_info_w = tag_addr_w(aw-1, aw-tag_w)
 
 
   val tag_ram = {
