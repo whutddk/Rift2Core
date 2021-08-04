@@ -2,12 +2,11 @@
 # @Author: Ruige Lee
 # @Date:   2020-11-18 15:37:18
 # @Last Modified by:   Ruige Lee
-# @Last Modified time: 2021-08-04 17:00:56
+# @Last Modified time: 2021-07-28 20:04:23
 
-# from multiprocessing import Process
+
 import sys
 import os
-import threading
 
 
 CIReturn = 0
@@ -107,24 +106,21 @@ testList = [
 
 
 
-def ci(file):
-	res = os.system("iverilog.exe -Wall -o ./build/"+file+".iverilog  -y ./ -y ./vtb/ -y ../src/test/resources -y ../generated/ -I ../generated/ -D RANDOMIZE_MEM_INIT ../tb/rift2chip_CI.v >>null")
-
-	if ( res == 0 ):
-		print ("compile pass!")
-	else:
-		print ("compile Fail!")
-		CIReturn = -1
-		sys.exit(-1)
 
 
+res = os.system("iverilog.exe -Wall -o ./build/wave.iverilog  -y ./ -y ./vtb/ -y ../src/test/resources -y ../generated/ -I ../generated/ -D RANDOMIZE_MEM_INIT ../tb/rift2chip_CI.v ")
 
+if ( res == 0 ):
+	print ("compile pass!")
+else:
+	print ("compile Fail!")
+	CIReturn = -1
+	sys.exit(-1)
 
-
-	cmd = "vvp -N ./build/"+file+".iverilog +./ci/"
+for file in testList:
+	cmd = "vvp -N ./build/wave.iverilog +./ci/"
 	cmd = cmd + file
 	cmd = cmd + ".verilog >> null"
-	print("Testing " + file)
 	res = os.system(cmd)
 
 	if (res == 0):
@@ -148,30 +144,8 @@ def ci(file):
 	with open("./ci/"+file+".json","w") as f:
 		f.write(jsonFile)
 
-	# os.system("rm ./build/"+file+".iverilog")
-
 # if (CIReturn):
 # 	sys.exit(-1)
-
-
-if __name__ == "__main__": 
-
-
-
-	# process = []
-	thread = []
-
-	for file in testList:
-		t = threading.Thread(target=ci, args=(file,))
-		# process.append(p)
-		thread.append(t)
-		t.start()
-	for t in thread:
-		t.join()
-
-	print("CI end!")
-
-
 
 
 
