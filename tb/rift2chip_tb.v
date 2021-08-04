@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-07-28 20:04:37
+* @Last Modified time: 2021-08-04 17:14:47
 */
 
 
@@ -290,13 +290,13 @@ debuger i_debuger(
 
 
 
-reg [255:0] testName;
+// reg [255:0] testName;
 
-initial begin
-	if ( $value$plusargs("%s",testName[255:0]) ) begin
-		$display("%s",testName);
-	end
-end
+// initial begin
+// 	if ( $value$plusargs("%s",testName[255:0]) ) begin
+// 		$display("%s",testName);
+// 	end
+// end
 
 
 
@@ -439,8 +439,8 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	// $readmemh("./ci/rv64ua-p-lrsc.verilog", mem);
-	$readmemh(testName, mem);
+	$readmemh("./ci/rv64ui-p-simple.verilog", mem);
+	// $readmemh(testName, mem);
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
 		for ( by = 0; by < 16; by = by + 1 ) begin

@@ -322,8 +322,8 @@ class Commit extends Privilege with Superscalar {
 
 
   io.cmm_mmu.satp := satp
-  io.cmm_mmu.pmpcfg := pmpcfg
-  io.cmm_mmu.pmpaddr := pmpaddr
+  for ( i <- 0 until 16 ) yield io.cmm_mmu.pmpcfg(i) := pmpcfg(i)
+  for ( i <- 0 until 64 ) yield io.cmm_mmu.pmpaddr(i) := pmpaddr(i)
   io.cmm_mmu.priv_lvl := priv_lvl_qout
   io.cmm_mmu.mstatus := mstatus
   io.cmm_mmu.sstatus := sstatus
