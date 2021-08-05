@@ -22,12 +22,14 @@ import chisel3.util._
 
 
 class Info_pmpcfg extends Bundle {
-  val R    = Bool()
-  val W    = Bool()
-  val X    = Bool()
-  val A    = UInt(2.W)
-  val reserved = UInt(2.W)
-  val L = Bool()
+  val value = UInt(8.W)
+
+  def L = value(7).asBool
+  def reserved = value(6,5)
+  def A = value(4,3)
+  def X = value(2).asBool
+  def W = value(1).asBool
+  def R = value(0).asBool
 
 }
 
@@ -125,31 +127,31 @@ class PMP(entry: Int) extends RawModule {
     return (chk_priv === "b11".U & ~is_L)
   }
 
-  val is_inRange = Wire( UInt(entry.W) )
-  val is_inType  = Wire( UInt(entry.W) )
-  val is_inEnfce = Wire( UInt(entry.W) )
+  val is_inRange = Wire( Vec(entry, Bool()) )
+  val is_inType  = Wire( Vec(entry, Bool()) )
+  val is_inEnfce = Wire( Vec(entry, Bool()) )
 
   for( i <- 0 until entry ) yield {
-    is_inRange := Mux1H( Seq(
+    is_inRange(i) := Mux1H( Seq(
       (io.pmp_cfg(i).A === 0.U) -> off_range,
       (io.pmp_cfg(i).A === 1.U) -> tor_range  (io.pmp_addr(i),   io.pmp_addr(i+1), io.chk_addr),
       (io.pmp_cfg(i).A === 2.U) -> na4_range  (io.pmp_addr(i+1), io.chk_addr),
       (io.pmp_cfg(i).A === 3.U) -> napot_range(io.pmp_addr(i+1), io.chk_addr)
     ))
-    is_inType  := cmp_type( io.chk_type, io.pmp_cfg(i).X, io.pmp_cfg(i).W, io.pmp_cfg(i).R )
-    is_inEnfce := cmp_priv( io.chk_priv, io.pmp_cfg(i).L )
+    is_inType(i)  := cmp_type( io.chk_type, io.pmp_cfg(i).X, io.pmp_cfg(i).W, io.pmp_cfg(i).R )
+    is_inEnfce(i) := cmp_priv( io.chk_priv, io.pmp_cfg(i).L )
   }
 
   /**
     * when no range match, but in M-mode, it's valid!
     */
-  val is_Mbp = ~is_inRange.orR & (io.chk_priv === "b11".U)
-  val idx = VecInit(is_inRange.asBools).indexWhere( (x:Bool) => (x === true.B ))
+  val is_Mbp = ~is_inRange.asUInt.orR & (io.chk_priv === "b11".U)
+  val idx = is_inRange.indexWhere( (x:Bool) => (x === true.B ))
 
   io.is_fault := 
   ~(
     is_Mbp |
-    ( is_inRange.orR & (is_inType(idx) | is_inEnfce(idx) ))    
+    ( is_inRange.asUInt.orR & (is_inType(idx) | is_inEnfce(idx) ))    
   )
 
 }
