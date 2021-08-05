@@ -96,8 +96,8 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
 
 
-  assert( io.mmu_if.bits.is_page_fault === false.B )
-  assert( io.mmu_if.bits.is_pmp_fault === false.B )
+  assert( ~(io.mmu_if.valid & io.mmu_if.bits.is_page_fault) )
+  assert( ~(io.mmu_if.valid & io.mmu_if.bits.is_pmp_fault) )
   
   
 

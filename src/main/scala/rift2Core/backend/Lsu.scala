@@ -120,8 +120,8 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   io.lsu_mmu.bits.is_W := io.lsu_iss_exe.bits.fun.is_W
   io.lsu_mmu.bits.is_X := false.B
 
-  assert(io.mmu_lsu.bits.is_page_fault === false.B)
-  assert(io.mmu_lsu.bits.is_pmp_fault === false.B)
+  assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_page_fault) )
+  assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_pmp_fault ) )
   
   
 
