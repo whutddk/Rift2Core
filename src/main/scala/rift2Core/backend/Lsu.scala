@@ -22,11 +22,11 @@ import chisel3._
 import chisel3.util._
 import chisel3.util.random._
 import rift2Core.define._
-import rift2Core.cache._
-import tilelink._
 import axi._
 import chisel3.experimental.ChiselEnum
 import rift2Core.L1Cache._
+import rift2Core.privilege._
+
 
 import chisel3.experimental._
 import chipsalliance.rocketchip.config.Parameters
@@ -47,6 +47,9 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
+
+    val lsu_mmu = ValidIO(new Info_mmu_req)
+    val mmu_lsu = Flipped(ValidIO(new Info_mmu_rsp))
 
     // val icache_fence_req = Output(Bool())
     // val dcache_fence_req = Output(Bool())
@@ -105,12 +108,29 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   pending_fifo.io.flush := io.flush
 
 
+  // val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
+  // val lsu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+
+  // val lsu_mmu = ValidIO(new Info_mmu_req)
+  // val mmu_lsu = Flipped(ValidIO(new Info_mmu_rsp))
+
+  io.lsu_mmu.valid := io.lsu_iss_exe.valid
+  io.lsu_mmu.bits.vaddr := io.lsu_iss_exe.bits.param.op1
+  io.lsu_mmu.bits.is_R := io.lsu_iss_exe.bits.fun.is_R
+  io.lsu_mmu.bits.is_W := io.lsu_iss_exe.bits.fun.is_W
+  io.lsu_mmu.bits.is_X := false.B
+
+  assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_page_fault) )
+  assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_pmp_fault ) )
+  
+  
+
 
 
   when( io.flush ) { trans_kill := true.B }
   .elsewhen( lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty ) { trans_kill := false.B }
 
-  when( io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & ~fence_op ) {
+  when( io.mmu_lsu.valid & io.lsu_iss_exe.bits.fun.is_fence & ~fence_op ) {
     fence_op := true.B
     is_fence_i := io.lsu_iss_exe.bits.fun.fence_i
   }
@@ -123,7 +143,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
 
   su_exe_iwb_fifo.io.enq.valid :=
-    io.lsu_iss_exe.valid & ~trans_kill & ~fence_op & ~is_Fault & (
+    io.mmu_lsu.valid & ~trans_kill & ~fence_op & ~is_Fault & (
       (pending_fifo.io.enq.ready & io.lsu_iss_exe.bits.fun.is_su) //when is store, the pending fifo should ready
       
     )
@@ -133,19 +153,22 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   su_exe_iwb_fifo.io.enq.bits.res     := 0.U
 
   fe_exe_iwb_fifo.io.enq.valid :=
-    io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty
+    io.mmu_lsu.valid & io.lsu_iss_exe.bits.fun.is_fence & lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty
 
   fe_exe_iwb_fifo.io.enq.bits.rd0_phy := io.lsu_iss_exe.bits.param.rd0_phy
   fe_exe_iwb_fifo.io.enq.bits.res     := 0.U
 
 
   pending_fifo.io.enq.valid :=
-    io.lsu_iss_exe.valid & ~trans_kill & ~fence_op & ~is_Fault & (
+    io.mmu_lsu.valid & ~trans_kill & ~fence_op & ~is_Fault & (
       (su_exe_iwb_fifo.io.enq.ready & io.lsu_iss_exe.bits.fun.is_su) | //when is store, store wb should ready
       (io.lsu_iss_exe.bits.fun.is_amo )                                //when is atom, don't care wb fifo
     )
-    
-  pending_fifo.io.enq.bits := io.lsu_iss_exe.bits
+
+  {
+    pending_fifo.io.enq.bits := io.lsu_iss_exe.bits
+    pending_fifo.io.enq.bits.param.op1 := io.mmu_lsu.bits.paddr
+  }
 
   io.lsu_iss_exe.ready :=
     ~trans_kill &  ~is_Fault & (
@@ -166,8 +189,13 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
 
 
-  scoreBoard_arb.io.in(1).valid := io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_lu & ~trans_kill & ~fence_op & ~is_Fault & ~pending_fifo.io.is_hazard
-  scoreBoard_arb.io.in(1).bits := io.lsu_iss_exe.bits
+  scoreBoard_arb.io.in(1).valid := io.mmu_lsu.valid & io.lsu_iss_exe.bits.fun.is_lu & ~trans_kill & ~fence_op & ~is_Fault & ~pending_fifo.io.is_hazard
+  
+  {
+    scoreBoard_arb.io.in(1).bits := io.lsu_iss_exe.bits
+    scoreBoard_arb.io.in(1).bits.param.op1 := io.mmu_lsu.bits.paddr
+  }
+
 
   scoreBoard_arb.io.out <> lsu_scoreBoard.io.lsu_push
 
@@ -185,20 +213,20 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
   def is_accessFault = 
       (io.lsu_iss_exe.bits.fun.is_lu | io.lsu_iss_exe.bits.fun.is_su | io.lsu_iss_exe.bits.fun.is_amo) & 
-     ( (io.lsu_iss_exe.bits.param.op1(63,32) =/= 0.U ) | (io.lsu_iss_exe.bits.param.op1(31,29) =/= "b001".U & io.lsu_iss_exe.bits.param.op1(31) =/= 1.U))
+     ( (io.mmu_lsu.bits.paddr(63,32) =/= 0.U ) | (io.mmu_lsu.bits.paddr(31,29) =/= "b001".U & io.mmu_lsu.bits.paddr(31) =/= 1.U))
 
   def is_Fault = is_accessFault | io.lsu_iss_exe.bits.is_misAlign
 
 
 
   io.lsu_cmm.is_accessFault :=
-    io.lsu_iss_exe.valid & is_accessFault
+    io.mmu_lsu.valid & is_accessFault
     
 
   io.lsu_cmm.is_misAlign :=
-    io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.is_misAlign
+    io.mmu_lsu.valid & io.lsu_iss_exe.bits.is_misAlign
 
-  io.lsu_cmm.trap_addr := io.lsu_iss_exe.bits.param.op1
+  io.lsu_cmm.trap_addr := io.mmu_lsu.bits.paddr
 
 
 

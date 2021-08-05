@@ -22,8 +22,6 @@ import chisel3._
 import chisel3.util._
 import chisel3.util.random._
 import rift2Core.define._
-import rift2Core.cache._
-import tilelink._
 import axi._
 import chisel3.experimental.ChiselEnum
 import rift2Core.L1Cache._

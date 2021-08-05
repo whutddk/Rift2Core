@@ -161,6 +161,8 @@ class Lsu_isa extends Bundle {
   def is_usi = lbu | lhu | lwu
   def is_fence = fence | fence_i
 
+  def is_R = is_lu | is_lr | is_amo
+  def is_W = is_su | is_sc | is_amo
 }
 
 class Csr_isa extends Bundle {

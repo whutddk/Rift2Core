@@ -163,8 +163,8 @@ abstract class CsrFiles_port extends Module{
   val dscratch1 = Wire(UInt(64.W))
 
 
-  val pmpcfg  = WireDefault(VecInit( Seq.fill(16)(0.U(64.W)) ))
-  val pmpaddr = WireDefault(VecInit( Seq.fill(64)(0.U(64.W)) ))
+  val pmpcfg  = Wire(Vec( 16, UInt(64.W)) )
+  val pmpaddr = Wire(Vec( 64, UInt(64.W)) )
 
 
   val hpmcounter = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))

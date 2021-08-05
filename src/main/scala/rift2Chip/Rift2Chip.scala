@@ -28,7 +28,6 @@ package rift2Chip
 import chisel3._
 import chisel3.util._
 import rift2Core._
-import cache._
 import axi._
 
 import chipsalliance.rocketchip.config._
@@ -129,6 +128,10 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     l1_xbar :=
     TLBuffer() := 
     i_rift2Core.dcacheClientNode
+
+    l1_xbar :=
+    TLBuffer() := 
+    i_rift2Core.mmuClientNode
 
   val memory = InModuleBody {
     memAXI4SlaveNode.makeIOs()

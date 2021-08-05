@@ -29,8 +29,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.frontend._
 import rift2Core.backend._
-import rift2Core.cache._
-import tilelink._
+import rift2Core.privilege._
 import axi._
 
 import chipsalliance.rocketchip.config._
@@ -57,16 +56,23 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
     ))
   )
 
+  val mmuClientParameters = TLMasterPortParameters.v1(
+    Seq(TLMasterParameters.v1(
+      name = "mmu",
+      sourceId = IdRange(0, 1),
+      // supportsGet = TransferSizes(32)
+    ))
+  )
+
   val icacheClientNode = TLClientNode(Seq(icacheClientParameters))
   val dcacheClientNode = TLClientNode(Seq(dcacheClientParameters))
+  val    mmuClientNode = TLClientNode(Seq(   mmuClientParameters))
 
   lazy val module = new Rift2CoreImp(this)
 }
  
 class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val io = IO(new Bundle{
-    val il1_chn_a = new DecoupledIO(new TLchannel_a(128, 32))
-    val il1_chn_d = Flipped(new DecoupledIO( new TLchannel_d(128) ))
 
     val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
     val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
@@ -79,6 +85,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   val ( icache_bus, icache_edge ) = outer.icacheClientNode.out.head
   val ( dcache_bus, dcache_edge ) = outer.dcacheClientNode.out.head
+  val (    mmu_bus,    mmu_edge ) = outer.mmuClientNode.out.head
 
   val pc_stage = Module(new Pc_gen)
   val if_stage = Module(new Ifetch(icache_edge))
@@ -94,9 +101,20 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   val i_regfiles = Module(new Regfiles)
 
+  val i_mmu = Module(new MMU(edge = mmu_edge))
 
-  // if_stage.io.il1_chn_a <> io.il1_chn_a
-  // if_stage.io.il1_chn_d <> io.il1_chn_d
+  i_mmu.io.if_mmu <> if_stage.io.if_mmu
+  i_mmu.io.mmu_if <> if_stage.io.mmu_if
+  i_mmu.io.lsu_mmu <> exe_stage.io.lsu_mmu
+  i_mmu.io.mmu_lsu <> exe_stage.io.mmu_lsu
+
+  i_mmu.io.cmm_mmu <> cmm_stage.io.cmm_mmu
+
+
+  i_mmu.io.flush := false.B
+
+
+
 
   pc_stage.io.bd_pc <> bd_stage.io.bd_pc
   
@@ -129,7 +147,6 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   exe_stage.io.mul_exe_iwb <>	iwb_stage.io.exe_iwb(4)
 
 
-  // if_stage.io.is_il1_fence_req := exe_stage.io.icache_fence_req
 
   
 
@@ -240,8 +257,13 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   dcache_bus.e.bits := exe_stage.io.missUnit_dcache_grantAck.bits
   exe_stage.io.missUnit_dcache_grantAck.ready := dcache_bus.e.ready 
 
+  mmu_bus.a.valid := i_mmu.io.ptw_get.valid
+  mmu_bus.a.bits := i_mmu.io.ptw_get.bits
+  i_mmu.io.ptw_get.ready := mmu_bus.a.ready
 
-
+  mmu_bus.d.ready := i_mmu.io.ptw_access.ready
+  i_mmu.io.ptw_access.bits := mmu_bus.d.bits
+  i_mmu.io.ptw_access.valid := mmu_bus.d.valid
 
 
   exe_stage.io.sys_chn_ar <> io.sys_chn_ar

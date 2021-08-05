@@ -30,7 +30,7 @@ import chisel3.util._
 import rift2Core._
 import rift2Chip._
 import rift2Core.privilege._
-import rift2Core.cache._
+
 
 import chiseltest._
 import org.scalatest._

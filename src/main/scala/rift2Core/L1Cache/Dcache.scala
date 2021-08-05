@@ -37,6 +37,9 @@ trait HasDcacheParameters extends HasL1CacheParameters {
   def cb_w = log2Ceil(cb)
 
   def tag_w    = aw - addr_lsb - line_w
+
+  require( (addr_lsb + line_w) == 12 )
+  
 }
 
 abstract class DcacheModule(implicit p: Parameters) extends L1CacheModule

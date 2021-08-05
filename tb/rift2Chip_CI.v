@@ -1,10 +1,10 @@
 /*
-* @File name: rift2chip_tb
+* @File name: rift2Chip_CI
 * @Author: Ruige Lee
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-07-28 20:04:37
+* @Last Modified time: 2021-08-04 17:14:04
 */
 
 
