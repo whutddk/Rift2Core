@@ -299,11 +299,11 @@ abstract class CsrFiles_M extends CsrFiles_port {
   misa := {
     val mxl = WireDefault(2.U(2.W))
     val extensions = {
-      if (false) {
-        WireDefault("b00000101000001000100000100".U(26.W))  
+      if (true) {
+        WireDefault("b00000101000001000100000101".U(26.W))  
       }
       else {
-        WireDefault("b00000000000001000100000100".U(26.W))
+        WireDefault("b00000000000001000100000101".U(26.W))
       }
     
     }

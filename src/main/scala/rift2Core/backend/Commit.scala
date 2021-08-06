@@ -185,6 +185,9 @@ class Commit extends Privilege with Superscalar {
     is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo
   )
 
+  // when( is_commit_comfirm(0) ) { printf("comfirm pc=%x\n", io.rod_i(0).bits.pc) }
+  // when( is_commit_comfirm(1) ) { printf("comfirm pc=%x\n", io.rod_i(1).bits.pc) }
+
 
   io.cm_op(0).valid := is_commit_comfirm(0)
   io.cm_op(1).valid := is_commit_comfirm(1)
