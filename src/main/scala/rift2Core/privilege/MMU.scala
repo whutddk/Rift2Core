@@ -31,16 +31,16 @@ import freechips.rocketchip.tilelink._
 class Info_pte_sv39 extends Bundle {
   val value = UInt(64.W)
 
-  val V = value(0).asBool
-  val R = value(1).asBool
-  val W = value(2).asBool
-  val X = value(3).asBool
-  val U = value(4).asBool
-  val G = value(5).asBool
-  val A = value(6).asBool
-  val D = value(7).asBool
-  val rsw = value(9,8)
-  val ppn = MixedVecInit( Seq( value(18,10), value(27,19), value(53,28) ) )
+  def V = value(0).asBool
+  def R = value(1).asBool
+  def W = value(2).asBool
+  def X = value(3).asBool
+  def U = value(4).asBool
+  def G = value(5).asBool
+  def A = value(6).asBool
+  def D = value(7).asBool
+  def rsw = value(9,8)
+  def ppn = MixedVecInit( Seq( value(18,10), value(27,19), value(53,28) ) )
 
   val is_4K_page = Bool()
   val is_giga_page = Bool()
