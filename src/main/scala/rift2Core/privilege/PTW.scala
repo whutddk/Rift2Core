@@ -35,8 +35,8 @@ import freechips.rocketchip.tilelink._
   */ 
 class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
-    val vaddr = Flipped(ValidIO(UInt(64.W)))
-    val ptw_o = ValidIO(new Info_pte_sv39)
+    val vaddr = Flipped(DecoupledIO(UInt(64.W)))
+    val ptw_o = DecoupledIO(new Info_pte_sv39)
     val is_ptw_fail = Output(Bool())
     val satp_ppn = Input(UInt(44.W))
 

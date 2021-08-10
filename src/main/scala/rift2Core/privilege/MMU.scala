@@ -98,11 +98,11 @@ class Info_cmm_mmu extends Bundle {
   */
 class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
-    val if_mmu = Flipped(ValidIO(new Info_mmu_req))
-    val mmu_if = ValidIO(new Info_mmu_rsp)
+    val if_mmu = Flipped(DecoupledIO(new Info_mmu_req))
+    val mmu_if = DecoupledIO(new Info_mmu_rsp)
 
-    val lsu_mmu = Flipped(ValidIO(new Info_mmu_req))
-    val mmu_lsu = ValidIO(new Info_mmu_rsp)
+    val lsu_mmu = Flipped(DecoupledIO(new Info_mmu_req))
+    val mmu_lsu = DecoupledIO(new Info_mmu_rsp)
 
     val cmm_mmu = Input( new Info_cmm_mmu )
 
@@ -146,7 +146,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val ptw_req_no_qout = RegNext(ptw_req_no_dnxt, 0.U(2.W))
 
   ptw_req_no_dnxt := {
-    val is_iptw = (io.if_mmu.valid  & ~is_mmu_bypass_if  & ~itlb.io.pte_o.valid)
+    val is_iptw = (io.if_mmu.valid  & ~is_mmu_bypass_if & ~itlb.io.pte_o.valid)
     val is_dptw = (io.lsu_mmu.valid & ~is_mmu_bypass_ls & ~dtlb.io.pte_o.valid)
     
     MuxCase( ptw_req_no_qout, Array(
@@ -186,7 +186,11 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   
   io.mmu_if.bits.is_page_fault := {
     val ipte = Mux( itlb.io.pte_o.valid, itlb.io.pte_o.bits, ptw.io.ptw_o.bits )
-    ~is_mmu_bypass_if & is_chk_page_fault( ipte, io.if_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, "b100".U)
+    ~is_mmu_bypass_if & (
+      is_chk_page_fault( ipte, io.if_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, "b100".U) |
+      ptw.io.is_ptw_fail
+    )
+
   }
   
   io.mmu_if.bits.is_pmp_fault := 
@@ -198,7 +202,11 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   io.mmu_lsu.bits.is_page_fault := {
     val dpte = Mux( dtlb.io.pte_o.valid, dtlb.io.pte_o.bits, ptw.io.ptw_o.bits )
-    ~is_mmu_bypass_ls & is_chk_page_fault( dpte, io.lsu_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, Cat(io.if_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R ))
+    ~is_mmu_bypass_ls & (
+      is_chk_page_fault( dpte, io.lsu_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, Cat(io.if_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R )) |
+      ptw.io.is_ptw_fail  
+    )
+
   }
 
   io.mmu_lsu.bits.is_pmp_fault := 
