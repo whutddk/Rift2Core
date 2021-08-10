@@ -145,9 +145,9 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
       (fsm.state_qout === state.lvl1 & fsm.state_dnxt === state.lvl0)
 
     val wr_enable = 
-      (fsm.state_qout === state.lvl2 & io.ptw_access.fire & is_trans_done & ~walk.is_ptw_fail) |
-      (fsm.state_qout === state.lvl1 & io.ptw_access.fire & is_trans_done & ~walk.is_ptw_fail) |
-      (fsm.state_qout === state.lvl0 & io.ptw_access.fire & is_trans_done & ~walk.is_ptw_fail)
+      (fsm.state_qout === state.lvl2 & is_trans_done & ~walk.is_ptw_fail) |
+      (fsm.state_qout === state.lvl1 & is_trans_done & ~walk.is_ptw_fail) |
+      (fsm.state_qout === state.lvl0 & is_trans_done & ~walk.is_ptw_fail)
 
     cache_tag.tag_en_w(i) := wr_enable
     cache_tag.tag_en_r(i) := rd_enable
@@ -170,14 +170,17 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val data =
       VecInit( for ( j <- 0 until 4) yield { ptw_access_data(64*j+63, 64*j) } )
 
-    assert( PopCount( Seq(is_hit, io.ptw_access.fire & is_trans_done) ) <= 1.U )
+    assert( PopCount( Seq(is_hit, is_trans_done) ) <= 1.U )
 
     val value = RegInit(0.U(64.W))
 
     when( is_hit ) { value := cache_dat.dat_info_r(0)(walk.bk_sel_qout) }
-    .elsewhen( io.ptw_access.fire & is_trans_done ) { data(walk.bk_sel_qout) }
+    .elsewhen( is_trans_done ) { value := data(walk.bk_sel_qout) }
 
-    value
+    MuxCase(value, Array(
+      is_hit        -> cache_dat.dat_info_r(0)(walk.bk_sel_qout),
+      is_trans_done -> data(walk.bk_sel_qout)
+    ))
   }
 
 
@@ -208,19 +211,19 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val ptw_state_dnxt_in_free = Mux( io.vaddr.valid, state.lvl2, state.free )
   val ptw_state_dnxt_in_lvl2 = 
     Mux(
-      (io.ptw_access.fire & is_trans_done) | is_hit,
+      (is_trans_done) | is_hit,
       Mux( walk.is_ptw_end | io.is_ptw_fail, state.free, state.lvl1 ),
       state.lvl2
     )
   val ptw_state_dnxt_in_lvl1 = 
     Mux(
-      (io.ptw_access.fire & is_trans_done) | is_hit,
+      (is_trans_done) | is_hit,
       Mux( walk.is_ptw_end | io.is_ptw_fail, state.free, state.lvl0 ),
       state.lvl1
     )
   val ptw_state_dnxt_in_lvl0 = 
     Mux(
-      (io.ptw_access.fire & is_trans_done) | is_hit,
+      (is_trans_done) | is_hit,
       Mux( walk.is_ptw_end | io.is_ptw_fail, state.free, state.free ),
       state.lvl0
     )
