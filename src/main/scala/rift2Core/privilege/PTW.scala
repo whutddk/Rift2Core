@@ -196,7 +196,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
 
 
-  val ptw_state_dnxt_in_free = Mux( io.vaddr.valid, state.lvl0, state.free )
+  val ptw_state_dnxt_in_free = Mux( io.vaddr.valid, state.lvl2, state.free )
   val ptw_state_dnxt_in_lvl2 = 
     Mux(
       (io.ptw_access.fire & is_trans_done) | is_hit,

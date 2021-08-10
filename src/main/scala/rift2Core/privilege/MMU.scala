@@ -225,8 +225,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   ptw.io.vaddr.valid := ptw_req_no_dnxt === 1.U | ptw_req_no_dnxt === 2.U
   ptw.io.vaddr.bits := 
-    MuxCase( DontCare, Array(
-      (ptw_req_no_dnxt === 0.U) -> DontCare,
+    Mux1H(Seq(
       (ptw_req_no_dnxt === 1.U) -> io.if_mmu.bits.vaddr,
       (ptw_req_no_dnxt === 2.U) -> io.lsu_mmu.bits.vaddr
     ))

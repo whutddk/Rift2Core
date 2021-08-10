@@ -109,7 +109,7 @@ class TLB( entry: Int = 32 ) extends Module {
   assert( PopCount( tlb_hit.asUInt ) <= 1.U, "Assert Fail at tlb, more than 1 entry hit!"  )
 
   io.pte_o.bits  := Mux1H( tlb_hit zip pte )
-  io.pte_o.valid := tlb_hit.contains(true.B)
+  io.pte_o.valid := tlb_hit.contains(true.B) & io.vaddr.valid
 }
 
 
