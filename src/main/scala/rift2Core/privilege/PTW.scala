@@ -69,7 +69,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     // val level = RegInit(0.U(2.W))
     val is_ptw_end = Wire(Bool())
     val is_ptw_fail = Wire(Bool())
-    val pte_value = RegInit(0.U(256.W))
+    val pte_value = RegInit(0.U(64.W))
     val pte  = pte_value.asTypeOf(new Info_pte_sv39)
     val addr_dnxt = Wire(UInt(56.W))
     val addr_qout = RegNext(addr_dnxt, 0.U(56.W))
@@ -83,9 +83,9 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
     addr_dnxt :=
       Cat(a, Mux1H(Seq(
-        (fsm.state_dnxt === state.lvl0) -> Cat(io.vaddr.bits(20,12), 0.U(3.W)),
-        (fsm.state_dnxt === state.lvl1) -> Cat(io.vaddr.bits(29,21), 0.U(3.W)),
         (fsm.state_dnxt === state.lvl2) -> Cat(io.vaddr.bits(38,30), 0.U(3.W)),
+        (fsm.state_dnxt === state.lvl1) -> Cat(io.vaddr.bits(29,21), 0.U(3.W)),
+        (fsm.state_dnxt === state.lvl0) -> Cat(io.vaddr.bits(20,12), 0.U(3.W)),
         ))
       )
 
@@ -284,7 +284,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   .elsewhen( fsm.state_dnxt =/= fsm.state_qout ) { is_get_reqed := false.B }
 
 
-  when( (fsm.state_qout === state.lvl2 | fsm.state_qout === state.lvl1 | fsm.state_qout === state.lvl0) & ~is_hit & ~io.ptw_get.valid ) {
+  when( (fsm.state_qout === state.lvl2 | fsm.state_qout === state.lvl1 | fsm.state_qout === state.lvl0) & ~is_hit & ~io.ptw_get.valid & ~is_get_reqed ) {
     ptw_get_valid := true.B
   } .elsewhen( io.ptw_get.fire ) {
     ptw_get_valid := false.B
