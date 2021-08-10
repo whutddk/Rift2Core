@@ -279,6 +279,10 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   io.ptw_get.valid := ptw_get_valid
   io.ptw_access.ready := ptw_access_ready
 
+  val is_get_reqed = RegInit(false.B)
+  when( io.ptw_get.fire ) { is_get_reqed := true.B }
+  .elsewhen( fsm.state_dnxt =/= fsm.state_qout ) { is_get_reqed := false.B }
+
 
   when( (fsm.state_qout === state.lvl2 | fsm.state_qout === state.lvl1 | fsm.state_qout === state.lvl0) & ~is_hit & ~io.ptw_get.valid ) {
     ptw_get_valid := true.B
