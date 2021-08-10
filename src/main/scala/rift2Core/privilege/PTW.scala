@@ -71,9 +71,9 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val is_ptw_fail = Wire(Bool())
 
 
-    val pte_value = Wire(UInt(64.W))
+    val pte = Wire(new Info_pte_sv39)
 
-    val pte  = pte_value.asTypeOf(new Info_pte_sv39)
+    // val pte  = pte_value.asTypeOf(new Info_pte_sv39)
     val addr_dnxt = Wire(UInt(56.W))
     val addr_qout = RegNext(addr_dnxt, 0.U(56.W))
     
@@ -166,14 +166,18 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val is_hit = (walk.tag_sel === cache_tag.tag_info_r(0))
 
 
-  walk.pte_value := {
+  walk.pte.value := {
     val data =
       VecInit( for ( j <- 0 until 4) yield { ptw_access_data(64*j+63, 64*j) } )
 
-    Mux( is_hit,
-      cache_dat.dat_info_r(0)(walk.bk_sel_qout),
-      Mux( io.ptw_access.fire & is_trans_done, data(walk.bk_sel_qout), DontCare )
-    )
+    assert( PopCount( Seq(is_hit, io.ptw_access.fire & is_trans_done) ) <= 1.U )
+
+    val value = RegInit(0.U(64.W))
+
+    when( is_hit ) { value := cache_dat.dat_info_r(0)(walk.bk_sel_qout) }
+    .elsewhen( io.ptw_access.fire & is_trans_done ) { data(walk.bk_sel_qout) }
+
+    value
   }
 
 
