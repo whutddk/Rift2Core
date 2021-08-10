@@ -69,7 +69,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     // val level = RegInit(0.U(2.W))
     val is_ptw_end = Wire(Bool())
     val is_ptw_fail = Wire(Bool())
-    val pte_value = RegInit(0.U(64.W))
+    val pte_value = Wire(UInt(64.W))
     val pte  = pte_value.asTypeOf(new Info_pte_sv39)
     val addr_dnxt = Wire(UInt(56.W))
     val addr_qout = RegNext(addr_dnxt, 0.U(56.W))
@@ -100,7 +100,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
 
     is_ptw_fail :=
-      ( ~is_ptw_end & 
+      ( is_ptw_end & 
       Mux1H(Seq(
         (fsm.state_qout === state.free) -> false.B,
         (fsm.state_qout === state.lvl2) -> (pte.ppn(0) =/= 0.U | pte.ppn(1) =/= 0.U),
