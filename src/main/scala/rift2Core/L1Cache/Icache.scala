@@ -56,8 +56,8 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     val pc_if = Flipped(new DecoupledIO( UInt(64.W) ))
     val if_iq = Vec(4, new DecoupledIO(UInt(16.W)) )
 
-    val if_mmu = ValidIO(new Info_mmu_req)
-    val mmu_if = Flipped(ValidIO(new Info_mmu_rsp))
+    val if_mmu = DecoupledIO(new Info_mmu_req)
+    val mmu_if = Flipped(DecoupledIO(new Info_mmu_rsp))
 
     val missUnit_icache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
     val missUnit_icache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
@@ -92,6 +92,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   io.if_mmu.bits.is_R := true.B
   io.if_mmu.bits.is_W := false.B
   io.if_mmu.bits.is_X := true.B
+  io.pc_if.ready := io.if_mmu.ready
   
 
 
@@ -111,7 +112,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   ibuf.io.flush := io.flush
 
-  io.pc_if.ready := ibuf.io.enq(0).fire
+  io.mmu_if.ready := ibuf.io.enq(0).fire
   io.if_iq <> ibuf.io.deq
 
 

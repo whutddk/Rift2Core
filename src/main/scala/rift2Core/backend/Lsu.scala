@@ -48,8 +48,8 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
 
-    val lsu_mmu = ValidIO(new Info_mmu_req)
-    val mmu_lsu = Flipped(ValidIO(new Info_mmu_rsp))
+    val lsu_mmu = DecoupledIO(new Info_mmu_req)
+    val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
 
     // val icache_fence_req = Output(Bool())
     // val dcache_fence_req = Output(Bool())
@@ -119,6 +119,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   io.lsu_mmu.bits.is_R := io.lsu_iss_exe.bits.fun.is_R
   io.lsu_mmu.bits.is_W := io.lsu_iss_exe.bits.fun.is_W
   io.lsu_mmu.bits.is_X := false.B
+  io.lsu_iss_exe.ready := io.lsu_mmu.ready
 
   assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_page_fault) )
   assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_pmp_fault ) )
@@ -170,7 +171,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
     pending_fifo.io.enq.bits.param.op1 := io.mmu_lsu.bits.paddr
   }
 
-  io.lsu_iss_exe.ready :=
+  io.mmu_lsu.ready :=
     ~trans_kill &  ~is_Fault & (
       ( ~fence_op & io.lsu_iss_exe.bits.fun.is_su  & pending_fifo.io.enq.ready & su_exe_iwb_fifo.io.enq.ready) | //when store, both pending fifo and store wb should ready
       ( ~fence_op & ~pending_fifo.io.is_hazard & io.lsu_iss_exe.bits.fun.is_lu  & scoreBoard_arb.io.in(1).ready) | //when load, scoreBoard should ready
