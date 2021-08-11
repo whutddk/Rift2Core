@@ -133,7 +133,7 @@ class PMP(entry: Int) extends RawModule {
   val is_inType  = Wire( Vec(entry, Bool()) )
   val is_inEnfce = Wire( Vec(entry, Bool()) )
 
-  val pmpcfg = VecInit(
+  val pmp_cfg = VecInit(
      io.cmm_mmu.pmpcfg(0)( 7, 0).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(15, 8).asTypeOf(new Info_pmpcfg),
      io.cmm_mmu.pmpcfg(0)(23,16).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(31,24).asTypeOf(new Info_pmpcfg),
      io.cmm_mmu.pmpcfg(0)(39,32).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(47,40).asTypeOf(new Info_pmpcfg),
@@ -147,9 +147,9 @@ class PMP(entry: Int) extends RawModule {
   for( i <- 0 until entry ) yield {
     is_inRange(i) := Mux1H( Seq(
       (pmp_cfg(i).A === 0.U) -> off_range,
-      (pmp_cfg(i).A === 1.U) -> tor_range  (pmp_addr(i),   pmp_addr(i+1), chk_addr),
-      (pmp_cfg(i).A === 2.U) -> na4_range  (pmp_addr(i+1), chk_addr),
-      (pmp_cfg(i).A === 3.U) -> napot_range(pmp_addr(i+1), chk_addr)
+      (pmp_cfg(i).A === 1.U) -> tor_range  (pmp_addr(i),   pmp_addr(i+1), io.chk_addr),
+      (pmp_cfg(i).A === 2.U) -> na4_range  (pmp_addr(i+1), io.chk_addr),
+      (pmp_cfg(i).A === 3.U) -> napot_range(pmp_addr(i+1), io.chk_addr)
     ))
     is_inType(i)  := cmp_type( io.chk_type, pmp_cfg(i).X, pmp_cfg(i).W, pmp_cfg(i).R )
     is_inEnfce(i) := cmp_priv( io.cmm_mmu.priv_lvl, pmp_cfg(i).L )
@@ -174,7 +174,7 @@ class PMP(entry: Int) extends RawModule {
   */
 object PMP{
   def apply(
-    cmm_mmu: Vec[Info_cmm_mmu],
+    cmm_mmu: Info_cmm_mmu,
     chk_addr: UInt,
     chk_type: UInt
   ) = {

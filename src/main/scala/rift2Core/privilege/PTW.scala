@@ -131,7 +131,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     when( fsm.state_qout === state.free & fsm.state_dnxt === state.lvl2 ) {
       is_access_fault := false.B
     }
-    .elsewhen( ptw.io.ptw_get.fire ) {
+    .elsewhen( io.ptw_get.fire ) {
       is_access_fault := 
         is_access_fault |
         PMP( io.cmm_mmu, io.ptw_get.bits.address, Cat(false.B, false.B, true.B))
