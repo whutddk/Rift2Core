@@ -50,14 +50,15 @@ class Info_pte_sv39 extends Bundle {
 
 
 
-
-
-
-class Info_mmu_req extends Bundle {
-  val vaddr = UInt(64.W)
+trait Info_access_lvl extends Bundle {
   val is_X = Bool()
   val is_W = Bool()
   val is_R = Bool()
+}
+
+
+class Info_mmu_req extends Bundle with Info_access_lvl{
+  val vaddr = UInt(64.W)
 }
 
 
@@ -118,36 +119,55 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val dtlb = Module( new TLB(32) )
   val ptw  = Module( new PTW(edge) )
 
-  val pmpcfg_vec = VecInit(
-     io.cmm_mmu.pmpcfg(0)(7,0).asTypeOf(new Info_pmpcfg),   io.cmm_mmu.pmpcfg(0)(15,8).asTypeOf(new Info_pmpcfg),
-     io.cmm_mmu.pmpcfg(0)(23,16).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(31,24).asTypeOf(new Info_pmpcfg),
-     io.cmm_mmu.pmpcfg(0)(39,32).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(47,40).asTypeOf(new Info_pmpcfg),
-     io.cmm_mmu.pmpcfg(0)(55,48).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(63,56).asTypeOf(new Info_pmpcfg)
-  )
 
-  val pmp_addr_vec = VecInit( Seq(0.U(64.W)) ++ (for ( i <- 0 until 8 ) yield io.cmm_mmu.pmpaddr(i)) )
 
   itlb.io.vaddr.valid := io.if_mmu.valid
   itlb.io.vaddr.bits  := io.if_mmu.bits.vaddr
   itlb.io.asid_i  := io.cmm_mmu.satp(59,44)
+  io.if_mmu.ready := 
+    io.mmu_if.ready & (
+      (itlb.io.pte_o.valid & true.B) |
+      ptw_arb.io.in(0).ready
+    )
 
   dtlb.io.vaddr.valid := io.lsu_mmu.valid
   dtlb.io.vaddr.bits  := io.lsu_mmu.bits.vaddr
   dtlb.io.asid_i  := io.cmm_mmu.satp(59,44)
+  io.lsu_mmu.ready := 
+    io.mmu_lsu.ready & (
+      (dtlb.io.pte_o.valid & true.B) |
+      ptw_arb.io.in(1).ready
+    )
 
   ptw.io.satp_ppn := io.cmm_mmu.satp(43,0)
 
-  val is_mmu_bypass_if = io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl === "b11".U
+  val ptw_arb = Module(new Arbiter(new Info_mmu_req, 2))
 
-  val is_mmu_bypass_ls = (io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl === "b11".U) & 
+  ptw_arb.io.in(0).valid := io.if_mmu.valid & ~itlb.io.pte_o.valid
+  ptw_arb.io.in(0).bits  := io.if_mmu.bits
+
+  ptw_arb.io.in(1).valid := io.lsu_mmu.valid & ~dtlb.io.pte_o.valid
+  ptw_arb.io.in(1).bits  := io.lsu_mmu.bits
+
+  ptw_arb.io.out <> ptw.io.ptw_i
+
+
+
+  val is_bypass_if = io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl === "b11".U
+
+  val is_bypass_ls = (io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl === "b11".U) & 
                         ~(io.cmm_mmu.mstatus(17) === 1.U & io.cmm_mmu.priv_lvl === "b11".U)
+
+
+
+
 
   val ptw_req_no_dnxt = Wire(UInt(2.W))
   val ptw_req_no_qout = RegNext(ptw_req_no_dnxt, 0.U(2.W))
 
   ptw_req_no_dnxt := {
-    val is_iptw = (io.if_mmu.valid  & ~is_mmu_bypass_if & ~itlb.io.pte_o.valid)
-    val is_dptw = (io.lsu_mmu.valid & ~is_mmu_bypass_ls & ~dtlb.io.pte_o.valid)
+    val is_iptw = (io.if_mmu.valid  & ~is_bypass_if & ~itlb.io.pte_o.valid)
+    val is_dptw = (io.lsu_mmu.valid & ~is_bypass_ls & ~dtlb.io.pte_o.valid)
     
     MuxCase( ptw_req_no_qout, Array(
       (ptw_req_no_qout === 0.U & is_iptw) -> 1.U,
@@ -163,7 +183,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
 
   val i_paddr = {
-    val ipte = Mux( itlb.io.pte_o.valid, itlb.io.pte_o.bits, ptw.io.ptw_o.bits )
+    val ipte = Mux( itlb.io.pte_o.valid, itlb.io.pte_o.bits, ptw.io.ptw_o.bits.pte )
     val pa_ppn_2 = ipte.ppn(2)
     val pa_ppn_1 = Mux( (ipte.is_giga_page ), io.if_mmu.bits.vaddr(29,21), ipte.ppn(1) )
     val pa_ppn_0 = Mux( (ipte.is_giga_page | ipte.is_mega_page), io.if_mmu.bits.vaddr(20,12), ipte.ppn(0) )
@@ -172,7 +192,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   }
 
   val d_paddr = {
-    val dpte = Mux( dtlb.io.pte_o.valid, dtlb.io.pte_o.bits, ptw.io.ptw_o.bits )
+    val dpte = Mux( dtlb.io.pte_o.valid, dtlb.io.pte_o.bits, ptw.io.ptw_o.bits.pte )
     val pa_ppn_2 = dpte.ppn(2)
     val pa_ppn_1 = Mux( (dpte.is_giga_page ), io.lsu_mmu.bits.vaddr(29,21), dpte.ppn(1) )
     val pa_ppn_0 = Mux( (dpte.is_giga_page | dpte.is_mega_page), io.lsu_mmu.bits.vaddr(20,12), dpte.ppn(0) )
@@ -181,14 +201,14 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   }
 
 
-  io.mmu_if.valid := Mux( is_mmu_bypass_if, io.if_mmu.valid, (itlb.io.pte_o.valid | (ptw.io.ptw_o.valid & ptw_req_no_qout === 1.U ) ) )
-  io.mmu_if.bits.paddr := Mux( is_mmu_bypass_if, io.if_mmu.bits.vaddr, i_paddr )
+  io.mmu_if.valid := Mux( is_bypass_if, io.if_mmu.valid, (itlb.io.pte_o.valid | (ptw.io.ptw_o.valid & ptw_req_no_qout === 1.U ) ) )
+  io.mmu_if.bits.paddr := Mux( is_bypass_if, io.if_mmu.bits.vaddr, i_paddr )
   
   io.mmu_if.bits.is_page_fault := {
-    val ipte = Mux( itlb.io.pte_o.valid, itlb.io.pte_o.bits, ptw.io.ptw_o.bits )
-    ~is_mmu_bypass_if & (
+    val ipte = Mux( itlb.io.pte_o.valid, itlb.io.pte_o.bits, ptw.io.ptw_o.bits.pte )
+    ~is_bypass_if & (
       is_chk_page_fault( ipte, io.if_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, "b100".U) |
-      ptw.io.is_ptw_fail
+      ptw.io.ptw_o.bits.is_ptw_fail
     )
 
   }
@@ -197,17 +217,33 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     PMP( pmp_addr_vec, pmpcfg_vec, io.mmu_if.bits.paddr, io.cmm_mmu.priv_lvl , Cat(io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R)) | 
     (is_ptw_pmp_fault & ptw_req_no_qout === 1.U)
 
-  io.mmu_lsu.valid := Mux( is_mmu_bypass_ls, io.lsu_mmu.valid, (dtlb.io.pte_o.valid | (ptw.io.ptw_o.valid & ptw_req_no_qout === 2.U )) )
-  io.mmu_lsu.bits.paddr := Mux( is_mmu_bypass_ls, io.lsu_mmu.bits.vaddr, d_paddr )
+  io.mmu_lsu.valid := Mux( is_bypass_ls, io.lsu_mmu.valid, (dtlb.io.pte_o.valid | (ptw.io.ptw_o.valid & ptw_req_no_qout === 2.U )) )
+  io.mmu_lsu.bits.paddr := Mux( is_bypass_ls, io.lsu_mmu.bits.vaddr, d_paddr )
 
   io.mmu_lsu.bits.is_page_fault := {
-    val dpte = Mux( dtlb.io.pte_o.valid, dtlb.io.pte_o.bits, ptw.io.ptw_o.bits )
-    ~is_mmu_bypass_ls & (
+    val dpte = Mux( dtlb.io.pte_o.valid, dtlb.io.pte_o.bits, ptw.io.ptw_o.bits.pte )
+    ~is_bypass_ls & (
       is_chk_page_fault( dpte, io.lsu_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, Cat(io.if_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R )) |
-      ptw.io.is_ptw_fail  
+      ptw.io.ptw_o.bits.is_ptw_fail  
     )
 
   }
+
+
+  val pmpcfg_vec = VecInit(
+     io.cmm_mmu.pmpcfg(0)(7,0).asTypeOf(new Info_pmpcfg),   io.cmm_mmu.pmpcfg(0)(15,8).asTypeOf(new Info_pmpcfg),
+     io.cmm_mmu.pmpcfg(0)(23,16).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(31,24).asTypeOf(new Info_pmpcfg),
+     io.cmm_mmu.pmpcfg(0)(39,32).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(47,40).asTypeOf(new Info_pmpcfg),
+     io.cmm_mmu.pmpcfg(0)(55,48).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(63,56).asTypeOf(new Info_pmpcfg)
+  )
+
+  val pmp_addr_vec = VecInit( Seq(0.U(64.W)) ++ (for ( i <- 0 until 8 ) yield io.cmm_mmu.pmpaddr(i)) )
+
+
+
+
+
+
 
   io.mmu_lsu.bits.is_pmp_fault := 
     PMP( pmp_addr_vec, pmpcfg_vec, io.mmu_lsu.bits.paddr, io.cmm_mmu.priv_lvl , Cat(io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R) ) | 
@@ -224,19 +260,13 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   itlb.io.tlb_renew.bits := ptw.io.ptw_o.bits
   dtlb.io.tlb_renew.bits := ptw.io.ptw_o.bits
 
-  itlb.io.tlb_renew.valid := (ptw.io.ptw_o.valid & ptw_req_no_qout === 1.U ) & ~ptw.io.is_ptw_fail
-  dtlb.io.tlb_renew.valid := (ptw.io.ptw_o.valid & ptw_req_no_qout === 2.U ) & ~ptw.io.is_ptw_fail
+  itlb.io.tlb_renew.valid := (ptw.io.ptw_o.valid & ptw_req_no_qout === 1.U ) & ~ptw.io.ptw_o.bits.is_ptw_fail
+  dtlb.io.tlb_renew.valid := (ptw.io.ptw_o.valid & ptw_req_no_qout === 2.U ) & ~ptw.io.ptw_o.bits.is_ptw_fail
 
 
 
 
 
-  ptw.io.vaddr.valid := ptw_req_no_dnxt === 1.U | ptw_req_no_dnxt === 2.U
-  ptw.io.vaddr.bits := 
-    Mux1H(Seq(
-      (ptw_req_no_dnxt === 1.U) -> io.if_mmu.bits.vaddr,
-      (ptw_req_no_dnxt === 2.U) -> io.lsu_mmu.bits.vaddr
-    ))
 
   
 

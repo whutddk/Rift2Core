@@ -29,7 +29,7 @@ import chipsalliance.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
-class Info_ptw_rsp extends Bundle {
+class Info_ptw_rsp extends Bundle with Info_access_lvl{
   val pte = new Info_pte_sv39
   val is_ptw_fail = Bool()
 
@@ -44,7 +44,6 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val ptw_i = Flipped(DecoupledIO(new Info_mmu_req))
     val ptw_o = DecoupledIO(new Info_ptw_rsp)
-    val is_ptw_fail = Output(Bool())
 
     val satp_ppn = Input(UInt(44.W))
 
@@ -254,7 +253,9 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
 
 
-
+  io.ptw_o.bits.is_X := walk.req.is_X
+  io.ptw_o.bits.is_R := walk.req.is_R
+  io.ptw_o.bits.is_W := walk.req.is_W
   io.ptw_o.bits.pte  := walk.pte
   io.ptw_o.bits.is_ptw_fail := walk.is_ptw_fail
   io.ptw_o.valid :=
