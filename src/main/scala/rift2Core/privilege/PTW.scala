@@ -32,6 +32,7 @@ import freechips.rocketchip.tilelink._
 class Info_ptw_rsp extends Bundle with Info_access_lvl{
   val pte = new Info_pte_sv39
   val is_ptw_fail = Bool()
+  val is_access_fault = Bool()
 
 }
 
@@ -45,7 +46,8 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val ptw_i = Flipped(DecoupledIO(new Info_mmu_req))
     val ptw_o = DecoupledIO(new Info_ptw_rsp)
 
-    val satp_ppn = Input(UInt(44.W))
+    val cmm_mmu = Input(new Info_cmm_mmu)
+    // val satp_ppn = Input(UInt(44.W))
 
     val ptw_get    = new DecoupledIO(new TLBundleA(edge.bundle))
     val ptw_access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
@@ -72,6 +74,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     // val level = RegInit(0.U(2.W))
     val is_ptw_end = Wire(Bool())
     val is_ptw_fail = Wire(Bool())
+    val is_access_fault = RegInit(false.B)
 
 
     val pte = Wire(new Info_pte_sv39)
@@ -82,7 +85,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     
     a :=
       Mux1H(Seq(
-        ( fsm.state_dnxt === state.lvl2 ) -> io.satp_ppn,
+        ( fsm.state_dnxt === state.lvl2 ) -> io.cmm_mmu.satp(43,0),
         ( fsm.state_dnxt === state.lvl1 ) -> Cat(pte.ppn(2), pte.ppn(1), pte.ppn(0)),
         ( fsm.state_dnxt === state.lvl0 ) -> Cat(pte.ppn(2), pte.ppn(1), pte.ppn(0)),
       ))
@@ -123,6 +126,17 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     pte.is_4K_page   := is_ptw_end & fsm.state_qout === state.lvl0
     pte.is_mega_page := is_ptw_end & fsm.state_qout === state.lvl1       
     pte.is_giga_page := is_ptw_end & fsm.state_qout === state.lvl2
+
+
+    when( fsm.state_qout === state.free & fsm.state_dnxt === state.lvl2 ) {
+      is_access_fault := false.B
+    }
+    .elsewhen( ptw.io.ptw_get.fire ) {
+      is_access_fault := 
+        is_access_fault |
+        PMP( io.cmm_mmu, io.ptw_get.bits.address, Cat(false.B, false.B, true.B))
+    }
+
 
   }
 
@@ -251,8 +265,10 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     )) === 1.U, "Assert Faild at ptw FSM!"
   )
 
+  io.ptw_i.ready :=
+    fsm.state_qout === state.free & io.ptw_o.ready 
 
-
+  io.ptw_o.bits.is_access_fault := walk.is_access_fault
   io.ptw_o.bits.is_X := walk.req.is_X
   io.ptw_o.bits.is_R := walk.req.is_R
   io.ptw_o.bits.is_W := walk.req.is_W
@@ -260,6 +276,8 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   io.ptw_o.bits.is_ptw_fail := walk.is_ptw_fail
   io.ptw_o.valid :=
     fsm.state_dnxt === state.free & fsm.state_qout =/= state.free
+
+  assert( ~(io.ptw_o.valid & ~io.ptw_o.ready) ) //when ptw_valid, ptw_o must ready 
 
 
 
@@ -330,4 +348,5 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
 
 }
+
 
