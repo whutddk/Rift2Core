@@ -123,20 +123,18 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val is_bypass_ls = (io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl === "b11".U) & 
                         ~(io.cmm_mmu.mstatus(17) === 1.U & io.cmm_mmu.priv_lvl === "b11".U)
 
-  itlb.io.vaddr.valid := io.if_mmu.valid
-  itlb.io.vaddr.bits  := io.if_mmu.bits.vaddr
+  itlb.io.req.valid := io.if_mmu.valid
+  itlb.io.req.bits  := io.if_mmu.bits.vaddr
   itlb.io.asid_i  := io.cmm_mmu.satp(59,44)
-  io.if_mmu.ready := 
-    ( itlb.io.pte_o.valid & true.B) |
-    (~itlb.io.pte_o.valid & ptw_arb.io.in(0).ready)
+  io.if_mmu.ready := immu_rsp_fifo.io.enq.ready
 
 
-  dtlb.io.vaddr.valid := io.lsu_mmu.valid
-  dtlb.io.vaddr.bits  := io.lsu_mmu.bits.vaddr
+
+  dtlb.io.req.valid := io.lsu_mmu.valid
+  dtlb.io.req.bits  := io.lsu_mmu.bits.vaddr
   dtlb.io.asid_i  := io.cmm_mmu.satp(59,44)
-  io.lsu_mmu.ready := 
-    ( dtlb.io.pte_o.valid & true.B) |
-    (~dtlb.io.pte_o.valid & ptw_arb.io.in(1).ready)
+  io.lsu_mmu.ready := dmmu_rsp_fifo.io.enq.ready
+
 
 
   ptw.io.cmm_mmu := io.cmm_mmu
@@ -151,8 +149,8 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   ptw_arb.io.out <> ptw.io.ptw_i
 
-  val iptw_rsp_fifo = Module(new Queue(new Info_mmu_rsp, 4, false, true) )
-  val dptw_rsp_fifo = Module(new Queue(new Info_mmu_rsp, 4, false, true) )
+  val immu_rsp_fifo = Module(new Queue(new Info_mmu_rsp, 4, false, true) )
+  val dmmu_rsp_fifo = Module(new Queue(new Info_mmu_rsp, 4, false, true) )
 
 
 
