@@ -70,6 +70,10 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   val walk = new Bundle {
     val req = RegEnable( io.ptw_i.bits, (fsm.state_qout === 0.U & fsm.state_dnxt =/= 0.U) )
+    val rsp = RegInit( 0.U.asTypeOf(new Info_ptw_rsp) )
+    val rsp_valid = RegInit(false.B)
+
+
     val a     = Wire(UInt(44.W))
     // val level = RegInit(0.U(2.W))
     val is_ptw_end = Wire(Bool())
@@ -129,11 +133,11 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
 
     when( fsm.state_qout === state.free & fsm.state_dnxt === state.lvl2 ) {
-      is_access_fault := false.B
+      rsp.is_access_fault := false.B
     }
     .elsewhen( io.ptw_get.fire ) {
-      is_access_fault := 
-        is_access_fault |
+      rsp.is_access_fault := 
+        rsp.is_access_fault |
         PMP( io.cmm_mmu, io.ptw_get.bits.address, Cat(false.B, false.B, true.B))
     }
 
@@ -228,7 +232,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
 
 
-  val ptw_state_dnxt_in_free = Mux( io.ptw_i.valid, state.lvl2, state.free )
+  val ptw_state_dnxt_in_free = Mux( io.ptw_i.fire, state.lvl2, state.free )
   val ptw_state_dnxt_in_lvl2 = 
     Mux(
       (is_trans_done) | is_hit,
@@ -265,19 +269,36 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     )) === 1.U, "Assert Faild at ptw FSM!"
   )
 
-  io.ptw_i.ready :=
-    fsm.state_qout === state.free & io.ptw_o.ready 
 
-  io.ptw_o.bits.is_access_fault := walk.is_access_fault
-  io.ptw_o.bits.is_X := walk.req.is_X
-  io.ptw_o.bits.is_R := walk.req.is_R
-  io.ptw_o.bits.is_W := walk.req.is_W
-  io.ptw_o.bits.pte  := walk.pte
-  io.ptw_o.bits.is_ptw_fail := walk.is_ptw_fail
-  io.ptw_o.valid :=
-    fsm.state_dnxt === state.free & fsm.state_qout =/= state.free
+  when( fsm.state_dnxt === state.free & fsm.state_qout =/= state.free ) {
+    walk.rsp.is_ptw_fail := walk.is_ptw_fail
+    walk.rsp.is_X := walk.req.is_X
+    walk.rsp.is_R := walk.req.is_R
+    walk.rsp.is_W := walk.req.is_W
+    walk.rsp.pte := walk.pte
 
-  assert( ~(io.ptw_o.valid & ~io.ptw_o.ready) ) //when ptw_valid, ptw_o must ready 
+    walk.rsp_valid := true.B
+
+    assert( io.ptw_o.valid === false.B )
+  } .elsewhen( io.ptw_o.fire ) {
+    walk.rsp_valid := false.B
+  }
+
+  io.ptw_o.bits := walk.rsp
+  io.ptw_o.valid := walk.rsp_valid
+
+  // io.ptw_o.bits.is_ptw_fail := walk.is_ptw_fail
+  // io.ptw_o.bits.is_access_fault := walk.is_access_fault
+  // io.ptw_o.bits.pte := walk.pte
+  // io.ptw_o.bits.is_R := walk.req.is_R
+  // io.ptw_o.bits.is_W := walk.req.is_W
+  // io.ptw_o.bits.is_X := walk.req.is_X
+
+  // io.ptw_o.valid := fsm.state_dnxt === state.free & fsm.state_qout =/= state.free
+
+  io.ptw_i.ready := fsm.state_qout === state.free & ~io.ptw_o.valid
+
+  // assert( ~(io.ptw_o.valid & ~io.ptw_o.ready) ) //when ptw_valid, ptw_o must ready 
 
 
 
