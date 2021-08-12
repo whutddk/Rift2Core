@@ -166,7 +166,7 @@ class Regfiles extends Module{
   when( is_cm(0) & ~(cm_raw(0) === cm_raw(1) & is_cm(1)) ) { archit_ptr(cm_raw(0)) := cm_phy(0) }
 
   for ( i <- 0 until 32 ) yield {
-    assert( regLog(archit_ptr(i)) === "b11".U, "Assert Fail at regisiter Files, the reglog archit_ptr pointer point to should be \"b11\".U" )
+    assert( regLog(archit_ptr(i)) === "b11".U, "Assert Fail at regisiter Files, the reglog archit_ptr, where pointer: " + i + ", points to should be \"b11\".U" )
   }
 
 
