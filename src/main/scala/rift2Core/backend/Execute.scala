@@ -56,8 +56,8 @@ class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val bru_pd_b = new ValidIO( Bool() )
     val bru_pd_j = new ValidIO( UInt(64.W) )
 
-    val csr_addr = Output(UInt(12.W))
-    val csr_data = Input(UInt(64.W))
+    val csr_addr = ValidIO(UInt(12.W))
+    val csr_data = Flipped(ValidIO(UInt(64.W)))
     val csr_cmm_op = DecoupledIO( new Exe_Port ) 
 
     val lsu_mmu = DecoupledIO(new Info_mmu_req)

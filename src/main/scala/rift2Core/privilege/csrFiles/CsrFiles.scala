@@ -30,7 +30,7 @@ abstract class CsrFiles extends CsrFiles_H{
 
 
 
-  def csr_read_res(addr: UInt): UInt = {
+  def csr_read_res(addr: UInt) = {
     val pmpcfg_arr = {
       val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
       val reg_sel  = for ( i <- 0 until 16 ) yield { pmpcfg(i) }
@@ -142,11 +142,10 @@ abstract class CsrFiles extends CsrFiles_H{
           ( addr === "h7B3".U ) -> dscratch1
         )
 
-    val res = Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
-    return res
+    Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
   }
 
-  def csr_read_prilvl(addr: UInt): UInt = {
+  def csr_read_prilvl(addr: UInt) = {
     val pmpcfg_arr = {
       val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
       val reg_sel  = for ( i <- 0 until 16 ) yield { priv_lvl_qout >= "b11".U }
@@ -259,11 +258,11 @@ abstract class CsrFiles extends CsrFiles_H{
         )
 
     val res = Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
-    return ~res
+    ~res
   }
 
 
-  def csr_write_denied(addr: UInt): UInt = {
+  def csr_write_denied(addr: UInt) = {
     val pmpcfg_arr = {
       val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
       val reg_sel  = for ( i <- 0 until 16 ) yield { true.B }
@@ -376,7 +375,7 @@ abstract class CsrFiles extends CsrFiles_H{
         )
 
     val res = Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
-    return ~res
+    ~res
   }
 
 } 
