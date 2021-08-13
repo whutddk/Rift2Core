@@ -354,6 +354,8 @@ class Instruction_param extends Bundle {
 
 class Info_instruction extends Bundle with Instruction_set {
   val param = new Instruction_param
+  val is_access_fault = Bool()
+  val is_paging_fault = Bool()
 
 }
 
@@ -443,7 +445,8 @@ class Info_reorder_i extends Bundle {
   val is_csr = Bool()
 
   val privil = new Privil_isa
-  val is_accessFault = Bool()
+  val is_access_fault = Bool()
+  val is_paging_fault = Bool()
   val is_illeage = Bool()
 
 }

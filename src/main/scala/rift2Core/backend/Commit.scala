@@ -127,10 +127,16 @@ class Commit extends Privilege with Superscalar {
         io.rod_i(1).bits.privil.ebreak & ~is_1st_solo
       )
  
-    val is_instr_accessFault_v =
+    val is_instr_access_fault_v =
       VecInit(
-        io.rod_i(0).bits.is_accessFault,
-        io.rod_i(1).bits.is_accessFault & ~is_1st_solo
+        io.rod_i(0).bits.is_access_fault,
+        io.rod_i(1).bits.is_access_fault & ~is_1st_solo
+      )
+
+    val is_instr_paging_fault_v =
+      VecInit(
+        io.rod_i(0).bits.is_paging_fault,
+        io.rod_i(1).bits.is_paging_fault & ~is_1st_solo
       )
 
     val is_illeage_v =
@@ -163,7 +169,8 @@ class Commit extends Privilege with Superscalar {
     VecInit( for (i <- 0 until 2) yield {
       is_ecall_v(i)  |
       is_ebreak_v(i)  |
-      is_instr_accessFault_v(i)  |
+      is_instr_access_fault_v(i)  |
+      is_instr_paging_fault_v(i)  |
       is_illeage_v(i) |
       is_load_accessFault_ack_v(i)  |
       is_store_accessFault_ack_v(i) |
@@ -321,7 +328,8 @@ class Commit extends Privilege with Superscalar {
 	commit_pc               := Mux(is_1st_solo, io.rod_i(0).bits.pc, io.rod_i(1).bits.pc)
 	ill_instr               := 0.U
 	ill_vaddr               := io.lsu_cmm.trap_addr
-	is_instr_accessFault    := is_instr_accessFault_v.contains(true.B)
+	is_instr_access_fault    := is_instr_access_fault_v.contains(true.B)
+	is_instr_paging_fault    := is_instr_paging_fault_v.contains(true.B)
 	is_instr_illeage        := is_illeage_v.contains(true.B)
 	is_breakPoint           := is_ebreak_v.contains(true.B)
 	is_load_misAlign        := is_load_misAlign_ack_v.contains(true.B)

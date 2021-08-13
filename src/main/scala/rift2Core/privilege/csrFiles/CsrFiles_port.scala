@@ -61,7 +61,8 @@ abstract class CsrFiles_port extends Module{
   val is_csrw_illegal = Wire(Bool())
   val is_csrr_illegal = Wire(Bool())
 
-  val is_instr_accessFault      = Wire(Bool())
+  val is_instr_access_fault      = Wire(Bool())
+  val is_instr_paging_fault      = Wire(Bool())
   val is_instr_illeage          = Wire(Bool())
   val is_breakPoint             = Wire(Bool())
   val is_load_misAlign          = Wire(Bool())

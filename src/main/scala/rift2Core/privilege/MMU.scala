@@ -64,8 +64,10 @@ class Info_mmu_req extends Bundle with Info_access_lvl{
 
 class Info_mmu_rsp extends Bundle {
   val paddr  = UInt(64.W)
-  val is_page_fault = Bool()
+  val is_paging_fault = Bool()
   val is_access_fault = Bool()
+
+  def is_fault = is_access_fault | is_paging_fault
 }
 
 
@@ -173,9 +175,10 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
     io.mmu_if.bits.is_access_fault :=
       PMP( io.cmm_mmu, ipaddr, Cat( io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R) ) | 
-      (ptw.io.ptw_o.bits.is_access_fault & ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid)
+      (ptw.io.ptw_o.bits.is_access_fault & ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid) |
+      ipaddr(63,32) =/= (0.U)
 
-    io.mmu_if.bits.is_page_fault := 
+    io.mmu_if.bits.is_paging_fault := 
       ~is_bypass_if &
       (
         is_chk_page_fault( pte, io.if_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, "b100".U) |
@@ -202,9 +205,10 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
     io.mmu_lsu.bits.is_access_fault :=
       PMP( io.cmm_mmu, dpaddr, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R) ) | 
-      (ptw.io.ptw_o.bits.is_access_fault & (~ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid))
+      (ptw.io.ptw_o.bits.is_access_fault & (~ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid)) |
+      dpaddr(63,32) =/= (0.U)
 
-    io.mmu_lsu.bits.is_page_fault :=
+    io.mmu_lsu.bits.is_paging_fault :=
       ~is_bypass_ls & (
         is_chk_page_fault( pte, io.lsu_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R )) |
         ptw.io.ptw_o.bits.is_ptw_fail & ~ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid

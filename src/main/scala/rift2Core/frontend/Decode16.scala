@@ -451,5 +451,8 @@ class Decode16 (x:UInt, pc: UInt) {
   info.fpu_isa.fcvt_d_lu   := false.B
   info.fpu_isa.fmv_d_x     := false.B
 
+  info.is_access_fault := false.B
+  info.is_paging_fault := false.B
+
 }
 

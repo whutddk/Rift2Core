@@ -46,8 +46,7 @@ class Info_ib_id extends Bundle {
 class Info_bd_dpt extends Bundle {
 
   val info = new Info_instruction()
-  val is_iFAccessFault = Bool()
-  val is_illeage = Bool()
+
 
 }
 

@@ -38,7 +38,8 @@ abstract class CsrFiles_M extends CsrFiles_port {
   val is_m_ecall = is_ecall & priv_lvl_qout === "b11".U
 
   val is_exception =
-    is_instr_accessFault    |
+    is_instr_access_fault   |
+    is_instr_paging_fault   |
     is_instr_illeage        |
     is_breakPoint           |
     is_load_misAlign        |
@@ -468,7 +469,8 @@ abstract class CsrFiles_M extends CsrFiles_port {
     .elsewhen( is_exception & priv_lvl_dnxt === "b11".U ) {
       interrupt := 0.U
       exception_code := Mux1H( Seq(
-        is_instr_accessFault    -> 1.U,
+        is_instr_access_fault    -> 1.U,
+        is_instr_paging_fault    -> 12.U,
         is_instr_illeage        -> 2.U,
         is_breakPoint           -> 3.U,
         is_load_misAlign        -> 4.U,
@@ -502,7 +504,8 @@ abstract class CsrFiles_M extends CsrFiles_port {
     val (enable, dnxt) = Reg_Exe_Port( value, "h343".U, exe_port )
     when( priv_lvl_dnxt === "b11".U ) {
       value := Mux1H( Seq(
-        is_instr_accessFault    -> ill_vaddr,
+        is_instr_access_fault   -> ill_vaddr,
+        is_instr_paging_fault   -> ill_vaddr,
         is_instr_illeage        -> ill_instr,
         is_breakPoint           -> ill_vaddr,
         is_load_misAlign        -> ill_vaddr,

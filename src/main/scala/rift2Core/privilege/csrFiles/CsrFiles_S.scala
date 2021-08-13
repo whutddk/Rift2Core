@@ -185,7 +185,8 @@ abstract class CsrFiles_S extends CsrFiles_U {
     .elsewhen( is_exception & priv_lvl_dnxt === "b01".U ) {
       interrupt := 0.U
       exception_code := Mux1H( Seq(
-        is_instr_accessFault    -> 1.U,
+        is_instr_access_fault   -> 1.U,
+        is_instr_paging_fault   -> 1.U,
         is_instr_illeage        -> 2.U,
         is_breakPoint           -> 3.U,
         is_load_misAlign        -> 4.U,
@@ -222,7 +223,8 @@ abstract class CsrFiles_S extends CsrFiles_U {
     val (enable, dnxt) = Reg_Exe_Port( value, "h143".U, exe_port )
     when( priv_lvl_dnxt === "b01".U ) {
       value := Mux1H( Seq(
-        is_instr_accessFault    -> ill_vaddr,
+        is_instr_access_fault   -> ill_vaddr,
+        is_instr_paging_fault   -> ill_vaddr,
         is_instr_illeage        -> ill_instr,
         is_breakPoint           -> ill_vaddr,
         is_load_misAlign        -> ill_vaddr,
