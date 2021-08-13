@@ -52,8 +52,8 @@ class Commit extends Privilege with Superscalar {
 
     val cmm_bru_ilp = Output(Bool())
 
-    val csr_addr = Input(UInt(12.W))
-    val csr_data = Output(UInt(64.W))
+    val csr_addr = Flipped(ValidIO(UInt(12.W)))
+    val csr_data = ValidIO(UInt(64.W))
     val csr_cmm_op = Flipped(DecoupledIO( new Exe_Port ) )
 
     val is_misPredict = Input(Bool())
@@ -108,6 +108,13 @@ class Commit extends Privilege with Superscalar {
         io.lsu_cmm.is_misAlign & (io.rod_i(1).bits.is_su | io.rod_i(1).bits.is_amo) & ~is_wb_v(1) & ~is_1st_solo
       )
 
+
+    val is_csr_illegal_ack_v =
+      VecInit(
+        (is_csrr_illegal | is_csrw_illegal) & (io.rod_i(0).valid & io.rod_i(0).bits.is_csr & ~is_wb_v(0)),
+        (is_csrr_illegal | is_csrw_illegal) & (io.rod_i(1).valid & io.rod_i(1).bits.is_csr & ~is_wb_v(1)) & ~is_1st_solo
+      )
+
     val is_ecall_v  =
       VecInit(
         io.rod_i(0).bits.privil.ecall,
@@ -128,8 +135,8 @@ class Commit extends Privilege with Superscalar {
 
     val is_illeage_v =
       VecInit(
-        io.rod_i(0).bits.is_illeage,
-        io.rod_i(1).bits.is_illeage & ~is_1st_solo
+        (io.rod_i(0).bits.is_illeage | is_csr_illegal_ack_v(0)),
+        (io.rod_i(1).bits.is_illeage | is_csr_illegal_ack_v(1)) & ~is_1st_solo
       )
 
     val is_mRet_v =
@@ -274,10 +281,17 @@ class Commit extends Privilege with Superscalar {
 
 
 
+  is_csrw_illegal := 
+    csr_write_denied(io.csr_cmm_op.bits.addr) |
+    csr_read_prilvl(io.csr_cmm_op.bits.addr)
+
+  is_csrr_illegal := csr_read_prilvl(io.csr_addr.bits)
 
 
 
-  io.csr_data := csr_read(io.csr_addr)
+  io.csr_data.bits := csr_read_res(io.csr_addr.bits)
+  io.csr_data.valid := io.csr_addr.valid & ~is_csrr_illegal
+
 
   
   io.csr_cmm_op.ready := io.csr_cmm_op.valid & (
