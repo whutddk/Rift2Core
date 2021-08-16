@@ -102,8 +102,8 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   // assert( ~(io.mmu_if.valid & io.mmu_if.bits.is_page_fault) )
   // assert( ~(io.mmu_if.valid & io.mmu_if.bits.is_access_fault) )
   
-  val is_access_fault = io.mmu_if.valid & io.mmu_if.bits.is_paging_fault
-  val is_paging_fault = io.mmu_if.valid & io.mmu_if.bits.is_access_fault
+  val is_access_fault = io.mmu_if.valid & io.mmu_if.bits.is_access_fault
+  val is_paging_fault = io.mmu_if.valid & io.mmu_if.bits.is_paging_fault
   val fault_push = io.mmu_if.valid & io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(7).ready & missUnit.io.req.ready
   assert( ~(is_access_fault & is_paging_fault) )
 
@@ -254,8 +254,9 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     res
   }
 
-  ibuf.io.enq(0).bits := Mux( ~fault_push, reAlign_instr >> 0.U , "b0010000000010011".U)
-  ibuf.io.enq(1).bits := Mux( ~fault_push, reAlign_instr >> 16.U, Mux(is_access_fault, 0.U, 1.U) )
+  ibuf.io.enq(0).bits := Mux( ~fault_push, reAlign_instr >> 0.U, Mux(is_access_fault, "b1001110001000001".U, "b1001110001000101".U) )
+
+  ibuf.io.enq(1).bits := reAlign_instr >> 16.U
   ibuf.io.enq(2).bits := reAlign_instr >> 32.U
   ibuf.io.enq(3).bits := reAlign_instr >> 48.U
   ibuf.io.enq(4).bits := reAlign_instr >> 64.U

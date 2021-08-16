@@ -231,8 +231,12 @@ class Privil_isa extends Bundle {
   val hlv_d = Bool()
   val hsv_d = Bool()
 
+  val is_access_fault = Bool()
+  val is_paging_fault = Bool()
 
-  def is_privil = ecall | ebreak | mret | uret | sret | dret | wfi | sfence_vma | hfence_vvma | hfence_gvma | hlv_b | hlv_bu | hlv_h | hlv_hu | hlvx_hu | hlv_w | hlvx_wu | hsv_b | hsv_h | hsv_w | hlv_wu | hlv_d | hsv_d
+  def is_privil = 
+    ecall | ebreak | mret | uret | sret | dret | wfi | sfence_vma | hfence_vvma | hfence_gvma | hlv_b | hlv_bu | hlv_h | hlv_hu | hlvx_hu | hlv_w | hlvx_wu | hsv_b | hsv_h | hsv_w | hlv_wu | hlv_d | hsv_d |
+    is_access_fault | is_paging_fault
 
 
 }
@@ -354,8 +358,8 @@ class Instruction_param extends Bundle {
 
 class Info_instruction extends Bundle with Instruction_set {
   val param = new Instruction_param
-  val is_access_fault = Bool()
-  val is_paging_fault = Bool()
+  // val is_access_fault = Bool()
+  // val is_paging_fault = Bool()
 
 }
 
@@ -445,8 +449,6 @@ class Info_reorder_i extends Bundle {
   val is_csr = Bool()
 
   val privil = new Privil_isa
-  val is_access_fault = Bool()
-  val is_paging_fault = Bool()
   val is_illeage = Bool()
 
 }

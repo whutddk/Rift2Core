@@ -129,14 +129,14 @@ class Commit extends Privilege with Superscalar {
  
     val is_instr_access_fault_v =
       VecInit(
-        io.rod_i(0).bits.is_access_fault,
-        io.rod_i(1).bits.is_access_fault & ~is_1st_solo
+        io.rod_i(0).bits.privil.is_access_fault,
+        io.rod_i(1).bits.privil.is_access_fault & ~is_1st_solo
       )
 
     val is_instr_paging_fault_v =
       VecInit(
-        io.rod_i(0).bits.is_paging_fault,
-        io.rod_i(1).bits.is_paging_fault & ~is_1st_solo
+        io.rod_i(0).bits.privil.is_paging_fault,
+        io.rod_i(1).bits.privil.is_paging_fault & ~is_1st_solo
       )
 
     val is_illeage_v =
