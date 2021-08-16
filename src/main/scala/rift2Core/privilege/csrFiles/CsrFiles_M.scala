@@ -43,15 +43,14 @@ abstract class CsrFiles_M extends CsrFiles_port {
     is_instr_illeage        |
     is_breakPoint           |
     is_load_misAlign        |
-    is_load_accessFault     |
+    is_load_access_fault     |
     is_storeAMO_misAlign    |
-    is_storeAMO_accessFault |
+    is_storeAMO_access_fault |
+    is_storeAMO_paging_fault |
     is_u_ecall              |
     is_s_ecall              |
     is_m_ecall              |
-    is_instr_pageFault      |
-    is_load_pageFault       |
-    is_storeAMO_pageFault
+    is_load_paging_fault       
 
 
   lazy val is_m_interrupt = is_msi | is_mti | is_mei
@@ -474,15 +473,15 @@ abstract class CsrFiles_M extends CsrFiles_port {
         is_instr_illeage        -> 2.U,
         is_breakPoint           -> 3.U,
         is_load_misAlign        -> 4.U,
-        is_load_accessFault     -> 5.U,
+        is_load_access_fault     -> 5.U,
         is_storeAMO_misAlign    -> 6.U,
-        is_storeAMO_accessFault -> 7.U,
+        is_storeAMO_access_fault -> 7.U,
         is_u_ecall              -> 8.U,
         is_s_ecall              -> 9.U,
         is_m_ecall              -> 11.U,
-        is_instr_pageFault      -> 12.U,
-        is_load_pageFault       -> 13.U,
-        is_storeAMO_pageFault   -> 15.U
+        is_instr_paging_fault      -> 12.U,
+        is_load_paging_fault       -> 13.U,
+        is_storeAMO_paging_fault   -> 15.U
       ))
     }
     .elsewhen(enable) {
@@ -509,12 +508,11 @@ abstract class CsrFiles_M extends CsrFiles_port {
         is_instr_illeage        -> ill_instr,
         is_breakPoint           -> ill_vaddr,
         is_load_misAlign        -> ill_vaddr,
-        is_load_accessFault     -> ill_vaddr,
+        is_load_access_fault     -> ill_vaddr,
         is_storeAMO_misAlign    -> ill_vaddr,
-        is_storeAMO_accessFault -> ill_vaddr,
-        is_instr_pageFault      -> ill_vaddr,
-        is_load_pageFault       -> ill_vaddr,
-        is_storeAMO_pageFault   -> ill_vaddr       
+        is_storeAMO_access_fault -> ill_vaddr,
+        is_load_paging_fault       -> ill_vaddr,
+        is_storeAMO_paging_fault   -> ill_vaddr       
       ))
     }
     .elsewhen(enable) { value := dnxt }

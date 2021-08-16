@@ -645,7 +645,8 @@ class Info_cmm_lsu extends Bundle {
 }
 
 class Info_lsu_cmm extends Bundle {
-  val is_accessFault = Bool()
+  val is_access_fault = Bool()
+  val is_paging_fault = Bool()
   val is_misAlign = Bool()
   val trap_addr = UInt(64.W)
 }

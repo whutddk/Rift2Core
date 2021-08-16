@@ -121,8 +121,8 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   io.lsu_mmu.bits.is_X := false.B
   io.lsu_iss_exe.ready := io.lsu_mmu.ready
 
-  assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_paging_fault) )
-  assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_access_fault ) )
+  // assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_paging_fault) )
+  // assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_access_fault ) )
   
   
 
@@ -212,17 +212,19 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   lsu_scoreBoard.io.periph_pop <> periph.io.periph_pop
 
 
-  def is_accessFault = 
-      (io.lsu_iss_exe.bits.fun.is_lu | io.lsu_iss_exe.bits.fun.is_su | io.lsu_iss_exe.bits.fun.is_amo) & 
-     ( (io.mmu_lsu.bits.paddr(63,32) =/= 0.U ) | (io.mmu_lsu.bits.paddr(31,29) =/= "b001".U & io.mmu_lsu.bits.paddr(31) =/= 1.U))
+  // def is_accessFault = 
+  //     (io.lsu_iss_exe.bits.fun.is_lu | io.lsu_iss_exe.bits.fun.is_su | io.lsu_iss_exe.bits.fun.is_amo) & 
+  //    ( (io.mmu_lsu.bits.paddr(63,32) =/= 0.U ) | (io.mmu_lsu.bits.paddr(31,29) =/= "b001".U & io.mmu_lsu.bits.paddr(31) =/= 1.U))
 
-  def is_Fault = is_accessFault | io.lsu_iss_exe.bits.is_misAlign
+  def is_Fault = io.lsu_cmm.is_access_fault | io.lsu_cmm.is_paging_fault | io.lsu_iss_exe.bits.is_misAlign
 
 
 
-  io.lsu_cmm.is_accessFault :=
-    io.mmu_lsu.valid & is_accessFault
-    
+  io.lsu_cmm.is_access_fault :=
+    io.mmu_lsu.valid & io.mmu_lsu.bits.is_access_fault
+
+  io.lsu_cmm.is_paging_fault :=
+    io.mmu_lsu.valid & io.mmu_lsu.bits.is_paging_fault
 
   io.lsu_cmm.is_misAlign :=
     io.mmu_lsu.valid & io.lsu_iss_exe.bits.is_misAlign

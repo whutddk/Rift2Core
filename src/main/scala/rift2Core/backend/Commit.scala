@@ -86,16 +86,29 @@ class Commit extends Privilege with Superscalar {
 
     val is_load_accessFault_ack_v =
       VecInit(
-        io.lsu_cmm.is_accessFault & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
-        io.lsu_cmm.is_accessFault & io.rod_i(1).bits.is_lu & ~is_wb_v(1) & ~is_1st_solo
+        io.lsu_cmm.is_access_fault & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
+        io.lsu_cmm.is_access_fault & io.rod_i(1).bits.is_lu & ~is_wb_v(1) & ~is_1st_solo
       )
 
     val is_store_accessFault_ack_v =
       VecInit(
-        io.lsu_cmm.is_accessFault & io.rod_i(0).bits.is_su & ~is_wb_v(0),
-        io.lsu_cmm.is_accessFault & io.rod_i(1).bits.is_su & ~is_wb_v(1) & ~is_1st_solo
+        io.lsu_cmm.is_access_fault & ( io.rod_i(0).bits.is_su | io.rod_i(0).bits.is_amo ) & ~is_wb_v(0),
+        io.lsu_cmm.is_access_fault & ( io.rod_i(1).bits.is_su | io.rod_i(1).bits.is_amo ) & ~is_wb_v(1) & ~is_1st_solo
       )
 
+    val is_load_pagingFault_ack_v =
+      VecInit(
+        io.lsu_cmm.is_paging_fault & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
+        io.lsu_cmm.is_paging_fault & io.rod_i(1).bits.is_lu & ~is_wb_v(1) & ~is_1st_solo
+      )
+
+    val is_store_pagingFault_ack_v =
+      VecInit(
+        io.lsu_cmm.is_paging_fault & ( io.rod_i(0).bits.is_su | io.rod_i(0).bits.is_amo ) & ~is_wb_v(0),
+        io.lsu_cmm.is_paging_fault & ( io.rod_i(1).bits.is_su | io.rod_i(1).bits.is_amo ) & ~is_wb_v(1) & ~is_1st_solo
+      )
+
+      
     val is_load_misAlign_ack_v =
       VecInit(
         io.lsu_cmm.is_misAlign & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
@@ -333,13 +346,12 @@ class Commit extends Privilege with Superscalar {
 	is_instr_illeage        := is_illeage_v.contains(true.B)
 	is_breakPoint           := is_ebreak_v.contains(true.B)
 	is_load_misAlign        := is_load_misAlign_ack_v.contains(true.B)
-	is_load_accessFault     := is_load_accessFault_ack_v.contains(true.B)
+	is_load_access_fault     := is_load_accessFault_ack_v.contains(true.B)
 	is_storeAMO_misAlign    := is_store_misAlign_ack_v.contains(true.B)
-	is_storeAMO_accessFault := is_store_accessFault_ack_v.contains(true.B)
+	is_storeAMO_access_fault := is_store_accessFault_ack_v.contains(true.B)
+	is_storeAMO_paging_fault := is_store_pagingFault_ack_v.contains(true.B)
 	is_ecall                := is_ecall_v.contains(true.B)
-	is_instr_pageFault      := false.B
-	is_load_pageFault       := false.B
-	is_storeAMO_pageFault   := false.B
+	is_load_paging_fault       := is_load_pagingFault_ack_v.contains(true.B)
 	retired_cnt             := Mux( is_retired_v(1), 2.U, Mux(is_retired_v(0), 1.U, 0.U) )
 	clint_sw_m              := false.B
 	clint_sw_s              := false.B
