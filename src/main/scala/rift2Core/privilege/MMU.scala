@@ -133,14 +133,14 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val kill_iptw = RegInit(false.B)
   val kill_dptw = RegInit(false.B)
 
-  when( io.if_flush & io.if_mmu.valid & ~io.mmu_if.fire ) {
+  when( io.if_flush & io.if_mmu.valid & ~io.mmu_if.valid ) {
     kill_iptw := true.B
   } .elsewhen ( io.mmu_if.fire ) {
     kill_iptw := false.B
   }
 
 
-  when( io.lsu_flush & io.lsu_mmu.valid & ~io.mmu_lsu.fire ) {
+  when( io.lsu_flush & io.lsu_mmu.valid & ~io.mmu_lsu.valid ) {
     kill_dptw := true.B
   } .elsewhen ( io.mmu_lsu.fire ) {
     kill_dptw := false.B
@@ -205,11 +205,10 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
       )
 
     io.mmu_if.valid :=
-      ( ~io.if_flush & ~kill_iptw ) & (
-        (io.if_mmu.valid & is_bypass_if) |
-        (io.if_mmu.valid & itlb.io.is_hit) |
-        (io.if_mmu.valid & (ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid))        
-      )
+      (io.if_mmu.valid & is_bypass_if) |
+      (io.if_mmu.valid & itlb.io.is_hit) |
+      (io.if_mmu.valid & (ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid))        
+
 
 
 
@@ -237,11 +236,10 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
       )
 
     io.mmu_lsu.valid :=
-      ( ~io.lsu_flush & ~kill_dptw ) & (
-        (io.lsu_mmu.valid & is_bypass_ls) |
-        (io.lsu_mmu.valid & dtlb.io.is_hit) |
-        (io.lsu_mmu.valid & (~ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid))        
-      )
+      (io.lsu_mmu.valid & is_bypass_ls) |
+      (io.lsu_mmu.valid & dtlb.io.is_hit) |
+      (io.lsu_mmu.valid & (~ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid))        
+
 
 
 
