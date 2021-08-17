@@ -265,7 +265,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   ibuf.io.enq(7).bits := reAlign_instr >> 112.U
 
   ibuf.io.enq(0).valid := fault_push | icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 7.U )
-  ibuf.io.enq(1).valid := fault_push | icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 6.U )
+  ibuf.io.enq(1).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 6.U )
   ibuf.io.enq(2).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 5.U )
   ibuf.io.enq(3).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 4.U )
   ibuf.io.enq(4).valid := icache_state_qout === 2.U & is_hit & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 3.U )
