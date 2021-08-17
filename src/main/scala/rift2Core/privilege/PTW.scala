@@ -192,7 +192,12 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   walk.pte.value := {
     val data =
-      VecInit( for ( j <- 0 until 4) yield {  Cat( io.ptw_access.bits.data, ptw_access_data_lo ) } )
+      VecInit( 
+        ptw_access_data_lo(63,0),
+        ptw_access_data_lo(127,64),
+        io.ptw_access.bits.data(63,0),
+        io.ptw_access.bits.data(127,64)
+      )
 
     assert( PopCount( Seq(is_hit, is_trans_done) ) <= 1.U )
 
