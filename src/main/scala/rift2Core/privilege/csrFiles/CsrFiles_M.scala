@@ -325,6 +325,7 @@ abstract class CsrFiles_M extends CsrFiles_port {
   medeleg := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h302".U, exe_port )
+    when(enable) { value := dnxt }
     value 
   }
 
