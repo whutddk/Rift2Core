@@ -33,9 +33,7 @@ abstract class CsrFiles_M extends CsrFiles_port {
   val is_sei = mip(9)  & mie(9)  & mstatus(1)
   val is_mei = mip(11) & mie(11) & mstatus(3)
 
-  val is_u_ecall = is_ecall & priv_lvl_qout === "b00".U
-  val is_s_ecall = is_ecall & priv_lvl_qout === "b01".U
-  val is_m_ecall = is_ecall & priv_lvl_qout === "b11".U
+
 
   val is_exception =
     is_instr_access_fault   |
@@ -47,9 +45,9 @@ abstract class CsrFiles_M extends CsrFiles_port {
     is_storeAMO_misAlign    |
     is_storeAMO_access_fault |
     is_storeAMO_paging_fault |
-    is_u_ecall              |
-    is_s_ecall              |
-    is_m_ecall              |
+    is_ecall_M              |
+    is_ecall_S              |
+    is_ecall_U              |
     is_load_paging_fault       
 
 
@@ -468,20 +466,20 @@ abstract class CsrFiles_M extends CsrFiles_port {
     .elsewhen( is_exception & priv_lvl_dnxt === "b11".U ) {
       interrupt := 0.U
       exception_code := Mux1H( Seq(
+        is_instr_misAlign        -> 0.U,
         is_instr_access_fault    -> 1.U,
-        is_instr_paging_fault    -> 12.U,
-        is_instr_illeage        -> 2.U,
-        is_breakPoint           -> 3.U,
-        is_load_misAlign        -> 4.U,
+        is_instr_illeage         -> 2.U,
+        is_breakPoint            -> 3.U,
+        is_load_misAlign         -> 4.U,
         is_load_access_fault     -> 5.U,
-        is_storeAMO_misAlign    -> 6.U,
+        is_storeAMO_misAlign     -> 6.U,
         is_storeAMO_access_fault -> 7.U,
-        is_u_ecall              -> 8.U,
-        is_s_ecall              -> 9.U,
-        is_m_ecall              -> 11.U,
-        is_instr_paging_fault      -> 12.U,
-        is_load_paging_fault       -> 13.U,
-        is_storeAMO_paging_fault   -> 15.U
+        is_ecall_U               -> 8.U,
+        is_ecall_S               -> 9.U,
+        is_ecall_M               -> 11.U,
+        is_instr_paging_fault    -> 12.U,
+        is_load_paging_fault     -> 13.U,
+        is_storeAMO_paging_fault -> 15.U,
       ))
     }
     .elsewhen(enable) {

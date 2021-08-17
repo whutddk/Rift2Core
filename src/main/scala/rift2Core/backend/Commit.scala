@@ -248,24 +248,28 @@ class Commit extends Privilege with Superscalar {
 
   io.cmm_pc.valid :=
   (    
-    (io.rod_i(0).valid & is_xRet_v(0)) |
+    (io.rod_i(0).valid & is_mRet_v(0)) |
+    (io.rod_i(0).valid & is_sRet_v(0)) |
     (io.rod_i(0).valid & is_trap_v(0)) |
     (io.rod_i(0).valid & is_fence_i_v(0)) 
   ) |
   (
 
-    (io.rod_i(1).valid & is_xRet_v(1)) |
+    (io.rod_i(1).valid & is_mRet_v(1)) |
+    (io.rod_i(1).valid & is_sRet_v(1)) |
     (io.rod_i(1).valid & is_trap_v(1)) |
     (io.rod_i(1).valid & is_fence_i_v(1))      
 
   )
     
   io.cmm_pc.bits.addr := Mux1H(Seq(
-    (io.rod_i(0).valid & is_xRet_v(0)) -> mepc,
-    (io.rod_i(0).valid & is_trap_v(0)) -> mtvec,
+    (io.rod_i(0).valid & is_mRet_v(0)) -> mepc,
+    (io.rod_i(0).valid & is_sRet_v(0)) -> sepc,
+    (io.rod_i(0).valid & is_trap_v(0)) -> Mux1H(Seq( (priv_lvl_dnxt === "b11".U) -> mtvec, (priv_lvl_dnxt === "b01".U) -> stvec)),
     (io.rod_i(0).valid & is_fence_i_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
 
-    (io.rod_i(1).valid & is_xRet_v(1)) -> mepc,
+    (io.rod_i(1).valid & is_mRet_v(1)) -> mepc,
+    (io.rod_i(1).valid & is_sRet_v(1)) -> sepc,
     (io.rod_i(1).valid & is_trap_v(1)) -> mtvec,
     (io.rod_i(1).valid & is_fence_i_v(1)) -> (io.rod_i(1).bits.pc + 4.U)
   ))
@@ -350,7 +354,9 @@ class Commit extends Privilege with Superscalar {
 	is_storeAMO_misAlign    := is_store_misAlign_ack_v.contains(true.B)
 	is_storeAMO_access_fault := is_store_accessFault_ack_v.contains(true.B)
 	is_storeAMO_paging_fault := is_store_pagingFault_ack_v.contains(true.B)
-	is_ecall                := is_ecall_v.contains(true.B)
+	is_ecall_M                := is_ecall_v.contains(true.B) & priv_lvl_qout === "b11".U
+	is_ecall_S                := is_ecall_v.contains(true.B) & priv_lvl_qout === "b01".U
+	is_ecall_U                := is_ecall_v.contains(true.B) & priv_lvl_qout === "b00".U
 	is_load_paging_fault       := is_load_pagingFault_ack_v.contains(true.B)
 	retired_cnt             := Mux( is_retired_v(1), 2.U, Mux(is_retired_v(0), 1.U, 0.U) )
 	clint_sw_m              := false.B
