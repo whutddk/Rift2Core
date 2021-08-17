@@ -153,7 +153,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   val ptw_get_valid = RegInit(false.B)
   val ptw_access_ready = RegInit(false.B)
-  val ptw_access_data = RegInit( 0.U(256.W) )
+  val ptw_access_data_lo = RegInit( 0.U(128.W) )
 
   cache_dat.dat_addr_r := walk.addr_dnxt
   cache_tag.tag_addr_r := walk.addr_dnxt
@@ -183,7 +183,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   }
 
   for ( j <- 0 until 4 ) yield {
-    cache_dat.dat_info_w(j) := ptw_access_data(64*j+63, 64*j)
+    cache_dat.dat_info_w(j) :=  Cat( io.ptw_access.bits.data, ptw_access_data_lo )
     cache_dat.dat_info_wstrb(j) := "hFF".U
   }
 
@@ -192,7 +192,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   walk.pte.value := {
     val data =
-      VecInit( for ( j <- 0 until 4) yield { ptw_access_data(64*j+63, 64*j) } )
+      VecInit( for ( j <- 0 until 4) yield {  Cat( io.ptw_access.bits.data, ptw_access_data_lo ) } )
 
     assert( PopCount( Seq(is_hit, is_trans_done) ) <= 1.U )
 
@@ -355,14 +355,11 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     ptw_access_ready := false.B
   }
 
-  io.ptw_get.bits := edge.Get(fromSource = 0.U, toAddress = walk.addr_qout, lgSize = log2Ceil(256/8).U)._2
+  io.ptw_get.bits := edge.Get(fromSource = 0.U, toAddress = walk.addr_qout & ("hFFFFFFFF".U << 5), lgSize = log2Ceil(256/8).U)._2
 
-  when( io.ptw_access.fire ) {
-    ptw_access_data := 
-      Mux( is_trans_done,
-        Cat( io.ptw_access.bits.data, ptw_access_data(127,0)  ),
-        Cat( ptw_access_data(255,128), io.ptw_access.bits.data )
-      )
+  when( io.ptw_access.fire & ~is_trans_done) {
+    ptw_access_data_lo := io.ptw_access.bits.data
+
   }
 
 
