@@ -293,15 +293,15 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     chk_type: UInt): Bool = {
 
       val is_vaddr_illegal = chk_vaddr(63,39) =/= Fill(25,chk_vaddr(38))
-      val is_U_access_ilegal =
+      val is_U_access_illegal =
         (chk_priv === "b00".U & pte.U === false.B) |
-        (chk_priv === "b01".U & pte.U === true.B & (io.cmm_mmu.sstatus(18) === false.B) | chk_type(2) === true.B )
+        (chk_priv === "b01".U & pte.U === true.B & (io.cmm_mmu.sstatus(18) === false.B | chk_type(2) === true.B) )
 
       val is_A_illegal = pte.A === false.B
       val is_D_illegal = pte.D === false.B & chk_type(1) === true.B
       val is_MXR_illegal = io.cmm_mmu.mstatus(19) === false.B & pte.R === false.B
 
-      return is_vaddr_illegal | is_U_access_ilegal | is_A_illegal | is_D_illegal | is_MXR_illegal
+      return is_vaddr_illegal | is_U_access_illegal | is_A_illegal | is_D_illegal | is_MXR_illegal
   }
 
 
