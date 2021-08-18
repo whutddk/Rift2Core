@@ -502,16 +502,16 @@ abstract class CsrFiles_M extends CsrFiles_port {
     val (enable, dnxt) = Reg_Exe_Port( value, "h343".U, exe_port )
     when( priv_lvl_dnxt === "b11".U ) {
       value := Mux1H( Seq(
-        is_instr_access_fault   -> ill_vaddr,
-        is_instr_paging_fault   -> ill_vaddr,
-        is_instr_illeage        -> ill_instr,
-        is_breakPoint           -> ill_vaddr,
-        is_load_misAlign        -> ill_vaddr,
-        is_load_access_fault     -> ill_vaddr,
-        is_storeAMO_misAlign    -> ill_vaddr,
-        is_storeAMO_access_fault -> ill_vaddr,
-        is_load_paging_fault       -> ill_vaddr,
-        is_storeAMO_paging_fault   -> ill_vaddr       
+        is_instr_access_fault    -> ill_ivaddr,
+        is_instr_paging_fault    -> ill_ivaddr,
+        is_instr_illeage         -> ill_instr,
+        is_breakPoint            -> 0.U,
+        is_load_misAlign         -> ill_dvaddr,
+        is_load_access_fault     -> ill_dvaddr,
+        is_storeAMO_misAlign     -> ill_dvaddr,
+        is_storeAMO_access_fault -> ill_dvaddr,
+        is_load_paging_fault     -> ill_dvaddr,
+        is_storeAMO_paging_fault -> ill_dvaddr    
       ))
     }
     .elsewhen(enable) { value := dnxt }

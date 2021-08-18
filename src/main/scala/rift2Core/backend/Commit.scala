@@ -29,6 +29,8 @@ import chisel3._
 import chisel3.util._
 
 import rift2Core.define._
+import rift2Core.frontend._
+import rift2Core.L1Cache._
 import rift2Core.backend._
 import rift2Core.privilege._
 import rift2Core.privilege.csrFiles._
@@ -62,6 +64,9 @@ class Commit extends Privilege with Superscalar {
     val is_commit_abort = Vec(2, Output( Bool() ))
 
     val cmm_pc = new ValidIO(new Info_cmm_pc)
+    val if_cmm = Input( new Info_if_cmm )
+
+
 
     val cmm_mmu = Output( new Info_cmm_mmu )
 
@@ -348,7 +353,8 @@ class Commit extends Privilege with Superscalar {
 	is_sRet                 := is_sRet_v.contains(true.B)
 	commit_pc               := Mux(is_1st_solo, io.rod_i(0).bits.pc, io.rod_i(1).bits.pc)
 	ill_instr               := 0.U
-	ill_vaddr               := io.lsu_cmm.trap_addr
+  ill_ivaddr               := io.if_cmm.ill_vaddr
+	ill_dvaddr               := io.lsu_cmm.trap_addr
 	is_instr_access_fault    := is_instr_access_fault_v.contains(true.B)
 	is_instr_paging_fault    := is_instr_paging_fault_v.contains(true.B)
 	is_instr_illeage        := is_illeage_v.contains(true.B)

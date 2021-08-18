@@ -49,6 +49,10 @@ abstract class IcacheBundle(implicit p: Parameters) extends L1CacheBundle
   with HasIcacheParameters
 
 
+class Info_if_cmm extends Bundle {
+  val ill_vaddr = UInt(64.W)
+}
+
 
 
 class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
@@ -59,6 +63,8 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
     val if_mmu = DecoupledIO(new Info_mmu_req)
     val mmu_if = Flipped(DecoupledIO(new Info_mmu_rsp))
+
+    val if_cmm = Output(new Info_if_cmm)
 
 
     val missUnit_icache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
@@ -106,6 +112,8 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val is_paging_fault = io.mmu_if.valid & io.mmu_if.bits.is_paging_fault
   val fault_push = io.mmu_if.valid & io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(7).ready & missUnit.io.req.ready
   assert( ~(is_access_fault & is_paging_fault) )
+
+  io.if_cmm.ill_vaddr := io.pc_if.bits
 
 
 
