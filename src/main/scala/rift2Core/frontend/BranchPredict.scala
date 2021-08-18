@@ -93,14 +93,14 @@ trait BHT {
 
 class Info_BHQ extends Bundle {
   val dir = Bool()
-  val ori_pc = UInt(32.W)
-  val opp_pc = UInt(32.W)
+  val ori_pc = UInt(64.W)
+  val opp_pc = UInt(64.W)
 }
 
 
 class Info_JTB extends Bundle {
-  val ori_pc = UInt(32.W)
-  val tgt_pc = UInt(32.W)
+  val ori_pc = UInt(64.W)
+  val tgt_pc = UInt(64.W)
 }
 
 
