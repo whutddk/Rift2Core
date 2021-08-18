@@ -53,7 +53,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
     // val icache_fence_req = Output(Bool())
     // val dcache_fence_req = Output(Bool())
-
+    val mmu_fence_req = Output(Bool())
 
     val missUnit_dcache_acquire = Decoupled(new TLBundleA(tlc_edge.bundle))
     val missUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(tlc_edge.bundle)))
@@ -94,6 +94,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
   /** indicate if the fence is an icache fence */
   val is_fence_i  = RegInit(false.B)
+  val is_sfence_vma  = RegInit(false.B)
 
   /** when a fence request comes, commit it and block all request from issue until scoreboard is empty */ 
   val fence_op  = RegInit(false.B)
@@ -134,13 +135,16 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   when( io.mmu_lsu.valid & io.lsu_iss_exe.bits.fun.is_fence & ~fence_op ) {
     fence_op := true.B
     is_fence_i := io.lsu_iss_exe.bits.fun.fence_i
+    is_sfence_vma := io.lsu_iss_exe.bits.fun.sfence_vma
   }
   .elsewhen( lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty & fence_op ) {
     fence_op := false.B
     is_fence_i := false.B
+    is_sfence_vma := false.B
   }
 
   // io.icache_fence_req := fence_op === true.B & lsu_scoreBoard.io.is_empty & is_fence_i
+  io.mmu_fence_req := fence_op === true.B & lsu_scoreBoard.io.is_empty & is_sfence_vma
 
 
   su_exe_iwb_fifo.io.enq.valid :=

@@ -314,6 +314,7 @@ class Decode16 (x:UInt, pc: UInt) {
   info.lsu_isa.sd          := c_sd | c_sdsp
   info.lsu_isa.fence       := false.B
   info.lsu_isa.fence_i     := false.B
+  info.lsu_isa.sfence_vma  := false.B
 
   info.csr_isa.rw          := false.B
   info.csr_isa.rs          := false.B
@@ -344,8 +345,6 @@ class Decode16 (x:UInt, pc: UInt) {
   info.privil_isa.dret        := false.B
 
   info.privil_isa.wfi         := false.B
-
-  info.privil_isa.sfence_vma  := false.B
 
   info.privil_isa.hfence_vvma := false.B
   info.privil_isa.hfence_gvma := false.B

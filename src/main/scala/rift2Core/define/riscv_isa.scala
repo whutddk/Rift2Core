@@ -111,6 +111,7 @@ class Lsu_isa extends Bundle {
   val sd  = Bool()
   val fence = Bool()
   val fence_i = Bool()
+  val sfence_vma = Bool()
 
   val lr_w      = Bool()
   val sc_w      = Bool()
@@ -159,7 +160,7 @@ class Lsu_isa extends Bundle {
   def is_dubl = ld | lr_d | fld | sd | sc_d | fsd | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
 
   def is_usi = lbu | lhu | lwu
-  def is_fence = fence | fence_i
+  def is_fence = fence | fence_i | sfence_vma
 
   def is_R = is_lu | is_lr | is_amo
   def is_W = is_su | is_sc | is_amo
@@ -211,7 +212,7 @@ class Privil_isa extends Bundle {
 
   val wfi = Bool()
 
-  val sfence_vma = Bool()
+
 
   val hfence_vvma = Bool()
   val hfence_gvma = Bool()
@@ -235,7 +236,7 @@ class Privil_isa extends Bundle {
   val is_paging_fault = Bool()
 
   def is_privil = 
-    ecall | ebreak | mret | uret | sret | dret | wfi | sfence_vma | hfence_vvma | hfence_gvma | hlv_b | hlv_bu | hlv_h | hlv_hu | hlvx_hu | hlv_w | hlvx_wu | hsv_b | hsv_h | hsv_w | hlv_wu | hlv_d | hsv_d |
+    ecall | ebreak | mret | uret | sret | dret | wfi | hfence_vvma | hfence_gvma | hlv_b | hlv_bu | hlv_h | hlv_hu | hlvx_hu | hlv_w | hlvx_wu | hsv_b | hsv_h | hsv_w | hlv_wu | hlv_d | hsv_d |
     is_access_fault | is_paging_fault
 
 
@@ -446,6 +447,7 @@ class Info_reorder_i extends Bundle {
   val is_amo = Bool()
   val is_fence = Bool()
   val is_fence_i = Bool()
+  val is_sfence_vma = Bool()
   val is_csr = Bool()
 
   val privil = new Privil_isa

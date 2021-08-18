@@ -185,7 +185,11 @@ class Commit extends Privilege with Superscalar {
         io.rod_i(1).bits.is_fence_i & is_wb_v(1) & ~is_1st_solo
       )
 
-
+    val is_sfence_vma_v =
+      VecInit(
+        io.rod_i(0).bits.is_sfence_vma & is_wb_v(0),
+        io.rod_i(1).bits.is_sfence_vma & is_wb_v(1) & ~is_1st_solo
+      )
 
 	val is_exception_v = 
     VecInit( for (i <- 0 until 2) yield {
@@ -209,10 +213,10 @@ class Commit extends Privilege with Superscalar {
 
 
   io.is_commit_abort(1) :=
-    (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) | is_fence_i_v(1) ) & ~is_1st_solo
+    (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) | is_fence_i_v(1) | is_sfence_vma_v(1) ) & ~is_1st_solo
   
   io.is_commit_abort(0) :=
-    (io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet_v(0) | is_trap_v(0) | is_fence_i_v(0) )
+    (io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet_v(0) | is_trap_v(0) | is_fence_i_v(0) | is_sfence_vma_v(0) )
 
 
   //only one privilege can commit once
@@ -260,14 +264,16 @@ class Commit extends Privilege with Superscalar {
     (io.rod_i(0).valid & is_mRet_v(0)) |
     (io.rod_i(0).valid & is_sRet_v(0)) |
     (io.rod_i(0).valid & is_trap_v(0)) |
-    (io.rod_i(0).valid & is_fence_i_v(0)) 
+    (io.rod_i(0).valid & is_fence_i_v(0)) |
+    (io.rod_i(0).valid & is_sfence_vma_v(0))
   ) |
   (
 
     (io.rod_i(1).valid & is_mRet_v(1)) |
     (io.rod_i(1).valid & is_sRet_v(1)) |
     (io.rod_i(1).valid & is_trap_v(1)) |
-    (io.rod_i(1).valid & is_fence_i_v(1))      
+    (io.rod_i(1).valid & is_fence_i_v(1)) |    
+    (io.rod_i(1).valid & is_sfence_vma_v(1))  
 
   )
     
@@ -276,11 +282,13 @@ class Commit extends Privilege with Superscalar {
     (io.rod_i(0).valid & is_sRet_v(0)) -> sepc,
     (io.rod_i(0).valid & is_trap_v(0)) -> Mux1H(Seq( (priv_lvl_dnxt === "b11".U) -> mtvec, (priv_lvl_dnxt === "b01".U) -> stvec)),
     (io.rod_i(0).valid & is_fence_i_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
+    (io.rod_i(0).valid & is_sfence_vma_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
 
     (io.rod_i(1).valid & is_mRet_v(1)) -> mepc,
     (io.rod_i(1).valid & is_sRet_v(1)) -> sepc,
     (io.rod_i(1).valid & is_trap_v(1)) -> mtvec,
-    (io.rod_i(1).valid & is_fence_i_v(1)) -> (io.rod_i(1).bits.pc + 4.U)
+    (io.rod_i(1).valid & is_fence_i_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
+    (io.rod_i(1).valid & is_sfence_vma_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
   ))
 
   assert(
@@ -288,9 +296,11 @@ class Commit extends Privilege with Superscalar {
       (io.rod_i(0).valid & is_xRet_v(0)),
       (io.rod_i(0).valid & is_trap_v(0)),
       (io.rod_i(0).valid & is_fence_i_v(0)),
+      (io.rod_i(0).valid & is_sfence_vma_v(0)),
       (io.rod_i(1).valid & is_xRet_v(1)),
       (io.rod_i(1).valid & is_trap_v(1)),
-      (io.rod_i(1).valid & is_fence_i_v(1))     
+      (io.rod_i(1).valid & is_fence_i_v(1)),    
+      (io.rod_i(1).valid & is_sfence_vma_v(1)),    
     )) <= 1.U
   )
 

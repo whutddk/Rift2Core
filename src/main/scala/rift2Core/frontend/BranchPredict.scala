@@ -149,14 +149,15 @@ class BP_ID_ss extends Module with BHT with Superscalar{
 
 
 
-  lazy val is_jal    = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_jal    & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_jal    & bd_dpt_fifo.io.enq(1).fire) ))
-  lazy val is_jalr   = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_jalr   & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_jalr   & bd_dpt_fifo.io.enq(1).fire) ))
-  lazy val is_branch = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_branch & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_branch & bd_dpt_fifo.io.enq(1).fire) ))
-  lazy val is_call   = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_call   & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_call   & bd_dpt_fifo.io.enq(1).fire) ))
-  lazy val is_return = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_return & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_return & bd_dpt_fifo.io.enq(1).fire) ))
-  lazy val is_rvc    = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_rvc    & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_rvc    & bd_dpt_fifo.io.enq(1).fire) ))
-  lazy val is_fencei = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_fencei & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_fencei & bd_dpt_fifo.io.enq(1).fire) ))
-  lazy val imm       = MuxCase( 0.U,     Array( is_1st_solo ->  io.pd_bd(0).bits.info.imm, is_2nd_solo -> io.pd_bd(1).bits.info.imm ))
+  lazy val is_jal       = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_jal       & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_jal       & bd_dpt_fifo.io.enq(1).fire) ))
+  lazy val is_jalr      = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_jalr      & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_jalr      & bd_dpt_fifo.io.enq(1).fire) ))
+  lazy val is_branch    = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_branch    & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_branch    & bd_dpt_fifo.io.enq(1).fire) ))
+  lazy val is_call      = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_call      & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_call      & bd_dpt_fifo.io.enq(1).fire) ))
+  lazy val is_return    = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_return    & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_return    & bd_dpt_fifo.io.enq(1).fire) ))
+  lazy val is_rvc       = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_rvc       & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_rvc       & bd_dpt_fifo.io.enq(1).fire) ))
+  lazy val is_fencei    = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_fencei    & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_fencei    & bd_dpt_fifo.io.enq(1).fire) ))
+  lazy val is_sfencevma = MuxCase( false.B, Array( is_1st_solo -> (io.pd_bd(0).bits.info.is_sfencevma & bd_dpt_fifo.io.enq(0).fire), is_2nd_solo -> (io.pd_bd(1).bits.info.is_sfencevma & bd_dpt_fifo.io.enq(1).fire) ))
+  lazy val imm          = MuxCase( 0.U,     Array( is_1st_solo ->  io.pd_bd(0).bits.info.imm, is_2nd_solo -> io.pd_bd(1).bits.info.imm ))
 
 
   lazy val ori_pc    = (Mux( is_1st_solo, io.pd_bd(0).bits.pc, io.pd_bd(1).bits.pc))
@@ -206,7 +207,7 @@ class BP_ID_ss extends Module with BHT with Superscalar{
   when( io.flush ) {
     bd_lock := false.B
   }
-  .elsewhen( (is_jalr & ~is_ras_taken) | is_fencei ) {
+  .elsewhen( (is_jalr & ~is_ras_taken) | is_fencei | is_sfencevma) {
     bd_lock := true.B
   }
 
