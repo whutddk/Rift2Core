@@ -29,6 +29,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.frontend._
 import rift2Core.backend._
+import rift2Core.diff._
 import rift2Core.privilege._
 import axi._
 
@@ -86,6 +87,10 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val ( icache_bus, icache_edge ) = outer.icacheClientNode.out.head
   val ( dcache_bus, dcache_edge ) = outer.dcacheClientNode.out.head
   val (    mmu_bus,    mmu_edge ) = outer.mmuClientNode.out.head
+
+  val diff = Module(new diff)
+
+
 
   val pc_stage = Module(new Pc_gen)
   val if_stage = Module(new Ifetch(icache_edge))
@@ -272,6 +277,22 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   exe_stage.io.sys_chn_aw <> io.sys_chn_aw
   exe_stage.io.sys_chn_w  <> io.sys_chn_w
   exe_stage.io.sys_chn_b  <> io.sys_chn_b
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  diff.io.register := i_regfiles.io.diff_register
+  diff.io.commit   := cmm_stage.io.diff_commit
 
 
 }

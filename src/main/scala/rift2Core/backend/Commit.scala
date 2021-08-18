@@ -33,6 +33,8 @@ import rift2Core.backend._
 import rift2Core.privilege._
 import rift2Core.privilege.csrFiles._
 
+import rift2Core.diff._
+
 /** commit
   * @author Ruige Lee
   * 
@@ -64,6 +66,8 @@ class Commit extends Privilege with Superscalar {
     val cmm_mmu = Output( new Info_cmm_mmu )
 
     val rtc_clock = Input(Bool())
+
+    val diff_commit = Output(new Info_cmm_diff)
   })
 
 
@@ -374,4 +378,22 @@ class Commit extends Privilege with Superscalar {
   io.cmm_mmu.priv_lvl := priv_lvl_qout
   io.cmm_mmu.mstatus := mstatus
   io.cmm_mmu.sstatus := sstatus
+
+
+
+
+
+
+
+
+
+
+
+  io.diff_commit.pc(0) := io.rod_i(0).bits.pc
+  io.diff_commit.pc(1) := io.rod_i(1).bits.pc
+  io.diff_commit.comfirm(0) := is_commit_comfirm(0)
+  io.diff_commit.comfirm(1) := is_commit_comfirm(1)
+  io.diff_commit.abort(0) := io.is_commit_abort(0)
+  io.diff_commit.abort(1) := io.is_commit_abort(1)
+
 }
