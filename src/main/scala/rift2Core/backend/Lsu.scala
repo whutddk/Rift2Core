@@ -53,7 +53,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
     // val icache_fence_req = Output(Bool())
     // val dcache_fence_req = Output(Bool())
-    val mmu_fence_req = Output(Bool())
+    // val mmu_fence_req = Output(Bool())
 
     val missUnit_dcache_acquire = Decoupled(new TLBundleA(tlc_edge.bundle))
     val missUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(tlc_edge.bundle)))
@@ -109,11 +109,6 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   pending_fifo.io.flush := io.flush
 
 
-  // val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-  // val lsu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
-
-  // val lsu_mmu = ValidIO(new Info_mmu_req)
-  // val mmu_lsu = Flipped(ValidIO(new Info_mmu_rsp))
 
   io.lsu_mmu.valid := io.lsu_iss_exe.valid
   io.lsu_mmu.bits.vaddr := io.lsu_iss_exe.bits.param.op1
@@ -143,8 +138,8 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
     is_sfence_vma := false.B
   }
 
-  // io.icache_fence_req := fence_op === true.B & lsu_scoreBoard.io.is_empty & is_fence_i
-  io.mmu_fence_req := fence_op === true.B & lsu_scoreBoard.io.is_empty & is_sfence_vma
+  // io.icache_fence_req := fence_op & lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty & is_fence_i
+  // io.mmu_fence_req := fence_op & lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty & is_sfence_vma
 
 
   su_exe_iwb_fifo.io.enq.valid :=

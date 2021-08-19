@@ -82,6 +82,8 @@ class Info_cmm_mmu extends Bundle {
   val mstatus = UInt(64.W)
   val sstatus = UInt(64.W)
 
+  val sfence_vma = Bool()
+
 }
 
 
@@ -116,8 +118,6 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val ptw_get    = new DecoupledIO(new TLBundleA(edge.bundle))
     val ptw_access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
 
-
-    val flush = Input(Bool())
   })
 
   val itlb = Module( new TLB(32) )
@@ -145,12 +145,6 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   } .elsewhen ( io.mmu_lsu.fire ) {
     kill_dptw := false.B
   }
-
-  // val immu_rsp_fifo = Module(new Queue(new Info_mmu_rsp, 4, false, true) )
-  // val dmmu_rsp_fifo = Module(new Queue(new Info_mmu_rsp, 4, false, true) )
-
-  // io.mmu_if  <> immu_rsp_fifo.io.deq
-  // io.mmu_lsu <> dmmu_rsp_fifo.io.deq
 
   itlb.io.req.valid := io.if_mmu.valid
   itlb.io.req.bits  := io.if_mmu.bits
@@ -281,8 +275,9 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   io.ptw_get <> ptw.io.ptw_get
   ptw.io.ptw_access <> io.ptw_access
 
-  itlb.io.flush := io.flush
-  dtlb.io.flush := io.flush
+  itlb.io.sfence_vma := io.cmm_mmu.sfence_vma
+  dtlb.io.sfence_vma := io.cmm_mmu.sfence_vma
+  ptw.io.sfence_vma  := io.cmm_mmu.sfence_vma
 
 
 
@@ -317,6 +312,8 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     return paddr
   }    
 
-
+  when( io.cmm_mmu.sfence_vma ) {
+    assert( io.if_flush & io.lsu_flush )
+  }
 
 }

@@ -116,9 +116,6 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   i_mmu.io.cmm_mmu <> cmm_stage.io.cmm_mmu
 
 
-  i_mmu.io.flush := false.B
-
-
 
 
   pc_stage.io.bd_pc <> bd_stage.io.bd_pc

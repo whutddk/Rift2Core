@@ -50,7 +50,7 @@ class TLB( entry: Int = 32 ) extends Module {
 
     val tlb_renew = Flipped(ValidIO(new Info_pte_sv39))
 
-    val flush = Input(Bool())
+    val sfence_vma = Input(Bool())
   })
 
   /** The tag including *is_valid*, *asid*, and *vpn[8:0]* X 3 */
@@ -59,7 +59,7 @@ class TLB( entry: Int = 32 ) extends Module {
   /** The PTE info of page */
   val pte = RegInit( VecInit( Seq.fill(entry)(0.U.asTypeOf( new Info_pte_sv39 ))))
 
-  when( io.flush ) {
+  when( io.sfence_vma ) {
     for( i <- 0 until entry ) yield tag(i) := 0.U.asTypeOf( new Info_tlb_tag )
   }
   .elsewhen(io.tlb_renew.valid) {
@@ -111,6 +111,7 @@ class TLB( entry: Int = 32 ) extends Module {
 
   io.pte_o := Mux1H( tlb_hit zip pte )
   io.is_hit := tlb_hit.contains(true.B) & io.req.valid
+
 }
 
 
