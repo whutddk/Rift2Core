@@ -420,7 +420,10 @@ class Commit extends Privilege with Superscalar {
   io.diff_commit.comfirm(1) := is_commit_comfirm(1)
   io.diff_commit.abort(0) := io.is_commit_abort(0)
   io.diff_commit.abort(1) := io.is_commit_abort(1)
-
+  io.diff_commit.priv_lvl := priv_lvl_qout
+  io.diff_commit.is_ecall_M := is_ecall_M
+  io.diff_commit.is_ecall_S := is_ecall_S
+  io.diff_commit.is_ecall_U := is_ecall_U
 
 
   assert( ~(is_wb_v(0) & ~io.rod_i(0).valid) )

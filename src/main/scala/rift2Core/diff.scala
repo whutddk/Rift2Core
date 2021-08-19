@@ -47,6 +47,10 @@ class Info_cmm_diff extends Bundle {
   val pc = Vec(2, UInt(64.W))
   val comfirm = Vec(2, Bool())
   val abort = Vec(2, Bool())
+  val priv_lvl = UInt(2.W)
+  val is_ecall_M = Bool()
+  val is_ecall_S = Bool()
+  val is_ecall_U = Bool()
 }
 
 
