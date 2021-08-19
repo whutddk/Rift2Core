@@ -220,7 +220,9 @@ class Commit extends Privilege with Superscalar {
 
   io.is_commit_abort(1) :=
     (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) | is_fence_i_v(1) | is_sfence_vma_v(1) ) & ~is_1st_solo
-  
+  // assert( io.is_commit_abort(1) === false.B )
+
+
   io.is_commit_abort(0) :=
     (io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet_v(0) | is_trap_v(0) | is_fence_i_v(0) | is_sfence_vma_v(0) )
 
@@ -246,7 +248,7 @@ class Commit extends Privilege with Superscalar {
 
 
 
-  io.rod_i(0).ready := is_commit_comfirm(0)
+  io.rod_i(0).ready := is_commit_comfirm(0) | io.is_commit_abort(0)
   io.rod_i(1).ready := is_commit_comfirm(1)
 
   io.cmm_lsu.is_amo_pending := io.rod_i(0).valid & io.rod_i(0).bits.is_amo & ~is_commit_comfirm(0) //only pending amo in rod0 is send out
@@ -272,16 +274,17 @@ class Commit extends Privilege with Superscalar {
     (io.rod_i(0).valid & is_trap_v(0)) |
     (io.rod_i(0).valid & is_fence_i_v(0)) |
     (io.rod_i(0).valid & is_sfence_vma_v(0))
-  ) |
-  (
+  ) 
+  // |
+  // (
 
-    (io.rod_i(1).valid & is_mRet_v(1)) |
-    (io.rod_i(1).valid & is_sRet_v(1)) |
-    (io.rod_i(1).valid & is_trap_v(1)) |
-    (io.rod_i(1).valid & is_fence_i_v(1)) |    
-    (io.rod_i(1).valid & is_sfence_vma_v(1))  
+  //   (io.rod_i(1).valid & is_mRet_v(1)) |
+  //   (io.rod_i(1).valid & is_sRet_v(1)) |
+  //   (io.rod_i(1).valid & is_trap_v(1)) |
+  //   (io.rod_i(1).valid & is_fence_i_v(1)) |    
+  //   (io.rod_i(1).valid & is_sfence_vma_v(1))  
 
-  )
+  // )
     
   io.cmm_pc.bits.addr := Mux1H(Seq(
     (io.rod_i(0).valid & is_mRet_v(0)) -> mepc,
@@ -290,11 +293,11 @@ class Commit extends Privilege with Superscalar {
     (io.rod_i(0).valid & is_fence_i_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
     (io.rod_i(0).valid & is_sfence_vma_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
 
-    (io.rod_i(1).valid & is_mRet_v(1)) -> mepc,
-    (io.rod_i(1).valid & is_sRet_v(1)) -> sepc,
-    (io.rod_i(1).valid & is_trap_v(1)) -> mtvec,
-    (io.rod_i(1).valid & is_fence_i_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
-    (io.rod_i(1).valid & is_sfence_vma_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
+    // (io.rod_i(1).valid & is_mRet_v(1)) -> mepc,
+    // (io.rod_i(1).valid & is_sRet_v(1)) -> sepc,
+    // (io.rod_i(1).valid & is_trap_v(1)) -> mtvec,
+    // (io.rod_i(1).valid & is_fence_i_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
+    // (io.rod_i(1).valid & is_sfence_vma_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
   ))
 
   assert(
@@ -303,10 +306,10 @@ class Commit extends Privilege with Superscalar {
       (io.rod_i(0).valid & is_trap_v(0)),
       (io.rod_i(0).valid & is_fence_i_v(0)),
       (io.rod_i(0).valid & is_sfence_vma_v(0)),
-      (io.rod_i(1).valid & is_xRet_v(1)),
-      (io.rod_i(1).valid & is_trap_v(1)),
-      (io.rod_i(1).valid & is_fence_i_v(1)),    
-      (io.rod_i(1).valid & is_sfence_vma_v(1)),    
+      // (io.rod_i(1).valid & is_xRet_v(1)),
+      // (io.rod_i(1).valid & is_trap_v(1)),
+      // (io.rod_i(1).valid & is_fence_i_v(1)),    
+      // (io.rod_i(1).valid & is_sfence_vma_v(1)),    
     )) <= 1.U
   )
 
@@ -316,7 +319,7 @@ class Commit extends Privilege with Superscalar {
     val is_retired_v = 
       VecInit(
         is_commit_comfirm(0) | io.is_commit_abort(0),
-        is_commit_comfirm(1) 
+        is_commit_comfirm(1),
       )
 
 
@@ -364,26 +367,26 @@ class Commit extends Privilege with Superscalar {
 
 	rtc_clock               := io.rtc_clock	
 	exe_port                := Mux( io.csr_cmm_op.ready, io.csr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
-	is_trap                 := is_trap_v.contains(true.B)
-	is_mRet                 := is_mRet_v.contains(true.B)
-	is_sRet                 := is_sRet_v.contains(true.B)
+	is_trap                 := io.rod_i(0).valid & is_trap_v(0)
+	is_mRet                 := io.rod_i(0).valid & is_mRet_v(0)
+	is_sRet                 := io.rod_i(0).valid & is_sRet_v(0)
 	commit_pc               := Mux(is_1st_solo, io.rod_i(0).bits.pc, io.rod_i(1).bits.pc)
 	ill_instr               := 0.U
   ill_ivaddr               := io.if_cmm.ill_vaddr
 	ill_dvaddr               := io.lsu_cmm.trap_addr
-	is_instr_access_fault    := is_instr_access_fault_v.contains(true.B)
-	is_instr_paging_fault    := is_instr_paging_fault_v.contains(true.B)
-	is_instr_illeage        := is_illeage_v.contains(true.B)
-	is_breakPoint           := is_ebreak_v.contains(true.B)
-	is_load_misAlign        := is_load_misAlign_ack_v.contains(true.B)
-	is_load_access_fault     := is_load_accessFault_ack_v.contains(true.B)
-	is_storeAMO_misAlign    := is_store_misAlign_ack_v.contains(true.B)
-	is_storeAMO_access_fault := is_store_accessFault_ack_v.contains(true.B)
-	is_storeAMO_paging_fault := is_store_pagingFault_ack_v.contains(true.B)
-	is_ecall_M                := is_ecall_v.contains(true.B) & priv_lvl_qout === "b11".U
-	is_ecall_S                := is_ecall_v.contains(true.B) & priv_lvl_qout === "b01".U
-	is_ecall_U                := is_ecall_v.contains(true.B) & priv_lvl_qout === "b00".U
-	is_load_paging_fault       := is_load_pagingFault_ack_v.contains(true.B)
+	is_instr_access_fault    := io.rod_i(0).valid & is_instr_access_fault_v(0)
+	is_instr_paging_fault    := io.rod_i(0).valid & is_instr_paging_fault_v(0)
+	is_instr_illeage        := io.rod_i(0).valid & is_illeage_v(0)
+	is_breakPoint           := io.rod_i(0).valid & is_ebreak_v(0)
+	is_load_misAlign        := io.rod_i(0).valid & is_load_misAlign_ack_v(0)
+	is_load_access_fault     := io.rod_i(0).valid & is_load_accessFault_ack_v(0)
+	is_storeAMO_misAlign    := io.rod_i(0).valid & is_store_misAlign_ack_v(0)
+	is_storeAMO_access_fault := io.rod_i(0).valid & is_store_accessFault_ack_v(0)
+	is_storeAMO_paging_fault := io.rod_i(0).valid & is_store_pagingFault_ack_v(0)
+	is_ecall_M                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b11".U
+	is_ecall_S                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b01".U
+	is_ecall_U                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b00".U
+	is_load_paging_fault       := io.rod_i(0).valid & is_load_pagingFault_ack_v(0)
 	retired_cnt             := Mux( is_retired_v(1), 2.U, Mux(is_retired_v(0), 1.U, 0.U) )
 	clint_sw_m              := false.B
 	clint_sw_s              := false.B
