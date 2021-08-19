@@ -131,11 +131,7 @@ class Commit extends Privilege with Superscalar {
       )
 
 
-    val is_csr_illegal_ack_v =
-      VecInit(
-        (is_csrr_illegal | is_csrw_illegal) & (io.rod_i(0).valid & io.rod_i(0).bits.is_csr & ~is_wb_v(0)),
-        (is_csrr_illegal | is_csrw_illegal) & (io.rod_i(1).valid & io.rod_i(1).bits.is_csr & ~is_wb_v(1)) & ~is_1st_solo
-      )
+
 
     val is_ecall_v  =
       VecInit(
@@ -161,12 +157,22 @@ class Commit extends Privilege with Superscalar {
         io.rod_i(1).bits.privil.is_paging_fault & ~is_1st_solo
       )
 
-    val is_illeage_v =
-      VecInit(
-        (io.rod_i(0).bits.is_illeage | is_csr_illegal_ack_v(0)),
-        (io.rod_i(1).bits.is_illeage | is_csr_illegal_ack_v(1)) & ~is_1st_solo
+    val is_illeage_v = {
+      val is_csr_illegal = VecInit(
+        (is_csrr_illegal | is_csrw_illegal) & (io.rod_i(0).valid & io.rod_i(0).bits.is_csr & ~is_wb_v(0)),
+        (is_csrr_illegal | is_csrw_illegal) & (io.rod_i(1).valid & io.rod_i(1).bits.is_csr & ~is_wb_v(1)) & ~is_1st_solo
       )
 
+      val is_ill_sfence = VecInit(
+        is_wb_v(0) & io.rod_i(0).bits.is_sfence_vma & (mstatus(20) | priv_lvl_qout === "b00".U),
+        is_wb_v(1) & io.rod_i(1).bits.is_sfence_vma & (mstatus(20) | priv_lvl_qout === "b00".U)
+      )
+
+      VecInit(
+        (io.rod_i(0).bits.is_illeage | is_csr_illegal(0) | is_ill_sfence(0)),
+        (io.rod_i(1).bits.is_illeage | is_csr_illegal(1) | is_ill_sfence(1)) & ~is_1st_solo
+      )
+    }
     val is_mRet_v =
       VecInit(
         io.rod_i(0).bits.privil.mret,
@@ -412,4 +418,8 @@ class Commit extends Privilege with Superscalar {
   io.diff_commit.abort(0) := io.is_commit_abort(0)
   io.diff_commit.abort(1) := io.is_commit_abort(1)
 
+
+
+  assert( ~(is_wb_v(0) & ~io.rod_i(0).valid) )
+  assert( ~(is_wb_v(1) & ~io.rod_i(1).valid) )
 }
