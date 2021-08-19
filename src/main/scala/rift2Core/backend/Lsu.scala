@@ -110,12 +110,14 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
 
 
-  io.lsu_mmu.valid := io.lsu_iss_exe.valid
+  io.lsu_mmu.valid := io.lsu_iss_exe.valid & ~io.lsu_iss_exe.bits.fun.is_fence
   io.lsu_mmu.bits.vaddr := io.lsu_iss_exe.bits.param.op1
   io.lsu_mmu.bits.is_R := io.lsu_iss_exe.bits.fun.is_R
   io.lsu_mmu.bits.is_W := io.lsu_iss_exe.bits.fun.is_W
   io.lsu_mmu.bits.is_X := false.B
-  io.lsu_iss_exe.ready := io.lsu_mmu.ready
+  io.lsu_iss_exe.ready :=
+    ( ~io.lsu_iss_exe.bits.fun.is_fence & io.lsu_mmu.ready) |
+    (  io.lsu_iss_exe.bits.fun.is_fence & fe_exe_iwb_fifo.io.enq.fire) 
 
   // assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_paging_fault) )
   // assert( ~(io.mmu_lsu.valid & io.mmu_lsu.bits.is_access_fault ) )
@@ -127,7 +129,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   when( io.flush ) { trans_kill := true.B }
   .elsewhen( lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty ) { trans_kill := false.B }
 
-  when( io.mmu_lsu.valid & io.lsu_iss_exe.bits.fun.is_fence & ~fence_op ) {
+  when( io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & ~fence_op ) {
     fence_op := true.B
     is_fence_i := io.lsu_iss_exe.bits.fun.fence_i
     is_sfence_vma := io.lsu_iss_exe.bits.fun.sfence_vma
@@ -153,7 +155,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   su_exe_iwb_fifo.io.enq.bits.res     := 0.U
 
   fe_exe_iwb_fifo.io.enq.valid :=
-    io.mmu_lsu.valid & io.lsu_iss_exe.bits.fun.is_fence & lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty
+    lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty & fence_op
 
   fe_exe_iwb_fifo.io.enq.bits.rd0_phy := io.lsu_iss_exe.bits.param.rd0_phy
   fe_exe_iwb_fifo.io.enq.bits.res     := 0.U
@@ -174,8 +176,8 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
     ~trans_kill &  ~is_Fault & (
       ( ~fence_op & io.lsu_iss_exe.bits.fun.is_su  & pending_fifo.io.enq.ready & su_exe_iwb_fifo.io.enq.ready) | //when store, both pending fifo and store wb should ready
       ( ~fence_op & ~pending_fifo.io.is_hazard & io.lsu_iss_exe.bits.fun.is_lu  & scoreBoard_arb.io.in(1).ready) | //when load, scoreBoard should ready
-      ( ~fence_op & io.lsu_iss_exe.bits.fun.is_amo & pending_fifo.io.enq.ready) |                                //when amo, the pending fifo should ready
-      ( io.lsu_iss_exe.bits.fun.is_fence & fe_exe_iwb_fifo.io.enq.fire)                               //when fence, the store wb shoudl ready      
+      ( ~fence_op & io.lsu_iss_exe.bits.fun.is_amo & pending_fifo.io.enq.ready) //|                                //when amo, the pending fifo should ready
+      // ( io.lsu_iss_exe.bits.fun.is_fence & fe_exe_iwb_fifo.io.enq.fire)                               //when fence, the store wb should ready      
     )
 
 
