@@ -146,13 +146,14 @@ class Lsu_isa extends Bundle {
 
   def is_lu  = lb | lh | lw | ld | lbu | lhu | lwu |  flw | fld 
   def is_su  = sb | sh | sw | sd | fsw | fsd
-  def is_nls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd | fence | fence_i
+  def is_nls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd
   def is_lrsc = is_sc | is_lr
   def is_amo =
     amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d |
     lr_w | lr_d | sc_w | sc_d 
   def is_fls = flw | fsw | fld | fsd
-  def is_lsu = is_nls | is_lrsc | is_amo | is_fls
+  def is_fence = fence | fence_i | sfence_vma
+  def is_lsu = is_nls | is_lrsc | is_amo | is_fls | is_fence
 
   def is_byte = lb | lbu | sb
   def is_half = lh | lhu | sh
@@ -160,7 +161,7 @@ class Lsu_isa extends Bundle {
   def is_dubl = ld | lr_d | fld | sd | sc_d | fsd | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
 
   def is_usi = lbu | lhu | lwu
-  def is_fence = fence | fence_i | sfence_vma
+
 
   def is_R = is_lu | is_lr | is_amo
   def is_W = is_su | is_sc | is_amo
