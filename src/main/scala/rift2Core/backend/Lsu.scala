@@ -129,12 +129,12 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   when( io.flush ) { trans_kill := true.B }
   .elsewhen( lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty ) { trans_kill := false.B }
 
-  when( io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & ~fence_op ) {
+  when( io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & ~fence_op & ~io.flush) {
     fence_op := true.B
     is_fence_i := io.lsu_iss_exe.bits.fun.fence_i
     is_sfence_vma := io.lsu_iss_exe.bits.fun.sfence_vma
   }
-  .elsewhen( lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty & fence_op ) {
+  .elsewhen( (lsu_scoreBoard.io.is_empty & pending_fifo.io.is_empty & fence_op) | io.flush ) {
     fence_op := false.B
     is_fence_i := false.B
     is_sfence_vma := false.B
