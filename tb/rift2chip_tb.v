@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-08-19 19:39:31
+* @Last Modified time: 2021-08-20 14:17:26
 */
 
 
@@ -339,8 +339,9 @@ end
 
 wire is_ecall_U = s_Rift2Chip.i_rift2Core.diff.io_commit_is_ecall_U;
 wire is_ecall_M = s_Rift2Chip.i_rift2Core.diff.io_commit_is_ecall_M;
-wire [63:0] gp  = s_Rift2Chip.i_rift2Core.diff.io_register_gp;
-wire [63:0] a0  = s_Rift2Chip.i_rift2Core.diff.io_register_a0;
+wire is_ecall_S = s_Rift2Chip.i_rift2Core.diff.io_commit_is_ecall_S;
+// wire [63:0] gp  = s_Rift2Chip.i_rift2Core.diff.io_register_gp;
+wire [63:0] t6  = s_Rift2Chip.i_rift2Core.diff.io_register_t6;
 
 
 // reg sim_end = 0;
@@ -355,8 +356,8 @@ wire [63:0] a0  = s_Rift2Chip.i_rift2Core.diff.io_register_a0;
 
 
 always @(negedge CLK ) begin
-	if ( is_ecall_U ) begin
-		if ( a0 == 64'd1 ) begin
+	if ( is_ecall_U | is_ecall_M | is_ecall_S ) begin
+		if ( t6 == 64'd1 ) begin
 			$display("PASS");
 			# 1000 
 			$finish;
@@ -367,20 +368,6 @@ always @(negedge CLK ) begin
 			$stop;
 		end
 	end
-
-	if ( is_ecall_M ) begin
-		if ( gp == 64'd1 ) begin
-			$display("PASS");
-			# 1000 
-			$finish;
-		end
-		else begin
-			$display("Fail");
-			# 100
-			$stop;
-		end
-	end
-
 end
 
 
@@ -391,7 +378,7 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	$readmemh("./ci/rv64ui-v-simple.verilog", mem);
+	$readmemh("./ci/rv64mi-p-ma_addr.verilog", mem);
 	// $readmemh(testName, mem);
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
