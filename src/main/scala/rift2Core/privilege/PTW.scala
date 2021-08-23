@@ -180,7 +180,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val wr_enable = 
       // (fsm.state_qout === state.lvl2 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
       // (fsm.state_qout === state.lvl1 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
-      (fsm.state_qout === state.lvl0 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
+      // (fsm.state_qout === state.lvl0 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
 
     cache_tag.tag_en_w(i) := wr_enable
     cache_tag.tag_en_r(i) := rd_enable
