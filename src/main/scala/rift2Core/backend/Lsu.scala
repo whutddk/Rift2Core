@@ -230,7 +230,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   io.lsu_cmm.is_misAlign :=
     io.mmu_lsu.valid & io.lsu_iss_exe.bits.is_misAlign
 
-  io.lsu_cmm.trap_addr := io.mmu_lsu.bits.paddr
+  io.lsu_cmm.trap_addr := io.lsu_iss_exe.bits.param.op1
 
 
 
