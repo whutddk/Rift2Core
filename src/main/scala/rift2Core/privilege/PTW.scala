@@ -173,13 +173,13 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   for( i <- 0 until 1 ) yield {
     val rd_enable = 
-      (fsm.state_qout === state.free & fsm.state_dnxt === state.lvl2) |
-      (fsm.state_qout === state.lvl2 & fsm.state_dnxt === state.lvl1) |
+      // (fsm.state_qout === state.free & fsm.state_dnxt === state.lvl2) |
+      // (fsm.state_qout === state.lvl2 & fsm.state_dnxt === state.lvl1) |
       (fsm.state_qout === state.lvl1 & fsm.state_dnxt === state.lvl0)
 
     val wr_enable = 
-      (fsm.state_qout === state.lvl2 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
-      (fsm.state_qout === state.lvl1 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
+      // (fsm.state_qout === state.lvl2 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
+      // (fsm.state_qout === state.lvl1 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
       (fsm.state_qout === state.lvl0 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
 
     cache_tag.tag_en_w(i) := wr_enable
@@ -202,7 +202,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     cache_dat.dat_info_wstrb(j) := "hFF".U
   }
 
-  val is_hit = (walk.tag_sel === cache_tag.tag_info_r(0)) & is_cache_valid(walk.cl_sel)
+  val is_hit = (walk.tag_sel === cache_tag.tag_info_r(0)) & is_cache_valid(walk.cl_sel) & fsm.state_qout === state.lvl0
 
 
   walk.pte.value := {
