@@ -207,7 +207,9 @@ class Commit extends Privilege with Superscalar {
       is_load_accessFault_ack_v(i)  |
       is_store_accessFault_ack_v(i) |
       is_load_misAlign_ack_v(i)  |
-      is_store_misAlign_ack_v(i)
+      is_store_misAlign_ack_v(i) |
+      is_load_pagingFault_ack_v(i) |
+      is_store_pagingFault_ack_v(i) 
     })
 
 	// val is_trap_v = Wire(Vec(2, Bool()))
