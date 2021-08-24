@@ -32,6 +32,7 @@ import base._
 import chisel3.experimental.ChiselEnum
 import rift2Core.define._
 import rift2Core.frontend._
+import rift2Core.L1Cache._
 
 
 class Info_preDecode extends Bundle {
@@ -113,6 +114,7 @@ class PreDecode32() extends Module{
 
 class Predecode_ss extends Module with Superscalar{
   val io = IO(new Bundle {
+    val if_cmm_shadow = Input(new Info_if_cmm)
 
     val if_pd = Vec(4, Flipped(new DecoupledIO(UInt(16.W)) ))
     val pd_bd = Vec(2, new DecoupledIO(new Info_pd_bd))
@@ -131,10 +133,34 @@ class Predecode_ss extends Module with Superscalar{
   pd16(0).io.instr16 := io.if_pd(0).bits;                         pd16(1).io.instr16 := io.if_pd(idx_2nd).bits
   pd32(0).io.instr32 := Cat( io.if_pd(1).bits, io.if_pd(0).bits); pd32(1).io.instr32 := Cat( io.if_pd(idx_2nd+1.U).bits, io.if_pd(idx_2nd).bits)
 
-  pd_bd_fifo.io.enq(0).bits.info := Mux( is_1st16, pd16(0).io.info, pd32(0).io.info ) //1st00 will not be care
+  pd_bd_fifo.io.enq(0).bits.info := {
+
+    val fault_info = Wire(new Info_preDecode)
+      fault_info.is_jal       := false.B
+      fault_info.is_jalr      := false.B
+      fault_info.is_branch    := false.B
+      fault_info.is_call      := false.B
+      fault_info.is_return    := false.B
+      fault_info.is_rvc       := true.B
+      fault_info.is_fencei    := false.B
+      fault_info.is_sfencevma := false.B
+      fault_info.imm          := 0.U   
+
+    Mux( io.if_cmm_shadow.is_access_fault | io.if_cmm_shadow.is_paging_fault,
+      fault_info,
+      Mux( is_1st16, pd16(0).io.info, pd32(0).io.info ) //1st00 will not be care         
+    )
+ 
+  }
+
+
   pd_bd_fifo.io.enq(1).bits.info := Mux( is_2nd16, pd16(1).io.info, pd32(1).io.info ) //2nd00 will not be care
 
-  pd_bd_fifo.io.enq(0).bits.instr := Mux( is_1st16, io.if_pd(0).bits,     Cat( io.if_pd(1).bits, io.if_pd(0).bits) )
+  pd_bd_fifo.io.enq(0).bits.instr :=
+    Mux( io.if_cmm_shadow.is_access_fault, "b1001110001000001".U,
+      Mux( io.if_cmm_shadow.is_paging_fault, "b1001110001000101".U,
+        Mux( is_1st16, io.if_pd(0).bits,     Cat( io.if_pd(1).bits, io.if_pd(0).bits) )
+    ))
   pd_bd_fifo.io.enq(1).bits.instr := Mux( is_2nd16, io.if_pd(idx_2nd).bits, Cat( io.if_pd(idx_2nd+1.U).bits, io.if_pd(idx_2nd).bits) )
 
   pd_bd_fifo.io.enq(0).bits.pc    := pc_qout
@@ -180,7 +206,7 @@ class Predecode_ss extends Module with Superscalar{
   override def is_2nd_solo = is_1st_solo & false.B
 
   
-  pd_bd_fifo.io.enq(0).valid := ~is_1st00
+  pd_bd_fifo.io.enq(0).valid := ~is_1st00 | (io.if_cmm_shadow.is_access_fault | io.if_cmm_shadow.is_paging_fault)
   pd_bd_fifo.io.enq(1).valid := ~is_2nd00
 
 

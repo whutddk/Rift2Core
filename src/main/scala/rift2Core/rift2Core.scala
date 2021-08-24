@@ -98,6 +98,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val bd_stage = Module(new BP_ID_ss)
 
 
+
   val dpt_stage = Module(new Dispatch_ss)
   val iss_stage = Module(new Issue)
   val exe_stage = Module(new Execute(dcache_edge))
@@ -126,6 +127,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   
   pc_stage.io.pc_if <> if_stage.io.pc_if
   if_stage.io.if_iq <> pd_stage.io.if_pd
+  pd_stage.io.if_cmm_shadow := if_stage.io.if_cmm
   pd_stage.io.pd_bd <> bd_stage.io.pd_bd
   bd_stage.io.bd_dpt <> dpt_stage.io.bd_dpt
 
