@@ -180,7 +180,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val wr_enable = 
       // (fsm.state_qout === state.lvl2 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
       // (fsm.state_qout === state.lvl1 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
-      // (fsm.state_qout === state.lvl0 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
+      (fsm.state_qout === state.lvl0 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
 
     cache_tag.tag_en_w(i) := wr_enable
     cache_tag.tag_en_r(i) := rd_enable
@@ -198,9 +198,13 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   }
 
   for ( j <- 0 until 4 ) yield {
-    cache_dat.dat_info_w(j) :=  Cat( io.ptw_access.bits.data, ptw_access_data_lo )
     cache_dat.dat_info_wstrb(j) := "hFF".U
   }
+
+  cache_dat.dat_info_w(0) := ptw_access_data_lo(63,0)
+  cache_dat.dat_info_w(1) := ptw_access_data_lo(127,64)
+  cache_dat.dat_info_w(2) := io.ptw_access.bits.data(63,0)
+  cache_dat.dat_info_w(3) := io.ptw_access.bits.data(127,64)
 
   val is_hit = (walk.tag_sel === cache_tag.tag_info_r(0)) & is_cache_valid(walk.cl_sel) & fsm.state_qout === state.lvl0
 
