@@ -221,7 +221,7 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
 
   val is_lsu_free = 
     pending_fifo.io.is_empty & lsu_scoreBoard.io.is_empty & 
-    ~su_exe_iwb_fifo.io.deq.valid & 
+    // ~su_exe_iwb_fifo.io.deq.valid & //ignore su_iwb, because the su will wb immediatly
     ~lu_exe_iwb_fifo.io.deq.valid & 
     ~fe_exe_iwb_fifo.io.deq.valid
 
