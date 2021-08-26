@@ -159,8 +159,10 @@ class Commit extends Privilege with Superscalar {
 
     val is_illeage_v = {
       val is_csr_illegal = VecInit(
-        (is_csrr_illegal | is_csrw_illegal) & (io.rod_i(0).valid & io.rod_i(0).bits.is_csr & ~is_wb_v(0)),
-        (is_csrr_illegal | is_csrw_illegal) & (io.rod_i(1).valid & io.rod_i(1).bits.is_csr & ~is_wb_v(1)) & ~is_1st_solo
+        (is_csrr_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_csr & ~is_wb_v(0)) |
+        (is_csrw_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_csr & is_wb_v(0)) ,
+        (is_csrr_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_csr & ~is_wb_v(1)) & ~is_1st_solo |
+        (is_csrw_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_csr & is_wb_v(1)) & ~is_1st_solo 
       )
 
       val is_ill_sfence = VecInit(

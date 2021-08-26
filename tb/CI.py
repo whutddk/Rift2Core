@@ -2,7 +2,7 @@
 # @Author: Ruige Lee
 # @Date:   2020-11-18 15:37:18
 # @Last Modified by:   Ruige Lee
-# @Last Modified time: 2021-08-25 20:50:18
+# @Last Modified time: 2021-08-26 10:11:15
 
 
 import sys
@@ -234,7 +234,7 @@ testList = [
 
 "rv64mi-p-access",
 "rv64mi-p-breakpoint",
-    "rv64mi-p-csr",
+"rv64mi-p-csr",
     "rv64mi-p-illegal",
 "rv64mi-p-ma_addr",
 "rv64mi-p-ma_fetch",
