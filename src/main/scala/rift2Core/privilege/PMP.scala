@@ -52,6 +52,13 @@ class PMP(entry: Int) extends RawModule {
     val is_fault = Output(Bool())
   })
 
+  val priv_lvl = 
+    Mux(
+      io.chk_type(2),
+      io.cmm_mmu.priv_lvl_if,
+      io.cmm_mmu.priv_lvl_ls
+    )
+
   
   /**
     * when pmp in off mode 
@@ -154,9 +161,8 @@ class PMP(entry: Int) extends RawModule {
     is_inType(i)  := cmp_type( io.chk_type, pmp_cfg(i).X, pmp_cfg(i).W, pmp_cfg(i).R )
     is_inEnfce(i) := 
       pmp_cfg(i).L |
-      io.cmm_mmu.priv_lvl === "b00".U |
-      io.cmm_mmu.priv_lvl === "b01".U |
-      (io.cmm_mmu.mstatus(17) & io.cmm_mmu.mstatus(12,11) =/= "b11".U)        
+      priv_lvl =/= "b11".U
+       
 
 
 
@@ -178,16 +184,16 @@ class PMP(entry: Int) extends RawModule {
       */
     val is_range_match = is_inRange.asUInt.orR
 
-    val is_mprv_block = 
-      io.cmm_mmu.mstatus(17) & io.cmm_mmu.mstatus(12,11) =/= "b11".U & (io.chk_type(0) | io.chk_type(1))
+    // val is_mprv_block = 
+    //   io.cmm_mmu.mstatus(17) & io.cmm_mmu.mstatus(12,11) =/= "b11".U & (io.chk_type(0) | io.chk_type(1))
 
 
   io.is_fault := 
   ~( 
     Mux(
       is_range_match,
-      is_inType(idx) | (io.cmm_mmu.priv_lvl === "b11".U & ~is_mprv_block & ~pmp_cfg(idx).L),
-      io.cmm_mmu.priv_lvl === "b11".U & ~is_mprv_block
+      is_inType(idx) | ~is_inEnfce(idx),
+      priv_lvl === "b11".U
     )
   )
 }

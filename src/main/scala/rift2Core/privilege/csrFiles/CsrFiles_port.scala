@@ -183,5 +183,8 @@ abstract class CsrFiles_port extends Module{
   val priv_lvl_enable = Wire(Bool())
   val priv_lvl_qout = RegEnable(priv_lvl_dnxt, "b11".U(2.W), priv_lvl_enable)
 
+
+  val priv_lvl_if = priv_lvl_qout
+  val priv_lvl_ls = Mux( mstatus(17), mstatus(12,11), priv_lvl_qout )
 }
 

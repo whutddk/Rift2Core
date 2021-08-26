@@ -77,7 +77,8 @@ class Info_cmm_mmu extends Bundle {
 	val pmpcfg = Vec(16, UInt(64.W))
   val pmpaddr = Vec(64, UInt(64.W))
 
-  val priv_lvl = UInt(2.W)
+  val priv_lvl_if = UInt(2.W)
+  val priv_lvl_ls = UInt(2.W)
 
   val mstatus = UInt(64.W)
   val sstatus = UInt(64.W)
@@ -124,9 +125,8 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val dtlb = Module( new TLB(32) )
   val ptw  = Module( new PTW(edge) )
 
-  val is_bypass_if = io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl === "b11".U
-  val is_bypass_ls = (io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl === "b11".U) & 
-                        ~(io.cmm_mmu.mstatus(17) === 1.U & io.cmm_mmu.mstatus(12,11) =/= "b11".U)
+  val is_bypass_if = io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl_if === "b11".U
+  val is_bypass_ls = io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl_ls === "b11".U
 
   val ptw_arb = Module(new Arbiter(new Info_mmu_req, 2))
 
@@ -187,7 +187,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     io.mmu_if.bits.is_paging_fault := 
       ~is_bypass_if &
       (
-        is_chk_page_fault( pte, io.if_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, "b100".U) |
+        is_chk_page_fault( pte, io.if_mmu.bits.vaddr, io.cmm_mmu.priv_lvl_if, "b100".U) |
         (ptw.io.ptw_o.bits.is_ptw_fail & ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid)
       )
 
@@ -221,7 +221,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
     io.mmu_lsu.bits.is_paging_fault :=
       ~is_bypass_ls & (
-        is_chk_page_fault( pte, io.lsu_mmu.bits.vaddr, io.cmm_mmu.priv_lvl, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R )) |
+        is_chk_page_fault( pte, io.lsu_mmu.bits.vaddr, io.cmm_mmu.priv_lvl_ls, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R )) |
         ptw.io.ptw_o.bits.is_ptw_fail & ~ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid
       )
 
