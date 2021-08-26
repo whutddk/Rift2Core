@@ -117,17 +117,17 @@ class PMP(entry: Int) extends RawModule {
     return ( (chk_type & Cat(is_X, is_W, is_R)) === chk_type )
   }
 
-  /**
-    * check if the pmp  should be bypass
-    * when in M-mode and the pmp is unlock, the type matching should bypass the pmp limitation
-    *
-    * @param chk_priv (UInt(2.W)) the current privlege mode
-    * @param is_L whether is lock
-    * @return Bool() whether the type matching is bypass 
-    */
-  def cmp_priv( chk_priv: UInt, is_L: Bool ): Bool = {
-    return (chk_priv === "b11".U & ~is_L)
-  }
+  // /**
+  //   * check if the pmp  should be bypass
+  //   * when in M-mode and the pmp is unlock, the type matching should bypass the pmp limitation
+  //   *
+  //   * @param chk_priv (UInt(2.W)) the current privlege mode
+  //   * @param is_L whether is lock
+  //   * @return Bool() whether the type matching is bypass 
+  //   */
+  // def cmp_priv( chk_priv: UInt, is_L: Bool ): Bool = {
+  //   return (chk_priv === "b11".U & ~is_L)
+  // }
 
   val is_inRange = Wire( Vec(entry, Bool()) )
   val is_inType  = Wire( Vec(entry, Bool()) )
@@ -152,21 +152,44 @@ class PMP(entry: Int) extends RawModule {
       (pmp_cfg(i).A === 3.U) -> napot_range(pmp_addr(i+1), io.chk_addr)
     ))
     is_inType(i)  := cmp_type( io.chk_type, pmp_cfg(i).X, pmp_cfg(i).W, pmp_cfg(i).R )
-    is_inEnfce(i) := cmp_priv( io.cmm_mmu.priv_lvl, pmp_cfg(i).L )
+    is_inEnfce(i) := 
+      pmp_cfg(i).L |
+      io.cmm_mmu.priv_lvl === "b00".U |
+      io.cmm_mmu.priv_lvl === "b01".U |
+      (io.cmm_mmu.mstatus(17) & io.cmm_mmu.mstatus(12,11) =/= "b11".U)        
+
+
+
+
   }
 
-  /**
-    * when no range match, but in M-mode, it's valid!
-    */
-  val is_Mbp = ~is_inRange.asUInt.orR & (io.cmm_mmu.priv_lvl === "b11".U)
-  val idx = is_inRange.indexWhere( (x:Bool) => (x === true.B ))
+  // /**
+  //   * when no range match, but in M-mode, it's valid!
+  //   */
+  // val is_Mbp =
+  //   ~is_inRange.asUInt.orR & is_inEnfce(i)
+  //   (io.cmm_mmu.priv_lvl === "b11".U & ~(io.cmm_mmu.mstatus(17) & io.cmm_mmu.mstatus(12,11) =/= "b11".U) )
+  
+    val idx = is_inRange.indexWhere( (x:Bool) => (x === true.B ))
+
+    /**
+      * @note if no PMP entry matches an M-mode access, the access succeeds
+      * @note if no PMP entry matches an S-mode or U-mode access, but at least one PMP entry is implemented, the access fails
+      */
+    val is_range_match = is_inRange.asUInt.orR
+
+    val is_mprv_block = 
+      io.cmm_mmu.mstatus(17) & io.cmm_mmu.mstatus(12,11) =/= "b11".U & (io.chk_type(0) | io.chk_type(1))
+
 
   io.is_fault := 
-  ~(
-    is_Mbp |
-    ( is_inRange.asUInt.orR & (is_inType(idx) | is_inEnfce(idx) ))    
+  ~( 
+    Mux(
+      is_range_match,
+      is_inType(idx) | (io.cmm_mmu.priv_lvl === "b11".U & ~is_mprv_block & ~pmp_cfg(idx).L),
+      io.cmm_mmu.priv_lvl === "b11".U & ~is_mprv_block
+    )
   )
-
 }
 
 /**

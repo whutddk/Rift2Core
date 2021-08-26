@@ -126,7 +126,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   val is_bypass_if = io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl === "b11".U
   val is_bypass_ls = (io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl === "b11".U) & 
-                        ~(io.cmm_mmu.mstatus(17) === 1.U & io.cmm_mmu.priv_lvl === "b11".U)
+                        ~(io.cmm_mmu.mstatus(17) === 1.U & io.cmm_mmu.mstatus(12,11) =/= "b11".U)
 
   val ptw_arb = Module(new Arbiter(new Info_mmu_req, 2))
 
@@ -289,7 +289,8 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
       val is_vaddr_illegal = chk_vaddr(63,39) =/= Fill(25,chk_vaddr(38))
       val is_U_access_illegal =
         (chk_priv === "b00".U & pte.U === false.B) |
-        (chk_priv === "b01".U & pte.U === true.B & (io.cmm_mmu.sstatus(18) === false.B | chk_type(2) === true.B) )
+        (chk_priv === "b01".U & pte.U === true.B & (io.cmm_mmu.sstatus(18) === false.B | chk_type(2) === true.B) ) |
+        ( io.cmm_mmu.mstatus(17) & io.cmm_mmu.mstatus(12,11) === "b01".U & pte.U === true.B & io.cmm_mmu.sstatus(18) === false.B )
 
       val is_A_illegal = pte.A === false.B
       val is_D_illegal = pte.D === false.B & chk_type(1) === true.B

@@ -245,11 +245,13 @@ abstract class CsrFiles_M extends CsrFiles_port {
       mpie := 1.U
       mpp  := "b00".U
 
-      mprv := Mux( mpp =/= "b11".U, 0.U, mprv )
+      mprv := Mux( priv_lvl_dnxt =/= "b11".U, 0.U, mprv )
     }
     .elsewhen( is_sRet ) {
       spie := 1.U
       sie  := spie
+
+      mprv := Mux( priv_lvl_dnxt =/= "b11".U, 0.U, mprv )
     }
     .elsewhen(enable0) {
       sd   := dnxt0(63)
