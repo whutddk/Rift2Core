@@ -79,8 +79,6 @@ class Commit extends Privilege with Superscalar {
   val rd0_raw = VecInit( io.rod_i(0).bits.rd0_raw, io.rod_i(1).bits.rd0_raw )
   val rd0_phy = VecInit( io.rod_i(0).bits.rd0_phy, io.rod_i(1).bits.rd0_phy )
 
-  val is_wfi_lock = RegInit(false.B)
-  val wfi_pc = RegInit(0.U(64.W))
 
   val is_wb_v =
     VecInit(
@@ -227,7 +225,7 @@ class Commit extends Privilege with Superscalar {
 
 	val is_exception_v = 
     VecInit( for (i <- 0 until 2) yield {
-      ~is_wfi_lock & (
+      (
         is_ecall_v(i)  |
         is_ebreak_v(i)  |
         is_instr_access_fault_v(i)  |
@@ -262,23 +260,13 @@ class Commit extends Privilege with Superscalar {
 
   //only one privilege can commit once
   val is_commit_comfirm = VecInit(
-    ~is_wfi_lock & is_wb_v(0) & ~io.is_commit_abort(0),
-    ~is_wfi_lock & is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo
+    is_wb_v(0) & ~io.is_commit_abort(0),
+    is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo
   )
 
   // when( is_commit_comfirm(0) ) { printf("comfirm pc=%x\n", io.rod_i(0).bits.pc) }
   // when( is_commit_comfirm(1) ) { printf("comfirm pc=%x\n", io.rod_i(1).bits.pc) }
-  when( io.rod_i(0).bits.is_wfi & is_commit_comfirm(0) ) {
-    is_wfi_lock := true.B
-    wfi_pc := io.rod_i(0).bits.pc
-  }
-  .elsewhen( io.rod_i(1).bits.is_wfi & is_commit_comfirm(1) ) {
-    is_wfi_lock := true.B
-    wfi_pc := io.rod_i(1).bits.pc
-  }
-  .elsewhen( io.is_commit_abort(0) ) {
-    is_wfi_lock := false.B
-  }
+
 
   io.cm_op(0).valid := is_commit_comfirm(0)
   io.cm_op(1).valid := is_commit_comfirm(1)
@@ -311,7 +299,6 @@ class Commit extends Privilege with Superscalar {
 
 
   io.cmm_pc.valid :=
-    ~is_wfi_lock &
   (    
     (io.rod_i(0).valid & is_mRet_v(0)) |
     (io.rod_i(0).valid & is_sRet_v(0)) |
@@ -389,12 +376,12 @@ class Commit extends Privilege with Superscalar {
 
 
   io.csr_data.bits := csr_read_res(io.csr_addr.bits)
-  io.csr_data.valid := ~is_wfi_lock & io.csr_addr.valid & ~is_csrr_illegal
+  io.csr_data.valid := io.csr_addr.valid & ~is_csrr_illegal
 
 
   
   io.csr_cmm_op.ready :=
-    ~is_wfi_lock & io.csr_cmm_op.valid & (
+    io.csr_cmm_op.valid & (
       (is_commit_comfirm(0) & io.rod_i(0).bits.is_csr) | 
       (is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)		
     )
@@ -448,8 +435,8 @@ class Commit extends Privilege with Superscalar {
   io.cmm_mmu.mstatus    := mstatus
   io.cmm_mmu.sstatus    := sstatus
   io.cmm_mmu.sfence_vma := 
-    ( ~is_wfi_lock & io.rod_i(1).valid & is_sfence_vma_v(1) & ~is_1st_solo) |
-    ( ~is_wfi_lock & io.rod_i(0).valid & is_sfence_vma_v(0))
+    ( io.rod_i(1).valid & is_sfence_vma_v(1) & ~is_1st_solo) |
+    ( io.rod_i(0).valid & is_sfence_vma_v(0))
 
 
 
