@@ -567,10 +567,20 @@ abstract class CsrFiles_M extends CsrFiles_port {
 
   //Machine Memory Protection
   for ( i <- 0 until 16 ) yield {
+  // for ( i <- 0 until 16 if i%2 != 0) yield {
     pmpcfg(i) := {
-      val value = RegInit(0.U(64.W))
+      val buf = RegInit( VecInit(Seq.fill(8)(0.U(8.W))))
+      val value = Cat( for ( i <- 0 until 8 ) yield { buf(7-i) } )
+      val lock = VecInit(
+        for( j <- 0 until 8 ) yield { buf(j)(7).asBool }
+      )
       val (enable, dnxt) = Reg_Exe_Port( value, "h3A0".U + i.U, exe_port )
-      when(enable) { value := dnxt }
+      for ( j <- 0 until 8 ) yield {
+        when( enable & ~lock(j) ) {
+          buf(j) := dnxt(8*j+7, 8*j)
+
+          }
+      }
       value 
     }
 
@@ -581,8 +591,16 @@ abstract class CsrFiles_M extends CsrFiles_port {
     for ( i <- 0 until 64 ) yield {
       pmpaddr(i) := {
         val value = RegInit(0.U(64.W))
+        val cfg_idx = i/8*2
+        val bit_idx = 8*(i%8) + 7
+        val lock = pmpcfg(cfg_idx)(bit_idx)
         val (enable, dnxt) = Reg_Exe_Port( value, "h3B0".U + i.U, exe_port )
-        when(enable) { value := dnxt }
+        when(enable) {
+          when( lock =/= 1.U ) {
+            value := dnxt            
+          }
+
+        }
         value 
       }
     }
