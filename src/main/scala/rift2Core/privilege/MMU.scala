@@ -85,6 +85,12 @@ class Info_cmm_mmu extends Bundle {
 
   val sfence_vma = Bool()
 
+  val sit_mdf =
+    ShiftRegister() =/= |
+    ShiftRegister() =/= |
+    ShiftRegister() =/= |
+
+
 }
 
 
