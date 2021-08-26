@@ -66,11 +66,13 @@ class Alu_isa extends Bundle{
   val or    = Bool()
   val and   = Bool()
 
+  val wfi = Bool()
+
   def is_32w = addiw | addw | subw | slliw | sllw | srliw | srlw | sraiw | sraw;
   def is_usi = sltiu | sltu
   def is_imm =  lui | auipc | addi | addiw | slti | sltiu | xori | ori | andi | slli | slliw | srli | srliw | srai | sraiw
 
-  def is_fun_add = addi | addiw | add | addw | lui | auipc | sub | subw
+  def is_fun_add = addi | addiw | add | addw | lui | auipc | sub | subw | wfi
   def is_fun_slt = slti | sltiu | slt | sltu
   def is_fun_xor = xori | xor
   def is_fun_or  = ori | or
@@ -79,7 +81,7 @@ class Alu_isa extends Bundle{
   def is_fun_srl = srli | srliw | srl | srlw
   def is_fun_sra = srai | sraiw | sra | sraw
 
-  def is_alu = lui | auipc | addi | addiw | slti | sltiu | xori | ori | andi | slli | slliw | srli | srliw | srai | sraiw | add | addw | sub | subw | sll | sllw | slt | sltu | xor | srl | srlw | sra | sraw | or |and
+  def is_alu = lui | auipc | addi | addiw | slti | sltiu | xori | ori | andi | slli | slliw | srli | srliw | srai | sraiw | add | addw | sub | subw | sll | sllw | slt | sltu | xor | srl | srlw | sra | sraw | or |and |wfi
 
 } 
 
@@ -211,7 +213,7 @@ class Privil_isa extends Bundle {
   val sret = Bool()
   val dret = Bool()
 
-  val wfi = Bool()
+
 
 
 
@@ -237,7 +239,7 @@ class Privil_isa extends Bundle {
   val is_paging_fault = Bool()
 
   def is_privil = 
-    ecall | ebreak | mret | uret | sret | dret | wfi | hfence_vvma | hfence_gvma | hlv_b | hlv_bu | hlv_h | hlv_hu | hlvx_hu | hlv_w | hlvx_wu | hsv_b | hsv_h | hsv_w | hlv_wu | hlv_d | hsv_d |
+    ecall | ebreak | mret | uret | sret | dret | hfence_vvma | hfence_gvma | hlv_b | hlv_bu | hlv_h | hlv_hu | hlvx_hu | hlv_w | hlvx_wu | hsv_b | hsv_h | hsv_w | hlv_wu | hlv_d | hsv_d |
     is_access_fault | is_paging_fault
 
 
@@ -449,6 +451,7 @@ class Info_reorder_i extends Bundle {
   val is_fence = Bool()
   val is_fence_i = Bool()
   val is_sfence_vma = Bool()
+  val is_wfi = Bool()
   val is_csr = Bool()
 
   val privil = new Privil_isa

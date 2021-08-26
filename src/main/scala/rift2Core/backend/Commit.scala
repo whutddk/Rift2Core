@@ -79,7 +79,8 @@ class Commit extends Privilege with Superscalar {
   val rd0_raw = VecInit( io.rod_i(0).bits.rd0_raw, io.rod_i(1).bits.rd0_raw )
   val rd0_phy = VecInit( io.rod_i(0).bits.rd0_phy, io.rod_i(1).bits.rd0_phy )
 
-
+  val is_wfi_lock = RegInit(false.B)
+  val wfi_pc = RegInit(0.U(64.W))
 
   val is_wb_v =
     VecInit(
@@ -161,8 +162,8 @@ class Commit extends Privilege with Superscalar {
       val is_csr_illegal = VecInit(
         (is_csrr_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_csr & ~is_wb_v(0)) |
         (is_csrw_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_csr & is_wb_v(0)) ,
-        (is_csrr_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_csr & ~is_wb_v(1)) & ~is_1st_solo |
-        (is_csrw_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_csr & is_wb_v(1)) & ~is_1st_solo 
+        (is_csrr_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_csr & ~is_wb_v(1)) |
+        (is_csrw_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_csr & is_wb_v(1))
       )
 
       val is_ill_sfence = VecInit(
@@ -170,21 +171,40 @@ class Commit extends Privilege with Superscalar {
         is_wb_v(1) & io.rod_i(1).bits.is_sfence_vma & (mstatus(20) | priv_lvl_qout === "b00".U)
       )
 
+      val is_ill_wfi_v = VecInit(
+        is_wb_v(0) & io.rod_i(0).bits.is_wfi & (mstatus(21) & priv_lvl_qout < "b11".U),
+        is_wb_v(1) & io.rod_i(1).bits.is_wfi & (mstatus(21) & priv_lvl_qout < "b11".U)
+      )
+
+      val is_ill_mRet_v = VecInit(
+        io.rod_i(0).bits.privil.mret & priv_lvl_qout =/= "b11".U,
+        io.rod_i(1).bits.privil.mret & priv_lvl_qout =/= "b11".U
+      )
+
+      val is_ill_sRet_v = VecInit(
+        io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b10".U & mstatus(22)) ),
+        io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b10".U & mstatus(22)) )
+      
+      )
+
+
+
       VecInit(
-        (io.rod_i(0).bits.is_illeage | is_csr_illegal(0) | is_ill_sfence(0)),
-        (io.rod_i(1).bits.is_illeage | is_csr_illegal(1) | is_ill_sfence(1)) & ~is_1st_solo
+        (io.rod_i(0).bits.is_illeage | is_csr_illegal(0) | is_ill_sfence(0) | is_ill_wfi_v(0) | is_ill_mRet_v(0) | is_ill_sRet_v(0) ),
+        (io.rod_i(1).bits.is_illeage | is_csr_illegal(1) | is_ill_sfence(1) | is_ill_wfi_v(1) | is_ill_mRet_v(1) | is_ill_sRet_v(1)) & ~is_1st_solo
       )
     }
+
     val is_mRet_v =
       VecInit(
-        io.rod_i(0).bits.privil.mret,
-        io.rod_i(1).bits.privil.mret & ~is_1st_solo
+        io.rod_i(0).bits.privil.mret & priv_lvl_qout === "b11".U,
+        io.rod_i(1).bits.privil.mret & priv_lvl_qout === "b11".U & ~is_1st_solo
       )
 
     val is_sRet_v =
       VecInit(
-        io.rod_i(0).bits.privil.sret,
-        io.rod_i(1).bits.privil.sret & ~is_1st_solo
+        io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b10".U & ~mstatus(22)) ),
+        io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b10".U & ~mstatus(22)) ) & ~is_1st_solo
       )
 
     val is_fence_i_v =
@@ -199,19 +219,28 @@ class Commit extends Privilege with Superscalar {
         io.rod_i(1).bits.is_sfence_vma & is_wb_v(1) & ~is_1st_solo
       )
 
+
+
+
+
+
+
 	val is_exception_v = 
     VecInit( for (i <- 0 until 2) yield {
-      is_ecall_v(i)  |
-      is_ebreak_v(i)  |
-      is_instr_access_fault_v(i)  |
-      is_instr_paging_fault_v(i)  |
-      is_illeage_v(i) |
-      is_load_accessFault_ack_v(i)  |
-      is_store_accessFault_ack_v(i) |
-      is_load_misAlign_ack_v(i)  |
-      is_store_misAlign_ack_v(i) |
-      is_load_pagingFault_ack_v(i) |
-      is_store_pagingFault_ack_v(i) 
+      ~is_wfi_lock & (
+        is_ecall_v(i)  |
+        is_ebreak_v(i)  |
+        is_instr_access_fault_v(i)  |
+        is_instr_paging_fault_v(i)  |
+        is_illeage_v(i) |
+        is_load_accessFault_ack_v(i)  |
+        is_store_accessFault_ack_v(i) |
+        is_load_misAlign_ack_v(i)  |
+        is_store_misAlign_ack_v(i) |
+        is_load_pagingFault_ack_v(i) |
+        is_store_pagingFault_ack_v(i)         
+      )
+
     })
 
 	// val is_trap_v = Wire(Vec(2, Bool()))
@@ -233,13 +262,23 @@ class Commit extends Privilege with Superscalar {
 
   //only one privilege can commit once
   val is_commit_comfirm = VecInit(
-    is_wb_v(0) & ~io.is_commit_abort(0),
-    is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo
+    ~is_wfi_lock & is_wb_v(0) & ~io.is_commit_abort(0),
+    ~is_wfi_lock & is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo
   )
 
   // when( is_commit_comfirm(0) ) { printf("comfirm pc=%x\n", io.rod_i(0).bits.pc) }
   // when( is_commit_comfirm(1) ) { printf("comfirm pc=%x\n", io.rod_i(1).bits.pc) }
-
+  when( io.rod_i(0).bits.is_wfi & is_commit_comfirm(0) ) {
+    is_wfi_lock := true.B
+    wfi_pc := io.rod_i(0).bits.pc
+  }
+  .elsewhen( io.rod_i(1).bits.is_wfi & is_commit_comfirm(1) ) {
+    is_wfi_lock := true.B
+    wfi_pc := io.rod_i(1).bits.pc
+  }
+  .elsewhen( io.is_commit_abort(0) ) {
+    is_wfi_lock := false.B
+  }
 
   io.cm_op(0).valid := is_commit_comfirm(0)
   io.cm_op(1).valid := is_commit_comfirm(1)
@@ -272,6 +311,7 @@ class Commit extends Privilege with Superscalar {
 
 
   io.cmm_pc.valid :=
+    ~is_wfi_lock &
   (    
     (io.rod_i(0).valid & is_mRet_v(0)) |
     (io.rod_i(0).valid & is_sRet_v(0)) |
@@ -349,12 +389,12 @@ class Commit extends Privilege with Superscalar {
 
 
   io.csr_data.bits := csr_read_res(io.csr_addr.bits)
-  io.csr_data.valid := io.csr_addr.valid & ~is_csrr_illegal
+  io.csr_data.valid := ~is_wfi_lock & io.csr_addr.valid & ~is_csrr_illegal
 
 
   
   io.csr_cmm_op.ready :=
-    io.csr_cmm_op.valid & (
+    ~is_wfi_lock & io.csr_cmm_op.valid & (
       (is_commit_comfirm(0) & io.rod_i(0).bits.is_csr) | 
       (is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)		
     )
@@ -408,8 +448,8 @@ class Commit extends Privilege with Superscalar {
   io.cmm_mmu.mstatus    := mstatus
   io.cmm_mmu.sstatus    := sstatus
   io.cmm_mmu.sfence_vma := 
-    (io.rod_i(1).valid & is_sfence_vma_v(1) & ~is_1st_solo) |
-    (io.rod_i(0).valid & is_sfence_vma_v(0))
+    ( ~is_wfi_lock & io.rod_i(1).valid & is_sfence_vma_v(1) & ~is_1st_solo) |
+    ( ~is_wfi_lock & io.rod_i(0).valid & is_sfence_vma_v(0))
 
 
 

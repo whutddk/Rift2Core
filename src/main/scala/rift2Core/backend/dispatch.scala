@@ -58,6 +58,8 @@ trait ReOrder {
     reorder_i_info.is_fence_i     := bd_dpt_info.info.lsu_isa.fence_i
     reorder_i_info.is_sfence_vma  := bd_dpt_info.info.lsu_isa.sfence_vma
 
+    reorder_i_info.is_wfi         := bd_dpt_info.info.alu_isa.wfi
+
     reorder_i_info.is_csr         := bd_dpt_info.info.csr_isa.is_csr
     reorder_i_info.privil         := bd_dpt_info.info.privil_isa
     reorder_i_info.is_illeage     := bd_dpt_info.info.is_illeage

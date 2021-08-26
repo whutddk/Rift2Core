@@ -291,7 +291,8 @@ class Decode16 (x:UInt, pc: UInt) {
   info.alu_isa.sraw        := false.B
   info.alu_isa.or          := c_or
   info.alu_isa.and         := c_and
-
+  info.alu_isa.wfi         := false.B
+  
   info.bru_isa.jal         := c_j
   info.bru_isa.jalr        := c_jr | c_jalr
   info.bru_isa.beq         := c_beqz
@@ -344,7 +345,7 @@ class Decode16 (x:UInt, pc: UInt) {
   info.privil_isa.sret        := false.B
   info.privil_isa.dret        := false.B
 
-  info.privil_isa.wfi         := false.B
+
 
   info.privil_isa.hfence_vvma := false.B
   info.privil_isa.hfence_gvma := false.B
