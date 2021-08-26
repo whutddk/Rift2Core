@@ -165,8 +165,8 @@ class Commit extends Privilege with Superscalar {
       )
 
       val is_ill_sfence = VecInit(
-        is_wb_v(0) & io.rod_i(0).bits.is_sfence_vma & (mstatus(20) | priv_lvl_qout === "b00".U),
-        is_wb_v(1) & io.rod_i(1).bits.is_sfence_vma & (mstatus(20) | priv_lvl_qout === "b00".U)
+        is_wb_v(0) & io.rod_i(0).bits.is_sfence_vma & ( (mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b00".U),
+        is_wb_v(1) & io.rod_i(1).bits.is_sfence_vma & ( (mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b00".U)
       )
 
       val is_ill_wfi_v = VecInit(
@@ -180,8 +180,8 @@ class Commit extends Privilege with Superscalar {
       )
 
       val is_ill_sRet_v = VecInit(
-        io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b10".U & mstatus(22)) ),
-        io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b10".U & mstatus(22)) )
+        io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b01".U & mstatus(22)) ),
+        io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b01".U & mstatus(22)) )
       
       )
 
@@ -201,8 +201,8 @@ class Commit extends Privilege with Superscalar {
 
     val is_sRet_v =
       VecInit(
-        io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b10".U & ~mstatus(22)) ),
-        io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b10".U & ~mstatus(22)) ) & ~is_1st_solo
+        io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b01".U & ~mstatus(22)) ),
+        io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b01".U & ~mstatus(22)) ) & ~is_1st_solo
       )
 
     val is_fence_i_v =
@@ -213,8 +213,8 @@ class Commit extends Privilege with Superscalar {
 
     val is_sfence_vma_v =
       VecInit(
-        io.rod_i(0).bits.is_sfence_vma & is_wb_v(0),
-        io.rod_i(1).bits.is_sfence_vma & is_wb_v(1) & ~is_1st_solo
+        io.rod_i(0).bits.is_sfence_vma & is_wb_v(0) & ( (~mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b11".U),
+        io.rod_i(1).bits.is_sfence_vma & is_wb_v(1) & ( (~mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b11".U) & ~is_1st_solo
       )
 
 

@@ -202,7 +202,7 @@ abstract class CsrFiles extends CsrFiles_H{
           ( addr === "h142".U ) -> (priv_lvl_qout >= "b01".U),
           ( addr === "h143".U ) -> (priv_lvl_qout >= "b01".U),
           ( addr === "h144".U ) -> (priv_lvl_qout >= "b01".U),
-          ( addr === "h180".U ) -> ((priv_lvl_qout === "b11".U) | (priv_lvl_qout === "b11".U & mstatus(20) === 0.U)), //TVM IN S-MODE
+          ( addr === "h180".U ) -> ((priv_lvl_qout === "b11".U) | (priv_lvl_qout === "b01".U & mstatus(20) === 0.U)), //TVM IN S-MODE
           ( addr === "h600".U ) -> false.B,
           ( addr === "h602".U ) -> false.B,
           ( addr === "h603".U ) -> false.B,
