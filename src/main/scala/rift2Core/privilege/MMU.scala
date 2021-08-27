@@ -322,10 +322,6 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val pa_ppn_0 = Mux( (pte.is_giga_page | pte.is_mega_page), vaddr(20,12), pte.ppn(0) )
     val pa_pgoff = vaddr(11,0)
 
-    dontTouch(pa_ppn_2)
-    dontTouch(pa_ppn_1)
-    dontTouch(pa_ppn_0)
-
     paddr := Cat( pa_ppn_2, pa_ppn_1, pa_ppn_0, pa_pgoff )
     return paddr
   }    

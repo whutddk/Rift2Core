@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-02-24 09:25:27
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-08-27 15:34:18
+* @Last Modified time: 2021-07-09 12:03:31
 */
 
 
@@ -35,7 +35,7 @@
 module axi_full_slv_sram #
 (
 	parameter DW = 64,
-	parameter AW = 20
+	parameter AW = 14
 )
 (
 

@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-08-27 15:34:09
+* @Last Modified time: 2021-07-27 15:57:35
 */
 
 
@@ -212,7 +212,7 @@ Rift2Chip s_Rift2Chip(
 
 
 
-axi_full_slv_sram # ( .DW(128), .AW(20) ) s_axi_full_slv_sram 
+axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram 
 (
 
 	.MEM_AWID   ({4'b0,io_mem_chn_aw_bits_id}),
