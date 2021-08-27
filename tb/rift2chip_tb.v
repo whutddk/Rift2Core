@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-04-21 15:17:49
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-08-27 14:07:36
+* @Last Modified time: 2021-08-27 17:07:25
 */
 
 
@@ -212,7 +212,7 @@ Rift2Chip s_Rift2Chip(
 
 
 
-axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram 
+axi_full_slv_sram # ( .DW(128), .AW(21) ) s_axi_full_slv_sram 
 (
 
 	.MEM_AWID   ({4'b0,io_mem_chn_aw_bits_id}),
@@ -373,12 +373,12 @@ end
 
 
 `define MEM s_axi_full_slv_sram.i_sram.ram
-reg [7:0] mem [0:200000];
+reg [7:0] mem [0:3000000];
 
-localparam DP = 2**14;
+localparam DP = 2**21;
 integer i, by;
 initial begin
-	$readmemh("./ci/rv64si-p-icache-alias.verilog", mem);
+	$readmemh("./ci/rv64ssvnapot-p-napot.verilog", mem);
 	// $readmemh(testName, mem);
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
