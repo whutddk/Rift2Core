@@ -2,7 +2,7 @@
 # @Author: Ruige Lee
 # @Date:   2020-11-18 15:37:18
 # @Last Modified by:   Ruige Lee
-# @Last Modified time: 2021-08-26 15:28:24
+# @Last Modified time: 2021-08-27 15:21:12
 
 
 import sys
@@ -242,8 +242,8 @@ testList = [
 "rv64mi-p-sbreak",
 "rv64mi-p-scall",
 "rv64si-p-csr",
-    "rv64si-p-dirty",
-    "rv64si-p-icache-alias",
+"rv64si-p-dirty",
+"rv64si-p-icache-alias",
 "rv64si-p-ma_fetch",
 "rv64si-p-sbreak",
 "rv64si-p-scall",
