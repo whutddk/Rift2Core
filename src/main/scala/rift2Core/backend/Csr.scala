@@ -66,15 +66,15 @@ class Csr extends Module {
 
   csr_op_fifo.io.enq.bits.addr := addr
   csr_op_fifo.io.enq.bits.dat_i := dat
-  csr_op_fifo.io.enq.bits.op_rw := rw
-  csr_op_fifo.io.enq.bits.op_rs := rs
-  csr_op_fifo.io.enq.bits.op_rc := rc
+  csr_op_fifo.io.enq.bits.op_rw := rw & ~dontWrite
+  csr_op_fifo.io.enq.bits.op_rs := rs & ~dontWrite
+  csr_op_fifo.io.enq.bits.op_rc := rc & ~dontWrite
 
   io.csr_addr.bits  := addr
   io.csr_addr.valid := io.csr_iss_exe.valid
 
   io.csr_iss_exe.ready     := csr_exe_iwb_fifo.io.enq.fire
-  csr_op_fifo.io.enq.valid := csr_exe_iwb_fifo.io.enq.fire & ~dontWrite
+  csr_op_fifo.io.enq.valid := csr_exe_iwb_fifo.io.enq.fire
 
   csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready & io.csr_data.valid
   csr_exe_iwb_fifo.io.enq.bits.res := io.csr_data.bits

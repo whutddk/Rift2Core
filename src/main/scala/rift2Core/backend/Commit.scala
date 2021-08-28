@@ -365,7 +365,9 @@ class Commit extends Privilege with Superscalar {
 
 
   is_csrw_illegal := 
-    io.csr_cmm_op.valid & (
+    io.csr_cmm_op.valid &
+    ( io.csr_cmm_op.bits.op_rc | io.csr_cmm_op.bits.op_rs | io.csr_cmm_op.bits.op_rw ) &
+    (
       csr_write_denied(io.csr_cmm_op.bits.addr) |
       csr_read_prilvl(io.csr_cmm_op.bits.addr)
     )
