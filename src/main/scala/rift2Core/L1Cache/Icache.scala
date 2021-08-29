@@ -5,6 +5,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.privilege._
+import rift2Core.frontend._
 
 import base._
 import chipsalliance.rocketchip.config.Parameters
@@ -48,6 +49,12 @@ abstract class IcacheBundle(implicit p: Parameters) extends L1CacheBundle
   with HasIcacheParameters
 
 
+class Info_if_cmm extends Bundle {
+  val ill_vaddr = UInt(64.W)
+  val is_paging_fault = Bool()
+  val is_access_fault = Bool()
+}
+
 
 
 class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
@@ -56,8 +63,11 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     val pc_if = Flipped(new DecoupledIO( UInt(64.W) ))
     val if_iq = Vec(4, new DecoupledIO(UInt(16.W)) )
 
-    val if_mmu = ValidIO(new Info_mmu_req)
-    val mmu_if = Flipped(ValidIO(new Info_mmu_rsp))
+    val if_mmu = DecoupledIO(new Info_mmu_req)
+    val mmu_if = Flipped(DecoupledIO(new Info_mmu_rsp))
+
+    val if_cmm = Output(new Info_if_cmm)
+
 
     val missUnit_icache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
     val missUnit_icache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
@@ -92,14 +102,23 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   io.if_mmu.bits.is_R := true.B
   io.if_mmu.bits.is_W := false.B
   io.if_mmu.bits.is_X := true.B
+  io.pc_if.ready := io.if_mmu.ready
   
 
 
 
-  assert( ~(io.mmu_if.valid & io.mmu_if.bits.is_page_fault) )
-  assert( ~(io.mmu_if.valid & io.mmu_if.bits.is_pmp_fault) )
+  // assert( ~(io.mmu_if.valid & io.mmu_if.bits.is_page_fault) )
+  // assert( ~(io.mmu_if.valid & io.mmu_if.bits.is_access_fault) )
   
-  
+  val is_access_fault = io.mmu_if.valid & io.mmu_if.bits.is_access_fault
+  val is_paging_fault = io.mmu_if.valid & io.mmu_if.bits.is_paging_fault
+  val fault_push = io.mmu_if.valid & io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(7).ready & missUnit.io.req.ready
+  assert( ~(is_access_fault & is_paging_fault) )
+
+  io.if_cmm.ill_vaddr := io.pc_if.bits
+  io.if_cmm.is_access_fault := is_access_fault
+  io.if_cmm.is_paging_fault := is_paging_fault
+
 
 
 
@@ -111,7 +130,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   ibuf.io.flush := io.flush
 
-  io.pc_if.ready := ibuf.io.enq(0).fire
+  io.mmu_if.ready := ibuf.io.enq(0).fire & ~fault_push
   io.if_iq <> ibuf.io.deq
 
 
@@ -201,7 +220,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
         MuxCase( 0.U, Array(
           (missUnit.io.rsp.valid & writeBackUnit.io.wb_req.ready) -> 3.U,
           probeUnit.io.req.valid -> 1.U,
-          (io.mmu_if.valid & ~io.flush & ibuf.io.enq(7).ready & missUnit.io.req.ready) -> 2.U
+          (io.mmu_if.valid & ~io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(7).ready & missUnit.io.req.ready ) -> 2.U
         )),
       (icache_state_qout === 3.U) -> Mux(writeBackUnit.io.wb_req.ready, 0.U, 3.U),
       (icache_state_qout === 1.U) -> Mux(writeBackUnit.io.pb_req.ready, 0.U, 1.U),
@@ -248,6 +267,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   }
 
   ibuf.io.enq(0).bits := reAlign_instr >> 0.U
+
   ibuf.io.enq(1).bits := reAlign_instr >> 16.U
   ibuf.io.enq(2).bits := reAlign_instr >> 32.U
   ibuf.io.enq(3).bits := reAlign_instr >> 48.U

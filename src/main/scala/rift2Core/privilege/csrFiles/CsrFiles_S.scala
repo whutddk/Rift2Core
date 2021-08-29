@@ -185,19 +185,20 @@ abstract class CsrFiles_S extends CsrFiles_U {
     .elsewhen( is_exception & priv_lvl_dnxt === "b01".U ) {
       interrupt := 0.U
       exception_code := Mux1H( Seq(
-        is_instr_accessFault    -> 1.U,
-        is_instr_illeage        -> 2.U,
-        is_breakPoint           -> 3.U,
-        is_load_misAlign        -> 4.U,
-        is_load_accessFault     -> 5.U,
-        is_storeAMO_misAlign    -> 6.U,
-        is_storeAMO_accessFault -> 7.U,
-        is_u_ecall              -> 8.U,
-        is_s_ecall              -> 9.U,
-        is_m_ecall              -> 11.U,
-        is_instr_pageFault      -> 12.U,
-        is_load_pageFault       -> 13.U,
-        is_storeAMO_pageFault   -> 15.U
+        is_instr_misAlign        -> 0.U,
+        is_instr_access_fault    -> 1.U,
+        is_instr_illeage         -> 2.U,
+        is_breakPoint            -> 3.U,
+        is_load_misAlign         -> 4.U,
+        is_load_access_fault     -> 5.U,
+        is_storeAMO_misAlign     -> 6.U,
+        is_storeAMO_access_fault -> 7.U,
+        is_ecall_U               -> 8.U,
+        is_ecall_S               -> 9.U,
+        is_ecall_M               -> 11.U,
+        is_instr_paging_fault    -> 12.U,
+        is_load_paging_fault     -> 13.U,
+        is_storeAMO_paging_fault -> 15.U,
       ))
     }
     .elsewhen(enable) {
@@ -222,16 +223,16 @@ abstract class CsrFiles_S extends CsrFiles_U {
     val (enable, dnxt) = Reg_Exe_Port( value, "h143".U, exe_port )
     when( priv_lvl_dnxt === "b01".U ) {
       value := Mux1H( Seq(
-        is_instr_accessFault    -> ill_vaddr,
-        is_instr_illeage        -> ill_instr,
-        is_breakPoint           -> ill_vaddr,
-        is_load_misAlign        -> ill_vaddr,
-        is_load_accessFault     -> ill_vaddr,
-        is_storeAMO_misAlign    -> ill_vaddr,
-        is_storeAMO_accessFault -> ill_vaddr,
-        is_instr_pageFault      -> ill_vaddr,
-        is_load_pageFault       -> ill_vaddr,
-        is_storeAMO_pageFault   -> ill_vaddr       
+        is_instr_access_fault    -> ill_ivaddr,
+        is_instr_paging_fault    -> ill_ivaddr,
+        is_instr_illeage         -> ill_instr,
+        is_breakPoint            -> 0.U,
+        is_load_misAlign         -> ill_dvaddr,
+        is_load_access_fault     -> ill_dvaddr,
+        is_storeAMO_misAlign     -> ill_dvaddr,
+        is_storeAMO_access_fault -> ill_dvaddr,
+        is_load_paging_fault     -> ill_dvaddr,
+        is_storeAMO_paging_fault -> ill_dvaddr       
       ))
     }
     .elsewhen(enable) { value := dnxt }

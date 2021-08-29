@@ -29,6 +29,7 @@ import chisel3._
 import chisel3.util._
 
 import rift2Core.define._
+import rift2Core.diff._
 
 class Info_rename_op extends Bundle{
   val raw = UInt(5.W)
@@ -62,6 +63,8 @@ class Regfiles extends Module{
 
 
     val flush = Input(Bool())
+
+    val diff_register = Output(new Info_abi_reg)
   })
 
 
@@ -165,8 +168,16 @@ class Regfiles extends Module{
   when( is_cm(1) ) { archit_ptr(cm_raw(1)) := cm_phy(1) }
   when( is_cm(0) & ~(cm_raw(0) === cm_raw(1) & is_cm(1)) ) { archit_ptr(cm_raw(0)) := cm_phy(0) }
 
+  for( i <- 0 until 64 ) yield {
+    assert(
+      PopCount( archit_ptr.map{_ === i.U} ) <= 1.U, "Assert Failed at Regfiles, More than one archit_ptr point to "+i
+    )
+  }
+
+
+
   for ( i <- 0 until 32 ) yield {
-    assert( regLog(archit_ptr(i)) === "b11".U, "Assert Fail at regisiter Files, the reglog archit_ptr pointer point to should be \"b11\".U" )
+    assert( regLog(archit_ptr(i)) === "b11".U, "Assert Fail at regisiter Files, the reglog archit_ptr, where pointer: " + i + ", points to should be \"b11\".U" )
   }
 
 
@@ -234,6 +245,52 @@ class Regfiles extends Module{
   // assert( ~(io.rn_op(0).valid & io.rn_op(1).valid & (io.rn_op(0).bits.raw === io.rn_op(1).bits.raw)), "Assert Fail at Register Files, a RAW register is renamed twice in one cycle, it's not allow in this version")
   // assert( ~(io.cm_op(0).valid & io.cm_op(1).valid & (io.cm_op(0).bits.raw === io.cm_op(1).bits.raw)), "Assert Fail at Register Files, a RAW register is committed twice in one cycle, it's not allow in this version")
  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  io.diff_register.zero := files(archit_ptr(0))
+  io.diff_register.ra   := files(archit_ptr(1))
+  io.diff_register.sp   := files(archit_ptr(2))
+  io.diff_register.gp   := files(archit_ptr(3))
+  io.diff_register.tp   := files(archit_ptr(4))
+  io.diff_register.t0   := files(archit_ptr(5))
+  io.diff_register.t1   := files(archit_ptr(6))
+  io.diff_register.t2   := files(archit_ptr(7))
+  io.diff_register.s0   := files(archit_ptr(8))
+  io.diff_register.a0   := files(archit_ptr(10))
+  io.diff_register.a1   := files(archit_ptr(11))
+  io.diff_register.a2   := files(archit_ptr(12))
+  io.diff_register.a3   := files(archit_ptr(13))
+  io.diff_register.a4   := files(archit_ptr(14))
+  io.diff_register.a5   := files(archit_ptr(15))
+  io.diff_register.a6   := files(archit_ptr(16))
+  io.diff_register.a7   := files(archit_ptr(17))
+  io.diff_register.s2   := files(archit_ptr(18))
+  io.diff_register.s3   := files(archit_ptr(19))
+  io.diff_register.s4   := files(archit_ptr(20))
+  io.diff_register.s5   := files(archit_ptr(21))
+  io.diff_register.s6   := files(archit_ptr(22))
+  io.diff_register.s7   := files(archit_ptr(23))
+  io.diff_register.s8   := files(archit_ptr(24))
+  io.diff_register.s9   := files(archit_ptr(25))
+  io.diff_register.s10  := files(archit_ptr(26))
+  io.diff_register.s11  := files(archit_ptr(27))
+  io.diff_register.t3   := files(archit_ptr(28))
+  io.diff_register.t4   := files(archit_ptr(29))
+  io.diff_register.t5   := files(archit_ptr(30))
+  io.diff_register.t6   := files(archit_ptr(31))
 
 
 }

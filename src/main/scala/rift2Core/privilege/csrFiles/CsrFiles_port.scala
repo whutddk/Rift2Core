@@ -56,20 +56,27 @@ abstract class CsrFiles_port extends Module{
 
   val commit_pc = Wire(UInt(64.W))
   val ill_instr = Wire(UInt(64.W))
-  val ill_vaddr = Wire(UInt(64.W))
+  val ill_ivaddr = Wire(UInt(64.W))
+  val ill_dvaddr = Wire(UInt(64.W))
 
+  val is_csrw_illegal = Wire(Bool())
+  val is_csrr_illegal = Wire(Bool())
 
-  val is_instr_accessFault      = Wire(Bool())
+  val is_instr_misAlign = WireDefault(false.B)
+  val is_instr_access_fault      = Wire(Bool())
   val is_instr_illeage          = Wire(Bool())
   val is_breakPoint             = Wire(Bool())
   val is_load_misAlign          = Wire(Bool())
-  val is_load_accessFault       = Wire(Bool())
+  val is_load_access_fault       = Wire(Bool())
   val is_storeAMO_misAlign      = Wire(Bool())
-  val is_storeAMO_accessFault   = Wire(Bool())
-  val is_ecall                  = Wire(Bool())
-  val is_instr_pageFault        = Wire(Bool())
-  val is_load_pageFault         = Wire(Bool())
-  val is_storeAMO_pageFault     = Wire(Bool())
+  val is_storeAMO_access_fault   = Wire(Bool())
+  val is_ecall_U                  = Wire(Bool())
+  val is_ecall_S                  = Wire(Bool())
+  val is_ecall_M                  = Wire(Bool())
+  val is_instr_paging_fault      = Wire(Bool())
+  val is_load_paging_fault         = Wire(Bool())
+  val is_storeAMO_paging_fault   = Wire(Bool())
+
 
 
   val retired_cnt = Wire( UInt(2.W))
@@ -176,5 +183,8 @@ abstract class CsrFiles_port extends Module{
   val priv_lvl_enable = Wire(Bool())
   val priv_lvl_qout = RegEnable(priv_lvl_dnxt, "b11".U(2.W), priv_lvl_enable)
 
+
+  val priv_lvl_if = priv_lvl_qout
+  val priv_lvl_ls = Mux( mstatus(17), mstatus(12,11), priv_lvl_qout )
 }
 

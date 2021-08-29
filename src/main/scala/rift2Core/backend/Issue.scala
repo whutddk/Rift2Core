@@ -257,6 +257,9 @@ class Alu_issue(dpt_info: Alu_dpt_info, buf_valid: Bool, log: Vec[UInt], op: rea
         ( dpt_info.isa.sraw  === true.B) -> (is_rs1_ready & is_rs2_ready),
         ( dpt_info.isa.or    === true.B) -> (is_rs1_ready & is_rs2_ready),
         ( dpt_info.isa.and   === true.B) -> (is_rs1_ready & is_rs2_ready),
+        
+        ( dpt_info.isa.wfi   === true.B) -> true.B,
+
       ))
     )
 
@@ -294,6 +297,7 @@ class Alu_issue(dpt_info: Alu_dpt_info, buf_valid: Bool, log: Vec[UInt], op: rea
       ( dpt_info.isa.sraw  === true.B) -> nzero_cnt,
       ( dpt_info.isa.or    === true.B) -> nzero_cnt,
       ( dpt_info.isa.and   === true.B) -> nzero_cnt,
+      ( dpt_info.isa.wfi   === true.B) -> 0.U,
     ))	
 
   }
@@ -350,7 +354,10 @@ class Alu_issue(dpt_info: Alu_dpt_info, buf_valid: Bool, log: Vec[UInt], op: rea
         dpt_info.isa.sra    -> src1,
         dpt_info.isa.sraw   -> src1,
         dpt_info.isa.or     -> src1,
-        dpt_info.isa.and    -> src1
+        dpt_info.isa.and    -> src1,
+
+        dpt_info.isa.wfi    -> 0.U,
+
     ))
 
     alu_iss_info.param.op2 :=
@@ -384,7 +391,9 @@ class Alu_issue(dpt_info: Alu_dpt_info, buf_valid: Bool, log: Vec[UInt], op: rea
         dpt_info.isa.sra    -> src2,
         dpt_info.isa.sraw   -> src2,
         dpt_info.isa.or     -> src2,
-        dpt_info.isa.and    -> src2
+        dpt_info.isa.and    -> src2,
+
+        dpt_info.isa.wfi    -> 0.U
     ))
 
     alu_iss_info.param.rd0_phy := dpt_info.phy.rd0
@@ -469,6 +478,7 @@ class Lsu_issue (dpt_info: Lsu_dpt_info, buf_valid: Bool, log: Vec[UInt], op: re
         dpt_info.isa.sd        -> (is_rs1_ready & is_rs2_ready),
         dpt_info.isa.fence     -> is_rs1_ready,
         dpt_info.isa.fence_i   -> is_rs1_ready,
+        dpt_info.isa.sfence_vma -> (is_rs1_ready & is_rs2_ready),
         dpt_info.isa.lr_w      -> is_rs1_ready,
         dpt_info.isa.sc_w      -> (is_rs1_ready & is_rs2_ready),
         dpt_info.isa.amoswap_w -> (is_rs1_ready & is_rs2_ready),
@@ -514,6 +524,7 @@ class Lsu_issue (dpt_info: Lsu_dpt_info, buf_valid: Bool, log: Vec[UInt], op: re
       dpt_info.isa.sd        -> nzero_cnt,
       dpt_info.isa.fence     -> Mux( is_rs1_x0, 0.U, 1.U ),
       dpt_info.isa.fence_i   -> Mux( is_rs1_x0, 0.U, 1.U ),
+      dpt_info.isa.sfence_vma -> Mux( is_rs1_x0, 0.U, 1.U ),
       dpt_info.isa.lr_w      -> Mux( is_rs1_x0, 0.U, 1.U ),
       dpt_info.isa.sc_w      -> nzero_cnt,
       dpt_info.isa.amoswap_w -> nzero_cnt,

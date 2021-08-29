@@ -37,7 +37,12 @@ import chipsalliance.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
+// class Info_if_cmm extends Bundle {
+//   val is_access_fault = Bool()
+//   val is_paging_fault = Bool()
+//   val fault_vaddr = UInt(64.W)
 
+// }
 
 
 class Ifetch(edge: TLEdgeOut)(implicit p: Parameters) extends Icache(edge = edge){

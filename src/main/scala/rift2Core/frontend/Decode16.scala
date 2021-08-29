@@ -291,7 +291,8 @@ class Decode16 (x:UInt, pc: UInt) {
   info.alu_isa.sraw        := false.B
   info.alu_isa.or          := c_or
   info.alu_isa.and         := c_and
-
+  info.alu_isa.wfi         := false.B
+  
   info.bru_isa.jal         := c_j
   info.bru_isa.jalr        := c_jr | c_jalr
   info.bru_isa.beq         := c_beqz
@@ -314,6 +315,7 @@ class Decode16 (x:UInt, pc: UInt) {
   info.lsu_isa.sd          := c_sd | c_sdsp
   info.lsu_isa.fence       := false.B
   info.lsu_isa.fence_i     := false.B
+  info.lsu_isa.sfence_vma  := false.B
 
   info.csr_isa.rw          := false.B
   info.csr_isa.rs          := false.B
@@ -343,9 +345,7 @@ class Decode16 (x:UInt, pc: UInt) {
   info.privil_isa.sret        := false.B
   info.privil_isa.dret        := false.B
 
-  info.privil_isa.wfi         := false.B
 
-  info.privil_isa.sfence_vma  := false.B
 
   info.privil_isa.hfence_vvma := false.B
   info.privil_isa.hfence_gvma := false.B
@@ -450,6 +450,9 @@ class Decode16 (x:UInt, pc: UInt) {
   info.fpu_isa.fcvt_d_l    := false.B
   info.fpu_isa.fcvt_d_lu   := false.B
   info.fpu_isa.fmv_d_x     := false.B
+
+  info.privil_isa.is_access_fault := ( x === BitPat("b1001110001000001") )
+  info.privil_isa.is_paging_fault := ( x === BitPat("b1001110001000101") )
 
 }
 

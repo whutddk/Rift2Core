@@ -29,6 +29,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.frontend._
 import rift2Core.backend._
+import rift2Core.diff._
 import rift2Core.privilege._
 import axi._
 
@@ -87,10 +88,15 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val ( dcache_bus, dcache_edge ) = outer.dcacheClientNode.out.head
   val (    mmu_bus,    mmu_edge ) = outer.mmuClientNode.out.head
 
+  val diff = Module(new diff)
+
+
+
   val pc_stage = Module(new Pc_gen)
   val if_stage = Module(new Ifetch(icache_edge))
   val pd_stage = Module(new Predecode_ss)
   val bd_stage = Module(new BP_ID_ss)
+
 
 
   val dpt_stage = Module(new Dispatch_ss)
@@ -111,9 +117,6 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   i_mmu.io.cmm_mmu <> cmm_stage.io.cmm_mmu
 
 
-  i_mmu.io.flush := false.B
-
-
 
 
   pc_stage.io.bd_pc <> bd_stage.io.bd_pc
@@ -124,6 +127,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   
   pc_stage.io.pc_if <> if_stage.io.pc_if
   if_stage.io.if_iq <> pd_stage.io.if_pd
+  pd_stage.io.if_cmm_shadow := if_stage.io.if_cmm
   pd_stage.io.pd_bd <> bd_stage.io.pd_bd
   bd_stage.io.bd_dpt <> dpt_stage.io.bd_dpt
 
@@ -155,7 +159,8 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   
 
-
+  i_mmu.io.if_flush := if_stage.io.flush
+  i_mmu.io.lsu_flush := exe_stage.io.flush
   if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | bd_stage.io.bd_pc.valid | exe_stage.io.bru_pd_j.valid
   // pd_stage.io.flush  := exe_stage.io.icache_fence_req
   bd_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | exe_stage.io.bru_pd_j.valid 
@@ -178,6 +183,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   cmm_stage.io.csr_cmm_op <> exe_stage.io.csr_cmm_op
 
   cmm_stage.io.cmm_pc <> pc_stage.io.cmm_pc
+  cmm_stage.io.if_cmm := if_stage.io.if_cmm
 
 
   i_regfiles.io.wb_op <> iwb_stage.io.wb_op
@@ -271,6 +277,22 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   exe_stage.io.sys_chn_aw <> io.sys_chn_aw
   exe_stage.io.sys_chn_w  <> io.sys_chn_w
   exe_stage.io.sys_chn_b  <> io.sys_chn_b
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  diff.io.register := i_regfiles.io.diff_register
+  diff.io.commit   := cmm_stage.io.diff_commit
 
 
 }

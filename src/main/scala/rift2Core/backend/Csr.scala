@@ -37,8 +37,8 @@ class Csr extends Module {
     val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
     val csr_exe_iwb = new DecoupledIO(new Exe_iwb_info)
 
-    val csr_addr = Output(UInt(12.W))
-    val csr_data = Input(UInt(64.W))
+    val csr_addr = ValidIO(UInt(12.W))
+    val csr_data = Flipped(ValidIO(UInt(64.W)))
 
     val csr_cmm_op = DecoupledIO( new Exe_Port ) 
 
@@ -53,8 +53,6 @@ class Csr extends Module {
   io.csr_cmm_op <> csr_op_fifo.io.deq
   csr_op_fifo.reset := reset.asBool | io.flush
 
-  def iss_ack = io.csr_iss_exe.valid & io.csr_iss_exe.ready
-
 
 
   def rw = io.csr_iss_exe.bits.fun.rw
@@ -68,17 +66,18 @@ class Csr extends Module {
 
   csr_op_fifo.io.enq.bits.addr := addr
   csr_op_fifo.io.enq.bits.dat_i := dat
-  csr_op_fifo.io.enq.bits.op_rw := rw
-  csr_op_fifo.io.enq.bits.op_rs := rs
-  csr_op_fifo.io.enq.bits.op_rc := rc
+  csr_op_fifo.io.enq.bits.op_rw := rw & ~dontWrite
+  csr_op_fifo.io.enq.bits.op_rs := rs & ~dontWrite
+  csr_op_fifo.io.enq.bits.op_rc := rc & ~dontWrite
 
-  io.csr_addr := addr
+  io.csr_addr.bits  := addr
+  io.csr_addr.valid := io.csr_iss_exe.valid
 
-  io.csr_iss_exe.ready     := csr_exe_iwb_fifo.io.enq.valid & csr_exe_iwb_fifo.io.enq.ready
-  csr_op_fifo.io.enq.valid := csr_exe_iwb_fifo.io.enq.valid & csr_exe_iwb_fifo.io.enq.ready & ~dontWrite
+  io.csr_iss_exe.ready     := csr_exe_iwb_fifo.io.enq.fire
+  csr_op_fifo.io.enq.valid := csr_exe_iwb_fifo.io.enq.fire
 
-  csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready
-  csr_exe_iwb_fifo.io.enq.bits.res := io.csr_data
+  csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready & io.csr_data.valid
+  csr_exe_iwb_fifo.io.enq.bits.res := io.csr_data.bits
 
   csr_exe_iwb_fifo.io.enq.bits.rd0_phy := io.csr_iss_exe.bits.param.rd0_phy
 
