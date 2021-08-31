@@ -26,6 +26,12 @@
 package rift2Core.define
 
 import chisel3._
+import chisel3.util._
+
+
+
+
+
 
 
 class Alu_isa extends Bundle{
@@ -60,11 +66,13 @@ class Alu_isa extends Bundle{
   val or    = Bool()
   val and   = Bool()
 
+  val wfi = Bool()
+
   def is_32w = addiw | addw | subw | slliw | sllw | srliw | srlw | sraiw | sraw;
   def is_usi = sltiu | sltu
   def is_imm =  lui | auipc | addi | addiw | slti | sltiu | xori | ori | andi | slli | slliw | srli | srliw | srai | sraiw
 
-  def is_fun_add = addi | addiw | add | addw | lui | auipc | sub | subw
+  def is_fun_add = addi | addiw | add | addw | lui | auipc | sub | subw | wfi
   def is_fun_slt = slti | sltiu | slt | sltu
   def is_fun_xor = xori | xor
   def is_fun_or  = ori | or
@@ -73,7 +81,7 @@ class Alu_isa extends Bundle{
   def is_fun_srl = srli | srliw | srl | srlw
   def is_fun_sra = srai | sraiw | sra | sraw
 
-  def is_alu = lui | auipc | addi | addiw | slti | sltiu | xori | ori | andi | slli | slliw | srli | srliw | srai | sraiw | add | addw | sub | subw | sll | sllw | slt | sltu | xor | srl | srlw | sra | sraw | or |and
+  def is_alu = lui | auipc | addi | addiw | slti | sltiu | xori | ori | andi | slli | slliw | srli | srliw | srai | sraiw | add | addw | sub | subw | sll | sllw | slt | sltu | xor | srl | srlw | sra | sraw | or |and |wfi
 
 } 
 
@@ -105,6 +113,7 @@ class Lsu_isa extends Bundle {
   val sd  = Bool()
   val fence = Bool()
   val fence_i = Bool()
+  val sfence_vma = Bool()
 
   val lr_w      = Bool()
   val sc_w      = Bool()
@@ -134,13 +143,30 @@ class Lsu_isa extends Bundle {
   val fld = Bool()
   val fsd = Bool()
 
-  def is_lu  = lb | lh | lw | ld | lbu | lhu | lwu | lr_w | lr_d | flw | fld 
-  def is_su  = sb | sh | sw | sd | sc_w | sc_d | fsw | fsd
-  def is_nls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd | fence | fence_i
-  def is_lrsc = lr_w | sc_w | lr_d | sc_d
-  def is_amo = amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
+  def is_sc = sc_d | sc_w
+  def is_lr = lr_d | lr_w
+
+  def is_lu  = lb | lh | lw | ld | lbu | lhu | lwu |  flw | fld 
+  def is_su  = sb | sh | sw | sd | fsw | fsd
+  def is_nls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd
+  def is_lrsc = is_sc | is_lr
+  def is_amo =
+    amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d |
+    lr_w | lr_d | sc_w | sc_d 
   def is_fls = flw | fsw | fld | fsd
-  def is_lsu = is_nls | is_lrsc | is_amo | is_fls
+  def is_fence = fence | fence_i | sfence_vma
+  def is_lsu = is_nls | is_lrsc | is_amo | is_fls | is_fence
+
+  def is_byte = lb | lbu | sb
+  def is_half = lh | lhu | sh
+  def is_word = lw | lwu | sw | amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | flw | fsw | lr_w | sc_w
+  def is_dubl = ld | lr_d | fld | sd | sc_d | fsd | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
+
+  def is_usi = lbu | lhu | lwu
+
+
+  def is_R = is_lu | is_lr | is_amo
+  def is_W = is_su | is_sc | is_amo
 }
 
 class Csr_isa extends Bundle {
@@ -187,9 +213,9 @@ class Privil_isa extends Bundle {
   val sret = Bool()
   val dret = Bool()
 
-  val wfi = Bool()
 
-  val sfence_vma = Bool()
+
+
 
   val hfence_vvma = Bool()
   val hfence_gvma = Bool()
@@ -209,8 +235,12 @@ class Privil_isa extends Bundle {
   val hlv_d = Bool()
   val hsv_d = Bool()
 
+  val is_access_fault = Bool()
+  val is_paging_fault = Bool()
 
-  def is_privil = ecall | ebreak | mret | uret | sret | dret | wfi | sfence_vma | hfence_vvma | hfence_gvma | hlv_b | hlv_bu | hlv_h | hlv_hu | hlvx_hu | hlv_w | hlvx_wu | hsv_b | hsv_h | hsv_w | hlv_wu | hlv_d | hsv_d
+  def is_privil = 
+    ecall | ebreak | mret | uret | sret | dret | hfence_vvma | hfence_gvma | hlv_b | hlv_bu | hlv_h | hlv_hu | hlvx_hu | hlv_w | hlvx_wu | hsv_b | hsv_h | hsv_w | hlv_wu | hlv_d | hsv_d |
+    is_access_fault | is_paging_fault
 
 
 }
@@ -332,6 +362,8 @@ class Instruction_param extends Bundle {
 
 class Info_instruction extends Bundle with Instruction_set {
   val param = new Instruction_param
+  // val is_access_fault = Bool()
+  // val is_paging_fault = Bool()
 
 }
 
@@ -415,12 +447,14 @@ class Info_reorder_i extends Bundle {
   val is_branch = Bool()
   val is_lu = Bool()
   val is_su = Bool()
+  val is_amo = Bool()
   val is_fence = Bool()
   val is_fence_i = Bool()
+  val is_sfence_vma = Bool()
+  val is_wfi = Bool()
   val is_csr = Bool()
 
   val privil = new Privil_isa
-  val is_accessFault = Bool()
   val is_illeage = Bool()
 
 }
@@ -503,6 +537,14 @@ class Lsu_param extends Bundle {
 class Lsu_iss_info extends Bundle {
   val fun = new Lsu_isa
   val param = new Lsu_param
+
+  def is_misAlign =
+    Mux1H( Seq(
+      fun.is_half -> (param.op1(0) =/= 0.U),
+      fun.is_word -> (param.op1(1,0) =/= 0.U),
+      fun.is_dubl -> (param.op1(2,0) =/= 0.U)	
+    ))
+
 }
 
 
@@ -603,12 +645,14 @@ class Info_cmm_pc extends Bundle {
 // }
 
 class Info_cmm_lsu extends Bundle {
-  val is_fence_commit = Bool()
-  val is_store_commit = Bool()
+  val is_lr_clear = Bool()
+  val is_amo_pending = Bool()
+  val is_store_commit = Vec(2, Bool())
 }
 
 class Info_lsu_cmm extends Bundle {
-  val is_accessFault = Bool()
+  val is_access_fault = Bool()
+  val is_paging_fault = Bool()
   val is_misAlign = Bool()
   val trap_addr = UInt(64.W)
 }

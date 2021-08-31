@@ -53,12 +53,16 @@ trait ReOrder {
     reorder_i_info.is_branch      := bd_dpt_info.info.bru_isa.is_branch
     reorder_i_info.is_lu          := bd_dpt_info.info.lsu_isa.is_lu
     reorder_i_info.is_su          := bd_dpt_info.info.lsu_isa.is_su
+    reorder_i_info.is_amo         := bd_dpt_info.info.lsu_isa.is_amo
     reorder_i_info.is_fence       := bd_dpt_info.info.lsu_isa.fence
     reorder_i_info.is_fence_i     := bd_dpt_info.info.lsu_isa.fence_i
+    reorder_i_info.is_sfence_vma  := bd_dpt_info.info.lsu_isa.sfence_vma
+
+    reorder_i_info.is_wfi         := bd_dpt_info.info.alu_isa.wfi
+
     reorder_i_info.is_csr         := bd_dpt_info.info.csr_isa.is_csr
     reorder_i_info.privil         := bd_dpt_info.info.privil_isa
-    reorder_i_info.is_accessFault := bd_dpt_info.is_iFAccessFault
-    reorder_i_info.is_illeage     := bd_dpt_info.is_illeage
+    reorder_i_info.is_illeage     := bd_dpt_info.info.is_illeage
 
     return reorder_i_info
   }
@@ -289,7 +293,7 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
         (io.bd_dpt(0).valid & instruction_info(0).mul_isa.is_mul & rename_i.is_free_1st() & is_rod_ready(0) & mul_dpt_iss_fifo.io.enq.ready)
 
   is_privil_dpt_1st := 
-        (io.bd_dpt(0).valid & (instruction_info(0).privil_isa.is_privil | io.bd_dpt(0).bits.is_iFAccessFault | io.bd_dpt(0).bits.is_illeage ) & is_rod_ready(0))
+        (io.bd_dpt(0).valid & (instruction_info(0).privil_isa.is_privil | io.bd_dpt(0).bits.info.is_illeage ) & is_rod_ready(0))
   
   is_dpt_1st        := 
         (is_alu_dpt_1st | is_bru_dpt_1st | is_lsu_dpt_1st | is_csr_dpt_1st | is_mul_dpt_1st | is_privil_dpt_1st) //| is_fpu_dpt_1st
@@ -322,7 +326,7 @@ class Dispatch_ss extends Module with Superscalar with ReOrder with Dpt{
 
   is_privil_dpt_2nd := 
         (is_dpt_1st) &
-        (io.bd_dpt(1).valid & (instruction_info(1).privil_isa.is_privil | io.bd_dpt(1).bits.is_iFAccessFault | io.bd_dpt(1).bits.is_illeage) & is_rod_ready(1))
+        (io.bd_dpt(1).valid & (instruction_info(1).privil_isa.is_privil | io.bd_dpt(1).bits.info.is_illeage) & is_rod_ready(1))
 
 
   is_dpt_2nd        := is_alu_dpt_2nd | is_bru_dpt_2nd | is_lsu_dpt_2nd | is_csr_dpt_2nd | is_mul_dpt_2nd | is_privil_dpt_2nd //| is_fpu_dpt_2nd

@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-02-24 09:25:27
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-11 14:56:36
+* @Last Modified time: 2021-07-09 12:03:31
 */
 
 
@@ -38,6 +38,12 @@ module axi_full_slv_sram #
 	parameter AW = 14
 )
 (
+
+  input [7:0] MEM_AWID,
+  output [7:0] MEM_BID,
+  input [7:0] MEM_ARID,
+  output [7:0] MEM_RID,
+
 
 	input [31:0] MEM_AWADDR,
 	input [7:0] MEM_AWLEN,
@@ -75,6 +81,13 @@ module axi_full_slv_sram #
 );
 
 	localparam ADDR_LSB = $clog2(DW/8);
+
+
+
+	gen_dffren # (.DW(8)) awid_dffren (.dnxt(MEM_AWID), .qout(MEM_BID), .en(MEM_AWVALID & MEM_AWREADY), .CLK(CLK), .RSTn(RSTn));
+	gen_dffren # (.DW(8)) arid_dffren (.dnxt(MEM_ARID), .qout(MEM_RID), .en(MEM_ARVALID & MEM_ARREADY), .CLK(CLK), .RSTn(RSTn));
+	
+
 
 
 	wire [31:0] aw_wrap_size; 

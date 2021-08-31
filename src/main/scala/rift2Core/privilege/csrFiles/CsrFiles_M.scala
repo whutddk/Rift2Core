@@ -33,24 +33,22 @@ abstract class CsrFiles_M extends CsrFiles_port {
   val is_sei = mip(9)  & mie(9)  & mstatus(1)
   val is_mei = mip(11) & mie(11) & mstatus(3)
 
-  val is_u_ecall = is_ecall & priv_lvl_qout === "b00".U
-  val is_s_ecall = is_ecall & priv_lvl_qout === "b01".U
-  val is_m_ecall = is_ecall & priv_lvl_qout === "b11".U
+
 
   val is_exception =
-    is_instr_accessFault    |
+    is_instr_access_fault   |
+    is_instr_paging_fault   |
     is_instr_illeage        |
     is_breakPoint           |
     is_load_misAlign        |
-    is_load_accessFault     |
+    is_load_access_fault     |
     is_storeAMO_misAlign    |
-    is_storeAMO_accessFault |
-    is_u_ecall              |
-    is_s_ecall              |
-    is_m_ecall              |
-    is_instr_pageFault      |
-    is_load_pageFault       |
-    is_storeAMO_pageFault
+    is_storeAMO_access_fault |
+    is_storeAMO_paging_fault |
+    is_ecall_M              |
+    is_ecall_S              |
+    is_ecall_U              |
+    is_load_paging_fault       
 
 
   lazy val is_m_interrupt = is_msi | is_mti | is_mei
@@ -247,11 +245,13 @@ abstract class CsrFiles_M extends CsrFiles_port {
       mpie := 1.U
       mpp  := "b00".U
 
-      mprv := Mux( mpp =/= "b11".U, 0.U, mprv )
+      mprv := Mux( priv_lvl_dnxt =/= "b11".U, 0.U, mprv )
     }
     .elsewhen( is_sRet ) {
       spie := 1.U
       sie  := spie
+
+      mprv := Mux( priv_lvl_dnxt =/= "b11".U, 0.U, mprv )
     }
     .elsewhen(enable0) {
       sd   := dnxt0(63)
@@ -299,11 +299,11 @@ abstract class CsrFiles_M extends CsrFiles_port {
   misa := {
     val mxl = WireDefault(2.U(2.W))
     val extensions = {
-      if (false) {
-        WireDefault("b00000101000001000100000100".U(26.W))  
+      if (true) {
+        WireDefault("b00000101000001000100000101".U(26.W))  
       }
       else {
-        WireDefault("b00000000000001000100000100".U(26.W))
+        WireDefault("b00000000000001000100000101".U(26.W))
       }
     
     }
@@ -327,6 +327,7 @@ abstract class CsrFiles_M extends CsrFiles_port {
   medeleg := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h302".U, exe_port )
+    when(enable) { value := dnxt }
     value 
   }
 
@@ -468,19 +469,20 @@ abstract class CsrFiles_M extends CsrFiles_port {
     .elsewhen( is_exception & priv_lvl_dnxt === "b11".U ) {
       interrupt := 0.U
       exception_code := Mux1H( Seq(
-        is_instr_accessFault    -> 1.U,
-        is_instr_illeage        -> 2.U,
-        is_breakPoint           -> 3.U,
-        is_load_misAlign        -> 4.U,
-        is_load_accessFault     -> 5.U,
-        is_storeAMO_misAlign    -> 6.U,
-        is_storeAMO_accessFault -> 7.U,
-        is_u_ecall              -> 8.U,
-        is_s_ecall              -> 9.U,
-        is_m_ecall              -> 11.U,
-        is_instr_pageFault      -> 12.U,
-        is_load_pageFault       -> 13.U,
-        is_storeAMO_pageFault   -> 15.U
+        is_instr_misAlign        -> 0.U,
+        is_instr_access_fault    -> 1.U,
+        is_instr_illeage         -> 2.U,
+        is_breakPoint            -> 3.U,
+        is_load_misAlign         -> 4.U,
+        is_load_access_fault     -> 5.U,
+        is_storeAMO_misAlign     -> 6.U,
+        is_storeAMO_access_fault -> 7.U,
+        is_ecall_U               -> 8.U,
+        is_ecall_S               -> 9.U,
+        is_ecall_M               -> 11.U,
+        is_instr_paging_fault    -> 12.U,
+        is_load_paging_fault     -> 13.U,
+        is_storeAMO_paging_fault -> 15.U,
       ))
     }
     .elsewhen(enable) {
@@ -502,16 +504,16 @@ abstract class CsrFiles_M extends CsrFiles_port {
     val (enable, dnxt) = Reg_Exe_Port( value, "h343".U, exe_port )
     when( priv_lvl_dnxt === "b11".U ) {
       value := Mux1H( Seq(
-        is_instr_accessFault    -> ill_vaddr,
-        is_instr_illeage        -> ill_instr,
-        is_breakPoint           -> ill_vaddr,
-        is_load_misAlign        -> ill_vaddr,
-        is_load_accessFault     -> ill_vaddr,
-        is_storeAMO_misAlign    -> ill_vaddr,
-        is_storeAMO_accessFault -> ill_vaddr,
-        is_instr_pageFault      -> ill_vaddr,
-        is_load_pageFault       -> ill_vaddr,
-        is_storeAMO_pageFault   -> ill_vaddr       
+        is_instr_access_fault    -> ill_ivaddr,
+        is_instr_paging_fault    -> ill_ivaddr,
+        is_instr_illeage         -> ill_instr,
+        is_breakPoint            -> 0.U,
+        is_load_misAlign         -> ill_dvaddr,
+        is_load_access_fault     -> ill_dvaddr,
+        is_storeAMO_misAlign     -> ill_dvaddr,
+        is_storeAMO_access_fault -> ill_dvaddr,
+        is_load_paging_fault     -> ill_dvaddr,
+        is_storeAMO_paging_fault -> ill_dvaddr    
       ))
     }
     .elsewhen(enable) { value := dnxt }
@@ -565,10 +567,20 @@ abstract class CsrFiles_M extends CsrFiles_port {
 
   //Machine Memory Protection
   for ( i <- 0 until 16 ) yield {
+  // for ( i <- 0 until 16 if i%2 != 0) yield {
     pmpcfg(i) := {
-      val value = RegInit(0.U(64.W))
+      val buf = RegInit( VecInit(Seq.fill(8)(0.U(8.W))))
+      val value = Cat( for ( i <- 0 until 8 ) yield { buf(7-i) } )
+      val lock = VecInit(
+        for( j <- 0 until 8 ) yield { buf(j)(7).asBool }
+      )
       val (enable, dnxt) = Reg_Exe_Port( value, "h3A0".U + i.U, exe_port )
-      when(enable) { value := dnxt }
+      for ( j <- 0 until 8 ) yield {
+        when( enable & ~lock(j) ) {
+          buf(j) := dnxt(8*j+7, 8*j)
+
+          }
+      }
       value 
     }
 
@@ -579,8 +591,16 @@ abstract class CsrFiles_M extends CsrFiles_port {
     for ( i <- 0 until 64 ) yield {
       pmpaddr(i) := {
         val value = RegInit(0.U(64.W))
+        val cfg_idx = i/8*2
+        val bit_idx = 8*(i%8) + 7
+        val lock = pmpcfg(cfg_idx)(bit_idx)
         val (enable, dnxt) = Reg_Exe_Port( value, "h3B0".U + i.U, exe_port )
-        when(enable) { value := dnxt }
+        when(enable) {
+          when( lock =/= 1.U ) {
+            value := dnxt            
+          }
+
+        }
         value 
       }
     }

@@ -29,7 +29,7 @@ abstract class CsrFiles_D extends CsrFiles_M {
   tselect := {
     val value = RegInit(0.U(64.W))
     val (enable, dnxt) = Reg_Exe_Port( value, "h7A0".U, exe_port )
-    when(enable) { value := dnxt }
+    when(enable) { value := Mux( dnxt >= 0.U, ~dnxt, dnxt ) }
     value 
   }
   tdata1 := {

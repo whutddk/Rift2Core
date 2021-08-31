@@ -28,15 +28,39 @@ package test
 import chisel3._
 import rift2Chip._
 import rift2Core._
-import rift2Core.frontend._
-import rift2Core.backend._
-import rift2Core.cache._
+// import rift2Core.frontend._
+// import rift2Core.backend._
+// import rift2Core.cache._
+import rift._
 import rift2Core.privilege._
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.config._
+import chisel3.stage._
+import rift2Core.L1Cache._
+
+
+class miniCfg extends Config((site, here, up) => {
+  case CacheParamsKey => CacheSetting()
+
+  
+})
+
+
 
 
 object testMain extends App {
 
-  Driver.execute(args, () => new Rift2Chip )
+  // Driver.execute(args, () => new Rift2Chip )
+
+
+  val cfg = new miniCfg
+
+  (new chisel3.stage.ChiselStage).execute(args, Seq(
+      ChiselGeneratorAnnotation(() => {
+    val soc = LazyModule(new Rift2Chip()(cfg))
+    soc.module
+  })
+  ))
 }
 
 

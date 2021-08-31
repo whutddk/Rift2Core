@@ -1,0 +1,9 @@
+[submodule "block-inclusivecache-sifive"]
+	path = block-inclusivecache-sifive
+	url = git@github.com:sifive/block-inclusivecache-sifive.git
+[submodule "rocket-chip"]
+	path = rocket-chip
+	url = git@github.com:chipsalliance/rocket-chip.git
+[submodule "sifive-blocks"]
+	path = sifive-blocks
+	url = git@github.com:sifive/sifive-blocks.git

@@ -357,3 +357,4 @@ src/test/resources/
 tb/ci/
 tb/null
 *.vsdx
+*.fir

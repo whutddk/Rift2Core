@@ -44,9 +44,6 @@ class Decode extends Module {
     new Decode32(io.ib_id.instr, io.ib_id.pc).info
     )
 
-  io.id_dpt.is_iFAccessFault  := io.ib_id.pc(63,32) =/= (0.U)
-  io.id_dpt.is_illeage        := io.id_dpt.info.is_illeage
-
   
 
 }
