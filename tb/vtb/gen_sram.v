@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-01-04 17:37:00
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-02-24 17:38:10
+* @Last Modified time: 2021-09-03 15:28:30
 */
 
 
@@ -82,10 +82,10 @@ module gen_sram #
 integer i;
 initial begin
 	for ( i = 0; i < DP; i = i + 1 ) begin
-		ram[i] = $random;
+		ram[i] = {((DW+31)/32){$random}};
 	end
 	
-	data_r_reg = $random;
+	data_r_reg = {((DW+31)/32){$random}};
 end
 
 

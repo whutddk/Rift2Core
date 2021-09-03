@@ -27,7 +27,7 @@
 module SimTop (
 	input CLK,
 
-	input RSTn,
+	input RSTn
 	
 );
 
@@ -208,9 +208,9 @@ Rift2Chip s_Rift2Chip(
 axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram 
 (
 
-	.MEM_AWID   ({4'b0,io_mem_chn_aw_bits_id}),
+	.MEM_AWID   (io_mem_chn_aw_bits_id),
 	.MEM_BID    (io_mem_chn_b_bits_id),
-	.MEM_ARID   ({4'b0,io_mem_chn_ar_bits_id}),
+	.MEM_ARID   (io_mem_chn_ar_bits_id),
 	.MEM_RID    (io_mem_chn_r_bits_id),
 
 	.MEM_AWADDR(io_mem_chn_aw_bits_addr),
@@ -284,12 +284,12 @@ initial begin
 end
 
 
-initial begin
-	forever
-	begin 
-		 #610 rtc_clock <= ~rtc_clock;
-	end
-end
+// initial begin
+// 	forever
+// 	begin 
+// 		 #610 rtc_clock <= ~rtc_clock;
+// 	end
+// end
 
 
 
@@ -300,7 +300,53 @@ wire is_ecall_S = s_Rift2Chip.i_rift2Core.diff.io_commit_is_ecall_S;
 wire [63:0] gp  = s_Rift2Chip.i_rift2Core.diff.io_register_gp;
 
 
+// always @(negedge CLK ) begin
+// 	if ( is_ecall_U | is_ecall_M | is_ecall_S ) begin
+// 		if ( gp == 64'd1 ) begin
+// 			$display("PASS");
+// 			# 1000 
+// 			$finish;
+// 		end
+// 		else begin
+// 			$display("Fail");
+// 			# 100
+// 			$stop;
+// 		end
+// 	end
+// end
 
+
+reg [255:0] testName;
+
+
+
+
+`define MEM s_axi_full_slv_sram.i_sram.ram
+reg [7:0] mem [0:200000];
+
+localparam DP = 2**14;
+integer i, by;
+initial begin
+	if ( $value$plusargs("%s",testName[255:0]) ) begin
+		$display("%s",testName);
+	  $readmemh(testName, mem);		
+	end
+
+	
+	for ( i = 0; i < DP; i = i + 1 ) begin
+		for ( by = 0; by < 16; by = by + 1 ) begin
+			if ( | mem[i*16+by] ) begin
+				`MEM[i][8*by +: 8] = mem[i*16+by];
+			end
+			else begin
+				`MEM[i][8*by +: 8] = 8'h0;
+			end
+		end
+
+
+	end
+
+end 
 
 
 endmodule
