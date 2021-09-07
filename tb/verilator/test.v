@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-09-07 11:05:57
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-07 15:15:21
+* @Last Modified time: 2021-09-07 15:33:52
 */
 
 
@@ -15,6 +15,7 @@ module test(
 
 
 reg [255:0] testName;
+reg [255:0] testName1;
 
 
 
@@ -32,10 +33,13 @@ end else begin
 	$display("no abcd");
 end
 
-  $value$plusargs("%s",testName[255:0]);
+  $value$plusargs("ab=%s",testName[255:0]);
+  $value$plusargs("cd=%s",testName1[255:0]);
+
 
   $display("Begin");
    $display("%s",testName);
+   $display("%s",testName1);
 
   $display("End");
 end
