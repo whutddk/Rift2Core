@@ -327,10 +327,19 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-	if ( $value$plusargs("%s",testName[255:0]) ) begin
-		$display("%s",testName);
-	  $readmemh(testName, mem);		
-	end
+  $value$plusargs("%s",testName[255:0]);
+    $display("%s",testName);
+  $readmemh(testName, mem);
+
+	// if ( $value$plusargs("%s",testName[255:0]) ) begin
+	// 	$display("%s",testName);
+	//   $readmemh(testName, mem);		
+	//   // $readmemh("../ci/rv64ui-p-blt.verilog", mem);		
+
+	// end
+	// else begin 
+	// 	$error;
+	// end
 
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin
