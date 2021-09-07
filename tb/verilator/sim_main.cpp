@@ -2,12 +2,12 @@
 * @Author: Ruige Lee
 * @Date:   2021-08-06 10:14:14
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-07 15:13:57
+* @Last Modified time: 2021-09-07 16:37:14
 */
 
 
 #include <verilated.h>
-#include "Vtest.h"
+#include "VSimTop.h"
 #include <memory>
 #include <iostream>
 
@@ -16,34 +16,15 @@
 
 
 vluint64_t main_time = 0;
-Vtest *top;
+
 int main(int argc, char **argv, char **env) {
+
+
+	// const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
 	Verilated::commandArgs(argc, argv);
 
 
-
-
-
-
-
-
-
-	std::cout << argc << std::endl;
-	std::cout << argv[0] << std::endl;
-	std::cout << argv[1] << std::endl;
-
-	std::cout << "Hello World" << std::endl;
-	// const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
-    // contextp->commandArgs(argc, argv);
-
-	// char* arg[] = { "abcd\n", "efag\n", "ab23\n", "efag\n" };
- //    char **argv1  = &arg[0];
-	top = new Vtest();
-
-
-
-    
-
+	VSimTop *top = new VSimTop();
 
 
 	Verilated::traceEverOn(true);
@@ -56,35 +37,48 @@ int main(int argc, char **argv, char **env) {
 	tfp->open("./build/wave.vcd");
 
 	
-
-
 	top->RSTn = 0;
 	top->CLK = 0;
 
 
-	while(1) {
-		// contextp->timeInc(1);
+	while(!Verilated::gotFinish()) {
+		Verilated::timeInc(1);
 
-		if ( main_time > 50 ){
+		if ( main_time != 50 ){
+		} else {
 			top->RSTn = 1;
 		}
+
 		if ( main_time % 10 == 1 ){
 			top->CLK = 1;
-		}
-		if ( main_time % 10 == 6 ){
+		} else if ( main_time % 10 == 6 ){
 			top->CLK = 0;
 		} 
 
 
 
+
+
 		top->eval();
 
-		// tfp->dump(contextp->time());
+		tfp->dump(Verilated::time());
 
 
-		if ( main_time > 50000 ){
+		if ( main_time > 500000 ){
+			std::cout << "Timeout!" << std::endl;	
 			break;
 		} 
+
+		if ( top -> fail == 1 && main_time % 100 == 0 ) {
+			std::cout << "Fail!!!" << std::endl;	
+			break;			
+		}
+		else if ( top -> success == 1 && main_time % 100 == 0 ) {
+			std::cout << "Pass!" << std::endl;	
+			break;			
+		} 
+
+
 		main_time ++;
 	}
 	tfp->close();
@@ -93,7 +87,7 @@ int main(int argc, char **argv, char **env) {
 	delete top;
 
 
-	std::cout << "End!" << std::endl;	
+	
 	return 0;
 
 

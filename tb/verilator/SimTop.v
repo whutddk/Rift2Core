@@ -25,6 +25,10 @@
 
 
 module SimTop (
+
+	output success,
+	output fail,
+
 	input CLK,
 
 	input RSTn
@@ -284,13 +288,6 @@ initial begin
 end
 
 
-// initial begin
-// 	forever
-// 	begin 
-// 		 #610 rtc_clock <= ~rtc_clock;
-// 	end
-// end
-
 
 
 
@@ -299,27 +296,29 @@ wire is_ecall_M = s_Rift2Chip.i_rift2Core.diff.io_commit_is_ecall_M;
 wire is_ecall_S = s_Rift2Chip.i_rift2Core.diff.io_commit_is_ecall_S;
 wire [63:0] gp  = s_Rift2Chip.i_rift2Core.diff.io_register_gp;
 
+reg success_reg = 1'b0;
+reg fail_reg = 1'b0;
 
-// always @(negedge CLK ) begin
-// 	if ( is_ecall_U | is_ecall_M | is_ecall_S ) begin
-// 		if ( gp == 64'd1 ) begin
-// 			$display("PASS");
-// 			# 1000 
-// 			$finish;
-// 		end
-// 		else begin
-// 			$display("Fail");
-// 			# 100
-// 			$stop;
-// 		end
-// 	end
-// end
+assign success = success_reg;
+assign fail = fail_reg;
+
+always @(negedge CLK ) begin
+	if ( is_ecall_U | is_ecall_M | is_ecall_S ) begin
+		if ( gp == 64'd1 ) begin
+			// $display("PASS");
+			success_reg = 1'b1;
+			// $finish;
+		end
+		else begin
+			// $display("Fail");
+			fail_reg = 1'b1;
+			// $stop;
+		end
+	end
+end
 
 
 reg [255:0] testName;
-
-
-
 
 `define MEM s_axi_full_slv_sram.i_sram.ram
 reg [7:0] mem [0:200000];
@@ -327,19 +326,16 @@ reg [7:0] mem [0:200000];
 localparam DP = 2**14;
 integer i, by;
 initial begin
-  $value$plusargs("%s",testName[255:0]);
-    $display("%s",testName);
-  $readmemh(testName, mem);
 
-	// if ( $value$plusargs("%s",testName[255:0]) ) begin
-	// 	$display("%s",testName);
-	//   $readmemh(testName, mem);		
-	//   // $readmemh("../ci/rv64ui-p-blt.verilog", mem);		
 
-	// end
-	// else begin 
-	// 	$error;
-	// end
+	if ( $value$plusargs("%s",testName[255:0]) ) begin
+		$display("%s",testName);
+	  $readmemh(testName, mem);		
+
+	end
+	else begin 
+		$error("Failed to read Files!");
+	end
 
 	
 	for ( i = 0; i < DP; i = i + 1 ) begin

@@ -20,10 +20,16 @@ sim:
 	-y ${R2}/generated/ \
 	-y ${R2}/tb/ \
 	-y ${R2}/tb/vtb/ \
-	--top-module test \
+	--top-module SimTop \
 	--trace \
-	--cc ${R2}/tb/verilator/test.v  \
+	--cc ${R2}/tb/verilator/SimTop.v  \
 	--exe --build ./verilator/sim_main.cpp  \
 	-Mdir build \
 	-j 8
 # 	rm ./obj_dir/*.d ./obj_dir/*.o ./obj_dir/*.cpp
+
+# unit: sim
+# 	./VSimTop +{}
+
+
+.PHONY: clean
