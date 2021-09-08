@@ -300,3 +300,9 @@ sim:
 
 unit: sim
 	$(foreach test, $(isa), ./build/VSimTop +./ci/$(test).verilog; )
+
+
+# TESTFILE ?= rv64ui-p-add
+single: sim
+	./build/VSimTop -w +./ci/$(TESTFILE).verilog
+
