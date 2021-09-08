@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-08-06 10:14:14
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-07 16:37:14
+* @Last Modified time: 2021-09-08 10:37:44
 */
 
 
@@ -16,6 +16,10 @@
 
 
 vluint64_t main_time = 0;
+
+double sc_time_stamp () {
+    return main_time;
+}
 
 int main(int argc, char **argv, char **env) {
 
