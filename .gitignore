@@ -358,3 +358,4 @@ tb/ci/
 tb/null
 *.vsdx
 *.fir
+tb/obj_dir/
