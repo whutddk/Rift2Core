@@ -306,3 +306,16 @@ unit: sim
 single: sim
 	./build/VSimTop -w +./ci/$(TESTFILE).verilog
 
+dromajo:
+	verilator -Wno-fatal  \
+	--timescale "1 ns / 1 ps" \
+	-y ${R2}/generated/ \
+	-y ${R2}/tb/ \
+	-y ${R2}/tb/vtb/ \
+	--top-module test \
+	--trace \
+	-LDFLAGS -ldromajo_cosim \
+	--cc ${R2}/tb/verilator/test.v  \
+	--exe --build ./verilator/dromajo.cpp  \
+	-Mdir build \
+	-j 8
