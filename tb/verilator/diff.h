@@ -2,7 +2,7 @@
 #ifndef _DIFF_H_
 #define _DIFF_H_
 
-
+#include "VSimTop.h"
 #include "riscv_machine.h"
 
 struct diff {
@@ -24,7 +24,8 @@ struct diff {
 extern void dromajo_init();
 extern void dromajo_step();
 extern void dromajo_deinit();
-
+extern int diff_chk(VSimTop *top);
+extern struct diff diff;
 #endif
 
 

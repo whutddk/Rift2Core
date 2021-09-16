@@ -269,6 +269,7 @@ class Regfiles extends Module{
   io.diff_register.t1   := files(archit_ptr(6))
   io.diff_register.t2   := files(archit_ptr(7))
   io.diff_register.s0   := files(archit_ptr(8))
+  io.diff_register.s1   := files(archit_ptr(9))
   io.diff_register.a0   := files(archit_ptr(10))
   io.diff_register.a1   := files(archit_ptr(11))
   io.diff_register.a2   := files(archit_ptr(12))

@@ -290,8 +290,11 @@ sim:
 	-y ${R2}/tb/vtb/ \
 	--top-module SimTop \
 	--trace \
+	-LDFLAGS -ldromajo_cosim \
 	--cc ${R2}/tb/verilator/SimTop.v  \
-	--exe --build ./verilator/sim_main.cpp  \
+	--exe --build \
+	./verilator/sim_main.cpp  \
+	./verilator/diff.cpp \
 	-Mdir build \
 	-j 8
 # 	rm ./obj_dir/*.d ./obj_dir/*.o ./obj_dir/*.cpp

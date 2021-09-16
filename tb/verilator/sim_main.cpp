@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-08-06 10:14:14
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-13 20:05:10
+* @Last Modified time: 2021-09-16 17:51:26
 */
 
 
@@ -11,13 +11,13 @@
 #include <memory>
 #include <iostream>
 #include <getopt.h>
-#include "sim.h"
+#include "diff.h"
 
 #if VM_TRACE
 #include "verilated_vcd_c.h"
 #endif
 
-
+char* img;
 vluint64_t main_time = 0;
 
 double sc_time_stamp () {
@@ -29,15 +29,19 @@ uint8_t flag_waveEnable = 0;
 
 int prase_arg(int argc, char **argv) {
 	int opt;
-	while( -1 != ( opt = getopt( argc, argv, "w" ) ) ) {
+	while( -1 != ( opt = getopt( argc, argv, "wf:" ) ) ) {
 		switch(opt) {
 			case 'w':
 				flag_waveEnable = 1;
 				std::cout << "Waveform is Enable" << std::endl;
 				break;
+			case 'f':
+				img = strdup(optarg);
+				std::cout << "load in image is " << img << std::endl;
+				break;
 			case '?':
 				std::cout << "-w to enable waveform" << std::endl;
-				std::cout << "+FILENAME to testfile" << std::endl;
+				std::cout << "-f FILENAME to testfile" << std::endl;
 				return -1;
 				break;
 			default:
@@ -64,16 +68,7 @@ int main(int argc, char **argv, char **env) {
 		return -1;
 	}
 
-
-	// sim_t s(isa, priv, varch, nprocs, halted, real_time_clint,
-	//       initrd_start, initrd_end, bootargs, start_pc, mems, plugin_devices, htif_args,
-	//       std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file
-	//       , io_service_ptr, acceptor_ptr
-	//       );
-
-
-
-
+	dromajo_init();
 
 	Verilated::commandArgs(argc, argv);
 
@@ -106,6 +101,21 @@ int main(int argc, char **argv, char **env) {
 			top->CLK = 1;
 		} else if ( main_time % 10 == 6 ){
 			top->CLK = 0;
+
+
+			if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
+				dromajo_step();
+				dromajo_step();
+			} else if ( top->trace_comfirm_0 || top->trace_abort_0 ) {
+				dromajo_step();
+			} else {
+			    ;
+			}
+
+			if ( -1 == diff_chk(top) ) {
+				printf("failed at dromajo pc = 0x%lx\n", diff.pc);
+				break;
+			}
 		} 
 
 
@@ -145,6 +155,7 @@ int main(int argc, char **argv, char **env) {
 
 #endif
 	top->final();
+	dromajo_deinit();
 
 	delete top;
 

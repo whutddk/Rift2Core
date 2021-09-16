@@ -9,7 +9,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,6 +28,46 @@ module SimTop (
 
 	output success,
 	output fail,
+
+  output [63:0] trace_abi_zero,
+  output [63:0] trace_abi_ra  ,
+  output [63:0] trace_abi_sp  ,
+  output [63:0] trace_abi_gp  ,
+  output [63:0] trace_abi_tp  ,
+  output [63:0] trace_abi_t0  ,
+  output [63:0] trace_abi_t1  ,
+  output [63:0] trace_abi_t2  ,
+  output [63:0] trace_abi_s0  ,
+  output [63:0] trace_abi_s1  ,
+  output [63:0] trace_abi_a0  ,
+  output [63:0] trace_abi_a1  ,
+  output [63:0] trace_abi_a2  ,
+  output [63:0] trace_abi_a3  ,
+  output [63:0] trace_abi_a4  ,
+  output [63:0] trace_abi_a5  ,
+  output [63:0] trace_abi_a6  ,
+  output [63:0] trace_abi_a7  ,
+  output [63:0] trace_abi_s2  ,
+  output [63:0] trace_abi_s3  ,
+  output [63:0] trace_abi_s4  ,
+  output [63:0] trace_abi_s5  ,
+  output [63:0] trace_abi_s6  ,
+  output [63:0] trace_abi_s7  ,
+  output [63:0] trace_abi_s8  ,
+  output [63:0] trace_abi_s9  ,
+  output [63:0] trace_abi_s10 ,
+  output [63:0] trace_abi_s11 ,
+  output [63:0] trace_abi_t3  ,
+  output [63:0] trace_abi_t4  ,
+  output [63:0] trace_abi_t5  ,
+  output [63:0] trace_abi_t6  ,
+
+  output [63:0] trace_pc_0,
+  output [63:0] trace_pc_1,
+  output trace_comfirm_0,
+  output trace_comfirm_1,
+  output trace_abort_0,
+  output [1:0] trace_priv,
 
 	input CLK,
 
@@ -352,6 +392,55 @@ initial begin
 	end
 
 end 
+
+
+
+
+  assign trace_abi_zero = s_Rift2Chip.i_rift2Core.diff.io_register_zero;
+  assign trace_abi_ra   = s_Rift2Chip.i_rift2Core.diff.io_register_ra ;
+  assign trace_abi_sp   = s_Rift2Chip.i_rift2Core.diff.io_register_sp ;
+  assign trace_abi_gp   = s_Rift2Chip.i_rift2Core.diff.io_register_gp ;
+  assign trace_abi_tp   = s_Rift2Chip.i_rift2Core.diff.io_register_tp ;
+  assign trace_abi_t0   = s_Rift2Chip.i_rift2Core.diff.io_register_t0 ;
+  assign trace_abi_t1   = s_Rift2Chip.i_rift2Core.diff.io_register_t1 ;
+  assign trace_abi_t2   = s_Rift2Chip.i_rift2Core.diff.io_register_t2 ;
+  assign trace_abi_s0   = s_Rift2Chip.i_rift2Core.diff.io_register_s0 ;
+  assign trace_abi_s1   = s_Rift2Chip.i_rift2Core.diff.io_register_s1 ;
+  assign trace_abi_a0   = s_Rift2Chip.i_rift2Core.diff.io_register_a0 ;
+  assign trace_abi_a1   = s_Rift2Chip.i_rift2Core.diff.io_register_a1 ;
+  assign trace_abi_a2   = s_Rift2Chip.i_rift2Core.diff.io_register_a2 ;
+  assign trace_abi_a3   = s_Rift2Chip.i_rift2Core.diff.io_register_a3 ;
+  assign trace_abi_a4   = s_Rift2Chip.i_rift2Core.diff.io_register_a4 ;
+  assign trace_abi_a5   = s_Rift2Chip.i_rift2Core.diff.io_register_a5 ;
+  assign trace_abi_a6   = s_Rift2Chip.i_rift2Core.diff.io_register_a6 ;
+  assign trace_abi_a7   = s_Rift2Chip.i_rift2Core.diff.io_register_a7 ;
+  assign trace_abi_s2   = s_Rift2Chip.i_rift2Core.diff.io_register_s2 ;
+  assign trace_abi_s3   = s_Rift2Chip.i_rift2Core.diff.io_register_s3 ;
+  assign trace_abi_s4   = s_Rift2Chip.i_rift2Core.diff.io_register_s4 ;
+  assign trace_abi_s5   = s_Rift2Chip.i_rift2Core.diff.io_register_s5 ;
+  assign trace_abi_s6   = s_Rift2Chip.i_rift2Core.diff.io_register_s6 ;
+  assign trace_abi_s7   = s_Rift2Chip.i_rift2Core.diff.io_register_s7 ;
+  assign trace_abi_s8   = s_Rift2Chip.i_rift2Core.diff.io_register_s8 ;
+  assign trace_abi_s9   = s_Rift2Chip.i_rift2Core.diff.io_register_s9 ;
+  assign trace_abi_s10  = s_Rift2Chip.i_rift2Core.diff.io_register_s10;
+  assign trace_abi_s11  = s_Rift2Chip.i_rift2Core.diff.io_register_s11;
+  assign trace_abi_t3   = s_Rift2Chip.i_rift2Core.diff.io_register_t3 ;
+  assign trace_abi_t4   = s_Rift2Chip.i_rift2Core.diff.io_register_t4 ;
+  assign trace_abi_t5   = s_Rift2Chip.i_rift2Core.diff.io_register_t5 ;
+  assign trace_abi_t6   = s_Rift2Chip.i_rift2Core.diff.io_register_t6 ;
+
+  assign trace_pc_0 = s_Rift2Chip.i_rift2Core.diff.io_commit_pc_0;
+  assign trace_pc_1 = s_Rift2Chip.i_rift2Core.diff.io_commit_pc_1;
+  assign trace_comfirm_0 = s_Rift2Chip.i_rift2Core.diff.io_commit_comfirm_0;
+  assign trace_comfirm_1 = s_Rift2Chip.i_rift2Core.diff.io_commit_comfirm_1;
+  assign trace_abort_0 = s_Rift2Chip.i_rift2Core.diff.io_commit_abort_0;
+
+  assign trace_priv = s_Rift2Chip.i_rift2Core.diff.io_commit_priv_lvl;
+
+
+
+
+
 
 
 endmodule
