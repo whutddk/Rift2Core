@@ -2,13 +2,13 @@
 * @Author: Ruige Lee
 * @Date:   2021-09-15 15:37:08
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-16 12:01:05
+* @Last Modified time: 2021-09-16 15:57:15
 */
 
 
-#include "riscv_machine.h"
 
 
+#include "diff.h"
 
 #include <verilated.h>
 #include "Vtest.h"
@@ -21,62 +21,8 @@
 #include "verilated_vcd_c.h"
 #endif
 
-RISCVMachine *machine;
-RISCVCPUState *cpu;
+
 char* img;
-
-
-
-// int iterate_core(RISCVMachine *m, int hartid) {
-//     if (m->common.maxinsns-- <= 0)
-//         /* Succeed after N instructions without failure. */
-//         return 0;
-
-//     RISCVCPUState *cpu = m->cpu_state[hartid];
-
-//     /* Instruction that raises exceptions should be marked as such in
-//      * the trace of retired instructions.
-//      */
-//     uint64_t last_pc  = virt_machine_get_pc(m, hartid);
-//     // std::cout << "pc=" << last_pc << std::endl;	
-
-
-
-//     int      priv     = riscv_get_priv_level(cpu);
-//     uint32_t insn_raw = -1;
-//     (void)riscv_read_insn(cpu, &insn_raw, last_pc);
-//     int keep_going = virt_machine_run(m, hartid);
-//     if (last_pc == virt_machine_get_pc(m, hartid))
-//         return 0;
-
-//     if (m->common.trace) {
-//         --m->common.trace;
-//         return keep_going;
-//     }
-
-//     ;
-
-//     int iregno = riscv_get_most_recently_written_reg(cpu);
-//     int fregno = riscv_get_most_recently_written_fp_reg(cpu);
-
-//     if (cpu->pending_exception != -1)
-//         ;
-//     else if (iregno > 0)
-//         ;
-//     else if (fregno >= 0)
-//         ;
-
-//     ;
-
-//     return keep_going;
-// }
-
-
-
-
-
-
-
 
 
 
@@ -199,52 +145,53 @@ int main(int argc, char **argv, char **env) {
 // 	top->final();
 
 
-std::cout << "dromajo_cosim_init" << std::endl;	
-
-
-	char * temp[2] = { "dromajo_init", "./ci/rv64ui-p-add" };
-	char **argv_temp = temp;
-
-	machine = virt_machine_main(2,  argv_temp );
-
-    if ( machine == NULL ) {return 1;}
+// std::cout << "dromajo_cosim_init" << std::endl;	
 
 
 
-    // iterate_core(machine, 0);
-    int cnt = 500;
-    while(cnt --) {
-	    cpu = machine->cpu_state[0];
+//     // iterate_core(machine, 0);
+//     int cnt = 100;
+//     while(cnt --) {
+// 	    cpu = machine->cpu_state[0];
 
-	    /* Instruction that raises exceptions should be marked as such in
-	     * the trace of retired instructions.
-	     */
-	    uint64_t last_pc  = virt_machine_get_pc(machine, 0);
-	    printf("pc=0x%lx \n", last_pc);
-	    for ( uint8_t i = 0; i < 32; i++) {
-	    	printf("reg %d = 0x%lx   ", i, virt_machine_get_reg(machine, 0, i));
-	    }
-	    printf("\n");
-	    // std::cout << "pc=" << last_pc << std::endl;	
+// 	    /* Instruction that raises exceptions should be marked as such in
+// 	     * the trace of retired instructions.
+// 	     */
+// 	    uint64_t last_pc  = virt_machine_get_pc(machine, 0);
+// 	    printf("pc=0x%lx \n", last_pc);
+// 	    for ( uint8_t i = 0; i < 32; i++) {
+// 	    	// printf("reg %d = 0x%lx   ", i, virt_machine_get_reg(machine, 0, i));
+// 	    }
+// 	    // printf("\n");
+// 	    // std::cout << "pc=" << last_pc << std::endl;	
 
-	    int      priv     = riscv_get_priv_level(cpu);
+// 	    int      priv     = riscv_get_priv_level(cpu);
 
-	    virt_machine_run(machine, 0);
+// 		virt_machine_run(machine, 0);
 
 
-	    if (cpu->pending_exception != -1)
-	        std::cout << "Exception" << std::endl;	    	
-    }
+// 	    if (cpu->pending_exception != -1)
+// 	        std::cout << "Exception" << std::endl;	    	
+//     }
 
 
 
 
 
-    virt_machine_end(machine);
+//     virt_machine_end(machine);
 
-std::cout << "dromajo_cosim_done" << std::endl;	
-	// delete top;
+// std::cout << "dromajo_cosim_done" << std::endl;	
+// 	// delete top;
 
+
+	dromajo_init();
+
+	int step = 100;
+	while(step--) {
+		dromajo_step();
+	}
+
+dromajo_deinit();
 	return 0;
 
 }

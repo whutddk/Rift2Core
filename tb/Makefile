@@ -316,6 +316,9 @@ dromajo:
 	--trace \
 	-LDFLAGS -ldromajo_cosim \
 	--cc ${R2}/tb/verilator/test.v  \
-	--exe --build ./verilator/dromajo.cpp  \
+	--exe --build \
+	./verilator/dromajo.cpp  \
+	./verilator/diff.cpp \
+	-I./verilator \
 	-Mdir build \
 	-j 8
