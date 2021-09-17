@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-08-06 10:14:14
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-16 17:51:26
+* @Last Modified time: 2021-09-17 12:04:58
 */
 
 
@@ -88,7 +88,7 @@ int main(int argc, char **argv, char **env) {
 	top->RSTn = 0;
 	top->CLK = 0;
 
-
+	printf("start diff\n");
 	while(!Verilated::gotFinish()) {
 		Verilated::timeInc(1);
 
@@ -102,20 +102,45 @@ int main(int argc, char **argv, char **env) {
 		} else if ( main_time % 10 == 6 ){
 			top->CLK = 0;
 
+			static uint8_t flag_align = 0;
+			if ( flag_align ) {
+				if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
 
-			if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
-				dromajo_step();
-				dromajo_step();
-			} else if ( top->trace_comfirm_0 || top->trace_abort_0 ) {
-				dromajo_step();
+
+					dromajo_step();
+					dromajo_step();
+
+					if ( -1 == diff_chk(top) ) {
+						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
+						break;
+					}
+				} else if ( top->trace_comfirm_0 || top->trace_abort_0 ) {
+
+					dromajo_step();
+
+										if ( -1 == diff_chk(top) ) {
+						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
+						break;
+					}
+				} else {
+				    ;
+				}
 			} else {
-			    ;
+				if( top->trace_comfirm_0 && top->trace_pc_0 == 0x80000000 ) {
+					if ( -1 == diff_chk(top) ) {
+						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
+						break;
+					}
+					// printf("is_align");
+					flag_align = 1;
+				}
 			}
 
-			if ( -1 == diff_chk(top) ) {
-				printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-				break;
-			}
+
+
+
+
+
 		} 
 
 

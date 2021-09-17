@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-09-16 14:25:51
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-16 17:56:56
+* @Last Modified time: 2021-09-17 11:40:15
 */
 
 
@@ -20,37 +20,12 @@ extern char* img;
 
 
 void dromajo_step() {
-	cpu = machine->cpu_state[0];
+	
 
-	diff.pc  = virt_machine_get_pc(machine, 0);
+  virt_machine_run(machine, 0);
 
-	printf("pc=0x%lx \n", diff.pc);
-	for ( uint8_t i = 0; i < 32; i++) {
-		diff.ireg[i] = virt_machine_get_reg(machine, 0, i);
-		// printf("reg %d = 0x%lx   ", i, virt_machine_get_reg(machine, 0, i));
-	}
-	// printf("\n");
-	// std::cout << "pc=" << last_pc << std::endl;
-
-	diff.priv = riscv_get_priv_level(cpu);
-
-
-	diff.mstatus = riscv_cpu_get_mstatus(cpu);
-	diff.mcause = cpu->mcause;
-	diff.mtval = cpu -> mtval;
-	diff.mtvec = cpu -> mtvec;
-	diff.mepc = cpu -> mepc;
-
-
-	// printf("mstatus=%lx ",diff.mstatus);
-	// printf("mcause=%lx ",diff.mcause);
-	// printf("mtval=%lx ",diff.mtval);
-	// printf("mtvec=%lx ",diff.mtvec);
-	// printf("mepc=%lx ",diff.mepc);
-	// printf("\n");
-
-	virt_machine_run(machine, 0);
-
+  uint64_t pc  = virt_machine_get_pc(machine, 0);
+  printf("step pc = %lx\n", pc);
 
 	if (cpu->pending_exception != -1)
 	std::cout << "Exception" << std::endl;
@@ -58,23 +33,26 @@ void dromajo_step() {
 
 
 void dromajo_init() {
-	char * temp[2];
+	char * temp[4];
 	temp[0] = "dromajo_init";
 	
-	temp[1] = img;
+  temp[1] = "--reset_vector";
+  temp[2] = "0x80000000";
+  temp[3] = img;
+
 
 	char **argv_temp = temp;
 
-	machine = virt_machine_main(2,  argv_temp );
-
+	machine = virt_machine_main(4,  argv_temp );
+  cpu = machine->cpu_state[0];
     if ( machine == NULL ) {
     	std::cout << "DROMAJO Init Failed!!!" << std::endl;;
     } else {
     	std::cout << "DROMAJO Init Success!!!" << std::endl;
 
-    	while( diff.pc != 0x80000000 ) {
-    		dromajo_step();
-    	}
+    	// while( diff.pc != 0x80000000 ) {
+    	// 	dromajo_step();
+    	// }
 
   	
     }
@@ -88,10 +66,24 @@ void dromajo_deinit() {
 
 
 int diff_chk(VSimTop *top) {
+  printf("check\n");
+  diff.pc  = virt_machine_get_pc(machine, 0);
+  for ( uint8_t i = 0; i < 32; i++) {
+    diff.ireg[i] = virt_machine_get_reg(machine, 0, i);
+    // printf("reg %d = 0x%lx   ", i, virt_machine_get_reg(machine, 0, i));
+  }
+  // printf("\n");
+  // std::cout << "pc=" << last_pc << std::endl;
+
+  diff.priv = riscv_get_priv_level(cpu);
+  diff.mstatus = riscv_cpu_get_mstatus(cpu);
+  diff.mcause = cpu->mcause;
+  diff.mtval = cpu -> mtval;
+  diff.mtvec = cpu -> mtvec;
+  diff.mepc = cpu -> mepc;
 
 
-
-  if (diff.ireg[0]  != top->trace_abi_zero) { printf( "Failed at zero, real is 0x%lx, should be 0x%lx\n", top->trace_abi_zero , diff.ireg[0] ); return -1; }
+  // if (diff.ireg[0]  != top->trace_abi_zero) { printf( "Failed at zero, real is 0x%lx, should be 0x%lx\n", top->trace_abi_zero , diff.ireg[0] ); return -1; }
   if (diff.ireg[1]  != top->trace_abi_ra  ) { printf( "Failed at ra, real is 0x%lx, should be 0x%lx\n", top->trace_abi_ra , diff.ireg[1] ); return -1; }
   if (diff.ireg[2]  != top->trace_abi_sp  ) { printf( "Failed at sp, real is 0x%lx, should be 0x%lx\n", top->trace_abi_sp , diff.ireg[2] ); return -1; }
   if (diff.ireg[3]  != top->trace_abi_gp  ) { printf( "Failed at gp, real is 0x%lx, should be 0x%lx\n", top->trace_abi_gp , diff.ireg[3] ); return -1; }
@@ -126,7 +118,7 @@ int diff_chk(VSimTop *top) {
 
 
 
-  uint64_t last_pc;
+  static uint64_t last_pc;
   if (diff.priv != top->trace_priv) { printf( "Failed at priv, real is %d, should be %d\n", top->trace_priv, diff.priv ); return -1; }
 
   if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
@@ -137,8 +129,7 @@ int diff_chk(VSimTop *top) {
   	;
   }
 
-  if (diff.pc != last_pc  ) { printf( "Failed at pc, real is 0x%lx, should be 0x%lx", last_pc , diff.pc ); return -1; }
-
+  if (diff.pc != last_pc  ) { printf( "Failed at pc, real is 0x%lx, should be 0x%lx\n", last_pc , diff.pc );  }
 
 	return 0;
 }
