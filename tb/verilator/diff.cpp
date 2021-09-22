@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-09-16 14:25:51
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-17 11:40:15
+* @Last Modified time: 2021-09-22 19:56:43
 */
 
 
@@ -25,14 +25,16 @@ void dromajo_step() {
   virt_machine_run(machine, 0);
 
   uint64_t pc  = virt_machine_get_pc(machine, 0);
-  printf("step pc = %lx\n", pc);
+  // printf("step pc = %lx\n", pc);
 
-	if (cpu->pending_exception != -1)
-	std::cout << "Exception" << std::endl;
+	if (cpu->pending_exception != -1) {
+      // std::cout << "Exception" << std::endl;
+  }
+
 }
 
 
-void dromajo_init() {
+int dromajo_init() {
 	char * temp[4];
 	temp[0] = "dromajo_init";
 	
@@ -47,26 +49,38 @@ void dromajo_init() {
   cpu = machine->cpu_state[0];
     if ( machine == NULL ) {
     	std::cout << "DROMAJO Init Failed!!!" << std::endl;;
+      return -1;
     } else {
-    	std::cout << "DROMAJO Init Success!!!" << std::endl;
-
-    	// while( diff.pc != 0x80000000 ) {
-    	// 	dromajo_step();
-    	// }
-
-  	
+    	// std::cout << "DROMAJO Init Success!!!" << std::endl;  	
     }
-
+    return 0;
 }
 
 void dromajo_deinit() {
 	virt_machine_end(machine);
 }
 
+int diff_chk_pc(VSimTop *top) {
+  // printf("check\n");
+  diff.pc  = virt_machine_get_pc(machine, 0);
 
+  static uint64_t last_pc;
 
-int diff_chk(VSimTop *top) {
-  printf("check\n");
+  if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
+    last_pc = top->trace_pc_1;
+  } else if ( top->trace_comfirm_0 || top->trace_abort_0 ) {
+    last_pc = top->trace_pc_0;
+  } else {
+    ;
+  }
+
+  if (diff.pc != last_pc  ) { printf( "Failed at pc, real is 0x%lx, should be 0x%lx\n", last_pc , diff.pc ); return -1; }
+
+  return 0;
+}
+
+int diff_chk_reg(VSimTop *top) {
+  // printf("check\n");
   diff.pc  = virt_machine_get_pc(machine, 0);
   for ( uint8_t i = 0; i < 32; i++) {
     diff.ireg[i] = virt_machine_get_reg(machine, 0, i);
@@ -118,18 +132,7 @@ int diff_chk(VSimTop *top) {
 
 
 
-  static uint64_t last_pc;
-  if (diff.priv != top->trace_priv) { printf( "Failed at priv, real is %d, should be %d\n", top->trace_priv, diff.priv ); return -1; }
 
-  if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
-  	last_pc = top->trace_pc_1;
-  } else if ( top->trace_comfirm_0 || top->trace_abort_0 ) {
-  	last_pc = top->trace_pc_0;
-  } else {
-  	;
-  }
-
-  if (diff.pc != last_pc  ) { printf( "Failed at pc, real is 0x%lx, should be 0x%lx\n", last_pc , diff.pc );  }
 
 	return 0;
 }

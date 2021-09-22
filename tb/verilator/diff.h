@@ -21,10 +21,11 @@ struct diff {
 
 
 
-extern void dromajo_init();
+extern int dromajo_init();
 extern void dromajo_step();
 extern void dromajo_deinit();
-extern int diff_chk(VSimTop *top);
+extern int diff_chk_reg(VSimTop *top);
+extern int diff_chk_pc(VSimTop *top);
 extern struct diff diff;
 #endif
 

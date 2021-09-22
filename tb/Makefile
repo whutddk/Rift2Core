@@ -302,12 +302,12 @@ sim:
 
 
 unit: sim
-	$(foreach test, $(isa), ./build/VSimTop +./ci/$(test).verilog; )
+	$(foreach test, $(isa), ./build/VSimTop -f ./ci/$(test); )
 
 
 # TESTFILE ?= rv64ui-p-add
 single: sim
-	./build/VSimTop -w +./ci/$(TESTFILE).verilog
+	./build/VSimTop -w -f ./ci/$(TESTFILE)
 
 dromajo:
 	verilator -Wno-fatal  \
