@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-09-16 14:25:51
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-22 19:56:43
+* @Last Modified time: 2021-09-23 10:59:41
 */
 
 
@@ -23,13 +23,27 @@ void dromajo_step() {
 	
 
   virt_machine_run(machine, 0);
+  diff.pc  = virt_machine_get_pc(machine, 0);
 
-  uint64_t pc  = virt_machine_get_pc(machine, 0);
-  // printf("step pc = %lx\n", pc);
 
 	if (cpu->pending_exception != -1) {
       // std::cout << "Exception" << std::endl;
   }
+
+  for ( uint8_t i = 0; i < 32; i++) {
+    diff.ireg[i] = virt_machine_get_reg(machine, 0, i);
+    // printf("reg %d = 0x%lx   ", i, virt_machine_get_reg(machine, 0, i));
+  }
+
+
+  diff.priv = riscv_get_priv_level(cpu);
+  diff.mstatus = riscv_cpu_get_mstatus(cpu);
+  diff.mcause = cpu->mcause;
+  diff.mtval = cpu -> mtval;
+  diff.mtvec = cpu -> mtvec;
+  diff.mepc = cpu -> mepc;
+
+  printf("pc is %lx, t0 is %lx\n", diff.pc, diff.ireg[5]);
 
 }
 
@@ -58,11 +72,15 @@ int dromajo_init() {
 
 void dromajo_deinit() {
 	virt_machine_end(machine);
+
+
 }
+
+
 
 int diff_chk_pc(VSimTop *top) {
   // printf("check\n");
-  diff.pc  = virt_machine_get_pc(machine, 0);
+
 
   static uint64_t last_pc;
 
@@ -81,20 +99,8 @@ int diff_chk_pc(VSimTop *top) {
 
 int diff_chk_reg(VSimTop *top) {
   // printf("check\n");
-  diff.pc  = virt_machine_get_pc(machine, 0);
-  for ( uint8_t i = 0; i < 32; i++) {
-    diff.ireg[i] = virt_machine_get_reg(machine, 0, i);
-    // printf("reg %d = 0x%lx   ", i, virt_machine_get_reg(machine, 0, i));
-  }
-  // printf("\n");
-  // std::cout << "pc=" << last_pc << std::endl;
 
-  diff.priv = riscv_get_priv_level(cpu);
-  diff.mstatus = riscv_cpu_get_mstatus(cpu);
-  diff.mcause = cpu->mcause;
-  diff.mtval = cpu -> mtval;
-  diff.mtvec = cpu -> mtvec;
-  diff.mepc = cpu -> mepc;
+ 
 
 
   // if (diff.ireg[0]  != top->trace_abi_zero) { printf( "Failed at zero, real is 0x%lx, should be 0x%lx\n", top->trace_abi_zero , diff.ireg[0] ); return -1; }
