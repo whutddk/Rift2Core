@@ -307,7 +307,7 @@ unit: sim
 
 # TESTFILE ?= rv64ui-p-add
 single: sim
-	./build/VSimTop -w -f ./ci/$(TESTFILE)
+	./build/VSimTop -w -d -f ./ci/$(TESTFILE)
 
 dromajo:
 	verilator -Wno-fatal  \

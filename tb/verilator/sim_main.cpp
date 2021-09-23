@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-08-06 10:14:14
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-23 14:21:56
+* @Last Modified time: 2021-09-23 14:38:42
 */
 
 
@@ -30,11 +30,15 @@ double sc_time_stamp () {
 
 
 uint8_t flag_waveEnable = 0;
+uint8_t flag_diffEnable = 0;
 
 int prase_arg(int argc, char **argv) {
 	int opt;
-	while( -1 != ( opt = getopt( argc, argv, "wf:" ) ) ) {
+	while( -1 != ( opt = getopt( argc, argv, "dwf:" ) ) ) {
 		switch(opt) {
+			case 'd':
+			flag_diffEnable = 1;
+			break;
 			case 'w':
 				flag_waveEnable = 1;
 				std::cout << "Waveform is Enable" << std::endl;
@@ -72,9 +76,12 @@ int main(int argc, char **argv, char **env) {
 		return -1;
 	}
 
-	if ( -1 == dromajo_init() ) {
-		return -1;
+	if ( flag_diffEnable ) {
+		if ( -1 == dromajo_init() ) {
+			return -1;
+		}		
 	}
+
 
 	
 	char * temp[2];
@@ -118,39 +125,43 @@ int main(int argc, char **argv, char **env) {
 		} else if ( main_time % 10 == 6 ) {
 			top->CLK = 0;
 
-			if ( flag_chk ) {
-				if ( -1 == diff_chk_reg(top) ) {
-					printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-					break;
+			if ( flag_diffEnable ) {
+				if ( flag_chk ) {
+					if ( -1 == diff_chk_reg(top) ) {
+						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
+						break;
+					}
+					flag_chk = 0;
 				}
-				flag_chk = 0;			
 			}
-
-
 
 			if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
 				// printf("real pc = %lx, real t0 = %lx\n", top->trace_pc_1, top->trace_abi_t0);
 
+				if ( flag_diffEnable ) {
+					if ( -1 == diff_chk_pc(top) ) {
+						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
+						break;
+					}
 
-				if ( -1 == diff_chk_pc(top) ) {
-					printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-					break;
+					dromajo_step();
+					dromajo_step();
+					flag_chk = 1;					
 				}
 
-				dromajo_step();
-				dromajo_step();
-				flag_chk = 1;
 
 			} else if ( top->trace_comfirm_0 || top->trace_abort_0 ) {
 				// printf("real pc = %lx, real t0 = %lx\n", top->trace_pc_0, top->trace_abi_t0);
+				if ( flag_diffEnable ) {
+					if ( -1 == diff_chk_pc(top) ) {
+						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
+						break;
+					}
 
-				if ( -1 == diff_chk_pc(top) ) {
-					printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-					break;
+					dromajo_step();
+					flag_chk = 1;					
 				}
 
-				dromajo_step();
-				flag_chk = 1;
 			} else {
 				;
 			}
@@ -197,11 +208,13 @@ int main(int argc, char **argv, char **env) {
 
 #endif
 	top->final();
-	dromajo_deinit();
+
+	if ( flag_diffEnable ) {
+		dromajo_deinit();		
+	}
+
 
 	delete top;
-
-
 	
 	return 0;
 
