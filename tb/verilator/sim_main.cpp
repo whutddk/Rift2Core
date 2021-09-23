@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-08-06 10:14:14
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-08 14:46:46
+* @Last Modified time: 2021-09-23 14:38:42
 */
 
 
@@ -11,12 +11,17 @@
 #include <memory>
 #include <iostream>
 #include <getopt.h>
+#include "diff.h"
+
+#include <sstream>
+
+
 
 #if VM_TRACE
 #include "verilated_vcd_c.h"
 #endif
 
-
+char* img;
 vluint64_t main_time = 0;
 
 double sc_time_stamp () {
@@ -25,23 +30,31 @@ double sc_time_stamp () {
 
 
 uint8_t flag_waveEnable = 0;
+uint8_t flag_diffEnable = 0;
 
 int prase_arg(int argc, char **argv) {
 	int opt;
-	while( -1 != ( opt = getopt( argc, argv, "w" ) ) ) {
+	while( -1 != ( opt = getopt( argc, argv, "dwf:" ) ) ) {
 		switch(opt) {
+			case 'd':
+			flag_diffEnable = 1;
+			break;
 			case 'w':
 				flag_waveEnable = 1;
 				std::cout << "Waveform is Enable" << std::endl;
 				break;
+			case 'f':
+				img = strdup(optarg);
+				// std::cout << "load in image is " << img << std::endl;
+				break;
 			case '?':
 				std::cout << "-w to enable waveform" << std::endl;
-				std::cout << "+FILENAME to testfile" << std::endl;
+				std::cout << "-f FILENAME to testfile" << std::endl;
 				return -1;
 				break;
 			default:
-			    std::cout << opt << std::endl;
-			    assert(0);
+				std::cout << opt << std::endl;
+				assert(0);
 		}
 	}
 	return 0;
@@ -57,14 +70,28 @@ int prase_arg(int argc, char **argv) {
 
 int main(int argc, char **argv, char **env) {
 
+
 	if ( -1 == prase_arg(argc, argv) ) {
 		std::cout << "Prase Error." << std::endl;
 		return -1;
 	}
 
+	if ( flag_diffEnable ) {
+		if ( -1 == dromajo_init() ) {
+			return -1;
+		}		
+	}
 
 
-	Verilated::commandArgs(argc, argv);
+	
+	char * temp[2];
+	char cmd[64] = "+";
+	strcat(cmd, img);
+	strcat(cmd, ".verilog");
+	temp[0] = "Verilated";
+	temp[1] = cmd;
+	char **argv_temp = temp;
+	Verilated::commandArgs(2, argv_temp);
 
 	VSimTop *top = new VSimTop();
 
@@ -82,8 +109,10 @@ int main(int argc, char **argv, char **env) {
 	top->RSTn = 0;
 	top->CLK = 0;
 
-
+	// printf("start diff\n");
 	while(!Verilated::gotFinish()) {
+		static uint8_t flag_chk = 0;
+
 		Verilated::timeInc(1);
 
 		if ( main_time != 50 ){
@@ -91,11 +120,56 @@ int main(int argc, char **argv, char **env) {
 			top->RSTn = 1;
 		}
 
-		if ( main_time % 10 == 1 ){
+		if ( main_time % 10 == 1 ) {
 			top->CLK = 1;
-		} else if ( main_time % 10 == 6 ){
+		} else if ( main_time % 10 == 6 ) {
 			top->CLK = 0;
+
+			if ( flag_diffEnable ) {
+				if ( flag_chk ) {
+					if ( -1 == diff_chk_reg(top) ) {
+						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
+						break;
+					}
+					flag_chk = 0;
+				}
+			}
+
+			if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
+				// printf("real pc = %lx, real t0 = %lx\n", top->trace_pc_1, top->trace_abi_t0);
+
+				if ( flag_diffEnable ) {
+					if ( -1 == diff_chk_pc(top) ) {
+						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
+						break;
+					}
+
+					dromajo_step();
+					dromajo_step();
+					flag_chk = 1;					
+				}
+
+
+			} else if ( top->trace_comfirm_0 || top->trace_abort_0 ) {
+				// printf("real pc = %lx, real t0 = %lx\n", top->trace_pc_0, top->trace_abi_t0);
+				if ( flag_diffEnable ) {
+					if ( -1 == diff_chk_pc(top) ) {
+						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
+						break;
+					}
+
+					dromajo_step();
+					flag_chk = 1;					
+				}
+
+			} else {
+				;
+			}
+
 		} 
+
+
+
 
 
 
@@ -135,9 +209,12 @@ int main(int argc, char **argv, char **env) {
 #endif
 	top->final();
 
+	if ( flag_diffEnable ) {
+		dromajo_deinit();		
+	}
+
+
 	delete top;
-
-
 	
 	return 0;
 

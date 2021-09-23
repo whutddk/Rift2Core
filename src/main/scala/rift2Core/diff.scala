@@ -19,6 +19,7 @@ class Info_abi_reg extends Bundle {
   val t1   = UInt(64.W)
   val t2   = UInt(64.W)
   val s0   = UInt(64.W)
+  val s1   = UInt(64.W)
   val a0   = UInt(64.W)
   val a1   = UInt(64.W)
   val a2   = UInt(64.W)

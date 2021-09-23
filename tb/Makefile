@@ -290,8 +290,11 @@ sim:
 	-y ${R2}/tb/vtb/ \
 	--top-module SimTop \
 	--trace \
+	-LDFLAGS -ldromajo_cosim \
 	--cc ${R2}/tb/verilator/SimTop.v  \
-	--exe --build ./verilator/sim_main.cpp  \
+	--exe --build \
+	./verilator/sim_main.cpp  \
+	./verilator/diff.cpp \
 	-Mdir build \
 	-j 8
 # 	rm ./obj_dir/*.d ./obj_dir/*.o ./obj_dir/*.cpp
@@ -299,10 +302,26 @@ sim:
 
 
 unit: sim
-	$(foreach test, $(isa), ./build/VSimTop +./ci/$(test).verilog; )
+	$(foreach test, $(isa), ./build/VSimTop -f ./ci/$(test); )
 
 
 # TESTFILE ?= rv64ui-p-add
 single: sim
-	./build/VSimTop -w +./ci/$(TESTFILE).verilog
+	./build/VSimTop -w -d -f ./ci/$(TESTFILE)
 
+dromajo:
+	verilator -Wno-fatal  \
+	--timescale "1 ns / 1 ps" \
+	-y ${R2}/generated/ \
+	-y ${R2}/tb/ \
+	-y ${R2}/tb/vtb/ \
+	--top-module test \
+	--trace \
+	-LDFLAGS -ldromajo_cosim \
+	--cc ${R2}/tb/verilator/test.v  \
+	--exe --build \
+	./verilator/dromajo.cpp  \
+	./verilator/diff.cpp \
+	-I./verilator \
+	-Mdir build \
+	-j 8
