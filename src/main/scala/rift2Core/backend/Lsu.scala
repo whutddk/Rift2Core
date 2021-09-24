@@ -217,7 +217,11 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
   //     (io.lsu_iss_exe.bits.fun.is_lu | io.lsu_iss_exe.bits.fun.is_su | io.lsu_iss_exe.bits.fun.is_amo) & 
   //    ( (io.mmu_lsu.bits.paddr(63,32) =/= 0.U ) | (io.mmu_lsu.bits.paddr(31,29) =/= "b001".U & io.mmu_lsu.bits.paddr(31) =/= 1.U))
 
-  def is_Fault = io.lsu_cmm.is_access_fault | io.lsu_cmm.is_paging_fault | io.lsu_iss_exe.bits.is_misAlign
+  def is_Fault = 
+    io.mmu_lsu.valid & (
+      io.mmu_lsu.bits.is_access_fault | io.mmu_lsu.bits.is_paging_fault | io.lsu_iss_exe.bits.is_misAlign      
+    )
+
 
   val is_lsu_free = 
     pending_fifo.io.is_empty & lsu_scoreBoard.io.is_empty & 

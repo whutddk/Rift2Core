@@ -97,7 +97,7 @@ class read_op(files: Vec[UInt]) {
     val seq2_2 = (( (alu_chn_valid_i +& csr_chn_valid_i) === 2.U & bru_chn_valid_i =/= 0.U ) )
     val seq2_3 = (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 1.U & lsu_chn_valid_i === 2.U ) )
     val seq2_4 = (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 2.U & lsu_chn_valid_i =/= 0.U ) )
-    val seq2_5 = (mul_chn_valid_i === 2.U)
+    val seq2_5 = (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i +& lsu_chn_valid_i ) <= 2.U) & (mul_chn_valid_i === 2.U))
 
     val seq2 = Seq(
       (alu_chn_valid_i === 2.U & csr_chn_valid_i === 1.U ) -> csr_chn_phy_i(0),
@@ -105,29 +105,28 @@ class read_op(files: Vec[UInt]) {
       (( (alu_chn_valid_i +& csr_chn_valid_i) === 2.U & bru_chn_valid_i =/= 0.U ) ) -> bru_chn_phy_i(0),
       (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 1.U & lsu_chn_valid_i === 2.U ) ) -> lsu_chn_phy_i(1),
       (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 2.U & lsu_chn_valid_i =/= 0.U ) ) -> lsu_chn_phy_i(0),
-      (mul_chn_valid_i === 2.U) -> mul_chn_phy_i(0)
+      (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i +& lsu_chn_valid_i ) <= 2.U) & (mul_chn_valid_i === 2.U)) -> mul_chn_phy_i(0)
     )
 
     val seq3_0 = ( (alu_chn_valid_i +& csr_chn_valid_i) === 2.U & bru_chn_valid_i === 2.U)
     val seq3_1 = ( (alu_chn_valid_i +& csr_chn_valid_i) === 3.U & bru_chn_valid_i === 1.U)
     val seq3_2 = ( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 2.U & lsu_chn_valid_i === 2.U)
     val seq3_3 = ( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 3.U & lsu_chn_valid_i === 1.U)
-    val seq3_4 = (mul_chn_valid_i === 2.U)
+    val seq3_4 = (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i +& lsu_chn_valid_i ) <= 2.U) & (mul_chn_valid_i === 2.U))
 
     val seq3 = Seq(
       ( (alu_chn_valid_i +& csr_chn_valid_i) === 2.U & bru_chn_valid_i === 2.U) -> bru_chn_phy_i(1),
       ( (alu_chn_valid_i +& csr_chn_valid_i) === 3.U & bru_chn_valid_i === 1.U) -> bru_chn_phy_i(0),
       ( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 2.U & lsu_chn_valid_i === 2.U) -> lsu_chn_phy_i(1),
       ( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 3.U & lsu_chn_valid_i === 1.U) -> lsu_chn_phy_i(0),
-      (mul_chn_valid_i === 2.U) -> mul_chn_phy_i(1)
+      ( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i +& lsu_chn_valid_i ) <= 2.U & (mul_chn_valid_i === 2.U)) -> mul_chn_phy_i(1)
     )
 
-    assert(
-      PopCount(seq0.map(_._1)) <= 1.U && 
-      PopCount(seq1.map(_._1)) <= 1.U && 
-      PopCount(seq2.map(_._1)) <= 1.U && 
-      PopCount(seq3.map(_._1)) <= 1.U
-    )
+    assert( PopCount(seq0.map(_._1)) <= 1.U )
+    assert( PopCount(seq1.map(_._1)) <= 1.U )
+    assert( PopCount(seq2.map(_._1)) <= 1.U )
+    assert( PopCount(seq3.map(_._1)) <= 1.U )
+
 
     VecInit( Mux1H(seq0), Mux1H(seq1), Mux1H(seq2), Mux1H(seq3))
   }

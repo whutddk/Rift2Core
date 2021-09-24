@@ -302,16 +302,16 @@ sim:
 
 
 unit: sim
-	$(foreach test, $(isa), ./build/VSimTop -f ./ci/$(test); )
+	$(foreach test, $(isa), ./build/VSimTop -l -f ./ci/$(test); )
 
 
 # TESTFILE ?= rv64ui-p-add
 single: sim
-	./build/VSimTop -w -d -f ./ci/$(TESTFILE)
+	./build/VSimTop -w -d -l -f ./ci/$(TESTFILE)
 
 dromajo:
 	verilator -Wno-fatal  \
-	--timescale "1 ns / 1 ps" \
+	--timescale "1 ns / 1 ns" \
 	-y ${R2}/generated/ \
 	-y ${R2}/tb/ \
 	-y ${R2}/tb/vtb/ \
@@ -325,3 +325,13 @@ dromajo:
 	-I./verilator \
 	-Mdir build \
 	-j 8
+
+dhrystone5: sim
+	./build/VSimTop -w -f ./ci/dhrystone5.riscv
+
+dhrystone500: sim
+	./build/VSimTop -f ./ci/dhrystone500.riscv
+
+
+coremark: sim
+	./build/VSimTop  -f ./ci/coremark1_bare
