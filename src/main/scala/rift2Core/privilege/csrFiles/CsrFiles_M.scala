@@ -202,7 +202,7 @@ abstract class CsrFiles_M extends CsrFiles_port {
 
 
   mstatus := {
-    val sd = RegInit(0.U(1.W))
+    
     val mbe = RegInit(0.U(1.W))
     val sbe = RegInit(0.U(1.W))
     val sxl = 2.U(2.W)
@@ -213,15 +213,16 @@ abstract class CsrFiles_M extends CsrFiles_port {
     val mxr = RegInit(0.U(1.W))
     val sum = RegInit(0.U(1.W))
     val mprv = RegInit(0.U(1.W))
-    val xs = RegInit(0.U(2.W))
-    val fs = RegInit(0.U(2.W))
-    val mpp = RegInit(0.U(2.W))
+    val xs = 0.U(2.W)
+    val fs = 0.U(2.W)
+    val mpp = RegInit("b11".U(2.W))
     val spp = RegInit(0.U(1.W))
     val mpie = RegInit(0.U(1.W))
     val ube = RegInit(0.U(1.W))
     val spie = RegInit(0.U(1.W))
     val mie = RegInit(0.U(1.W))
     val sie = RegInit(0.U(1.W))
+    val sd = (xs | fs).orR
 
     val value = Cat( sd, 0.U(25.W), mbe, sbe, sxl, uxl, 0.U(9.W), tsr, tw, tvm, mxr, sum, mprv, xs, fs, mpp, 0.U(2.W), spp, mpie, ube, spie, 0.U(1.W), mie, 0.U(1.W), sie, 0.U(1.W) )
 
@@ -254,18 +255,18 @@ abstract class CsrFiles_M extends CsrFiles_port {
       mprv := Mux( priv_lvl_dnxt =/= "b11".U, 0.U, mprv )
     }
     .elsewhen(enable0) {
-      sd   := dnxt0(63)
+      // sd   := dnxt0(63)
       mxr  := dnxt0(19)
       sum  := dnxt0(18)
-      xs   := dnxt0(16,15)
-      fs   := dnxt0(14,13)
+      // xs   := dnxt0(16,15)
+      // fs   := dnxt0(14,13)
       spp  := dnxt0(8)
       ube  := dnxt0(6)
       spie := dnxt0(5)
       sie  := dnxt0(1)
     }
     .elsewhen(enable1) {
-      sd   := dnxt1(63)
+      // sd   := dnxt1(63)
       mbe  := dnxt1(37)
       sbe  := dnxt1(36)
       tsr  := dnxt1(22)
@@ -274,8 +275,8 @@ abstract class CsrFiles_M extends CsrFiles_port {
       mxr  := dnxt1(19)
       sum  := dnxt1(18)
       mprv := dnxt1(17)
-      xs   := dnxt1(16,15)
-      fs   := dnxt1(14,13)
+      // xs   := dnxt1(16,15)
+      // fs   := dnxt1(14,13)
       mpp  := dnxt1(12,11)
       spp  := dnxt1(8)
       mpie := dnxt1(7)
