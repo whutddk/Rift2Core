@@ -271,6 +271,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   diff.io.register := i_regfiles.io.diff_register
   diff.io.commit   := cmm_stage.io.diff_commit
+  diff.io.csr      := cmm_stage.io.diff_csr
 
 
 }

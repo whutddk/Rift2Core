@@ -75,6 +75,7 @@ class Commit extends Privilege with Superscalar {
     val rtc_clock = Input(Bool())
 
     val diff_commit = Output(new Info_cmm_diff)
+    val diff_csr = Output(new Info_csr_reg)
   })
 
 
@@ -460,6 +461,46 @@ class Commit extends Privilege with Superscalar {
   io.diff_commit.is_ecall_S := is_ecall_S
   io.diff_commit.is_ecall_U := is_ecall_U
 
+
+	io.diff_csr.mstatus   := mstatus
+	io.diff_csr.mtvec     := mtvec
+	io.diff_csr.mscratch  := mscratch
+	io.diff_csr.mepc      := mepc
+	io.diff_csr.mcause    := mcause
+	io.diff_csr.mtval     := mtval
+  io.diff_csr.mvendorid := mvendorid
+  io.diff_csr.marchid   := marchid
+  io.diff_csr.mimpid    := mimpid
+  io.diff_csr.mhartid   := mhartid
+  io.diff_csr.misa      := misa
+  io.diff_csr.mie       := mie
+  io.diff_csr.mip       := mip
+  io.diff_csr.medeleg   := medeleg
+  io.diff_csr.mideleg   := mideleg
+  // io.diff_csr.mcounteren           = mcounteren
+  // io.diff_csr.mcountinhibit        = mcountinhibit
+  // io.diff_csr.tselect              = tselect
+  // io.diff_csr.tdata1[MAX_TRIGGERS] = tdata1
+  // io.diff_csr.tdata2[MAX_TRIGGERS] = tdata2
+  // io.diff_csr.tdata3[MAX_TRIGGERS] = tdata3
+  // io.diff_csr.mhpmevent[32]        = mhpmevent
+  for ( i <- 0 until 4 ) yield {
+    io.diff_csr.pmpcfg(i) := pmpcfg(i)
+  }
+  for ( i <- 0 until 16 ) yield {
+	  io.diff_csr.pmpaddr(i)  := pmpaddr(i)  
+  }
+
+  io.diff_csr.stvec    := stvec
+  io.diff_csr.sscratch := sscratch
+  io.diff_csr.sepc     := sepc
+  io.diff_csr.scause   := scause
+  io.diff_csr.stval    := stval
+  io.diff_csr.satp     := satp
+  // io.diff_csr.scounteren := scounteren
+  // io.diff_csr.dcsr       := dcsr
+  // io.diff_csr.dpc        := dpc
+  // io.diff_csr.dscratch   := dscratch
 
   assert( ~(is_wb_v(0) & ~io.rod_i(0).valid) )
   assert( ~(is_wb_v(1) & ~io.rod_i(1).valid) )
