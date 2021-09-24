@@ -591,14 +591,14 @@ abstract class CsrFiles_M extends CsrFiles_port {
    
     for ( i <- 0 until 64 ) yield {
       pmpaddr(i) := {
-        val value = RegInit(0.U(64.W))
+        val value = RegInit(0.U(38.W)) // for dromajo diff-test, support sv39 only
         val cfg_idx = i/8*2
         val bit_idx = 8*(i%8) + 7
         val lock = pmpcfg(cfg_idx)(bit_idx)
         val (enable, dnxt) = Reg_Exe_Port( value, "h3B0".U + i.U, exe_port )
         when(enable) {
           when( lock =/= 1.U ) {
-            value := dnxt            
+            value := dnxt
           }
 
         }
