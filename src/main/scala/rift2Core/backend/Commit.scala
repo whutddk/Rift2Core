@@ -66,6 +66,8 @@ class Commit extends Privilege with Superscalar {
     val cmm_pc = new ValidIO(new Info_cmm_pc)
     val if_cmm = Input( new Info_if_cmm )
 
+    val ifence = Output(Bool())
+
 
 
     val cmm_mmu = Output( new Info_cmm_mmu )
@@ -438,12 +440,11 @@ class Commit extends Privilege with Superscalar {
   io.cmm_mmu.mstatus    := mstatus
   io.cmm_mmu.sstatus    := sstatus
   io.cmm_mmu.sfence_vma := 
-    ( io.rod_i(1).valid & is_sfence_vma_v(1) & ~is_1st_solo) |
     ( io.rod_i(0).valid & is_sfence_vma_v(0))
 
 
-
-
+  io.ifence := 
+    ( io.rod_i(0).valid & is_fence_i_v(0))
 
 
 

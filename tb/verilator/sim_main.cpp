@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-08-06 10:14:14
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-23 14:38:42
+* @Last Modified time: 2021-09-24 09:40:50
 */
 
 
@@ -184,13 +184,13 @@ int main(int argc, char **argv, char **env) {
 
 #endif
 
-		if ( main_time > 500000 ){
-			std::cout << "Timeout!" << std::endl;	
+		if ( main_time > 5000000 ){
+			std::cout << "Timeout!!!!!" << std::endl;	
 			break;
 		} 
 
 		if ( top -> fail == 1 && main_time % 100 == 0 ) {
-			std::cout << "Fail!!!" << std::endl;	
+			std::cout << "Fail!!!!!!" << std::endl;	
 			break;			
 		}
 		else if ( top -> success == 1 && main_time % 100 == 0 ) {
