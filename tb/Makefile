@@ -302,7 +302,7 @@ sim:
 
 
 unit: sim
-	$(foreach test, $(isa), ./build/VSimTop -f ./ci/$(test); )
+	$(foreach test, $(isa), ./build/VSimTop -d -f ./ci/$(test); )
 
 
 # TESTFILE ?= rv64ui-p-add
