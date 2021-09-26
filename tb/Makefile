@@ -330,3 +330,6 @@ dromajo:
 dhrystone: sim
 	./build/VSimTop -w -f ./ci/dhrystone500.riscv
 
+
+coremark: sim
+	./build/VSimTop -f ./ci/coremark1_bare

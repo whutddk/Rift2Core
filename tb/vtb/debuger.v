@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-03-17 15:15:31
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-12 10:38:10
+* @Last Modified time: 2021-09-26 18:56:54
 */
 
 
@@ -115,7 +115,7 @@ module debuger (
 `define UART_TX 32'h20000000
 `define TIMER   32'h20000008
 `define COTRL   32'h20000010
-
+`define COTRL_COREMARK   32'h20000020
 
 
 reg [63:0] cycle_cnt;
@@ -165,7 +165,6 @@ integer file;
 always @(posedge CLK ) begin
 
 	if ( (DEBUGER_AWADDR == `COTRL) & DEBUGER_AWVALID & DEBUGER_AWREADY & DEBUGER_WVALID & DEBUGER_WREADY & (DEBUGER_WDATA == 64'd1)) begin
-
 		$display("cycle_cnt = %d", cycle_cnt);
 		$display( "The DMIPS/MHz is %f", 1000000.0/(cycle_cnt/500.0)/1757.0 );
 
@@ -176,8 +175,22 @@ always @(posedge CLK ) begin
 		$fclose(file);
 
 		$finish;
-
 	end
+
+	if ( (DEBUGER_AWADDR == `COTRL_COREMARK) & DEBUGER_AWVALID & DEBUGER_AWREADY & DEBUGER_WVALID & DEBUGER_WREADY & (DEBUGER_WDATA == 64'd1)) begin
+		$display("Total ticks      : %d", cycle_cnt);
+		$display("CoreMark 1.0 : %f",1*10/(cycle_cnt/100000000));
+
+
+		file = $fopen("../ci/coremakr.json", "w");
+
+		$fwrite(file, "{\n  \"schemaVersion\": 1, \n  \"label\": \"coremark\", \n  \"message\": \"%f\", \n  \"color\": \"ff69b4\" \n}", 1000000.0/(cycle_cnt/500.0)/1757.0 );
+		$fclose(file);
+
+		$finish;
+	
+	end
+
 end
 
 
