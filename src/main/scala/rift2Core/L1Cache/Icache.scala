@@ -184,7 +184,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
           Mux((io.mmu_if.valid & ~io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(7).ready ), 1.U, 0.U),
       (icache_state_qout === 1.U) ->
         Mux( io.flush, 0.U,
-          Mux( is_hit, Mux( ibuf.io.enq(7).ready, 0.U, 1.U ),
+          Mux( is_hit, 0.U,
                       Mux( io.icache_get.fire, 2.U, 1.U ))),
       (icache_state_qout === 2.U) ->
           Mux( is_trans_done, 0.U, 2.U ),  
@@ -297,7 +297,9 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   }
 
   for( i <- 0 until cb; k <- 0 until cl ) yield {
-    is_valid(k)(i) := Mux( io.ifence, false.B, is_valid(k)(i))
+    when( io.ifence ) {
+       is_valid(k)(i) := false.B
+    }
   }
 
   when( io.ifence ) { assert(io.flush) }
