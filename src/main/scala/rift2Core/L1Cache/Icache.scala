@@ -155,7 +155,10 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
       for( i <- 0 until cb ) yield {
         (cache_tag.tag_info_r(i) === tag_sel) & is_valid(cl_sel)(i)        
       }
-    assert(PopCount(res) <= 1.U)
+      
+    when( icache_state_qout === 1.U ) {
+      assert(PopCount(res) <= 1.U)        
+    }
     VecInit(res)
   }
 
@@ -292,7 +295,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
 
 
-  when( icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ~kill_trans & ~io.flush ) {
+  when( icache_state_qout === 2.U & icache_state_dnxt === 0.U & ~kill_trans & ~io.flush ) {
     is_valid(cl_sel)(cb_sel) := true.B
   }
 
