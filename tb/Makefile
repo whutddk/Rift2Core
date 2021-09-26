@@ -302,12 +302,12 @@ sim:
 
 
 unit: sim
-	$(foreach test, $(isa), ./build/VSimTop -d -f ./ci/$(test); )
+	$(foreach test, $(isa), ./build/VSimTop -l -f ./ci/$(test); )
 
 
 # TESTFILE ?= rv64ui-p-add
 single: sim
-	./build/VSimTop -w -d -f ./ci/$(TESTFILE)
+	./build/VSimTop -w -d -l -f ./ci/$(TESTFILE)
 
 dromajo:
 	verilator -Wno-fatal  \
@@ -325,3 +325,8 @@ dromajo:
 	-I./verilator \
 	-Mdir build \
 	-j 8
+
+
+dhrystone: sim
+	./build/VSimTop -w -f ./ci/dhrystone500.riscv
+

@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-09-16 14:25:51
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-25 10:22:49
+* @Last Modified time: 2021-09-26 14:31:00
 */
 
 
@@ -129,7 +129,7 @@ int diff_chk_pc(VSimTop *top) {
 }
 
 int diff_chk_reg(VSimTop *top) {
-	// printf( "mstatus = %lx\n", diff.mstatus );
+	// printf( "pc = %lx, mstatus = %lx\n", diff.pc, diff.mstatus );
 
 	// if (diff.ireg[0]  != top->trace_abi_zero) { printf( "Failed at zero, real is 0x%lx, should be 0x%lx\n", top->trace_abi_zero , diff.ireg[0] ); return -1; }
 	CHK_REG( "ra", diff.ireg[1] , top->trace_abi_ra  )
