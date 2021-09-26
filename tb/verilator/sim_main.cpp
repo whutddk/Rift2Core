@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-08-06 10:14:14
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-24 09:40:50
+* @Last Modified time: 2021-09-26 11:24:43
 */
 
 
@@ -31,11 +31,15 @@ double sc_time_stamp () {
 
 uint8_t flag_waveEnable = 0;
 uint8_t flag_diffEnable = 0;
+uint8_t flag_limitEnable = 0;
 
 int prase_arg(int argc, char **argv) {
 	int opt;
-	while( -1 != ( opt = getopt( argc, argv, "dwf:" ) ) ) {
+	while( -1 != ( opt = getopt( argc, argv, "ldwf:" ) ) ) {
 		switch(opt) {
+			case 'l':
+			flag_limitEnable = 1;
+			break;
 			case 'd':
 			flag_diffEnable = 1;
 			break;
@@ -184,10 +188,12 @@ int main(int argc, char **argv, char **env) {
 
 #endif
 
-		if ( main_time > 5000000 ){
-			std::cout << "Timeout!!!!!" << std::endl;	
-			break;
-		} 
+		if ( flag_limitEnable ) {
+			if ( main_time > 5000000 ){
+				std::cout << "Timeout!!!!!" << std::endl;	
+				break;
+			} 			
+		}
 
 		if ( top -> fail == 1 && main_time % 100 == 0 ) {
 			std::cout << "Fail!!!!!!" << std::endl;	
