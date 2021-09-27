@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-03-17 15:15:31
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-26 18:56:54
+* @Last Modified time: 2021-09-27 19:31:59
 */
 
 
@@ -179,7 +179,7 @@ always @(posedge CLK ) begin
 
 	if ( (DEBUGER_AWADDR == `COTRL_COREMARK) & DEBUGER_AWVALID & DEBUGER_AWREADY & DEBUGER_WVALID & DEBUGER_WREADY & (DEBUGER_WDATA == 64'd1)) begin
 		$display("Total ticks      : %d", cycle_cnt);
-		$display("CoreMark 1.0 : %f",1*10/(cycle_cnt/100000000));
+		$display("CoreMark 1.0 : %f",1*1*1000000.0/cycle_cnt);
 
 
 		file = $fopen("../ci/coremakr.json", "w");

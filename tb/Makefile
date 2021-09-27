@@ -311,7 +311,7 @@ single: sim
 
 dromajo:
 	verilator -Wno-fatal  \
-	--timescale "1 ns / 1 ps" \
+	--timescale "1 ns / 1 ns" \
 	-y ${R2}/generated/ \
 	-y ${R2}/tb/ \
 	-y ${R2}/tb/vtb/ \
@@ -326,10 +326,12 @@ dromajo:
 	-Mdir build \
 	-j 8
 
+dhrystone5: sim
+	./build/VSimTop -w -f ./ci/dhrystone5.riscv
 
-dhrystone: sim
-	./build/VSimTop -w -f ./ci/dhrystone500.riscv
+dhrystone500: sim
+	./build/VSimTop -f ./ci/dhrystone500.riscv
 
 
 coremark: sim
-	./build/VSimTop -f ./ci/coremark1_bare
+	./build/VSimTop  -f ./ci/coremark1_bare

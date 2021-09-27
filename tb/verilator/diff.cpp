@@ -2,7 +2,7 @@
 * @Author: Ruige Lee
 * @Date:   2021-09-16 14:25:51
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-26 14:31:00
+* @Last Modified time: 2021-09-27 14:22:36
 */
 
 
@@ -18,7 +18,7 @@ struct diff diff;
 extern char* img;
 
 #define CHK_REG( NAME, DIFF, TRACE ) \
-	if ( DIFF != TRACE ) { printf( "Failed at %s, real is b\'%lx, should be 0x%lx\n", NAME, TRACE, DIFF ); return -1; }
+	if ( DIFF != TRACE ) { printf( "Failed at %s, real is 0x%lx, should be 0x%lx\n", NAME, TRACE, DIFF ); return -1; }
 
 
 void dromajo_step() {
@@ -129,7 +129,7 @@ int diff_chk_pc(VSimTop *top) {
 }
 
 int diff_chk_reg(VSimTop *top) {
-	// printf( "pc = %lx, mstatus = %lx\n", diff.pc, diff.mstatus );
+	printf( "pc = %lx, real a1 = %lx, should be = %lx\n", diff.pc, top->trace_abi_a1, diff.ireg[11] );
 
 	// if (diff.ireg[0]  != top->trace_abi_zero) { printf( "Failed at zero, real is 0x%lx, should be 0x%lx\n", top->trace_abi_zero , diff.ireg[0] ); return -1; }
 	CHK_REG( "ra", diff.ireg[1] , top->trace_abi_ra  )
