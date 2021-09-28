@@ -44,11 +44,11 @@ cd .
 make compile
 ```
 
-The sbt will download the dependency (来自某些地区的赛博残障人士，请自行寻找稳定连接网络，并从**Maven**下载依赖项的方案) and than emits the verilog to `./generated`.
+The sbt will download the dependency (来自某些地区的赛博残障人士，请自行寻找稳定连接网络的方案，并从**Maven**下载依赖项) and than emits the verilog to `./generated`.
 
 ## Compile Model of Rif2Chip
 
-The Verilator will compile the Verilog-files emited by chisel3 and a top wrapper `SimTop.v` into a library "VSimTop__ALL". Then a main function in `sim_main.cpp` will be built up to simulate the behavior of the Rift2Chip SoC. 
+The Verilator will compile the Verilog-files emited by chisel3 and a top wrapper `SimTop.v` into a library `VSimTop__ALL`. Then a main function in `sim_main.cpp` will be built up to simulate the behavior of the Rift2Chip SoC. 
 
 ```
 export R2=/PATH/TO/Rift2Core
