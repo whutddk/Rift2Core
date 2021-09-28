@@ -19,6 +19,7 @@ class Info_abi_reg extends Bundle {
   val t1   = UInt(64.W)
   val t2   = UInt(64.W)
   val s0   = UInt(64.W)
+  val s1   = UInt(64.W)
   val a0   = UInt(64.W)
   val a1   = UInt(64.W)
   val a2   = UInt(64.W)
@@ -53,11 +54,53 @@ class Info_cmm_diff extends Bundle {
   val is_ecall_U = Bool()
 }
 
+class Info_csr_reg extends Bundle {
+	val mstatus = UInt(64.W)
+	val mtvec = UInt(64.W)
+	val mscratch = UInt(64.W)
+	val mepc = UInt(64.W)
+	val mcause = UInt(64.W)
+	val mtval = UInt(64.W)
+
+  val mvendorid = UInt(64.W)
+  val marchid = UInt(64.W)
+  val mimpid = UInt(64.W)
+  val mhartid = UInt(64.W)
+  val misa = UInt(64.W)
+  val mie = UInt(64.W)
+  val mip = UInt(64.W)
+  val medeleg = UInt(64.W)
+  val mideleg = UInt(64.W)
+  // val mcounteren = UInt(64.W)
+  // val mcountinhibit = UInt(64.W)
+  // val tselect = UInt(64.W)
+  // val tdata1[MAX_TRIGGERS] = UInt(64.W)
+  // val tdata2[MAX_TRIGGERS] = UInt(64.W)
+  // val tdata3[MAX_TRIGGERS] = UInt(64.W)
+  // val mhpmevent[32] = UInt(64.W)
+
+  val pmpcfg = Vec(4, UInt(64.W))
+	val pmpaddr = Vec(16, UInt(64.W))
+
+
+  val stvec = UInt(64.W)
+  val sscratch = UInt(64.W)
+  val sepc = UInt(64.W)
+  val scause = UInt(64.W)
+  val stval = UInt(64.W)
+  val satp = UInt(64.W)
+
+  // val scounteren = UInt(64.W)
+  // val dcsr = UInt(64.W)
+  // val dpc = UInt(64.W)
+  // val dscratch;  = UInt(64.W)
+}
 
 class diff extends Module {
   val io = IO(new Bundle{
     val register = Input(new Info_abi_reg)
     val commit = Input(new Info_cmm_diff)
+    val csr = Input(new Info_csr_reg)
   })
 
 

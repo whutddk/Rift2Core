@@ -4,7 +4,7 @@
 * @Email: wut.ruigeli@gmail.com
 * @Date:   2021-02-24 09:25:27
 * @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-07-09 12:03:31
+* @Last Modified time: 2021-09-03 16:29:40
 */
 
 
@@ -39,10 +39,10 @@ module axi_full_slv_sram #
 )
 (
 
-  input [7:0] MEM_AWID,
-  output [7:0] MEM_BID,
-  input [7:0] MEM_ARID,
-  output [7:0] MEM_RID,
+  input [3:0] MEM_AWID,
+  output [3:0] MEM_BID,
+  input [3:0] MEM_ARID,
+  output [3:0] MEM_RID,
 
 
 	input [31:0] MEM_AWADDR,
@@ -84,8 +84,8 @@ module axi_full_slv_sram #
 
 
 
-	gen_dffren # (.DW(8)) awid_dffren (.dnxt(MEM_AWID), .qout(MEM_BID), .en(MEM_AWVALID & MEM_AWREADY), .CLK(CLK), .RSTn(RSTn));
-	gen_dffren # (.DW(8)) arid_dffren (.dnxt(MEM_ARID), .qout(MEM_RID), .en(MEM_ARVALID & MEM_ARREADY), .CLK(CLK), .RSTn(RSTn));
+	gen_dffren # (.DW(4)) awid_dffren (.dnxt(MEM_AWID), .qout(MEM_BID), .en(MEM_AWVALID & MEM_AWREADY), .CLK(CLK), .RSTn(RSTn));
+	gen_dffren # (.DW(4)) arid_dffren (.dnxt(MEM_ARID), .qout(MEM_RID), .en(MEM_ARVALID & MEM_ARREADY), .CLK(CLK), .RSTn(RSTn));
 	
 
 

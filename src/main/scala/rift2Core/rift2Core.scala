@@ -184,6 +184,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   cmm_stage.io.cmm_pc <> pc_stage.io.cmm_pc
   cmm_stage.io.if_cmm := if_stage.io.if_cmm
+  if_stage.io.ifence := cmm_stage.io.ifence
 
 
   i_regfiles.io.wb_op <> iwb_stage.io.wb_op
@@ -200,36 +201,13 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-  if_stage.io.missUnit_icache_grant.bits := icache_bus.d.bits
-  if_stage.io.missUnit_icache_grant.valid := icache_bus.d.valid & ( icache_bus.d.bits.opcode === TLMessages.Grant | icache_bus.d.bits.opcode === TLMessages.GrantData )
+  if_stage.io.icache_access.bits := icache_bus.d.bits
+  if_stage.io.icache_access.valid := icache_bus.d.valid
+  icache_bus.d.ready := if_stage.io.icache_access.ready
 
-  if_stage.io.writeBackUnit_icache_grant.bits := icache_bus.d.bits
-  if_stage.io.writeBackUnit_icache_grant.valid := icache_bus.d.valid & ( icache_bus.d.bits.opcode === TLMessages.ReleaseAck )
-
-  icache_bus.d.ready := 
-    Mux1H(Seq(
-      ( icache_bus.d.bits.opcode === TLMessages.Grant || icache_bus.d.bits.opcode === TLMessages.GrantData ) -> if_stage.io.missUnit_icache_grant.ready,
-      ( icache_bus.d.bits.opcode === TLMessages.ReleaseAck ) -> if_stage.io.writeBackUnit_icache_grant.ready
-    ))
-
-  icache_bus.a.valid := if_stage.io.missUnit_icache_acquire.valid
-  icache_bus.a.bits := if_stage.io.missUnit_icache_acquire.bits
-  if_stage.io.missUnit_icache_acquire.ready := icache_bus.a.ready
-
-  if_stage.io.probeUnit_icache_probe.valid := icache_bus.b.valid
-  if_stage.io.probeUnit_icache_probe.bits := icache_bus.b.bits
-  icache_bus.b.ready := if_stage.io.probeUnit_icache_probe.ready
-  
-  icache_bus.c.valid := if_stage.io.writeBackUnit_icache_release.valid
-  icache_bus.c.bits := if_stage.io.writeBackUnit_icache_release.bits
-  if_stage.io.writeBackUnit_icache_release.ready := icache_bus.c.ready
-  
-  icache_bus.e.valid := if_stage.io.missUnit_icache_grantAck.valid
-  icache_bus.e.bits := if_stage.io.missUnit_icache_grantAck.bits
-  if_stage.io.missUnit_icache_grantAck.ready := icache_bus.e.ready 
-
-
-
+  icache_bus.a.valid := if_stage.io.icache_get.valid
+  icache_bus.a.bits := if_stage.io.icache_get.bits
+  if_stage.io.icache_get.ready := icache_bus.a.ready
 
 
 
@@ -293,6 +271,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   diff.io.register := i_regfiles.io.diff_register
   diff.io.commit   := cmm_stage.io.diff_commit
+  diff.io.csr      := cmm_stage.io.diff_csr
 
 
 }

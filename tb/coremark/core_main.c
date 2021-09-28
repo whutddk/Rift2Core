@@ -1,21 +1,21 @@
 /*
-Author : Shay Gal-On, EEMBC
+Copyright 2018 Embedded Microprocessor Benchmark Consortium (EEMBC)
 
-This file is part of  EEMBC(R) and CoreMark(TM), which are Copyright (C) 2009 
-All rights reserved.                            
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-EEMBC CoreMark Software is a product of EEMBC and is provided under the terms of the
-CoreMark License that is distributed with the official EEMBC COREMARK Software release. 
-If you received this EEMBC CoreMark Software without the accompanying CoreMark License, 
-you must discontinue use and download the official release from www.coremark.org.  
+    http://www.apache.org/licenses/LICENSE-2.0
 
-Also, if you are publicly displaying scores generated from the EEMBC CoreMark software, 
-make sure that you are in compliance with Run and Reporting rules specified in the accompanying readme.txt file.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
-EEMBC 
-4354 Town Center Blvd. Suite 114-200
-El Dorado Hills, CA, 95762 
-*/ 
+Original Author: Shay Gal-on
+*/
+
 /* File: core_main.c
 	This file contains the framework to acquire a block of memory, seed initial parameters, tun t he benchmark and report the results.
 */
@@ -110,13 +110,10 @@ MAIN_RETURN_TYPE main(int argc, char *argv[]) {
 	results[0].seed1=get_seed(1);
 	results[0].seed2=get_seed(2);
 	results[0].seed3=get_seed(3);
-	results[0].iterations=get_seed_32(4);
+	results[0].iterations=1;
 #if CORE_DEBUG
 	results[0].iterations=1;
 #endif
-    // Bob: change the interation times to make it faster
-	results[0].iterations=800;
-
 	results[0].execs=get_seed_32(5);
 	if (results[0].execs==0) { /* if not supplied, execute all algorithms */
 		results[0].execs=ALL_ALGORITHMS_MASK;
@@ -194,27 +191,15 @@ MAIN_RETURN_TYPE main(int argc, char *argv[]) {
 		if (results[i].execs & ID_STATE) {
 			core_init_state(results[0].size,results[i].seed1,results[i].memblock[3]);
 		}
+
 	}
 	
 	/* automatically determine number of iterations if not set */
 	if (results[0].iterations==0) { 
-		secs_ret secs_passed=0;
-		ee_u32 divisor;
-		results[0].iterations=1;
-		while (secs_passed < (secs_ret)1) {
-			results[0].iterations*=10;
-			start_time();
-			iterate(&results[0]);
-			stop_time();
-			secs_passed=time_in_secs(get_time());
-		}
-		/* now we know it executes for at least 1 sec, set actual run time at about 10 secs */
-		divisor=(ee_u32)secs_passed;
-		if (divisor==0) /* some machines cast float to int as 0 since this conversion is not defined by ANSI, but we know at least one second passed */
-			divisor=1;
-		results[0].iterations*=1+10/divisor;
+		results[0].iterations = 1;
 	}
 	/* perform actual benchmark */
+	ee_printf("Start for coremark: iterations = %d\n", results[0].iterations);
 	start_time();
 #if (MULTITHREAD>1)
 	if (default_num_contexts>MULTITHREAD) {
@@ -232,7 +217,7 @@ MAIN_RETURN_TYPE main(int argc, char *argv[]) {
 	iterate(&results[0]);
 #endif
 	stop_time();
-	total_time=get_time();
+	// total_time=get_time();
 	/* get a function of the input to report */
 	seedcrc=crc16(results[0].seed1,seedcrc);
 	seedcrc=crc16(results[0].seed2,seedcrc);
@@ -287,23 +272,10 @@ MAIN_RETURN_TYPE main(int argc, char *argv[]) {
 	}
 	total_errors+=check_data_types();
 	/* and report results */
-	ee_printf("CoreMark Size    : %lu\n",(ee_u32)results[0].size);
-	ee_printf("Total ticks      : %lu\n",(ee_u32)total_time);
-#if HAS_FLOAT
-	ee_printf("Total time (secs): %f\n",time_in_secs(total_time));
-	if (time_in_secs(total_time) > 0)
-		ee_printf("Iterations/Sec   : %f\n",default_num_contexts*results[0].iterations/time_in_secs(total_time));
-#else 
-	ee_printf("Total time (secs): %d\n",time_in_secs(total_time));
-	if (time_in_secs(total_time) > 0)
-		ee_printf("Iterations/Sec   : %d\n",default_num_contexts*results[0].iterations/time_in_secs(total_time));
-#endif
-	if (time_in_secs(total_time) < 10) {
-		ee_printf("ERROR! Must execute for at least 10 secs for a valid result!\n");
-		total_errors++;
-	}
+	ee_printf("CoreMark Size    : %lu\n", (long unsigned) results[0].size);
 
-	ee_printf("Iterations       : %lu\n",(ee_u32)default_num_contexts*results[0].iterations);
+
+	ee_printf("Iterations       : %lu\n", (long unsigned) default_num_contexts*results[0].iterations);
 	ee_printf("Compiler version : %s\n",COMPILER_VERSION);
 	ee_printf("Compiler flags   : %s\n",COMPILER_FLAGS);
 #if (MULTITHREAD>1)
@@ -324,10 +296,9 @@ MAIN_RETURN_TYPE main(int argc, char *argv[]) {
 	for (i=0 ; i<default_num_contexts; i++) 
 		ee_printf("[%d]crcfinal      : 0x%04x\n",i,results[i].crc);
 	if (total_errors==0) {
-		ee_printf("Correct operation validated. See readme.txt for run and reporting rules.\n");
+		ee_printf("Correct operation validated. See README.md for run and reporting rules.\n");
 #if HAS_FLOAT
 		if (known_id==3) {
-			ee_printf("CoreMark 1.0 : %f / %s %s",default_num_contexts*results[0].iterations/time_in_secs(total_time),COMPILER_VERSION,COMPILER_FLAGS);
 #if defined(MEM_LOCATION) && !defined(MEM_LOCATION_UNSPEC)
 			ee_printf(" / %s",MEM_LOCATION);
 #else
@@ -352,21 +323,6 @@ MAIN_RETURN_TYPE main(int argc, char *argv[]) {
 #endif
 	/* And last call any target specific code for finalizing */
 	portable_fini(&(results[0].port));
-
-    float coremark_dmips = (results[0].iterations*1000000)/(float)total_time;
-
-#if HAS_FLOAT
-    ee_printf ("\n");
-    ee_printf ("\n");
-    ee_printf ("Print Personal Added Addtional Info to Easy Visual Analysis\n");
-    ee_printf ("\n");
-    ee_printf (" (*) Assume core running at 1 MHz\n");
-    ee_printf ("     So the CoreMark/MHz can be caculated by: \n");
-    ee_printf ("     (Iterations*1000000/total_ticks) = %2.6f CoreMark/MHz\n", coremark_dmips);
-    //float coremark_dmips_2 = default_num_contexts*results[0].iterations/time_in_secs(total_time) / 8.388;
-    //ee_printf ("     (Iterations/Sec/total_cycles) = %2.6f CoreMark/MHz\n", coremark_dmips_2);
-    ee_printf ("\n");
-#endif
 
 	return MAIN_RETURN_VAL;	
 }
