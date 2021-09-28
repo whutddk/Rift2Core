@@ -20,6 +20,7 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 * Setup sbt
 * Setup verilator and gtkwave
 * Compile chisel3 to verilog
+* Compile Model of Rif2Chip
 * Test a single ISA with waveform
 * Test all ISA without waveform
 

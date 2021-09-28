@@ -39,10 +39,47 @@ sudo make install
 ## Compile chisel3 to verilog
 
 
+```
+cd .
+make compile
+```
+
+The sbt will download the dependency (来自某些地区的赛博残障人士，请自行寻找稳定连接网络，并从**Maven**下载依赖项的方案) and than emits the verilog to `./generated`.
+
+## Compile Model of Rif2Chip
+
+The Verilator will compile the Verilog-files emited by chisel3 and a top wrapper `SimTop.v` into a library "VSimTop__ALL". Then a main function in `sim_main.cpp` will be built up to simulate the behavior of the Rift2Chip SoC. 
+
+```
+export R2=/PATH/TO/Rift2Core
+cd ./tb
+make sim 
+```
+
+We will get an executable file `./tb/build/VSimTop`.
 
 ## Test a single ISA with waveform
 
+Make sure your executable riscv files are placed in `./tb/ci`.
+
+```
+cd ./tb
+make single TESTFILE=./ci/FILENAME
+```
+
+the FILENAME will be loaded for diff-test with Dromajo. The FILENAME.verilog will be loaded into the memory of Rift2Chip
+
+To check the waveform?
+```
+make wave
+```
 
 
 ## Test all ISA without waveform
 
+Make sure your executable riscv files are placed in `./tb/ci`.
+
+```
+cd ./tb
+make unit
+```

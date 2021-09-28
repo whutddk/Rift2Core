@@ -335,3 +335,6 @@ dhrystone500: sim
 
 coremark: sim
 	./build/VSimTop  -f ./ci/coremark1_bare
+
+wave:
+	gtkwave ./build/wave.vcd
