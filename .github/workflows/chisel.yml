@@ -74,7 +74,7 @@ jobs:
         run: |
           cd ~
           wget https://github.com/sifive/verilator/releases/download/4.204-0sifive3/verilator_4.204-0sifive3_amd64.deb
-          dpkg -i verilator_4.204-0sifive3_amd64.deb
+          sudo dpkg -i verilator_4.204-0sifive3_amd64.deb
 
       - name: Clone Test Repository
         if: steps.cache-tools-chian.outputs.cache-hit != 'true'
