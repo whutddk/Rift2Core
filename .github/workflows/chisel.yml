@@ -157,6 +157,7 @@ jobs:
           
       - name: Test ISA
         run: |
+          export R2=/home/runner/work/Rift2Core/Rift2Core/
           export PATH=$PATH:~/bin
           export RISCV=~/RISCV
           export PATH=$PATH:$RISCV/bin
@@ -168,6 +169,7 @@ jobs:
 
       - name: Run Dhrystone
         run: |
+          export R2=/home/runner/work/Rift2Core/Rift2Core/
           export PATH=$PATH:~/bin
           export RISCV=~/RISCV
           export PATH=$PATH:$RISCV/bin
@@ -194,6 +196,7 @@ jobs:
 
       - name: Run CoreMark
         run: |
+          export R2=/home/runner/work/Rift2Core/Rift2Core/
           export PATH=$PATH:~/bin
           export RISCV=~/RISCV
           export PATH=$PATH:$RISCV/bin
