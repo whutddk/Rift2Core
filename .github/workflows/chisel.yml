@@ -151,7 +151,9 @@ jobs:
           cp /home/runner/work/Rift2Core/Rift2Core/tb/dhrystone/dhrystone_main.c ./
           cd ~/riscv-tests/benchmarks
           make all
-          cp dhrystone.riscv.verilog /home/runner/work/Rift2Core/Rift2Core/tb/ci/dhrystone500.riscv.verilog
+          cp dhrystone.riscv.verilog /home/runner/work/Rift2Core/Rift2Core/tb/ci/
+          cd /home/runner/work/Rift2Core/Rift2Core/tb/ci/ 
+          mv dhrystone.riscv.verilog dhrystone500.riscv.verilog
 
       - name: Compile CoreMark
         if: steps.cache-tools-chian.outputs.cache-hit != 'true'
