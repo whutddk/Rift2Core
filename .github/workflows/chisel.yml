@@ -87,6 +87,25 @@ jobs:
           git checkout master
           git submodule update --init --recursive
 
+      - name: Compile Dromajo
+        if: steps.cache-tools-chian.outputs.cache-hit != 'true'
+        run: |
+          cd ~
+          git clone https://github.com/chipsalliance/dromajo.git
+          cd dromajo
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make
+          cp libdromajo_cosim.a $RISCV/lib
+          cd ../
+          cp include $RISCV/ -r
+
+          export C_INCLUDE_PATH=$RISCV/include:$RISCV/include/dromajo
+          export CPLUS_INCLUDE_PATH=$RISCV/include:$RISCV/include/dromajo
+          export LIBRARY_PATH=$LIBRARY_PATH:$RISCV/lib
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$RISCV/lib
+
 
       - name: Compile ISA
         if: steps.cache-tools-chian.outputs.cache-hit != 'true'
@@ -99,35 +118,34 @@ jobs:
           cp /home/runner/work/Rift2Core/Rift2Core/tb/isa/Makefile ./Makefile
           make
 
-      # - name: Compile Dhrystone
-      #   if: steps.cache-tools-chian.outputs.cache-hit != 'true'
-      #   run: |
-      #     export RISCV=~/RISCV
-      #     export PATH=$PATH:$RISCV/bin
-      #     cd ~/riscv-tests/benchmarks
-      #     rm Makefile
-      #     cp /home/runner/work/RiftCore/RiftCore/tb/dhrystone/Makefile ./
-      #     cd ./common
-      #     rm crt.S syscalls.c
-      #     cp /home/runner/work/RiftCore/RiftCore/tb/dhrystone/crt.S ./
-      #     cp /home/runner/work/RiftCore/RiftCore/tb/dhrystone/syscalls.c ./
-      #     cd ../dhrystone
-      #     rm dhrystone_main.c
-      #     cp /home/runner/work/RiftCore/RiftCore/tb/dhrystone/dhrystone_main.c ./
-      #     cd ~/riscv-tests/benchmarks
-      #     make all
+      - name: Compile Dhrystone
+        if: steps.cache-tools-chian.outputs.cache-hit != 'true'
+        run: |
+          export RISCV=~/RISCV
+          export PATH=$PATH:$RISCV/bin
+          cd ~/riscv-tests/benchmarks
+          rm Makefile
+          cp /home/runner/work/Rif2tCore/Rift2Core/tb/dhrystone/Makefile ./
+          cd ./common
+          rm crt.S syscalls.c
+          cp /home/runner/work/Rift2Core/Rift2Core/tb/dhrystone/crt.S ./
+          cp /home/runner/work/Rift2Core/Rift2Core/tb/dhrystone/syscalls.c ./
+          cd ../dhrystone
+          rm dhrystone_main.c
+          cp /home/runner/work/Rift2Core/Rift2Core/tb/dhrystone/dhrystone_main.c ./
+          cd ~/riscv-tests/benchmarks
+          make all
 
-      # - name: Test ISA
-      #   run: |
-      #     export PATH=$PATH:~/bin
-      #     export RISCV=~/RISCV
-      #     export PATH=$PATH:$RISCV/bin
-      #     cd ~/riscv-tests/isa
-      #     cp *.verilog /home/runner/work/RiftCore/RiftCore/tb/ci/
-      #     cd /home/runner/work/RiftCore/RiftCore/tb
-      #     export PATH=$PATH:~/bin
-      #     python CI.py
-  
+      - name: Test ISA
+        run: |
+          export PATH=$PATH:~/bin
+          export RISCV=~/RISCV
+          export PATH=$PATH:$RISCV/bin
+          cd ~/riscv-tests/isa
+          cp *.verilog /home/runner/work/Rift2Core/Rift2Core/tb/ci/
+          cd /home/runner/work/Rift2Core/Rift2Core/tb
+          export PATH=$PATH:~/bin
+          make unit
       # - name: Restore Data
       #   run: |
       #     cd /home/runner/work/RiftCore/RiftCore/
