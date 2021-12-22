@@ -110,6 +110,7 @@ jobs:
       - name: Compile Rift2Cpp
         if: steps.cache-tools-chian.outputs.cache-hit != 'true'
         run: |
+          export R2=/home/runner/work/Rift2Core/Rift2Core/
           export RISCV=~/RISCV
           export PATH=$PATH:$RISCV/bin
           export C_INCLUDE_PATH=$RISCV/include:$RISCV/include/dromajo
@@ -175,6 +176,17 @@ jobs:
           export PATH=$PATH:~/bin
           make unit
 
+      - name: Run Dhrystone
+        run: |
+          export PATH=$PATH:~/bin
+          cd /home/runner/work/Rift2Core/Rift2Core/tb  
+          make dhrystone5
+
+      - name: Run CoreMark
+        run: |
+          export PATH=$PATH:~/bin
+          cd /home/runner/work/Rift2Core/Rift2Core/tb  
+          make coremark
 
       # - name: Restore Data
       #   run: |
@@ -184,11 +196,7 @@ jobs:
       #     cp data/performance.js tb/ci/
       #     cp ~/riscv-tests/benchmarks/*.verilog tb/ci/
 
-      # - name: Run Dhrystone
-      #   run: |
-      #     export PATH=$PATH:~/bin
-      #     cd /home/runner/work/RiftCore/RiftCore/tb  
-      #     python DS.py    
+  
 
       # - name: Commit
       #   run: |
