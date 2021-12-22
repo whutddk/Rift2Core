@@ -166,8 +166,9 @@ jobs:
           git submodule update --init --recursive
           cp /home/runner/work/Rift2Core/Rift2Core/tb/coremark ~/riscv-coremark -r
           ./build-coremark.sh
-          cp coremark1_bare.verilog /home/runner/work/Rift2Core/Rift2Core/tb/ci
-
+          cp coremark_bare.verilog /home/runner/work/Rift2Core/Rift2Core/tb/ci/
+          cd /home/runner/work/Rift2Core/Rift2Core/tb/ci/ 
+          mv coremark_bare.verilog coremark1_bare.verilog
 
       - name: Test ISA
         run: |
