@@ -90,6 +90,7 @@ jobs:
       - name: Compile Dromajo
         if: steps.cache-tools-chian.outputs.cache-hit != 'true'
         run: |
+          export RISCV=~/RISCV
           cd ~
           git clone https://github.com/chipsalliance/dromajo.git
           cd dromajo
