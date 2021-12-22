@@ -180,12 +180,16 @@ jobs:
       - name: Run Dhrystone
         run: |
           export PATH=$PATH:~/bin
+          export RISCV=~/RISCV
+          export PATH=$PATH:$RISCV/bin
           cd /home/runner/work/Rift2Core/Rift2Core/tb  
           make dhrystone5
 
       - name: Run CoreMark
         run: |
           export PATH=$PATH:~/bin
+          export RISCV=~/RISCV
+          export PATH=$PATH:$RISCV/bin
           cd /home/runner/work/Rift2Core/Rift2Core/tb  
           make coremark
 
