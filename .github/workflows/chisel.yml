@@ -51,7 +51,9 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
       - name: Compile
-        run: make compile
+        run: |
+          git submodule update --init --recursive
+          make compile
 
 
 
