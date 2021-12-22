@@ -141,7 +141,7 @@ jobs:
           export PATH=$PATH:$RISCV/bin
           cd ~/riscv-tests/benchmarks
           rm Makefile
-          cp /home/runner/work/Rif2tCore/Rift2Core/tb/dhrystone/Makefile ./
+          cp /home/runner/work/Rift2Core/Rift2Core/tb/dhrystone/Makefile ./
           cd ./common
           rm crt.S syscalls.c
           cp /home/runner/work/Rift2Core/Rift2Core/tb/dhrystone/crt.S ./
