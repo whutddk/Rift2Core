@@ -73,18 +73,8 @@ jobs:
         if: steps.cache-tools-chian.outputs.cache-hit != 'true'
         run: |
           cd ~
-          sudo apt-get install git perl python3 make autoconf g++ flex bison ccache
-          sudo apt-get install libgoogle-perftools-dev numactl perl-doc
-          sudo apt-get install libfl2
-          sudo apt-get install libfl-dev
-          sudo apt-get install zlibc zlib1g zlib1g-dev
-          git clone https://github.com/verilator/verilator.git
-          cd verilator
-          autoconf
-          ./configure --prefix=$RISCV
-          make -j4096
-          sudo make install          
-
+          wget https://github.com/sifive/verilator/releases/download/4.204-0sifive3/verilator_4.204-0sifive3_amd64.deb
+          dpkg -i verilator_4.204-0sifive3_amd64.deb
 
       - name: Clone Test Repository
         if: steps.cache-tools-chian.outputs.cache-hit != 'true'
