@@ -98,9 +98,9 @@ jobs:
           cd build
           cmake -DCMAKE_BUILD_TYPE=Release ..
           sudo make
-          # cp libdromajo_cosim.a $RISCV/lib
-          # cd ../
-          # cp include $RISCV/ -r
+          cp libdromajo_cosim.a $RISCV/lib
+          cd ../
+          cp include $RISCV/ -r
 
           export C_INCLUDE_PATH=$RISCV/include:$RISCV/include/dromajo
           export CPLUS_INCLUDE_PATH=$RISCV/include:$RISCV/include/dromajo
