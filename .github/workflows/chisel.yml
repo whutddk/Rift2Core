@@ -154,21 +154,7 @@ jobs:
           cp dhrystone.riscv.verilog /home/runner/work/Rift2Core/Rift2Core/tb/ci/
           cd /home/runner/work/Rift2Core/Rift2Core/tb/ci/ 
           mv dhrystone.riscv.verilog dhrystone500.riscv.verilog
-
-      - name: Compile CoreMark
-        if: steps.cache-tools-chian.outputs.cache-hit != 'true'
-        run: |
-          export RISCV=~/RISCV
-          export PATH=$PATH:$RISCV/bin
-          cd ~
-          git clone https://github.com/riscv-boom/riscv-coremark.git
-          cd riscv-coremark
-          git submodule update --init --recursive
-          cp /home/runner/work/Rift2Core/Rift2Core/tb/coremark ~/riscv-coremark -r
-          ./build-coremark.sh
-          cp ../coremark1_bare.verilog /home/runner/work/Rift2Core/Rift2Core/tb/ci/
-
-
+          
       - name: Test ISA
         run: |
           export PATH=$PATH:~/bin
@@ -187,6 +173,24 @@ jobs:
           export PATH=$PATH:$RISCV/bin
           cd /home/runner/work/Rift2Core/Rift2Core/tb  
           make dhrystone500
+
+
+      - name: Compile CoreMark
+        if: steps.cache-tools-chian.outputs.cache-hit != 'true'
+        run: |
+          export RISCV=~/RISCV
+          export PATH=$PATH:$RISCV/bin
+          cd ~
+          git clone https://github.com/riscv-boom/riscv-coremark.git
+          cd riscv-coremark
+          git submodule update --init --recursive
+          cp /home/runner/work/Rift2Core/Rift2Core/tb/coremark ~/riscv-coremark -r
+          ./build-coremark.sh
+          cd ~/riscv-coremark
+          cp *.verilog /home/runner/work/Rift2Core/Rift2Core/tb/ci/
+
+
+
 
       - name: Run CoreMark
         run: |
