@@ -93,18 +93,32 @@ jobs:
           cd ~
           git clone https://github.com/chipsalliance/dromajo.git
           cd dromajo
+          git submodule update --init --recursive
           mkdir build
           cd build
           cmake -DCMAKE_BUILD_TYPE=Release ..
-          make
-          cp libdromajo_cosim.a $RISCV/lib
-          cd ../
-          cp include $RISCV/ -r
+          sudo make
+          # cp libdromajo_cosim.a $RISCV/lib
+          # cd ../
+          # cp include $RISCV/ -r
 
           export C_INCLUDE_PATH=$RISCV/include:$RISCV/include/dromajo
           export CPLUS_INCLUDE_PATH=$RISCV/include:$RISCV/include/dromajo
           export LIBRARY_PATH=$LIBRARY_PATH:$RISCV/lib
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$RISCV/lib
+
+      - name: Compile Rift2Cpp
+        if: steps.cache-tools-chian.outputs.cache-hit != 'true'
+        run: |
+          export RISCV=~/RISCV
+          export PATH=$PATH:$RISCV/bin
+          export C_INCLUDE_PATH=$RISCV/include:$RISCV/include/dromajo
+          export CPLUS_INCLUDE_PATH=$RISCV/include:$RISCV/include/dromajo
+          export LIBRARY_PATH=$LIBRARY_PATH:$RISCV/lib
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$RISCV/lib
+
+          cd /home/runner/work/Rift2Core/Rift2Core/tb/
+          make sim
 
 
       - name: Compile ISA
@@ -136,6 +150,20 @@ jobs:
           cd ~/riscv-tests/benchmarks
           make all
 
+      - name: Compile CoreMark
+        if: steps.cache-tools-chian.outputs.cache-hit != 'true'
+        run: |
+          export RISCV=~/RISCV
+          export PATH=$PATH:$RISCV/bin
+          cd ~
+          git clone https://github.com/riscv-boom/riscv-coremark.git
+          cd riscv-coremark
+          git submodule update --init --recursive
+          cp /home/runner/work/Rift2Core/Rift2Core/tb/coremark ~/riscv-coremark -r
+          ./build-coremark.sh
+          cp coremark1_bare /home/runner/work/Rift2Core/Rift2Core/tb/ci
+
+
       - name: Test ISA
         run: |
           export PATH=$PATH:~/bin
@@ -146,6 +174,8 @@ jobs:
           cd /home/runner/work/Rift2Core/Rift2Core/tb
           export PATH=$PATH:~/bin
           make unit
+
+
       # - name: Restore Data
       #   run: |
       #     cd /home/runner/work/RiftCore/RiftCore/
