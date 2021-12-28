@@ -46,4 +46,36 @@ trait Superscalar {
   // 	is_act(i) := ~is_stall(i) & ~is_no_source(i)
   // 	is_out(i) := ~is_stall(i) & ~is_no_source(i) & is_no_sink
   // }
+//   def forwordBlock( con: Vec[Bool] ) = {
+    
+
+//     for ( i <- 0 until dpt_w ) yield 
+//         is_fun_float2int_pre.zipWithIndex.map{
+//           case ( x:Bool, y:Int ) => (
+//             if (y < i) {~x}
+//             else if( y == i ) {x}
+//             else if( y>i ) {true.B}
+//             else { assert(false.B); false.B }
+//           )
+//         }.reduce(_&_)
+//     } 
+//   }
+
+// val is_fun_float2int = {
+//     val is_fun_float2int_pre = 
+//       for ( i <- 0 until dpt_w ) yield {
+//         io.fpu_dpt_iss(i).valid & io.fpu_dpt_iss(i).bits.isa.is_fun_float2int
+//       }
+
+//     for ( i <- 0 until dpt_w ) yield {
+//         is_fun_float2int_pre.zipWithIndex.map{
+//           case ( x:Bool, y:Int ) => (
+//             if (y < i) {~x}
+//             else if( y == i ) {x}
+//             else if( y>i ) {true.B}
+//             else { assert(false.B); false.B }
+//           )
+//         }.reduce(_&_)
+//     } 
+//   }
 }

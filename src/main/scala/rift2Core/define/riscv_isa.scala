@@ -312,7 +312,119 @@ class Fpu_isa extends Bundle {
   val fmv_d_x = Bool()
 
 
-  def is_fpu = fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s | fdiv_s | fsqrt_s | fsgnj_s | fsgnjn_s | fsgnjx_s | fmin_s | fmax_s | fcvt_w_s | fcvt_wu_s | fmv_x_w | feq_s | flt_s | fle_s | fclass_s | fcvt_s_w | fcvt_s_wu | fmv_w_x | fcvt_l_s | fcvt_lu_s | fcvt_s_l | fcvt_s_lu | fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d | fdiv_d | fsqrt_d | fsgnj_d | fsgnjn_d | fsgnjx_d | fmin_d | fmax_d | fcvt_s_d | fcvt_d_s | feq_d | flt_d | fle_d | fclass_d | fcvt_w_d | fcvt_wu_d | fcvt_d_w | fcvt_d_wu | fcvt_l_d | fcvt_lu_d | fmv_x_d | fcvt_d_l | fcvt_d_lu | fmv_d_x
+  val fcsr_rw = Bool()
+  val fcsr_rs = Bool()
+  val fcsr_rc = Bool()
+
+
+
+
+
+  def is_fun_int2float =
+    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fmv_w_x |
+    fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d | fmv_d_x
+  def is_fun_float2float =
+    fsgnj_s | fsgnjn_s | fsgnjx_s | 
+    fsgnj_d | fsgnjn_d | fsgnjx_d |
+    fcvt_s_d | fcvt_d_s
+  def is_fun_floatCmp = fmin_s | fmax_s | feq_s | flt_s | fle_s | fmin_d | fmax_d | feq_d | flt_d | fle_d
+  def is_fun_float2int =
+    fmv_x_w | fclass_s | fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
+    fmv_x_d | fclass_d | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu 
+  def is_fun_floatFma =
+    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s |
+    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d
+  def is_fun_floatDivSqrt = fdiv_s | fsqrt_s | fdiv_d | fsqrt_d
+  def is_fun_floatCsr = fcsr_rw | fcsr_rs | fcsr_rc
+
+
+  def is_fma_addsub =
+      fadd_s | fsub_s |
+      fadd_d | fsub_d
+
+  def is_fma_mul =
+      fmul_s | fmul_d
+
+  def is_fma_dual_op = is_fma_addsub | is_fma_mul
+  def is_fma_trpl_op =
+    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | 
+    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d
+
+
+  def is_int_iss =
+    fmv_w_x | fmv_d_x |
+    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |fcsr_rw | fcsr_rs | fcsr_rc
+
+  def is_fot_iss =
+    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fmadd_d | fmsub_d | fnmsub_d | fnmadd_d |
+    fadd_s | fsub_s | fmul_s | fadd_d | fsub_d | fmul_d |
+    fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
+    feq_s | flt_s | fle_s | feq_d | flt_d | fle_d | fmin_s | fmax_s | fmin_d | fmax_d |
+    fmv_x_w | fmv_x_d |
+    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_s_d | fcvt_d_s | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
+
+    
+  def is_recFN32_in =
+    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s |
+    fsgnj_s | fsgnjn_s | fsgnjx_s |
+    feq_s | flt_s | fle_s | fmin_s | fmax_s |
+    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_s_d
+    
+  def is_recFN64_in =
+    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d |
+    fsgnj_d | fsgnjn_d | fsgnjx_d |
+    feq_d | flt_d | fle_d | fmin_d | fmax_d |
+    fcvt_d_s | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
+
+
+
+  def is_int_rtn = 
+    feq_s | flt_s | fle_s | feq_d | flt_d | fle_d |
+    fmv_x_w | fmv_x_d | 
+    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
+
+  def is_fot_rtn =
+    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fmadd_d | fmsub_d | fnmsub_d | fnmadd_d |
+    fadd_s | fsub_s | fmul_s | fadd_d | fsub_d | fmul_d | 
+    fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
+    fmin_s | fmax_s | fmin_d | fmax_d |
+    fmv_w_x | fmv_d_x | 
+    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_s_d | fcvt_d_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d
+
+  def is_recFN32_out =
+    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s |
+    fadd_s | fsub_s | fmul_s |
+    fsgnj_s | fsgnjn_s | fsgnjx_s |
+    fmin_s | fmax_s |
+    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s |
+    fcvt_d_s
+
+  def is_recFN64_out =
+    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d |
+    fadd_d | fsub_d | fmul_d | 
+    fsgnj_d | fsgnjn_d | fsgnjx_d |
+    fmin_d | fmax_d |
+    fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |
+    fcvt_s_d
+     
+     
+
+     
+
+
+  def is_usi =
+    fcvt_s_wu | fcvt_s_lu| fcvt_d_wu | fcvt_d_lu | fcvt_wu_s | fcvt_lu_s | fcvt_wu_d | fcvt_lu_d
+
+  def is_fpu =
+    is_fun_int2float |
+    is_fun_float2float |
+    is_fun_floatCmp |
+    is_fun_float2int |
+    is_fun_floatFma |
+    is_fun_floatDivSqrt |
+    is_fun_floatCsr
+
+
 
 
 
@@ -354,6 +466,7 @@ class Instruction_param extends Bundle {
   val pc = UInt(64.W)
   
   val imm = UInt(64.W)
+  val rm = UInt(3.W)
   val rd0_raw = UInt(5.W)
   val rs1_raw = UInt(5.W)
   val rs2_raw = UInt(5.W)
@@ -579,21 +692,101 @@ class Mul_iss_info extends Bundle {
   val param = new Mul_param
 }
 
-class Fpu_isu_info extends Bundle {
-  
-}
+// class Fpu_param extends Bundle {
+//   val op1 = UInt(64.W)
+//   val op2 = UInt(64.W)
+//   val op3 = UInt(64.W)
+//   val rm = UInt(3.W)
 
+//   val rd0_phy = UInt(6.W)
+// }
+
+
+// class Fpu_float2int_iss_info extends Bundle {
+//   val is_Float2Int = Bool()
+//   val is_Fmv       = Bool()
+//   val is_Fclass    = Bool()
+
+//   val is_in_64_32n  = Bool()
+//   val is_out_64_32n = Bool()
+//   val is_usi        = Bool()
+
+//   val op1 = UInt(64.W)
+//   val rm = UInt(3.W)
+
+//   val rd0_int_phy = UInt(6.W)
+// }
+
+// class Fpu_int2float_iss_info extends Bundle {
+//   val is_Int2Float = Bool()
+//   val is_Fmv       = Bool()
+
+//   val is_in_64_32n  = Bool()
+//   val is_out_64_32n = Bool()
+//   val is_usi        = Bool()
+
+//   val op1 = UInt(64.W)
+//   val rm = UInt(3.W)
+
+//   val rd0_float_phy = UInt(6.W)
+// }
+
+// class Fpu_float2float_iss_info extends Bundle {
+//   val is_Float2Float = Bool()
+//   val is_FloatSign   = Bool()
+
+//   val is_in_64_32n  = Bool()
+
+//   val op1 = UInt(64.W)
+//   val rm = UInt(3.W)
+
+//   val rd0_float_phy = UInt(6.W)
+// }
+
+// class Fpu_floatCmp_iss_info extends Bundle {
+//   val is_eq  = Bool()
+//   val is_lt  = Bool()
+//   val is_gt  = Bool()
+//   val is_min = Bool()
+//   val is_max = Bool()
+
+//   val is_in_64_32n  = Bool()
+
+//   val op1 = UInt(64.W)
+//   val op2 = UInt(64.W)
+//   val rm = UInt(3.W)
+
+//   val rd0_int_phy = UInt(6.W)
+//   val rd0_float_phy = UInt(6.W)
+// }
+
+// class Fpu_floatFma_iss_info extends Bundle {
+//   val fun = new Fpu_isa
+//   val param = new Fpu_param
+// }
+
+// class Fpu_floatDivSqrt_iss_info extends Bundle {
+//   val fun = new Fpu_isa
+
+
+//   val op1 = UInt(64.W)
+//   val op2 = UInt(64.W)
+//   val op3 = UInt(64.W)
+//   val rm = UInt(3.W)
+
+//   val rd0_phy = UInt(6.W)
+// }
 
 
 
 class Exe_iwb_info extends Bundle {
   val res = UInt(64.W)
-
   val rd0_phy = UInt(6.W)
 }
 
 class Exe_fwb_info extends Bundle {
-  
+  val res = UInt(64.W)
+  val rd0_phy = UInt(6.W)
 }
 
 

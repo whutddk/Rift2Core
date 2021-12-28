@@ -73,11 +73,29 @@ lazy val sifiveBlocks = (project in file("./sifive-blocks"))
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
 )
 
+lazy val hardfloat = (project in file("./berkeley-hardfloat"))
+  .dependsOn(rocketchip)
+  .settings(
+    name := "berkeley-hardfloat",
+    libraryDependencies ++= Seq(
+      "edu.berkeley.cs" %% "chisel3" % "3.4.3",
+      // "org.scalatest" % "scalatest_2.11" % "2.2.4",
+      // "org.scalacheck" %% "scalacheck" % "1.12.4"
+    ),
+    scalacOptions ++= Seq(
+      "-Xsource:2.11",
+      "-language:reflectiveCalls",
+      "-deprecation",
+      "-feature",
+      "-Xcheckinit"
+    )
+)
 
 lazy val root = (project in file("."))
   .dependsOn(inclusiveCache)
   .dependsOn(rocketchip)
   .dependsOn(sifiveBlocks)
+  .dependsOn(hardfloat)
   .settings(
     name := "%NAME%",
     libraryDependencies ++= Seq(

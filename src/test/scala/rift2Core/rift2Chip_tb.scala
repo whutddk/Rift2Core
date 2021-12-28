@@ -63,5 +63,23 @@ object testMain extends App {
   ))
 }
 
+// import rift2Core.backend.fpu._
 
+// object testModule extends App {
+//   (new chisel3.stage.ChiselStage).execute(args, Seq(
+//       ChiselGeneratorAnnotation(() => {
+//     new Reservation_fpu()
+//   })
+//     ))
+// }
+
+import base._
+
+object testModule extends App {
+  (new chisel3.stage.ChiselStage).execute(args, Seq(
+      ChiselGeneratorAnnotation(() => {
+    new RePort( UInt(8.W), 3)
+  })
+    ))
+}
 

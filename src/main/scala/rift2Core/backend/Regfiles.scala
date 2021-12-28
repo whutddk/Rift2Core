@@ -44,6 +44,7 @@ class Info_writeback_op extends Bundle{
 class Info_commit_op extends Bundle{
   val raw = UInt(5.W)
   val phy = UInt(6.W)
+  val is_abort = Bool()
 }
 
 

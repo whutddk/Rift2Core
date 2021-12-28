@@ -338,3 +338,23 @@ coremark: sim
 
 wave:
 	gtkwave ./build/wave.vcd
+
+
+
+module:
+	verilator -Wno-fatal  \
+	--timescale "1 ns / 1 ps" \
+	-y ${R2}/generated/ \
+	-y ${R2}/tb/verilator/mdl_test/ \
+	-y ${R2}/tb/ \
+	-y ${R2}/tb/vtb/ \
+	-y ${R2}/tb/vtb/ \
+	--top-module $(TOP) \
+	--trace \
+	--cc ${R2}/tb/verilator/mdl_test/$(TOP).v  \
+	--exe --build \
+	./verilator/mdl_test/$(TOP).cpp  \
+	-Mdir build \
+	-j 8
+
+	./build/V$(TOP)
