@@ -51,10 +51,6 @@ class Lsu(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule{
     val lsu_mmu = DecoupledIO(new Info_mmu_req)
     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
 
-    // val icache_fence_req = Output(Bool())
-    // val dcache_fence_req = Output(Bool())
-    // val mmu_fence_req = Output(Bool())
-
     val missUnit_dcache_acquire = Decoupled(new TLBundleA(tlc_edge.bundle))
     val missUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(tlc_edge.bundle)))
     val missUnit_dcache_grantAck  = Decoupled(new TLBundleE(tlc_edge.bundle))
