@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-# @Author: Ruige Lee
-# @Date:   2021-02-02 17:06:19
-# @Last Modified by:   Ruige Lee
-# @Last Modified time: 2021-05-12 16:37:49
 
 
 import sys
@@ -93,42 +89,6 @@ else:
 	print(file, "dhrystone FAIL!!!!!!!!!!")
 	sys.exit(-1)
 
-
-# performance = []
-# for item in new:
-# 	performance.append(item["benchmark"])
-
-# print("performance=", performance)
-
-# print(len(performance))
-# x1 = range(0, len(performance))
-
-
-# plt.xticks([])
-# plt.scatter(x1, performance, marker='.', s = 1000//len(performance))
-
-# # plt.show()
-# plt.savefig("./ci/performance.png")
-
-
-
-
-
-
-
-
-# "git log -1 --pretty=format:\"%h\"" #短哈希
-# "git log -1 --pretty=format:\"%an\"" #作者
-# "git log -1 --pretty=format:\"%ae\"" #作者邮箱
-# "git log -1 --pretty=format:\"%ad\"" #作者日期
-# "git log -1 --pretty=format:\"%s\"" #提交说明
-
-
-# data = 
-# {
-# 	"lastUpdata": 10000,
-# 	"benchmark": [{"hash": "f010753", "author name": "Ruige Lee", "author email": "295054118@qq.com", "author date": " Fri Jan  1 12:13:35 2021 ", "commit comment": "0.4.2", "dhrystone": 0.568016}]
-# }
 
 
 

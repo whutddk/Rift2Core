@@ -1,15 +1,8 @@
-/*
-* @File name: debuger
-* @Author: Ruige Lee
-* @Email: wut.ruigeli@gmail.com
-* @Date:   2021-03-17 15:15:31
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-28 09:43:06
-*/
+
 
 
 /*
-	Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+	Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
 	 Licensed under the Apache License, Version 2.0 (the "License");
 	 you may not use this file except in compliance with the License.

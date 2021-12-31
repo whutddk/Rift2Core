@@ -1,11 +1,4 @@
-/*
-* @File name: Reservation_top
-* @Author: Ruige Lee
-* @Email: wut.ruigeli@gmail.com
-* @Date:   2021-12-21 11:12:51
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-12-21 11:39:13
-*/
+
 
 
 module Reservation_top(

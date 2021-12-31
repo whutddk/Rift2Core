@@ -1,16 +1,8 @@
-/*
-* @File name: rift2Chip_CI
-* @Author: Ruige Lee
-* @Email: wut.ruigeli@gmail.com
-* @Date:   2021-04-21 15:17:49
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-08-20 15:43:43
-*/
 
 
 
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.

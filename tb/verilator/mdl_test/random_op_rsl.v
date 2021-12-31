@@ -1,11 +1,4 @@
-/*
-* @File name: random_op_rsl
-* @Author: Ruige Lee
-* @Email: wut.ruigeli@gmail.com
-* @Date:   2021-12-21 11:34:39
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-12-21 12:05:07
-*/
+
 module random_op_rsl(
 	input clock,
 	input reset,

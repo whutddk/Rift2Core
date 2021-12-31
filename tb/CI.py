@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-# @Author: Ruige Lee
-# @Date:   2020-11-18 15:37:18
-# @Last Modified by:   Ruige Lee
-# @Last Modified time: 2021-08-27 17:51:24
 
 
 import sys

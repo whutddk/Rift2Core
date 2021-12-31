@@ -1,9 +1,4 @@
-/*
-* @Author: Ruige Lee
-* @Date:   2021-12-17 17:04:40
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-12-21 11:29:20
-*/
+
 
 #include <verilated.h>
 #include "VReservation_top.h"

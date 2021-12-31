@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -167,7 +167,7 @@ class FIss extends Module {
         iss(i).bits.is_fSign32 :=
           dpt(i).bits.isa.fsgnj_s | dpt(i).bits.isa.fsgnjn_s | dpt(i).bits.isa.fsgnjx_s
         iss(i).bits.is_fSign64 := 
-          dpt(i)x.bits.isa.fsgnj_d | dpt(i).bits.isa.fsgnjn_d | dpt(i).bits.isa.fsgnjx_d
+          dpt(i).bits.isa.fsgnj_d | dpt(i).bits.isa.fsgnjn_d | dpt(i).bits.isa.fsgnjx_d
 
         iss(i).bits.op1 := io.fpu_iss_fwb(i).op1
         iss(i).bits.op2 := io.fpu_iss_fwb(i).op2
@@ -198,7 +198,7 @@ class FIss extends Module {
         iss(i).bits.is_lt := dpt(i).bits.isa.flt_s | dpt(i).bits.isa.flt_d
         iss(i).bits.is_gt := dpt(i).bits.isa.fle_s | dpt(i).bits.isa.fle_d
         iss(i).bits.is_min := dpt(i).bits.isa.fmin_s | dpt(i).bits.isa.fmin_d
-        iss(i).bits.is_max := dpt(i).bits.isa.fmax_s | dpt(i).bits.isa.fmax_d ) )
+        iss(i).bits.is_max := dpt(i).bits.isa.fmax_s | dpt(i).bits.isa.fmax_d
         iss(i).bits.is_in_64_32n := dpt(i).is_fun_cmp_d
         iss(i).bits.op1 := io.fpu_iss_fwb(i).op1
         iss(i).bits.op2 := io.fpu_iss_fwb(i).op2
@@ -229,7 +229,7 @@ class FIss extends Module {
         iss(i).bits.is_fmvfto64 := dpt(i).bits.isa.fmv_x_d
         iss(i).bits.is_fclass32 := dpt(i).bits.isa.fclass_s
         iss(i).bits.is_fclass64 := dpt(i).bits.isa.fclass_d
-        iss(i).bits.is_usi      := dpt(i).bits.isa.is_usi) )
+        iss(i).bits.is_usi      := dpt(i).bits.isa.is_usi
         iss(i).bits.op1 := io.fpu_iss_fwb(i).op1
         iss(i).bits.rm := dpt(i).bits.param.rm
         iss(i).bits.rd0_phy := dpt(i).bits.phy.rd0

@@ -1,11 +1,4 @@
-/*
-* @File name: random_csr_req
-* @Author: Ruige Lee
-* @Email: wut.ruigeli@gmail.com
-* @Date:   2021-12-21 10:40:37
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-12-21 12:09:26
-*/
+
 
 module random_csr_req(
   input         clock,

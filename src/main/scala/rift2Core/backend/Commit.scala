@@ -1,13 +1,6 @@
 
 /*
-* @Author: Ruige Lee
-* @Date:   2021-04-14 11:24:59
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-17 17:02:17
-*/
-
-/*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -38,7 +31,7 @@ import rift2Core.privilege.csrFiles._
 import rift2Core.diff._
 
 /** commit
-  * @author Ruige Lee
+  * 
   * 
   * 
   */
