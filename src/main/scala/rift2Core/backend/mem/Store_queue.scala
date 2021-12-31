@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import rift2Core.backend._
 class lsu_wr_Info extends Bundle {
   val paddr = UInt(64.W)
   val wdata = UInt(64.W)
-  val wstrb = UInt(8.W)
+  val wmask = UInt(64.W)
 }
 
 
@@ -135,22 +135,24 @@ class Store_queue(dp: Int = 64) extends Module {
     }
   }
 
-  val forward_mask = forward_buff.map{
-    x => {
-      for ( i <- 0 until 8 ) yield {
-        Fill()
+
+  io.forward_wdata := {
+    def fw_wr( ori: UInt, wdata: UInt, wmask: UInt): UInt = {
+      (ori & ~wmask) | (wdata & wmask)
+    }
+
+    val temp_res = Wire(UInt(64.W))
+    for ( i <- 0 until dp ) yield {
+      if ( i == 0 ) {
+        temp_res(0) := fw_wr( 0.U, forward_buff(0).wdata, forward_buff(0).wmask)
+      } else {
+        temp_res(i) := fw_wr( temp_res(i-1), forward_buff(i).wdata, forward_buff(i).wmask)
       }
     }
-    x.wstrb   
+    temp_res(dp-1)
   }
 
-  val forward_wdata = forward_buff.map{
-    x => {
-
-    }
-  }
-    Flipped(ValidIO(UInt(64.W)))
-  val forward_wstrb = forward_buff.map(x => x.wstrb).reduce(_|_)
+  io.forward_wmask := forward_buff.map(x => x.wmask).reduce(_|_)
 
 
 }
