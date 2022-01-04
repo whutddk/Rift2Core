@@ -15,51 +15,50 @@
    limitations under the License.
 */
 
-package rift2Core.backend.mmu
+package rift2Core.backend.mem
 
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 
-class lsu_wr_Info extends Bundle {
+class Reservation_Info extends Bundle {
   val paddr = UInt(64.W)
   val wdata = UInt(64.W)
   val wmask = UInt(64.W)
 }
 
 
-/**
-  * @note if no store addr harazd, load req will be sent to dcache 
-  * @note if    store addr harazd, load req will get res from forward store req
-  * @note if no store addr harazd, write req will be push into write fifo
-  * @note if    store addr harazd, write req will be push into write fifo
-  * @note if no store addr harazd, amo req will be sent to dcache as a load, and write req will be push into write fifo
-  * @note if    store addr harazd, load req will get res from forward store req, and write req will be push into write fifo
-  * @note if a forward instr is flushed, reset all reservation
-  * 
-  * @note haraze will happeded at commit queue and wrirt-in queue
-  */ 
+// /**
+//   * @note if no store addr harazd, load req will be sent to dcache 
+//   * @note if    store addr harazd, load req will get res from forward store req
+//   * @note if no store addr harazd, write req will be push into write fifo
+//   * @note if    store addr harazd, write req will be push into write fifo
+//   * @note if no store addr harazd, amo req will be sent to dcache as a load, and write req will be push into write fifo
+//   * @note if    store addr harazd, load req will get res from forward store req, and write req will be push into write fifo
+//   * @note if a forward instr is flushed, reset all reservation
+//   * 
+//   * @note haraze will happeded at commit queue and wrirt-in queue
+//   */ 
 
-class Reservation_lsu() extends Module {
-
-
+// class Reservation_lsu() extends Module {
 
 
 
-}
+
+
+// }
 
 /**
   * bound to every cache 
   */
-class Store_queue(dp: Int = 64) extends Module {
+class Store_queue(dp: Int = 16) extends Module {
   def dp_w = log2Ceil(dp)
 
   val io = IO( new Bundle{
     val enq = DecoupledIO(new Reservation_Info)
-
-    /** only when the data is written into cache will this pop */
-    val deq = Flipped(DecoupledIO(new Reservation_Info))
+    val mem_deq = Flipped(DecoupledIO(new Reservation_Info))
+    val sys_deq = Flipped(DecoupledIO(new Reservation_Info))
 
     val is_commited = Input(Vec(2,Bool()))
 
@@ -72,7 +71,8 @@ class Store_queue(dp: Int = 64) extends Module {
   } )
 
 
-  val buff = RegInit(VecInit(Seq.fill(dp)(new Reservation_Info)))
+  val buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeof(new Reservation_Info))))
+  
   val cm_ptr_reg = RegInit( 0.U((dp_w+1).W) )
   val wr_ptr_reg = RegInit( 0.U((dp_w+1).W) )
   val rd_ptr_reg = RegInit( 0.U((dp_w+1).W) )
@@ -84,8 +84,14 @@ class Store_queue(dp: Int = 64) extends Module {
   def full = (wr_ptr(dp_w) =/= rd_ptr(dp_w)) & (wr_ptr(dp_w-1,0) === rd_ptr(dp_w-1,0))
   def emty = cm_ptr === rd_ptr
 
+  val rd_buff = buff(rd_ptr)
+
   io.enq.ready := ~full
-  io.deq.valid := ~emty
+  io.mem_deq.valid := ~emty & rd_buff.bits.paddr(31) === 1.U
+  io.sys_deq.valid := ~emty & rd_buff.bits.paddr(31) === 0.U
+
+  io.mem_deq.bits := Mux( io.mem_deq.valid, rd_buff, DontCare )
+  io.sys_deq.bits := Mux( io.sys_deq.valid, rd_buff, DontCare )
 
   when( io.enq.fire ) {
     buff(wr_ptr) := io.enq.bits
@@ -101,16 +107,10 @@ class Store_queue(dp: Int = 64) extends Module {
     cm_ptr_reg := cm_ptr_reg + 1.U
   }
 
-  when( io.deq.fire ) {
+  when( io.mem_deq.fire | io.sys_deq.fire ) {
     rd_ptr_reg := rd_ptr_reg + 1.U
   }
 
-
-  val forward_buff = Wire(Vec(dp, new Reservation_Info))
-
-  val forward_paddr = ValidIO(UInt(64.W))
-  val forward_wdata = Flipped(ValidIO(UInt(64.W)))
-  val forward_wstrb = Flipped(ValidIO(UInt(64.W)))
 
 
   when( rd_ptr_reg(dp_w) =/= wr_ptr_reg(dp_w) ) {

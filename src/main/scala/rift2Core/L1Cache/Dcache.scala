@@ -20,6 +20,7 @@ case class DcacheParameters(
   bk: Int,
   cb: Int,
   cl: Int,
+  nm: Int, //number of dcache
   aw: Int = 32
 ) extends L1CacheParameters
 
@@ -30,13 +31,15 @@ trait HasDcacheParameters extends HasL1CacheParameters {
   def bk = dcacheParams.bk
   def cb = dcacheParams.cb
   def cl = dcacheParams.cl
+  def nm = dcacheParams.nm
   def aw = dcacheParams.aw
 
   def addr_lsb = log2Ceil(dw*bk/8)
   def line_w   = log2Ceil(cl)
   def cb_w = log2Ceil(cb)
+  def nm_w = log2Ceil(nm)
 
-  def tag_w    = aw - addr_lsb - line_w
+  def tag_w    = aw - addr_lsb - line_w - nm_w
 
   require( (addr_lsb + line_w) == 12 )
   

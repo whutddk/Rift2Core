@@ -41,6 +41,7 @@ case class CacheSetting(
     dw = 64,
     bk = 4,
     cb = 8,
+    nm = 8,
     cl = 128
   ),
 ){
