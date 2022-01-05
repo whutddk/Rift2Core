@@ -28,7 +28,7 @@ import rift2Core.backend._
 class Store_buffer(dp: Int = 16) extends Module {
   val io = IO(new Bundle{
     val enq = DecoupledIO(new Reservation_Info)
-    val deq = Flipped(DecoupledIO(new Reservation_Info))
+    val rls = DecoupledIO(UInt(log2Ceil(dp).W))
 
     val forward_paddr = ValidIO(UInt(64.W))
     val forward_wdata = Flipped(ValidIO(UInt(64.W)))
@@ -37,27 +37,20 @@ class Store_buffer(dp: Int = 16) extends Module {
 
   val buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeof(new Reservation_Info))))
   val valid = RegInit(VecInit(Seq.fill(dp)(false.B)))
-  val deq_arb = Module(new RRArbiter(new Reservation_Info, dp))
+
 
   for ( i <- 0 until dp ) yield {
-    deq_arb.io.in(i).bits  := buff(i)
-    deq_arb.io.in(i).valid := valid(i)
-
     when( valid(i) == ture.B ) {
       assert( buff.count( (x: Reservation_Info) => (x.paddr === buff(i).paddr) ) === 1.U )
     }
-
   }
-
-  io.deq <> deq_arb.io.out
-
 
 
 
 
   {
-    val is_hazard = deq_arb.io.in.map( x => (x.valid & (x.bits.paddr === io.forward_paddr.paddr) ) ).reduce(_|_)
-    val idx = deq_arb.io.indexWhere( x => (x.valid & (x.bits.paddr === io.forward_paddr.paddr)) )
+    val is_hazard = buff.map( x => (x.paddr === io.forward_paddr.paddr) ).reduce(_|_)
+    val idx = valid.indexWhere( (x:Bool) => (x === true.B) )
 
     io.forward_wdata.valid := io.forward_paddr.valid & is_hazard
     io.forward_wstrb.valid := io.forward_paddr.valid & is_hazard
@@ -69,7 +62,7 @@ class Store_buffer(dp: Int = 16) extends Module {
 
 
   for ( i <- 0 until dp ) yield {
-    val is_hazard = deq_arb.io.in.map( x => (x.valid & (x.bits.paddr === io.enq.bits.paddr) ) ).reduce(_|_)
+    val is_hazard = buff.map( x => (x.paddr === io.enq.bits.paddr) ).reduce(_|_)
     val idx = valid.indexWhere( (x:Bool) => (x === false.B) )
     io.enq.ready := 
       valid.exists( (x:Bool) => (x === false.B) ) &
@@ -79,9 +72,9 @@ class Store_buffer(dp: Int = 16) extends Module {
       buff(idx)  := io.enq.bits
       valid(idx) := true.B
     }
-    when( deq_arb.io.in(i).fire ) {
-      buff(idx)  := 0.U.asTypeOf( new Reservation_Info )
-      valid(idx) := false.B
+    when( io.rls.fire ) {
+      buff(io.rls.bits)  := 0.U.asTypeOf( new Reservation_Info )
+      valid(io.rls.bits) := false.B
     }
   }
 

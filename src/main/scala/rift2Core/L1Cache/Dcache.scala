@@ -77,6 +77,7 @@ trait Info_cache_raw extends DcacheBundle {
   val wmask  = UInt(8.W)
   val wdata  = Vec(bk,UInt(64.W))
   val op    = new Cache_op
+  val rd = new Rd_Param
 
   def tag_sel = paddr(31,32-tag_w)
   def bk_sel  = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
@@ -99,7 +100,7 @@ class Info_cache_s1s2(implicit p: Parameters) extends DcacheBundle with Info_cac
 class Info_cache_sb extends Lsu_iss_info
 
 class Info_cache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc_idx {
-  val res = UInt(64.W)
+  val wb = new WriteBack_info
   val is_load_amo = Bool()
 }
 

@@ -26,6 +26,11 @@ class Reservation_Info extends Bundle {
   val paddr = UInt(64.W)
   val wdata = UInt(64.W)
   val wmask = UInt(64.W)
+
+  val fun = new Lsu_isa
+
+  val chk_idx = UInt(6.W)
+  val rd = new Rd_Param
 }
 
 
