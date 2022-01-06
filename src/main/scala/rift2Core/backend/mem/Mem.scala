@@ -63,50 +63,50 @@ class Cache_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
   su_wb_fifo.io.enq.bits  := opMux.io.st_deq.bits.param.rd
 
   stQueue.io.enq.valid := opMux.io.st_deq.fire | opMux.io.am_deq.fire
-  stQueue.io.enq.bits.paddr := {
-    val clr_mask = ~(("b111".U)(64.W))
-    Mux1H( Seq(
-      opMux.io.st_deq.fire -> (opMux.io.st_deq.bits.param.op1 & clr_mask),
-      opMux.io.am_deq.fire -> (opMux.io.am_deq.bits.param.op1 & clr_mask),
-    ))
-  }
+  // stQueue.io.enq.bits.paddr := {
+  //   val clr_mask = ~(("b111".U)(64.W))
+  //   Mux1H( Seq(
+  //     opMux.io.st_deq.fire -> (opMux.io.st_deq.bits.param.op1 & clr_mask),
+  //     opMux.io.am_deq.fire -> (opMux.io.am_deq.bits.param.op1 & clr_mask),
+  //   ))
+  // }
 
-  stQueue.io.enq.bits.wdata := {
-    val res = Wire(UInt(64.W))
-    val paddr = 
-      Mux1H( Seq(
-        opMux.io.st_deq.fire -> opMux.io.st_deq.bits.param.op1,
-        opMux.io.am_deq.fire -> opMux.io.am_deq.bits.param.op1,
-      ))
-    val shift = Wire(UInt(6.W))
-    shift := Cat( paddr(2,0), 0.U(3.W) )
-    res := 
-      Mux1H( Seq(
-        opMux.io.st_deq.fire -> opMux.io.st_deq.bits.param.op2 << shift,
-        opMux.io.am_deq.fire -> opMux.io.am_deq.bits.param.op2 << shift,
-      ))      
+  // stQueue.io.enq.bits.wdata := {
+  //   val res = Wire(UInt(64.W))
+  //   val paddr = 
+  //     Mux1H( Seq(
+  //       opMux.io.st_deq.fire -> opMux.io.st_deq.bits.param.op1,
+  //       opMux.io.am_deq.fire -> opMux.io.am_deq.bits.param.op1,
+  //     ))
+  //   val shift = Wire(UInt(6.W))
+  //   shift := Cat( paddr(2,0), 0.U(3.W) )
+  //   res := 
+  //     Mux1H( Seq(
+  //       opMux.io.st_deq.fire -> opMux.io.st_deq.bits.param.op2 << shift,
+  //       opMux.io.am_deq.fire -> opMux.io.am_deq.bits.param.op2 << shift,
+  //     ))      
       
-    res
-  }
+  //   res
+  // }
 
-  stQueue.io.enq.bits.wmask := {
-    val paddr =
-      Mux1H( Seq(
-        opMux.io.st_deq.fire -> opMux.io.st_deq.bits.param.op1,
-        opMux.io.am_deq.fire -> opMux.io.am_deq.bits.param.op1,
-      )) 
+  // stQueue.io.enq.bits.wmask := {
+  //   val paddr =
+  //     Mux1H( Seq(
+  //       opMux.io.st_deq.fire -> opMux.io.st_deq.bits.param.op1,
+  //       opMux.io.am_deq.fire -> opMux.io.am_deq.bits.param.op1,
+  //     )) 
       
-    val op =
-      Mux1H( Seq(
-        opMux.io.st_deq.fire -> opMux.io.st_deq.bits.fun,
-        opMux.io.am_deq.fire -> opMux.io.am_deq.bits.fun,
-      )) 
+  //   val op =
+  //     Mux1H( Seq(
+  //       opMux.io.st_deq.fire -> opMux.io.st_deq.bits.fun,
+  //       opMux.io.am_deq.fire -> opMux.io.am_deq.bits.fun,
+  //     )) 
 
-    Mux1H(Seq(
-      op.is_byte -> Fill( 8, 1.U), op.is_half -> Fill(16, 1.U),
-      op.is_word -> Fill(32, 1.U), op.is_dubl -> Fill(64, 1.U)
-    )) << Cat(paddr(2,0), 0.U(3.W) )
-  }
+  //   Mux1H(Seq(
+  //     op.is_byte -> Fill( 8, 1.U), op.is_half -> Fill(16, 1.U),
+  //     op.is_word -> Fill(32, 1.U), op.is_dubl -> Fill(64, 1.U)
+  //   )) << Cat(paddr(2,0), 0.U(3.W) )
+  // }
 
   stQueue.io.enq.bits.fun :=
     Mux1H(Seq(
@@ -124,12 +124,35 @@ class Cache_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
   opMux.io.st_deq.ready := su_exe_iwb_fifo.io.enq.ready & stQueue.io.enq.ready
   opMux.io.am_deq.ready := stQueue.io.enq.ready
 
-  stBuffer.io.enq = DecoupledIO(new Reservation_Info)
-  stBuffer.io.rls = DecoupledIO(UInt(6.W))
-  dcache.io.
-  stQueue.io.deq
+  // stBuffer.io.enq = DecoupledIO(new Reservation_Info)
+  // stBuffer.io.rls = DecoupledIO(UInt(6.W))
+  // dcache.io.
 
+  stBuffer.io.enq.valid := stQueue.io.deq.fire
+  stBuffer.io.enq.bits  := stQueue.io.deq.bits
+  
 
+  // dcache.io.deq = new DecoupledIO(new Info_cache_retn)
+  // dcache.io.is_lr_clear = Input(Bool())
+
+  dcache.io.missUnit_dcache_acquire <> io.missUnit_dcache_acquire
+  dcache.io.missUnit_dcache_grant <> io.missUnit_dcache_grant
+  dcache.io.missUnit_dcache_grantAck <> io.missUnit_dcache_grantAck
+  dcache.io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe
+  dcache.io.writeBackUnit_dcache_release <> io.writeBackUnit_dcache_release
+  dcache.io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
+
+  dcache.io.enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
+  dcache.io.enq.valid := stQueue.io.deq.fire
+  dcache.io.enq.bits.
+  val paddr = UInt(64.W)
+  val wmask  = UInt(8.W)
+  val wdata  = Vec(bk,UInt(64.W))
+  val op    = new Cache_op
+  val rd = new Rd_Param
+  chk_idx = UInt(8.W)
+
+  stQueue.io.deq.ready  := stBuffer.io.enq.ready & dcache.io.enq.ready
 
 
   lu_exe_iwb_fifo.io.enq.valid :=

@@ -92,8 +92,8 @@ class lsu_scoreBoard(implicit p: Parameters) extends DcacheModule {
   io.dcache_push.bits.paddr   := io.lsu_push.bits.param.op1
   io.periph_push.bits.paddr   := io.lsu_push.bits.param.op1
 
-  io.periph_push.bits.wmask   := io.dcache_push.bits.wmask
-  io.dcache_push.bits.wmask   := {
+  io.periph_push.bits.wstrb   := io.dcache_push.bits.wstrb
+  io.dcache_push.bits.wstrb   := {
     val paddr = io.lsu_push.bits.param.op1
     val op = io.lsu_push.bits.fun
     val lsu_wstrb_align =

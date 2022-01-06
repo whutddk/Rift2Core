@@ -22,37 +22,19 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 
-class Reservation_Info extends Bundle {
-  val paddr = UInt(64.W)
-  val wdata = UInt(64.W)
-  val wmask = UInt(64.W)
+// class Reservation_Info extends Bundle {
+//   val paddr = UInt(64.W)
+//   val wdata = UInt(64.W)
+//   val wstrb  = UInt(8.W)
 
-  val fun = new Lsu_isa
+//   val fun = new Lsu_isa
 
-  val chk_idx = UInt(6.W)
-  val rd = new Rd_Param
-}
+//   val chk_idx = UInt(6.W)
+//   val rd = new Rd_Param
 
-
-// /**
-//   * @note if no store addr harazd, load req will be sent to dcache 
-//   * @note if    store addr harazd, load req will get res from forward store req
-//   * @note if no store addr harazd, write req will be push into write fifo
-//   * @note if    store addr harazd, write req will be push into write fifo
-//   * @note if no store addr harazd, amo req will be sent to dcache as a load, and write req will be push into write fifo
-//   * @note if    store addr harazd, load req will get res from forward store req, and write req will be push into write fifo
-//   * @note if a forward instr is flushed, reset all reservation
-//   * 
-//   * @note haraze will happeded at commit queue and wrirt-in queue
-//   */ 
-
-// class Reservation_lsu() extends Module {
-
-
-
-
-
+//   def wmask = Strb2Mask(wstrb)
 // }
+
 
 /**
   * bound to every cache 
@@ -61,9 +43,8 @@ class Store_queue(dp: Int = 16) extends Module {
   def dp_w = log2Ceil(dp)
 
   val io = IO( new Bundle{
-    val enq = DecoupledIO(new Reservation_Info)
-    val mem_deq = Flipped(DecoupledIO(new Reservation_Info))
-    val sys_deq = Flipped(DecoupledIO(new Reservation_Info))
+    val enq = DecoupledIO(new Lsu_iss_info)
+    val deq = Flipped(DecoupledIO(new Info_cache_s0s1))
 
     val is_commited = Input(Vec(2,Bool()))
 
@@ -72,11 +53,11 @@ class Store_queue(dp: Int = 16) extends Module {
     val forward_wstrb = Flipped(ValidIO(UInt(64.W)))
 
     /** prefetch is not guarantee to be accepted by cache*/
-    val preFetch = ValidIO( UInt(64.W) )
+    // val preFetch = ValidIO( UInt(64.W) )
   } )
 
 
-  val buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeof(new Reservation_Info))))
+  val buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeof(new Info_cache_s0s1))))
   
   val cm_ptr_reg = RegInit( 0.U((dp_w+1).W) )
   val wr_ptr_reg = RegInit( 0.U((dp_w+1).W) )
@@ -92,27 +73,26 @@ class Store_queue(dp: Int = 16) extends Module {
   val rd_buff = buff(rd_ptr)
 
   io.enq.ready := ~full
-  io.mem_deq.valid := ~emty & rd_buff.bits.paddr(31) === 1.U
-  io.sys_deq.valid := ~emty & rd_buff.bits.paddr(31) === 0.U
+  io.deq.valid := ~emty & rd_buff.bits.paddr(31) === 1.U
 
-  io.mem_deq.bits := Mux( io.mem_deq.valid, rd_buff, DontCare )
-  io.sys_deq.bits := Mux( io.sys_deq.valid, rd_buff, DontCare )
+  io.deq.bits := Mux( io.deq.valid, rd_buff, DontCare )
 
   when( io.enq.fire ) {
-    buff(wr_ptr) := io.enq.bits
+    buff(wr_ptr) := pkg_Info_cache_s0s1(io.enq.bits)
     wr_ptr_reg := wr_ptr_reg + 1.U
   }
 
-  io.preFetch.valid := io.enq.fire
-  io.preFetch.bits := io.enq.bits.paddr
+  // io.preFetch.valid := io.enq.fire
+  // io.preFetch.bits := io.enq.bits.paddr
 
   when( io.is_commited(1) ) {
     cm_ptr_reg := cm_ptr_reg + 2.U
+    assert( io.is_commited(0) )
   } .elsewhen( io.is_commited(0) ) {
     cm_ptr_reg := cm_ptr_reg + 1.U
   }
 
-  when( io.mem_deq.fire | io.sys_deq.fire ) {
+  when( io.mem_deq.fire ) {
     rd_ptr_reg := rd_ptr_reg + 1.U
   }
 
@@ -157,7 +137,7 @@ class Store_queue(dp: Int = 16) extends Module {
     temp_res(dp-1)
   }
 
-  io.forward_wmask := forward_buff.map(x => x.wmask).reduce(_|_)
+  io.forward_wstrb := forward_buff.map(x => x.wstrb).reduce(_|_)
 
 
 }

@@ -132,4 +132,86 @@ class OpMux extends Module {
   }
 }
 
+object Strb2Mask{
+  def apply(strb: UInt): UInt = {
+    val mask = Wire(UInt(64.W))
+
+    for ( i <- 0 unitl 8 ) yield {
+      mask(8*i+7,8*i) := strb(i)
+    } 
+    mask
+  } 
+}
+
+object pkg_Info_cache_s0s1{
+  def apply( ori: Info_miss_rsp ) = {
+    val res = Wire(new Info_cache_s0s1)
+
+    res.paddr := ori.paddr
+    res.wstrb := "hFF".U
+    res.wdata(0) := ori.wdata(63,0)
+    res.wdata(1) := ori.wdata(127,64)
+    res.wdata(2) := ori.wdata(191,128)
+    res.wdata(3) := ori.wdata(255,192)
+
+    {
+      res.op := 0.U.asTypeOf(new Cache_op)
+      res.op.grant := true.B      
+    }
+
+    res.chk_idx := DontCare
+    res
+  }
+  
+  def apply( ori: Info_probe_req ) = {
+    val res = Wire(new Info_cache_s0s1)
+    res.paddr := ori.paddr
+    res.wstrb := DontCare
+    res.wdata := DontCare
+    {
+      res.op := 0.U.asTypeOf(new Cache_op)
+      res.op.probe := true.B      
+    }
+    res.chk_idx := DontCare
+    res
+  }
+
+  def apply( ori: Lsu_iss_info ) = {
+
+    val res = Wire(new Info_cache_s0s1)
+
+    val wdata = {
+      val res = Wire(UInt(64.W))
+      val paddr = ori.param.op1
+      val shift = Wire(UInt(6.W))
+      shift := Cat( paddr(2,0), 0.U(3.W) )
+      res   := ori.param.op2 << shift  
+      res
+    }
+
+    val wstrb = {
+      val paddr = ori.param.op1
+      val op = ori.fun
+
+      Mux1H(Seq(
+        op.is_byte -> "b00000001".U, op.is_half -> "b00000011".U,
+        op.is_word -> "b00001111".U, op.is_dubl -> "b11111111".U
+      )) << Cat(paddr(2,0), 0.U(3.W) )
+    }
+
+    res.paddr := ori.param.op1 & ~(("b111".U)(64.W))
+    res.wdata := VecInit( Seq.fill(4)(wdata) )
+    res.wstrb := wstrb
+
+
+    {
+      res.op := 0.U.asTypeOf(new Cache_op)
+      res.op.fun := ori.fun     
+    }
+    res.chk_idx := DontCare
+    res
+  
+  }
+}
+
 
