@@ -441,7 +441,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
 
 
-  when( io.is_lr_clear ) {
+  when( io.flush ) {
     is_pending_lr := false.B
   }
   .elsewhen( io.deq.fire & io.wr_in.bits.op.fun.is_lr ) {
@@ -511,7 +511,7 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule with 
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = new DecoupledIO(new Info_cache_retn)
-    val is_lr_clear = Input(Bool())
+    val flush = Input(Bool())
 
     val missUnit_dcache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
     val missUnit_dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
@@ -559,24 +559,24 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule with 
   wr_stage.io.missUnit_req      <> missUnit.io.req
   wr_stage.io.wb_req <> writeBackUnit.io.wb_req
   wr_stage.io.pb_req <> writeBackUnit.io.pb_req
-  wr_stage.io.is_lr_clear := io.is_lr_clear
+  wr_stage.io.is_lr_clear := io.flush
 
   missUnit.io.miss_ban := writeBackUnit.io.miss_ban
   writeBackUnit.io.release_ban := missUnit.io.release_ban
 
 
-  val ls_arb = Module(new Arbiter( new Info_cache_s0s1, 2))
+  val op_arb = Module(new Arbiter( new Info_cache_s0s1, 2))
   val rd_arb = Module(new Arbiter( new Info_cache_s0s1, 3))
 
   val reload_fifo = Module( new Queue( new Info_cache_s0s1, 1, false, true) )
 
   wr_stage.io.reload <> reload_fifo.io.enq
-  reload_fifo.io.deq <> ls_arb.io.in(0)
+  reload_fifo.io.deq <> op_arb.io.in(0)
   
 
-  io.enq <> Decoupled1toN( VecInit( ls_arb.io.in(1), buf_enq ) )
+  io.enq <> Decoupled1toN( VecInit( op_arb.io.in(1), buf_enq ) )
 
-  ls_arb.io.out <> lsEntry.io.enq 
+  op_arb.io.out <> lsEntry.io.enq 
 
   rd_arb.io.in(0).bits := pkg_Info_cache_s0s1( missUnit.io.rsp.bits )
   rd_arb.io.in(0).valid := missUnit.io.rsp.valid
