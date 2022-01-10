@@ -783,7 +783,8 @@ class Mul_iss_info extends Bundle {
 //   val rd0_phy = UInt(6.W)
 // }
 
-class WriteBack_info extends Rd_Param {
+class WriteBack_info extends Bundle {
+  val rd = new Rd_Param
   val res = UInt(64.W)
 }
 

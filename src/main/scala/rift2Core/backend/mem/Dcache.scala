@@ -53,8 +53,7 @@ abstract class DcacheBundle(implicit p: Parameters) extends L1CacheBundle
 
 
 
-class Cache_op extends Bundle {
-  val fun = new Lsu_isa
+class Cache_op extends Lsu_isa {
 
   val probe = Bool()
   val grant = Bool()
@@ -74,9 +73,10 @@ class Cache_op extends Bundle {
 
 trait Info_cache_raw extends DcacheBundle {
   val paddr = UInt(64.W)
-  val wstrb  = UInt(8.W)
   val wdata  = Vec(bk,UInt(64.W))
-  val op    = new Cache_op
+  val wstrb  = UInt(8.W)
+
+  val fun    = new Cache_op
   val rd = new Rd_Param
 
   def tag_sel = paddr(31,32-tag_w)
@@ -218,8 +218,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
   val is_sc_fail = 
     ~is_pending_lr | 
-    (is_lr_64_32n & io.wr_in.bits.op.fun.is_word) |
-    (~is_lr_64_32n & io.wr_in.bits.op.fun.is_dubl) |
+    (is_lr_64_32n & io.wr_in.bits.fun.is_word) |
+    (~is_lr_64_32n & io.wr_in.bits.fun.is_dubl) |
     lr_addr =/= io.wr_in.bits.paddr
 
 
@@ -267,7 +267,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
         ) |
         (
           io.wr_in.bits.op.is_access & j.U === bk_sel & is_hit &
-          Mux( io.wr_in.bits.op.fun.is_sc, ~is_sc_fail, true.B)
+          Mux( io.wr_in.bits.fun.is_sc, ~is_sc_fail, true.B)
         )
       )
   }
@@ -292,24 +292,24 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     io.dat_info_w(j) := 
       Mux1H(Seq(
         op.grant -> io.wr_in.bits.wdata(j),
-        op.fun.is_su -> io.wr_in.bits.wdata(bk_sel),
-        op.fun.is_sc -> io.wr_in.bits.wdata(bk_sel),
-        (op.fun.amoswap_w | op.fun.amoswap_d) -> io.wr_in.bits.wdata(bk_sel),
-        (op.fun.amoadd_w  | op.fun.amoadd_d ) -> (io.wr_in.bits.wdata(bk_sel) + io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.fun.amoxor_w  | op.fun.amoxor_d ) -> (io.wr_in.bits.wdata(bk_sel) ^ io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.fun.amoand_w  | op.fun.amoand_d ) -> (io.wr_in.bits.wdata(bk_sel) & io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.fun.amoor_w   | op.fun.amoor_d  ) -> (io.wr_in.bits.wdata(bk_sel) | io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        fun.is_su -> io.wr_in.bits.wdata(bk_sel),
+        fun.is_sc -> io.wr_in.bits.wdata(bk_sel),
+        (fun.amoswap_w | fun.amoswap_d) -> io.wr_in.bits.wdata(bk_sel),
+        (fun.amoadd_w  | fun.amoadd_d ) -> (io.wr_in.bits.wdata(bk_sel) + io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (fun.amoxor_w  | fun.amoxor_d ) -> (io.wr_in.bits.wdata(bk_sel) ^ io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (fun.amoand_w  | fun.amoand_d ) -> (io.wr_in.bits.wdata(bk_sel) & io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (fun.amoor_w   | fun.amoor_d  ) -> (io.wr_in.bits.wdata(bk_sel) | io.wr_in.bits.rdata(cb_sel)(bk_sel)),
 
 
 
-        (op.fun.amomin_w ) -> Mux(cmp_a_sel.asSInt                   < cmp_b_sel.asSInt,                           io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.fun.amomin_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.fun.amomax_w ) -> Mux(cmp_a_sel.asSInt                   < cmp_b_sel.asSInt,                           io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
-        (op.fun.amomax_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
-        (op.fun.amominu_w) -> Mux(cmp_a_sel                          < cmp_b_sel,                                  io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.fun.amominu_d) -> Mux(io.wr_in.bits.wdata(bk_sel)        < io.wr_in.bits.rdata(cb_sel)(bk_sel),        io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (op.fun.amomaxu_w) -> Mux(cmp_a_sel                          < cmp_b_sel,                                  io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
-        (op.fun.amomaxu_d) -> Mux(io.wr_in.bits.wdata(bk_sel)        < io.wr_in.bits.rdata(cb_sel)(bk_sel),        io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (fun.amomin_w ) -> Mux(cmp_a_sel.asSInt                   < cmp_b_sel.asSInt,                           io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (fun.amomin_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (fun.amomax_w ) -> Mux(cmp_a_sel.asSInt                   < cmp_b_sel.asSInt,                           io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (fun.amomax_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (fun.amominu_w) -> Mux(cmp_a_sel                          < cmp_b_sel,                                  io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (fun.amominu_d) -> Mux(io.wr_in.bits.wdata(bk_sel)        < io.wr_in.bits.rdata(cb_sel)(bk_sel),        io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        (fun.amomaxu_w) -> Mux(cmp_a_sel                          < cmp_b_sel,                                  io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (fun.amomaxu_d) -> Mux(io.wr_in.bits.wdata(bk_sel)        < io.wr_in.bits.rdata(cb_sel)(bk_sel),        io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
               
       ))
 
@@ -421,7 +421,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
 
     val res = Mux(
-      io.wr_in.bits.op.fun.is_sc,
+      io.wr_in.bits.fun.is_sc,
       Mux( is_sc_fail, 1.U, 0.U ),
       get_loadRes( op, paddr, rdata )
     )
@@ -444,14 +444,14 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
   when( io.flush ) {
     is_pending_lr := false.B
   }
-  .elsewhen( io.deq.fire & io.wr_in.bits.op.fun.is_lr ) {
+  .elsewhen( io.deq.fire & io.wr_in.bits.fun.is_lr ) {
     is_pending_lr := true.B
-    is_lr_64_32n := io.wr_in.bits.op.fun.is_dubl
+    is_lr_64_32n := io.wr_in.bits.fun.is_dubl
     lr_addr := io.wr_in.bits.paddr
 
-    assert( io.wr_in.bits.op.fun.is_dubl | io.wr_in.bits.op.fun.is_word )
+    assert( io.wr_in.bits.fun.is_dubl | io.wr_in.bits.fun.is_word )
   }
-  .elsewhen( io.deq.fire & io.wr_in.bits.op.fun.is_sc ) {
+  .elsewhen( io.deq.fire & io.wr_in.bits.fun.is_sc ) {
     is_pending_lr := false.B
   }
   .elsewhen( io.wr_in.fire & io.wr_in.bits.op.probe ) {
@@ -459,7 +459,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
       is_pending_lr := false.B
     }
   }
-  .elsewhen( io.deq.fire & (io.wr_in.bits.op.fun.is_su | (io.wr_in.bits.op.fun.is_amo & ~io.wr_in.bits.op.fun.is_lrsc)) ) {
+  .elsewhen( io.deq.fire & (io.wr_in.bits.fun.is_su | (io.wr_in.bits.fun.is_amo & ~io.wr_in.bits.fun.is_lrsc)) ) {
     when( tag_sel === lr_addr(31,32-tag_w) ) {
       is_pending_lr := false.B
     }   
@@ -495,10 +495,10 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val align = reAlign(rdata, paddr)
 
     res := Mux1H(Seq(
-      op.fun.is_byte -> load_byte(op.fun.is_usi, align),
-      op.fun.is_half -> load_half(op.fun.is_usi, align),
-      op.fun.is_word -> load_word(op.fun.is_usi, align),
-      op.fun.is_dubl -> align
+      fun.is_byte -> load_byte(fun.is_usi, align),
+      fun.is_half -> load_half(fun.is_usi, align),
+      fun.is_word -> load_word(fun.is_usi, align),
+      fun.is_dubl -> align
     ))  
 
     res
@@ -666,14 +666,14 @@ class periph_mst(implicit p: Parameters) extends DcacheModule {
   val wop_fifo = Module(new Queue(UInt(8.W), 1))
   val rop_fifo = Module(new Queue(UInt(8.W), 1))
 
-  wop_fifo.io.enq.valid := io.periph_push.valid & io.periph_push.bits.op.fun.is_su
-  rop_fifo.io.enq.valid := io.periph_push.valid & io.periph_push.bits.op.fun.is_lu
+  wop_fifo.io.enq.valid := io.periph_push.valid & io.periph_push.bits.fun.is_su
+  rop_fifo.io.enq.valid := io.periph_push.valid & io.periph_push.bits.fun.is_lu
   wop_fifo.io.enq.bits := io.periph_push.bits.chk_idx
   rop_fifo.io.enq.bits := io.periph_push.bits.chk_idx
 
   io.periph_push.ready := 
-    (wop_fifo.io.enq.ready & io.periph_push.bits.op.fun.is_su) |
-    (rop_fifo.io.enq.ready & io.periph_push.bits.op.fun.is_lu)
+    (wop_fifo.io.enq.ready & io.periph_push.bits.fun.is_su) |
+    (rop_fifo.io.enq.ready & io.periph_push.bits.fun.is_lu)
 
   when( rop_fifo.io.enq.fire ) { ar_valid := true.B }
   .elsewhen( io.sys_chn_ar.fire ) { ar_valid := false.B }

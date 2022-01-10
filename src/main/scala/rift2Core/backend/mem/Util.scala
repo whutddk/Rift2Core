@@ -43,8 +43,8 @@ class addrTrans extends Module {
 object addrTrans {
   def apply( iss_exe: DecoupledIO[Lsu_iss_info], mmu_lsu: DecoupledIO[Info_mmu_rsp] ): DecoupledIO[Lsu_iss_info] = {
     val mdl = Module(new addrTrans)
-    mdl.io.iss_exe := iss_exe
-    mdl.io.mmu_lsu := mmu_lsu
+    mdl.io.iss_exe <> iss_exe
+    mdl.io.mmu_lsu <> mmu_lsu
 
     return mdl.io.deq
   }
@@ -57,14 +57,14 @@ class regionMux extends Module{
   })
 
   val psel = io.enq.bits.paddr(31,28)
-  val sel = Mux( psel(3), 2.U, Mux( psel(2), 1.U, 0.U) )
+  val sel = Mux( psel(3), 0.U, Mux( psel(2), 1.U, 2.U) )
 
 
-  when( sel === 0.U ) {
-    io.deq(0) <> io.enq
+  when( sel === 2.U ) {
+    io.deq(2) <> io.enq
   } .otherwise {
-    io.deq(0).valid := false.B
-    io.deq(0).bits  := DontCare
+    io.deq(2).valid := false.B
+    io.deq(2).bits  := DontCare
   }
 
   when( sel === 1.U ) {
@@ -74,11 +74,11 @@ class regionMux extends Module{
     io.deq(1).bits  := DontCare
   }
 
-  when( sel === 2.U ) {
-    io.deq(2) <> io.enq
+  when( sel === 0.U ) {
+    io.deq(0) <> io.enq
   } .otherwise {
-    io.deq(2).valid := false.B
-    io.deq(2).bits  := DontCare
+    io.deq(0).valid := false.B
+    io.deq(0).bits  := DontCare
   }
 }
 
@@ -143,6 +143,33 @@ object Strb2Mask{
   } 
 }
 
+object align_mem{
+  def apply(ori: Lsu_iss_info) = {
+    val wdata = {
+      val res = Wire(UInt(64.W))
+      val paddr = ori.param.op1
+      val shift = Wire(UInt(6.W))
+      shift := Cat( paddr(2,0), 0.U(3.W) )
+      res   := ori.param.op2 << shift  
+      res
+    }
+
+    val wstrb = {
+      val paddr = ori.param.op1
+      val op = ori.fun
+
+      Mux1H(Seq(
+        op.is_byte -> "b00000001".U, op.is_half -> "b00000011".U,
+        op.is_word -> "b00001111".U, op.is_dubl -> "b11111111".U
+      )) << Cat(paddr(2,0), 0.U(3.W) )
+    }
+
+    val paddr = ori.param.op1 & ~(("b111".U)(64.W))
+
+    (paddr, wdata, wstrb)
+  }
+}
+
 object pkg_Info_cache_s0s1{
   def apply( ori: Info_miss_rsp ) = {
     val res = Wire(new Info_cache_s0s1)
@@ -180,26 +207,8 @@ object pkg_Info_cache_s0s1{
 
     val res = Wire(new Info_cache_s0s1)
 
-    val wdata = {
-      val res = Wire(UInt(64.W))
-      val paddr = ori.param.op1
-      val shift = Wire(UInt(6.W))
-      shift := Cat( paddr(2,0), 0.U(3.W) )
-      res   := ori.param.op2 << shift  
-      res
-    }
-
-    val wstrb = {
-      val paddr = ori.param.op1
-      val op = ori.fun
-
-      Mux1H(Seq(
-        op.is_byte -> "b00000001".U, op.is_half -> "b00000011".U,
-        op.is_word -> "b00001111".U, op.is_dubl -> "b11111111".U
-      )) << Cat(paddr(2,0), 0.U(3.W) )
-    }
-
-    res.paddr := ori.param.op1 & ~(("b111".U)(64.W))
+    val (paddr, wdata, wstrb ) = align_mem( Lsu_iss_info )
+    res.paddr := paddr
     res.wdata := VecInit( Seq.fill(4)(wdata) )
     res.wstrb := wstrb
 

@@ -48,9 +48,9 @@ class Store_queue(dp: Int = 16) extends Module {
 
     val is_commited = Input(Vec(2,Bool()))
 
-    val forward_paddr = ValidIO(UInt(64.W))
-    val forward_wdata = Flipped(ValidIO(UInt(64.W)))
-    val forward_wstrb = Flipped(ValidIO(UInt(64.W)))
+    val overlap_paddr = ValidIO(UInt(64.W))
+    val overlap_wdata = Flipped(ValidIO(UInt(64.W)))
+    val overlap_wstrb = Flipped(ValidIO(UInt(64.W)))
 
     /** prefetch is not guarantee to be accepted by cache*/
     // val preFetch = ValidIO( UInt(64.W) )
@@ -102,26 +102,26 @@ class Store_queue(dp: Int = 16) extends Module {
     assert( rd_ptr >= wr_ptr )
     for ( i <- 0 until dp ) yield {
       val ro_ptr = (rd_ptr_reg + i)(dp_w-1,0)
-      when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff.paddr === io.forward_paddr) ) {
-        forward_buff(i) := buff(ro_ptr)
+      when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff.paddr === io.overlap_paddr) ) {
+        overlap_buff(i) := buff(ro_ptr)
       } .otherwise {
-        forward_buff(i) := 0.U.asTypeOf(new Reservation_Info)
+        overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
       }
     }
   } .otherwise {
     assert( rd_ptr <= wr_ptr )
     for ( i <- 0 until dp ) yield {
       val ro_ptr = (rd_ptr_reg + i)(dp_w-1,0)
-      when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff.paddr === io.forward_paddr) ) {
-        forward_buff(i) := buff(ro_ptr)
+      when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff.paddr === io.overlap_paddr) ) {
+        overlap_buff(i) := buff(ro_ptr)
       } .otherwise {
-        forward_buff(i) := 0.U.asTypeOf(new Reservation_Info)
+        overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
       }
     }
   }
 
 
-  io.forward_wdata := {
+  io.overlap_wdata := {
     def fw_wr( ori: UInt, wdata: UInt, wmask: UInt): UInt = {
       (ori & ~wmask) | (wdata & wmask)
     }
@@ -129,15 +129,15 @@ class Store_queue(dp: Int = 16) extends Module {
     val temp_res = Wire(UInt(64.W))
     for ( i <- 0 until dp ) yield {
       if ( i == 0 ) {
-        temp_res(0) := fw_wr( 0.U, forward_buff(0).wdata, forward_buff(0).wmask)
+        temp_res(0) := fw_wr( 0.U, overlap_buff(0).wdata, overlap_buff(0).wmask)
       } else {
-        temp_res(i) := fw_wr( temp_res(i-1), forward_buff(i).wdata, forward_buff(i).wmask)
+        temp_res(i) := fw_wr( temp_res(i-1), overlap_buff(i).wdata, overlap_buff(i).wmask)
       }
     }
     temp_res(dp-1)
   }
 
-  io.forward_wstrb := forward_buff.map(x => x.wstrb).reduce(_|_)
+  io.overlap_wstrb := overlap_buff.map(x => x.wstrb).reduce(_|_)
 
 
 }

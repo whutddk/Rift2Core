@@ -71,6 +71,12 @@ class Cache_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
       opMux.io.am_deq.fire -> opMux.io.am_deq.bits,
     ))
 
+    val is_commited = Input(Vec(2,Bool()))
+    val overlap_paddr = ValidIO(UInt(64.W))
+    val overlap_wdata = Flipped(ValidIO(UInt(64.W)))
+    val overlap_wstrb = Flipped(ValidIO(UInt(64.W)))
+
+
   opMux.io.st_deq.ready := su_wb_fifo.io.enq.ready & stQueue.io.enq.ready
   opMux.io.am_deq.ready := stQueue.io.enq.ready
 
@@ -102,27 +108,112 @@ class Cache_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
 
 }
 
-class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
+class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModule{
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
     val deq = new DecoupledIO(new WriteBack_info)
 
-    val get    = new DecoupledIO(new TLBundleA(edge(nm).bundle))
+    val getPut    = new DecoupledIO(new TLBundleA(edge(nm).bundle))
     val access = Flipped(new DecoupledIO(new TLBundleD(edge(nm).bundle)))
-
-    val flush = Input(Bool())
   })
 
-  val req_fifo = Module(new Queue( new Lsu_iss_info, 8 ), pipe = true)
+  val req_fifo = {
+    val mdl = Module(new Queue( new Lsu_iss_info, 8 ), pipe = true)
+    mdl.io.enq <> io.enq
+    mdl
+  }
 
-  io.icache_get.valid := icache_state_qout === 1.U & ~is_hit & ~io.flush
-  io.icache_get.bits :=
-    edge.Get(
-      fromSource = 0.U,
-      toAddress = io.mmu_if.bits.paddr & ("hffffffff".U << addr_lsb.U),
-      lgSize = log2Ceil(256/8).U
-    )._2
 
+  val opMux = {
+    val mdl = Module(new OpMux)
+    mdl.io.enq <> req_fifo.io.deq
+    mdl.io.am_deq.ready := true.B
+    assert(mdl.io.am_deq.valid === false.B, "Assert Failed at IO_Lsu, AMO is not supported in IO region")
+    mdl
+  }
+
+  val stQueue = {
+    val mdl = Module(new Store_queue)
+    mdl.io.enq.valid := opMux.io.st_deq.fire 
+    mdl.io.enq.bits := opMux.io.st_deq.bits
+    mdl
+  }
+
+    val is_commited = Input(Vec(2,Bool()))
+    val overlap_paddr = ValidIO(UInt(64.W))
+    val overlap_wdata = Flipped(ValidIO(UInt(64.W)))
+    val overlap_wstrb = Flipped(ValidIO(UInt(64.W)))
+
+  val su_wb_fifo = {
+    val mdl = Module( new Queue( new WriteBack_info, 1, false, true ) )
+    mdl.io.enq.valid := opMux.io.st_deq.fire
+    mdl.io.enq.bits  := opMux.io.st_deq.bits.param.rd
+    mdl
+  }
+  opMux.io.st_deq.ready := su_wb_fifo.io.enq.ready & stQueue.io.enq.ready
+
+
+  val ls_arb = {
+    val mdl = Module(new Arbiter(new Info_cache_s0s1, 2))
+    mdl.io.in(0).valid := opMux.io.ld_deq.valid
+    mdl.io.in(0).bits  := pkg_Info_cache_s0s1(opMux.io.ld_deq.bits)
+    opMux.io.ld_deq.ready := mdl.io.in(0).ready
+
+    mdl.io.in(1) <> stQueue.io.deq
+    mdl
+  }
+
+  val lu_wb_fifo = Module( new Queue( new WriteBack_info, 1, false, true ) )
+
+  val wb_arb = {
+    val mdl = Module(new Arbiter(new WriteBack_info, 2))
+    mdl.io.in(0) <> su_wb_fifo.io.deq
+    mdl.io.in(1) <> lu_wb_fifo.io.deq
+    mdl.io.out   <> io.deq
+    mdl
+  }
+
+
+  ls_arb.io.out <> dcache.io.enq
+
+  io.getPut.valid := io.enq.valid & ~is_busy
+  when( io.enq.bits.fun.is_lu & ~io.enq.bits.fun.is_lr) {
+    io.getPut.bits := 
+      edge.Get(
+        fromSource = idx.U,
+        toAddress = io.enq.paddr
+        lgSize = log2Ceil(64/8).U
+      )._2    
+  } .elsewhen( io.enq.bits.fun.is_su & ~io.enq.bits.fun.is_sc ) {
+    io.getPut.bits :=
+      edge.Put(
+        fromSource = idx.U,
+        toAddress = io.enq.paddr
+        lgSize = log2Ceil(64/8).U,
+        data = io.enq.wdata,
+        mask = io.enq.wstrb
+      )._2
+  } .otherwise{
+    io.getPut.bits := DontCare
+
+    assert(false.B, "Assert Failed at IO_Lsu, RISCV-A is not support at IO region")
+  }
+
+  val is_busy = RegInit(false.B)
+  val pending_rd = Reg(new Rd_Param)
+  when( io.getPut.fire ) {
+    assert( is_busy === false.B  )
+    pending_rd := io.enq.rd
+    is_busy := true.B
+  } .elsewhen( io.access.fire ) {
+    assert( is_busy === true.B  )
+    is_busy := false.B
+  }
+
+  io.deq.valid    := io.access.valid
+  io.deq.bits.res := io.access.bits.data
+  io.deq.bits.rd  := pending_rd
+  io.access.ready := io.deq.ready
     
 }
 
@@ -152,32 +243,34 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule{
     val writeBackUnit_dcache_grant   =
       for ( i <- 0 until nm ) yield Flipped(DecoupledIO(new TLBundleD(edge(i).bundle)))
 
-    val sys_get    = new DecoupledIO(new TLBundleA(edge(nm).bundle))
-    val sys_access = Flipped(new DecoupledIO(new TLBundleD(edge(nm).bundle)))
+    val system_getPut = new DecoupledIO(new TLBundleA(edge(nm).bundle))
+    val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(nm).bundle)))
 
-    val preph_get    = new DecoupledIO(new TLBundleA(edge(nm+1).bundle))
-    val preph_access = Flipped(new DecoupledIO(new TLBundleD(edge(nm+1).bundle)))
-
-    // val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-    // val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
-    // val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-    // val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
-    // val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
+    val periph_getPut = new DecoupledIO(new TLBundleA(edge(nm+1).bundle))
+    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(nm+1).bundle)))
 
 
     val flush = Input(Bool())
   })
 
 
-  val regionMux = Module(new regionMux)
-  val cacheMux = Module(new cacheMux)
- 
-  val rtn_arb = Module(new Arbiter( new Info_cache_retn, nm+2))
+  val regionMux = {
+    val mdl = Module(new regionMux)
+    mdl.io.enq := addrTrans( io.lsu_iss_exe, io.mmu_lsu )
+    mdl
+  }
+
+
+  val cacheMux = {
+    val mdl = Module(new cacheMux)
+    mdl.io.enq <> regionMux.io.deq(2)
+    mdl
+  }
 
   val cache = for ( i <- 0 until nm ) yield {
     val mdl = Moudle(new Cache_Lsu(edge(i)))
     mdl.io.enq := cacheMux.io.deq(i)
-    mdl.io.deq := rtn_arb.io.in(i)
+
 
     mdl.io.missUnit_dcache_acquire <> io.missUnit_dcache_acquire(i)
     mdl.io.missUnit_dcache_grant <> io.missUnit_dcache_grant(i)
@@ -191,24 +284,41 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule{
     mdl
   }
 
+  val periph = {
+    val mdl = IO_Lsu(edge(nm), idx = nm)
+    mdl.io.enq <> regionMux.io.deq(0)
 
-  regionMux.io.enq := addrTrans( io.iss_exe, io.mmu_lsu )
-  <> regionMux.io.deq(0)
-  <> regionMux.io.deq(1)
 
-  rtn_arb.io.in(nm) <>
-  rtn_arb.io.in(nm+1) <>
+    mdl.io.getPut <> io.periph_getPut
+    mdl.io.access <> io.periph_access
+    mdl
+  }
+  val system = {
+    val mdl = IO_Lsu(edge(nm+1), idx = nm+1)
+    mdl.io.enq <> regionMux.io.deq(1)
 
-  cacheMux.io.enq <> regionMux.io.deq(2)
+
+    mdl.io.getPut <> io.system_getPut
+    mdl.io.access <> io.system_access
+    mdl
+  }
+
+
+  val rtn_arb = {
+    val mdl = Module(new Arbiter( new Info_cache_retn, nm+2))
+
+    for ( i <- 0 unitl nm ) until {
+      mdl.io.in(i) <> cache.io.deq
+    }
+
+    mdl.io.in(nm)   <> system.io.deq
+    mdl.io.in(nm+1) <> periph.io.deq
+
+    mdl
+  }
+
+
   io.lsu_exe_wb <> rtn_arb.io.out
-
-  
-
-
-
-
-
-
 
 }
 
