@@ -835,7 +835,7 @@ class Info_cmm_pc extends Bundle {
 // }
 
 class Info_cmm_lsu extends Bundle {
-  val is_lr_clear = Bool()
+  // val is_lr_clear = Bool()
   val is_amo_pending = Bool()
   val is_store_commit = Vec(2, Bool())
 }
@@ -846,3 +846,14 @@ class Info_lsu_cmm extends Bundle {
   val is_misAlign = Bool()
   val trap_addr = UInt(64.W)
 }
+
+class Info_overlap extends Bundle{
+  val paddr = Output(UInt(64.W))
+  val wdata = Input(UInt(64.W))
+  val wstrb = Input(UInt(8.W))
+
+}
+
+
+
+

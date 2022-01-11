@@ -50,6 +50,36 @@ object addrTrans {
   }
 }
 
+class OpMux extends Module {
+  val io = IO(new Bundle{
+    val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
+    val st_deq = DecoupledIO(new Lsu_iss_info)
+    val ld_deq = DecoupledIO(new Lsu_iss_info)
+    val am_deq = DecoupledIO(new Lsu_iss_info)
+  })
+
+  when( io.enq.bits.fun.is_lu ) {
+    io.ld_deq <> io.enq
+  } .otherwise{
+    io.ld_deq.valid := false.B
+    io.ld_deq.bits  := DontCare
+  }
+
+  when( io.enq.bits.fun.is_su ) {
+    io.st_deq <> io.enq
+  } .otherwise{
+    io.st_deq.valid := false.B
+    io.st_deq.bits  := DontCare
+  }
+
+  when( io.enq.bits.fun.is_amo ) {
+    io.am_deq <> io.enq
+  } .otherwise{
+    io.am_deq.valid := false.B
+    io.am_deq.bits  := DontCare
+  }
+}
+
 class regionMux extends Module{
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
@@ -102,35 +132,7 @@ class cacheMux(implicit p: Parameters) extends DcacheModule{
 
 
 
-class OpMux extends Module {
-  val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val st_deq = DecoupledIO(new Lsu_iss_info)
-    val ld_deq = DecoupledIO(new Lsu_iss_info)
-    val am_deq = DecoupledIO(new Lsu_iss_info)
-  })
 
-  when( io.enq.bits.fun.is_lu ) {
-    io.ld_deq <> io.enq
-  } .otherwise{
-    io.ld_deq.valid := false.B
-    io.ld_deq.bits  := DontCare
-  }
-
-  when( io.enq.bits.fun.is_su ) {
-    io.st_deq <> io.enq
-  } .otherwise{
-    io.st_deq.valid := false.B
-    io.st_deq.bits  := DontCare
-  }
-
-  when( io.enq.bits.fun.is_amo ) {
-    io.am_deq <> io.enq
-  } .otherwise{
-    io.am_deq.valid := false.B
-    io.am_deq.bits  := DontCare
-  }
-}
 
 object Strb2Mask{
   def apply(strb: UInt): UInt = {
@@ -225,4 +227,47 @@ object pkg_Info_cache_s0s1{
 
 }
 
+object overlap_wr{
+  def apply( ori: UInt, ori_wstrb: UInt, wdata: UInt, wstrb: UInt): (UInt, UInt) = {
+    val mask = Strb2Mask(wstrb)
+
+    val new_data = (ori & ~wmask) | (wdata & wmask)
+    val new_strb = ori_wstrb | wstrb
+
+    return (new_data, new_strb)
+  }
+}
+
+// class overlap_chk extends Module {
+//   val io = IO(new Bundle{
+//     val rd_info = Flipped(ValidIO(new Bundle{
+//       val paddr = UInt(64.W)
+//       val rdata = UInt(64.W)
+//     }))
+//     val wr_info = new Info_overlap
+
+//     val real_rd = Output(UInt(64.W))
+//   })
+
+//   io.wr_info.req.valid <> io.rd_info.valid
+//   io.wr_info.req.bits.paddr <> io.rd_info.bits.paddr
+
+//   io.real_rd :=
+//     Mux(
+//       io.wr_info.rsp.valid,
+//       overlap_wr( io.rd_info.bits.rdata, DontCare, io.wr_info.rsp.bits.wdata, io.wr_info.rsp.bits.wstrb)._1,
+//       io.rd_info.bits.rdata
+//     )
+
+// }
+
+
+// object overlap_chk{
+//   def apply( rd: Info_overlap, wr: Info_overlap): UInt = {
+//     val mdl = Module(new overlap_chk)
+//     mdl.io.rd_info <> rd
+//     mdl.io.wr_info <> wr
+//     return mdl.io.real_rd
+//   }
+// }
 

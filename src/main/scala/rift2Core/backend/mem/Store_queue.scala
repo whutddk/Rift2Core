@@ -46,11 +46,12 @@ class Store_queue(dp: Int = 16) extends Module {
     val enq = DecoupledIO(new Lsu_iss_info)
     val deq = Flipped(DecoupledIO(new Info_cache_s0s1))
 
-    val is_commited = Input(Vec(2,Bool()))
+    // val is_commited = Input(Vec(2,Bool()))
+    val cmm_lsu = Input(new Info_cmm_lsu)
 
-    val overlap_paddr = ValidIO(UInt(64.W))
-    val overlap_wdata = Flipped(ValidIO(UInt(64.W)))
-    val overlap_wstrb = Flipped(ValidIO(UInt(64.W)))
+    val overlap = Vec(3, Flipped(new Info_overlap))
+
+    val flush = Input(Bool())
 
     /** prefetch is not guarantee to be accepted by cache*/
     // val preFetch = ValidIO( UInt(64.W) )
@@ -72,29 +73,42 @@ class Store_queue(dp: Int = 16) extends Module {
 
   val rd_buff = buff(rd_ptr)
 
+  val is_amo = {
+    val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending & ~io.flush, false.B)
+    (is_amo_pre === false.B) & (io.cmm_lsu.is_amo_pending === true.B)
+  }
+
+  val is_commited = VecInit( io.cmm_lsu.is_commited(0), io.cmm_lsu.is_commited(1) )
   io.enq.ready := ~full
   io.deq.valid := ~emty & rd_buff.bits.paddr(31) === 1.U
 
   io.deq.bits := Mux( io.deq.valid, rd_buff, DontCare )
 
-  when( io.enq.fire ) {
+  when( io.flush ) {
+    wr_ptr_reg := cm_ptr_reg
+    assert( ~is_commited(0) & ~is_commited(1) & ~is_amo )
+  } .elsewhen( io.enq.fire ) {
     buff(wr_ptr) := pkg_Info_cache_s0s1(io.enq.bits)
     wr_ptr_reg := wr_ptr_reg + 1.U
   }
 
-  // io.preFetch.valid := io.enq.fire
-  // io.preFetch.bits := io.enq.bits.paddr
+  when( io.deq.fire ) {
+    rd_ptr_reg := rd_ptr_reg + 1.U
+  }
 
-  when( io.is_commited(1) ) {
+
+
+  when( is_commited(1) ) {
     cm_ptr_reg := cm_ptr_reg + 2.U
-    assert( io.is_commited(0) )
-  } .elsewhen( io.is_commited(0) ) {
+    assert( is_commited(0) )
+  } .elsewhen( is_commited(0) | is_amo ) {
     cm_ptr_reg := cm_ptr_reg + 1.U
   }
 
-  when( io.mem_deq.fire ) {
-    rd_ptr_reg := rd_ptr_reg + 1.U
-  }
+
+
+
+
 
 
 
@@ -121,23 +135,40 @@ class Store_queue(dp: Int = 16) extends Module {
   }
 
 
-  io.overlap_wdata := {
-    def fw_wr( ori: UInt, wdata: UInt, wmask: UInt): UInt = {
-      (ori & ~wmask) | (wdata & wmask)
-    }
 
-    val temp_res = Wire(UInt(64.W))
-    for ( i <- 0 until dp ) yield {
-      if ( i == 0 ) {
-        temp_res(0) := fw_wr( 0.U, overlap_buff(0).wdata, overlap_buff(0).wmask)
-      } else {
-        temp_res(i) := fw_wr( temp_res(i-1), overlap_buff(i).wdata, overlap_buff(i).wmask)
-      }
+  val temp_wdata = Wire(UInt(64.W))
+  val temp_wstrb = Wire(UInt(8.W))
+  for ( i <- 0 until dp ) yield {
+    if ( i == 0 ) {
+      val (wdata, wstrb) = overlap_wr( 0.U, 0.U, overlap_buff(0).wdata, overlap_buff(0).wstrb)
+      temp_wdata(0) := wdata
+      temp_wstrb(0) := wstrb
+    } else {
+      val (wdata, wstrb) = overlap_wr( temp_res(i-1), overlap_buff(i).wdata, overlap_buff(i).wstrb)
+      temp_wdata(i) := wdata
+      temp_wstrb(i) := wstrb
     }
-    temp_res(dp-1)
   }
+  io.overlap_wdata := temp_wdata(dp-1)
+  io.overlap_wstrb := temp_wstrb(dp-1)
 
-  io.overlap_wstrb := overlap_buff.map(x => x.wstrb).reduce(_|_)
+  // io.overlap_wdata := {
+  //   def overlap_wr( ori: UInt, wdata: UInt, wmask: UInt): UInt = {
+  //     (ori & ~wmask) | (wdata & wmask)
+  //   }
+
+  //   val temp_res = Wire(UInt(64.W))
+  //   for ( i <- 0 until dp ) yield {
+  //     if ( i == 0 ) {
+  //       temp_res(0) := overlap_wr( 0.U, overlap_buff(0).wdata, overlap_buff(0).wmask)
+  //     } else {
+  //       temp_res(i) := overlap_wr( temp_res(i-1), overlap_buff(i).wdata, overlap_buff(i).wmask)
+  //     }
+  //   }
+  //   temp_res(dp-1)
+  // }
+
+  // io.overlap_wstrb := overlap_buff.map(x => x.wstrb).reduce(_|_)
 
 
 }

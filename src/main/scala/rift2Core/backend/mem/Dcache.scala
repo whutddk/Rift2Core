@@ -106,6 +106,7 @@ class Info_cache_sb extends Lsu_iss_info
 class Info_cache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc_idx {
   val wb = new WriteBack_info
   val is_load_amo = Bool()
+  val paddr = UInt(64.W)
 }
 
 
@@ -414,7 +415,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     Mux( io.reload.valid, io.wr_in.bits.chk_idx, 0.U )
 
   io.deq.valid := io.wr_in.valid & io.wr_in.bits.op.is_access & is_hit
-  io.deq.bits.res := {
+  io.deq.bits.wb.res := {
     val rdata = io.wr_in.bits.rdata(cb_sel)(bk_sel)
     val paddr = io.wr_in.bits.paddr
     val op = io.wr_in.bits.op
@@ -435,8 +436,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
   io.deq.bits.is_load_amo :=
     Mux( io.deq.valid, io.wr_in.bits.op.is_wb, 0.U )
     
-
-
+  io.deq.bits.paddr := 
+    Mux( io.deq.valid, io.wr_in.bits.paddr, 0.U )
 
 
 
@@ -511,6 +512,7 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule with 
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = new DecoupledIO(new Info_cache_retn)
+    val overlap = new Info_overlap
     val flush = Input(Bool())
 
     val missUnit_dcache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
@@ -594,10 +596,21 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule with 
 
 
   wr_stage.io.deq <> Decoupled1toN( VecInit( io.deq, buf_enq ) )
+  // io.deq.bits.wb.res := {
+  //   val mdl = Module(new overlap_chk)
+  //   val ori = wr_stage.io.bits.wb.res
 
+  //   mdl.io.rd_info.valid := io.deq.valid
+  //   mdl.io.rd_info.bits.paddr :=
+  //   mdl.io.rd_info.bits.rdata := 
 
+  //   mdl.io.wr_info := io.overlap
 
-
+  //   Mux( mdl.io.wr_info.rsp.valid,
+  //     overlap_wr( ori, DontCare, mdl.io.wr_info.rsp.bits.wdata, mdl.io.wr_info.rsp.bits.wstrb)._1,
+  //     ori
+  //   )
+  // }
 
 
 
@@ -608,95 +621,95 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule with 
 
 
 
-class periph_mst(implicit p: Parameters) extends DcacheModule {
-  val io = IO(new Bundle{
-    val periph_push = Flipped(new DecoupledIO(new Info_cache_s0s1))
-    val periph_pop = new DecoupledIO(new Info_cache_retn)
+// class periph_mst(implicit p: Parameters) extends DcacheModule {
+//   val io = IO(new Bundle{
+//     val periph_push = Flipped(new DecoupledIO(new Info_cache_s0s1))
+//     val periph_pop = new DecoupledIO(new Info_cache_retn)
 
-    val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-    val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
+//     val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+//     val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
 
-    val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-    val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
-    val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
+//     val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
+//     val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
+//     val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
 
-  })
+//   })
 
-  val ar_valid = RegInit(false.B)
-  val r_ready  = Wire(Bool())
+//   val ar_valid = RegInit(false.B)
+//   val r_ready  = Wire(Bool())
 
-  val aw_valid = RegInit(false.B)
-  val w_valid  = RegInit(false.B)
-  val b_ready  = Wire(Bool())
-
-
-  io.sys_chn_ar.valid := ar_valid
-  io.sys_chn_ar.bits.addr := RegEnable(io.periph_push.bits.paddr, io.periph_push.fire)
-  io.sys_chn_ar.bits.burst := 0.U
-  io.sys_chn_ar.bits.cache := 0.U
-  io.sys_chn_ar.bits.id := 0.U
-  io.sys_chn_ar.bits.len := 1.U
-  io.sys_chn_ar.bits.lock := 0.U
-  io.sys_chn_ar.bits.port := 0.U
-  io.sys_chn_ar.bits.qos := 0.U
-  io.sys_chn_ar.bits.size := 3.U
-  io.sys_chn_ar.bits.user := 0.U
-  io.sys_chn_r.ready := r_ready
-
-  io.sys_chn_aw.valid := aw_valid
-  io.sys_chn_aw.bits.addr := RegEnable(io.periph_push.bits.paddr, io.periph_push.fire)
-  io.sys_chn_aw.bits.burst := 0.U
-  io.sys_chn_aw.bits.cache := 0.U
-  io.sys_chn_aw.bits.id := 0.U
-  io.sys_chn_aw.bits.len := 1.U
-  io.sys_chn_aw.bits.lock := 0.U
-  io.sys_chn_aw.bits.port := 0.U
-  io.sys_chn_aw.bits.qos := 0.U
-  io.sys_chn_aw.bits.size := 3.U
-  io.sys_chn_aw.bits.user := 0.U
-
-  io.sys_chn_w.valid := w_valid
-  io.sys_chn_w.bits.data := RegEnable(io.periph_push.bits.wdata(0), io.periph_push.fire)
-  io.sys_chn_w.bits.last := true.B
-  io.sys_chn_w.bits.strb := RegEnable(io.periph_push.bits.wstrb, io.periph_push.fire)
-  io.sys_chn_w.bits.user := 0.U
-
-  io.sys_chn_b.ready := b_ready
-
-  val wop_fifo = Module(new Queue(UInt(8.W), 1))
-  val rop_fifo = Module(new Queue(UInt(8.W), 1))
-
-  wop_fifo.io.enq.valid := io.periph_push.valid & io.periph_push.bits.fun.is_su
-  rop_fifo.io.enq.valid := io.periph_push.valid & io.periph_push.bits.fun.is_lu
-  wop_fifo.io.enq.bits := io.periph_push.bits.chk_idx
-  rop_fifo.io.enq.bits := io.periph_push.bits.chk_idx
-
-  io.periph_push.ready := 
-    (wop_fifo.io.enq.ready & io.periph_push.bits.fun.is_su) |
-    (rop_fifo.io.enq.ready & io.periph_push.bits.fun.is_lu)
-
-  when( rop_fifo.io.enq.fire ) { ar_valid := true.B }
-  .elsewhen( io.sys_chn_ar.fire ) { ar_valid := false.B }
-
-  when( wop_fifo.io.enq.fire ) { aw_valid := true.B }
-  .elsewhen( io.sys_chn_aw.fire ) { aw_valid := false.B }
-
-  when( wop_fifo.io.enq.fire ) { w_valid := true.B }
-  .elsewhen( io.sys_chn_w.fire ) { w_valid := false.B }
+//   val aw_valid = RegInit(false.B)
+//   val w_valid  = RegInit(false.B)
+//   val b_ready  = Wire(Bool())
 
 
-  r_ready := io.periph_pop.ready & ~io.sys_chn_b.valid
-  b_ready := io.periph_pop.ready
+//   io.sys_chn_ar.valid := ar_valid
+//   io.sys_chn_ar.bits.addr := RegEnable(io.periph_push.bits.paddr, io.periph_push.fire)
+//   io.sys_chn_ar.bits.burst := 0.U
+//   io.sys_chn_ar.bits.cache := 0.U
+//   io.sys_chn_ar.bits.id := 0.U
+//   io.sys_chn_ar.bits.len := 1.U
+//   io.sys_chn_ar.bits.lock := 0.U
+//   io.sys_chn_ar.bits.port := 0.U
+//   io.sys_chn_ar.bits.qos := 0.U
+//   io.sys_chn_ar.bits.size := 3.U
+//   io.sys_chn_ar.bits.user := 0.U
+//   io.sys_chn_r.ready := r_ready
+
+//   io.sys_chn_aw.valid := aw_valid
+//   io.sys_chn_aw.bits.addr := RegEnable(io.periph_push.bits.paddr, io.periph_push.fire)
+//   io.sys_chn_aw.bits.burst := 0.U
+//   io.sys_chn_aw.bits.cache := 0.U
+//   io.sys_chn_aw.bits.id := 0.U
+//   io.sys_chn_aw.bits.len := 1.U
+//   io.sys_chn_aw.bits.lock := 0.U
+//   io.sys_chn_aw.bits.port := 0.U
+//   io.sys_chn_aw.bits.qos := 0.U
+//   io.sys_chn_aw.bits.size := 3.U
+//   io.sys_chn_aw.bits.user := 0.U
+
+//   io.sys_chn_w.valid := w_valid
+//   io.sys_chn_w.bits.data := RegEnable(io.periph_push.bits.wdata(0), io.periph_push.fire)
+//   io.sys_chn_w.bits.last := true.B
+//   io.sys_chn_w.bits.strb := RegEnable(io.periph_push.bits.wstrb, io.periph_push.fire)
+//   io.sys_chn_w.bits.user := 0.U
+
+//   io.sys_chn_b.ready := b_ready
+
+//   val wop_fifo = Module(new Queue(UInt(8.W), 1))
+//   val rop_fifo = Module(new Queue(UInt(8.W), 1))
+
+//   wop_fifo.io.enq.valid := io.periph_push.valid & io.periph_push.bits.fun.is_su
+//   rop_fifo.io.enq.valid := io.periph_push.valid & io.periph_push.bits.fun.is_lu
+//   wop_fifo.io.enq.bits := io.periph_push.bits.chk_idx
+//   rop_fifo.io.enq.bits := io.periph_push.bits.chk_idx
+
+//   io.periph_push.ready := 
+//     (wop_fifo.io.enq.ready & io.periph_push.bits.fun.is_su) |
+//     (rop_fifo.io.enq.ready & io.periph_push.bits.fun.is_lu)
+
+//   when( rop_fifo.io.enq.fire ) { ar_valid := true.B }
+//   .elsewhen( io.sys_chn_ar.fire ) { ar_valid := false.B }
+
+//   when( wop_fifo.io.enq.fire ) { aw_valid := true.B }
+//   .elsewhen( io.sys_chn_aw.fire ) { aw_valid := false.B }
+
+//   when( wop_fifo.io.enq.fire ) { w_valid := true.B }
+//   .elsewhen( io.sys_chn_w.fire ) { w_valid := false.B }
 
 
-  io.periph_pop.bits.is_load_amo := ~io.sys_chn_b.valid
-  io.periph_pop.bits.res := io.sys_chn_r.bits.data
-  io.periph_pop.bits.chk_idx := Mux(io.sys_chn_b.valid, wop_fifo.io.deq.bits, rop_fifo.io.deq.bits)
+//   r_ready := io.periph_pop.ready & ~io.sys_chn_b.valid
+//   b_ready := io.periph_pop.ready
 
-  io.periph_pop.valid := io.sys_chn_b.valid | io.sys_chn_r.valid
-  wop_fifo.io.deq.ready := io.periph_pop.ready
-  rop_fifo.io.deq.ready := io.periph_pop.ready & ~io.sys_chn_b.valid
 
-}
+//   io.periph_pop.bits.is_load_amo := ~io.sys_chn_b.valid
+//   io.periph_pop.bits.res := io.sys_chn_r.bits.data
+//   io.periph_pop.bits.chk_idx := Mux(io.sys_chn_b.valid, wop_fifo.io.deq.bits, rop_fifo.io.deq.bits)
+
+//   io.periph_pop.valid := io.sys_chn_b.valid | io.sys_chn_r.valid
+//   wop_fifo.io.deq.ready := io.periph_pop.ready
+//   rop_fifo.io.deq.ready := io.periph_pop.ready & ~io.sys_chn_b.valid
+
+// }
 
 
