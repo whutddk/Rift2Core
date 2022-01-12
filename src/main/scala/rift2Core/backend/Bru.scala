@@ -28,7 +28,7 @@ import rift2Core.define._
 class Bru extends Module {
   val io = IO(new Bundle{
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
-    val bru_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+    val bru_exe_iwb = new DecoupledIO(new WriteBack_info)
 
     val cmm_bru_ilp = Input(Bool())
 
@@ -38,7 +38,7 @@ class Bru extends Module {
     val flush = Input(Bool())
   })
 
-  val bru_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, false, false ) ) // to block back-to back branch
+  val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info, 1, false, false ) ) // to block back-to back branch
   io.bru_exe_iwb <> bru_exe_iwb_fifo.io.deq
   bru_exe_iwb_fifo.reset := reset.asBool | io.flush
 
@@ -73,7 +73,7 @@ class Bru extends Module {
 
   bru_exe_iwb_fifo.io.enq.valid := is_clear_ilp & io.bru_iss_exe.valid
   bru_exe_iwb_fifo.io.enq.bits.res := io.bru_iss_exe.bits.param.pc + Mux( io.bru_iss_exe.bits.param.is_rvc, 2.U, 4.U)
-  bru_exe_iwb_fifo.io.enq.bits.rd0_phy := io.bru_iss_exe.bits.param.rd0_phy
+  bru_exe_iwb_fifo.io.enq.bits.rd := io.bru_iss_exe.bits.param.rd
 
 
 
