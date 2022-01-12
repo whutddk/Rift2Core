@@ -24,27 +24,33 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 
+
+
 class addrTrans extends Module {
   val io = IO(new Bundle{
     val iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
+    val block = Input(Bool())
 
     val deq = new DecoupledIO(new Lsu_iss_info)
   })
 
-  io.deq.valid := io.mmu_lsu.valid
+  /** the transation will be blocked if the request is illegal */
+  io.deq.valid := io.mmu_lsu.valid & ~io.mmu_lsu.is_fault & ~io.iss_exe.bits.is_misAlign & ~io.block
   {
     io.deq.bits := io.iss_exe
     io.deq.bits.param.op1 := io.mmu_lsu.bits.paddr
-    io.mmu_lsu.ready := io.deq.ready
+    io.mmu_lsu.ready := io.deq.ready & ~io.mmu_lsu.is_fault & ~io.iss_exe.bits.is_misAlign & ~io.block
   }
+
 }
 
 object addrTrans {
-  def apply( iss_exe: DecoupledIO[Lsu_iss_info], mmu_lsu: DecoupledIO[Info_mmu_rsp] ): DecoupledIO[Lsu_iss_info] = {
+  def apply( iss_exe: DecoupledIO[Lsu_iss_info], mmu_lsu: DecoupledIO[Info_mmu_rsp], block: Bool ): DecoupledIO[Lsu_iss_info] = {
     val mdl = Module(new addrTrans)
     mdl.io.iss_exe <> iss_exe
     mdl.io.mmu_lsu <> mmu_lsu
+    mdl.io.block := block
 
     return mdl.io.deq
   }
@@ -55,7 +61,7 @@ class OpMux extends Module {
     val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
     val st_deq = DecoupledIO(new Lsu_iss_info)
     val ld_deq = DecoupledIO(new Lsu_iss_info)
-    val am_deq = DecoupledIO(new Lsu_iss_info)
+    val am_deq = DecoupledIO(new Lsu_iss_info) 
   })
 
   when( io.enq.bits.fun.is_lu ) {
@@ -78,12 +84,13 @@ class OpMux extends Module {
     io.am_deq.valid := false.B
     io.am_deq.bits  := DontCare
   }
+
 }
 
 class regionMux extends Module{
   val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val deq = Vec(3, new DecoupledIO(new Lsu_iss_info))
+    val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
+    val deq = Vec(3, new DecoupledIO(new Info_cache_s0s1))
   })
 
   val psel = io.enq.bits.paddr(31,28)
@@ -114,8 +121,8 @@ class regionMux extends Module{
 
 class cacheMux(implicit p: Parameters) extends DcacheModule{
   val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val deq = Vec(nm, new DecoupledIO(new Lsu_iss_info))
+    val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
+    val deq = Vec(nm, new DecoupledIO(new Info_cache_s0s1))
   })
 
   val chn = io.enq.bits.paddr(12+nm_w-1,12)

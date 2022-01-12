@@ -23,15 +23,22 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 
+trait Fence_op{
+  /** when a flush comes, flush all uncommit write & amo request in pending-fifo, and block all request from issue until scoreboard is empty */
+  val trans_kill = RegInit(false.B)
+
+  /** indicate if the fence is an icache fence */
+  val is_fence  = RegInit(false.B)
+  val is_fence_i  = RegInit(false.B)
+  val is_sfence_vma  = RegInit(false.B)
+  def is_fence_op = is_fence | is_fence_i | is_sfence_vma
+}
 
 
-
-class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule{
+class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with Fence_op{
   val io = IO(new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-
     val lsu_exe_wb = new DecoupledIO(new WriteBack_info)
-
 
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
@@ -63,13 +70,15 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule{
   })
 
 
+
+  /** divide operation into load, store, and amo */
   val opMux = {
     val mdl = Module(new OpMux)
-    mdl.io.enq <> addrTrans( io.lsu_iss_exe, io.mmu_lsu )
+    mdl.io.enq.bits := addrTrans( io.lsu_iss_exe, io.mmu_lsu, trans_kill | is_fence_op)
     mdl
   }
 
-
+  /** for store and amo, they should be push into stQueue waiting for commited and pending commit */
   val stQueue = {
     val mdl = Module(new Store_queue)
     mdl.io.enq.valid := opMux.io.st_deq.fire | opMux.io.am_deq.fire
@@ -84,7 +93,10 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule{
   }
 
   
-
+  /** the raw req that will be merged
+    * @param in Info_cache_s0s1
+    * @return Info_cache_s0s1
+    */
   val ls_arb = {
     val mdl = Module(new Arbiter(new Info_cache_s0s1, 2))
     mdl.io.in(0).valid := opMux.io.ld_deq.valid
@@ -93,13 +105,21 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule{
     mdl
   }
 
+  /** according to the paddr, the request will be sent to cache, system-bus, periph-bus
+    * @param in Info_cache_s0s1
+    * @return Info_cache_s0s1
+    */ 
   val regionMux = {
     val mdl = Module(new regionMux)
     mdl.io.enq <> ls_arb.io.out
     mdl
   }
 
-
+  /** according to the paddr, the cache request will be divided into 4 or 8 (nm) "bank",
+    * @note there are 2 "bank" defined here, which may make you confuse
+    * @param in Info_cache_s0s1
+    * @return Info_cache_s0s1
+    */ 
   val cacheMux = {
     val mdl = Module(new cacheMux)
     mdl.io.enq <> regionMux.io.deq(2)
@@ -107,11 +127,13 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule{
   }
 
 
-
+  /** there are nm cache bank 
+    * @param in Info_cache_s0s1
+    * @return Info_cache_retn
+    */
   val cache = for ( i <- 0 until nm ) yield {
-    val mdl = Moudle(new Cache_Lsu(edge(i)))
+    val mdl = Module(new Dcache(edge(i)))
     mdl.io.enq := cacheMux.io.deq(i)
-
 
     mdl.io.missUnit_dcache_acquire <> io.missUnit_dcache_acquire(i)
     mdl.io.missUnit_dcache_grant <> io.missUnit_dcache_grant(i)
@@ -129,7 +151,6 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule{
     val mdl = IO_Lsu(edge(nm+1), idx = nm+1)
     mdl.io.enq <> regionMux.io.deq(1)
 
-
     mdl.io.getPut <> io.system_getPut
     mdl.io.access <> io.system_access
     mdl
@@ -139,41 +160,55 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule{
     val mdl = IO_Lsu(edge(nm), idx = nm)
     mdl.io.enq <> regionMux.io.deq(0)
 
-
     mdl.io.getPut <> io.periph_getPut
     mdl.io.access <> io.periph_access
     mdl
   }
 
-
-
-
-
-
+  /** the load-and-amo operation write-back info from cache or bus
+    * @param enq Vec[Info_cache_retn]
+    * @return Info_cache_retn
+    */
   val lu_wb_arb = {
-    val mdl = Module(new Arbiter(3, new Info_cache_retn))
-    mdl.io.in(0) <> cache.io.deq
-    mdl.io.in(1) <> system.io.deq
-    mdl.io.in(2) <> periph.io.deq
+    val mdl = Module(new Arbiter(nm+2, new Info_cache_retn))
+    for ( i <- 0 until nm ) yield {
+      mdl.io.in(i) <> cache(i).io.deq      
+    }
+
+    mdl.io.in(nm)   <> system.io.deq
+    mdl.io.in(nm+1) <> periph.io.deq
     mdl
   }
 
+  /** the load-and-amo write-back fifo, 
+    * @note overlap will be merge here
+    * @note when trans_kill, the load result will be abort here to prevent write-back
+    * @param in Info_cache_retn
+    * @return WriteBack_info
+    */
   val lu_wb_fifo = {
     val mdl = Module( new Queue( new WriteBack_info, 1, false, true ) )
-    mdl.io.enq.valid := lu_wb_arb.io.out.valid
+    mdl.io.enq.valid := lu_wb_arb.io.out.valid & ~trans_kill
     mdl.io.enq.bits.rd := lu_wb_arb.io.out.bits.wb.rd
     mdl.io.enq.bits.res := {
       stQueue.io.overlap.paddr := lu_wb_arb.io.out.bits.paddr
       overlap_wr( lu_wb_arb.io.out.bits.wb.res, 0.U, stQueue.io.overlap.wdata, stQueue.io.overlap.wstrb)
     }
-    lu_wb_arb.io.out.ready := mdl.io.enq.ready 
+    lu_wb_arb.io.out.ready := mdl.io.enq.ready | trans_kill
+    mdl.reset := reset.asBool | io.flush
     mdl
   }
 
+  /** store operations will write-back dircetly from opMux
+    * @param in Lsu_iss_info
+    * @return WriteBack_info
+    */
   val su_wb_fifo = {
     val mdl = Module( new Queue( new WriteBack_info, 1, false, true ) )
     mdl.io.enq.valid := opMux.io.st_deq.fire
-    mdl.io.enq.bits  := opMux.io.st_deq.bits.param.rd
+    mdl.io.enq.bits.rd  := opMux.io.st_deq.bits.param.rd
+    mdl.io.enq.bits.res := 0.U
+    mdl.reset := reset.asBool | io.flush
     mdl
   }
 
@@ -185,23 +220,83 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule{
 
 
 
-  val rtn_arb = {
-    val mdl = Module(new Arbiter( new Info_cache_retn, nm+2))
-
-    for ( i <- 0 unitl nm ) until {
-      mdl.io.in(i) <> cache.io.deq
-    }
-
-    mdl.io.in(nm)   <> system.io.deq
-    mdl.io.in(nm+1) <> periph.io.deq
-
+  val fe_wb_fifo = {
+    val mdl = Module( new Queue( new WriteBack_info, 1, false, true ) )
+    mdl.reset := reset.asBool | io.flush
+    mdl.io.enq.valid := is_empty & is_fence_op
+    mdl.io.enq.bits.rd := io.lsu_iss_exe.bits.param.rd
+    mdl.io.enq.bits.res := 0.U
     mdl
   }
 
 
-  io.lsu_exe_wb.valid := rtn_arb.io.out.valid
-  io.lsu_exe_wb.bits := rtn_arb.io.out.bits.wb
-  rtn_arb.io.out.ready := io.lsu_exe_wb.ready
+  /** merge lu-writeback and su-writeback
+    * @param in WriteBack_info
+    * @return WriteBack_info
+    */
+  val rtn_arb = {
+    val mdl = Module(new Arbiter( new WriteBack_info, 2))
+    mdl.io.in(0) <> su_wb_fifo.io.deq
+    mdl.io.in(1) <> lu_wb_fifo.io.deq
+    mdl.io.in(2) <> fe_wb_fifo.io.deq
+    mdl.io.out   <> io.lsu_exe_wb
+    mdl
+  }
+
+
+  /** indicate the mem unit is empty by all seq-element is empty*/
+  val is_empty = 
+    stQueue.io.is_empty & 
+    cache.io.is_empty &
+    system.io.is_empty &
+    periph.io.is_empty &
+    ~su_wb_fifo.io.deq.valid & 
+    ~lu_wb_fifo.io.deq.valid & 
+    ~fe_wb_fifo.io.deq.valid
+
+
+  io.lsu_mmu.valid := io.lsu_iss_exe.valid & ~io.lsu_iss_exe.bits.fun.is_fence
+  io.lsu_mmu.bits.vaddr := io.lsu_iss_exe.bits.param.op1
+  io.lsu_mmu.bits.is_R := io.lsu_iss_exe.bits.fun.is_R
+  io.lsu_mmu.bits.is_W := io.lsu_iss_exe.bits.fun.is_W
+  io.lsu_mmu.bits.is_X := false.B
+  io.lsu_iss_exe.ready :=
+    ( ~io.lsu_iss_exe.bits.fun.is_fence & io.lsu_mmu.ready) |
+    (  io.lsu_iss_exe.bits.fun.is_fence & fe_wb_fifo.io.enq.fire) 
+
+
+
+
+  io.lsu_cmm.is_access_fault :=
+    io.mmu_lsu.valid & io.mmu_lsu.bits.is_access_fault & is_empty
+
+  io.lsu_cmm.is_paging_fault :=
+    io.mmu_lsu.valid & io.mmu_lsu.bits.is_paging_fault & is_empty
+
+  io.lsu_cmm.is_misAlign :=
+    io.mmu_lsu.valid & io.lsu_iss_exe.bits.is_misAlign & is_empty
+
+  io.lsu_cmm.trap_addr := io.lsu_iss_exe.bits.param.op1
+
+
+
+
+
+
+
+  when( io.flush ) { trans_kill := true.B }
+  .elsewhen( is_empty ) { trans_kill := false.B }
+
+  when( io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & ~is_fence_op & ~io.flush) {
+    is_fence      := io.lsu_iss_exe.bits.fun.fence
+    is_fence_i     := io.lsu_iss_exe.bits.fun.fence_i
+    is_sfence_vma := io.lsu_iss_exe.bits.fun.sfence_vma
+  }
+  .elsewhen( is_empty & ( is_fence_op | io.flush ) {
+    is_fence      := false.B
+    is_fence_i    := false.B
+    is_sfence_vma := false.B
+  }
 
 }
 

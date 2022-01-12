@@ -512,7 +512,7 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule with 
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = new DecoupledIO(new Info_cache_retn)
-    val overlap = new Info_overlap
+    val is_empty = Output(Bool())
     val flush = Input(Bool())
 
     val missUnit_dcache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
@@ -596,24 +596,8 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule with 
 
 
   wr_stage.io.deq <> Decoupled1toN( VecInit( io.deq, buf_enq ) )
-  // io.deq.bits.wb.res := {
-  //   val mdl = Module(new overlap_chk)
-  //   val ori = wr_stage.io.bits.wb.res
 
-  //   mdl.io.rd_info.valid := io.deq.valid
-  //   mdl.io.rd_info.bits.paddr :=
-  //   mdl.io.rd_info.bits.rdata := 
-
-  //   mdl.io.wr_info := io.overlap
-
-  //   Mux( mdl.io.wr_info.rsp.valid,
-  //     overlap_wr( ori, DontCare, mdl.io.wr_info.rsp.bits.wdata, mdl.io.wr_info.rsp.bits.wstrb)._1,
-  //     ori
-  //   )
-  // }
-
-
-
+  io.is_empty := is_storeBuff_empty
 }
 
 

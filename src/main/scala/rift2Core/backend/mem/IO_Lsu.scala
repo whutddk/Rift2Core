@@ -27,49 +27,22 @@ import rift2Core.backend._
 
 class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModule{
   val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
+    val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = new DecoupledIO(new Info_cache_retn)
-    val overlap = new Info_overlap
+    val is_empty = Output(Bool())
 
     val getPut    = new DecoupledIO(new TLBundleA(edge(nm).bundle))
     val access = Flipped(new DecoupledIO(new TLBundleD(edge(nm).bundle)))
   })
 
-  val req_fifo = {
-    val mdl = Module(new Queue( new Lsu_iss_info, 8 ), pipe = true)
-    // mdl.io.enq <> io.enq
-    mdl
-  }
+  val is_busy = RegInit(false.B)
+  val pending_rd = Reg(new Rd_Param)
+  val pending_paddr = Reg(new UInt(64.W))
 
+  io.is_empty := ~is_busy
 
-
-
-
-
-  val ls_arb = {
-    val mdl = Module(new Arbiter(new Info_cache_s0s1, 2))
-    mdl.io.in(0).valid := opMux.io.ld_deq.valid
-    mdl.io.in(0).bits  := pkg_Info_cache_s0s1(opMux.io.ld_deq.bits)
-    opMux.io.ld_deq.ready := mdl.io.in(0).ready
-
-    mdl.io.in(1) <> stQueue.io.deq
-    mdl
-  }
-
-  val lu_wb_fifo = Module( new Queue( new WriteBack_info, 1, false, true ) )
-
-  val wb_arb = {
-    val mdl = Module(new Arbiter(new WriteBack_info, 2))
-    mdl.io.in(0) <> su_wb_fifo.io.deq
-    mdl.io.in(1) <> lu_wb_fifo.io.deq
-    mdl.io.out   <> io.deq
-    mdl
-  }
-
-
-  // ls_arb.io.out <> dcache.io.enq
-
-  io.getPut.valid := ls_arb.io.out.valid & ~is_busy
+  io.getPut.valid := io.enq.valid & ~is_busy
+  io.enq.ready := io.getPut.fire
   when( io.enq.bits.fun.is_lu & ~io.enq.bits.fun.is_lr) {
     io.getPut.bits := 
       edge.Get(
@@ -92,9 +65,7 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
     assert(false.B, "Assert Failed at IO_Lsu, RISCV-A is not support at IO region")
   }
 
-  val is_busy = RegInit(false.B)
-  val pending_rd = Reg(new Rd_Param)
-  val pending_paddr = Reg(new UInt(64.W))
+
   when( io.getPut.fire ) {
     assert( is_busy === false.B  )
     pending_rd := io.enq.rd

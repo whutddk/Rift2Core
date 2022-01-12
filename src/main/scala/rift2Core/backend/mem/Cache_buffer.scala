@@ -58,7 +58,9 @@ trait Cache_buffer {
     buff(buf_deq.bits)  := 0.U.asTypeOf( new Reservation_Info )
     valid(buf_deq.bits) := false.B
   }
-  buf_deq.ready := true.B
+
+  def is_storeBuff_empty = valid.forall((x:Bool) => (x === false.B))
+  buf_deq.ready := ~is_storeBuff_empty
 
 
 

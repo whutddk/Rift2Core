@@ -48,6 +48,7 @@ class Store_queue(dp: Int = 16) extends Module {
 
     // val is_commited = Input(Vec(2,Bool()))
     val cmm_lsu = Input(new Info_cmm_lsu)
+    val is_empty = Output(Bool())
 
     val overlap = Vec(3, Flipped(new Info_overlap))
 
@@ -152,23 +153,7 @@ class Store_queue(dp: Int = 16) extends Module {
   io.overlap_wdata := temp_wdata(dp-1)
   io.overlap_wstrb := temp_wstrb(dp-1)
 
-  // io.overlap_wdata := {
-  //   def overlap_wr( ori: UInt, wdata: UInt, wmask: UInt): UInt = {
-  //     (ori & ~wmask) | (wdata & wmask)
-  //   }
-
-  //   val temp_res = Wire(UInt(64.W))
-  //   for ( i <- 0 until dp ) yield {
-  //     if ( i == 0 ) {
-  //       temp_res(0) := overlap_wr( 0.U, overlap_buff(0).wdata, overlap_buff(0).wmask)
-  //     } else {
-  //       temp_res(i) := overlap_wr( temp_res(i-1), overlap_buff(i).wdata, overlap_buff(i).wmask)
-  //     }
-  //   }
-  //   temp_res(dp-1)
-  // }
-
-  // io.overlap_wstrb := overlap_buff.map(x => x.wstrb).reduce(_|_)
+  io.empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
 
 
 }
