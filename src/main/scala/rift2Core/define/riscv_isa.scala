@@ -473,27 +473,39 @@ class Info_instruction extends Bundle with Instruction_set {
 }
 
 
-class Reg_raw extends Bundle {
-  val rd0 = UInt(5.W)
-  val rs1 = UInt(5.W)
-  val rs2 = UInt(5.W)
-  val rs3 = UInt(5.W)
+class Register_source(dp:Int) extends Bundle {
+  val rs1 = UInt((log2Ceil(dp)).W)
+  val rs2 = UInt((log2Ceil(dp)).W)
+  val rs3 = UInt((log2Ceil(dp)).W)
 }
 
-
-class Reg_phy extends Bundle {
-  val rd0 = UInt(6.W)
-  val rs1 = UInt(6.W)
-  val rs2 = UInt(6.W)
-  val rs3 = UInt(6.W)
+class Register_dstntn(dp:Int) extends Bundle {
+  val rd = UInt((log2Ceil(dp)).W)
 }
+
+class Operation_source extends Bundle {
+  val op1 = UInt(64.W)
+  val op2 = UInt(64.W)
+  val op3 = UInt(64.W)
+}
+
+// class Reg_raw extends Bundle {
+//   val rd0 = UInt(5.W)
+//   val rs1 = UInt(5.W)
+//   val rs2 = UInt(5.W)
+//   val rs3 = UInt(5.W)
+// }
+
+
+class Reg_phy(dp:Int) extends Register_source(dp) with Register_dstntn(dp)
+
 
 
 
 class Alu_dpt_info extends Bundle {
   val isa = new Alu_isa()
   val param = new Instruction_param
-  val phy = new Reg_phy
+  val phy = new Reg_phy(dp = 64)
 
 }
 
@@ -504,7 +516,7 @@ class Alu_dpt_info extends Bundle {
 class Bru_dpt_info extends Bundle {
   val isa = new Bru_isa
   val param = new Instruction_param
-  val phy = new Reg_phy
+  val phy = new Reg_phy(dp = 64)
 }
 
 
@@ -514,7 +526,7 @@ class Bru_dpt_info extends Bundle {
 class Lsu_dpt_info extends Bundle {
   val isa = new Lsu_isa
   val param = new Instruction_param
-  val phy = new Reg_phy
+  val phy = new Reg_phy(dp = 64)
 }
 
 
@@ -522,7 +534,7 @@ class Lsu_dpt_info extends Bundle {
 class Csr_dpt_info extends Bundle {
   val isa = new Csr_isa
   val param = new Instruction_param
-  val phy = new Reg_phy
+  val phy = new Reg_phy(dp = 64)
 
 }
 
@@ -530,14 +542,14 @@ class Csr_dpt_info extends Bundle {
 class Mul_dpt_info extends Bundle {
   val isa = new Mul_isa
   val param = new Instruction_param
-  val phy = new Reg_phy
+  val phy = new Reg_phy(dp = 64)
 }
 
 
 class Fpu_dpt_info extends Bundle {
   val isa = new Fpu_isa
   val param = new Instruction_param
-  val phy = new Reg_phy
+  val phy = new Reg_phy(dp = 64)
 }
 
 
@@ -574,10 +586,9 @@ class Info_reorder_f extends Bundle {
 
 
 
-class Rd_Param extends Bundle {
+class Rd_Param(dp:Int) extends Register_dstntn(dp) {
   val is_iwb = Bool()
   val is_fwb = Bool()
-  val rd0_phy = UInt(6.W)
 }
 
 
@@ -607,7 +618,7 @@ class Alu_param extends Bundle {
   val op1 = UInt(64.W)
   val op2 = UInt(64.W)
 
-  val rd = new Rd_Param
+  val rd = new Rd_Param(64)
 }
 
 class Alu_iss_info extends Bundle {
@@ -626,7 +637,7 @@ class Bru_param extends Bundle {
   val op2 = UInt(64.W)
 
 
-  val rd = new Rd_Param
+  val rd = new Rd_Param(64)
 }
 
 class Bru_iss_info extends Bundle {
@@ -639,7 +650,7 @@ class Lsu_param extends Bundle {
   val op1 = UInt(64.W)
   val op2 = UInt(64.W)
 
-  val rd = new Rd_Param
+  val rd = new Rd_Param(64)
 }
 
 class Lsu_iss_info extends Bundle {
@@ -666,7 +677,7 @@ class Csr_param extends Bundle {
   val op1 = UInt(64.W)
   val op2 = UInt(12.W)
 
-  val rd = new Rd_Param
+  val rd = new Rd_Param(64)
 }
 
 class Csr_iss_info extends Bundle {
@@ -678,7 +689,7 @@ class Mul_param extends Bundle {
   val op1 = UInt(64.W)
   val op2 = UInt(64.W)
 
-  val rd = new Rd_Param
+  val rd = new Rd_Param(64)
 }
 
 class Mul_iss_info extends Bundle {
@@ -686,115 +697,14 @@ class Mul_iss_info extends Bundle {
   val param = new Mul_param
 }
 
-// class Fpu_param extends Bundle {
-//   val op1 = UInt(64.W)
-//   val op2 = UInt(64.W)
-//   val op3 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_phy = UInt(6.W)
-// }
 
 
-// class Fpu_float2int_iss_info extends Bundle {
-//   val is_Float2Int = Bool()
-//   val is_Fmv       = Bool()
-//   val is_Fclass    = Bool()
-
-//   val is_in_64_32n  = Bool()
-//   val is_out_64_32n = Bool()
-//   val is_usi        = Bool()
-
-//   val op1 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_int_phy = UInt(6.W)
-// }
-
-// class Fpu_int2float_iss_info extends Bundle {
-//   val is_Int2Float = Bool()
-//   val is_Fmv       = Bool()
-
-//   val is_in_64_32n  = Bool()
-//   val is_out_64_32n = Bool()
-//   val is_usi        = Bool()
-
-//   val op1 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_float_phy = UInt(6.W)
-// }
-
-// class Fpu_float2float_iss_info extends Bundle {
-//   val is_Float2Float = Bool()
-//   val is_FloatSign   = Bool()
-
-//   val is_in_64_32n  = Bool()
-
-//   val op1 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_float_phy = UInt(6.W)
-// }
-
-// class Fpu_floatCmp_iss_info extends Bundle {
-//   val is_eq  = Bool()
-//   val is_lt  = Bool()
-//   val is_gt  = Bool()
-//   val is_min = Bool()
-//   val is_max = Bool()
-
-//   val is_in_64_32n  = Bool()
-
-//   val op1 = UInt(64.W)
-//   val op2 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_int_phy = UInt(6.W)
-//   val rd0_float_phy = UInt(6.W)
-// }
-
-// class Fpu_floatFma_iss_info extends Bundle {
-//   val fun = new Fpu_isa
-//   val param = new Fpu_param
-// }
-
-// class Fpu_floatDivSqrt_iss_info extends Bundle {
-//   val fun = new Fpu_isa
-
-
-//   val op1 = UInt(64.W)
-//   val op2 = UInt(64.W)
-//   val op3 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_phy = UInt(6.W)
-// }
-
-
-
-// class Exe_iwb_info extends Bundle {
-//   val res = UInt(64.W)
-//   val rd0_phy = UInt(6.W)
-// }
-
-// class Exe_fwb_info extends Bundle {
-//   val res = UInt(64.W)
-//   val rd0_phy = UInt(6.W)
-// }
-
-class WriteBack_info extends Bundle {
-  val rd = new Rd_Param
+class WriteBack_info(dp:Int) extends Bundle {
+  val dest = new Rd_Param(dp)
   val res = UInt(64.W)
 }
 
 
-// class Info_bru_id extends Bundle {
-// 	val is_takenBranch_bits = Bool()
-// 	val is_takenBranch_valid = Bool()
-// 	val jalr_pc = UInt(64.W)
-// 	val jalr_valid = Bool()
-// }
 
 
 
@@ -828,11 +738,7 @@ class Info_cmm_pc extends Bundle {
 
 
 
-// class Info_wb_reg extends Bundle {
-//   val dnxt = Vec(64, UInt(64.W))
-//   val enable = Vec(64, Bool())
 
-// }
 
 class Info_cmm_lsu extends Bundle {
   // val is_lr_clear = Bool()

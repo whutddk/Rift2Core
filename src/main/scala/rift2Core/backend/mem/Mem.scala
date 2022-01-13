@@ -292,7 +292,7 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     is_fence_i     := io.lsu_iss_exe.bits.fun.fence_i
     is_sfence_vma := io.lsu_iss_exe.bits.fun.sfence_vma
   }
-  .elsewhen( is_empty & ( is_fence_op | io.flush ) {
+  .elsewhen( is_empty & ( is_fence_op | io.flush )) {
     is_fence      := false.B
     is_fence_i    := false.B
     is_sfence_vma := false.B

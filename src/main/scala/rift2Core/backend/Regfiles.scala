@@ -33,9 +33,9 @@ class Info_writeback_op extends Bundle{
   val dnxt   = UInt(64.W)
 }
 
-class Info_commit_op extends Bundle{
+class Info_commit_op(dp:Int) extends Bundle{
   val raw = UInt(5.W)
-  val phy = UInt(6.W)
+  val phy = UInt((log2Ceil(dp)).W)
   val is_abort = Bool()
 }
 
