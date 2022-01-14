@@ -1,6 +1,7 @@
 
 
 
+
 /*
   Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
@@ -25,37 +26,75 @@ import chisel3.util._
 
 import rift2Core.define._
 
-class WriteBack extends Module {
+class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int=4, cmm_chn: Int = 2) extends Module {
   val io = IO(new Bundle{
-    val exe_iwb = Vec(5, (Flipped(new DecoupledIO(new Exe_iwb_info))))
+    val dpt_rename = Vec( rn_chn, new dpt_rename_info(dp) )
 
-    val wb_op = Vec(2, ValidIO( new Info_writeback_op))
+
+    val ooo_isOpRsl = Vec(4, Flipped(new DecoupledIO( new Register_source(dp) )))
+    val ooo_readOp  = Vec(4, Flipped( new iss_readOp_info))
+
+    val ito_isOpRsl = Flipped(new DecoupledIO( new Register_source(dp) ))
+    val ito_readOp  = Flipped( new iss_readOp_info)
+
+    val fpu_isOpRsl = Flipped(new DecoupledIO( new Register_source(dp) ))
+    val fpu_readOp  = Flipped( new iss_readOp_info)
+
+    val alu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
+    val bru_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
+    val csr_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
+    val mem_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
+    val mul_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
+    val fpu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
+
+    val commit = Vec(cmm_chn, Flipped(Valid(new Info_commit_op(dp))))
   })
 
 
-  io.exe_iwb(0).ready := PopCount(Seq( io.exe_iwb(1).fire, io.exe_iwb(2).fire ) ) < 2.U
-  io.exe_iwb(1).ready := true.B
-  io.exe_iwb(2).ready := true.B
-  io.exe_iwb(3).ready := PopCount(Seq( io.exe_iwb(0).fire, io.exe_iwb(1).fire, io.exe_iwb(2).fire ) ) < 2.U
-  io.exe_iwb(4).ready := PopCount(Seq( io.exe_iwb(0).fire, io.exe_iwb(1).fire, io.exe_iwb(2).fire, io.exe_iwb(3).fire ) ) < 2.U
+  val iReg = Module(new RegFiles(dp, rn_chn, rop_chn, wb_chn, cmm_chn))
+//   val fReg = Module(new RegFiles(dp=64, rn_chn=2, rop_chn=1, wb_chn=1, cmm_chn=2))
+
+    iReg.io.dpt_rename <> io.dpt_rename
+    iReg.io.commit <> io.commit
 
 
+    val isOpRsl_arb = {
+      val mdl = Module(new XArbiter(Register_source(dp), in = 6, out = rop_chn))
+      mdl.io.in(0) <> io.ooo_isOpRsl(0)
+      mdl.io.in(1) <> io.ooo_isOpRsl(1)
+      mdl.io.in(2) <> io.ooo_isOpRsl(2)
+      mdl.io.in(3) <> io.ooo_isOpRsl(3)
+      mdl.io.in(4) <> io.ito_isOpRsl
+      mdl.io.in(5) <> io.fpu_isOpRsl
+      mdl.out <> iReg.io.dpt_isOpRsl
 
+      mdl
+    }
 
-  io.wb_op(0).valid := PopCount(Seq( io.exe_iwb(0).fire, io.exe_iwb(1).fire, io.exe_iwb(2).fire, io.exe_iwb(3).fire, io.exe_iwb(4).fire ) ) > 0.U
-  io.wb_op(1).valid := PopCount(Seq( io.exe_iwb(0).fire, io.exe_iwb(1).fire, io.exe_iwb(2).fire, io.exe_iwb(3).fire, io.exe_iwb(4).fire ) ) === 2.U
+    val readOp_arb = {
+      val mdl = Module(new XArbiter(new iss_readOp_info, in = 6, out = rop_chn))
+      mdl.io.in(0) <> io.ooo_readOp(0)
+      mdl.io.in(1) <> io.ooo_readOp(1)
+      mdl.io.in(2) <> io.ooo_readOp(2)
+      mdl.io.in(3) <> io.ooo_readOp(3)
+      mdl.io.in(4) <> io.ito_readOp
+      mdl.io.in(5) <> io.fpu_readOp
+      mdl.out <> iReg.io.iss_readOp
 
-  val idx = VecInit(
-    io.exe_iwb.indexWhere    ( (x:DecoupledIO[Exe_iwb_info]) => (x.fire === true.B)),
-    io.exe_iwb.lastIndexWhere( (x:DecoupledIO[Exe_iwb_info]) => (x.fire === true.B))
-  )
+      mdl
+    }
 
-  for ( i <- 0 until 2 ) yield {
-    io.wb_op(i).bits.phy  := io.exe_iwb(idx(i)).bits.rd0_phy
-    io.wb_op(i).bits.dnxt := io.exe_iwb(idx(i)).bits.res
+    val writeBack_arb = {
+      val mdl = Module(new XArbiter(new WriteBack_info, in = 6, out = wb_chn))
+      mdl.io.in(0) <> io.alu_writeBack
+      mdl.io.in(1) <> io.bru_writeBack
+      mdl.io.in(2) <> io.csr_writeBack
+      mdl.io.in(3) <> io.mem_writeBack
+      mdl.io.in(4) <> io.mul_writeBack
+      mdl.io.in(5) <> io.fpu_writeBack
+      mdl.out <> iReg.io.exe_writeBack
 
-  }
-  //alu, lsu and bru must always ready
+      mdl
+    }
+
 }
-
-
