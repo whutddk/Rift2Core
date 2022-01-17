@@ -43,8 +43,6 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
   val io = IO( new Bundle{
 
     val dpt_rename = Vec( rn_chn, new dpt_rename_info(dp) )
-    /** are operators written back */
-    val dpt_isOpRsl = Vec(rop_chn, Flipped(new DecoupledIO( new Register_source(dp) )))
     /** read operators based on idx, must success */
     val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info) )
     /** writeBack request from exeUnit */
@@ -115,34 +113,24 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
 
 
   for ( i <- 0 until rop_chn ) yield {
-    {
-      val idx1 = io.is_op_rsl(i).bits.rs1
-      val idx2 = io.is_op_rsl(i).bits.rs2
-      val idx3 = io.is_op_rsl(i).bits.rs3
+    val idx1 = io.iss_readOp(i).reg.rs1
+    val idx2 = io.iss_readOp(i).reg.rs2
+    val idx3 = io.iss_readOp(i).reg.rs3
 
-      io.is_op_rsl(i).ready :=
-        io.is_op_rsl(i).valid & 
-        (log(idx1) === "b10".U | idx1 === 63.U ) &
-        (log(idx2) === "b10".U | idx2 === 63.U ) &
-        (log(idx3) === "b10".U | idx3 === 63.U )      
+    when( io.iss_readOp(i).fire ) {
+      io.iss_readOp(i).dat.op1 := Mux(idx1 === 63.U, 0.U, files(idx1))
+      io.iss_readOp(i).dat.op2 := Mux(idx2 === 63.U, 0.U, files(idx2))
+      io.iss_readOp(i).dat.op3 := Mux(idx3 === 63.U, 0.U, files(idx3))
+    } .otherwise {
+      io.iss_readOp(i).dat.op1 := 0.U
+      io.iss_readOp(i).dat.op2 := 0.U
+      io.iss_readOp(i).dat.op3 := 0.U
     }
+    io.iss_readOp(i).ready :=
+      (log(idx1) === "b10".U | idx1 === 63.U ) &
+      (log(idx2) === "b10".U | idx2 === 63.U ) &
+      (log(idx3) === "b10".U | idx3 === 63.U ) 
 
-    {
-      val idx1 = io.iss_readOp(i).reg.rs1
-      val idx2 = io.iss_readOp(i).reg.rs2
-      val idx3 = io.iss_readOp(i).reg.rs3
-
-      when( io.iss_readOp(i).valid ) {
-        io.iss_readOp(i).dat.op1 := Mux(idx1 === 63.U, 0.U, files(idx1))
-        io.iss_readOp(i).dat.op2 := Mux(idx2 === 63.U, 0.U, files(idx2))
-        io.iss_readOp(i).dat.op3 := Mux(idx3 === 63.U, 0.U, files(idx3))             
-      } .otherwise {
-        io.iss_readOp(i).dat.op1 := 0.U
-        io.iss_readOp(i).dat.op2 := 0.U
-        io.iss_readOp(i).dat.op3 := 0.U
-      }
-      io.iss_readOp(i).ready := true.B
-    }
   }
 
   for ( i <- 0 until wb_chn ) yield {

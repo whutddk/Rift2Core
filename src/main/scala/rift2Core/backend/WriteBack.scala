@@ -31,13 +31,9 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int=4, cmm_
     val dpt_rename = Vec( rn_chn, new dpt_rename_info(dp) )
 
 
-    val ooo_isOpRsl = Vec(4, Flipped(new DecoupledIO( new Register_source(dp) )))
+
     val ooo_readOp  = Vec(4, Flipped( new iss_readOp_info))
-
-    val ito_isOpRsl = Flipped(new DecoupledIO( new Register_source(dp) ))
     val ito_readOp  = Flipped( new iss_readOp_info)
-
-    val fpu_isOpRsl = Flipped(new DecoupledIO( new Register_source(dp) ))
     val fpu_readOp  = Flipped( new iss_readOp_info)
 
     val alu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
@@ -58,18 +54,6 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int=4, cmm_
     iReg.io.commit <> io.commit
 
 
-    val isOpRsl_arb = {
-      val mdl = Module(new XArbiter(Register_source(dp), in = 6, out = rop_chn))
-      mdl.io.in(0) <> io.ooo_isOpRsl(0)
-      mdl.io.in(1) <> io.ooo_isOpRsl(1)
-      mdl.io.in(2) <> io.ooo_isOpRsl(2)
-      mdl.io.in(3) <> io.ooo_isOpRsl(3)
-      mdl.io.in(4) <> io.ito_isOpRsl
-      mdl.io.in(5) <> io.fpu_isOpRsl
-      mdl.out <> iReg.io.dpt_isOpRsl
-
-      mdl
-    }
 
     val readOp_arb = {
       val mdl = Module(new XArbiter(new iss_readOp_info, in = 6, out = rop_chn))
