@@ -430,7 +430,7 @@ class Register_source(dp:Int) extends Bundle {
 }
 
 class Register_dstntn(dp:Int) extends Bundle {
-  val rd = UInt((log2Ceil(dp)).W)
+  val idx = UInt((log2Ceil(dp)).W)
 }
 
 class Operation_source extends Bundle {
