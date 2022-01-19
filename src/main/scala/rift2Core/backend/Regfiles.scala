@@ -26,11 +26,11 @@ import rift2Core.define._
   * the rd should rename and malloc 1 new phy, 
   */
 class dpt_rename_info(dp: Int) extends Bundle{
-  val raw = Input(new Register_source(32))
-  val phy = Output(new Register_source(dp))
+  // val raw = Input(new Register_source(32))
+  // val phy = Output(new Register_source(dp))
 
-  val rsp = Output(new Register_dstntn(dp))
-  val req = Decoupled(new Register_dstntn(32))
+  val rsp = Output(new Reg_phy)
+  val req = Decoupled(new Reg_raw)
 }
 
 class iss_readOp_info(dp: Int) extends Bundle {
@@ -82,7 +82,7 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
     molloc_idx(i) := 0.U
     for ( j <- dp-1 to 0 by -1 ) {
       if ( i == 0 ) { when( log(j) === 0.U ) { molloc_idx(i) := j.U }  }
-      else { when( log(j) === 0.U & j.U > molloc_idx(i-1) ) { molloc_idx(i) := j.U } }
+      else { when( log(j) === 0.U && j.U > molloc_idx(i-1) ) { molloc_idx(i) := j.U } }
     }
   }
   //   VecInit(
@@ -90,24 +90,36 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
   //   log.lastIndexWhere( (x:UInt) => ( x === 0.U ))
   // )
 
-  for ( i <- 0 until rn_chn ) yield {
-    val idx1 = io.dpt_rename(i).raw.rs1
-    val idx2 = io.dpt_rename(i).raw.rs2
-    val idx3 = io.dpt_rename(i).raw.rs3
+  for ( i <- 0 until rn_chn ) {
+    val idx1 = io.dpt_rename(i).req.rs1
+    val idx2 = io.dpt_rename(i).req.rs2
+    val idx3 = io.dpt_rename(i).req.rs3
 
-    io.dpt_rename(i).phy.rs1 := rename_ptr(idx1)
-    io.dpt_rename(i).phy.rs2 := rename_ptr(idx2)
-    io.dpt_rename(i).phy.rs3 := rename_ptr(idx3)
+    if ( i == 0) {
+      io.dpt_rename(i).rsp.rs1 := rename_ptr(idx1)
+      io.dpt_rename(i).rsp.rs2 := rename_ptr(idx2)
+      io.dpt_rename(i).rsp.rs3 := rename_ptr(idx3)
+    } else {
+      io.dpt_rename(i).rsp.rs1 := rename_ptr(idx1)
+      io.dpt_rename(i).rsp.rs2 := rename_ptr(idx2)
+      io.dpt_rename(i).rsp.rs3 := rename_ptr(idx3) 
+      for ( j <- 0 until i ) {
+        when( io.dpt_rename(j).req.rd0 === idx1 ) { io.dpt_rename(i).rsp.rs1 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.rd0 === idx2 ) { io.dpt_rename(i).rsp.rs2 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.rd0 === idx3 ) { io.dpt_rename(i).rsp.rs3 := molloc_idx(j) }
+      }
+    }
+
 
     when( io.dpt_rename(i).req.fire ) {
       val idx = io.dpt_rename(i).req.rd0
-      assert( log(idx) === "b00".U )
-      log(idx) := "b01".U //may be override by flush
+      assert( log(molloc_idx(i)) === "b00".U )
+      log(molloc_idx(i)) := "b01".U //may be override by flush
       rename_ptr(idx) := molloc_idx(i) //may be override by flush
     }
 
     io.dpt_rename(i).ready := log.count( (x:UInt) => ( x === 0.U ) ) > i.U
-    io.dpt_rename(i).rsp.rd := molloc_idx(i)
+    io.dpt_rename(i).rsp.rd0 := molloc_idx(i)
 
   }
 

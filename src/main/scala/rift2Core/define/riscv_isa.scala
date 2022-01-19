@@ -430,7 +430,7 @@ class Register_source(dp:Int) extends Bundle {
 }
 
 class Register_dstntn(dp:Int) extends Bundle {
-  val idx = UInt((log2Ceil(dp)).W)
+  val rd0 = UInt((log2Ceil(dp)).W)
 }
 
 class Operation_source extends Bundle {
@@ -467,6 +467,10 @@ class Instruction_set extends Bundle{
       fpu_isa.fdiv_d | fpu_isa.fsqrt_d | fpu_isa.fsgnj_d | fpu_isa.fsgnjn_d |
       fpu_isa.fsgnjx_d | fpu_isa.fmin_d | fpu_isa. fmax_d
 
+  def is_ooo_dpt = alu_isa.is_alu | lsu_isa.is_lsu | mul_isa.is_mul
+  def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr
+  def is_privil_dpt = privil_isa.is_privil
+  def is_fpu_dpt = fpu_isa.is_fpu
   def is_iwb = ~is_fwb
   def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mul | privil_isa.is_privil | fpu_isa.is_fpu) 
 
@@ -494,9 +498,7 @@ class Info_instruction extends Instruction_set {
 
 
 
-class Dpt_info extends Bundle {
-  val isa = new Instruction_set
-  val param = new Instruction_param
+class Dpt_info extends Info_instruction {
   val phy = new Reg_phy(dp = 64)
 }
 
@@ -540,13 +542,12 @@ class Alu_function extends Bundle {
   val sra = Bool()
 }
 
-class Alu_param extends Bundle {
+class Alu_param extends Rd_Param(64) {
   val is_32w = Bool()
   val is_usi = Bool()
 
   val dat = new Operation_source
 
-  val rd = new Rd_Param(64)
 }
 
 class Alu_iss_info extends Bundle {
@@ -558,15 +559,13 @@ class Alu_iss_info extends Bundle {
 
 
 
-class Bru_param extends Bundle {
+class Bru_param extends Rd_Param(64) {
   val is_rvc = Bool()
   val pc = UInt(64.W)
   val imm = UInt(64.W)
 
   val dat = new Operation_source
 
-
-  val rd = new Rd_Param(64)
 }
 
 class Bru_iss_info extends Bundle {
@@ -578,10 +577,8 @@ class Bru_iss_info extends Bundle {
 
 
 
-class Lsu_param extends Bundle {
+class Lsu_param extends Rd_Param(64) {
   val dat = new Operation_source
-
-  val rd = new Rd_Param(64)
 }
 
 class Lsu_iss_info extends Bundle {
