@@ -40,9 +40,9 @@ class Decoupled1toN[T<:Data]( dw: T, out: Int ) extends Module{
 }
 
 object Decoupled1toN {
-  def apply[T <: Data](deq: Vec[DecoupledIO[T]] ): DecoupledIO[T] = {
-    val mdl = Module(new Decoupled1toN( new deq.bits.cloneType , deq.length ))
-    mdl.io.deq := deq
+  def apply[T <: Data](deq: Seq[DecoupledIO[T]] ): DecoupledIO[T] = {
+    val mdl = Module(new Decoupled1toN( chiselTypeOf(deq(0).bits), deq.length ))
+    mdl.io.deq <> deq
 
     mdl.io.enq
   }

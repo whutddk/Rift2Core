@@ -52,7 +52,7 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
 
   for ( i <- 0 until dp ) {
     when( valid(i) === true.B ) {
-      when( is_zip(i).exist((x:Bool) => (x === true.B))){
+      when( is_zip(i).exists((x:Bool) => (x === true.B))){
         buff(i) := 0.U.asTypeOf(dw)
         valid(i) := false.B
       } .otherwise {  } //is_zip(i) === false.B
@@ -61,15 +61,15 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
         when( valid(i+1) === true.B && is_zip(i+1)(1) === false.B && is_zip(i+1)(2) === false.B) {
           buff(i) := buff(i+1)
           valid(i) := valid(i+1)
-          is_zip(i+1)(0) := ture.B
-        } .elsewhen( valid(i+2) === true.B && is_zip(i+2)(2) := false.B) {
+          is_zip(i+1)(0) := true.B
+        } .elsewhen( valid(i+2) === true.B && is_zip(i+2)(2) === false.B) {
           buff(i) := buff(i+2)
           valid(i) := valid(i+2)
-          is_zip(i+2)(1) := ture.B
+          is_zip(i+2)(1) := true.B
         } .elsewhen( valid(i+3) === true.B ) {
           buff(i) := buff(i+3)
           valid(i) := valid(i+3)
-          is_zip(i+3)(2) := ture.B
+          is_zip(i+3)(2) := true.B
         }        
       }
 
@@ -96,9 +96,9 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
 
 
   for ( i <- 0 until in; j <- 0 until in ) yield 
-    assert( !(io.enq(i).valid === true.B && io.enq(j).valid == false.B && i.U >= j.U), "Assert Fail! enq port illegal")
+    assert( !(io.enq(i).valid === true.B && io.enq(j).valid === false.B && i.U >= j.U), "Assert Fail! enq port illegal")
 
   for ( i <- 0 until out; j <- 0 until out ) yield 
-    assert( !(io.deq(i).valid === true.B && io.deq(j).valid == false.B && i.U >= j.U), "Assert Fail! deq port illegal")
+    assert( !(io.deq(i).valid === true.B && io.deq(j).valid === false.B && i.U >= j.U), "Assert Fail! deq port illegal")
 
 }

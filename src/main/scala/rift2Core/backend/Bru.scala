@@ -73,8 +73,9 @@ class Bru extends Module {
 
   bru_exe_iwb_fifo.io.enq.valid := is_clear_ilp & io.bru_iss_exe.valid
   bru_exe_iwb_fifo.io.enq.bits.res := io.bru_iss_exe.bits.param.pc + Mux( io.bru_iss_exe.bits.param.is_rvc, 2.U, 4.U)
-  bru_exe_iwb_fifo.io.enq.bits.rd := io.bru_iss_exe.bits.param.rd
-
+  bru_exe_iwb_fifo.io.enq.bits.rd0 := io.bru_iss_exe.bits.param.rd0
+  bru_exe_iwb_fifo.io.enq.bits.is_iwb := true.B
+  bru_exe_iwb_fifo.io.enq.bits.is_fwb := false.B
 
 
 }

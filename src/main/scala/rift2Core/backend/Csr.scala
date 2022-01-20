@@ -72,7 +72,9 @@ class Csr extends Module {
 
   csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready & io.csr_data.valid
   csr_exe_iwb_fifo.io.enq.bits.res := io.csr_data.bits
-  csr_exe_iwb_fifo.io.enq.bits.rd := io.csr_iss_exe.bits.param.rd
+  csr_exe_iwb_fifo.io.enq.bits.rd0 := io.csr_iss_exe.bits.param.rd0
+  csr_exe_iwb_fifo.io.enq.bits.is_iwb := true.B
+  csr_exe_iwb_fifo.io.enq.bits.is_fwb := false.B
 
 }
 

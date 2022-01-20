@@ -22,10 +22,10 @@ import chisel3._
 import chisel3.util._
 
 
-class XArbiter[T <: Data](val gen: T, val in: Int, val out: Int) extends Module {
+class XArbiter[T <: Data]( gen: T, in: Int,out: Int) extends Module {
   val io = IO(new Bundle{
-    val in = Flipped(Vec(in, Decoupled(gen)))
-    val out = Vec(out, Decoupled(gen))
+    val enq = Flipped(Vec(in, Decoupled(gen)))
+    val deq = Vec(out, Decoupled(gen))
     val chosen = Output(Vec(out, UInt(log2Ceil(in).W) ))
   })
 
@@ -33,7 +33,7 @@ class XArbiter[T <: Data](val gen: T, val in: Int, val out: Int) extends Module 
   for ( i <- 0 until out ) {
     io.chosen(i) := 0.U //init
     for ( j <- in-1 to 0 by -1 ) {
-      when( io.in(j).valid ) {
+      when( io.enq(j).valid ) {
         if ( i == 0 ) { io.chosen(i) := j.U } 
         else {
           when( j.U > io.chosen(i-1) ) {
@@ -46,13 +46,13 @@ class XArbiter[T <: Data](val gen: T, val in: Int, val out: Int) extends Module 
 
 
   /** init */
-  for ( i <- 0 until out ) yield { io.out(i).valid := false.B; io.out(i).bits := DontCare }
-  for ( i <- 0 until in ) yield { io.in(i).ready := false.B }
+  for ( i <- 0 until out ) yield { io.deq(i).valid := false.B; io.deq(i).bits := DontCare }
+  for ( i <- 0 until in ) yield { io.enq(i).ready := false.B }
 
   for ( i <- 0 until out ) yield {
-    when( io.in.count( (x:Decoupled[gen]) => x.valid === true.B ) >= i.U ) {
+    when( io.enq.count( (x:DecoupledIO[T]) => x.valid === true.B ) >= i.U ) {
       val idx = io.chosen(i)
-      io.out(i) <> io.in(idx)
+      io.deq(i) <> io.enq(idx)
     }
   }
 

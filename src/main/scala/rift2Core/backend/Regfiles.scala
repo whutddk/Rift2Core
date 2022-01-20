@@ -48,7 +48,7 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
     /** writeBack request from exeUnit */
     val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info)))
     /** Commit request from commitUnit */
-    val commit = Vec(cmm_chn, Flipped(Valid(new Info_commit_op(dp))))
+    val commit = Vec(cmm_chn, Flipped(Decoupled(new Info_commit_op(dp))))
 
   })
 
@@ -96,13 +96,13 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
     val idx3 = io.dpt_rename(i).req.rs3
 
     if ( i == 0) {
-      io.dpt_rename(i).rsp.rs1 := rename_ptr(idx1)
-      io.dpt_rename(i).rsp.rs2 := rename_ptr(idx2)
-      io.dpt_rename(i).rsp.rs3 := rename_ptr(idx3)
+      io.dpt_rename(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )
+      io.dpt_rename(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
+      io.dpt_rename(i).rsp.rs3 := Mux( idx3 === 0.U, 63.U, rename_ptr(idx3) )
     } else {
-      io.dpt_rename(i).rsp.rs1 := rename_ptr(idx1)
-      io.dpt_rename(i).rsp.rs2 := rename_ptr(idx2)
-      io.dpt_rename(i).rsp.rs3 := rename_ptr(idx3) 
+      io.dpt_rename(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )
+      io.dpt_rename(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
+      io.dpt_rename(i).rsp.rs3 := Mux( idx3 === 0.U, 63.U, rename_ptr(idx3) ) 
       for ( j <- 0 until i ) {
         when( io.dpt_rename(j).req.rd0 === idx1 ) { io.dpt_rename(i).rsp.rs1 := molloc_idx(j) }
         when( io.dpt_rename(j).req.rd0 === idx2 ) { io.dpt_rename(i).rsp.rs2 := molloc_idx(j) }
@@ -155,13 +155,17 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
   }
 
   {
-    val raw = io.fpu_cmm_fwb.map{ x => x.bits.raw }
-    val phy = io.fpu_cmm_fwb.map{ x => x.bits.phy }
-    val idx_pre = io.fpu_cmm_fwb.map{ x => archit_ptr(x.bits.raw) }
+    val raw = io.commit.map{ x => x.bits.raw }
+    val phy = io.commit.map{ x => x.bits.phy }
+    val idx_pre = io.commit.map{ x => archit_ptr(x.bits.raw) }
 
     for ( i <- 0 until cmm_chn ) {
       def m = cmm_chn-1-i
-      when( io.commit(m).valid ) {
+
+      io.commit(m).ready := log(phy(m)) === 3.U
+
+
+      when( io.commit(m).fire ) {
         when( io.commit(m).bits.is_abort ) {
           /** clear all log to 0, except that archit_ptr point to, may be override */
           for ( j <- 0 unitl dp-1 ) yield {log(j) := Mux( archit_ptr.exist( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
@@ -172,11 +176,11 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
         }
       }
 
-      when( io.commit(m).valid & ~io.commit(m).bits.is_abort) {
+      when( io.commit(m).fire & ~io.commit(m).bits.is_abort) {
         archit_ptr(raw(m)) := phy(m)
       }
 
-      when( io.commit(m).valid ) {
+      when( io.commit(m).fire ) {
         when (io.commit(m).bits.is_abort) {
           for ( j <- 0 until 32 ) yield {
             rename_ptr(j) := archit_ptr(j)

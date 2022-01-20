@@ -189,7 +189,9 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   val lu_wb_fifo = {
     val mdl = Module( new Queue( new WriteBack_info, 1, false, true ) )
     mdl.io.enq.valid := lu_wb_arb.io.out.valid & ~trans_kill
-    mdl.io.enq.bits.rd := lu_wb_arb.io.out.bits.wb.rd
+    mdl.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
+    mdl.io.enq.bits.is_iwb := lu_wb_arb.io.out.bits.wb.is_iwb
+    mdl.io.enq.bits.is_fwb := lu_wb_arb.io.out.bits.wb.is_fwb
     mdl.io.enq.bits.res := {
       stQueue.io.overlap.paddr := lu_wb_arb.io.out.bits.paddr
       overlap_wr( lu_wb_arb.io.out.bits.wb.res, 0.U, stQueue.io.overlap.wdata, stQueue.io.overlap.wstrb)
@@ -206,7 +208,9 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   val su_wb_fifo = {
     val mdl = Module( new Queue( new WriteBack_info, 1, false, true ) )
     mdl.io.enq.valid := opMux.io.st_deq.fire
-    mdl.io.enq.bits.rd  := opMux.io.st_deq.bits.param.rd
+    mdl.io.enq.bits.rd0  := opMux.io.st_deq.bits.param.rd0
+    mdl.io.enq.bits.is_iwb  := opMux.io.st_deq.bits.param.is_iwb
+    mdl.io.enq.bits.is_fwb  := opMux.io.st_deq.bits.param.is_fwb
     mdl.io.enq.bits.res := 0.U
     mdl.reset := reset.asBool | io.flush
     mdl
@@ -224,7 +228,9 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     val mdl = Module( new Queue( new WriteBack_info, 1, false, true ) )
     mdl.reset := reset.asBool | io.flush
     mdl.io.enq.valid := is_empty & is_fence_op
-    mdl.io.enq.bits.rd := io.lsu_iss_exe.bits.param.rd
+    mdl.io.enq.bits.rd0 := io.lsu_iss_exe.bits.param.rd0
+    mdl.io.enq.bits.is_iwb := true.B
+    mdl.io.enq.bits.is_fwb := false.B
     mdl.io.enq.bits.res := 0.U
     mdl
   }

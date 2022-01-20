@@ -37,9 +37,8 @@ import rift2Core.diff._
   */
 class Commit extends Privilege with Superscalar {
   val io = IO(new Bundle{
-
-    val cm_op = Vec(2, ValidIO( new Info_commit_op ))
-    val log = Input(Vec(64, UInt(2.W)))
+    val cm_op = Vec(2, Flipped(Decoupled(new Info_commit_op(dp))))
+    // val log = Input(Vec(64, UInt(2.W)))
 
 
     val rod_i = Vec(2, Flipped(new DecoupledIO( new Info_reorder_i ) ))
@@ -75,15 +74,19 @@ class Commit extends Privilege with Superscalar {
   val rd0_raw = VecInit( io.rod_i(0).bits.rd0_raw, io.rod_i(1).bits.rd0_raw )
   val rd0_phy = VecInit( io.rod_i(0).bits.rd0_phy, io.rod_i(1).bits.rd0_phy )
 
+  io.cm_op(0).bits.phy := rd0_phy(0)
+  io.cm_op(1).bits.phy := rd0_phy(1)
+  io.cm_op(0).bits.raw := rd0_raw(0)
+  io.cm_op(1).bits.raw := rd0_raw(1)
 
   val is_wb_v =
     VecInit(
-      (io.log(rd0_phy(0)) === 3.U) & (io.rod_i(0).valid),
-      (io.log(rd0_phy(1)) === 3.U) & (io.rod_i(1).valid)
+      (io.cm_op(0).ready & (io.rod_i(0).valid)),
+      (io.cm_op(1).ready & (io.rod_i(1).valid))
     )
 
   //bru commit ilp
-  io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (io.log(rd0_phy(0)) =/= 3.U)
+  io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (~io.cm_op(0).ready)
 
   val is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | io.rod_i(0).bits.is_su | ~is_wb_v(0) | (io.rod_i(0).bits.rd0_raw === io.rod_i(1).bits.rd0_raw)
   val is_2nd_solo = io.is_commit_abort(1) | io.rod_i(1).bits.is_csr | io.rod_i(1).bits.is_su
@@ -264,15 +267,11 @@ class Commit extends Privilege with Superscalar {
   // when( is_commit_comfirm(1) ) { printf("comfirm pc=%x\n", io.rod_i(1).bits.pc) }
 
 
-  io.cm_op(0).valid := is_commit_comfirm(0)
-  io.cm_op(1).valid := is_commit_comfirm(1)
+  io.cm_op(0).valid := is_commit_comfirm(0) | io.is_commit_abort(0)
+  io.cm_op(1).valid := is_commit_comfirm(1) | io.is_commit_abort(1)
 
-  io.cm_op(0).bits.phy := rd0_phy(0)
-  io.cm_op(1).bits.phy := rd0_phy(1)
-
-  io.cm_op(0).bits.raw := rd0_raw(0)
-  io.cm_op(1).bits.raw := rd0_raw(1)
-
+  io.cm_op(0).bits.is_abort := io.is_commit_abort(0)
+  io.cm_op(1).bits.is_abort := io.is_commit_abort(1)
 
 
   io.rod_i(0).ready := is_commit_comfirm(0) | io.is_commit_abort(0)

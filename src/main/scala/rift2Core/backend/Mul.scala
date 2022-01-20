@@ -210,8 +210,9 @@ class Mul extends Module {
 
   mul_exe_iwb_fifo.io.enq.valid := is_fun_end
   mul_exe_iwb_fifo.io.enq.bits.res := res
-  mul_exe_iwb_fifo.io.enq.bits.rd := io.mul_iss_exe.bits.param.rd
-
+  mul_exe_iwb_fifo.io.enq.bits.rd0 := io.mul_iss_exe.bits.param.rd0
+  mul_exe_iwb_fifo.io.enq.bits.is_iwb := true.B
+  mul_exe_iwb_fifo.io.enq.bits.is_fwb := false.B
 
 }
 

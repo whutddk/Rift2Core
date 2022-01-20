@@ -33,18 +33,18 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
-class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
+class Execute(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
-    val alu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+    val alu_exe_iwb = new DecoupledIO(new WriteBack_info)
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
-    val bru_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+    val bru_exe_iwb = new DecoupledIO(new WriteBack_info)
     val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
-    val csr_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+    val csr_exe_iwb = new DecoupledIO(new WriteBack_info)
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+    val lsu_exe_wb = new DecoupledIO(new WriteBack_info)
     val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
-    val mul_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+    val mul_exe_iwb = new DecoupledIO(new WriteBack_info)
 
     val cmm_bru_ilp = Input(Bool())
     val bru_pd_b = new ValidIO( Bool() )
@@ -59,18 +59,23 @@ class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
 
-    val missUnit_dcache_acquire = Decoupled(new TLBundleA(tlc_edge.bundle))
-    val missUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(tlc_edge.bundle)))
-    val missUnit_dcache_grantAck  = Decoupled(new TLBundleE(tlc_edge.bundle))
-    val probeUnit_dcache_probe = Flipped(DecoupledIO(new TLBundleB(tlc_edge.bundle)))
-    val writeBackUnit_dcache_release = DecoupledIO(new TLBundleC(tlc_edge.bundle))
-    val writeBackUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(tlc_edge.bundle)))
+    val missUnit_dcache_acquire = 
+      for ( i <- 0 until nm ) yield Decoupled(new TLBundleA(edge(i).bundle))
+    val missUnit_dcache_grant = 
+      for ( i <- 0 until nm ) yield Flipped(DecoupledIO(new TLBundleD(edge(i).bundle)))
+    val missUnit_dcache_grantAck  = 
+      for ( i <- 0 until nm ) yield Decoupled(new TLBundleE(edge(i).bundle))
+    val probeUnit_dcache_probe = 
+      for ( i <- 0 until nm ) yield Flipped(DecoupledIO(new TLBundleB(edge(i).bundle)))
+    val writeBackUnit_dcache_release =
+      for ( i <- 0 until nm ) yield DecoupledIO(new TLBundleC(edge(i).bundle))
+    val writeBackUnit_dcache_grant   =
+      for ( i <- 0 until nm ) yield Flipped(DecoupledIO(new TLBundleD(edge(i).bundle)))
 
-    val sys_chn_ar = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-    val sys_chn_r = Flipped( new DecoupledIO(new AXI_chn_r( 64, 1, 1)) )
-    val sys_chn_aw = new DecoupledIO(new AXI_chn_a( 32, 1, 1 ))
-    val sys_chn_w = new DecoupledIO(new AXI_chn_w( 64, 1 )) 
-    val sys_chn_b = Flipped( new DecoupledIO(new AXI_chn_b( 1, 1 )))
+    val system_getPut = new DecoupledIO(new TLBundleA(edge(nm).bundle))
+    val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(nm).bundle)))
+    val periph_getPut = new DecoupledIO(new TLBundleA(edge(nm+1).bundle))
+    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(nm+1).bundle)))
 
     val flush = Input(Bool())
 
@@ -79,9 +84,59 @@ class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   val alu = Module(new Alu)
   val bru = Module(new Bru)
-  val lsu = Module(new Lsu((tlc_edge)))
+  val lsu = {
+    val mdl = Module(new Mem((tlc_edge)))
+
+    mdl.io.lsu_iss_exe <> io.lsu_iss_exe
+    mdl.io.lsu_exe_wb <> io.lsu_exe_wb
+
+    mdl.io.lsu_mmu <> io.lsu_mmu
+    mdl.io.mmu_lsu <> io.mmu_lsu
+
+    mdl.io.cmm_lsu <> io.cmm_lsu
+    mdl.io.lsu_cmm <> io.lsu_cmm
+    for ( i <- 0 until nm ) yield {
+      mdl.io.missUnit_dcache_acquire <> io.missUnit_dcache_acquire
+      mdl.io.missUnit_dcache_grant <> io.missUnit_dcache_grant
+      mdl.io.missUnit_dcache_grantAck <> mdl.io.missUnit_dcache_grantAck
+      mdl.io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe
+      mdl.io.writeBackUnit_dcache_release <> io.writeBackUnit_dcache_release
+      mdl.io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
+    }
+
+    mdl.io.system_getPut <> io.system_getPut
+    mdl.io.system_access <> io.system_access
+    mdl.io.periph_getPut <> io.periph_getPut
+    mdl.io.periph_access <> io.periph_access
+
+    mdl.io.flush = io.flush
+    mdl
+
+  }
   val csr = Module(new Csr)
   val mul = Module(new Mul)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   alu.io.alu_iss_exe <> io.alu_iss_exe
   alu.io.alu_exe_iwb <> io.alu_exe_iwb
@@ -100,31 +155,6 @@ class Execute(tlc_edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   csr.io.csr_data <> io.csr_data
   csr.io.csr_cmm_op <> io.csr_cmm_op
   csr.io.flush <> io.flush
-
-
-  lsu.io.lsu_iss_exe <> io.lsu_iss_exe
-  lsu.io.lsu_exe_iwb <> io.lsu_exe_iwb
-
-  io.missUnit_dcache_acquire      <> lsu.io.missUnit_dcache_acquire
-  lsu.io.missUnit_dcache_grant <> io.missUnit_dcache_grant
-  io.missUnit_dcache_grantAck     <> lsu.io.missUnit_dcache_grantAck
-  lsu.io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe
-  io.writeBackUnit_dcache_release <> lsu.io.writeBackUnit_dcache_release
-  lsu.io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
-
-  lsu.io.sys_chn_ar <> io.sys_chn_ar
-  lsu.io.sys_chn_r  <> io.sys_chn_r
-  lsu.io.sys_chn_aw <> io.sys_chn_aw
-  lsu.io.sys_chn_w  <> io.sys_chn_w
-  lsu.io.sys_chn_b  <> io.sys_chn_b
-
-  lsu.io.lsu_mmu <> io.lsu_mmu
-  lsu.io.mmu_lsu <> io.mmu_lsu
-
-  lsu.io.cmm_lsu <> io.cmm_lsu
-  lsu.io.lsu_cmm <> io.lsu_cmm
-
-  lsu.io.flush <> io.flush
 
   mul.io.mul_iss_exe <> io.mul_iss_exe
   mul.io.mul_exe_iwb <> io.mul_exe_iwb

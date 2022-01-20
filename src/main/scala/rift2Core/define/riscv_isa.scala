@@ -661,10 +661,8 @@ class Csr_function extends Bundle {
   val rc  = Bool()
 }
 
-class Csr_param extends Bundle {
+class Csr_param extends Rd_Param(64) {
   val dat = new Operation_source
-
-  val rd = new Rd_Param(64)
 }
 
 class Csr_iss_info extends Bundle {
@@ -672,10 +670,8 @@ class Csr_iss_info extends Bundle {
   val param = new Csr_param
 }
 
-class Mul_param extends Bundle {
+class Mul_param extends Rd_Param(64) {
   val dat = new Operation_source
-
-  val rd = new Rd_Param(64)
 }
 
 class Mul_iss_info extends Bundle {
@@ -685,13 +681,17 @@ class Mul_iss_info extends Bundle {
 
 
 
-class WriteBack_info(dp:Int) extends Bundle {
-  val dest = new Rd_Param(dp)
+class WriteBack_info(dp:Int) extends Rd_Param(dp) {
   val res = UInt(64.W)
 }
 
 
+class Info_commit_op(dp:Int) extends Bundle{
+  val raw = UInt(5.W)  
+  val phy = UInt((log2Ceil(dp)).W)
 
+  val is_abort = Bool()
+}
 
 
 class Info_cmm_csr extends Bundle {

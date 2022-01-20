@@ -265,3 +265,39 @@ class In_Order_Issue extends Module {
 
 }
 
+class Issue extends Module {
+  val io = IO(new Bundle{
+    val ooo_dpt_iss = Vec(4, Flipped(new DecoupledIO(new Dpt_info)))
+    val ito_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))   
+
+    val ooo_readOp  = Vec(4, Flipped( new iss_readOp_info))
+    val ito_readOp  = Flipped( new iss_readOp_info)
+
+    val alu_iss_exe = new DecoupledIO(new Alu_iss_info)
+    val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
+    val mul_iss_exe = new DecoupledIO(new Mul_iss_info)
+    val bru_iss_exe = new DecoupledIO(new Bru_iss_info)
+    val csr_iss_exe = new DecoupledIO(new Csr_iss_info)
+
+  })
+
+
+  val ooo_issue = {
+    val mdl = Module(new Out_of_Order_Issue)
+    mdl.io.ooo_dpt_iss <> io.ooo_dpt_iss
+    mdl.io.ooo_readOp  <> io.ooo_readOp
+    mdl.io.alu_iss_exe <> io.alu_iss_exe
+    mdl.io.lsu_iss_exe <> io.lsu_iss_exe
+    mdl.io.mul_iss_exe <> io.mul_iss_exe
+    mdl
+  }
+
+  val ito_issue = {
+    val mdl = Module(new In_Order_Issue)
+    mdl.io.ito_dpt_iss <> io.ito_dpt_iss
+    mdl.io.ito_readOp  <> io.ito_readOp
+    mdl.io.bru_iss_exe <> io.bru_iss_exe
+    mdl.io.csr_iss_exe <> io.csr_iss_exe
+    mdl
+  }
+}
