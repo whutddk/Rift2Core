@@ -15,12 +15,19 @@
    limitations under the License.
 */
 
-package rift2Core.backend.mem
+package rift2Core.backend.memory
 
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
+import rift2Core.L1Cache._
+import rift2Core.privilege._
+import rift._
+import base._
+import chipsalliance.rocketchip.config._
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.tilelink._
 
 // class Reservation_Info extends Bundle {
 //   val paddr = UInt(64.W)
@@ -39,7 +46,7 @@ import rift2Core.backend._
 /**
   * bound to every cache 
   */
-class Store_queue(dp: Int = 16) extends Module {
+class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
   def dp_w = log2Ceil(dp)
 
   val io = IO( new Bundle{
@@ -50,7 +57,7 @@ class Store_queue(dp: Int = 16) extends Module {
     val cmm_lsu = Input(new Info_cmm_lsu)
     val is_empty = Output(Bool())
 
-    val overlap = Vec(3, Flipped(new Info_overlap))
+    val overlap = Flipped(new Info_overlap)
 
     val flush = Input(Bool())
 
@@ -79,7 +86,7 @@ class Store_queue(dp: Int = 16) extends Module {
     (is_amo_pre === false.B) & (io.cmm_lsu.is_amo_pending === true.B)
   }
 
-  val is_commited = VecInit( io.cmm_lsu.is_commited(0), io.cmm_lsu.is_commited(1) )
+  val is_commited = VecInit( io.cmm_lsu.is_store_commit(0), io.cmm_lsu.is_store_commit(1) )
   io.enq.ready := ~full
   io.deq.valid := ~emty & rd_buff.bits.paddr(31) === 1.U
 
@@ -110,14 +117,14 @@ class Store_queue(dp: Int = 16) extends Module {
 
 
 
-
+  val overlap_buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeof(new Info_cache_s0s1))))
 
 
   when( rd_ptr_reg(dp_w) =/= wr_ptr_reg(dp_w) ) {
     assert( rd_ptr >= wr_ptr )
     for ( i <- 0 until dp ) yield {
-      val ro_ptr = (rd_ptr_reg + i)(dp_w-1,0)
-      when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff.paddr === io.overlap_paddr) ) {
+      val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
+      when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff.paddr === io.overlap.paddr) ) {
         overlap_buff(i) := buff(ro_ptr)
       } .otherwise {
         overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
@@ -126,8 +133,8 @@ class Store_queue(dp: Int = 16) extends Module {
   } .otherwise {
     assert( rd_ptr <= wr_ptr )
     for ( i <- 0 until dp ) yield {
-      val ro_ptr = (rd_ptr_reg + i)(dp_w-1,0)
-      when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff.paddr === io.overlap_paddr) ) {
+      val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
+      when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff.paddr === io.overlap.paddr) ) {
         overlap_buff(i) := buff(ro_ptr)
       } .otherwise {
         overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
@@ -150,8 +157,8 @@ class Store_queue(dp: Int = 16) extends Module {
       temp_wstrb(i) := wstrb
     }
   }
-  io.overlap_wdata := temp_wdata(dp-1)
-  io.overlap_wstrb := temp_wstrb(dp-1)
+  io.overlap.wdata := temp_wdata(dp-1)
+  io.overlap.wstrb := temp_wstrb(dp-1)
 
   io.empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
 

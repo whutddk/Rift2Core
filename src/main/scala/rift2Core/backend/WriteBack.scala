@@ -23,6 +23,7 @@ package rift2Core.backend
 
 import chisel3._
 import chisel3.util._
+import base._
 
 import rift2Core.define._
 
@@ -32,16 +33,16 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int=4, cmm_
 
 
 
-    val ooo_readOp  = Vec(4, Flipped( new iss_readOp_info))
-    val ito_readOp  = Flipped( new iss_readOp_info)
-    val fpu_readOp  = Flipped( new iss_readOp_info)
+    val ooo_readOp  = Vec(4, Flipped( new iss_readOp_info(dp)))
+    val ito_readOp  = Flipped( new iss_readOp_info(dp))
+    val fpu_readOp  = Flipped( new iss_readOp_info(dp))
 
-    val alu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
-    val bru_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
-    val csr_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
-    val mem_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
-    val mul_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
-    val fpu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info))
+    val alu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
+    val bru_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
+    val csr_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
+    val mem_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
+    val mul_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
+    val fpu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
 
     val commit = Vec(cmm_chn, Flipped(Valid(new Info_commit_op(dp))))
   })
@@ -56,27 +57,27 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int=4, cmm_
 
 
     val readOp_arb = {
-      val mdl = Module(new XArbiter(new iss_readOp_info, in = 6, out = rop_chn))
-      mdl.io.in(0) <> io.ooo_readOp(0)
-      mdl.io.in(1) <> io.ooo_readOp(1)
-      mdl.io.in(2) <> io.ooo_readOp(2)
-      mdl.io.in(3) <> io.ooo_readOp(3)
-      mdl.io.in(4) <> io.ito_readOp
-      mdl.io.in(5) <> io.fpu_readOp
-      mdl.out <> iReg.io.iss_readOp
+      val mdl = Module(new XArbiter(new iss_readOp_info(dp), in = 6, out = rop_chn))
+      mdl.io.enq(0) <> io.ooo_readOp(0)
+      mdl.io.enq(1) <> io.ooo_readOp(1)
+      mdl.io.enq(2) <> io.ooo_readOp(2)
+      mdl.io.enq(3) <> io.ooo_readOp(3)
+      mdl.io.enq(4) <> io.ito_readOp
+      mdl.io.enq(5) <> io.fpu_readOp
+      mdl.io.deq <> iReg.io.iss_readOp
 
       mdl
     }
 
     val writeBack_arb = {
-      val mdl = Module(new XArbiter(new WriteBack_info, in = 6, out = wb_chn))
-      mdl.io.in(0) <> io.alu_writeBack
-      mdl.io.in(1) <> io.bru_writeBack
-      mdl.io.in(2) <> io.csr_writeBack
-      mdl.io.in(3) <> io.mem_writeBack
-      mdl.io.in(4) <> io.mul_writeBack
-      mdl.io.in(5) <> io.fpu_writeBack
-      mdl.out <> iReg.io.exe_writeBack
+      val mdl = Module(new XArbiter(new WriteBack_info(dp), in = 6, out = wb_chn))
+      mdl.io.enq(0) <> io.alu_iWriteBack
+      mdl.io.enq(1) <> io.bru_iWriteBack
+      mdl.io.enq(2) <> io.csr_iWriteBack
+      mdl.io.enq(3) <> io.mem_iWriteBack
+      mdl.io.enq(4) <> io.mul_iWriteBack
+      mdl.io.enq(5) <> io.fpu_iWriteBack
+      mdl.io.deq <> iReg.io.exe_writeBack
 
       mdl
     }

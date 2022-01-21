@@ -81,6 +81,8 @@ class Decode32 (x:UInt, pc: UInt) {
     info.lsu_isa.sh          -> 0.U,
     info.lsu_isa.sw          -> 0.U,
     info.lsu_isa.sd          -> 0.U,
+    info.lsu_isa.fsw         -> 0.U,
+    info.lsu_isa.fsd         -> 0.U,
     info.privil_isa.ecall       -> 0.U,
     info.privil_isa.ebreak      -> 0.U,
     info.privil_isa.mret        -> 0.U,
@@ -93,8 +95,7 @@ class Decode32 (x:UInt, pc: UInt) {
     info.privil_isa.hsv_h       -> 0.U,
     info.privil_isa.hsv_w       -> 0.U,
     info.privil_isa.hsv_d       -> 0.U,
-    info.fpu_isa.fsw         -> 0.U,
-    info.fpu_isa.fsd         -> 0.U,
+ 
 
   ))
 
@@ -105,13 +106,13 @@ class Decode32 (x:UInt, pc: UInt) {
   info.param.raw.rs1 := MuxCase( x(19,15), Array(
     info.alu_isa.lui       -> 0.U,
     info.alu_isa.auipc     -> 0.U,
-    info.alu_isa.jal       -> 0.U,
     info.alu_isa.wfi       -> 0.U,
+    info.bru_isa.jal       -> 0.U,
     info.privil_isa.ecall  -> 0.U,
     info.privil_isa.ebreak -> 0.U,
-    info_csr_isa.rwi       -> 0.U,
-    info_csr_isa.rsi       -> 0.U,
-    info_csr_isa.rci       -> 0.U,
+    info.csr_isa.rwi       -> 0.U,
+    info.csr_isa.rsi       -> 0.U,
+    info.csr_isa.rci       -> 0.U,
     info.privil_isa.uret   -> 0.U,
     info.privil_isa.sret   -> 0.U,
     info.privil_isa.mret   -> 0.U,
@@ -122,8 +123,6 @@ class Decode32 (x:UInt, pc: UInt) {
   info.param.raw.rs2 := MuxCase( x(24,20), Array(
     info.alu_isa.lui   -> 0.U,
     info.alu_isa.auipc -> 0.U,
-    info.alu_isa.jal   -> 0.U,
-    info.alu_isa.jalr  -> 0.U,
     info.alu_isa.addi  -> 0.U,
     info.alu_isa.slti  -> 0.U,
     info.alu_isa.sltiu -> 0.U,
@@ -141,7 +140,8 @@ class Decode32 (x:UInt, pc: UInt) {
     info.alu_isa.srliw -> 0.U,
     info.alu_isa.sraiw -> 0.U,
     info.alu_isa.wfi   -> 0.U,
-
+    info.bru_isa.jal   -> 0.U,
+    info.bru_isa.jalr  -> 0.U,
     info.lsu_isa.lb    -> 0.U,
     info.lsu_isa.lh    -> 0.U,
     info.lsu_isa.lw    -> 0.U,

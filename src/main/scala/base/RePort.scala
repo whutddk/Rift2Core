@@ -25,15 +25,15 @@ import chisel3.util._
 
 class RePort[T<:Data]( dw: T, port: Int) extends Module{
   val io = IO( new Bundle{
-    val in = Vec(port, Flipped(new DecoupledIO(dw)) )
-    val out  = Vec(port, new DecoupledIO(dw) )
+    val enq = Vec(port, Flipped(new DecoupledIO(dw)) )
+    val deq  = Vec(port, new DecoupledIO(dw) )
     } )
 
 
   for ( i <- 0 until port ) yield {
-    io.out(i).valid := false.B 
-    io.out(i).bits  := DontCare
-    io.in(i).ready  := false.B
+    io.deq(i).valid := false.B 
+    io.deq(i).bits  := DontCare
+    io.enq(i).ready  := false.B
   }
 
   val is_end = Wire( Vec( port, Bool()) )
@@ -42,7 +42,7 @@ class RePort[T<:Data]( dw: T, port: Int) extends Module{
 
 
   {
-    val in = VecInit(io.in.map(x => x.valid)).asUInt
+    val in = VecInit(io.enq.map(x => x.valid)).asUInt
     is_end(0) := in === 0.U
     sel(0) := VecInit(in.asBools).indexWhere( (x:Bool) => (x === true.B) )
     in_next(0) := in & ~UIntToOH(sel(0))
@@ -57,17 +57,17 @@ class RePort[T<:Data]( dw: T, port: Int) extends Module{
 
   for ( out <- 0 until port ) yield {
     when( ~is_end(out) ) {
-      io.out(out) <> io.in(sel(out))
+      io.deq(out) <> io.enq(sel(out))
     }
   }
 
 }
 
 object RePort{
-  def apply[T <: Data]( in: Vec[ReadyValidIO[T]] ): Vec[DecoupledIO[T]] = {
-    val mdl = Module(new RePort( chiselTypeOf(in(0).bits), in.length ))
-    in <> mdl.io.in
-    return mdl.io.out
+  def apply[T <: Data]( enq: Vec[ReadyValidIO[T]] ): Vec[DecoupledIO[T]] = {
+    val mdl = Module(new RePort( chiselTypeOf(enq(0).bits), enq.length ))
+    enq <> mdl.io.enq
+    return mdl.io.deq
   }
 
 }

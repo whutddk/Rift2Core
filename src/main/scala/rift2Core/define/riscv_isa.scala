@@ -439,7 +439,10 @@ class Operation_source extends Bundle {
   val op3 = UInt(64.W)
 }
 
-class Reg_phy(dp:Int) extends Register_source(dp) with Register_dstntn(dp)
+
+class Reg_phy(dp:Int) extends Register_source(dp) {
+  val rd0 = UInt((log2Ceil(dp)).W)
+}
 class Reg_raw extends Reg_phy(dp = 32)
 
 class Rd_Param(dp:Int) extends Register_dstntn(dp) {
@@ -587,9 +590,9 @@ class Lsu_iss_info extends Bundle {
 
   def is_misAlign =
     Mux1H( Seq(
-      fun.is_half -> (param.op1(0) =/= 0.U),
-      fun.is_word -> (param.op1(1,0) =/= 0.U),
-      fun.is_dubl -> (param.op1(2,0) =/= 0.U)	
+      fun.is_half -> (param.dat.op1(0) =/= 0.U),
+      fun.is_word -> (param.dat.op1(1,0) =/= 0.U),
+      fun.is_dubl -> (param.dat.op1(2,0) =/= 0.U)	
     ))
 }
 

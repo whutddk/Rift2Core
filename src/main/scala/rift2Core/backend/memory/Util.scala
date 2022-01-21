@@ -17,14 +17,20 @@
    limitations under the License.
 */
 
-package rift2Core.backend.mem
+package rift2Core.backend.memory
 
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 
-
+import rift2Core.L1Cache._
+import rift2Core.privilege._
+import rift._
+import base._
+import chipsalliance.rocketchip.config._
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.tilelink._
 
 class addrTrans extends Module {
   val io = IO(new Bundle{
@@ -87,7 +93,7 @@ class OpMux extends Module {
 
 }
 
-class regionMux extends Module{
+class regionMux(implicit p: Parameters) extends DcacheModule{
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = Vec(3, new DecoupledIO(new Info_cache_s0s1))
@@ -156,15 +162,15 @@ object align_mem{
   def apply(ori: Lsu_iss_info) = {
     val wdata = {
       val res = Wire(UInt(64.W))
-      val paddr = ori.param.op1
+      val paddr = ori.param.dat.op1
       val shift = Wire(UInt(6.W))
       shift := Cat( paddr(2,0), 0.U(3.W) )
-      res   := ori.param.op2 << shift  
+      res   := ori.param.dat.op2 << shift  
       res
     }
 
     val wstrb = {
-      val paddr = ori.param.op1
+      val paddr = ori.param.dat.op1
       val op = ori.fun
 
       Mux1H(Seq(
@@ -173,7 +179,7 @@ object align_mem{
       )) << Cat(paddr(2,0), 0.U(3.W) )
     }
 
-    val paddr = ori.param.op1 & ~(("b111".U)(64.W))
+    val paddr = ori.param.dat.op1 & ~(("b111".U)(64.W))
 
     (paddr, wdata, wstrb)
   }
@@ -216,7 +222,7 @@ object pkg_Info_cache_s0s1{
 
     val res = Wire(new Info_cache_s0s1)
 
-    val (paddr, wdata, wstrb ) = align_mem( Lsu_iss_info )
+    val (paddr, wdata, wstrb ) = align_mem( ori )
     res.paddr := paddr
     res.wdata := VecInit( Seq.fill(4)(wdata) )
     res.wstrb := wstrb

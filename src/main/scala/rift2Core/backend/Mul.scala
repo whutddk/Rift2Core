@@ -29,19 +29,19 @@ import rift2Core.define._
 class Mul extends Module {
   val io = IO(new Bundle {
     val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
-    val mul_exe_iwb = new DecoupledIO(new WriteBack_info)
+    val mul_exe_iwb = new DecoupledIO(new WriteBack_info(64))
 
     val flush = Input(Bool())
   })
 
-  val mul_exe_iwb_fifo = Module( new Queue( new WriteBack_info, 1, true, false ) )
+  val mul_exe_iwb_fifo = Module( new Queue( new WriteBack_info(64), 1, true, false ) )
   io.mul_exe_iwb <> mul_exe_iwb_fifo.io.deq
   mul_exe_iwb_fifo.reset := reset.asBool | io.flush
 
   def iss_ack = io.mul_iss_exe.valid & io.mul_iss_exe.ready
 
-  def op1 = io.mul_iss_exe.bits.param.op1
-  def op2 = io.mul_iss_exe.bits.param.op2
+  def op1 = io.mul_iss_exe.bits.param.dat.op1
+  def op2 = io.mul_iss_exe.bits.param.dat.op2
 
   def cutTo32(in: UInt) = Cat(Fill( 32, in(31) ), in(31, 0))
 

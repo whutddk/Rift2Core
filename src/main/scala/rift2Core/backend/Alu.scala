@@ -29,12 +29,12 @@ import rift2Core.define._
 class Alu extends Module {
   val io = IO(new Bundle{
     val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
-    val alu_exe_iwb = new DecoupledIO(new WriteBack_info)
+    val alu_exe_iwb = new DecoupledIO(new WriteBack_info(64))
 
     val flush = Input(Bool())
   })
 
-  val alu_exe_iwb_fifo = Module( new Queue( new WriteBack_info, 1, true, false ) )
+  val alu_exe_iwb_fifo = Module( new Queue( new WriteBack_info(64), 1, true, false ) )
   io.alu_exe_iwb <> alu_exe_iwb_fifo.io.deq
   alu_exe_iwb_fifo.reset := reset.asBool | io.flush
 
@@ -44,8 +44,8 @@ class Alu extends Module {
   def is_32w = io.alu_iss_exe.bits.param.is_32w
   def is_usi = io.alu_iss_exe.bits.param.is_usi
 
-  def op1 = io.alu_iss_exe.bits.param.op1
-  def op2 = io.alu_iss_exe.bits.param.op2
+  def op1 = io.alu_iss_exe.bits.param.dat.op1
+  def op2 = io.alu_iss_exe.bits.param.dat.op2
 
   def cutTo32(in: UInt) = Cat(Fill( 32, in(31) ), in(31, 0))
 

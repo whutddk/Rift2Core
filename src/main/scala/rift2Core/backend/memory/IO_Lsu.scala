@@ -16,28 +16,34 @@
    limitations under the License.
 */
 
-package rift2Core.backend.mem
+package rift2Core.backend.memory
 
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
-
+import rift._
+import base._
+import rift2Core.L1Cache._
+import chipsalliance.rocketchip.config._
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.tilelink._
 
 
 class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModule{
+  def nm = 8
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = new DecoupledIO(new Info_cache_retn)
     val is_empty = Output(Bool())
 
-    val getPut    = new DecoupledIO(new TLBundleA(edge(nm).bundle))
-    val access = Flipped(new DecoupledIO(new TLBundleD(edge(nm).bundle)))
+    val getPut    = new DecoupledIO(new TLBundleA(edge.bundle))
+    val access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
   })
 
   val is_busy = RegInit(false.B)
-  val pending_rd = Reg(new Rd_Param)
-  val pending_paddr = Reg(new UInt(64.W))
+  val pending_rd = Reg(new Rd_Param(64))
+  val pending_paddr = Reg(UInt(64.W))
 
   io.is_empty := ~is_busy
 
@@ -47,14 +53,14 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
     io.getPut.bits := 
       edge.Get(
         fromSource = idx.U,
-        toAddress = io.enq.paddr
+        toAddress = io.enq.paddr,
         lgSize = log2Ceil(64/8).U
       )._2    
   } .elsewhen( io.enq.bits.fun.is_su & ~io.enq.bits.fun.is_sc ) {
     io.getPut.bits :=
       edge.Put(
         fromSource = idx.U,
-        toAddress = io.enq.paddr
+        toAddress = io.enq.paddr,
         lgSize = log2Ceil(64/8).U,
         data = io.enq.wdata,
         mask = io.enq.wstrb

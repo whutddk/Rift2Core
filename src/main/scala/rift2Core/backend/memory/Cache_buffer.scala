@@ -17,13 +17,18 @@
    limitations under the License.
 */
 
-package rift2Core.backend.mem
+package rift2Core.backend.memory
 
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
-
+import rift2Core.L1Cache._
+import rift._
+import base._
+import chipsalliance.rocketchip.config._
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.tilelink._
 
 trait Cache_buffer {
 
@@ -31,11 +36,11 @@ trait Cache_buffer {
   printf("Cache_Buff depth is 16\n")
 
 
-  val buf_enq = Decoupled(new Reservation_Info)
+  val buf_enq = Decoupled(new Info_cache_s0s1)
   val buf_deq = Decoupled(UInt(log2Ceil(16).W))
 
 
-  val buff = RegInit(VecInit(Seq.fill(16)(0.U.asTypeof(new Reservation_Info))))
+  val buff = RegInit(VecInit(Seq.fill(16)(0.U.asTypeOf(new Info_cache_s0s1))))
   val valid = RegInit(VecInit(Seq.fill(16)(false.B)))
 
 
@@ -55,7 +60,7 @@ trait Cache_buffer {
   }
 
   when( buf_deq.fire ) {
-    buff(buf_deq.bits)  := 0.U.asTypeOf( new Reservation_Info )
+    buff(buf_deq.bits)  := 0.U.asTypeOf( new Info_cache_s0s1 )
     valid(buf_deq.bits) := false.B
   }
 
@@ -65,7 +70,7 @@ trait Cache_buffer {
 
 
   for ( i <- 0 until 16 ) yield {
-    when( valid(i) == ture.B ) {
+    when( valid(i) === true.B ) {
       assert( buff.count( (x: Reservation_Info) => (x.paddr === buff(i).paddr) ) === 1.U )
     }
   }

@@ -16,12 +16,18 @@
    limitations under the License.
 */
 
-package rift2Core.backend.mem
+package rift2Core.backend.memory
 
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
+import rift._
+import chipsalliance.rocketchip.config._
+import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.tilelink._
+import rift2Core.L1Cache._
+import rift2Core.privilege._
 
 trait Fence_op{
   /** when a flush comes, flush all uncommit write & amo request in pending-fifo, and block all request from issue until scoreboard is empty */
@@ -35,10 +41,11 @@ trait Fence_op{
 }
 
 
-class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with Fence_op{
+class Lsu(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with Fence_op{
+  def nm = 8
   val io = IO(new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_wb = new DecoupledIO(new WriteBack_info)
+    val lsu_exe_wb = new DecoupledIO(new WriteBack_info(64))
 
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
@@ -148,7 +155,7 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   }
 
   val system = {
-    val mdl = IO_Lsu(edge(nm+1), idx = nm+1)
+    val mdl = Module(new IO_Lsu(edge(nm+1), idx = nm+1))
     mdl.io.enq <> regionMux.io.deq(1)
 
     mdl.io.getPut <> io.system_getPut
@@ -157,7 +164,7 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   }
 
   val periph = {
-    val mdl = IO_Lsu(edge(nm), idx = nm)
+    val mdl = Module(new IO_Lsu(edge(nm), idx = nm))
     mdl.io.enq <> regionMux.io.deq(0)
 
     mdl.io.getPut <> io.periph_getPut
@@ -170,7 +177,7 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     * @return Info_cache_retn
     */
   val lu_wb_arb = {
-    val mdl = Module(new Arbiter(nm+2, new Info_cache_retn))
+    val mdl = Module(new Arbiter(new Info_cache_retn, nm+2))
     for ( i <- 0 until nm ) yield {
       mdl.io.in(i) <> cache(i).io.deq      
     }
@@ -187,7 +194,7 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     * @return WriteBack_info
     */
   val lu_wb_fifo = {
-    val mdl = Module( new Queue( new WriteBack_info, 1, false, true ) )
+    val mdl = Module( new Queue( new WriteBack_info(64), 1, false, true ) )
     mdl.io.enq.valid := lu_wb_arb.io.out.valid & ~trans_kill
     mdl.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
     mdl.io.enq.bits.is_iwb := lu_wb_arb.io.out.bits.wb.is_iwb
@@ -206,7 +213,7 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     * @return WriteBack_info
     */
   val su_wb_fifo = {
-    val mdl = Module( new Queue( new WriteBack_info, 1, false, true ) )
+    val mdl = Module( new Queue( new WriteBack_info(64), 1, false, true ) )
     mdl.io.enq.valid := opMux.io.st_deq.fire
     mdl.io.enq.bits.rd0  := opMux.io.st_deq.bits.param.rd0
     mdl.io.enq.bits.is_iwb  := opMux.io.st_deq.bits.param.is_iwb
@@ -221,11 +228,19 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   opMux.io.am_deq.ready := stQueue.io.enq.ready
   opMux.io.ld_deq.ready := ls_arb.io.in(0).ready
 
-
+  /** indicate the mem unit is empty by all seq-element is empty*/
+  val is_empty = 
+    stQueue.io.is_empty & 
+    cache.map{x => x.io.is_empty}.forall((x:Bool) => (x === true.B)) &
+    system.io.is_empty &
+    periph.io.is_empty &
+    ~su_wb_fifo.io.deq.valid & 
+    ~lu_wb_fifo.io.deq.valid & 
+    ~fe_wb_fifo.io.deq.valid
 
 
   val fe_wb_fifo = {
-    val mdl = Module( new Queue( new WriteBack_info, 1, false, true ) )
+    val mdl = Module( new Queue( new WriteBack_info(64), 1, false, true ) )
     mdl.reset := reset.asBool | io.flush
     mdl.io.enq.valid := is_empty & is_fence_op
     mdl.io.enq.bits.rd0 := io.lsu_iss_exe.bits.param.rd0
@@ -241,7 +256,7 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     * @return WriteBack_info
     */
   val rtn_arb = {
-    val mdl = Module(new Arbiter( new WriteBack_info, 2))
+    val mdl = Module(new Arbiter( new WriteBack_info(64), 2))
     mdl.io.in(0) <> su_wb_fifo.io.deq
     mdl.io.in(1) <> lu_wb_fifo.io.deq
     mdl.io.in(2) <> fe_wb_fifo.io.deq
@@ -250,15 +265,7 @@ class Mem(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   }
 
 
-  /** indicate the mem unit is empty by all seq-element is empty*/
-  val is_empty = 
-    stQueue.io.is_empty & 
-    cache.io.is_empty &
-    system.io.is_empty &
-    periph.io.is_empty &
-    ~su_wb_fifo.io.deq.valid & 
-    ~lu_wb_fifo.io.deq.valid & 
-    ~fe_wb_fifo.io.deq.valid
+
 
 
   io.lsu_mmu.valid := io.lsu_iss_exe.valid & ~io.lsu_iss_exe.bits.fun.is_fence

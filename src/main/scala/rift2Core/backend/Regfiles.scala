@@ -29,7 +29,7 @@ class dpt_rename_info(dp: Int) extends Bundle{
   // val raw = Input(new Register_source(32))
   // val phy = Output(new Register_source(dp))
 
-  val rsp = Output(new Reg_phy)
+  val rsp = Output(new Reg_phy(dp))
   val req = Decoupled(new Reg_raw)
 }
 
@@ -44,9 +44,9 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
 
     val dpt_rename = Vec( rn_chn, new dpt_rename_info(dp) )
     /** read operators based on idx, must success */
-    val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info) )
+    val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dp)) )
     /** writeBack request from exeUnit */
-    val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info)))
+    val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(64))))
     /** Commit request from commitUnit */
     val commit = Vec(cmm_chn, Flipped(Decoupled(new Info_commit_op(dp))))
 
@@ -67,12 +67,12 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
   /**
     * index that 32 renamed register-sources point to
     */
-  val rename_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i} ) )
+  val rename_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U} ) )
 
   /**
     * index that 32 commited register-sources point to
     */  
-  val archit_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i} ) )
+  val archit_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U} ) )
 
   /**
     * finding out the first Free-phy-register
@@ -91,9 +91,9 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
   // )
 
   for ( i <- 0 until rn_chn ) {
-    val idx1 = io.dpt_rename(i).req.rs1
-    val idx2 = io.dpt_rename(i).req.rs2
-    val idx3 = io.dpt_rename(i).req.rs3
+    val idx1 = io.dpt_rename(i).req.bits.rs1
+    val idx2 = io.dpt_rename(i).req.bits.rs2
+    val idx3 = io.dpt_rename(i).req.bits.rs3
 
     if ( i == 0) {
       io.dpt_rename(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )
@@ -104,32 +104,32 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
       io.dpt_rename(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
       io.dpt_rename(i).rsp.rs3 := Mux( idx3 === 0.U, 63.U, rename_ptr(idx3) ) 
       for ( j <- 0 until i ) {
-        when( io.dpt_rename(j).req.rd0 === idx1 ) { io.dpt_rename(i).rsp.rs1 := molloc_idx(j) }
-        when( io.dpt_rename(j).req.rd0 === idx2 ) { io.dpt_rename(i).rsp.rs2 := molloc_idx(j) }
-        when( io.dpt_rename(j).req.rd0 === idx3 ) { io.dpt_rename(i).rsp.rs3 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.bits.rd0 === idx1 ) { io.dpt_rename(i).rsp.rs1 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.bits.rd0 === idx2 ) { io.dpt_rename(i).rsp.rs2 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.bits.rd0 === idx3 ) { io.dpt_rename(i).rsp.rs3 := molloc_idx(j) }
       }
     }
 
 
     when( io.dpt_rename(i).req.fire ) {
-      val idx = io.dpt_rename(i).req.rd0
+      val idx = io.dpt_rename(i).req.bits.rd0
       assert( log(molloc_idx(i)) === "b00".U )
       log(molloc_idx(i)) := "b01".U //may be override by flush
       rename_ptr(idx) := molloc_idx(i) //may be override by flush
     }
 
-    io.dpt_rename(i).ready := log.count( (x:UInt) => ( x === 0.U ) ) > i.U
+    io.dpt_rename(i).req.ready := log.count( (x:UInt) => ( x === 0.U ) ) > i.U
     io.dpt_rename(i).rsp.rd0 := molloc_idx(i)
 
   }
 
 
   for ( i <- 0 until rop_chn ) yield {
-    val idx1 = io.iss_readOp(i).reg.rs1
-    val idx2 = io.iss_readOp(i).reg.rs2
-    val idx3 = io.iss_readOp(i).reg.rs3
+    val idx1 = io.iss_readOp(i).reg.bits.rs1
+    val idx2 = io.iss_readOp(i).reg.bits.rs2
+    val idx3 = io.iss_readOp(i).reg.bits.rs3
 
-    when( io.iss_readOp(i).fire ) {
+    when( io.iss_readOp(i).reg.fire ) {
       io.iss_readOp(i).dat.op1 := Mux(idx1 === 63.U, 0.U, files(idx1))
       io.iss_readOp(i).dat.op2 := Mux(idx2 === 63.U, 0.U, files(idx2))
       io.iss_readOp(i).dat.op3 := Mux(idx3 === 63.U, 0.U, files(idx3))
@@ -138,7 +138,7 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
       io.iss_readOp(i).dat.op2 := 0.U
       io.iss_readOp(i).dat.op3 := 0.U
     }
-    io.iss_readOp(i).ready :=
+    io.iss_readOp(i).reg.ready :=
       (log(idx1) === "b10".U | idx1 === 63.U ) &
       (log(idx2) === "b10".U | idx2 === 63.U ) &
       (log(idx3) === "b10".U | idx3 === 63.U ) 
@@ -147,10 +147,10 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
 
   for ( i <- 0 until wb_chn ) yield {
     when( io.exe_writeBack(i).valid ) {
-      val idx = io.exe_writeBack(i).bits.dest.rd
+      val idx = io.exe_writeBack(i).bits.rd0
       assert( log(idx) === "b10".U )
       files(idx) := io.exe_writeBack(i).bits.res
-      io.exe_writeBack(i).raedy := true.B
+      io.exe_writeBack(i).ready := true.B
     }
   }
 
@@ -168,11 +168,11 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
       when( io.commit(m).fire ) {
         when( io.commit(m).bits.is_abort ) {
           /** clear all log to 0, except that archit_ptr point to, may be override */
-          for ( j <- 0 unitl dp-1 ) yield {log(j) := Mux( archit_ptr.exist( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
+          for ( j <- 0 until dp-1 ) yield {log(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
           for ( n <- 0 until m ) yield { assert( io.commit(n).valid & ~io.commit(n).bits.is_abort) }
         } .otherwise {
           /** override the log(clear) */
-          for ( j <- 0 unitl dp-1 ) yield { log(j) := Mux( j.U === idx_pre(m), 0.U, log(j) ) }
+          for ( j <- 0 until dp-1 ) yield { log(j) := Mux( j.U === idx_pre(m), 0.U, log(j) ) }
         }
       }
 

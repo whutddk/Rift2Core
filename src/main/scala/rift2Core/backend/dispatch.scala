@@ -28,7 +28,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
   val io = IO(new Bundle{
     val bd_dpt = Vec(rn_chn, Flipped(new DecoupledIO(new Info_bd_dpt())))
 
-    val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info(dp)) )
+    val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info(64)) )
 
     val ooo_dpt_iss = Vec(4, new DecoupledIO(new Dpt_info))
     val ito_dpt_iss = new DecoupledIO(new Dpt_info)
@@ -68,10 +68,10 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
     ito_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.is_ito_dpt
 
     ooo_dpt_rePort.io.enq(i).bits := Mux( ooo_dpt_rePort.io.enq(i).valid, Pkg_ooo_dpt(io.bd_dpt(i).bits.info, io.dpt_rename(i).rsp), DontCare )
-    dpt_rePort.io.enq(i).bits := Mux( ito_dpt_rePort.io.enq(i).valid, Pkg_ito_dpt(io.bd_dpt(i).bits.info, io.dpt_rename(i).rsp), DontCare )
+    ito_dpt_rePort.io.enq(i).bits := Mux( ito_dpt_rePort.io.enq(i).valid, Pkg_ito_dpt(io.bd_dpt(i).bits.info, io.dpt_rename(i).rsp), DontCare )
 
     io.dpt_rename(i).req.valid := io.bd_dpt(i).fire
-    io.dpt_rename(i).req.bits := Mux( io.dpt_rename(i).req.valid, io.bd_dpt(i).bits.info.param.raw )
+    io.dpt_rename(i).req.bits := Mux( io.dpt_rename(i).req.valid, io.bd_dpt(i).bits.info.param.raw, DontCare )
 
 
     reOrder_fifo_i.io.enq(i).valid := io.bd_dpt(i).fire
@@ -130,14 +130,13 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
       res.privil         := instr.privil_isa
       res.is_illeage     := instr.is_illeage
 
-    return reorder_i_info
+    return res
   }
 
 
 
-  ooo_dpt_fifo.io.flush := io.flush
-  ito_dpt_fifo.io.flush := io.flush
-  reOrder_fifo_i.io.flush := io.flush
+  ito_dpt_fifo.io.flush := false.B
+  reOrder_fifo_i.io.flush := false.B
   
 }
 

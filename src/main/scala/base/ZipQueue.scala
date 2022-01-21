@@ -26,8 +26,6 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
   val io = IO(new Bundle{
     val enq = Vec(in, Flipped(new DecoupledIO(dw)) )
     val deq  = Vec(out, new DecoupledIO(dw) )
-
-    val flush = Input(Bool())
   })
 
   val wr_ptr = Wire(UInt(aw.W))
