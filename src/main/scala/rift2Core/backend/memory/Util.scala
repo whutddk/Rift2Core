@@ -42,11 +42,12 @@ class addrTrans extends Module {
   })
 
   /** the transation will be blocked if the request is illegal */
-  io.deq.valid := io.mmu_lsu.valid & ~io.mmu_lsu.is_fault & ~io.iss_exe.bits.is_misAlign & ~io.block
+  io.deq.valid := io.mmu_lsu.valid & ~io.mmu_lsu.bits.is_fault & ~io.iss_exe.bits.is_misAlign & ~io.block
+  
   {
     io.deq.bits := io.iss_exe
-    io.deq.bits.param.op1 := io.mmu_lsu.bits.paddr
-    io.mmu_lsu.ready := io.deq.ready & ~io.mmu_lsu.is_fault & ~io.iss_exe.bits.is_misAlign & ~io.block
+    io.deq.bits.param.dat.op1 := io.mmu_lsu.bits.paddr
+    io.mmu_lsu.ready := io.deq.ready & ~io.mmu_lsu.bits.is_fault & ~io.iss_exe.bits.is_misAlign & ~io.block
   }
 
 }
@@ -151,7 +152,7 @@ object Strb2Mask{
   def apply(strb: UInt): UInt = {
     val mask = Wire(UInt(64.W))
 
-    for ( i <- 0 unitl 8 ) yield {
+    for ( i <- 0 until 8 ) yield {
       mask(8*i+7,8*i) := strb(i)
     } 
     mask
@@ -186,7 +187,7 @@ object align_mem{
 }
 
 object pkg_Info_cache_s0s1{
-  def apply( ori: Info_miss_rsp ) = {
+  def apply( ori: Info_miss_rsp )(implicit p: Parameters) = {
     val res = Wire(new Info_cache_s0s1)
 
     res.paddr := ori.paddr
@@ -197,28 +198,30 @@ object pkg_Info_cache_s0s1{
     res.wdata(3) := ori.wdata(255,192)
 
     {
-      res.op := 0.U.asTypeOf(new Cache_op)
-      res.op.grant := true.B      
+      res.fun := 0.U.asTypeOf(new Cache_op)
+      res.fun.grant := true.B      
     }
 
     res.chk_idx := DontCare
     res
   }
   
-  def apply( ori: Info_probe_req ) = {
+  def apply( ori: Info_probe_req )(implicit p: Parameters) = {
     val res = Wire(new Info_cache_s0s1)
     res.paddr := ori.paddr
     res.wstrb := DontCare
     res.wdata := DontCare
+
     {
-      res.op := 0.U.asTypeOf(new Cache_op)
-      res.op.probe := true.B      
+      res.fun := 0.U.asTypeOf(new Cache_op)
+      res.fun.probe := true.B      
     }
+
     res.chk_idx := DontCare
     res
   }
 
-  def apply( ori: Lsu_iss_info ) = {
+  def apply( ori: Lsu_iss_info )(implicit p: Parameters) = {
 
     val res = Wire(new Info_cache_s0s1)
 
@@ -229,8 +232,8 @@ object pkg_Info_cache_s0s1{
 
 
     {
-      res.op := 0.U.asTypeOf(new Cache_op)
-      res.op.fun := ori.fun     
+      res := 0.U.asTypeOf(new Cache_op)
+      res.fun := ori.fun     
     }
     res.chk_idx := DontCare
     res
@@ -242,7 +245,7 @@ object pkg_Info_cache_s0s1{
 
 object overlap_wr{
   def apply( ori: UInt, ori_wstrb: UInt, wdata: UInt, wstrb: UInt): (UInt, UInt) = {
-    val mask = Strb2Mask(wstrb)
+    val wmask = Strb2Mask(wstrb)
 
     val new_data = (ori & ~wmask) | (wdata & wmask)
     val new_strb = ori_wstrb | wstrb

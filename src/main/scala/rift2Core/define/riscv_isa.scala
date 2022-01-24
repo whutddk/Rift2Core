@@ -427,10 +427,14 @@ class Register_source(dp:Int) extends Bundle {
   val rs1 = UInt((log2Ceil(dp)).W)
   val rs2 = UInt((log2Ceil(dp)).W)
   val rs3 = UInt((log2Ceil(dp)).W)
+
+  override def cloneType = ( new Register_source(dp:Int) ).asInstanceOf[this.type]
 }
 
 class Register_dstntn(dp:Int) extends Bundle {
   val rd0 = UInt((log2Ceil(dp)).W)
+
+  // override def cloneType = ( new Register_dstntn(dp:Int) ).asInstanceOf[this.type]
 }
 
 class Operation_source extends Bundle {
@@ -442,12 +446,16 @@ class Operation_source extends Bundle {
 
 class Reg_phy(dp:Int) extends Register_source(dp) {
   val rd0 = UInt((log2Ceil(dp)).W)
+
+  override def cloneType = ( new Reg_phy(dp:Int) ).asInstanceOf[this.type]
 }
 class Reg_raw extends Reg_phy(dp = 32)
 
 class Rd_Param(dp:Int) extends Register_dstntn(dp) {
   val is_iwb = Bool()
   val is_fwb = Bool()
+
+  // override def cloneType = ( new Rd_Param(dp:Int) ).asInstanceOf[this.type]
 }
 
 class Instruction_set extends Bundle{
@@ -684,8 +692,10 @@ class Mul_iss_info extends Bundle {
 
 
 
-class WriteBack_info(dp:Int) extends Rd_Param(dp) {
+case class WriteBack_info(dp:Int) extends Rd_Param(dp) {
   val res = UInt(64.W)
+
+  override def cloneType = ( new WriteBack_info(dp:Int) ).asInstanceOf[this.type]
 }
 
 

@@ -34,7 +34,7 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
   val buff  = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
   val valid = RegInit(VecInit(Seq.fill(dp)(false.B)))
   val zip_cnt = Wire(Vec(dp, UInt(aw.W)))
-  val is_zip = Wire(Vec(dp,Vec(3,  false.B)))
+  val is_zip = Wire(Vec(dp,Vec(3,  Bool())))
 
 
   wr_ptr := 
@@ -55,7 +55,7 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
         valid(i) := false.B
       } .otherwise {  } //is_zip(i) === false.B
     } .otherwise { //valid(i) === false.B
-      if ( i < dp - 2 ) {
+      if ( i < dp - 4 ) {
         when( valid(i+1) === true.B && is_zip(i+1)(1) === false.B && is_zip(i+1)(2) === false.B) {
           buff(i) := buff(i+1)
           valid(i) := valid(i+1)

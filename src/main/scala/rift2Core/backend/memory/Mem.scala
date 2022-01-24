@@ -41,7 +41,7 @@ trait Fence_op{
 }
 
 
-class Lsu(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with Fence_op{
+class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with Fence_op{
   def nm = 8
   val io = IO(new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
@@ -54,17 +54,17 @@ class Lsu(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
 
     val missUnit_dcache_acquire = 
-      for ( i <- 0 until nm ) yield Decoupled(new TLBundleA(edge(i).bundle))
+      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleA(edge(i).bundle))) 
     val missUnit_dcache_grant = 
-      for ( i <- 0 until nm ) yield Flipped(DecoupledIO(new TLBundleD(edge(i).bundle)))
+      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleD(edge(i).bundle))))
     val missUnit_dcache_grantAck  = 
-      for ( i <- 0 until nm ) yield Decoupled(new TLBundleE(edge(i).bundle))
+      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleE(edge(i).bundle)))
     val probeUnit_dcache_probe = 
-      for ( i <- 0 until nm ) yield Flipped(DecoupledIO(new TLBundleB(edge(i).bundle)))
+      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleB(edge(i).bundle))))
     val writeBackUnit_dcache_release =
-      for ( i <- 0 until nm ) yield DecoupledIO(new TLBundleC(edge(i).bundle))
+      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleC(edge(i).bundle)))
     val writeBackUnit_dcache_grant   =
-      for ( i <- 0 until nm ) yield Flipped(DecoupledIO(new TLBundleD(edge(i).bundle)))
+      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleD(edge(i).bundle))))
 
     val system_getPut = new DecoupledIO(new TLBundleA(edge(nm).bundle))
     val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(nm).bundle)))
@@ -95,7 +95,7 @@ class Lsu(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
         opMux.io.am_deq.fire -> opMux.io.am_deq.bits,
       ))
     mdl.io.cmm_lsu := io.cmm_lsu
-    mdl.io.flush = io.flush
+    mdl.io.flush := io.flush
     mdl
   }
 
@@ -201,7 +201,8 @@ class Lsu(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     mdl.io.enq.bits.is_fwb := lu_wb_arb.io.out.bits.wb.is_fwb
     mdl.io.enq.bits.res := {
       stQueue.io.overlap.paddr := lu_wb_arb.io.out.bits.paddr
-      overlap_wr( lu_wb_arb.io.out.bits.wb.res, 0.U, stQueue.io.overlap.wdata, stQueue.io.overlap.wstrb)
+      val (new_data, new_strb) = overlap_wr( lu_wb_arb.io.out.bits.wb.res, 0.U, stQueue.io.overlap.wdata, stQueue.io.overlap.wstrb)
+      new_data
     }
     lu_wb_arb.io.out.ready := mdl.io.enq.ready | trans_kill
     mdl.reset := reset.asBool | io.flush
@@ -229,15 +230,8 @@ class Lsu(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   opMux.io.ld_deq.ready := ls_arb.io.in(0).ready
 
   /** indicate the mem unit is empty by all seq-element is empty*/
-  val is_empty = 
-    stQueue.io.is_empty & 
-    cache.map{x => x.io.is_empty}.forall((x:Bool) => (x === true.B)) &
-    system.io.is_empty &
-    periph.io.is_empty &
-    ~su_wb_fifo.io.deq.valid & 
-    ~lu_wb_fifo.io.deq.valid & 
-    ~fe_wb_fifo.io.deq.valid
 
+  val is_empty = Wire(Bool())
 
   val fe_wb_fifo = {
     val mdl = Module( new Queue( new WriteBack_info(64), 1, false, true ) )
@@ -250,6 +244,14 @@ class Lsu(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     mdl
   }
 
+  is_empty := 
+    stQueue.io.is_empty & 
+    VecInit(cache.map{x => x.io.is_empty}).forall((x:Bool) => (x === true.B)) &
+    system.io.is_empty &
+    periph.io.is_empty &
+    ~su_wb_fifo.io.deq.valid & 
+    ~lu_wb_fifo.io.deq.valid & 
+    ~fe_wb_fifo.io.deq.valid
 
   /** merge lu-writeback and su-writeback
     * @param in WriteBack_info
@@ -269,7 +271,7 @@ class Lsu(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
 
 
   io.lsu_mmu.valid := io.lsu_iss_exe.valid & ~io.lsu_iss_exe.bits.fun.is_fence
-  io.lsu_mmu.bits.vaddr := io.lsu_iss_exe.bits.param.op1
+  io.lsu_mmu.bits.vaddr := io.lsu_iss_exe.bits.param.dat.op1
   io.lsu_mmu.bits.is_R := io.lsu_iss_exe.bits.fun.is_R
   io.lsu_mmu.bits.is_W := io.lsu_iss_exe.bits.fun.is_W
   io.lsu_mmu.bits.is_X := false.B
@@ -289,7 +291,7 @@ class Lsu(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   io.lsu_cmm.is_misAlign :=
     io.mmu_lsu.valid & io.lsu_iss_exe.bits.is_misAlign & is_empty
 
-  io.lsu_cmm.trap_addr := io.lsu_iss_exe.bits.param.op1
+  io.lsu_cmm.trap_addr := io.lsu_iss_exe.bits.param.dat.op1
 
 
 

@@ -30,7 +30,7 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
-trait Cache_buffer {
+trait Cache_buffer extends DcacheModule{
 
 
   printf("Cache_Buff depth is 16\n")
@@ -46,7 +46,7 @@ trait Cache_buffer {
 
 
 
-  val is_hazard = buff.map( x => (x.paddr === buf_enq.paddr) ).reduce(_|_)
+  val is_hazard = buff.map( x => (x.paddr === buf_enq.bits.paddr) ).reduce(_|_)
   val idx = valid.indexWhere( (x:Bool) => (x === true.B) )
 
 
@@ -71,7 +71,7 @@ trait Cache_buffer {
 
   for ( i <- 0 until 16 ) yield {
     when( valid(i) === true.B ) {
-      assert( buff.count( (x: Reservation_Info) => (x.paddr === buff(i).paddr) ) === 1.U )
+      assert( buff.count( (x: Info_cache_s0s1) => (x.paddr === buff(i).paddr) ) === 1.U )
     }
   }
 }

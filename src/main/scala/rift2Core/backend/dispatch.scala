@@ -28,7 +28,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
   val io = IO(new Bundle{
     val bd_dpt = Vec(rn_chn, Flipped(new DecoupledIO(new Info_bd_dpt())))
 
-    val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info(64)) )
+    val dpt_rename = Vec( rn_chn, new dpt_rename_info(64))
 
     val ooo_dpt_iss = Vec(4, new DecoupledIO(new Dpt_info))
     val ito_dpt_iss = new DecoupledIO(new Dpt_info)
@@ -53,7 +53,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
   val ito_dpt_fifo = {
     val mdl = Module(new MultiPortFifo( new Dpt_info, aw = 4, in = rn_chn, out = 1 ))
     mdl.io.enq <> ito_dpt_rePort.io.deq
-    mdl.io.deq <> io.ito_dpt_iss
+    mdl.io.deq(0) <> io.ito_dpt_iss
     mdl
   }
 

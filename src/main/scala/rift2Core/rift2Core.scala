@@ -91,7 +91,8 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   })
 
   val ( icache_bus, icache_edge ) = outer.icacheClientNode.out.head
-  val ( dcache_bus, dcache_edge ) = for ( i <- 0 until 8 ) yield { outer.dcacheClientNode(i).out.head}
+  val  dcache_bus  = for ( i <- 0 until 8 ) yield { outer.dcacheClientNode(i).out.head._1}
+  val  dcache_edge = for ( i <- 0 until 8 ) yield { outer.dcacheClientNode(i).out.head._2}
   val ( system_bus, system_edge ) = outer.systemClientNode.out.head
   val ( periph_bus, periph_edge ) = outer.periphClientNode.out.head
   val (    mmu_bus,    mmu_edge ) = outer.mmuClientNode.out.head
@@ -120,7 +121,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   }
 
 
-  val exe_stage = Module(new Execute( VecInit(Seq(for ( i <- 0 until 8 ) yield dcache_edge(i) ) + Seq( system_edge, periph_edge ) ) ) )
+  val exe_stage = Module(new Execute( ((for ( i <- 0 until 8 ) yield dcache_edge(i) ) ++ Seq( system_edge, periph_edge ) ) ) )
 
 
 
@@ -141,7 +142,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
     mdl.io.alu_iWriteBack <> exe_stage.io.alu_exe_iwb
     mdl.io.bru_iWriteBack <> exe_stage.io.bru_exe_iwb
     mdl.io.csr_iWriteBack <> exe_stage.io.csr_exe_iwb
-    mdl.io.mem_iWriteBack <> exe_stage.io.lsu_exe_iwb
+    mdl.io.mem_iWriteBack <> exe_stage.io.lsu_exe_wb
     mdl.io.mul_iWriteBack <> exe_stage.io.mul_exe_iwb
     mdl.io.fpu_iWriteBack.valid := false.B
     mdl.io.fpu_iWriteBack.bits := DontCare
@@ -211,7 +212,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   cmm_stage.io.is_misPredict := bd_stage.io.is_misPredict_taken
 
 
-  cmm_state.io.cm_op <> iwb_stage.io.commit
+  cmm_stage.io.cm_op <> iwb_stage.io.commit
   cmm_stage.io.rod_i <> dpt_stage.io.rod_i
   cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
   cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
@@ -299,7 +300,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-  diff.io.register := i_regfiles.io.diff_register
+  diff.io.register := iwb_stage.io.diff_register
   diff.io.commit   := cmm_stage.io.diff_commit
   diff.io.csr      := cmm_stage.io.diff_csr
 

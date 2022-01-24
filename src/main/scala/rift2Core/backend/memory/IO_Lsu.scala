@@ -53,17 +53,17 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
     io.getPut.bits := 
       edge.Get(
         fromSource = idx.U,
-        toAddress = io.enq.paddr,
+        toAddress = io.enq.bits.paddr,
         lgSize = log2Ceil(64/8).U
       )._2    
   } .elsewhen( io.enq.bits.fun.is_su & ~io.enq.bits.fun.is_sc ) {
     io.getPut.bits :=
       edge.Put(
         fromSource = idx.U,
-        toAddress = io.enq.paddr,
+        toAddress = io.enq.bits.paddr,
         lgSize = log2Ceil(64/8).U,
-        data = io.enq.wdata,
-        mask = io.enq.wstrb
+        data = io.enq.bits.wdata(0),
+        mask = io.enq.bits.wstrb
       )._2
   } .otherwise{
     io.getPut.bits := DontCare
@@ -74,8 +74,8 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
 
   when( io.getPut.fire ) {
     assert( is_busy === false.B  )
-    pending_rd := io.enq.rd
-    pending_paddr := io.enq.bits.param.op1
+    pending_rd := io.enq.bits.rd
+    pending_paddr := io.enq.bits.paddr
     is_busy := true.B
   } .elsewhen( io.access.fire ) {
     assert( is_busy === true.B  )
@@ -84,7 +84,7 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
 
   io.deq.valid    := io.access.valid
 
-  io.deq.bits.wb.rd := pending_rd
+  io.deq.bits.wb.rd0 := pending_rd
   io.deq.bits.wb.res := io.access.bits.data
   io.deq.bits.is_load_amo := (io.access.bits.opcode === TLMessages.AccessAckData)
   io.deq.bits.paddr := pending_paddr

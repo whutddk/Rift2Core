@@ -33,7 +33,7 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
-class Execute(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
+class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
     val alu_exe_iwb = new DecoupledIO(new WriteBack_info(64))
@@ -60,22 +60,22 @@ class Execute(edge: Vec[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     val lsu_cmm = Output( new Info_lsu_cmm )
 
     val missUnit_dcache_acquire = 
-      for ( i <- 0 until 8 ) yield Decoupled(new TLBundleA(edge(i).bundle))
+      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleA(edge(i).bundle))) 
     val missUnit_dcache_grant = 
-      for ( i <- 0 until 8 ) yield Flipped(DecoupledIO(new TLBundleD(edge(i).bundle)))
+      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleD(edge(i).bundle))))
     val missUnit_dcache_grantAck  = 
-      for ( i <- 0 until 8 ) yield Decoupled(new TLBundleE(edge(i).bundle))
+      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleE(edge(i).bundle)))
     val probeUnit_dcache_probe = 
-      for ( i <- 0 until 8 ) yield Flipped(DecoupledIO(new TLBundleB(edge(i).bundle)))
+      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleB(edge(i).bundle))))
     val writeBackUnit_dcache_release =
-      for ( i <- 0 until 8 ) yield DecoupledIO(new TLBundleC(edge(i).bundle))
+      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleC(edge(i).bundle)))
     val writeBackUnit_dcache_grant   =
-      for ( i <- 0 until 8 ) yield Flipped(DecoupledIO(new TLBundleD(edge(i).bundle)))
+      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleD(edge(i).bundle))))
 
     val system_getPut = new DecoupledIO(new TLBundleA(edge(8).bundle))
     val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(8).bundle)))
-    val periph_getPut = new DecoupledIO(new TLBundleA(edge(9+1).bundle))
-    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(9+1).bundle)))
+    val periph_getPut = new DecoupledIO(new TLBundleA(edge(9).bundle))
+    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(9).bundle)))
 
     val flush = Input(Bool())
 

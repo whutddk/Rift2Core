@@ -42,7 +42,7 @@ class Out_of_Order_Issue() extends Module {
     val mul_iss_exe = new DecoupledIO(new Mul_iss_info)
 
 
-    val ooo_readOp  = Vec(4, Flipped( new iss_readOp_info(64)))
+    val ooo_readOp  = Vec(4,  new iss_readOp_info(64))
 
   })
 
@@ -57,7 +57,7 @@ class Out_of_Order_Issue() extends Module {
   val alu_iss_fifo = {
     val mdl = Module(new MultiPortFifo( new Alu_iss_info, aw = 4, in = 4, out = 1 ))
     mdl.io.enq <> alu_iss_rePort.io.deq
-    mdl.io.deq <> io.alu_iss_exe
+    mdl.io.deq(0) <> io.alu_iss_exe
     mdl 
   }
 
@@ -69,7 +69,7 @@ class Out_of_Order_Issue() extends Module {
   val lsu_iss_fifo = {
     val mdl = Module(new MultiPortFifo( new Lsu_iss_info, aw = 4, in = 4, out = 1 ))
     mdl.io.enq <> lsu_iss_rePort.io.deq
-    mdl.io.deq <> io.lsu_iss_exe
+    mdl.io.deq(0) <> io.lsu_iss_exe
     mdl 
   }
 
@@ -81,7 +81,7 @@ class Out_of_Order_Issue() extends Module {
   val mul_iss_fifo = {
     val mdl = Module(new MultiPortFifo( new Mul_iss_info, aw = 4, in = 4, out = 1 ))
     mdl.io.enq <> mul_iss_rePort.io.deq
-    mdl.io.deq <> io.mul_iss_exe
+    mdl.io.deq(0) <> io.mul_iss_exe
     mdl 
   }
 
@@ -203,7 +203,7 @@ class In_Order_Issue extends Module {
       val bru_iss_exe = new DecoupledIO(new Bru_iss_info)
       val csr_iss_exe = new DecoupledIO(new Csr_iss_info)
 
-      val ito_readOp  = Flipped( new iss_readOp_info(64))
+      val ito_readOp  = new iss_readOp_info(64)
 
   })
 
@@ -277,8 +277,8 @@ class Issue extends Module {
     val ooo_dpt_iss = Vec(4, Flipped(new DecoupledIO(new Dpt_info)))
     val ito_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))   
 
-    val ooo_readOp  = Vec(4, Flipped( new iss_readOp_info(64)))
-    val ito_readOp  = Flipped( new iss_readOp_info(64))
+    val ooo_readOp  = Vec(4,  new iss_readOp_info(64))
+    val ito_readOp  = new iss_readOp_info(64)
 
     val alu_iss_exe = new DecoupledIO(new Alu_iss_info)
     val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)

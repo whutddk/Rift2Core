@@ -20,6 +20,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 
+import rift2Core.diff._
 /**
   * rename channel is located in dpt-stage,
   * the raw-rs needs lookup the phy-rs num ( 1x, 2x, 3x raw-rs -> phy-rs ),
@@ -29,20 +30,24 @@ class dpt_rename_info(dp: Int) extends Bundle{
   // val raw = Input(new Register_source(32))
   // val phy = Output(new Register_source(dp))
 
-  val rsp = Output(new Reg_phy(dp))
+  val rsp = Input(new Reg_phy(dp))
   val req = Decoupled(new Reg_raw)
+
+  override def cloneType = ( new dpt_rename_info(dp:Int) ).asInstanceOf[this.type]
 }
 
 class iss_readOp_info(dp: Int) extends Bundle {
-  val reg = DecoupledIO(new Register_source(dp))
-  val dat = Output(new Operation_source)
+  val reg = Decoupled(new Register_source(dp))
+  val dat = Input(new Operation_source)
+
+  override def cloneType = ( new iss_readOp_info(dp:Int) ).asInstanceOf[this.type]
 }
 
 
 class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm_chn: Int = 2) extends Module{
   val io = IO( new Bundle{
 
-    val dpt_rename = Vec( rn_chn, new dpt_rename_info(dp) )
+    val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info(dp) ))
     /** read operators based on idx, must success */
     val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dp)) )
     /** writeBack request from exeUnit */
@@ -50,6 +55,7 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
     /** Commit request from commitUnit */
     val commit = Vec(cmm_chn, Flipped(Decoupled(new Info_commit_op(dp))))
 
+    val diff_register = Output(new Info_abi_reg)
   })
 
   /**
@@ -196,6 +202,40 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
 
 
 
+
+
+  io.diff_register.zero := files(archit_ptr(0))
+  io.diff_register.ra   := files(archit_ptr(1))
+  io.diff_register.sp   := files(archit_ptr(2))
+  io.diff_register.gp   := files(archit_ptr(3))
+  io.diff_register.tp   := files(archit_ptr(4))
+  io.diff_register.t0   := files(archit_ptr(5))
+  io.diff_register.t1   := files(archit_ptr(6))
+  io.diff_register.t2   := files(archit_ptr(7))
+  io.diff_register.s0   := files(archit_ptr(8))
+  io.diff_register.s1   := files(archit_ptr(9))
+  io.diff_register.a0   := files(archit_ptr(10))
+  io.diff_register.a1   := files(archit_ptr(11))
+  io.diff_register.a2   := files(archit_ptr(12))
+  io.diff_register.a3   := files(archit_ptr(13))
+  io.diff_register.a4   := files(archit_ptr(14))
+  io.diff_register.a5   := files(archit_ptr(15))
+  io.diff_register.a6   := files(archit_ptr(16))
+  io.diff_register.a7   := files(archit_ptr(17))
+  io.diff_register.s2   := files(archit_ptr(18))
+  io.diff_register.s3   := files(archit_ptr(19))
+  io.diff_register.s4   := files(archit_ptr(20))
+  io.diff_register.s5   := files(archit_ptr(21))
+  io.diff_register.s6   := files(archit_ptr(22))
+  io.diff_register.s7   := files(archit_ptr(23))
+  io.diff_register.s8   := files(archit_ptr(24))
+  io.diff_register.s9   := files(archit_ptr(25))
+  io.diff_register.s10  := files(archit_ptr(26))
+  io.diff_register.s11  := files(archit_ptr(27))
+  io.diff_register.t3   := files(archit_ptr(28))
+  io.diff_register.t4   := files(archit_ptr(29))
+  io.diff_register.t5   := files(archit_ptr(30))
+  io.diff_register.t6   := files(archit_ptr(31))
 
 
 

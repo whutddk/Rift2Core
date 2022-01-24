@@ -52,7 +52,8 @@ abstract class DcacheModule(implicit p: Parameters) extends L1CacheModule
 abstract class DcacheBundle(implicit p: Parameters) extends L1CacheBundle
   with HasDcacheParameters
 
-
+abstract class DcacheObject(implicit p: Parameters) extends L1CacheObject
+  with HasDcacheParameters
 
 class Cache_op extends Lsu_isa {
 

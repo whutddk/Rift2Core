@@ -26,6 +26,7 @@ import chisel3.util._
 import base._
 
 import rift2Core.define._
+import rift2Core.diff._
 
 class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int=4, cmm_chn: Int = 2) extends Module {
   val io = IO(new Bundle{
@@ -45,6 +46,8 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int=4, cmm_
     val fpu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
 
     val commit = Vec(cmm_chn, Flipped(Valid(new Info_commit_op(dp))))
+
+    val diff_register = Output(new Info_abi_reg)
   })
 
 
@@ -53,6 +56,7 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int=4, cmm_
 
     iReg.io.dpt_rename <> io.dpt_rename
     iReg.io.commit <> io.commit
+    iReg.io.diff_register <> io.diff_register
 
 
 

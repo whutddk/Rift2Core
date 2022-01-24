@@ -66,7 +66,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
   } )
 
 
-  val buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeof(new Info_cache_s0s1))))
+  val buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Info_cache_s0s1))))
   
   val cm_ptr_reg = RegInit( 0.U((dp_w+1).W) )
   val wr_ptr_reg = RegInit( 0.U((dp_w+1).W) )
@@ -88,7 +88,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
 
   val is_commited = VecInit( io.cmm_lsu.is_store_commit(0), io.cmm_lsu.is_store_commit(1) )
   io.enq.ready := ~full
-  io.deq.valid := ~emty & rd_buff.bits.paddr(31) === 1.U
+  io.deq.valid := ~emty & rd_buff.paddr(31) === 1.U
 
   io.deq.bits := Mux( io.deq.valid, rd_buff, DontCare )
 
@@ -117,14 +117,14 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
 
 
 
-  val overlap_buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeof(new Info_cache_s0s1))))
+  val overlap_buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Info_cache_s0s1))))
 
 
   when( rd_ptr_reg(dp_w) =/= wr_ptr_reg(dp_w) ) {
     assert( rd_ptr >= wr_ptr )
     for ( i <- 0 until dp ) yield {
       val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
-      when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff.paddr === io.overlap.paddr) ) {
+      when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).paddr === io.overlap.paddr) ) {
         overlap_buff(i) := buff(ro_ptr)
       } .otherwise {
         overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
@@ -134,7 +134,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
     assert( rd_ptr <= wr_ptr )
     for ( i <- 0 until dp ) yield {
       val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
-      when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff.paddr === io.overlap.paddr) ) {
+      when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).paddr === io.overlap.paddr) ) {
         overlap_buff(i) := buff(ro_ptr)
       } .otherwise {
         overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
@@ -148,11 +148,11 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
   val temp_wstrb = Wire(UInt(8.W))
   for ( i <- 0 until dp ) yield {
     if ( i == 0 ) {
-      val (wdata, wstrb) = overlap_wr( 0.U, 0.U, overlap_buff(0).wdata, overlap_buff(0).wstrb)
+      val (wdata, wstrb) = overlap_wr( 0.U, 0.U, overlap_buff(0).wdata(0), overlap_buff(0).wstrb)
       temp_wdata(0) := wdata
       temp_wstrb(0) := wstrb
     } else {
-      val (wdata, wstrb) = overlap_wr( temp_res(i-1), overlap_buff(i).wdata, overlap_buff(i).wstrb)
+      val (wdata, wstrb) = overlap_wr( temp_wdata(i-1), temp_wstrb(i-1), overlap_buff(i).wdata(0), overlap_buff(i).wstrb)
       temp_wdata(i) := wdata
       temp_wstrb(i) := wstrb
     }
@@ -160,7 +160,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
   io.overlap.wdata := temp_wdata(dp-1)
   io.overlap.wstrb := temp_wstrb(dp-1)
 
-  io.empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
+  io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
 
 
 }
