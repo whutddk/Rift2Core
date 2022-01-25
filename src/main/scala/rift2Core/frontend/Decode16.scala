@@ -251,7 +251,7 @@ class Decode16 (x:UInt, pc: UInt) {
       )
     )
 
-
+  info.param.rm := Mux( info.fpu_isa.is_fpu, x(14,12), 0.U )
 
 
 
@@ -444,6 +444,12 @@ class Decode16 (x:UInt, pc: UInt) {
   info.fpu_isa.fcvt_d_l    := false.B
   info.fpu_isa.fcvt_d_lu   := false.B
   info.fpu_isa.fmv_d_x     := false.B
+  info.fpu_isa.fcsr_rw     := false.B
+  info.fpu_isa.fcsr_rs     := false.B
+  info.fpu_isa.fcsr_rc     := false.B
+  info.fpu_isa.fcsr_rwi    := false.B
+  info.fpu_isa.fcsr_rsi    := false.B
+  info.fpu_isa.fcsr_rci    := false.B
 
   info.privil_isa.is_access_fault := ( x === BitPat("b1001110001000001") )
   info.privil_isa.is_paging_fault := ( x === BitPat("b1001110001000101") )

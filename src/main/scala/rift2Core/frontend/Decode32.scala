@@ -113,6 +113,9 @@ class Decode32 (x:UInt, pc: UInt) {
     info.csr_isa.rwi       -> 0.U,
     info.csr_isa.rsi       -> 0.U,
     info.csr_isa.rci       -> 0.U,
+    info.fpu_isa.fcsr_rwi   -> 0.U,
+    info.fpu_isa.fcsr_rsi   -> 0.U,
+    info.fpu_isa.fcsr_rci   -> 0.U,
     info.privil_isa.uret   -> 0.U,
     info.privil_isa.sret   -> 0.U,
     info.privil_isa.mret   -> 0.U,
@@ -163,7 +166,12 @@ class Decode32 (x:UInt, pc: UInt) {
     info.privil_isa.dret   -> 0.U,
 
     info.csr_isa.is_csr -> 0.U,
-
+    info.fpu_isa.fcsr_rw   -> 0.U,
+    info.fpu_isa.fcsr_rs   -> 0.U,
+    info.fpu_isa.fcsr_rc   -> 0.U,
+    info.fpu_isa.fcsr_rwi   -> 0.U,
+    info.fpu_isa.fcsr_rsi   -> 0.U,
+    info.fpu_isa.fcsr_rci   -> 0.U,
     info.fpu_isa.fsqrt_s   -> 0.U,
     info.fpu_isa.fcvt_w_s  -> 0.U,
     info.fpu_isa.fcvt_wu_s -> 0.U,
@@ -191,6 +199,7 @@ class Decode32 (x:UInt, pc: UInt) {
     info.fpu_isa.fcvt_d_lu -> 0.U,
     info.fpu_isa.fmv_d_x   -> 0.U,
 
+
     info.privil_isa.hlv_b   -> 0.U,
     info.privil_isa.hlv_bu  -> 0.U,
     info.privil_isa.hlv_h   -> 0.U,
@@ -215,6 +224,7 @@ class Decode32 (x:UInt, pc: UInt) {
     info.fpu_isa.fnmadd_d -> x(31,27),
   ))
 
+  info.param.rm := Mux( info.fpu_isa.is_fpu, x(14,12), 0.U )
 
   info.alu_isa.lui         := ( x === BitPat("b?????????????????????????0110111") )
   info.alu_isa.auipc       := ( x === BitPat("b?????????????????????????0010111") )
@@ -278,6 +288,13 @@ class Decode32 (x:UInt, pc: UInt) {
   info.csr_isa.rwi         := ( x === BitPat("b?????????????????101?????1110011") )
   info.csr_isa.rsi         := ( x === BitPat("b?????????????????110?????1110011") )
   info.csr_isa.rci         := ( x === BitPat("b?????????????????111?????1110011") )
+
+    info.fpu_isa.fcsr_rw   := ( x === BitPat("b?????????????????001?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
+    info.fpu_isa.fcsr_rs   := ( x === BitPat("b?????????????????010?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
+    info.fpu_isa.fcsr_rc   := ( x === BitPat("b?????????????????011?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
+    info.fpu_isa.fcsr_rwi  := ( x === BitPat("b?????????????????101?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
+    info.fpu_isa.fcsr_rsi  := ( x === BitPat("b?????????????????110?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
+    info.fpu_isa.fcsr_rci  := ( x === BitPat("b?????????????????111?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
 
   info.mul_isa.mul         := ( x === BitPat("b0000001??????????000?????0110011") )
   info.mul_isa.mulh        := ( x === BitPat("b0000001??????????001?????0110011") )

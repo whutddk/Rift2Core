@@ -34,7 +34,7 @@ import freechips.rocketchip.tilelink._
 
 class addrTrans extends Module {
   val io = IO(new Bundle{
-    val iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
+    val iss_exe = Input(new Lsu_iss_info)
     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
     val block = Input(Bool())
 
@@ -42,18 +42,19 @@ class addrTrans extends Module {
   })
 
   /** the transation will be blocked if the request is illegal */
-  io.deq.valid := io.mmu_lsu.valid & ~io.mmu_lsu.bits.is_fault & ~io.iss_exe.bits.is_misAlign & ~io.block
+  io.deq.valid := io.mmu_lsu.valid & ~io.mmu_lsu.bits.is_fault & ~io.iss_exe.is_misAlign & ~io.block
   
   {
     io.deq.bits := io.iss_exe
     io.deq.bits.param.dat.op1 := io.mmu_lsu.bits.paddr
-    io.mmu_lsu.ready := io.deq.ready & ~io.mmu_lsu.bits.is_fault & ~io.iss_exe.bits.is_misAlign & ~io.block
+    io.mmu_lsu.ready := io.deq.ready & ~io.mmu_lsu.bits.is_fault & ~io.iss_exe.is_misAlign & ~io.block
   }
+
 
 }
 
 object addrTrans {
-  def apply( iss_exe: DecoupledIO[Lsu_iss_info], mmu_lsu: DecoupledIO[Info_mmu_rsp], block: Bool ): DecoupledIO[Lsu_iss_info] = {
+  def apply( iss_exe: Lsu_iss_info, mmu_lsu: DecoupledIO[Info_mmu_rsp], block: Bool ): DecoupledIO[Lsu_iss_info] = {
     val mdl = Module(new addrTrans)
     mdl.io.iss_exe <> iss_exe
     mdl.io.mmu_lsu <> mmu_lsu
@@ -71,6 +72,7 @@ class OpMux extends Module {
     val am_deq = DecoupledIO(new Lsu_iss_info) 
   })
 
+  io.enq.ready := false.B
   when( io.enq.bits.fun.is_lu ) {
     io.ld_deq <> io.enq
   } .otherwise{
@@ -104,6 +106,8 @@ class regionMux(implicit p: Parameters) extends DcacheModule{
   val sel = Mux( psel(3), 0.U, Mux( psel(2), 1.U, 2.U) )
 
 
+  io.enq.ready := false.B
+
   when( sel === 2.U ) {
     io.deq(2) <> io.enq
   } .otherwise {
@@ -134,6 +138,8 @@ class cacheMux(implicit p: Parameters) extends DcacheModule{
 
   val chn = io.enq.bits.paddr(12+nm_w-1,12)
 
+  io.enq.ready := false.B
+  
   for ( i <- 0 until nm ) yield {
     when( i.U === chn ) {
       io.deq(i) <> io.enq
@@ -152,9 +158,15 @@ object Strb2Mask{
   def apply(strb: UInt): UInt = {
     val mask = Wire(UInt(64.W))
 
-    for ( i <- 0 until 8 ) yield {
-      mask(8*i+7,8*i) := strb(i)
-    } 
+    // for ( i <- 0 until 8 ) yield {
+    //   mask(8*i+7,8*i) := Fill(8, strb(i))
+    // } 
+    mask := Cat(
+      Fill(8, strb(7)), Fill(8, strb(6)),
+      Fill(8, strb(5)), Fill(8, strb(4)),
+      Fill(8, strb(3)), Fill(8, strb(2)),
+      Fill(8, strb(1)), Fill(8, strb(0))
+    )
     mask
   } 
 }
@@ -201,7 +213,7 @@ object pkg_Info_cache_s0s1{
       res.fun := 0.U.asTypeOf(new Cache_op)
       res.fun.grant := true.B      
     }
-
+    res.rd := DontCare
     res.chk_idx := DontCare
     res
   }
@@ -216,7 +228,7 @@ object pkg_Info_cache_s0s1{
       res.fun := 0.U.asTypeOf(new Cache_op)
       res.fun.probe := true.B      
     }
-
+    res.rd := DontCare
     res.chk_idx := DontCare
     res
   }
@@ -232,9 +244,52 @@ object pkg_Info_cache_s0s1{
 
 
     {
-      res := 0.U.asTypeOf(new Cache_op)
-      res.fun := ori.fun     
+      res.fun := 0.U.asTypeOf(new Cache_op)
+      // res.fun := ori.fun
+      res.fun.lb  := ori.fun.lb
+      res.fun.lh  := ori.fun.lh
+      res.fun.lw  := ori.fun.lw
+      res.fun.ld  := ori.fun.ld
+      res.fun.lbu := ori.fun.lbu
+      res.fun.lhu := ori.fun.lhu
+      res.fun.lwu := ori.fun.lwu
+      res.fun.sb  := ori.fun.sb
+      res.fun.sh  := ori.fun.sh
+      res.fun.sw  := ori.fun.sw
+      res.fun.sd  := ori.fun.sd
+      res.fun.fence      := ori.fun.fence
+      res.fun.fence_i    := ori.fun.fence_i
+      res.fun.sfence_vma := ori.fun.sfence_vma
+      res.fun.lr_w       := ori.fun.lr_w
+      res.fun.sc_w       := ori.fun.sc_w
+      res.fun.amoswap_w  := ori.fun.amoswap_w
+      res.fun.amoadd_w   := ori.fun.amoadd_w
+      res.fun.amoxor_w   := ori.fun.amoxor_w
+      res.fun.amoand_w   := ori.fun.amoand_w
+      res.fun.amoor_w    := ori.fun.amoor_w
+      res.fun.amomin_w   := ori.fun.amomin_w
+      res.fun.amomax_w   := ori.fun.amomax_w
+      res.fun.amominu_w  := ori.fun.amominu_w
+      res.fun.amomaxu_w  := ori.fun.amomaxu_w
+      res.fun.lr_d       := ori.fun.lr_d
+      res.fun.sc_d       := ori.fun.sc_d
+      res.fun.amoswap_d  := ori.fun.amoswap_d
+      res.fun.amoadd_d   := ori.fun.amoadd_d
+      res.fun.amoxor_d   := ori.fun.amoxor_d
+      res.fun.amoand_d   := ori.fun.amoand_d
+      res.fun.amoor_d    := ori.fun.amoor_d
+      res.fun.amomin_d   := ori.fun.amomin_d
+      res.fun.amomax_d   := ori.fun.amomax_d
+      res.fun.amominu_d  := ori.fun.amominu_d
+      res.fun.amomaxu_d  := ori.fun.amomaxu_d
+      res.fun.flw        := ori.fun.flw
+      res.fun.fsw        := ori.fun.fsw
+      res.fun.fld        := ori.fun.fld
+      res.fun.fsd        := ori.fun.fsd
     }
+    res.rd.rd0 := ori.param.rd0
+    res.rd.is_iwb := ori.param.is_iwb
+    res.rd.is_fwb := ori.param.is_fwb
     res.chk_idx := DontCare
     res
   

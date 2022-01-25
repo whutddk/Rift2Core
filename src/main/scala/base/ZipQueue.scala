@@ -33,7 +33,6 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
 
   val buff  = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
   val valid = RegInit(VecInit(Seq.fill(dp)(false.B)))
-  val zip_cnt = Wire(Vec(dp, UInt(aw.W)))
   val is_zip = Wire(Vec(dp,Vec(3,  Bool())))
 
 

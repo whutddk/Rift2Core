@@ -30,15 +30,32 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
-trait Cache_buffer extends DcacheModule{
-
+class Cache_buffer()(implicit p: Parameters) extends DcacheModule{
+  val io = IO(new Bundle{
+    val buf_enq = Flipped(DecoupledIO(new Info_cache_s0s1))
+    val enq_idx = Output(UInt(4.W))
+    val is_storeBuff_empty = Output(Bool())
+    val buf_deq = Flipped(DecoupledIO(new Info_cache_retn))
+    
+  })
 
   printf("Cache_Buff depth is 16\n")
 
 
-  val buf_enq = Decoupled(new Info_cache_s0s1)
-  val buf_deq = Decoupled(UInt(log2Ceil(16).W))
+  // val buf_enq_valid = Wire(Bool())
+  // val buf_enq_bits = Wire(new Info_cache_s0s1)
+  // val buf_enq_ready = Wire(Bool())
+  // buf_enq_valid := buf_enq.valid
+  // buf_enq_bits := buf_enq.bits
+  // buf_enq.ready := buf_enq_ready
 
+
+  // val buf_deq_valid = Wire(Bool())
+  // val buf_deq_bits = Wire((UInt(log2Ceil(16).W)))
+  // val buf_deq_ready = Wire(Bool())
+  // buf_deq.valid := buf_deq_valid
+  // buf_deq.bits  := buf_deq_bits
+  // buf_deq_ready := buf_deq.ready
 
   val buff = RegInit(VecInit(Seq.fill(16)(0.U.asTypeOf(new Info_cache_s0s1))))
   val valid = RegInit(VecInit(Seq.fill(16)(false.B)))
@@ -46,26 +63,26 @@ trait Cache_buffer extends DcacheModule{
 
 
 
-  val is_hazard = buff.map( x => (x.paddr === buf_enq.bits.paddr) ).reduce(_|_)
+  val is_hazard = VecInit(buff.map( x => (x.paddr === io.buf_enq.bits.paddr) )).reduce(_|_)
   val idx = valid.indexWhere( (x:Bool) => (x === true.B) )
+  io.enq_idx := idx
 
-
-  buf_enq.ready := 
+  io.buf_enq.ready := 
     valid.exists( (x:Bool) => (x === false.B) ) &
     ~is_hazard
 
-  when( buf_enq.fire ) {
-    buff(idx)  := buf_enq.bits
+  when( io.buf_enq.fire ) {
+    buff(idx)  := io.buf_enq.bits
     valid(idx) := true.B
   }
 
-  when( buf_deq.fire ) {
-    buff(buf_deq.bits)  := 0.U.asTypeOf( new Info_cache_s0s1 )
-    valid(buf_deq.bits) := false.B
+  when( io.buf_deq.fire ) {
+    buff(io.buf_deq.bits.chk_idx)  := 0.U.asTypeOf( new Info_cache_s0s1 )
+    valid(io.buf_deq.bits.chk_idx) := false.B
   }
 
-  def is_storeBuff_empty = valid.forall((x:Bool) => (x === false.B))
-  buf_deq.ready := ~is_storeBuff_empty
+  io.is_storeBuff_empty := valid.forall((x:Bool) => (x === false.B))
+  io.buf_deq.ready := ~io.is_storeBuff_empty
 
 
 

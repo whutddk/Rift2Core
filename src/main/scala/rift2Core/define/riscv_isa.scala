@@ -308,7 +308,9 @@ class Fpu_isa extends Bundle {
   val fcsr_rs = Bool()
   val fcsr_rc = Bool()
 
-
+  val fcsr_rwi = Bool()
+  val fcsr_rsi = Bool()
+  val fcsr_rci = Bool()
 
 
 
@@ -455,7 +457,7 @@ class Rd_Param(dp:Int) extends Register_dstntn(dp) {
   val is_iwb = Bool()
   val is_fwb = Bool()
 
-  // override def cloneType = ( new Rd_Param(dp:Int) ).asInstanceOf[this.type]
+  override def cloneType = ( new Rd_Param(dp:Int) ).asInstanceOf[this.type]
 }
 
 class Instruction_set extends Bundle{
@@ -559,6 +561,7 @@ class Alu_param extends Rd_Param(64) {
 
   val dat = new Operation_source
 
+  override def cloneType = ( new Alu_param ).asInstanceOf[this.type]
 }
 
 class Alu_iss_info extends Bundle {
@@ -577,6 +580,7 @@ class Bru_param extends Rd_Param(64) {
 
   val dat = new Operation_source
 
+  override def cloneType = ( new Bru_param ).asInstanceOf[this.type]
 }
 
 class Bru_iss_info extends Bundle {
@@ -590,6 +594,8 @@ class Bru_iss_info extends Bundle {
 
 class Lsu_param extends Rd_Param(64) {
   val dat = new Operation_source
+
+  override def cloneType = ( new Lsu_param ).asInstanceOf[this.type]
 }
 
 class Lsu_iss_info extends Bundle {
@@ -674,6 +680,8 @@ class Csr_function extends Bundle {
 
 class Csr_param extends Rd_Param(64) {
   val dat = new Operation_source
+
+  override def cloneType = ( new Csr_param ).asInstanceOf[this.type]
 }
 
 class Csr_iss_info extends Bundle {
@@ -683,6 +691,8 @@ class Csr_iss_info extends Bundle {
 
 class Mul_param extends Rd_Param(64) {
   val dat = new Operation_source
+
+override def cloneType = ( new Mul_param ).asInstanceOf[this.type]
 }
 
 class Mul_iss_info extends Bundle {
@@ -704,6 +714,8 @@ class Info_commit_op(dp:Int) extends Bundle{
   val phy = UInt((log2Ceil(dp)).W)
 
   val is_abort = Bool()
+
+  override def cloneType = ( new Info_commit_op(dp:Int) ).asInstanceOf[this.type]
 }
 
 

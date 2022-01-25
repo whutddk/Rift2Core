@@ -28,9 +28,9 @@ import base._
 import rift2Core.define._
 import rift2Core.diff._
 
-class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int=4, cmm_chn: Int = 2) extends Module {
+class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm_chn: Int = 2) extends Module {
   val io = IO(new Bundle{
-    val dpt_rename = Vec( rn_chn, new dpt_rename_info(dp) )
+    val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info(dp)) )
 
 
 
@@ -45,7 +45,7 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int=4, cmm_
     val mul_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
     val fpu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
 
-    val commit = Vec(cmm_chn, Flipped(Valid(new Info_commit_op(dp))))
+    val commit = Vec(cmm_chn, Flipped(Decoupled(new Info_commit_op(dp))))
 
     val diff_register = Output(new Info_abi_reg)
   })
@@ -59,19 +59,25 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int=4, cmm_
     iReg.io.diff_register <> io.diff_register
 
 
+      iReg.io.iss_readOp(0) <> io.ooo_readOp(0)
+      iReg.io.iss_readOp(1) <> io.ooo_readOp(1)
+      iReg.io.iss_readOp(2) <> io.ooo_readOp(2)
+      iReg.io.iss_readOp(3) <> io.ooo_readOp(3)
+      iReg.io.iss_readOp(4) <> io.ito_readOp
+      iReg.io.iss_readOp(5) <> io.fpu_readOp
 
-    val readOp_arb = {
-      val mdl = Module(new XArbiter(new iss_readOp_info(dp), in = 6, out = rop_chn))
-      mdl.io.enq(0) <> io.ooo_readOp(0)
-      mdl.io.enq(1) <> io.ooo_readOp(1)
-      mdl.io.enq(2) <> io.ooo_readOp(2)
-      mdl.io.enq(3) <> io.ooo_readOp(3)
-      mdl.io.enq(4) <> io.ito_readOp
-      mdl.io.enq(5) <> io.fpu_readOp
-      mdl.io.deq <> iReg.io.iss_readOp
+    // val readOp_arb = {
+    //   val mdl = Module(new XArbiter(new iss_readOp_info(dp), in = 6, out = rop_chn))
+    //   mdl.io.enq(0) <> io.ooo_readOp(0)
+    //   mdl.io.enq(1) <> io.ooo_readOp(1)
+    //   mdl.io.enq(2) <> io.ooo_readOp(2)
+    //   mdl.io.enq(3) <> io.ooo_readOp(3)
+    //   mdl.io.enq(4) <> io.ito_readOp
+    //   mdl.io.enq(5) <> io.fpu_readOp
+    //   mdl.io.deq <> iReg.io.iss_readOp
 
-      mdl
-    }
+    //   mdl
+    // }
 
     val writeBack_arb = {
       val mdl = Module(new XArbiter(new WriteBack_info(dp), in = 6, out = wb_chn))

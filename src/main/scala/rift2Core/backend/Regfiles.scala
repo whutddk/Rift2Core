@@ -44,7 +44,7 @@ class iss_readOp_info(dp: Int) extends Bundle {
 }
 
 
-class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm_chn: Int = 2) extends Module{
+class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends Module{
   val io = IO( new Bundle{
 
     val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info(dp) ))
@@ -62,13 +62,26 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
     * dp-1 (63) files exist in this version,'
     * @note the file(dp) is assert to be Zero
     */
-  val files = RegInit( VecInit( Seq.fill(dp-1)(0.U(64.W)) ))
+  val files = {
+    val res = Wire( Vec(dp, UInt(64.W)) )
+    val reg = RegInit( VecInit( Seq.fill(dp-1)(0.U(64.W)) ))
+    for ( i <- 0 until dp-1 ) yield { res(i) := reg(i) }
+    res(dp-1) := 0.U
+    res
+  }
+  
 
   /**
     * dp-1 (63) log exist in this version,
     * @note the log(dp) is assert to be "b11".U
     */ 
-  val log   = RegInit( VecInit( Seq.fill(dp-1)(0.U( 2.W)) ))
+  val log = {
+    val res = Wire( Vec(dp, UInt(2.W)) )
+    val lg = RegInit( VecInit( Seq.fill(dp-1)(0.U( 2.W)) ))
+    for ( i <- 0 until dp-1 ) yield { res(i) := lg(i) }
+    res(dp-1) := "b11".U
+    res
+  }
 
   /**
     * index that 32 renamed register-sources point to
@@ -152,12 +165,12 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=2, wb_chn: Int = 6, cmm
   }
 
   for ( i <- 0 until wb_chn ) yield {
-    when( io.exe_writeBack(i).valid ) {
+    when( io.exe_writeBack(i).fire ) {
       val idx = io.exe_writeBack(i).bits.rd0
       assert( log(idx) === "b10".U )
       files(idx) := io.exe_writeBack(i).bits.res
-      io.exe_writeBack(i).ready := true.B
     }
+    io.exe_writeBack(i).ready := true.B
   }
 
   {

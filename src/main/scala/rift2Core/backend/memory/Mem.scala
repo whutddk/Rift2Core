@@ -81,7 +81,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   /** divide operation into load, store, and amo */
   val opMux = {
     val mdl = Module(new OpMux)
-    mdl.io.enq.bits := addrTrans( io.lsu_iss_exe, io.mmu_lsu, trans_kill | is_fence_op)
+    mdl.io.enq <> addrTrans( io.lsu_iss_exe.bits, io.mmu_lsu, trans_kill | is_fence_op)
     mdl
   }
 
@@ -140,14 +140,31 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     */
   val cache = for ( i <- 0 until nm ) yield {
     val mdl = Module(new Dcache(edge(i)))
-    mdl.io.enq := cacheMux.io.deq(i)
+    mdl.io.enq <> cacheMux.io.deq(i)
 
-    mdl.io.missUnit_dcache_acquire <> io.missUnit_dcache_acquire(i)
-    mdl.io.missUnit_dcache_grant <> io.missUnit_dcache_grant(i)
-    mdl.io.missUnit_dcache_grantAck <> io.missUnit_dcache_grantAck(i)
-    mdl.io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe(i)
-    mdl.io.writeBackUnit_dcache_release <> io.writeBackUnit_dcache_release(i)
-    mdl.io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant(i)
+    io.missUnit_dcache_acquire(i).valid := mdl.io.missUnit_dcache_acquire.valid
+    io.missUnit_dcache_acquire(i).bits := mdl.io.missUnit_dcache_acquire.bits
+    mdl.io.missUnit_dcache_acquire.ready := io.missUnit_dcache_acquire(i).ready
+
+    mdl.io.missUnit_dcache_grant.valid := io.missUnit_dcache_grant(i).valid
+    mdl.io.missUnit_dcache_grant.bits  := io.missUnit_dcache_grant(i).bits
+    io.missUnit_dcache_grant(i).ready := mdl.io.missUnit_dcache_grant.ready
+
+    io.missUnit_dcache_grantAck(i).valid := mdl.io.missUnit_dcache_grantAck.valid
+    io.missUnit_dcache_grantAck(i).bits := mdl.io.missUnit_dcache_grantAck.bits
+    mdl.io.missUnit_dcache_grantAck.ready := io.missUnit_dcache_grantAck(i).ready
+
+    mdl.io.probeUnit_dcache_probe.valid := io.probeUnit_dcache_probe(i).valid
+    mdl.io.probeUnit_dcache_probe.bits := io.probeUnit_dcache_probe(i).bits
+    io.probeUnit_dcache_probe(i).ready := mdl.io.probeUnit_dcache_probe.ready
+
+    io.writeBackUnit_dcache_release(i).valid := mdl.io.writeBackUnit_dcache_release.valid
+    io.writeBackUnit_dcache_release(i).bits := mdl.io.writeBackUnit_dcache_release.bits
+    mdl.io.writeBackUnit_dcache_release.ready := io.writeBackUnit_dcache_release(i).ready
+
+    mdl.io.writeBackUnit_dcache_grant.valid := io.writeBackUnit_dcache_grant(i).valid
+    mdl.io.writeBackUnit_dcache_grant.bits := io.writeBackUnit_dcache_grant(i).bits
+    io.writeBackUnit_dcache_grant(i).ready := mdl.io.writeBackUnit_dcache_grant.ready
 
     mdl.io.flush := io.flush
 
@@ -158,8 +175,13 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     val mdl = Module(new IO_Lsu(edge(nm+1), idx = nm+1))
     mdl.io.enq <> regionMux.io.deq(1)
 
-    mdl.io.getPut <> io.system_getPut
-    mdl.io.access <> io.system_access
+    io.system_getPut.valid := mdl.io.getPut.valid
+    io.system_getPut.bits := mdl.io.getPut.bits
+    mdl.io.getPut.ready := io.system_getPut.ready
+
+    mdl.io.access.valid := io.system_access.valid
+    mdl.io.access.bits := io.system_access.bits
+    io.system_access.ready := mdl.io.access.ready
     mdl
   }
 
@@ -167,8 +189,13 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     val mdl = Module(new IO_Lsu(edge(nm), idx = nm))
     mdl.io.enq <> regionMux.io.deq(0)
 
-    mdl.io.getPut <> io.periph_getPut
-    mdl.io.access <> io.periph_access
+    io.periph_getPut.valid := mdl.io.getPut.valid
+    io.periph_getPut.bits := mdl.io.getPut.bits
+    mdl.io.getPut.ready := io.periph_getPut.ready
+
+    mdl.io.access.valid := io.periph_access.valid
+    mdl.io.access.bits := io.periph_access.bits
+    io.periph_access.ready := mdl.io.access.ready
     mdl
   }
 
@@ -258,7 +285,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     * @return WriteBack_info
     */
   val rtn_arb = {
-    val mdl = Module(new Arbiter( new WriteBack_info(64), 2))
+    val mdl = Module(new Arbiter( new WriteBack_info(64), 3))
     mdl.io.in(0) <> su_wb_fifo.io.deq
     mdl.io.in(1) <> lu_wb_fifo.io.deq
     mdl.io.in(2) <> fe_wb_fifo.io.deq

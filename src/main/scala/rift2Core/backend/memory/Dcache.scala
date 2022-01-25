@@ -96,7 +96,7 @@ trait Info_tag_dat extends DcacheBundle {
   val tag   = Vec(cb, UInt(tag_w.W))
 }
 
-trait Info_sc_idx extends DcacheBundle { val chk_idx = UInt(8.W) }
+trait Info_sc_idx extends DcacheBundle { val chk_idx = UInt(4.W) }
 
 class Info_cache_rd(implicit p: Parameters) extends Info_tag_dat
 class Info_cache_s0s1(implicit p: Parameters) extends DcacheBundle with Info_cache_raw with Info_sc_idx
@@ -168,6 +168,7 @@ class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
   io.rd_out.bits.wstrb    := info_bypass_fifo.io.deq.bits.wstrb
   io.rd_out.bits.wdata    := info_bypass_fifo.io.deq.bits.wdata
   io.rd_out.bits.fun       := info_bypass_fifo.io.deq.bits.fun
+  io.rd_out.bits.rd       := info_bypass_fifo.io.deq.bits.rd
   io.rd_out.bits.chk_idx  := info_bypass_fifo.io.deq.bits.chk_idx
   io.rd_out.valid := info_bypass_fifo.io.deq.valid
   info_bypass_fifo.io.deq.ready := io.rd_out.ready
@@ -180,8 +181,6 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val wr_in  = Flipped(new DecoupledIO(new Info_cache_s1s2))
     val reload = new DecoupledIO(new Info_cache_s0s1)
     val deq = DecoupledIO(new Info_cache_retn)
-
-    val is_lr_clear = Input(Bool())
 
     val tag_addr_w = Output(UInt(aw.W))
     val tag_en_w = Output( Vec(cb, Bool()) )
@@ -410,10 +409,13 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     Mux( io.reload.valid, io.wr_in.bits.wstrb, 0.U )
     
   io.reload.bits.wdata :=
-    Mux( io.reload.valid, io.wr_in.bits.wdata, 0.U )
+    Mux( io.reload.valid, io.wr_in.bits.wdata, DontCare )
 
   io.reload.bits.fun :=
-    Mux( io.reload.valid, io.wr_in.bits.fun, 0.U )
+    Mux( io.reload.valid, io.wr_in.bits.fun, DontCare )
+
+  io.reload.bits.rd :=
+    Mux( io.reload.valid, io.wr_in.bits.rd, DontCare )
 
   io.reload.bits.chk_idx :=
     Mux( io.reload.valid, io.wr_in.bits.chk_idx, 0.U )
@@ -432,7 +434,15 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     )
     Mux( io.deq.valid, res, 0.U )
   }
-  
+
+  io.deq.bits.wb.rd0 := 
+    Mux( io.deq.valid, io.wr_in.bits.rd.rd0, DontCare )  
+
+  io.deq.bits.wb.is_iwb := 
+    Mux( io.deq.valid, io.wr_in.bits.rd.is_iwb, DontCare )  
+
+  io.deq.bits.wb.is_fwb := 
+    Mux( io.deq.valid, io.wr_in.bits.rd.is_fwb, DontCare )  
 
   io.deq.bits.chk_idx :=
     Mux( io.deq.valid, io.wr_in.bits.chk_idx, 0.U )
@@ -512,7 +522,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
 }
 
-class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule with Cache_buffer{
+class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = new DecoupledIO(new Info_cache_retn)
@@ -539,6 +549,7 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule with 
   val rd_stage = Module(new L1d_rd_stage())
   val wr_stage = Module(new L1d_wr_stage())
 
+  val cache_buffer = Module(new Cache_buffer)
 
   io.missUnit_dcache_acquire  <> missUnit.io.cache_acquire
   missUnit.io.cache_grant <> io.missUnit_dcache_grant
@@ -580,7 +591,8 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule with 
   reload_fifo.io.deq <> op_arb.io.in(0)
   
 
-  io.enq <> Decoupled1toN( VecInit( op_arb.io.in(1), buf_enq ) )
+  io.enq <> Decoupled1toN( VecInit( op_arb.io.in(1), cache_buffer.io.buf_enq ) )
+  op_arb.io.in(1).bits.chk_idx := cache_buffer.io.enq_idx //override
 
   op_arb.io.out <> lsEntry.io.enq 
 
@@ -599,9 +611,9 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule with 
 
 
 
-  wr_stage.io.deq <> Decoupled1toN( VecInit( io.deq, buf_enq ) )
+  wr_stage.io.deq <> Decoupled1toN( VecInit( io.deq, cache_buffer.io.buf_deq ) )
 
-  io.is_empty := is_storeBuff_empty
+  io.is_empty := cache_buffer.io.is_storeBuff_empty
 }
 
 

@@ -96,18 +96,46 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     mdl.io.cmm_lsu <> io.cmm_lsu
     mdl.io.lsu_cmm <> io.lsu_cmm
     for ( i <- 0 until 8 ) yield {
-      mdl.io.missUnit_dcache_acquire(i) <> io.missUnit_dcache_acquire(i)
-      mdl.io.missUnit_dcache_grant(i) <> io.missUnit_dcache_grant(i)
-      mdl.io.missUnit_dcache_grantAck(i) <> mdl.io.missUnit_dcache_grantAck(i)
-      mdl.io.probeUnit_dcache_probe(i) <> io.probeUnit_dcache_probe(i)
-      mdl.io.writeBackUnit_dcache_release(i) <> io.writeBackUnit_dcache_release(i)
-      mdl.io.writeBackUnit_dcache_grant(i) <> io.writeBackUnit_dcache_grant(i)
+      io.missUnit_dcache_acquire(i).valid := mdl.io.missUnit_dcache_acquire(i).valid
+      io.missUnit_dcache_acquire(i).bits := mdl.io.missUnit_dcache_acquire(i).bits
+      mdl.io.missUnit_dcache_acquire(i).ready := io.missUnit_dcache_acquire(i).ready
+
+      mdl.io.missUnit_dcache_grant(i).valid := io.missUnit_dcache_grant(i).valid
+      mdl.io.missUnit_dcache_grant(i).bits  := io.missUnit_dcache_grant(i).bits
+      io.missUnit_dcache_grant(i).ready := mdl.io.missUnit_dcache_grant(i).ready
+
+      io.missUnit_dcache_grantAck(i).valid := mdl.io.missUnit_dcache_grantAck(i).valid
+      io.missUnit_dcache_grantAck(i).bits := mdl.io.missUnit_dcache_grantAck(i).bits
+      mdl.io.missUnit_dcache_grantAck(i).ready := io.missUnit_dcache_grantAck(i).ready
+
+      mdl.io.probeUnit_dcache_probe(i).valid := io.probeUnit_dcache_probe(i).valid
+      mdl.io.probeUnit_dcache_probe(i).bits := io.probeUnit_dcache_probe(i).bits
+      io.probeUnit_dcache_probe(i).ready := mdl.io.probeUnit_dcache_probe(i).ready
+
+      io.writeBackUnit_dcache_release(i).valid := mdl.io.writeBackUnit_dcache_release(i).valid
+      io.writeBackUnit_dcache_release(i).bits := mdl.io.writeBackUnit_dcache_release(i).bits
+      mdl.io.writeBackUnit_dcache_release(i).ready := io.writeBackUnit_dcache_release(i).ready
+
+      mdl.io.writeBackUnit_dcache_grant(i).valid := io.writeBackUnit_dcache_grant(i).valid
+      mdl.io.writeBackUnit_dcache_grant(i).bits := io.writeBackUnit_dcache_grant(i).bits
+      io.writeBackUnit_dcache_grant(i).ready := mdl.io.writeBackUnit_dcache_grant(i).ready
     }
 
-    mdl.io.system_getPut <> io.system_getPut
-    mdl.io.system_access <> io.system_access
-    mdl.io.periph_getPut <> io.periph_getPut
-    mdl.io.periph_access <> io.periph_access
+    io.system_getPut.valid := mdl.io.system_getPut.valid
+    io.system_getPut.bits := mdl.io.system_getPut.bits
+    mdl.io.system_getPut.ready := io.system_getPut.ready
+    mdl.io.system_access.valid := io.system_access.valid
+    mdl.io.system_access.bits := io.system_access.bits
+    io.system_access.ready := mdl.io.system_access.ready
+
+    io.periph_getPut.valid := mdl.io.periph_getPut.valid
+    io.periph_getPut.bits := mdl.io.periph_getPut.bits
+    mdl.io.periph_getPut.ready := io.periph_getPut.ready
+    mdl.io.periph_access.valid := io.periph_access.valid
+    mdl.io.periph_access.bits := io.periph_access.bits
+    io.periph_access.ready := mdl.io.periph_access.ready
+
+
 
     mdl.io.flush := io.flush
     mdl

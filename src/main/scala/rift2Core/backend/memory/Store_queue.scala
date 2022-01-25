@@ -50,8 +50,8 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
   def dp_w = log2Ceil(dp)
 
   val io = IO( new Bundle{
-    val enq = DecoupledIO(new Lsu_iss_info)
-    val deq = Flipped(DecoupledIO(new Info_cache_s0s1))
+    val enq = Flipped(DecoupledIO(new Lsu_iss_info))
+    val deq = DecoupledIO(new Info_cache_s0s1)
 
     // val is_commited = Input(Vec(2,Bool()))
     val cmm_lsu = Input(new Info_cmm_lsu)
@@ -76,8 +76,8 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
   val wr_ptr = wr_ptr_reg(dp_w-1,0)
   val rd_ptr = rd_ptr_reg(dp_w-1,0)
 
-  def full = (wr_ptr(dp_w) =/= rd_ptr(dp_w)) & (wr_ptr(dp_w-1,0) === rd_ptr(dp_w-1,0))
-  def emty = cm_ptr === rd_ptr
+  def full = (wr_ptr_reg(dp_w) =/= rd_ptr_reg(dp_w)) & (wr_ptr_reg(dp_w-1,0) === rd_ptr_reg(dp_w-1,0))
+  def emty = cm_ptr_reg === rd_ptr_reg
 
   val rd_buff = buff(rd_ptr)
 
@@ -144,8 +144,8 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
 
 
 
-  val temp_wdata = Wire(UInt(64.W))
-  val temp_wstrb = Wire(UInt(8.W))
+  val temp_wdata = Wire(Vec(dp, UInt(64.W)))
+  val temp_wstrb = Wire(Vec(dp, UInt(8.W)))
   for ( i <- 0 until dp ) yield {
     if ( i == 0 ) {
       val (wdata, wstrb) = overlap_wr( 0.U, 0.U, overlap_buff(0).wdata(0), overlap_buff(0).wstrb)

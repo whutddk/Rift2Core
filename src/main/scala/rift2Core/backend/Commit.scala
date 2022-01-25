@@ -37,7 +37,7 @@ import rift2Core.diff._
   */
 class Commit extends Privilege with Superscalar {
   val io = IO(new Bundle{
-    val cm_op = Vec(2, Flipped(Decoupled(new Info_commit_op(64))))
+    val cm_op = Vec(2, Decoupled(new Info_commit_op(64)))
     // val log = Input(Vec(64, UInt(2.W)))
 
 

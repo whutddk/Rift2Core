@@ -58,6 +58,7 @@ class Out_of_Order_Issue() extends Module {
     val mdl = Module(new MultiPortFifo( new Alu_iss_info, aw = 4, in = 4, out = 1 ))
     mdl.io.enq <> alu_iss_rePort.io.deq
     mdl.io.deq(0) <> io.alu_iss_exe
+    mdl.io.flush := false.B
     mdl 
   }
 
@@ -70,6 +71,7 @@ class Out_of_Order_Issue() extends Module {
     val mdl = Module(new MultiPortFifo( new Lsu_iss_info, aw = 4, in = 4, out = 1 ))
     mdl.io.enq <> lsu_iss_rePort.io.deq
     mdl.io.deq(0) <> io.lsu_iss_exe
+    mdl.io.flush := false.B
     mdl 
   }
 
@@ -82,6 +84,7 @@ class Out_of_Order_Issue() extends Module {
     val mdl = Module(new MultiPortFifo( new Mul_iss_info, aw = 4, in = 4, out = 1 ))
     mdl.io.enq <> mul_iss_rePort.io.deq
     mdl.io.deq(0) <> io.mul_iss_exe
+    mdl.io.flush := false.B
     mdl 
   }
 
@@ -160,7 +163,7 @@ class Out_of_Order_Issue() extends Module {
 
         dpt.alu_isa.wfi    -> 0.U
     ))
-
+    res.param.dat.op3 := 0.U
     res.param.rd0 := dpt.phy.rd0
     res.param.is_iwb := true.B
     res.param.is_fwb := false.B
@@ -264,6 +267,7 @@ class In_Order_Issue extends Module {
       ))
 
     res.param.dat.op2 := dpt.param.imm
+    res.param.dat.op3 := 0.U
     res.param.rd0    := dpt.phy.rd0
     res.param.is_iwb := true.B
     res.param.is_fwb := false.B
