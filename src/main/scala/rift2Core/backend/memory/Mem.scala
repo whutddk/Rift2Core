@@ -277,8 +277,8 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     system.io.is_empty &
     periph.io.is_empty &
     ~su_wb_fifo.io.deq.valid & 
-    ~lu_wb_fifo.io.deq.valid & 
-    ~fe_wb_fifo.io.deq.valid
+    ~lu_wb_fifo.io.deq.valid// & 
+    //~fe_wb_fifo.io.deq.valid //DontCare about fe_fifo
 
   /** merge lu-writeback and su-writeback
     * @param in WriteBack_info

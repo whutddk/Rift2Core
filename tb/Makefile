@@ -280,6 +280,7 @@ clean:
 	rm ./build/*.d
 	rm ./build/*.h
 	rm ./build/*.mk
+	rm ./build/*.a
 
 
 sim:

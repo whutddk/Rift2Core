@@ -57,6 +57,22 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     )
   ))
 
+  val sysRange = AddressSet(0x00000000L, 0x7fffffffL).subtract(AddressSet(0x00000000L, 0x1fffffffL))
+  val sysAXI4SlaveNode = AXI4SlaveNode(Seq(
+    AXI4SlavePortParameters(
+      slaves = Seq(
+        AXI4SlaveParameters(
+          address = sysRange,
+          regionType = RegionType.UNCACHED,
+          executable = true,
+          supportsRead = TransferSizes(1, 256/8),
+          supportsWrite = TransferSizes(1, 256/8)
+        )
+      ),
+      beatBytes = 64 / 8
+    )
+  ))
+
   // val axiRam =
   //   AXI4RAM(
   //     address = AddressSet(0x80000000L, 0x0fffffffL),
@@ -73,6 +89,7 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
 
   val mem_xbar = TLXbar()
   val l1_xbar = TLXbar()
+  val sys_xbar = TLXbar()
   val tlcork = TLCacheCork()
 
 
@@ -82,6 +99,13 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     AXI4Deinterleaver(256/8) :=
     TLToAXI4() :=
     TLWidthWidget(128 / 8) := mem_xbar
+
+  sysAXI4SlaveNode := 
+    AXI4UserYanker() := 
+    AXI4IdIndexer(4) :=
+    AXI4Deinterleaver(256/8) :=
+    TLToAXI4() :=
+    TLWidthWidget(64 / 8) := sys_xbar
 
     mem_xbar :=* 
     TLBuffer() :=* 
@@ -111,21 +135,23 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
 
     l1_xbar :=
     TLBuffer() := 
+    i_rift2Core.mmuClientNode
+
+    sys_xbar :=
+    TLBuffer() := 
     i_rift2Core.systemClientNode
 
-    l1_xbar :=
+    sys_xbar :=
     TLBuffer() := 
     i_rift2Core.periphClientNode
-
-    l1_xbar :=
-    TLBuffer() := 
-    i_rift2Core.mmuClientNode
 
   val memory = InModuleBody {
     memAXI4SlaveNode.makeIOs()
   }
 
-
+  val system = InModuleBody {
+    sysAXI4SlaveNode.makeIOs()
+  }
   
 
   // val managerParameters = TLSlavePortParameters.v1(

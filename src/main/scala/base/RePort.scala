@@ -55,10 +55,14 @@ class RePort[T<:Data]( dw: T, port: Int) extends Module{
     in_next(i) := in & ~UIntToOH(sel(i))
   }
 
-  for ( out <- 0 until port ) yield {
-    when( ~is_end(out) ) {
-      io.deq(out) <> io.enq(sel(out))
+  for ( i <- 0 until port ) yield {
+    when( ~is_end(i) ) {
+      io.deq(i).bits := io.enq(sel(i)).bits
     }
+    // for decouple
+    io.deq(i).valid := (io.enq.count((x:DecoupledIO[T]) => (x.valid === true.B)) > i.U)
+    io.enq(i).ready := (for ( j <- 0 to i ) yield { io.deq(i).ready === true.B }).reduce(_&_)
+
   }
 
 }

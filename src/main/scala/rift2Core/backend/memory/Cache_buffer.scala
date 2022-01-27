@@ -39,7 +39,7 @@ class Cache_buffer()(implicit p: Parameters) extends DcacheModule{
     
   })
 
-  printf("Cache_Buff depth is 16\n")
+  // printf("Cache_Buff depth is 16\n")
 
 
   // val buf_enq_valid = Wire(Bool())

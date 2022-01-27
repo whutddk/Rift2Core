@@ -33,7 +33,8 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
 
   val buff  = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
   val valid = RegInit(VecInit(Seq.fill(dp)(false.B)))
-  val is_zip = Wire(Vec(dp,Vec(3,  Bool())))
+  val is_zipped  = Wire(Vec(dp,Vec(3,  Bool())))
+  val zipping = Wire(Vec(dp, UInt(2.W)))
 
 
   wr_ptr := 
@@ -44,50 +45,119 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
 
 
 
-  for ( i <- 0 until dp ) yield { is_zip(i)(0) := false.B; is_zip(i)(1) := false.B; is_zip(i)(2) := false.B }
+  for ( i <- 0 until dp ) yield { zipping(i) := 0.U; is_zipped(i)(0) := false.B; is_zipped(i)(1) := false.B; is_zipped(i)(2) := false.B }
 
 
   for ( i <- 0 until dp ) {
-    when( valid(i) === true.B ) {
-      when( is_zip(i).exists((x:Bool) => (x === true.B))){
-        buff(i) := 0.U.asTypeOf(dw)
-        valid(i) := false.B
-      } .otherwise {  } //is_zip(i) === false.B
-    } .otherwise { //valid(i) === false.B
+    when( valid(i) === false.B ) {
       if ( i < dp - 4 ) {
-        when( valid(i+1) === true.B && is_zip(i+1)(1) === false.B && is_zip(i+1)(2) === false.B) {
-          buff(i) := buff(i+1)
-          valid(i) := valid(i+1)
-          is_zip(i+1)(0) := true.B
-        } .elsewhen( valid(i+2) === true.B && is_zip(i+2)(2) === false.B) {
-          buff(i) := buff(i+2)
-          valid(i) := valid(i+2)
-          is_zip(i+2)(1) := true.B
+        when( valid(i+1) === true.B && is_zipped(i+1)(1) === false.B && is_zipped(i+1)(2) === false.B) {
+          is_zipped(i+1)(0) := true.B
+          zipping(i) := 1.U
+        } .elsewhen( valid(i+2) === true.B && is_zipped(i+2)(2) === false.B) {
+          is_zipped(i+2)(1) := true.B
+          zipping(i) := 2.U
         } .elsewhen( valid(i+3) === true.B ) {
-          buff(i) := buff(i+3)
-          valid(i) := valid(i+3)
-          is_zip(i+3)(2) := true.B
-        }        
-      }
-
-      for ( j <- 0 until in ) yield {  
-        when( io.enq(j).fire && (i.U === wr_ptr+j.U) ) {
-          buff(i) := io.enq(j).bits
-          valid(i) := true.B
-
-          assert( is_zip(i).forall((x:Bool) => (x === false.B)) )
+          is_zipped(i+3)(2) := true.B
+          zipping(i) := 3.U
         }
       }
     }
+  }
+
+
+
+  for ( i <- 0 until dp ) {
+    when( is_zipped(i).exists((x:Bool) => (x === true.B))) {
+      buff(i) := 0.U.asTypeOf(dw)
+      valid(i) := false.B
+      assert( valid(i) === true.B )
+      assert( zipping(i) === 0.U )
+    }
+
+    for ( j <- 0 until in ) yield {  
+      when( io.enq(j).fire && (i.U === wr_ptr+j.U) ) {
+        buff(i) := io.enq(j).bits
+        valid(i) := true.B
+
+        assert( is_zipped(i).forall((x:Bool) => (x === false.B)) )
+      }
+    }
+
+      if ( i < dp - 4 ) {
+    when( zipping(i) === 1.U ) {
+
+      buff(i) := buff(i+1)
+      valid(i) := valid(i+1)
+    } .elsewhen( zipping(i) === 2.U ) {
+      buff(i) := buff(i+2)
+      valid(i) := valid(i+2)
+    } .elsewhen( zipping(i) === 3.U ) {
+      buff(i) := buff(i+3)
+      valid(i) := valid(i+3)
+    }
+  }
+
+    for ( j <- 0 until out ) yield {
+      when( io.deq(j).fire && (i.U === j.U) ) {
+        buff(i) := 0.U.asTypeOf(dw)
+        valid(i) := false.B
+      }    
+    }
 
   }
+
+
+
+
+
+
+
+
+
+
+
+  // for ( i <- 0 until dp ) {
+  //   when( valid(i) === true.B ) {
+  //     when( is_zip(i).exists((x:Bool) => (x === true.B))){
+  //       buff(i) := 0.U.asTypeOf(dw)
+  //       valid(i) := false.B
+  //     } .otherwise {  } //is_zip(i) === false.B
+  //   } .otherwise { //valid(i) === false.B
+  //     if ( i < dp - 4 ) {
+  //       when( valid(i+1) === true.B && is_zip(i+1)(1) === false.B && is_zip(i+1)(2) === false.B) {
+  //         buff(i) := buff(i+1)
+  //         valid(i) := valid(i+1)
+  //         is_zip(i+1)(0) := true.B
+  //       } .elsewhen( valid(i+2) === true.B && is_zip(i+2)(2) === false.B) {
+  //         buff(i) := buff(i+2)
+  //         valid(i) := valid(i+2)
+  //         is_zip(i+2)(1) := true.B
+  //       } .elsewhen( valid(i+3) === true.B ) {
+  //         buff(i) := buff(i+3)
+  //         valid(i) := valid(i+3)
+  //         is_zip(i+3)(2) := true.B
+  //       }        
+  //     }
+
+  //     for ( j <- 0 until in ) yield {  
+  //       when( io.enq(j).fire && (i.U === wr_ptr+j.U) ) {
+  //         buff(i) := io.enq(j).bits
+  //         valid(i) := true.B
+
+  //         assert( is_zip(i).forall((x:Bool) => (x === false.B)) )
+  //       }
+  //     }
+  //   }
+
+  // }
 
   for ( i <- 0 until in ) yield {  
     io.enq(i).ready := valid(wr_ptr+i.U) === false.B
   }
 
   for ( i <- 0 until out ) yield {
-    io.deq(i).valid := valid(i) & is_zip(i).forall((x:Bool) => (x === false.B))
+    io.deq(i).valid := valid(i) & is_zipped(i).forall((x:Bool) => (x === false.B))
     io.deq(i).bits  := Mux(io.deq(i).valid, buff(i), DontCare)
   }
 

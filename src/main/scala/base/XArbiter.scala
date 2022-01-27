@@ -50,9 +50,11 @@ class XArbiter[T <: Data]( gen: T, in: Int,out: Int) extends Module {
   for ( i <- 0 until in ) yield { io.enq(i).ready := false.B }
 
   for ( i <- 0 until out ) yield {
-    when( io.enq.count( (x:DecoupledIO[T]) => x.valid === true.B ) >= i.U ) {
+    when( io.enq.count( (x:DecoupledIO[T]) => x.valid === true.B ) > i.U ) {
       val idx = io.chosen(i)
-      io.deq(i) <> io.enq(idx)
+      io.deq(i).bits := io.enq(idx).bits
+      io.deq(i).valid := true.B
+      io.enq(idx).ready := io.deq(i).ready
     }
   }
 

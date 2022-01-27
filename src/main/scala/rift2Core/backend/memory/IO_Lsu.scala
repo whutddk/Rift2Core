@@ -49,27 +49,31 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
 
   io.getPut.valid := io.enq.valid & ~is_busy
   io.enq.ready := io.getPut.fire
-  when( io.enq.bits.fun.is_lu & ~io.enq.bits.fun.is_lr) {
-    io.getPut.bits := 
-      edge.Get(
-        fromSource = idx.U,
-        toAddress = io.enq.bits.paddr,
-        lgSize = log2Ceil(64/8).U
-      )._2    
-  } .elsewhen( io.enq.bits.fun.is_su & ~io.enq.bits.fun.is_sc ) {
-    io.getPut.bits :=
-      edge.Put(
-        fromSource = idx.U,
-        toAddress = io.enq.bits.paddr,
-        lgSize = log2Ceil(64/8).U,
-        data = io.enq.bits.wdata(0),
-        mask = io.enq.bits.wstrb
-      )._2
-  } .otherwise{
+  when( io.enq.valid ) {
+    when( io.enq.bits.fun.is_lu & ~io.enq.bits.fun.is_lr) {
+        io.getPut.bits := 
+          edge.Get(
+            fromSource = idx.U,
+            toAddress = io.enq.bits.paddr,
+            lgSize = log2Ceil(64/8).U
+          )._2    
+      } .elsewhen( io.enq.bits.fun.is_su & ~io.enq.bits.fun.is_sc ) {
+        io.getPut.bits :=
+          edge.Put(
+            fromSource = idx.U,
+            toAddress = io.enq.bits.paddr,
+            lgSize = log2Ceil(64/8).U,
+            data = io.enq.bits.wdata(0),
+            mask = io.enq.bits.wstrb
+          )._2
+      } .otherwise{
+        io.getPut.bits := DontCare
+        assert(false.B, "Assert Failed at IO_Lsu, RISCV-A is not support at IO region")      
+      }    
+  } .otherwise {
     io.getPut.bits := DontCare
-
-    assert(false.B, "Assert Failed at IO_Lsu, RISCV-A is not support at IO region")
   }
+  
 
 
   when( io.getPut.fire ) {

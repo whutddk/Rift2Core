@@ -62,10 +62,10 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
     * dp-1 (63) files exist in this version,'
     * @note the file(dp) is assert to be Zero
     */
+  val files_reg = RegInit( VecInit( Seq.fill(dp-1)(0.U(64.W)) ))
   val files = {
     val res = Wire( Vec(dp, UInt(64.W)) )
-    val reg = RegInit( VecInit( Seq.fill(dp-1)(0.U(64.W)) ))
-    for ( i <- 0 until dp-1 ) yield { res(i) := reg(i) }
+    for ( i <- 0 until dp-1 ) yield { res(i) := files_reg(i) }
     res(dp-1) := 0.U
     res
   }
@@ -75,10 +75,10 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
     * dp-1 (63) log exist in this version,
     * @note the log(dp) is assert to be "b11".U
     */ 
+  val log_reg = RegInit( VecInit( Seq.fill(dp-1)(0.U( 2.W)) ))
   val log = {
     val res = Wire( Vec(dp, UInt(2.W)) )
-    val lg = RegInit( VecInit( Seq.fill(dp-1)(0.U( 2.W)) ))
-    for ( i <- 0 until dp-1 ) yield { res(i) := lg(i) }
+    for ( i <- 0 until dp-1 ) yield { res(i) := log_reg(i) }
     res(dp-1) := "b11".U
     res
   }
@@ -133,7 +133,7 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
     when( io.dpt_rename(i).req.fire ) {
       val idx = io.dpt_rename(i).req.bits.rd0
       assert( log(molloc_idx(i)) === "b00".U )
-      log(molloc_idx(i)) := "b01".U //may be override by flush
+      log_reg(molloc_idx(i)) := "b01".U //may be override by flush
       rename_ptr(idx) := molloc_idx(i) //may be override by flush
     }
 
@@ -167,8 +167,9 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
   for ( i <- 0 until wb_chn ) yield {
     when( io.exe_writeBack(i).fire ) {
       val idx = io.exe_writeBack(i).bits.rd0
-      assert( log(idx) === "b10".U )
-      files(idx) := io.exe_writeBack(i).bits.res
+      assert( log(idx) === "b01".U, "Assert Failed when writeback log(" + i + ")" )
+      log_reg(idx) := "b10".U
+      files_reg(idx) := io.exe_writeBack(i).bits.res
     }
     io.exe_writeBack(i).ready := true.B
   }
@@ -181,17 +182,17 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
     for ( i <- 0 until cmm_chn ) {
       def m = cmm_chn-1-i
 
-      io.commit(m).ready := log(phy(m)) === 3.U
+      io.commit(m).ready := log(phy(m)) === "b10".U
 
 
       when( io.commit(m).fire ) {
         when( io.commit(m).bits.is_abort ) {
           /** clear all log to 0, except that archit_ptr point to, may be override */
-          for ( j <- 0 until dp-1 ) yield {log(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
+          for ( j <- 0 until dp-1 ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
           for ( n <- 0 until m ) yield { assert( io.commit(n).valid & ~io.commit(n).bits.is_abort) }
         } .otherwise {
           /** override the log(clear) */
-          for ( j <- 0 until dp-1 ) yield { log(j) := Mux( j.U === idx_pre(m), 0.U, log(j) ) }
+          for ( j <- 0 until dp-1 ) yield { log_reg(j) := Mux( j.U === idx_pre(m), 0.U, log(j) ) }
         }
       }
 
