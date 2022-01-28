@@ -192,7 +192,7 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
           for ( n <- 0 until m ) yield { assert( io.commit(n).valid & ~io.commit(n).bits.is_abort) }
         } .otherwise {
           /** override the log(clear) */
-          for ( j <- 0 until dp-1 ) yield { log_reg(j) := Mux( j.U === idx_pre(m), 0.U, log(j) ) }
+          for ( j <- 0 until dp-1 ) yield { when(j.U === idx_pre(m) ) {log_reg(j) := 0.U}  }
         }
       }
 
