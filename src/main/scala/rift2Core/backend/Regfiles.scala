@@ -86,12 +86,12 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
   /**
     * index that 32 renamed register-sources point to
     */
-  val rename_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U} ) )
+  val rename_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U(log2Ceil(dp).W)} ) )
 
   /**
     * index that 32 commited register-sources point to
     */  
-  val archit_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U} ) )
+  val archit_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U(log2Ceil(dp).W)} ) )
 
   /**
     * finding out the first Free-phy-register
@@ -158,9 +158,9 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
       io.iss_readOp(i).dat.op3 := 0.U
     }
     io.iss_readOp(i).reg.ready :=
-      (log(idx1) === "b10".U | idx1 === 63.U ) &
-      (log(idx2) === "b10".U | idx2 === 63.U ) &
-      (log(idx3) === "b10".U | idx3 === 63.U ) 
+      (log(idx1) === "b11".U | idx1 === 63.U ) &
+      (log(idx2) === "b11".U | idx2 === 63.U ) &
+      (log(idx3) === "b11".U | idx3 === 63.U ) 
 
   }
 
@@ -168,7 +168,7 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
     when( io.exe_writeBack(i).fire ) {
       val idx = io.exe_writeBack(i).bits.rd0
       assert( log(idx) === "b01".U, "Assert Failed when writeback log(" + i + ")" )
-      log_reg(idx) := "b10".U
+      log_reg(idx) := "b11".U
       files_reg(idx) := io.exe_writeBack(i).bits.res
     }
     io.exe_writeBack(i).ready := true.B
@@ -182,7 +182,7 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
     for ( i <- 0 until cmm_chn ) {
       def m = cmm_chn-1-i
 
-      io.commit(m).ready := log(phy(m)) === "b10".U
+      io.commit(m).ready := log(phy(m)) === "b11".U
 
 
       when( io.commit(m).fire ) {
