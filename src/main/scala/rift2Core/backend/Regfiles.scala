@@ -202,15 +202,14 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
         archit_ptr(raw(m)) := phy(m)
       }
 
-      when( io.commit(m).fire ) {
-        when (io.commit(m).bits.is_abort) {
-          for ( j <- 0 until 32 ) yield {
-            rename_ptr(j) := archit_ptr(j)
-            for ( n <- 0 until m ) {
-              when( j.U === raw(n) ) { rename_ptr(j) := phy(n) }
-            }
 
+      when (io.commit(m).valid & io.commit(m).bits.is_abort) {
+        for ( j <- 0 until 32 ) yield {
+          rename_ptr(j) := archit_ptr(j)
+          for ( n <- 0 until m ) {
+            when( j.U === raw(n) ) { rename_ptr(j) := phy(n) }
           }
+
         }
       }
     }
