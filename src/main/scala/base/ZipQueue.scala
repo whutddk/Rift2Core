@@ -165,7 +165,7 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
   for ( i <- 0 until in; j <- 0 until in ) yield 
     assert( !(io.enq(i).valid === true.B && io.enq(j).valid === false.B && i.U >= j.U), "Assert Fail! enq port illegal")
 
-  for ( i <- 0 until out; j <- 0 until out ) yield 
-    assert( !(io.deq(i).valid === true.B && io.deq(j).valid === false.B && i.U >= j.U), "Assert Fail! deq port illegal")
+  // for ( i <- 0 until out; j <- 0 until out ) yield 
+  //   assert( !(io.deq(i).valid === true.B && io.deq(j).valid === false.B && i.U >= j.U), "Assert Fail! deq port illegal")
 
 }
