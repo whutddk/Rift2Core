@@ -184,19 +184,19 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
     for ( i <- 0 until cmm_chn ) {
       def m = cmm_chn-1-i
 
+      //ready 和abort可能互斥，需要优化接口
       io.commit(m).ready := log(phy(m)) === "b11".U
 
-
-      when( io.commit(m).fire ) {
-        when( io.commit(m).bits.is_abort ) {
-          /** clear all log to 0, except that archit_ptr point to, may be override */
-          for ( j <- 0 until dp-1 ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
-          for ( n <- 0 until m ) yield { assert( io.commit(n).valid & ~io.commit(n).bits.is_abort) }
-        } .otherwise {
-          /** override the log(clear) */
-          for ( j <- 0 until dp-1 ) yield { when(j.U === idx_pre(m) ) {log_reg(j) := 0.U}  }
-        }
+      when( io.commit(m).valid & io.commit(m).bits.is_abort ) {
+        /** clear all log to 0, except that archit_ptr point to, may be override */
+        for ( j <- 0 until dp-1 ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
+        for ( n <- 0 until m ) yield { assert( io.commit(n).valid & ~io.commit(n).bits.is_abort) }
       }
+      when( io.commit(m).fire & ~io.commit(m).bits.is_abort ) {
+        /** override the log(clear) */
+        for ( j <- 0 until dp-1 ) yield { when(j.U === idx_pre(m) ) {log_reg(j) := 0.U}  }
+      }
+
 
       when( io.commit(m).fire & ~io.commit(m).bits.is_abort) {
         archit_ptr(raw(m)) := phy(m)
