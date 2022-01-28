@@ -75,7 +75,9 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
     * dp-1 (63) log exist in this version,
     * @note the log(dp) is assert to be "b11".U
     */ 
-  val log_reg = RegInit( VecInit( Seq.fill(dp-1)(0.U( 2.W)) ))
+  val log_reg = 
+    RegInit( VecInit( Seq.fill(32)("b11".U(2.W) ) ++ Seq.fill(dp-32-1)(0.U(2.W) )))
+
   val log = {
     val res = Wire( Vec(dp, UInt(2.W)) )
     for ( i <- 0 until dp-1 ) yield { res(i) := log_reg(i) }
