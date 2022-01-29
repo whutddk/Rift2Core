@@ -24,6 +24,38 @@ import rift2Core.define._
 import rift2Core.frontend._
 
 
+// class DptMux(port: Int = 2) extends Module {
+//   val io = IO( new Bundle{
+//     val enq     = Vec(rn_chn, Flipped(new DecoupledIO(new Info_bd_dpt())))
+//     val ooo_deq = Vec(rn_chn, new DecoupledIO(new Info_bd_dpt()))
+//     val ito_deq = Vec(rn_chn, new DecoupledIO(new Info_bd_dpt()))
+//   })
+
+//   val ooo_dpt_rePort = {
+//     val mdl = Module(new RePort( new Dpt_info, port = rn_chn))
+//     mdl.io.deq <> io.ooo_deq
+//     mdl
+//   }
+
+
+//   val ito_dpt_rePort = {
+//     val mdl = Module(new RePort( new Dpt_info, port = rn_chn))
+//     mdl.io.deq <> io.ito_deq
+//     mdl
+//   }
+
+//   ooo_dpt_rePort.io.enq(i).valid := io.enq(i).fire & io.enq(i).bits.info.is_ooo_dpt 
+//   ooo_dpt_rePort.io.enq(i).bits := Mux( ooo_dpt_rePort.io.enq(i).valid, io.enq(i).bits, DontCare )
+
+//   ito_dpt_rePort.io.enq(i).valid := io.enq(i).fire & io.enq(i).bits.info.is_ito_dpt 
+//   ito_dpt_rePort.io.enq(i).bits := Mux( ito_dpt_rePort.io.enq(i).valid, io.enq(i).bits, DontCare )
+
+//   io.enq(i)
+
+
+// }
+
+
 class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
   val io = IO(new Bundle{
     val bd_dpt = Vec(rn_chn, Flipped(new DecoupledIO(new Info_bd_dpt())))
@@ -38,8 +70,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
   })
 
 
-
-  val ooo_dpt_rePort = Module(new RePort( new Dpt_info, port = rn_chn))
+  val ooo_dpt_rePort =  Module(new RePort( new Dpt_info, port = rn_chn))
 
   val ooo_dpt_fifo = {
     val mdl = Module(new ZipQueue( new Dpt_info, 4, in = rn_chn, out = 4 ))
@@ -49,7 +80,6 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
   }
 
   val ito_dpt_rePort = Module(new RePort( new Dpt_info, port = rn_chn))
-
   val ito_dpt_fifo = {
     val mdl = Module(new MultiPortFifo( new Dpt_info, aw = 4, in = rn_chn, out = 1 ))
     mdl.io.enq <> ito_dpt_rePort.io.deq
@@ -77,7 +107,13 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
     reOrder_fifo_i.io.enq(i).valid := io.bd_dpt(i).fire
     reOrder_fifo_i.io.enq(i).bits  := Mux( reOrder_fifo_i.io.enq(i).valid, Pkg_rod_i(io.bd_dpt(i).bits.info, io.dpt_rename(i).rsp), DontCare )
 
-    io.bd_dpt(i).ready := ooo_dpt_rePort.io.enq(i).ready & ito_dpt_rePort.io.enq(i).ready & io.dpt_rename(i).req.ready
+    io.bd_dpt(i).ready := (
+      for ( j <- 0 to i by 1 ) yield {
+        ooo_dpt_rePort.io.enq(j).ready & ito_dpt_rePort.io.enq(j).ready & io.dpt_rename(j).req.ready
+      }      
+    ).reduce(_&_)
+
+     
 
   }
 
