@@ -125,9 +125,9 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
       io.dpt_rename(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
       io.dpt_rename(i).rsp.rs3 := Mux( idx3 === 0.U, 63.U, rename_ptr(idx3) ) 
       for ( j <- 0 until i ) {
-        when( io.dpt_rename(j).req.bits.rd0 === idx1 ) { io.dpt_rename(i).rsp.rs1 := molloc_idx(j) }
-        when( io.dpt_rename(j).req.bits.rd0 === idx2 ) { io.dpt_rename(i).rsp.rs2 := molloc_idx(j) }
-        when( io.dpt_rename(j).req.bits.rd0 === idx3 ) { io.dpt_rename(i).rsp.rs3 := molloc_idx(j) }
+        when( (io.dpt_rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.dpt_rename(i).rsp.rs1 := molloc_idx(j) }
+        when( (io.dpt_rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.dpt_rename(i).rsp.rs2 := molloc_idx(j) }
+        when( (io.dpt_rename(j).req.bits.rd0 === idx3) && (idx3 =/= 0.U) ) { io.dpt_rename(i).rsp.rs3 := molloc_idx(j) }
       }
     }
 
