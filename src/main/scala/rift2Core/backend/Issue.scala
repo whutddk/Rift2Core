@@ -179,7 +179,10 @@ class Out_of_Order_Issue() extends Module {
     res.fun := dpt.lsu_isa
 
 
-    res.param.dat := op.dat
+    res.param.dat.op1 := (op.dat.op1.asSInt + dpt.param.imm.asSInt()).asUInt()
+    res.param.dat.op2 := op.dat.op2
+    res.param.dat.op3 := op.dat.op3
+
     res.param.rd0 := dpt.phy.rd0
     res.param.is_iwb := true.B
     res.param.is_fwb := false.B
