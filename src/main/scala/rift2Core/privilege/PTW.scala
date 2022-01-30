@@ -148,7 +148,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
 
   val cache_dat = new Cache_dat( 64, 56, 4, 1, 128 )
-  val cache_tag = new Cache_tag( 64, 56, 4, 1, 128 ){ require ( tag_w == 44 ) }
+  val cache_tag = new Cache_tag( 64, 56, 4, 1, 128, nm = 1 ){ require ( tag_w == 44 ) }
   val is_cache_valid = RegInit( VecInit( Seq.fill(128)(false.B) ) )
 
   val (_, _, is_trans_done, transCnt) = edge.count(io.ptw_access)

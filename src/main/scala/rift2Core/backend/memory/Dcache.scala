@@ -540,7 +540,7 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   })
 
   val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
-  val cache_tag = new Cache_tag( dw, aw, bk, cb, cl ) 
+  val cache_tag = new Cache_tag( dw, aw, bk, cb, cl, nm = 8 ) 
   val missUnit = Module(new MissUnit(edge = edge, entry = 8, setting = 2))
   val probeUnit = Module(new ProbeUnit(edge = edge))
   val writeBackUnit = Module(new WriteBackUnit(edge = edge, setting = 2))
