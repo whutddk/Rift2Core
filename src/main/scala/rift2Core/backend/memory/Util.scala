@@ -192,7 +192,7 @@ object align_mem{
       )) << Cat(paddr(2,0), 0.U(3.W) )
     }
 
-    val paddr = ori.param.dat.op1 & ~(("b111".U)(64.W))
+    val paddr = ori.param.dat.op1 // & ~(("b111".U)(64.W))
 
     (paddr, wdata, wstrb)
   }
