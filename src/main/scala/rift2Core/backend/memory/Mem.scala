@@ -129,7 +129,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     */ 
   val cacheMux = {
     val mdl = Module(new cacheMux)
-    mdl.io.enq <> regionMux.io.deq(2)
+    mdl.io.enq <> regionMux.io.deq(0)
     mdl
   }
 
@@ -187,7 +187,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
 
   val periph = {
     val mdl = Module(new IO_Lsu(edge(nm), idx = nm))
-    mdl.io.enq <> regionMux.io.deq(0)
+    mdl.io.enq <> regionMux.io.deq(2)
 
     io.periph_getPut.valid := mdl.io.getPut.valid
     io.periph_getPut.bits := mdl.io.getPut.bits
