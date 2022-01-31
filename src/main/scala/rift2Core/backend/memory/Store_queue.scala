@@ -48,6 +48,7 @@ import freechips.rocketchip.tilelink._
   */
 class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
   def dp_w = log2Ceil(dp)
+  def nm = 8
 
   val io = IO( new Bundle{
     val enq = Flipped(DecoupledIO(new Lsu_iss_info))
@@ -57,7 +58,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
     val cmm_lsu = Input(new Info_cmm_lsu)
     val is_empty = Output(Bool())
 
-    val overlap = Flipped(new Info_overlap)
+    val overlap =  Flipped(Vec(nm+2,new Info_overlap))
 
     val flush = Input(Bool())
 
@@ -113,55 +114,57 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
     cm_ptr_reg := cm_ptr_reg + 1.U
   }
 
+    io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
+
+  for ( chn <- 0 until (nm+2) ) yield {
+    val overlap_buff = Wire(Vec(dp, (new Info_cache_s0s1)))
 
 
-
-
-  // val overlap_buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Info_cache_s0s1))))
-  val overlap_buff = Wire(Vec(dp, (new Info_cache_s0s1)))
-
-
-  when( rd_ptr_reg(dp_w) =/= wr_ptr_reg(dp_w) ) {
-    assert( rd_ptr >= wr_ptr )
-    for ( i <- 0 until dp ) yield {
-      val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
-      when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).paddr === io.overlap.paddr) ) {
-        overlap_buff(i) := buff(ro_ptr)
-      } .otherwise {
-        overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
+    when( rd_ptr_reg(dp_w) =/= wr_ptr_reg(dp_w) ) {
+      assert( rd_ptr >= wr_ptr )
+      for ( i <- 0 until dp ) yield {
+        val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
+        when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).paddr === io.overlap(chn).paddr) ) {
+          overlap_buff(i) := buff(ro_ptr)
+        } .otherwise {
+          overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
+        }
+      }
+    } .otherwise {
+      assert( rd_ptr <= wr_ptr )
+      for ( i <- 0 until dp ) yield {
+        val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
+        when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).paddr === io.overlap(chn).paddr) ) {
+          overlap_buff(i) := buff(ro_ptr)
+        } .otherwise {
+          overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
+        }
       }
     }
-  } .otherwise {
-    assert( rd_ptr <= wr_ptr )
+
+
+
+    val temp_wdata = Wire(Vec(dp, UInt(64.W)))
+    val temp_wstrb = Wire(Vec(dp, UInt(8.W)))
     for ( i <- 0 until dp ) yield {
-      val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
-      when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).paddr === io.overlap.paddr) ) {
-        overlap_buff(i) := buff(ro_ptr)
-      } .otherwise {
-        overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
+      if ( i == 0 ) {
+        val (wdata, wstrb) = overlap_wr( 0.U, 0.U, overlap_buff(0).wdata(0), overlap_buff(0).wstrb)
+        temp_wdata(0) := wdata
+        temp_wstrb(0) := wstrb
+      } else {
+        val (wdata, wstrb) = overlap_wr( temp_wdata(i-1), temp_wstrb(i-1), overlap_buff(i).wdata(0), overlap_buff(i).wstrb)
+        temp_wdata(i) := wdata
+        temp_wstrb(i) := wstrb
       }
     }
+    io.overlap(chn).wdata := temp_wdata(dp-1)
+    io.overlap(chn).wstrb := temp_wstrb(dp-1)
   }
 
+ 
 
 
-  val temp_wdata = Wire(Vec(dp, UInt(64.W)))
-  val temp_wstrb = Wire(Vec(dp, UInt(8.W)))
-  for ( i <- 0 until dp ) yield {
-    if ( i == 0 ) {
-      val (wdata, wstrb) = overlap_wr( 0.U, 0.U, overlap_buff(0).wdata(0), overlap_buff(0).wstrb)
-      temp_wdata(0) := wdata
-      temp_wstrb(0) := wstrb
-    } else {
-      val (wdata, wstrb) = overlap_wr( temp_wdata(i-1), temp_wstrb(i-1), overlap_buff(i).wdata(0), overlap_buff(i).wstrb)
-      temp_wdata(i) := wdata
-      temp_wstrb(i) := wstrb
-    }
-  }
-  io.overlap.wdata := temp_wdata(dp-1)
-  io.overlap.wstrb := temp_wstrb(dp-1)
 
-  io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
 
 
 }

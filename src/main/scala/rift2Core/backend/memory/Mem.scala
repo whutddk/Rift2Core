@@ -141,6 +141,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   val cache = for ( i <- 0 until nm ) yield {
     val mdl = Module(new Dcache(edge(i)))
     mdl.io.enq <> cacheMux.io.deq(i)
+    mdl.io.overlap <> stQueue.io.overlap(i)
 
     io.missUnit_dcache_acquire(i).valid := mdl.io.missUnit_dcache_acquire.valid
     io.missUnit_dcache_acquire(i).bits := mdl.io.missUnit_dcache_acquire.bits
@@ -174,6 +175,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   val system = {
     val mdl = Module(new IO_Lsu(edge(nm+1), idx = nm+1))
     mdl.io.enq <> regionMux.io.deq(1)
+    mdl.io.overlap <> stQueue.io.overlap(nm+1)
 
     io.system_getPut.valid := mdl.io.getPut.valid
     io.system_getPut.bits := mdl.io.getPut.bits
@@ -188,6 +190,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   val periph = {
     val mdl = Module(new IO_Lsu(edge(nm), idx = nm))
     mdl.io.enq <> regionMux.io.deq(2)
+    mdl.io.overlap <> stQueue.io.overlap(nm)
 
     io.periph_getPut.valid := mdl.io.getPut.valid
     io.periph_getPut.bits := mdl.io.getPut.bits
@@ -228,11 +231,12 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     mdl.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
     mdl.io.enq.bits.is_iwb := lu_wb_arb.io.out.bits.wb.is_iwb
     mdl.io.enq.bits.is_fwb := lu_wb_arb.io.out.bits.wb.is_fwb
-    mdl.io.enq.bits.res := {
-      stQueue.io.overlap.paddr := lu_wb_arb.io.out.bits.paddr
-      val (new_data, new_strb) = overlap_wr( lu_wb_arb.io.out.bits.wb.res, 0.U, stQueue.io.overlap.wdata, stQueue.io.overlap.wstrb)
-      new_data
-    }
+    mdl.io.enq.bits.res := lu_wb_arb.io.out.bits.wb.res
+    //   {
+    //   stQueue.io.overlap.paddr := lu_wb_arb.io.out.bits.paddr
+    //   val (new_data, new_strb) = overlap_wr( lu_wb_arb.io.out.bits.wb.res, 0.U, stQueue.io.overlap.wdata, stQueue.io.overlap.wstrb)
+    //   new_data
+    // }
     lu_wb_arb.io.out.ready := mdl.io.enq.ready | trans_kill
     mdl.reset := reset.asBool | io.flush
     mdl

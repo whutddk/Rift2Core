@@ -108,7 +108,7 @@ class Info_cache_sb extends Lsu_iss_info
 class Info_cache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc_idx {
   val wb = new WriteBack_info(64)
   val is_load_amo = Bool()
-  val paddr = UInt(64.W)
+  // val paddr = UInt(64.W)
 }
 
 
@@ -193,6 +193,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val missUnit_req = new DecoupledIO(new Info_miss_req)
     val wb_req = DecoupledIO(new Info_writeBack_req)
     val pb_req = DecoupledIO(new Info_writeBack_req)
+
+    val overlap = new Info_overlap
 
     val flush = Input(Bool())
   })
@@ -425,12 +427,18 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val rdata = io.wr_in.bits.rdata(cb_sel)(bk_sel)
     val paddr = io.wr_in.bits.paddr
     val fun = io.wr_in.bits.fun
-
+    
+    val res_pre_pre = {
+      io.overlap.paddr := paddr
+      val (new_data, new_strb) = overlap_wr( rdata, 0.U, io.overlap.wdata, io.overlap.wstrb)
+      new_data
+    }
+    val res_pre = get_loadRes( fun, paddr, res_pre_pre )
 
     val res = Mux(
       io.wr_in.bits.fun.is_sc,
       Mux( is_sc_fail, 1.U, 0.U ),
-      get_loadRes( fun, paddr, rdata )
+      res_pre
     )
     Mux( io.deq.valid, res, 0.U )
   }
@@ -450,8 +458,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
   io.deq.bits.is_load_amo :=
     Mux( io.deq.valid, io.wr_in.bits.fun.is_wb, false.B )
     
-  io.deq.bits.paddr := 
-    Mux( io.deq.valid, io.wr_in.bits.paddr, 0.U )
+  // io.deq.bits.paddr := 
+  //   Mux( io.deq.valid, io.wr_in.bits.paddr, 0.U )
 
 
 
@@ -487,39 +495,6 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
 
 
-
-
-
-  def get_loadRes( fun: Cache_op, paddr: UInt, rdata: UInt ) = {
-    val res = Wire(UInt(64.W))
-
-    def reAlign(rdata: UInt, paddr: UInt) = {
-      val res = Wire(UInt(64.W))
-      val shift = Wire(UInt(6.W))
-      shift := Cat( paddr(2,0), 0.U(3.W) )
-      res := rdata >> shift
-      res
-    }
-
-    def load_byte(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(56, Mux(is_usi, 0.U, rdata(7)) ),  rdata(7,0)  )
-    def load_half(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(48, Mux(is_usi, 0.U, rdata(15)) ), rdata(15,0) )
-    def load_word(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(32, Mux(is_usi, 0.U, rdata(31)) ), rdata(31,0) )
-
-
-    
-    val align = reAlign(rdata, paddr)
-
-    res := Mux1H(Seq(
-      fun.is_byte -> load_byte(fun.is_usi, align),
-      fun.is_half -> load_half(fun.is_usi, align),
-      fun.is_word -> load_word(fun.is_usi, align),
-      fun.is_dubl -> align
-    ))  
-
-    res
-  }
-
-
 }
 
 class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
@@ -527,6 +502,9 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = new DecoupledIO(new Info_cache_retn)
     val is_empty = Output(Bool())
+
+    val overlap = new Info_overlap
+
     val flush = Input(Bool())
 
     val missUnit_dcache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
@@ -576,6 +554,7 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   wr_stage.io.missUnit_req      <> missUnit.io.req
   wr_stage.io.wb_req <> writeBackUnit.io.wb_req
   wr_stage.io.pb_req <> writeBackUnit.io.pb_req
+  wr_stage.io.overlap <> io.overlap
   wr_stage.io.flush := io.flush
 
   missUnit.io.miss_ban := writeBackUnit.io.miss_ban

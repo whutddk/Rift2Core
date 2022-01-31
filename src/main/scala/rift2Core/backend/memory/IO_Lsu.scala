@@ -36,6 +36,7 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = new DecoupledIO(new Info_cache_retn)
     val is_empty = Output(Bool())
+    val overlap = new Info_overlap
 
     val getPut    = new DecoupledIO(new TLBundleA(edge.bundle))
     val access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
@@ -44,6 +45,7 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
   val is_busy = RegInit(false.B)
   val pending_wb = Reg(new WriteBack_info(dp=64))
   val pending_paddr = Reg(UInt(64.W))
+  val pending_fun = Reg(new Cache_op)
 
   io.is_empty := ~is_busy
 
@@ -82,6 +84,7 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
     pending_wb.is_iwb := io.enq.bits.rd.is_iwb
     pending_wb.is_fwb := io.enq.bits.rd.is_fwb
     pending_paddr := io.enq.bits.paddr
+    pending_fun := io.enq.bits.fun
     is_busy := true.B
   } .elsewhen( io.access.fire ) {
     assert( is_busy === true.B  )
@@ -91,10 +94,23 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
   io.deq.valid    := io.access.valid
 
   io.deq.bits.wb := pending_wb
-  io.deq.bits.wb.res := io.access.bits.data //override
+  io.deq.bits.wb.res := 
+  {
+    val rdata = io.access.bits.data
+    val paddr = pending_paddr
+    val fun = pending_fun
+    
+    val res_pre_pre = {
+      io.overlap.paddr := paddr
+      val (new_data, new_strb) = overlap_wr( rdata, 0.U, io.overlap.wdata, io.overlap.wstrb)
+      new_data
+    }
+    val res_pre = get_loadRes( fun, paddr, res_pre_pre )
+    res_pre
+  }
+
   io.deq.bits.is_load_amo := (io.access.bits.opcode === TLMessages.AccessAckData)
-  io.deq.bits.paddr := pending_paddr
-  io.deq.bits.paddr := pending_paddr
+  // io.deq.bits.paddr := pending_paddr
   io.deq.bits.chk_idx := DontCare
   
   io.access.ready := io.deq.ready

@@ -309,6 +309,38 @@ object overlap_wr{
   }
 }
 
+object get_loadRes{
+  def apply( fun: Cache_op, paddr: UInt, rdata: UInt ) = {
+        val res = Wire(UInt(64.W))
+
+    def reAlign(rdata: UInt, paddr: UInt) = {
+      val res = Wire(UInt(64.W))
+      val shift = Wire(UInt(6.W))
+      shift := Cat( paddr(2,0), 0.U(3.W) )
+      res := rdata >> shift
+      res
+    }
+
+    def load_byte(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(56, Mux(is_usi, 0.U, rdata(7)) ),  rdata(7,0)  )
+    def load_half(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(48, Mux(is_usi, 0.U, rdata(15)) ), rdata(15,0) )
+    def load_word(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(32, Mux(is_usi, 0.U, rdata(31)) ), rdata(31,0) )
+
+
+    
+    val align = reAlign(rdata, paddr)
+
+    res := Mux1H(Seq(
+      fun.is_byte -> load_byte(fun.is_usi, align),
+      fun.is_half -> load_half(fun.is_usi, align),
+      fun.is_word -> load_word(fun.is_usi, align),
+      fun.is_dubl -> align
+    ))  
+
+    res
+  }
+}
+
+
 // class overlap_chk extends Module {
 //   val io = IO(new Bundle{
 //     val rd_info = Flipped(ValidIO(new Bundle{
