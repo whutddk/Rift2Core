@@ -480,8 +480,8 @@ class Instruction_set extends Bundle{
       fpu_isa.fdiv_d | fpu_isa.fsqrt_d | fpu_isa.fsgnj_d | fpu_isa.fsgnjn_d |
       fpu_isa.fsgnjx_d | fpu_isa.fmin_d | fpu_isa. fmax_d
 
-  def is_ooo_dpt = alu_isa.is_alu | lsu_isa.is_lsu | mul_isa.is_mul
-  def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr
+  def is_ooo_dpt = alu_isa.is_alu | mul_isa.is_mul
+  def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr | lsu_isa.is_lsu
   def is_privil_dpt = privil_isa.is_privil
   def is_fpu_dpt = fpu_isa.is_fpu
   def is_iwb = ~is_fwb

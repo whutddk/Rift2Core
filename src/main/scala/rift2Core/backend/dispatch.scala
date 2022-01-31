@@ -123,7 +123,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
 
     res.alu_isa    := instr.alu_isa
     res.bru_isa    := 0.U.asTypeOf( new Bru_isa )
-    res.lsu_isa    := instr.lsu_isa
+    res.lsu_isa    := 0.U.asTypeOf( new Lsu_isa )
     res.csr_isa    := 0.U.asTypeOf( new Csr_isa )
     res.mul_isa    := instr.mul_isa
     res.privil_isa := 0.U.asTypeOf( new Privil_isa )
@@ -138,7 +138,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
 
     res.alu_isa    := 0.U.asTypeOf( new Alu_isa )
     res.bru_isa    := instr.bru_isa
-    res.lsu_isa    := 0.U.asTypeOf( new Lsu_isa )
+    res.lsu_isa    := instr.lsu_isa
     res.csr_isa    := instr.csr_isa
     res.mul_isa    := 0.U.asTypeOf( new Mul_isa )
     res.privil_isa := 0.U.asTypeOf( new Privil_isa )
