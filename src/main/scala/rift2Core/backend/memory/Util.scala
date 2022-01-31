@@ -189,7 +189,7 @@ object align_mem{
       Mux1H(Seq(
         op.is_byte -> "b00000001".U, op.is_half -> "b00000011".U,
         op.is_word -> "b00001111".U, op.is_dubl -> "b11111111".U
-      )) << Cat(paddr(2,0), 0.U(3.W) )
+      )) << paddr(2,0)
     }
 
     val paddr = ori.param.dat.op1 // & ~(("b111".U)(64.W))
