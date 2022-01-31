@@ -409,13 +409,13 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     Mux( io.reload.valid, io.wr_in.bits.wstrb, 0.U )
     
   io.reload.bits.wdata :=
-    Mux( io.reload.valid, io.wr_in.bits.wdata, DontCare )
+    Mux( io.reload.valid, io.wr_in.bits.wdata, VecInit(Seq.fill(bk)(0.U(64.W)) ) )
 
   io.reload.bits.fun :=
-    Mux( io.reload.valid, io.wr_in.bits.fun, DontCare )
+    Mux( io.reload.valid, io.wr_in.bits.fun, 0.U.asTypeOf(new Cache_op) )
 
   io.reload.bits.rd :=
-    Mux( io.reload.valid, io.wr_in.bits.rd, DontCare )
+    Mux( io.reload.valid, io.wr_in.bits.rd, 0.U.asTypeOf(new Rd_Param(64)) )
 
   io.reload.bits.chk_idx :=
     Mux( io.reload.valid, io.wr_in.bits.chk_idx, 0.U )
@@ -436,19 +436,19 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
   }
 
   io.deq.bits.wb.rd0 := 
-    Mux( io.deq.valid, io.wr_in.bits.rd.rd0, DontCare )  
+    Mux( io.deq.valid, io.wr_in.bits.rd.rd0, 0.U )  
 
   io.deq.bits.wb.is_iwb := 
-    Mux( io.deq.valid, io.wr_in.bits.rd.is_iwb, DontCare )  
+    Mux( io.deq.valid, io.wr_in.bits.rd.is_iwb, false.B )  
 
   io.deq.bits.wb.is_fwb := 
-    Mux( io.deq.valid, io.wr_in.bits.rd.is_fwb, DontCare )  
+    Mux( io.deq.valid, io.wr_in.bits.rd.is_fwb, false.B )  
 
   io.deq.bits.chk_idx :=
     Mux( io.deq.valid, io.wr_in.bits.chk_idx, 0.U )
     
   io.deq.bits.is_load_amo :=
-    Mux( io.deq.valid, io.wr_in.bits.fun.is_wb, 0.U )
+    Mux( io.deq.valid, io.wr_in.bits.fun.is_wb, false.B )
     
   io.deq.bits.paddr := 
     Mux( io.deq.valid, io.wr_in.bits.paddr, 0.U )
