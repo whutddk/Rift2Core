@@ -77,21 +77,21 @@ class OpMux extends Module {
     io.ld_deq <> io.enq
   } .otherwise{
     io.ld_deq.valid := false.B
-    io.ld_deq.bits  := DontCare
+    io.ld_deq.bits  := 0.U.asTypeOf(new Lsu_iss_info)
   }
 
   when( io.enq.bits.fun.is_su ) {
     io.st_deq <> io.enq
   } .otherwise{
     io.st_deq.valid := false.B
-    io.st_deq.bits  := DontCare
+    io.st_deq.bits  := 0.U.asTypeOf(new Lsu_iss_info)
   }
 
   when( io.enq.bits.fun.is_amo ) {
     io.am_deq <> io.enq
   } .otherwise{
     io.am_deq.valid := false.B
-    io.am_deq.bits  := DontCare
+    io.am_deq.bits  := 0.U.asTypeOf(new Lsu_iss_info)
   }
 
 }
