@@ -206,7 +206,9 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   val lu_wb_arb = {
     val mdl = Module(new Arbiter(new Info_cache_retn, nm+2))
     for ( i <- 0 until nm ) yield {
-      mdl.io.in(i) <> cache(i).io.deq      
+      mdl.io.in(i).valid := cache(i).io.deq.valid & cache(i).io.deq.bits.is_load_amo
+      mdl.io.in(i).bits := Mux( mdl.io.in(i).valid, cache(i).io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
+      cache(i).io.deq.ready := mdl.io.in(i).ready & cache(i).io.deq.bits.is_load_amo
     }
 
     mdl.io.in(nm)   <> system.io.deq
