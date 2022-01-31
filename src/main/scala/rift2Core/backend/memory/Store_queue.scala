@@ -117,7 +117,8 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
 
 
 
-  val overlap_buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Info_cache_s0s1))))
+  // val overlap_buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Info_cache_s0s1))))
+  val overlap_buff = Wire(Vec(dp, (new Info_cache_s0s1)))
 
 
   when( rd_ptr_reg(dp_w) =/= wr_ptr_reg(dp_w) ) {
