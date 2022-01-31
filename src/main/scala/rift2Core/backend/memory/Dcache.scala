@@ -121,6 +121,8 @@ class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
     val rd_in  = Flipped(DecoupledIO(new Info_cache_s0s1))
     val rd_out = DecoupledIO(new Info_cache_s1s2)
 
+    val overlap_paddr = Output(UInt(64.W))
+
     val dat_addr_r = Output(UInt(aw.W))
     val dat_en_r   = Output( Vec(cb, Vec(bk, Bool()) ))
     val dat_info_r = Input( Vec(cb, Vec(bk, UInt(dw.W)) ))
@@ -134,6 +136,7 @@ class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
   val bk_sel = io.rd_in.bits.bk_sel
   val info_bypass_fifo = Module(new Queue(new Info_cache_s0s1, 1, true, false))
 
+  io.overlap_paddr := io.rd_in.bits.paddr
   io.tag_addr_r := io.rd_in.bits.paddr
   io.dat_addr_r := io.rd_in.bits.paddr
 
@@ -194,7 +197,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val wb_req = DecoupledIO(new Info_writeBack_req)
     val pb_req = DecoupledIO(new Info_writeBack_req)
 
-    val overlap = new Info_overlap
+    val overlap_wdata = Input(UInt(64.W))
+    val overlap_wstrb = Input(UInt(8.W))
 
     val flush = Input(Bool())
   })
@@ -429,8 +433,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val fun = io.wr_in.bits.fun
     
     val res_pre_pre = {
-      io.overlap.paddr := paddr
-      val (new_data, new_strb) = overlap_wr( rdata, 0.U, io.overlap.wdata, io.overlap.wstrb)
+
+      val (new_data, new_strb) = overlap_wr( rdata, 0.U, io.overlap_wdata, io.overlap_wstrb)
       new_data
     }
     val res_pre = get_loadRes( fun, paddr, res_pre_pre )
@@ -543,6 +547,7 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   cache_dat.dat_info_r   <> rd_stage.io.dat_info_r
   rd_stage.io.tag_addr_r <> cache_tag.tag_addr_r
   rd_stage.io.tag_en_r   <> cache_tag.tag_en_r
+  io.overlap.paddr  := rd_stage.io.overlap_paddr
   cache_tag.tag_info_r   <> rd_stage.io.tag_info_r
 
   wr_stage.io.tag_addr_w        <> cache_tag.tag_addr_w
@@ -554,7 +559,9 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   wr_stage.io.missUnit_req      <> missUnit.io.req
   wr_stage.io.wb_req <> writeBackUnit.io.wb_req
   wr_stage.io.pb_req <> writeBackUnit.io.pb_req
-  wr_stage.io.overlap <> io.overlap
+  // wr_stage.io.overlap <> io.overlap
+  wr_stage.io.overlap_wdata := io.overlap.wdata
+  wr_stage.io.overlap_wstrb := io.overlap.wstrb
   wr_stage.io.flush := io.flush
 
   missUnit.io.miss_ban := writeBackUnit.io.miss_ban
