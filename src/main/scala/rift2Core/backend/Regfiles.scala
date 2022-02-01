@@ -169,7 +169,7 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
   for ( i <- 0 until wb_chn ) yield {
     when( io.exe_writeBack(i).fire ) {
       val idx = io.exe_writeBack(i).bits.rd0
-      assert( log(idx) === "b01".U, "Assert Failed when writeback at chn" + i + "log(" + idx + ")" )
+      assert( log(idx) === "b01".U, "Assert Failed when writeback at chn" + i + ", log(" + idx + ")" )
       log_reg(idx) := "b11".U
       files_reg(idx) := io.exe_writeBack(i).bits.res
     }

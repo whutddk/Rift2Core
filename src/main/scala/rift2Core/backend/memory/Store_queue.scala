@@ -89,7 +89,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
 
   val is_st_commited = VecInit( io.cmm_lsu.is_store_commit(0), io.cmm_lsu.is_store_commit(1) )
   io.enq.ready := ~full
-  io.deq.valid := ~emty & rd_buff.paddr(31) === 1.U
+  io.deq.valid := ~emty
 
   io.deq.bits := Mux( io.deq.valid, rd_buff, DontCare )
 
