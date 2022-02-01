@@ -83,7 +83,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
   val rd_buff = buff(rd_ptr)
 
   val is_amo = {
-    val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending & ~io.flush, false.B)
+    val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending & ~io.flush & ~io.is_empty, false.B)
     (is_amo_pre === false.B) & (io.cmm_lsu.is_amo_pending === true.B)
   }
 
