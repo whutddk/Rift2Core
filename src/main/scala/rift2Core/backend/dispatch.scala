@@ -109,7 +109,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
 
     io.bd_dpt(i).ready := (
       for ( j <- 0 to i by 1 ) yield {
-        ooo_dpt_rePort.io.enq(j).ready & ito_dpt_rePort.io.enq(j).ready & io.dpt_rename(j).req.ready
+        ooo_dpt_rePort.io.enq(j).ready & ito_dpt_rePort.io.enq(j).ready & io.dpt_rename(j).req.ready & reOrder_fifo_i.io.enq(i).ready
       }      
     ).reduce(_&_)
 
