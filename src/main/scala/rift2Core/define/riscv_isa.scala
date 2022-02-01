@@ -140,11 +140,11 @@ class Lsu_isa extends Bundle {
   def is_lr = lr_d | lr_w
 
   def is_lu  = lb | lh | lw | ld | lbu | lhu | lwu |  flw | fld | is_lr
-  def is_su  = sb | sh | sw | sd | fsw | fsd | is_sc
+  def is_su  = sb | sh | sw | sd | fsw | fsd 
   def is_nls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd
   def is_lrsc = is_sc | is_lr
   def is_amo =
-    amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
+    amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d | is_sc
   def is_fls = flw | fsw | fld | fsd
   def is_fence = fence | fence_i | sfence_vma
   def is_lsu = is_nls | is_lrsc | is_amo | is_fls | is_fence
