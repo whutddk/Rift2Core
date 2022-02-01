@@ -54,7 +54,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
     val enq = Flipped(DecoupledIO(new Lsu_iss_info))
     val deq = DecoupledIO(new Info_cache_s0s1)
 
-    // val is_commited = Input(Vec(2,Bool()))
+    // val is_st_commited = Input(Vec(2,Bool()))
     val cmm_lsu = Input(new Info_cmm_lsu)
     val is_empty = Output(Bool())
 
@@ -87,7 +87,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
     (is_amo_pre === false.B) & (io.cmm_lsu.is_amo_pending === true.B)
   }
 
-  val is_commited = VecInit( io.cmm_lsu.is_store_commit(0), io.cmm_lsu.is_store_commit(1) )
+  val is_st_commited = VecInit( io.cmm_lsu.is_store_commit(0), io.cmm_lsu.is_store_commit(1) )
   io.enq.ready := ~full
   io.deq.valid := ~emty & rd_buff.paddr(31) === 1.U
 
@@ -95,7 +95,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
 
   when( io.flush ) {
     wr_ptr_reg := cm_ptr_reg
-    assert( ~is_commited(0) & ~is_commited(1) & ~is_amo )
+    // assert( ~is_st_commited(0) & ~is_st_commited(1) & ~is_amo )
   } .elsewhen( io.enq.fire ) {
     buff(wr_ptr) := pkg_Info_cache_s0s1(io.enq.bits)
     wr_ptr_reg := wr_ptr_reg + 1.U
@@ -107,11 +107,13 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
 
 
 
-  when( is_commited(1) ) {
+  when( is_st_commited(1) & is_st_commited(0) ) {
     cm_ptr_reg := cm_ptr_reg + 2.U
-    assert( is_commited(0) )
-  } .elsewhen( is_commited(0) | is_amo ) {
+    // assert( is_st_commited(0) )
+    assert( ~is_amo )
+  } .elsewhen( is_st_commited(0) | is_amo | is_st_commited(1) ) {
     cm_ptr_reg := cm_ptr_reg + 1.U
+    assert( ~((is_st_commited(0) | is_st_commited(1)) & is_amo), "Assert Failed, is_amo only launch at chn 0!\n" )
   }
 
     io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
