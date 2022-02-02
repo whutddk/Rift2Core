@@ -84,7 +84,7 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
       }
     }
 
-      if ( i < dp - 4 ) {
+      if ( i < dp - 3 ) {
     when( zipping(i) === 1.U ) {
 
       buff(i) := buff(i+1)
