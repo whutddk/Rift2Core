@@ -187,7 +187,8 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
       //ready 和abort可能互斥，需要优化接口
       io.commit(m).ready := log(phy(m)) === "b11".U
 
-      when( io.commit(m).valid & io.commit(m).bits.is_abort ) {
+      //暂时CMM只支持chn0 进行abort
+      when( io.commit(m).valid & io.commit(m).bits.is_abort & m.U === 0.U) {
         /** clear all log to 0, except that archit_ptr point to, may be override */
         for ( j <- 0 until dp-1 ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
         for ( n <- 0 until m ) yield { assert( io.commit(n).valid & ~io.commit(n).bits.is_abort) }
@@ -202,8 +203,8 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
         archit_ptr(raw(m)) := phy(m)
       }
 
-
-      when (io.commit(m).valid & io.commit(m).bits.is_abort) {
+      //暂时CMM只支持chn0 进行abort
+      when (io.commit(m).valid & io.commit(m).bits.is_abort & m.U === 0.U) {
         for ( j <- 0 until 32 ) yield {
           rename_ptr(j) := archit_ptr(j)
           for ( n <- 0 until m ) {
