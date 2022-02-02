@@ -216,7 +216,9 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
   }
 
 
-
+  archit_ptr.map{
+    i => assert( log(i) === "b11".U, "Assert Failed, archit point to should be b11.U!\n")
+  }
 
 
   io.diff_register.zero := files(archit_ptr(0))
