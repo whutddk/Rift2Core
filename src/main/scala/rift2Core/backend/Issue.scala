@@ -74,14 +74,18 @@ class Out_of_Order_Issue() extends Module {
     io.ooo_readOp(i).reg.bits  := io.ooo_dpt_iss(i).bits.phy
 
     alu_iss_rePort.io.enq(i).valid := io.ooo_readOp(i).reg.fire & io.ooo_dpt_iss(i).bits.alu_isa.is_alu
-    // lsu_iss_rePort.io.enq(i).valid := io.ooo_readOp(i).reg.fire & io.ooo_dpt_iss(i).bits.lsu_isa.is_lsu
     mul_iss_rePort.io.enq(i).valid := io.ooo_readOp(i).reg.fire & io.ooo_dpt_iss(i).bits.mul_isa.is_mul
 
     alu_iss_rePort.io.enq(i).bits := Mux( alu_iss_rePort.io.enq(i).valid, Pkg_alu_iss(io.ooo_readOp(i), io.ooo_dpt_iss(i).bits), DontCare )
-    // lsu_iss_rePort.io.enq(i).bits := Mux( lsu_iss_rePort.io.enq(i).valid, Pkg_lsu_iss(io.ooo_readOp(i), io.ooo_dpt_iss(i).bits), DontCare )
     mul_iss_rePort.io.enq(i).bits := Mux( mul_iss_rePort.io.enq(i).valid, Pkg_mul_iss(io.ooo_readOp(i), io.ooo_dpt_iss(i).bits), DontCare )
 
     io.ooo_dpt_iss(i).ready := io.ooo_readOp(i).reg.ready & alu_iss_rePort.io.enq(i).ready & mul_iss_rePort.io.enq(i).ready
+
+    assert( io.ooo_readOp(i).reg.fire === io.ooo_dpt_iss(i).fire )
+    when( io.ooo_dpt_iss(i).fire ) {
+      assert( PopCount( Seq(alu_iss_rePort.io.enq(i).fire, mul_iss_rePort.io.enq(i).fire) ) === 1.U )    
+    }
+
   }
 
   def Pkg_alu_iss(op: iss_readOp_info, dpt: Dpt_info): Alu_iss_info = {
@@ -210,6 +214,13 @@ class In_Order_Issue extends Module {
 
 
   io.ito_dpt_iss.ready := io.ito_readOp.reg.ready & bru_iss_fifo.io.enq.ready & csr_iss_fifo.io.enq.ready & lsu_iss_fifo.io.enq.ready
+  
+
+  assert( io.ito_readOp.reg.fire === io.ito_dpt_iss.fire )
+  when( io.ito_dpt_iss.fire ) {
+    assert( PopCount( Seq(bru_iss_fifo.io.enq.fire, csr_iss_fifo.io.enq.fire, lsu_iss_fifo.io.enq.fire) ) === 1.U )
+  }
+
 
 
 
