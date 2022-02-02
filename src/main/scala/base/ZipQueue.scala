@@ -50,7 +50,7 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
 
   for ( i <- 0 until dp ) {
     when( valid(i) === false.B ) {
-      if ( i < dp - 4 ) {
+      if ( i < dp - 3 ) {
         when( valid(i+1) === true.B && is_zipped(i+1)(1) === false.B && is_zipped(i+1)(2) === false.B) {
           is_zipped(i+1)(0) := true.B
           zipping(i) := 1.U
