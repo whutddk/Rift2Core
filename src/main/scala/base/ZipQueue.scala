@@ -153,7 +153,7 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module{
   // }
 
   for ( i <- 0 until in ) yield {  
-    io.enq(i).ready := valid(wr_ptr+i.U) === false.B
+    io.enq(i).ready := (valid(wr_ptr+i.U) === false.B) & (wr_ptr < (dp-i).U)
   }
 
   for ( i <- 0 until out ) yield {
