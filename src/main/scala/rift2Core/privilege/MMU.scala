@@ -196,8 +196,8 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     io.mmu_if.bits.is_access_fault :=
       PMP( io.cmm_mmu, ipaddr, Cat( io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R) ) | 
       (ptw.io.ptw_o.bits.is_access_fault & ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid) |
-      ipaddr(63,32) =/= (0.U) |
-      ipaddr(31,29) === (0.U)
+      ipaddr(63,32) =/= (0.U)// |
+      //ipaddr(31,29) === (0.U)
 
     io.mmu_if.bits.is_paging_fault := 
       ~is_bypass_if &
@@ -232,8 +232,8 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     io.mmu_lsu.bits.is_access_fault :=
       PMP( io.cmm_mmu, dpaddr, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R) ) | 
       (ptw.io.ptw_o.bits.is_access_fault & (~ptw.io.ptw_o.bits.is_X & ptw.io.ptw_o.valid)) |
-      dpaddr(63,32) =/= (0.U) |
-      dpaddr(31,29) === (0.U)
+      dpaddr(63,32) =/= (0.U)// |
+      //dpaddr(31,29) === (0.U)
 
     io.mmu_lsu.bits.is_paging_fault :=
       ~is_bypass_ls & (

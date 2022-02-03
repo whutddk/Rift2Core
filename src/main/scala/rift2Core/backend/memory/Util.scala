@@ -103,7 +103,7 @@ class regionMux(implicit p: Parameters) extends DcacheModule{
   })
 
   val psel = io.enq.bits.paddr(31,28)
-  val sel = Mux( psel(3), 0.U, Mux( psel(2), 1.U, 2.U) )
+  val sel = Mux( psel(3), 0.U, Mux( psel(2), 1.U, Mux( psel(1), 2.U, 3.U) ) )
 
 
   io.enq.ready := false.B

@@ -116,7 +116,9 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val iss_stage = {
     val mdl = Module(new Issue)
     mdl.io.ooo_dpt_iss <> dpt_stage.io.ooo_dpt_iss
-    mdl.io.ito_dpt_iss <> dpt_stage.io.ito_dpt_iss
+    mdl.io.bru_dpt_iss <> dpt_stage.io.bru_dpt_iss
+    mdl.io.csr_dpt_iss <> dpt_stage.io.csr_dpt_iss
+    mdl.io.lsu_dpt_iss <> dpt_stage.io.lsu_dpt_iss
     mdl
   }
 
@@ -135,7 +137,9 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
     val mdl = Module(new WriteBack)
     mdl.io.dpt_rename <> dpt_stage.io.dpt_rename
     mdl.io.ooo_readOp <> iss_stage.io.ooo_readOp
-    mdl.io.ito_readOp <> iss_stage.io.ito_readOp
+    mdl.io.bru_readOp <> iss_stage.io.bru_readOp
+    mdl.io.csr_readOp <> iss_stage.io.csr_readOp
+    mdl.io.lsu_readOp <> iss_stage.io.lsu_readOp
     mdl.io.fpu_readOp.reg.valid := false.B
     mdl.io.fpu_readOp.reg.bits := DontCare
 
