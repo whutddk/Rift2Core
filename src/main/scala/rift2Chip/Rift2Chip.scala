@@ -57,7 +57,7 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     )
   ))
 
-  val sysRange = AddressSet(0x00000000L, 0x7fffffffL).subtract(AddressSet(0x00000000L, 0x1fffffffL))
+  val sysRange = Seq(AddressSet(0x00000000L, 0x7fffffffL)) //.subtract(AddressSet(0x00000000L, 0x1fffffffL))
   val sysAXI4SlaveNode = AXI4SlaveNode(Seq(
     AXI4SlavePortParameters(
       slaves = Seq(
