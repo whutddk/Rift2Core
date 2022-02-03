@@ -215,8 +215,18 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
       when( cache(i).io.deq.bits.is_load_amo ) { assert(cache(i).io.deq.fire === mdl.io.in(i).fire) }
     }
 
-    mdl.io.in(nm)   <> system.io.deq
-    mdl.io.in(nm+1) <> periph.io.deq
+
+    mdl.io.in(nm).valid := system.io.deq.valid & system.io.deq.bits.is_load_amo
+    mdl.io.in(nm).bits := Mux( mdl.io.in(nm).valid, system.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
+    system.io.deq.ready := mdl.io.in(nm).ready | ~system.io.deq.bits.is_load_amo
+    when( system.io.deq.bits.is_load_amo ) { assert(system.io.deq.fire === mdl.io.in(nm).fire) }
+
+    mdl.io.in(nm+1).valid := periph.io.deq.valid & periph.io.deq.bits.is_load_amo
+    mdl.io.in(nm+1).bits := Mux( mdl.io.in(nm+1).valid, periph.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
+    periph.io.deq.ready := mdl.io.in(nm+1).ready | ~periph.io.deq.bits.is_load_amo
+    when( periph.io.deq.bits.is_load_amo ) { assert(periph.io.deq.fire === mdl.io.in(nm+1).fire) }
+
+
     mdl
   }
 
