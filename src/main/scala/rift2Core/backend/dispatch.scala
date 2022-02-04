@@ -36,7 +36,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
     val csr_dpt_iss = new DecoupledIO(new Dpt_info)
     val lsu_dpt_iss = new DecoupledIO(new Dpt_info)
 
-    val rod_i = Vec(rn_chn,new DecoupledIO(new Info_reorder_i))
+    val rod_i = Vec(cmm_chn,new DecoupledIO(new Info_reorder_i))
  
   })
 
