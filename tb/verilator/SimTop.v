@@ -166,7 +166,7 @@ module SimTop (
 
 	wire         io_sys_chn_ar_ready;
 	wire         io_sys_chn_ar_valid;
-	wire         io_sys_chn_ar_bits_id;
+	wire [3:0]   io_sys_chn_ar_bits_id;
 	wire [31:0]  io_sys_chn_ar_bits_addr;
 	wire [7:0]   io_sys_chn_ar_bits_len;
 	wire [2:0]   io_sys_chn_ar_bits_size;
@@ -178,14 +178,15 @@ module SimTop (
 	wire         io_sys_chn_ar_bits_user;
 	wire         io_sys_chn_r_ready;
 	wire         io_sys_chn_r_valid;
-	wire         io_sys_chn_r_bits_id;
+	wire [3:0]   io_sys_chn_r_bits_id;
 	wire [63:0]  io_sys_chn_r_bits_data;
 	wire [1:0]   io_sys_chn_r_bits_rsp;
 	wire         io_sys_chn_r_bits_last;
 	wire         io_sys_chn_r_bits_user;
+
 	wire         io_sys_chn_aw_ready;
 	wire         io_sys_chn_aw_valid;
-	wire         io_sys_chn_aw_bits_id;
+	wire  [3:0]   io_sys_chn_aw_bits_id;
 	wire [31:0]  io_sys_chn_aw_bits_addr;
 	wire [7:0]   io_sys_chn_aw_bits_len;
 	wire [2:0]   io_sys_chn_aw_bits_size;
@@ -203,7 +204,7 @@ module SimTop (
 	wire         io_sys_chn_w_bits_user;
 	wire         io_sys_chn_b_ready;
 	wire         io_sys_chn_b_valid;
-	wire         io_sys_chn_b_bits_id;
+	wire [3:0]   io_sys_chn_b_bits_id;
 	wire [1:0]   io_sys_chn_b_bits_rsp;
 	wire         io_sys_chn_b_bits_user;
 
@@ -216,48 +217,45 @@ Rift2Chip s_Rift2Chip(
 	.clock(CLK),
 	.reset(~RSTn),
 
-	.io_sys_chn_ar_ready     (io_sys_chn_ar_ready),
-	.io_sys_chn_ar_valid     (io_sys_chn_ar_valid),
-	.io_sys_chn_ar_bits_id   (),
-	.io_sys_chn_ar_bits_addr (io_sys_chn_ar_bits_addr),
-	.io_sys_chn_ar_bits_len  (),
-	.io_sys_chn_ar_bits_size (),
-	.io_sys_chn_ar_bits_burst(),
-	.io_sys_chn_ar_bits_lock (),
-	.io_sys_chn_ar_bits_cache(),
-	.io_sys_chn_ar_bits_port (),
-	.io_sys_chn_ar_bits_qos  (),
-	.io_sys_chn_ar_bits_user (),
-	.io_sys_chn_r_ready      (io_sys_chn_r_ready),
-	.io_sys_chn_r_valid      (io_sys_chn_r_valid),
-	.io_sys_chn_r_bits_id    (1'b0),
-	.io_sys_chn_r_bits_data  (io_sys_chn_r_bits_data),
-	.io_sys_chn_r_bits_rsp   (io_sys_chn_r_bits_rsp),
-	.io_sys_chn_r_bits_last  (1'b1),
-	.io_sys_chn_r_bits_user  (1'b0),
-	.io_sys_chn_aw_ready     (io_sys_chn_aw_ready),
-	.io_sys_chn_aw_valid     (io_sys_chn_aw_valid),
-	.io_sys_chn_aw_bits_id   (),
-	.io_sys_chn_aw_bits_addr (io_sys_chn_aw_bits_addr),
-	.io_sys_chn_aw_bits_len  (),
-	.io_sys_chn_aw_bits_size (),
-	.io_sys_chn_aw_bits_burst(),
-	.io_sys_chn_aw_bits_lock (),
-	.io_sys_chn_aw_bits_cache(),
-	.io_sys_chn_aw_bits_port (),
-	.io_sys_chn_aw_bits_qos  (),
-	.io_sys_chn_aw_bits_user (),
-	.io_sys_chn_w_ready      (io_sys_chn_w_ready),
-	.io_sys_chn_w_valid      (io_sys_chn_w_valid),
-	.io_sys_chn_w_bits_data  (io_sys_chn_w_bits_data),
-	.io_sys_chn_w_bits_strb  (io_sys_chn_w_bits_strb),
-	.io_sys_chn_w_bits_last  (),
-	.io_sys_chn_w_bits_user  (),
-	.io_sys_chn_b_ready      (io_sys_chn_b_ready),
-	.io_sys_chn_b_valid      (io_sys_chn_b_valid),
-	.io_sys_chn_b_bits_id    (1'b0),
-	.io_sys_chn_b_bits_rsp   (io_sys_chn_b_bits_rsp),
-	.io_sys_chn_b_bits_user  (1'b0),
+  .system_0_aw_ready(io_sys_chn_aw_ready),
+  .system_0_aw_valid(io_sys_chn_aw_valid),
+  .system_0_aw_bits_id(io_sys_chn_aw_bits_id),
+  .system_0_aw_bits_addr(io_sys_chn_aw_bits_addr),
+  .system_0_aw_bits_len(io_sys_chn_aw_bits_len),
+  .system_0_aw_bits_size(io_sys_chn_aw_bits_size),
+  .system_0_aw_bits_burst(io_sys_chn_aw_bits_burst),
+  .system_0_aw_bits_lock(io_sys_chn_aw_bits_lock),
+  .system_0_aw_bits_cache(io_sys_chn_aw_bits_cache),
+  .system_0_aw_bits_prot(io_sys_chn_aw_bits_port),
+  .system_0_aw_bits_qos(io_sys_chn_aw_bits_qos),
+  .system_0_w_ready(io_sys_chn_w_ready),
+  .system_0_w_valid(io_sys_chn_w_valid),
+  .system_0_w_bits_data(io_sys_chn_w_bits_data),
+  .system_0_w_bits_strb(io_sys_chn_w_bits_strb),
+  .system_0_w_bits_last(io_sys_chn_w_bits_last),
+  .system_0_b_ready(io_sys_chn_b_ready),
+  .system_0_b_valid(io_sys_chn_b_valid),
+  .system_0_b_bits_id(io_sys_chn_b_bits_id),
+  .system_0_b_bits_resp(io_sys_chn_b_bits_rsp),
+
+  .system_0_ar_ready(io_sys_chn_ar_ready),
+  .system_0_ar_valid(io_sys_chn_ar_valid),
+  .system_0_ar_bits_id(io_sys_chn_ar_bits_id),
+  .system_0_ar_bits_addr(io_sys_chn_ar_bits_addr),
+  .system_0_ar_bits_len(io_sys_chn_ar_bits_len),
+  .system_0_ar_bits_size(io_sys_chn_ar_bits_size),
+  .system_0_ar_bits_burst(io_sys_chn_ar_bits_burst),
+  .system_0_ar_bits_lock(io_sys_chn_aw_bits_lock),
+  .system_0_ar_bits_cache(io_sys_chn_ar_bits_cache),
+  .system_0_ar_bits_prot(io_sys_chn_ar_bits_port),
+  .system_0_ar_bits_qos(io_sys_chn_ar_bits_qos),
+  .system_0_r_ready(io_sys_chn_r_ready),
+  .system_0_r_valid(io_sys_chn_r_valid),
+  .system_0_r_bits_id(io_sys_chn_r_bits_id),
+  .system_0_r_bits_data(io_sys_chn_r_bits_data),
+  .system_0_r_bits_resp(io_sys_chn_r_bits_rsp),
+  .system_0_r_bits_last(io_sys_chn_r_bits_last),
+
 
   .memory_0_aw_ready(io_mem_chn_aw_ready),
   .memory_0_aw_valid(io_mem_chn_aw_valid),
@@ -351,6 +349,11 @@ axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram
 
 
 debuger i_debuger(
+
+	.DEBUGER_AWID   (io_sys_chn_aw_bits_id),
+	.DEBUGER_BID    (io_sys_chn_b_bits_id),
+	.DEBUGER_ARID   (io_sys_chn_ar_bits_id),
+	.DEBUGER_RID    (io_sys_chn_r_bits_id),
 
 	.DEBUGER_AWADDR(io_sys_chn_aw_bits_addr),
 	.DEBUGER_AWVALID(io_sys_chn_aw_valid),

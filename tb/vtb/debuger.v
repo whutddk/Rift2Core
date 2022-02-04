@@ -23,6 +23,11 @@
 
 module debuger (
 
+	input [3:0] DEBUGER_AWID,
+	output [3:0] DEBUGER_BID,
+	input [3:0] DEBUGER_ARID,
+	output [3:0] DEBUGER_RID,
+
 	input [31:0] DEBUGER_AWADDR,
 	input DEBUGER_AWVALID,
 	output DEBUGER_AWREADY,
@@ -52,7 +57,8 @@ module debuger (
 
 
  
-
+	gen_dffren # (.DW(4)) awid_dffren (.dnxt(DEBUGER_AWID), .qout(DEBUGER_BID), .en(DEBUGER_AWVALID & DEBUGER_AWREADY), .CLK(CLK), .RSTn(RSTn));
+	gen_dffren # (.DW(4)) arid_dffren (.dnxt(DEBUGER_ARID), .qout(DEBUGER_RID), .en(DEBUGER_ARVALID & DEBUGER_ARREADY), .CLK(CLK), .RSTn(RSTn));
 
 	assign DEBUGER_AWREADY	= debuger_awready_qout;
 	assign DEBUGER_WREADY	= debuger_wready_qout;

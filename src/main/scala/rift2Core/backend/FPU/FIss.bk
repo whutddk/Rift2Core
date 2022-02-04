@@ -22,15 +22,12 @@ import rift2Core.define._
 import rift2Core.backend._
 
 
-class fpu_iss_fwb_info extends Bundle {
-  val rs = Output(Vec(3,UInt(6.W)))
-  val op = Input(Vec(3,UInt(64.W)))
-}
 
-class fpu_iss_iwb_info extends Bundle {
-  val rs = Output(UInt(6.W))
-  val op = Input(UInt(64.W))
-}
+
+// class fpu_iss_iwb_info extends Bundle {
+//   val rs = Output(UInt(6.W))
+//   val op = Input(UInt(64.W))
+// }
 
 
 

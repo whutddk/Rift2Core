@@ -139,13 +139,12 @@ class Lsu_isa extends Bundle {
   def is_sc = sc_d | sc_w
   def is_lr = lr_d | lr_w
 
-  def is_lu  = lb | lh | lw | ld | lbu | lhu | lwu |  flw | fld 
-  def is_su  = sb | sh | sw | sd | fsw | fsd
+  def is_lu  = lb | lh | lw | ld | lbu | lhu | lwu |  flw | fld | is_lr
+  def is_su  = sb | sh | sw | sd | fsw | fsd 
   def is_nls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd
   def is_lrsc = is_sc | is_lr
   def is_amo =
-    amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d |
-    lr_w | lr_d | sc_w | sc_d 
+    amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d | is_sc
   def is_fls = flw | fsw | fld | fsd
   def is_fence = fence | fence_i | sfence_vma
   def is_lsu = is_nls | is_lrsc | is_amo | is_fls | is_fence
@@ -309,7 +308,9 @@ class Fpu_isa extends Bundle {
   val fcsr_rs = Bool()
   val fcsr_rc = Bool()
 
-
+  val fcsr_rwi = Bool()
+  val fcsr_rsi = Bool()
+  val fcsr_rci = Bool()
 
 
 
@@ -424,10 +425,42 @@ class Fpu_isa extends Bundle {
 }
 
 
+class Register_source(dp:Int) extends Bundle {
+  val rs1 = UInt((log2Ceil(dp)).W)
+  val rs2 = UInt((log2Ceil(dp)).W)
+  val rs3 = UInt((log2Ceil(dp)).W)
+
+  override def cloneType = ( new Register_source(dp:Int) ).asInstanceOf[this.type]
+}
+
+class Register_dstntn(dp:Int) extends Bundle {
+  val rd0 = UInt((log2Ceil(dp)).W)
+
+  // override def cloneType = ( new Register_dstntn(dp:Int) ).asInstanceOf[this.type]
+}
+
+class Operation_source extends Bundle {
+  val op1 = UInt(64.W)
+  val op2 = UInt(64.W)
+  val op3 = UInt(64.W)
+}
 
 
+class Reg_phy(dp:Int) extends Register_source(dp) {
+  val rd0 = UInt((log2Ceil(dp)).W)
 
-trait Instruction_set {
+  override def cloneType = ( new Reg_phy(dp:Int) ).asInstanceOf[this.type]
+}
+class Reg_raw extends Reg_phy(dp = 32)
+
+class Rd_Param(dp:Int) extends Register_dstntn(dp) {
+  val is_iwb = Bool()
+  val is_fwb = Bool()
+
+  override def cloneType = ( new Rd_Param(dp:Int) ).asInstanceOf[this.type]
+}
+
+class Instruction_set extends Bundle{
   val alu_isa = new Alu_isa
   val bru_isa = new Bru_isa
   val lsu_isa = new Lsu_isa
@@ -447,6 +480,10 @@ trait Instruction_set {
       fpu_isa.fdiv_d | fpu_isa.fsqrt_d | fpu_isa.fsgnj_d | fpu_isa.fsgnjn_d |
       fpu_isa.fsgnjx_d | fpu_isa.fmin_d | fpu_isa. fmax_d
 
+  def is_ooo_dpt = alu_isa.is_alu | mul_isa.is_mul
+  def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr | lsu_isa.is_lsu
+  def is_privil_dpt = privil_isa.is_privil
+  def is_fpu_dpt = fpu_isa.is_fpu
   def is_iwb = ~is_fwb
   def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mul | privil_isa.is_privil | fpu_isa.is_fpu) 
 
@@ -460,85 +497,100 @@ class Instruction_param extends Bundle {
   
   val imm = UInt(64.W)
   val rm = UInt(3.W)
-  val rd0_raw = UInt(5.W)
-  val rs1_raw = UInt(5.W)
-  val rs2_raw = UInt(5.W)
-  val rs3_raw = UInt(5.W)
+  val raw = new Reg_raw
+
 }
 
-class Info_instruction extends Bundle with Instruction_set {
+class Info_instruction extends Instruction_set {
   val param = new Instruction_param
-  // val is_access_fault = Bool()
-  // val is_paging_fault = Bool()
 
 }
 
 
-class Reg_raw extends Bundle {
-  val rd0 = UInt(5.W)
-  val rs1 = UInt(5.W)
-  val rs2 = UInt(5.W)
-  val rs3 = UInt(5.W)
-}
-
-
-class Reg_phy extends Bundle {
-  val rd0 = UInt(6.W)
-  val rs1 = UInt(6.W)
-  val rs2 = UInt(6.W)
-  val rs3 = UInt(6.W)
+class Dpt_info extends Info_instruction {
+  val phy = new Reg_phy(dp = 64)
 }
 
 
 
-class Alu_dpt_info extends Bundle {
-  val isa = new Alu_isa()
-  val param = new Instruction_param
-  val phy = new Reg_phy
+class Alu_function extends Bundle {
 
+  val add = Bool()
+  val slt = Bool()
+  val xor = Bool()
+  val or  = Bool()
+  val and = Bool()
+  val sll = Bool()
+  val srl = Bool()
+  val sra = Bool()
 }
 
+class Alu_param extends Rd_Param(64) {
+  val is_32w = Bool()
+  val is_usi = Bool()
 
+  val dat = new Operation_source
 
+  override def cloneType = ( new Alu_param ).asInstanceOf[this.type]
+}
 
-
-class Bru_dpt_info extends Bundle {
-  val isa = new Bru_isa
-  val param = new Instruction_param
-  val phy = new Reg_phy
+class Alu_iss_info extends Bundle {
+  val fun = new Alu_function
+  val param = new Alu_param
 }
 
 
 
 
 
-class Lsu_dpt_info extends Bundle {
-  val isa = new Lsu_isa
-  val param = new Instruction_param
-  val phy = new Reg_phy
+class Bru_param extends Rd_Param(64) {
+  val is_rvc = Bool()
+  val pc = UInt(64.W)
+  val imm = UInt(64.W)
+
+  val dat = new Operation_source
+
+  override def cloneType = ( new Bru_param ).asInstanceOf[this.type]
+}
+
+class Bru_iss_info extends Bundle {
+  val fun = new Bru_isa
+  val param = new Bru_param
 }
 
 
 
-class Csr_dpt_info extends Bundle {
-  val isa = new Csr_isa
-  val param = new Instruction_param
-  val phy = new Reg_phy
 
+
+class Lsu_param extends Rd_Param(64) {
+  val dat = new Operation_source
+
+  override def cloneType = ( new Lsu_param ).asInstanceOf[this.type]
+}
+
+class Lsu_iss_info extends Bundle {
+  val fun = new Lsu_isa
+  val param = new Lsu_param
+
+  def is_misAlign =
+    Mux1H( Seq(
+      fun.is_half -> (param.dat.op1(0) =/= 0.U),
+      fun.is_word -> (param.dat.op1(1,0) =/= 0.U),
+      fun.is_dubl -> (param.dat.op1(2,0) =/= 0.U)	
+    ))
 }
 
 
-class Mul_dpt_info extends Bundle {
-  val isa = new Mul_isa
-  val param = new Instruction_param
-  val phy = new Reg_phy
-}
+
+
+
+
 
 
 class Fpu_dpt_info extends Bundle {
   val isa = new Fpu_isa
   val param = new Instruction_param
-  val phy = new Reg_phy
+  val phy = new Reg_phy(dp = 64)
 }
 
 
@@ -584,74 +636,10 @@ class Privil_dpt_info extends Bundle {
 
 
 
-class Alu_function extends Bundle {
-
-  val add = Bool()
-  val slt = Bool()
-  val xor = Bool()
-  val or  = Bool()
-  val and = Bool()
-  val sll = Bool()
-  val srl = Bool()
-  val sra = Bool()
-}
-
-class Alu_param extends Bundle {
-  val is_32w = Bool()
-  val is_usi = Bool()
 
 
-  val op1 = UInt(64.W)
-  val op2 = UInt(64.W)
-
-  val rd0_phy = UInt(6.W)
-}
-
-class Alu_iss_info extends Bundle {
-  val fun = new Alu_function
-  val param = new Alu_param
-
-}
-
-class Bru_param extends Bundle {
-  val is_rvc = Bool()
-  val pc = UInt(64.W)
-  val imm = UInt(64.W)
 
 
-  val op1 = UInt(64.W)
-  val op2 = UInt(64.W)
-
-
-  val rd0_phy = UInt(6.W)
-}
-
-class Bru_iss_info extends Bundle {
-  val fun = new Bru_isa
-  val param = new Bru_param
-
-
-}
-
-class Lsu_param extends Bundle {
-  val op1 = UInt(64.W)
-  val op2 = UInt(64.W)
-
-  val rd0_phy = UInt(6.W)
-}
-
-class Lsu_iss_info extends Bundle {
-  val fun = new Lsu_isa
-  val param = new Lsu_param
-
-  def is_misAlign =
-    Mux1H( Seq(
-      fun.is_half -> (param.op1(0) =/= 0.U),
-      fun.is_word -> (param.op1(1,0) =/= 0.U),
-      fun.is_dubl -> (param.op1(2,0) =/= 0.U)	
-    ))
-
-}
 
 
 class Csr_function extends Bundle {
@@ -660,12 +648,10 @@ class Csr_function extends Bundle {
   val rc  = Bool()
 }
 
-class Csr_param extends Bundle {
-  val op1 = UInt(64.W)
-  val op2 = UInt(12.W)
+class Csr_param extends Rd_Param(64) {
+  val dat = new Operation_source
 
-
-  val rd0_phy = UInt(6.W)
+  override def cloneType = ( new Csr_param ).asInstanceOf[this.type]
 }
 
 class Csr_iss_info extends Bundle {
@@ -673,11 +659,10 @@ class Csr_iss_info extends Bundle {
   val param = new Csr_param
 }
 
-class Mul_param extends Bundle {
-  val op1 = UInt(64.W)
-  val op2 = UInt(64.W)
+class Mul_param extends Rd_Param(64) {
+  val dat = new Operation_source
 
-  val rd0_phy = UInt(6.W)
+override def cloneType = ( new Mul_param ).asInstanceOf[this.type]
 }
 
 class Mul_iss_info extends Bundle {
@@ -685,113 +670,23 @@ class Mul_iss_info extends Bundle {
   val param = new Mul_param
 }
 
-// class Fpu_param extends Bundle {
-//   val op1 = UInt(64.W)
-//   val op2 = UInt(64.W)
-//   val op3 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_phy = UInt(6.W)
-// }
 
 
-// class Fpu_float2int_iss_info extends Bundle {
-//   val is_Float2Int = Bool()
-//   val is_Fmv       = Bool()
-//   val is_Fclass    = Bool()
-
-//   val is_in_64_32n  = Bool()
-//   val is_out_64_32n = Bool()
-//   val is_usi        = Bool()
-
-//   val op1 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_int_phy = UInt(6.W)
-// }
-
-// class Fpu_int2float_iss_info extends Bundle {
-//   val is_Int2Float = Bool()
-//   val is_Fmv       = Bool()
-
-//   val is_in_64_32n  = Bool()
-//   val is_out_64_32n = Bool()
-//   val is_usi        = Bool()
-
-//   val op1 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_float_phy = UInt(6.W)
-// }
-
-// class Fpu_float2float_iss_info extends Bundle {
-//   val is_Float2Float = Bool()
-//   val is_FloatSign   = Bool()
-
-//   val is_in_64_32n  = Bool()
-
-//   val op1 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_float_phy = UInt(6.W)
-// }
-
-// class Fpu_floatCmp_iss_info extends Bundle {
-//   val is_eq  = Bool()
-//   val is_lt  = Bool()
-//   val is_gt  = Bool()
-//   val is_min = Bool()
-//   val is_max = Bool()
-
-//   val is_in_64_32n  = Bool()
-
-//   val op1 = UInt(64.W)
-//   val op2 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_int_phy = UInt(6.W)
-//   val rd0_float_phy = UInt(6.W)
-// }
-
-// class Fpu_floatFma_iss_info extends Bundle {
-//   val fun = new Fpu_isa
-//   val param = new Fpu_param
-// }
-
-// class Fpu_floatDivSqrt_iss_info extends Bundle {
-//   val fun = new Fpu_isa
-
-
-//   val op1 = UInt(64.W)
-//   val op2 = UInt(64.W)
-//   val op3 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_phy = UInt(6.W)
-// }
-
-
-
-class Exe_iwb_info extends Bundle {
+case class WriteBack_info(dp:Int) extends Rd_Param(dp) {
   val res = UInt(64.W)
-  val rd0_phy = UInt(6.W)
-}
 
-class Exe_fwb_info extends Bundle {
-  val res = UInt(64.W)
-  val rd0_phy = UInt(6.W)
+  override def cloneType = ( new WriteBack_info(dp:Int) ).asInstanceOf[this.type]
 }
 
 
+class Info_commit_op(dp:Int) extends Bundle{
+  val raw = UInt(5.W)  
+  val phy = UInt((log2Ceil(dp)).W)
 
+  val is_abort = Bool()
 
-// class Info_bru_id extends Bundle {
-// 	val is_takenBranch_bits = Bool()
-// 	val is_takenBranch_valid = Bool()
-// 	val jalr_pc = UInt(64.W)
-// 	val jalr_valid = Bool()
-// }
-
+  override def cloneType = ( new Info_commit_op(dp:Int) ).asInstanceOf[this.type]
+}
 
 
 class Info_cmm_csr extends Bundle {
@@ -824,14 +719,10 @@ class Info_cmm_pc extends Bundle {
 
 
 
-// class Info_wb_reg extends Bundle {
-//   val dnxt = Vec(64, UInt(64.W))
-//   val enable = Vec(64, Bool())
 
-// }
 
 class Info_cmm_lsu extends Bundle {
-  val is_lr_clear = Bool()
+  // val is_lr_clear = Bool()
   val is_amo_pending = Bool()
   val is_store_commit = Vec(2, Bool())
 }
@@ -842,3 +733,14 @@ class Info_lsu_cmm extends Bundle {
   val is_misAlign = Bool()
   val trap_addr = UInt(64.W)
 }
+
+class Info_overlap extends Bundle{
+  val paddr = Output(UInt(64.W))
+  val wdata = Input(UInt(64.W))
+  val wstrb = Input(UInt(8.W))
+
+}
+
+
+
+

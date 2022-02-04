@@ -11,4 +11,35 @@ compile:
 
 clean:
 	rm generated/*.v generated/*.json generated/*.fir generated/*.f
+	make -f tb/Makefile clean
 
+
+
+sim:
+	make -f tb/Makefile sim
+
+unit:
+	make -f tb/Makefile unit
+
+single: sim
+	make -f tb/Makefile single
+
+dromajo:
+	make -f tb/Makefile dromajo
+
+dhrystone5: sim
+	make -f tb/Makefile dhrystone5
+
+dhrystone500: sim
+	make -f tb/Makefile dhrystone500
+
+coremark: sim
+	make -f tb/Makefile coremark
+
+wave:
+	make -f tb/Makefile wave
+
+
+
+module:
+	make -f tb/Makefile module
