@@ -282,6 +282,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     mdl.io.enq.bits.is_iwb := true.B
     mdl.io.enq.bits.is_fwb := false.B
     mdl.io.enq.bits.res := 0.U
+    mdl.reset := reset.asBool | io.flush
     mdl
   }
 
