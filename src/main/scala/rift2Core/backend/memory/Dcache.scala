@@ -437,7 +437,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val res_pre_pre = {
 
       val (new_data, new_strb) = overlap_wr( rdata, 0.U, overlap_wdata, overlap_wstrb)
-      new_data
+      
+      Mux( io.wr_in.bits.fun.is_lu, new_data, rdata)
     }
     val res_pre = get_loadRes( fun, paddr, res_pre_pre )
 
