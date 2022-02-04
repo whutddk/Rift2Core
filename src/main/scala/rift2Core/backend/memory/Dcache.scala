@@ -222,6 +222,9 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
   /** flag that indicated that if a cache block is dirty */
   val is_dirty = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
 
+  val flush_reg_0 = RegNext(io.flush, false.B)
+  val flush_reg_1 = RegNext(flush_reg_0, false.B)
+  val flush_reg_2 = RegNext(flush_reg_1, false.B)
   val is_pending_lr = RegInit(false.B)
   val is_lr_64_32n = RegInit(false.B)
   val lr_addr = RegInit(0.U(64.W))
@@ -471,7 +474,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
 
 
-  when( io.flush ) {
+  when( io.flush | flush_reg_0 | flush_reg_1 | flush_reg_2 ) {
     is_pending_lr := false.B
   }
   .elsewhen( io.deq.fire & io.wr_in.bits.fun.is_lr ) {

@@ -34,10 +34,10 @@ trait Fence_op{
   val trans_kill = RegInit(false.B)
 
   /** indicate if the fence is an icache fence */
-  val is_fence  = RegInit(false.B)
-  val is_fence_i  = RegInit(false.B)
-  val is_sfence_vma  = RegInit(false.B)
-  def is_fence_op = is_fence | is_fence_i | is_sfence_vma
+  // val is_fence  = RegInit(false.B)
+  // val is_fence_i  = RegInit(false.B)
+  // val is_sfence_vma  = RegInit(false.B)
+  // def is_fence_op = is_fence | is_fence_i | is_sfence_vma
 }
 
 
@@ -277,7 +277,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   val fe_wb_fifo = {
     val mdl = Module( new Queue( new WriteBack_info(64), 1, false, true ) )
     mdl.reset := reset.asBool | io.flush
-    mdl.io.enq.valid := is_empty & is_fence_op
+    mdl.io.enq.valid := is_empty & is_fence_op & io.lsu_iss_exe.valid
     mdl.io.enq.bits.rd0 := io.lsu_iss_exe.bits.param.rd0
     mdl.io.enq.bits.is_iwb := true.B
     mdl.io.enq.bits.is_fwb := false.B
@@ -344,16 +344,20 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   when( io.flush ) { trans_kill := true.B }
   .elsewhen( is_empty ) { trans_kill := false.B }
 
-  when( io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & ~is_fence_op & ~io.flush) {
-    is_fence      := io.lsu_iss_exe.bits.fun.fence
-    is_fence_i     := io.lsu_iss_exe.bits.fun.fence_i
-    is_sfence_vma := io.lsu_iss_exe.bits.fun.sfence_vma
-  }
-  .elsewhen( is_empty & ( is_fence_op | io.flush )) {
-    is_fence      := false.B
-    is_fence_i    := false.B
-    is_sfence_vma := false.B
-  }
+  def is_fence      = io.lsu_iss_exe.bits.fun.fence
+  def is_fence_i    = io.lsu_iss_exe.bits.fun.fence_i
+  def is_sfence_vma = io.lsu_iss_exe.bits.fun.sfence_vma
+  def is_fence_op = is_fence | is_fence_i | is_sfence_vma
+  // when( io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & ~is_fence_op & ~io.flush) {
+  //   is_fence      := io.lsu_iss_exe.bits.fun.fence
+  //   is_fence_i     := io.lsu_iss_exe.bits.fun.fence_i
+  //   is_sfence_vma := io.lsu_iss_exe.bits.fun.sfence_vma
+  // }
+  // .elsewhen( (is_empty &  is_fence_op) | io.flush ) {
+  //   is_fence      := false.B
+  //   is_fence_i    := false.B
+  //   is_sfence_vma := false.B
+  // }
 
 }
 
