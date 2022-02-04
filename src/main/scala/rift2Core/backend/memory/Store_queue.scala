@@ -29,18 +29,6 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
-// class Reservation_Info extends Bundle {
-//   val paddr = UInt(64.W)
-//   val wdata = UInt(64.W)
-//   val wstrb  = UInt(8.W)
-
-//   val fun = new Lsu_isa
-
-//   val chk_idx = UInt(6.W)
-//   val rd = new Rd_Param
-
-//   def wmask = Strb2Mask(wstrb)
-// }
 
 
 /**
@@ -58,7 +46,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
     val cmm_lsu = Input(new Info_cmm_lsu)
     val is_empty = Output(Bool())
 
-    val overlap =  Flipped(Vec(nm+2,new Info_overlap))
+    val overlap =  Flipped(new Info_overlap)
 
     val flush = Input(Bool())
 
@@ -118,16 +106,16 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
 
     io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
 
-  for ( chn <- 0 until (nm+2) ) yield {
-    // val overlap_buff = Wire(Vec(dp, (new Info_cache_s0s1)))
-    val overlap_buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Info_cache_s0s1) )))
+  // for ( chn <- 0 until (nm+2) ) yield {
+    val overlap_buff = Wire(Vec(dp, (new Info_cache_s0s1)))
+    // val overlap_buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Info_cache_s0s1) )))
 
 
     when( rd_ptr_reg(dp_w) =/= wr_ptr_reg(dp_w) ) {
       assert( rd_ptr >= wr_ptr )
       for ( i <- 0 until dp ) yield {
         val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
-        when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).paddr === io.overlap(chn).paddr) ) {
+        when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).paddr === io.overlap.paddr) ) {
           overlap_buff(i) := buff(ro_ptr)
         } .otherwise {
           overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
@@ -137,7 +125,7 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
       assert( rd_ptr <= wr_ptr )
       for ( i <- 0 until dp ) yield {
         val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
-        when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).paddr === io.overlap(chn).paddr) ) {
+        when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).paddr === io.overlap.paddr) ) {
           overlap_buff(i) := buff(ro_ptr)
         } .otherwise {
           overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
@@ -160,9 +148,9 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
         temp_wstrb(i) := wstrb
       }
     }
-    io.overlap(chn).wdata := temp_wdata(dp-1)
-    io.overlap(chn).wstrb := temp_wstrb(dp-1)
-  }
+    io.overlap.wdata := temp_wdata(dp-1)
+    io.overlap.wstrb := temp_wstrb(dp-1)
+  // }
 
  
 

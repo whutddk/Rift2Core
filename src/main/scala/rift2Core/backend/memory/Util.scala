@@ -295,7 +295,66 @@ object pkg_Info_cache_s0s1{
   
   }
 
+  def apply( ori: Lsu_iss_info, overlap_data: UInt, overlap_wstrb: UInt)(implicit p: Parameters) = {
 
+    val res = Wire(new Info_cache_s0s1)
+
+    val (paddr, wdata, wstrb ) = align_mem( ori )
+    res.paddr := paddr
+    res.wdata := VecInit( Seq.fill(4)(overlap_data) )
+    res.wstrb := overlap_wstrb
+
+    {
+      res.fun := 0.U.asTypeOf(new Cache_op)
+      // res.fun := ori.fun
+      res.fun.lb  := ori.fun.lb
+      res.fun.lh  := ori.fun.lh
+      res.fun.lw  := ori.fun.lw
+      res.fun.ld  := ori.fun.ld
+      res.fun.lbu := ori.fun.lbu
+      res.fun.lhu := ori.fun.lhu
+      res.fun.lwu := ori.fun.lwu
+      res.fun.sb  := ori.fun.sb
+      res.fun.sh  := ori.fun.sh
+      res.fun.sw  := ori.fun.sw
+      res.fun.sd  := ori.fun.sd
+      res.fun.fence      := ori.fun.fence
+      res.fun.fence_i    := ori.fun.fence_i
+      res.fun.sfence_vma := ori.fun.sfence_vma
+      res.fun.lr_w       := ori.fun.lr_w
+      res.fun.sc_w       := ori.fun.sc_w
+      res.fun.amoswap_w  := ori.fun.amoswap_w
+      res.fun.amoadd_w   := ori.fun.amoadd_w
+      res.fun.amoxor_w   := ori.fun.amoxor_w
+      res.fun.amoand_w   := ori.fun.amoand_w
+      res.fun.amoor_w    := ori.fun.amoor_w
+      res.fun.amomin_w   := ori.fun.amomin_w
+      res.fun.amomax_w   := ori.fun.amomax_w
+      res.fun.amominu_w  := ori.fun.amominu_w
+      res.fun.amomaxu_w  := ori.fun.amomaxu_w
+      res.fun.lr_d       := ori.fun.lr_d
+      res.fun.sc_d       := ori.fun.sc_d
+      res.fun.amoswap_d  := ori.fun.amoswap_d
+      res.fun.amoadd_d   := ori.fun.amoadd_d
+      res.fun.amoxor_d   := ori.fun.amoxor_d
+      res.fun.amoand_d   := ori.fun.amoand_d
+      res.fun.amoor_d    := ori.fun.amoor_d
+      res.fun.amomin_d   := ori.fun.amomin_d
+      res.fun.amomax_d   := ori.fun.amomax_d
+      res.fun.amominu_d  := ori.fun.amominu_d
+      res.fun.amomaxu_d  := ori.fun.amomaxu_d
+      res.fun.flw        := ori.fun.flw
+      res.fun.fsw        := ori.fun.fsw
+      res.fun.fld        := ori.fun.fld
+      res.fun.fsd        := ori.fun.fsd
+    }
+    res.rd.rd0 := ori.param.rd0
+    res.rd.is_iwb := ori.param.is_iwb
+    res.rd.is_fwb := ori.param.is_fwb
+    res.chk_idx := DontCare
+    res
+  
+  }
 }
 
 object overlap_wr{

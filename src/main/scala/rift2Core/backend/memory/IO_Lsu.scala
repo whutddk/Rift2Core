@@ -36,7 +36,6 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = new DecoupledIO(new Info_cache_retn)
     val is_empty = Output(Bool())
-    val overlap = new Info_overlap
 
     val getPut    = new DecoupledIO(new TLBundleA(edge.bundle))
     val access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
@@ -99,10 +98,11 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
     val rdata = io.access.bits.data
     val paddr = pending_paddr
     val fun = pending_fun
+    val overlap_wdata = io.enq.bits.wdata(0)
+    val overlap_wstrb = io.enq.bits.wstrb
     
     val res_pre_pre = {
-      io.overlap.paddr := paddr
-      val (new_data, new_strb) = overlap_wr( rdata, 0.U, io.overlap.wdata, io.overlap.wstrb)
+      val (new_data, new_strb) = overlap_wr( rdata, 0.U, overlap_wdata, overlap_wstrb)
       new_data
     }
     val res_pre = get_loadRes( fun, paddr, res_pre_pre )
@@ -115,23 +115,7 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
   
   io.access.ready := io.deq.ready
 
-  // io.deq.bits.res := {
-  //   val mdl = Module(new overlap_chk)
-  //   val ori = io.access.bits.data
 
-  //   mdl.io.rd_info.valid := io.deq.valid
-  //   mdl.io.rd_info.bits.paddr :=
-  //   mdl.io.rd_info.bits.rdata := 
-
-  //   mdl.io.wr_info := io.overlap
-
-  //   Mux( mdl.io.wr_info.rsp.valid,
-  //     overlap_wr( ori, DontCare, mdl.io.wr_info.rsp.bits.wdata, mdl.io.wr_info.rsp.bits.wstrb)._1,
-  //     ori
-  //   )
-  // }
-  
-  // io.deq.bits.rd  := pending_rd
 
     
 }

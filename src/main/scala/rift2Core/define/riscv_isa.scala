@@ -507,39 +507,9 @@ class Info_instruction extends Instruction_set {
 }
 
 
-
-
-
-
 class Dpt_info extends Info_instruction {
   val phy = new Reg_phy(dp = 64)
 }
-
-// class Bru_dpt_info extends Bundle {
-//   val isa = new Bru_isa
-//   val param = new Instruction_param
-//   val phy = new Reg_phy(dp = 64)
-// }
-
-// class Lsu_dpt_info extends Bundle {
-//   val isa = new Lsu_isa
-//   val param = new Instruction_param
-//   val phy = new Reg_phy(dp = 64)
-// }
-
-// class Csr_dpt_info extends Bundle {
-//   val isa = new Csr_isa
-//   val param = new Instruction_param
-//   val phy = new Reg_phy(dp = 64)
-
-// }
-
-// class Mul_dpt_info extends Bundle {
-//   val isa = new Mul_isa
-//   val param = new Instruction_param
-//   val phy = new Reg_phy(dp = 64)
-// }
-
 
 
 
