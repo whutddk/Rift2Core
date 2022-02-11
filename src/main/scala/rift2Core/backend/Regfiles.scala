@@ -33,14 +33,14 @@ class dpt_rename_info(dp: Int) extends Bundle{
   val rsp = Input(new Reg_phy(dp))
   val req = Decoupled(new Reg_raw)
 
-  override def cloneType = ( new dpt_rename_info(dp:Int) ).asInstanceOf[this.type]
+  // override def cloneType = ( new dpt_rename_info(dp:Int) ).asInstanceOf[this.type]
 }
 
 class iss_readOp_info(dp: Int) extends Bundle {
   val reg = Decoupled(new Register_source(dp))
   val dat = Input(new Operation_source)
 
-  override def cloneType = ( new iss_readOp_info(dp:Int) ).asInstanceOf[this.type]
+  // override def cloneType = ( new iss_readOp_info(dp:Int) ).asInstanceOf[this.type]
 }
 
 

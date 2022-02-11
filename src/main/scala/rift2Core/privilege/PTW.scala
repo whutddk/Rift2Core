@@ -64,13 +64,13 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   val kill_trans = RegInit(false.B)
 
-  val fsm = new Bundle {
+  class FSM{
     val state_dnxt = Wire(UInt(2.W))
     val state_qout = RegNext( state_dnxt, state.free )
-
   }
+  val fsm = new FSM
 
-  val walk = new Bundle {
+  class WALK{
     val req = RegEnable( io.ptw_i.bits, (fsm.state_qout === 0.U & fsm.state_dnxt =/= 0.U) )
     val rsp = RegInit( 0.U.asTypeOf(new Info_ptw_rsp) )
     val rsp_valid = RegInit(false.B)
@@ -145,7 +145,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
 
   }
-
+  val walk = new WALK
 
   val cache_dat = new Cache_dat( 64, 56, 4, 1, 128 )
   val cache_tag = new Cache_tag( 64, 56, 4, 1, 128, nm = 1 ){ require ( tag_w == 44 ) }

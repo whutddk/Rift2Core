@@ -26,9 +26,9 @@ import rift2Chip._
 import rift2Core.privilege._
 
 
-import chiseltest._
-import org.scalatest._
-import chisel3.iotesters._
+// import chiseltest._
+// import org.scalatest._
+// import chisel3.iotesters._
 import chisel3.util.experimental._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.config._

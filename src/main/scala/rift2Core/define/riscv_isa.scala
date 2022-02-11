@@ -430,7 +430,7 @@ class Register_source(dp:Int) extends Bundle {
   val rs2 = UInt((log2Ceil(dp)).W)
   val rs3 = UInt((log2Ceil(dp)).W)
 
-  override def cloneType = ( new Register_source(dp:Int) ).asInstanceOf[this.type]
+  // override def cloneType = ( new Register_source(dp:Int) ).asInstanceOf[this.type]
 }
 
 class Register_dstntn(dp:Int) extends Bundle {
@@ -449,7 +449,7 @@ class Operation_source extends Bundle {
 class Reg_phy(dp:Int) extends Register_source(dp) {
   val rd0 = UInt((log2Ceil(dp)).W)
 
-  override def cloneType = ( new Reg_phy(dp:Int) ).asInstanceOf[this.type]
+  // override def cloneType = ( new Reg_phy(dp:Int) ).asInstanceOf[this.type]
 }
 class Reg_raw extends Reg_phy(dp = 32)
 
@@ -457,7 +457,7 @@ class Rd_Param(dp:Int) extends Register_dstntn(dp) {
   val is_iwb = Bool()
   val is_fwb = Bool()
 
-  override def cloneType = ( new Rd_Param(dp:Int) ).asInstanceOf[this.type]
+  // override def cloneType = ( new Rd_Param(dp:Int) ).asInstanceOf[this.type]
 }
 
 class Instruction_set extends Bundle{
@@ -531,7 +531,7 @@ class Alu_param extends Rd_Param(64) {
 
   val dat = new Operation_source
 
-  override def cloneType = ( new Alu_param ).asInstanceOf[this.type]
+  // override def cloneType = ( new Alu_param ).asInstanceOf[this.type]
 }
 
 class Alu_iss_info extends Bundle {
@@ -550,7 +550,7 @@ class Bru_param extends Rd_Param(64) {
 
   val dat = new Operation_source
 
-  override def cloneType = ( new Bru_param ).asInstanceOf[this.type]
+  // override def cloneType = ( new Bru_param ).asInstanceOf[this.type]
 }
 
 class Bru_iss_info extends Bundle {
@@ -565,7 +565,7 @@ class Bru_iss_info extends Bundle {
 class Lsu_param extends Rd_Param(64) {
   val dat = new Operation_source
 
-  override def cloneType = ( new Lsu_param ).asInstanceOf[this.type]
+  // override def cloneType = ( new Lsu_param ).asInstanceOf[this.type]
 }
 
 class Lsu_iss_info extends Bundle {
@@ -651,7 +651,7 @@ class Csr_function extends Bundle {
 class Csr_param extends Rd_Param(64) {
   val dat = new Operation_source
 
-  override def cloneType = ( new Csr_param ).asInstanceOf[this.type]
+  // override def cloneType = ( new Csr_param ).asInstanceOf[this.type]
 }
 
 class Csr_iss_info extends Bundle {
@@ -662,7 +662,7 @@ class Csr_iss_info extends Bundle {
 class Mul_param extends Rd_Param(64) {
   val dat = new Operation_source
 
-override def cloneType = ( new Mul_param ).asInstanceOf[this.type]
+// override def cloneType = ( new Mul_param ).asInstanceOf[this.type]
 }
 
 class Mul_iss_info extends Bundle {
@@ -675,7 +675,7 @@ class Mul_iss_info extends Bundle {
 case class WriteBack_info(dp:Int) extends Rd_Param(dp) {
   val res = UInt(64.W)
 
-  override def cloneType = ( new WriteBack_info(dp:Int) ).asInstanceOf[this.type]
+  // override def cloneType = ( new WriteBack_info(dp:Int) ).asInstanceOf[this.type]
 }
 
 
@@ -685,7 +685,7 @@ class Info_commit_op(dp:Int) extends Bundle{
 
   val is_abort = Bool()
 
-  override def cloneType = ( new Info_commit_op(dp:Int) ).asInstanceOf[this.type]
+  // override def cloneType = ( new Info_commit_op(dp:Int) ).asInstanceOf[this.type]
 }
 
 

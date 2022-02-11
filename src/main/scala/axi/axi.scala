@@ -35,7 +35,7 @@ class AXI_chn_a( aw: Int, idw: Int = 1, usw: Int = 1 ) extends Bundle {
   val qos   = UInt(4.W)
   val user  = UInt(usw.W)
 
-  override def cloneType = ( new AXI_chn_a(aw, idw, usw) ).asInstanceOf[this.type]
+  // override def cloneType = ( new AXI_chn_a(aw, idw, usw) ).asInstanceOf[this.type]
 }
 
 class AXI_chn_w( dw: Int, usw: Int = 1 ) extends Bundle {
@@ -44,7 +44,7 @@ class AXI_chn_w( dw: Int, usw: Int = 1 ) extends Bundle {
   val last = Bool()
   val user = UInt(usw.W)
 
-  override def cloneType = ( new AXI_chn_w(dw, usw) ).asInstanceOf[this.type]
+  // override def cloneType = ( new AXI_chn_w(dw, usw) ).asInstanceOf[this.type]
 }
 
 
@@ -54,7 +54,7 @@ class AXI_chn_b( idw: Int = 1, usw: Int = 1 ) extends Bundle {
   val rsp  = UInt( 2.W )
   val user = UInt( usw.W )
 
-  override def cloneType = ( new AXI_chn_b(idw, usw) ).asInstanceOf[this.type]
+  // override def cloneType = ( new AXI_chn_b(idw, usw) ).asInstanceOf[this.type]
 }
 
 class AXI_chn_r( dw: Int, idw: Int = 1, usw: Int = 1 ) extends Bundle {
@@ -64,7 +64,7 @@ class AXI_chn_r( dw: Int, idw: Int = 1, usw: Int = 1 ) extends Bundle {
   val last = Bool()
   val user = UInt(usw.W)
 
-  override def cloneType = ( new AXI_chn_r(dw, idw, usw) ).asInstanceOf[this.type]
+  // override def cloneType = ( new AXI_chn_r(dw, idw, usw) ).asInstanceOf[this.type]
 }
 
 class AXI_mst_r(addrw: Int, dw: Int, idw: Int = 1, usw: Int = 1, len: Int ) extends Module{
