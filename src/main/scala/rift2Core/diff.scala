@@ -25,40 +25,7 @@ import rift2Core.frontend._
 import rift2Core.backend._
 
 
-class Info_abi_reg extends Bundle {
-  val zero = UInt(64.W)
-  val ra   = UInt(64.W)
-  val sp   = UInt(64.W)
-  val gp   = UInt(64.W)
-  val tp   = UInt(64.W)
-  val t0   = UInt(64.W)
-  val t1   = UInt(64.W)
-  val t2   = UInt(64.W)
-  val s0   = UInt(64.W)
-  val s1   = UInt(64.W)
-  val a0   = UInt(64.W)
-  val a1   = UInt(64.W)
-  val a2   = UInt(64.W)
-  val a3   = UInt(64.W)
-  val a4   = UInt(64.W)
-  val a5   = UInt(64.W)
-  val a6   = UInt(64.W)
-  val a7   = UInt(64.W)
-  val s2   = UInt(64.W)
-  val s3   = UInt(64.W)
-  val s4   = UInt(64.W)
-  val s5   = UInt(64.W)
-  val s6   = UInt(64.W)
-  val s7   = UInt(64.W)
-  val s8   = UInt(64.W)
-  val s9   = UInt(64.W)
-  val s10  = UInt(64.W)
-  val s11  = UInt(64.W)
-  val t3   = UInt(64.W)
-  val t4   = UInt(64.W)
-  val t5   = UInt(64.W)
-  val t6   = UInt(64.W)
-}
+
 
 class Info_cmm_diff extends Bundle {
   val pc = Vec(2, UInt(64.W))
@@ -114,13 +81,80 @@ class Info_csr_reg extends Bundle {
 
 class diff extends Module {
   val io = IO(new Bundle{
-    val register = Input(new Info_abi_reg)
+    val diffXReg = Output(Vec(32, UInt(64.W)))
+    val diffFReg = Output(Vec(32, UInt(64.W)))
+
     val commit = Input(new Info_cmm_diff)
     val csr = Input(new Info_csr_reg)
   })
 
 
   dontTouch(io)
+
+
+  class Info_abi_Xreg extends Bundle {
+    val zero = UInt(64.W)
+    val ra   = UInt(64.W)
+    val sp   = UInt(64.W)
+    val gp   = UInt(64.W)
+    val tp   = UInt(64.W)
+    val t    = Vec( 7, UInt(64.W) )
+    val s    = Vec( 12, UInt(64.W) )
+    val a    = Vec( 8, UInt(64.W) )
+
+  }
+
+  val XReg = Wire(new Info_abi_Xreg)
+  dontTouch(XReg)
+
+  XReg.zero := io.diffXReg(0)
+  XReg.ra   := io.diffXReg(1)
+  XReg.sp   := io.diffXReg(2)
+  XReg.gp   := io.diffXReg(3)
+  XReg.tp   := io.diffXReg(4)
+  XReg.t(0)   := io.diffXReg(5)
+  XReg.t(1)   := io.diffXReg(6)
+  XReg.t(2)   := io.diffXReg(7)
+  XReg.s(0)   := io.diffXReg(8)
+  XReg.s(1)   := io.diffXReg(9)
+  XReg.a(0)   := io.diffXReg(10)
+  XReg.a(1)   := io.diffXReg(11)
+  XReg.a(2)   := io.diffXReg(12)
+  XReg.a(3)   := io.diffXReg(13)
+  XReg.a(4)   := io.diffXReg(14)
+  XReg.a(5)   := io.diffXReg(15)
+  XReg.a(6)   := io.diffXReg(16)
+  XReg.a(7)   := io.diffXReg(17)
+  XReg.s(2)   := io.diffXReg(18)
+  XReg.s(3)   := io.diffXReg(19)
+  XReg.s(4)   := io.diffXReg(20)
+  XReg.s(5)   := io.diffXReg(21)
+  XReg.s(6)   := io.diffXReg(22)
+  XReg.s(7)   := io.diffXReg(23)
+  XReg.s(8)   := io.diffXReg(24)
+  XReg.s(9)   := io.diffXReg(25)
+  XReg.s(10)  := io.diffXReg(26)
+  XReg.s(11)  := io.diffXReg(27)
+  XReg.t(3)   := io.diffXReg(28)
+  XReg.t(4)   := io.diffXReg(29)
+  XReg.t(5)   := io.diffXReg(30)
+  XReg.t(6)   := io.diffXReg(31)
+
+  class Info_abi_Freg extends Bundle {
+    val ft = Vec(12, UInt(64.W))
+    val fs = Vec(12, UInt(64.W))
+    val fa = Vec(8, UInt(64.W))
+  }
+
+  val FReg = Wire(new Info_abi_Freg)
+  dontTouch(FReg)
+
+  for ( i <- 0 until 8 )  yield { Freg.ft(i) := io.diffFReg(i) }
+  for ( i <- 0 until 2 )  yield { Freg.fs(i) := io.diffFReg(8+i) }
+  for ( i <- 0 until 8 )  yield { Freg.fa(i) := io.diffFReg(10+i) }
+  for ( i <- 0 until 10 ) yield { Freg.fs(2+i) := io.diffFReg(18+i) }
+  for ( i <- 0 until 4 )  yield { Freg.ft(8+i) := io.diffFReg(28+i) }
+
 
 }
 

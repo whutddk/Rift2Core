@@ -97,7 +97,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val ( periph_bus, periph_edge ) = outer.periphClientNode.out.head
   val (    mmu_bus,    mmu_edge ) = outer.mmuClientNode.out.head
 
-  val diff = Module(new diff)
+
 
 
 
@@ -127,29 +127,29 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-
-
-
-//     val commit = Vec(cmm_chn, Flipped(Valid(new Info_commit_op(dp))))
-//   })
-
   val iwb_stage = { 
     val mdl = Module(new WriteBack)
-    mdl.io.dpt_rename <> dpt_stage.io.dpt_rename
+    mdl.io.dpt_Xlookup <> dpt_stage.io.dpt_Xlookup
+    mdl.io.dpt_Flookup <> dpt_stage.io.dpt_Flookup
+    mdl.io.dpt_Xrename <> dpt_stage.io.dpt_Xrename
+    mdl.io.dpt_Frename <> dpt_stage.io.dpt_Frename
+
     mdl.io.ooo_readOp <> iss_stage.io.ooo_readOp
     mdl.io.bru_readOp <> iss_stage.io.bru_readOp
     mdl.io.csr_readOp <> iss_stage.io.csr_readOp
-    mdl.io.lsu_readOp <> iss_stage.io.lsu_readOp
-    mdl.io.fpu_readOp.reg.valid := false.B
-    mdl.io.fpu_readOp.reg.bits := DontCare
+    mdl.io.lsu_readXOp <> iss_stage.io.lsu_readXOp
+    mdl.io.lsu_readFOp <> iss_stage.io.lsu_readFOp
+    mdl.io.fpu_readXOp <> iss_stage.io.fpu_readXOp
+    mdl.io.fpu_readFOp <> iss_stage.io.fpu_readFOp
 
     mdl.io.alu_iWriteBack <> exe_stage.io.alu_exe_iwb
     mdl.io.bru_iWriteBack <> exe_stage.io.bru_exe_iwb
     mdl.io.csr_iWriteBack <> exe_stage.io.csr_exe_iwb
-    mdl.io.mem_iWriteBack <> exe_stage.io.lsu_exe_wb
+    mdl.io.mem_iWriteBack <> exe_stage.io.lsu_exe_iwb
+    mdl.io.mem_fWriteBack <> exe_stage.io.lsu_exe_fwb
     mdl.io.mul_iWriteBack <> exe_stage.io.mul_exe_iwb
-    mdl.io.fpu_iWriteBack.valid := false.B
-    mdl.io.fpu_iWriteBack.bits := DontCare
+    mdl.io.fpu_iWriteBack <> exe_stage.io.fpu_exe_iwb
+    mdl.io.fpu_fWriteBack <> exe_stage.io.fpu_exe_iwb
 
 
     mdl
@@ -159,16 +159,17 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   val cmm_stage = Module(new Commit)
 
-  // val i_regfiles = Module(new Regfiles)
+  val i_mmu = {
+    val mdl = Module(new MMU(edge = mmu_edge))
+    mdl.io.if_mmu <> if_stage.io.if_mmu
+    mdl.io.mmu_if <> if_stage.io.mmu_if
+    mdl.io.lsu_mmu <> exe_stage.io.lsu_mmu
+    mdl.io.mmu_lsu <> exe_stage.io.mmu_lsu
+    mdl.io.cmm_mmu <> cmm_stage.io.cmm_mmu
+    mdl
+  }
 
-  val i_mmu = Module(new MMU(edge = mmu_edge))
 
-  i_mmu.io.if_mmu <> if_stage.io.if_mmu
-  i_mmu.io.mmu_if <> if_stage.io.mmu_if
-  i_mmu.io.lsu_mmu <> exe_stage.io.lsu_mmu
-  i_mmu.io.mmu_lsu <> exe_stage.io.mmu_lsu
-
-  i_mmu.io.cmm_mmu <> cmm_stage.io.cmm_mmu
 
 
 
@@ -301,12 +302,17 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
+  val diff = {
+    val mdl = Module(new diff)
+    diff.io.diffXReg := iwb_stage.io.diffXReg
+    diff.io.diffFReg := iwb_stage.io.diffFReg
+    diff.io.commit   := cmm_stage.io.diff_commit
+    diff.io.csr      := cmm_stage.io.diff_csr
+    mdl
+  }
 
 
 
-  diff.io.register := iwb_stage.io.diff_register
-  diff.io.commit   := cmm_stage.io.diff_commit
-  diff.io.csr      := cmm_stage.io.diff_csr
 
 
 }

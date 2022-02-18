@@ -45,7 +45,8 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   def nm = 8
   val io = IO(new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_wb = new DecoupledIO(new WriteBack_info(64))
+    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(64))
+    val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(64))
 
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
@@ -304,11 +305,12 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     mdl.io.in(0) <> su_wb_fifo.io.deq
     mdl.io.in(1) <> lu_wb_fifo.io.deq
     mdl.io.in(2) <> fe_wb_fifo.io.deq
-    mdl.io.out   <> io.lsu_exe_wb
+
     mdl
   }
 
-
+  when( rtn_arb.io.out.bits.is_iwb === true.B ) { rtn_arb.io.out <> io.lsu_exe_iwb }
+  .otherwise {rtn_arb.io.out <> io.lsu_exe_fwb} 
 
 
 

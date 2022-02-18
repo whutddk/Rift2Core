@@ -180,14 +180,19 @@ class In_Order_Issue extends Module {
       val bru_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
       val csr_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
       val lsu_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
+      val fpu_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
 
       val bru_iss_exe = new DecoupledIO(new Bru_iss_info)
       val csr_iss_exe = new DecoupledIO(new Csr_iss_info)
       val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
+      val fpu_iss_exe = new DecoupledIO(new Fpu_iss_info)
 
       val bru_readOp  = new iss_readOp_info(64)
       val csr_readOp  = new iss_readOp_info(64)
-      val lsu_readOp  = new iss_readOp_info(64)
+      val lsu_readXOp  = new iss_readOp_info(64)
+      val lsu_readFOp  = new iss_readOp_info(64)
+      val fpu_readXOp  = new iss_readOp_info(64)
+      val fpu_readFOp  = new iss_readOp_info(64)
 
   })
 
@@ -208,6 +213,12 @@ class In_Order_Issue extends Module {
   val lsu_iss_fifo = {
     val mdl = Module(new Queue( new Lsu_iss_info, 4, pipe = true, false ))
     mdl.io.deq <> io.lsu_iss_exe
+    mdl 
+  }
+
+  val fpu_iss_fifo = {
+    val mdl = Module(new Queue( new Fpu_iss_info, 4, pipe = true, false ))
+    mdl.io.deq <> io.fpu_iss_exe
     mdl 
   }
 
@@ -241,20 +252,48 @@ class In_Order_Issue extends Module {
   }
 
 
-  io.lsu_readOp.reg.valid := io.lsu_dpt_iss.valid
-  io.lsu_readOp.reg.bits  := io.lsu_dpt_iss.bits.phy
+  io.lsu_readXOp.reg.valid := io.lsu_dpt_iss.valid
+  io.lsu_readXOp.reg.bits.rs1  := io.lsu_dpt_iss.bits.phy.rs1
+  io.lsu_readXOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.lsu_isa.is_fst, 63.U, io.lsu_dpt_iss.bits.phy.rs2 )
+  io.lsu_readXOp.reg.bits.rs3  := 63.U
 
-  lsu_iss_fifo.io.enq.valid := io.lsu_readOp.reg.fire
-  lsu_iss_fifo.io.enq.bits := Mux( lsu_iss_fifo.io.enq.valid, Pkg_lsu_iss(io.lsu_readOp, io.lsu_dpt_iss.bits), DontCare )
+  io.lsu_readFOp.reg.valid := io.lsu_dpt_iss.valid
+  io.lsu_readFOp.reg.bits.rs1  := 63.U
+  io.lsu_readFOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.lsu_isa.is_fst, io.lsu_dpt_iss.bits.phy.rs2, 63.U )
+  io.lsu_readFOp.reg.bits.rs2  := 63.U
+
+
+  lsu_iss_fifo.io.enq.valid := io.lsu_readXOp.reg.fire & io.lsu_readFOp.reg.fire
+  lsu_iss_fifo.io.enq.bits := Mux( lsu_iss_fifo.io.enq.valid, Pkg_lsu_iss(io.lsu_readXOp, io.lsu_readFOp, io.lsu_dpt_iss.bits), DontCare )
 
   io.lsu_dpt_iss.ready :=
-    io.lsu_readOp.reg.ready & lsu_iss_fifo.io.enq.ready
+    io.lsu_readXOp.reg.ready & io.lsu_readFOp.reg.ready & lsu_iss_fifo.io.enq.ready
 
   when( io.lsu_dpt_iss.fire ) {
-    assert( io.lsu_readOp.reg.fire )
+    assert( io.lsu_readXOp.reg.fire & io.lsu_readFOp.reg.fire )
     assert( lsu_iss_fifo.io.enq.fire )
   }
 
+
+  io.fpu_readXOp.reg.valid := io.fpu_dpt_iss.valid
+  io.fpu_readXOp.reg.bits.rs1  := Mux( io.lsu_dpt_iss.bits.fpu_isa.is_fop, 63.U, io.fpu_dpt_iss.bits.phy.rs1 )
+  io.fpu_readXOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.fpu_isa.is_fop, 63.U, io.fpu_dpt_iss.bits.phy.rs2 )
+  io.fpu_readXOp.reg.bits.rs3  := 63.U
+  io.fpu_readFOp.reg.valid := io.fpu_dpt_iss.valid
+  io.fpu_readFOp.reg.bits.rs1  := Mux( io.lsu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs1, 63.U )
+  io.fpu_readFOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs2, 63.U )
+  io.fpu_readFOp.reg.bits.rs3  := Mux( io.lsu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs3, 63.U )
+
+  fpu_iss_fifo.io.enq.valid := io.fpu_readXOp.reg.fire & io.fpu_readFOp.reg.fire
+  fpu_iss_fifo.io.enq.bits := Mux( fpu_iss_fifo.io.enq.valid, Pkg_fpu_iss(io.fpu_readXOp, io.fpu_readFOp, io.fpu_dpt_iss.bits), DontCare )
+
+  io.fpu_dpt_iss.ready :=
+    io.fpu_readXOp.reg.ready & io.fpu_readFOp.reg.ready & fpu_iss_fifo.io.enq.ready
+
+  when( io.fpu_dpt_iss.fire ) {
+    assert( io.fpu_readXOp.reg.fire & io.fpu_readFOp.reg.fire )
+    assert( fpu_iss_fifo.io.enq.fire )
+  }
 
   def Pkg_bru_iss(op: iss_readOp_info, dpt: Dpt_info): Bru_iss_info = {
     val res = Wire(new Bru_iss_info)
@@ -292,24 +331,40 @@ class In_Order_Issue extends Module {
   }
 
 
-  def Pkg_lsu_iss(op: iss_readOp_info, dpt: Dpt_info): Lsu_iss_info = {
+  def Pkg_lsu_iss(Xop: iss_readOp_info, Fop: iss_readOp_info, dpt: Dpt_info): Lsu_iss_info = {
     val res = Wire(new Lsu_iss_info)
-    // res.fun := dpt.isa
-
 
     res.fun := dpt.lsu_isa
 
+    res.param.dat.op1 := (Xop.dat.op1.asSInt + dpt.param.imm.asSInt()).asUInt()
+    res.param.dat.op2 := Mux( dpt.lsu_isa.is_fst, Fop.dat.op2, Xop.dat.op2 )
+    res.param.dat.op3 := 0.U
 
-    res.param.dat.op1 := (op.dat.op1.asSInt + dpt.param.imm.asSInt()).asUInt()
+    res.param.rd0 := dpt.phy.rd0
+    res.param.is_iwb := dpt.lsu_isa.is_iwb
+    res.param.is_fwb := dpt.lsu_isa.is_fwb
+    return res
+  }
+
+  def Pkg_fpu_iss(Xop: iss_readOp_info, Fop: iss_readOp_info, dpt: Dpt_info): Fpu_iss_info = {
+    val res = Wire(new Lsu_iss_info)
+
+    res.fun := dpt.fpu_isa
+
+    val op = Mux( dpt.fpu_isa.is_fop, Fop, Xop )
+    res.param.dat.op1 := op.dat.op1
     res.param.dat.op2 := op.dat.op2
     res.param.dat.op3 := op.dat.op3
 
     res.param.rd0 := dpt.phy.rd0
-    res.param.is_iwb := true.B
-    res.param.is_fwb := false.B
+    res.param.is_iwb := dpt.fpu_isa.is_iwb
+    res.param.is_fwb := dpt.fpu_isa.is_fwb
     return res
   }
 }
+
+
+
 
 class Issue extends Module {
   val io = IO(new Bundle{
@@ -317,17 +372,22 @@ class Issue extends Module {
     val bru_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
     val csr_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
     val lsu_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
+    val fpu_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
 
     val ooo_readOp  = Vec(2,  new iss_readOp_info(64))
     val bru_readOp  = new iss_readOp_info(64)
     val csr_readOp  = new iss_readOp_info(64)
-    val lsu_readOp  = new iss_readOp_info(64)
+    val lsu_readXOp  = new iss_readOp_info(64)
+    val lsu_readFOp  = new iss_readOp_info(64)
+    val fpu_readXOp  = new iss_readOp_info(64)
+    val fpu_readFOp  = new iss_readOp_info(64)
 
     val alu_iss_exe = new DecoupledIO(new Alu_iss_info)
     val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
     val mul_iss_exe = new DecoupledIO(new Mul_iss_info)
     val bru_iss_exe = new DecoupledIO(new Bru_iss_info)
     val csr_iss_exe = new DecoupledIO(new Csr_iss_info)
+    val fpu_iss_exe = new DecoupledIO(new Fpu_iss_info)
 
   })
 

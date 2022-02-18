@@ -29,7 +29,12 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
   val io = IO(new Bundle{
     val bd_dpt = Vec(rn_chn, Flipped(new DecoupledIO(new Info_bd_dpt())))
 
-    val dpt_rename = Vec( rn_chn, new dpt_rename_info(64))
+    // val dpt_rename = Vec( rn_chn, new dpt_rename_info(64))
+    val dpt_Xlookup = Vec( rn_chn, Flipped(new dpt_lookup_info(64)) )
+    val dpt_Flookup = Vec( rn_chn, Flipped(new dpt_lookup_info(64)) )
+    val dpt_Xrename = Vec( rn_chn, Flipped(new dpt_rename_info(64)) )
+    val dpt_Frename = Vec( rn_chn, Flipped(new dpt_rename_info(64)) )
+
 
     val ooo_dpt_iss = Vec(2, new DecoupledIO(new Dpt_info))
     val bru_dpt_iss = new DecoupledIO(new Dpt_info)
@@ -81,27 +86,51 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
     mdl
   }
 
+  val reg_phy = Wire(new Reg_phy(64)) 
+
   for ( i <- 0 until rn_chn ) yield {
     ooo_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.is_ooo_dpt
     bru_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.bru_isa.is_bru
     csr_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.csr_isa.is_csr
     lsu_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.lsu_isa.is_lsu
 
-    ooo_dpt_rePort.io.enq(i).bits := Mux( ooo_dpt_rePort.io.enq(i).valid, Pkg_ooo_dpt(io.bd_dpt(i).bits.info, io.dpt_rename(i).rsp), DontCare )
-    bru_dpt_rePort.io.enq(i).bits := Mux( bru_dpt_rePort.io.enq(i).valid, Pkg_bru_dpt(io.bd_dpt(i).bits.info, io.dpt_rename(i).rsp), DontCare )
-    csr_dpt_rePort.io.enq(i).bits := Mux( csr_dpt_rePort.io.enq(i).valid, Pkg_csr_dpt(io.bd_dpt(i).bits.info, io.dpt_rename(i).rsp), DontCare )
-    lsu_dpt_rePort.io.enq(i).bits := Mux( lsu_dpt_rePort.io.enq(i).valid, Pkg_lsu_dpt(io.bd_dpt(i).bits.info, io.dpt_rename(i).rsp), DontCare )
+    ooo_dpt_rePort.io.enq(i).bits := Mux( ooo_dpt_rePort.io.enq(i).valid, Pkg_ooo_dpt(io.bd_dpt(i).bits.info, reg_phy), 0.U.asTypeOf(new Dpt_info) )
+    bru_dpt_rePort.io.enq(i).bits := Mux( bru_dpt_rePort.io.enq(i).valid, Pkg_bru_dpt(io.bd_dpt(i).bits.info, reg_phy), 0.U.asTypeOf(new Dpt_info) )
+    csr_dpt_rePort.io.enq(i).bits := Mux( csr_dpt_rePort.io.enq(i).valid, Pkg_csr_dpt(io.bd_dpt(i).bits.info, reg_phy), 0.U.asTypeOf(new Dpt_info) )
+    lsu_dpt_rePort.io.enq(i).bits := Mux( lsu_dpt_rePort.io.enq(i).valid, Pkg_lsu_dpt(io.bd_dpt(i).bits.info, reg_phy), 0.U.asTypeOf(new Dpt_info) )
 
-    io.dpt_rename(i).req.valid := io.bd_dpt(i).fire
-    io.dpt_rename(i).req.bits := Mux( io.dpt_rename(i).req.valid, io.bd_dpt(i).bits.info.param.raw, DontCare )
+    io.dpt_Xrename(i).req.valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.is_iwb
+    io.dpt_Xrename(i).req.bits := Mux( io.dpt_Xrename(i).req.valid, io.bd_dpt(i).bits.info.param.raw.rd0, 0.U )
+
+    io.dpt_Xlookup(i).req.bits.rs1 := io.bd_dpt(i).bits.info.param.raw.rs1
+    io.dpt_Xlookup(i).req.bits.rs2 := io.bd_dpt(i).bits.info.param.raw.rs2
+    io.dpt_Xlookup(i).req.bits.rs3 := 0.U
+
+  
+    io.dpt_Frename(i).req.valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.is_fwb
+    io.dpt_Frename(i).req.bits :=  Mux( io.dpt_Frename(i).req.valid, io.bd_dpt(i).bits.info.param.raw.rd0, 0.U )
+
+    io.dpt_Flookup(i).req.bits.rs1 := io.bd_dpt(i).bits.info.param.raw.rs1
+    io.dpt_Flookup(i).req.bits.rs2 := io.bd_dpt(i).bits.info.param.raw.rs2
+    io.dpt_Flookup(i).req.bits.rs3 := io.bd_dpt(i).bits.info.param.raw.rs3
+
+    
+    reg_phy.rs1 := Mux(io.bd_dpt(i).bits.info.fpu_isa.is_fop, io.dpt_Flookup(i).rsp.rs1, 63.U)
+    reg_phy.rs2 := Mux(io.bd_dpt(i).bits.info.fpu_isa.is_fop | io.bd_dpt(i).bits.info.lsu_isa.is_fst, io.dpt_Flookup(i).rsp.rs2, 63.U)
+    reg_phy.rs3 := Mux(io.bd_dpt(i).bits.info.fpu_isa.is_fop, io.dpt_Flookup(i).rsp.rs3, 63.U)
+    reg_phy.rd0 := 
+      Mux1H(Seq(
+        io.dpt_Frename(i).req.fire -> io.dpt_Frename(i).rsp.rd0,
+        io.dpt_Xrename(i).req.fire -> io.dpt_Xrename(i).rsp.rd0,
+      ))
 
 
     reOrder_fifo_i.io.enq(i).valid := io.bd_dpt(i).fire
-    reOrder_fifo_i.io.enq(i).bits  := Mux( reOrder_fifo_i.io.enq(i).valid, Pkg_rod_i(io.bd_dpt(i).bits.info, io.dpt_rename(i).rsp), DontCare )
+    reOrder_fifo_i.io.enq(i).bits  := Mux( reOrder_fifo_i.io.enq(i).valid, Pkg_rod_i(io.bd_dpt(i).bits.info, reg_phy), DontCare )
 
     io.bd_dpt(i).ready := (
       for ( j <- 0 to i by 1 ) yield {
-        ooo_dpt_rePort.io.enq(j).ready & io.dpt_rename(j).req.ready & reOrder_fifo_i.io.enq(i).ready &
+        ooo_dpt_rePort.io.enq(j).ready & io.dpt_Xrename(j).req.ready & io.dpt_Frename(j).req.ready & reOrder_fifo_i.io.enq(i).ready &
         bru_dpt_rePort.io.enq(j).ready &
         csr_dpt_rePort.io.enq(j).ready &
         lsu_dpt_rePort.io.enq(j).ready
@@ -190,6 +219,9 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
       res.is_csr         := instr.csr_isa.is_csr
       res.privil         := instr.privil_isa
       res.is_illeage     := instr.is_illeage
+
+      res.is_xcmm := instr.is_iwb
+      res.is_fcmm := instr.is_fwb
 
     return res
   }
