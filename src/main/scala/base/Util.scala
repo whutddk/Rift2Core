@@ -36,6 +36,6 @@ object padXTo{
   def apply(x: UInt, n: Int): UInt = {
     require(x.getWidth <= n)
     if (x.getWidth == n) x
-    else Cat( (0.U)(n - x.getWidth).W, x)
+    else Cat( (0.U)((n - x.getWidth).W), x)
   }  
 }

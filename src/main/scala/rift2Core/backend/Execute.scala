@@ -25,6 +25,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
+import rift2Core.backend.fpu._
 import rift2Core.backend.memory._
 import rift2Core.privilege.csrFiles._
 import rift2Core.privilege._

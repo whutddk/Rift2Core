@@ -30,10 +30,10 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
     val bd_dpt = Vec(rn_chn, Flipped(new DecoupledIO(new Info_bd_dpt())))
 
     // val dpt_rename = Vec( rn_chn, new dpt_rename_info(64))
-    val dpt_Xlookup = Vec( rn_chn, Flipped(new dpt_lookup_info(64)) )
-    val dpt_Flookup = Vec( rn_chn, Flipped(new dpt_lookup_info(64)) )
-    val dpt_Xrename = Vec( rn_chn, Flipped(new dpt_rename_info(64)) )
-    val dpt_Frename = Vec( rn_chn, Flipped(new dpt_rename_info(64)) )
+    val dpt_Xlookup = Vec( rn_chn, new dpt_lookup_info(64) )
+    val dpt_Flookup = Vec( rn_chn, new dpt_lookup_info(64) )
+    val dpt_Xrename = Vec( rn_chn, new dpt_rename_info(64) )
+    val dpt_Frename = Vec( rn_chn, new dpt_rename_info(64) )
 
 
     val ooo_dpt_iss = Vec(2, new DecoupledIO(new Dpt_info))
@@ -100,19 +100,19 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
     lsu_dpt_rePort.io.enq(i).bits := Mux( lsu_dpt_rePort.io.enq(i).valid, Pkg_lsu_dpt(io.bd_dpt(i).bits.info, reg_phy), 0.U.asTypeOf(new Dpt_info) )
 
     io.dpt_Xrename(i).req.valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.is_iwb
-    io.dpt_Xrename(i).req.bits := Mux( io.dpt_Xrename(i).req.valid, io.bd_dpt(i).bits.info.param.raw.rd0, 0.U )
+    io.dpt_Xrename(i).req.bits.rd0 := Mux( io.dpt_Xrename(i).req.valid, io.bd_dpt(i).bits.info.param.raw.rd0, 0.U )
 
-    io.dpt_Xlookup(i).req.bits.rs1 := io.bd_dpt(i).bits.info.param.raw.rs1
-    io.dpt_Xlookup(i).req.bits.rs2 := io.bd_dpt(i).bits.info.param.raw.rs2
-    io.dpt_Xlookup(i).req.bits.rs3 := 0.U
+    io.dpt_Xlookup(i).req.rs1 := io.bd_dpt(i).bits.info.param.raw.rs1
+    io.dpt_Xlookup(i).req.rs2 := io.bd_dpt(i).bits.info.param.raw.rs2
+    io.dpt_Xlookup(i).req.rs3 := 0.U
 
   
     io.dpt_Frename(i).req.valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.is_fwb
-    io.dpt_Frename(i).req.bits :=  Mux( io.dpt_Frename(i).req.valid, io.bd_dpt(i).bits.info.param.raw.rd0, 0.U )
+    io.dpt_Frename(i).req.bits.rd0 :=  Mux( io.dpt_Frename(i).req.valid, io.bd_dpt(i).bits.info.param.raw.rd0, 0.U )
 
-    io.dpt_Flookup(i).req.bits.rs1 := io.bd_dpt(i).bits.info.param.raw.rs1
-    io.dpt_Flookup(i).req.bits.rs2 := io.bd_dpt(i).bits.info.param.raw.rs2
-    io.dpt_Flookup(i).req.bits.rs3 := io.bd_dpt(i).bits.info.param.raw.rs3
+    io.dpt_Flookup(i).req.rs1 := io.bd_dpt(i).bits.info.param.raw.rs1
+    io.dpt_Flookup(i).req.rs2 := io.bd_dpt(i).bits.info.param.raw.rs2
+    io.dpt_Flookup(i).req.rs3 := io.bd_dpt(i).bits.info.param.raw.rs3
 
     
     reg_phy.rs1 := Mux(io.bd_dpt(i).bits.info.fpu_isa.is_fop, io.dpt_Flookup(i).rsp.rs1, 63.U)

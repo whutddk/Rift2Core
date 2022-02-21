@@ -347,18 +347,20 @@ class In_Order_Issue extends Module {
   }
 
   def Pkg_fpu_iss(Xop: iss_readOp_info, Fop: iss_readOp_info, dpt: Dpt_info): Fpu_iss_info = {
-    val res = Wire(new Lsu_iss_info)
+    val res = Wire(new Fpu_iss_info)
 
     res.fun := dpt.fpu_isa
 
-    val op = Mux( dpt.fpu_isa.is_fop, Fop, Xop )
-    res.param.dat.op1 := op.dat.op1
-    res.param.dat.op2 := op.dat.op2
-    res.param.dat.op3 := op.dat.op3
+    res.param.dat := Mux( dpt.fpu_isa.is_fop, Fop.dat, Xop.dat )
+
 
     res.param.rd0 := dpt.phy.rd0
     res.param.is_iwb := dpt.fpu_isa.is_iwb
     res.param.is_fwb := dpt.fpu_isa.is_fwb
+
+
+    res.param.rm := dpt.param.rm
+
     return res
   }
 }
@@ -408,7 +410,10 @@ class Issue extends Module {
     mdl.io.lsu_dpt_iss <> io.lsu_dpt_iss
     mdl.io.bru_readOp  <> io.bru_readOp
     mdl.io.csr_readOp  <> io.csr_readOp
-    mdl.io.lsu_readOp  <> io.lsu_readOp
+    mdl.io.lsu_readXOp  <> io.lsu_readXOp
+    mdl.io.lsu_readFOp  <> io.lsu_readFOp
+    mdl.io.fpu_readXOp  <> io.fpu_readXOp
+    mdl.io.fpu_readFOp  <> io.fpu_readFOp
     mdl.io.bru_iss_exe <> io.bru_iss_exe
     mdl.io.csr_iss_exe <> io.csr_iss_exe
     mdl.io.lsu_iss_exe <> io.lsu_iss_exe

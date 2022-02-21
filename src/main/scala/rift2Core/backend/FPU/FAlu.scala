@@ -21,15 +21,16 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
+import chisel3.experimental.dataview._
 
-class FAlu() extends Module {
-  val io = new Bundle{
-    val fpu_iss_exe = Flipped(new DecoupledIO(new Fpu_iss_info))
-    val fpu_exe_iwb = new DecoupledIO(new WriteBack_info(64))
-    val fpu_exe_fwb = new DecoupledIO(new WriteBack_info(64))
+class FAlu() extends Module with HasFPUParameters{
+  val io = IO(new Bundle{
+    val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
+    val fpu_exe_iwb = DecoupledIO(new WriteBack_info(64))
+    val fpu_exe_fwb = DecoupledIO(new WriteBack_info(64))
 
     val flush = Input(Bool())
-  }
+  })
 
   val fpu_exe_iwb_fifo = {
     val mdl = Module( new Queue( new WriteBack_info(64), 1, true, false ) )
@@ -42,13 +43,16 @@ class FAlu() extends Module {
     mdl
   }
 
-  val frm    = RegEnable(0.U(3.W))
-  val fflags = RegEnable(0.U(5.W))
+  val frm    = RegInit(0.U(3.W))
+  val fflags = RegInit(0.U(5.W))
   val fcsr   = Cat( 0.U(24.W),frm, fflags )
 
 
-  val f2i = FPToInt(){
-    io.in := io.fpu_iss_exe.bits
+  val f2i = {
+    val mdl = Module(new FPToInt)
+    mdl.io.in := io.fpu_iss_exe.bits
+
+    mdl
   }
 
 
@@ -93,30 +97,35 @@ class FAlu() extends Module {
           io.fpu_iss_exe.bits.fun.is_fun_frc -> (frm & ~io.fpu_iss_exe.bits.param.dat.op1(7,5)),
         ))
       } .otherwise {
-        assert( false, "Assert Failed at fpu exe, invalid csr address req" )
+        assert( false.B, "Assert Failed at fpu exe, invalid csr address req" )
       }
     } .otherwise {
       val fflags_dnxt =
         0.U(5.W) |
         f2i.io.out.exc
-      fflags := fflags | fcsr_dnxt(4,0)
+      fflags := fflags | fflags_dnxt(4,0)
     }
   }
 
 
-  fpu_exe_iwb_fifo.io.enq.valid := io.fpu_iss_exe.valid & io.fpu_iss_exe.fun.is_iwb
-  fpu_exe_iwb_fifo.io.enq.bits :=
+  fpu_exe_iwb_fifo.io.enq.valid := io.fpu_iss_exe.valid & io.fpu_iss_exe.bits.fun.is_iwb
+  fpu_exe_iwb_fifo.io.enq.bits.res :=
     Mux1H(Seq(
       io.fpu_iss_exe.bits.fun.is_fun_fcsr  -> fcsr_res,
       io.fpu_iss_exe.bits.fun.is_fun_class -> f2i.io.out.toint,
       io.fpu_iss_exe.bits.fun.is_fun_fcvtX -> f2i.io.out.toint,
       // io.fpu_iss_exe.bits.fun.is_fun_cmp   -> f2i.io.out.lt,
     ))
-
+  fpu_exe_iwb_fifo.io.enq.bits.viewAsSupertype(new Rd_Param(64)) := io.fpu_iss_exe.bits.param.viewAsSupertype(new Rd_Param(64))
+  // fpu_exe_iwb_fifo.io.enq.bits.is_iwb := true.B
+  // fpu_exe_iwb_fifo.io.enq.bits.is_fwb := false.B
+  // fpu_exe_iwb_fifo.io.enq.bits.rd0 := io.fpu_iss_exe.bits.
 
 
   fpu_exe_fwb_fifo.io.enq.valid := false.B//io.fpu_iss_exe.valid & io.fpu_iss_exe.fun.is_fwb
-  fpu_exe_fwb_fifo.io.enq.bits := 0.U
+  fpu_exe_fwb_fifo.io.enq.bits.res := 0.U
+  fpu_exe_fwb_fifo.io.enq.bits.viewAsSupertype(new Rd_Param(64)) := io.fpu_iss_exe.bits.param.viewAsSupertype(new Rd_Param(64))
+
 
 }
 

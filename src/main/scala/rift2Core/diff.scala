@@ -81,8 +81,8 @@ class Info_csr_reg extends Bundle {
 
 class diff extends Module {
   val io = IO(new Bundle{
-    val diffXReg = Output(Vec(32, UInt(64.W)))
-    val diffFReg = Output(Vec(32, UInt(64.W)))
+    val diffXReg = Input(Vec(32, UInt(64.W)))
+    val diffFReg = Input(Vec(32, UInt(64.W)))
 
     val commit = Input(new Info_cmm_diff)
     val csr = Input(new Info_csr_reg)
@@ -149,11 +149,11 @@ class diff extends Module {
   val FReg = Wire(new Info_abi_Freg)
   dontTouch(FReg)
 
-  for ( i <- 0 until 8 )  yield { Freg.ft(i) := io.diffFReg(i) }
-  for ( i <- 0 until 2 )  yield { Freg.fs(i) := io.diffFReg(8+i) }
-  for ( i <- 0 until 8 )  yield { Freg.fa(i) := io.diffFReg(10+i) }
-  for ( i <- 0 until 10 ) yield { Freg.fs(2+i) := io.diffFReg(18+i) }
-  for ( i <- 0 until 4 )  yield { Freg.ft(8+i) := io.diffFReg(28+i) }
+  for ( i <- 0 until 8 )  yield { FReg.ft(i) := io.diffFReg(i) }
+  for ( i <- 0 until 2 )  yield { FReg.fs(i) := io.diffFReg(8+i) }
+  for ( i <- 0 until 8 )  yield { FReg.fa(i) := io.diffFReg(10+i) }
+  for ( i <- 0 until 10 ) yield { FReg.fs(2+i) := io.diffFReg(18+i) }
+  for ( i <- 0 until 4 )  yield { FReg.ft(8+i) := io.diffFReg(28+i) }
 
 
 }

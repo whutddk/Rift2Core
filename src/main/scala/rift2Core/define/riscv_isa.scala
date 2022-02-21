@@ -161,7 +161,9 @@ class Lsu_isa extends Bundle {
   def is_W = is_su | is_sc | is_amo
 
   def is_fst = fsw | fsd
-  def is_fwb = lsu_isa.flw | lsu_isa.fld | lsu_isa.lr_w | lsu_isa.lr_d |
+  def is_ist = ~is_fst
+  def is_fwb = flw | fld | fsw | fsd
+  def is_iwb = ~is_fwb
 }
 
 class Csr_isa extends Bundle {
@@ -331,61 +333,61 @@ class Fpu_isa extends Bundle {
     fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu 
 
 
-  def is_fun_int2float =
-    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fmv_w_x |
-    fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d | fmv_d_x
-  def is_fun_float2float =
-    fsgnj_s | fsgnjn_s | fsgnjx_s | 
-    fsgnj_d | fsgnjn_d | fsgnjx_d |
-    fcvt_s_d | fcvt_d_s
-  def is_fun_floatCmp = fmin_s | fmax_s | feq_s | flt_s | fle_s | fmin_d | fmax_d | feq_d | flt_d | fle_d
-  def is_fun_float2int =
-    fmv_x_w | fclass_s | fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
-    fmv_x_d | fclass_d | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu 
-  def is_fun_floatFma =
-    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s |
-    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d
-  def is_fun_floatDivSqrt = fdiv_s | fsqrt_s | fdiv_d | fsqrt_d
-  def is_fun_floatCsr = fcsr_rw | fcsr_rs | fcsr_rc
+  // def is_fun_int2float =
+  //   fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fmv_w_x |
+  //   fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d | fmv_d_x
+  // def is_fun_float2float =
+  //   fsgnj_s | fsgnjn_s | fsgnjx_s | 
+  //   fsgnj_d | fsgnjn_d | fsgnjx_d |
+  //   fcvt_s_d | fcvt_d_s
+  // def is_fun_floatCmp = fmin_s | fmax_s | feq_s | flt_s | fle_s | fmin_d | fmax_d | feq_d | flt_d | fle_d
+  // def is_fun_float2int =
+  //   fmv_x_w | fclass_s | fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
+  //   fmv_x_d | fclass_d | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu 
+  // def is_fun_floatFma =
+  //   fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s |
+  //   fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d
+  // def is_fun_floatDivSqrt = fdiv_s | fsqrt_s | fdiv_d | fsqrt_d
+  // def is_fun_floatCsr = fcsr_rw | fcsr_rs | fcsr_rc
 
 
-  def is_fma_addsub =
-      fadd_s | fsub_s |
-      fadd_d | fsub_d
+  // def is_fma_addsub =
+  //     fadd_s | fsub_s |
+  //     fadd_d | fsub_d
 
-  def is_fma_mul =
-      fmul_s | fmul_d
+  // def is_fma_mul =
+  //     fmul_s | fmul_d
 
-  def is_fma_dual_op = is_fma_addsub | is_fma_mul
-  def is_fma_trpl_op =
-    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | 
-    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d
+  // def is_fma_dual_op = is_fma_addsub | is_fma_mul
+  // def is_fma_trpl_op =
+  //   fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | 
+  //   fmadd_d | fmsub_d | fnmsub_d | fnmadd_d
 
 
-  def is_int_iss =
-    fmv_w_x | fmv_d_x |
-    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |fcsr_rw | fcsr_rs | fcsr_rc
+  // def is_int_iss =
+  //   fmv_w_x | fmv_d_x |
+  //   fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |fcsr_rw | fcsr_rs | fcsr_rc
 
-  def is_fot_iss =
-    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fmadd_d | fmsub_d | fnmsub_d | fnmadd_d |
-    fadd_s | fsub_s | fmul_s | fadd_d | fsub_d | fmul_d |
-    fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
-    feq_s | flt_s | fle_s | feq_d | flt_d | fle_d | fmin_s | fmax_s | fmin_d | fmax_d |
-    fmv_x_w | fmv_x_d |
-    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_s_d | fcvt_d_s | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
+  // def is_fot_iss =
+  //   fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fmadd_d | fmsub_d | fnmsub_d | fnmadd_d |
+  //   fadd_s | fsub_s | fmul_s | fadd_d | fsub_d | fmul_d |
+  //   fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
+  //   feq_s | flt_s | fle_s | feq_d | flt_d | fle_d | fmin_s | fmax_s | fmin_d | fmax_d |
+  //   fmv_x_w | fmv_x_d |
+  //   fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_s_d | fcvt_d_s | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
 
     
-  def is_recFN32_in =
-    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s |
-    fsgnj_s | fsgnjn_s | fsgnjx_s |
-    feq_s | flt_s | fle_s | fmin_s | fmax_s |
-    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_s_d
+  // def is_recFN32_in =
+  //   fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s |
+  //   fsgnj_s | fsgnjn_s | fsgnjx_s |
+  //   feq_s | flt_s | fle_s | fmin_s | fmax_s |
+  //   fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_s_d
     
-  def is_recFN64_in =
-    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d |
-    fsgnj_d | fsgnjn_d | fsgnjx_d |
-    feq_d | flt_d | fle_d | fmin_d | fmax_d |
-    fcvt_d_s | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
+  // def is_recFN64_in =
+  //   fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d |
+  //   fsgnj_d | fsgnjn_d | fsgnjx_d |
+  //   feq_d | flt_d | fle_d | fmin_d | fmax_d |
+  //   fcvt_d_s | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
 
   def is_fop = 
     fmadd_s   | fmsub_s   | fnmsub_s  | fnmadd_s  |
@@ -399,29 +401,49 @@ class Fpu_isa extends Bundle {
     feq_s     | flt_s     | fle_s     |
     feq_d     | flt_d     | fle_d     |
     fclass_s  | fclass_d  |
-    fcvt_s_w  | fcvt_s_wu | fcvt_s_l  | fcvt_s_lu |
-    fcvt_d_w  | fcvt_d_wu | fcvt_d_l  | fcvt_d_lu |
-    fcvt_s_d  | fcvt_d_s  |
+    fcvt_w_s  | fcvt_wu_s | fcvt_l_s  | fcvt_lu_s |
+    fcvt_w_d  | fcvt_wu_d | fcvt_l_d  | fcvt_lu_d |
+    fcvt_s_d  | fcvt_d_s
 
   def is_iwb = 
     feq_s | flt_s | fle_s | feq_d | flt_d | fle_d |
     fmv_x_w | fmv_x_d | 
-    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
+    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d
 
-  def is_fwb =
-    fmadd_s  | fmsub_s  | fnmsub_s | 
-    fnmadd_s | fadd_s   | fsub_s   | 
-    fmul_s   | fdiv_s   | fsqrt_s  | fsgnj_s | 
-    fsgnjn_s | fsgnjx_s | fmin_s   | fmax_s | 
-    feq_s    | flt_s    | fle_s    |
-    fmadd_d  | fmsub_d  | fnmsub_d |
-    fnmadd_d | fadd_d   | fsub_d   | fmul_d |
-    fdiv_d   | fsqrt_d  | fsgnj_d  | fsgnjn_d |
-    fsgnjx_d | fmin_d   | fmax_d
+  def is_fwb = ~is_iwb
 
 
   def is_usi =
     fcvt_s_wu | fcvt_s_lu| fcvt_d_wu | fcvt_d_lu | fcvt_wu_s | fcvt_lu_s | fcvt_wu_d | fcvt_lu_d
+
+
+  def FtypeTagIn = {
+    def FtypeTagIn_0 =
+    fmadd_s   | fmsub_s   | fnmsub_s  | fnmadd_s  |  
+    fadd_s    | fsub_s    | fmul_s    | fdiv_s    | fsqrt_s   | 
+    fsgnj_s   | fsgnjn_s  | fsgnjx_s  |
+    fmin_s    | fmax_s    |
+    fmv_x_w   |
+    feq_s     | flt_s     | fle_s     |
+    fclass_s  |
+    fcvt_w_s  | fcvt_wu_s | fcvt_l_s  | fcvt_lu_s |
+    fcvt_d_s
+
+    def FtypeTagIn_1 =
+    fmadd_d   | fmsub_d   | fnmsub_d  | fnmadd_d  |    
+    fadd_d    | fsub_d    | fmul_d    | fdiv_d    | fsqrt_d   |    
+    fsgnj_d   | fsgnjn_d  | fsgnjx_d  |
+    fmin_d    | fmax_d    |
+    fmv_x_d   |
+    feq_d     | flt_d     | fle_d     |
+    fclass_d  |
+    fcvt_w_d  | fcvt_wu_d | fcvt_l_d  | fcvt_lu_d |
+    fcvt_s_d
+    
+    Mux1H(Seq(
+      FtypeTagIn_0 -> 0.U, FtypeTagIn_1 -> 1.U,
+    ))
+  }
 
 
   def FtypeTagOut = {
@@ -430,19 +452,35 @@ class Fpu_isa extends Bundle {
       fadd_s | fsub_s | fmul_s |
       fsgnj_s | fsgnjn_s | fsgnjx_s |
       fmin_s | fmax_s |
-      fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s |
-      fcvt_d_s
+      fmv_w_x   |
+      fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
+      fcvt_s_d
 
     def FtypeTagOut_1 =
       fmadd_d | fmsub_d | fnmsub_d | fnmadd_d |
       fadd_d | fsub_d | fmul_d | 
       fsgnj_d | fsgnjn_d | fsgnjx_d |
       fmin_d | fmax_d |
-      fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |
-      fcvt_s_d
+      fmv_d_x   |
+      fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu |
+      fcvt_d_s
     
     Mux1H(Seq(
       FtypeTagOut_0 -> 0.U, FtypeTagOut_1 -> 1.U,
+    ))
+  }
+
+  def XtypeTagIn = {
+    def XtypeTagIn_0 =
+      fmv_w_x   |
+      fcvt_s_w | fcvt_s_wu | fcvt_d_w | fcvt_d_wu 
+
+    def XtypeTagIn_1 =
+      fmv_d_x   |
+      fcvt_s_l | fcvt_s_lu | fcvt_d_l | fcvt_d_lu
+    
+    Mux1H(Seq(
+      XtypeTagIn_0 -> 0.U, XtypeTagIn_1 -> 1.U,
     ))
   }
 
@@ -465,16 +503,18 @@ class Fpu_isa extends Bundle {
 
 
   def is_fpu =
-    is_fun_int2float |
-    is_fun_float2float |
-    is_fun_floatCmp |
-    is_fun_float2int |
-    is_fun_floatFma |
-    is_fun_floatDivSqrt |
-    is_fun_floatCsr
-
-
-
+  fmadd_s   | fmsub_s   | fnmsub_s  | fnmadd_s  | fadd_s    | fsub_s    | fmul_s    | fdiv_s    | fsqrt_s   |
+  fmadd_d   | fmsub_d   | fnmsub_d  | fnmadd_d  | fadd_d    | fsub_d    | fmul_d    | fdiv_d    | fsqrt_d   |
+  fsgnj_s   | fsgnjn_s  | fsgnjx_s  | fsgnj_d   | fsgnjn_d  | fsgnjx_d  |
+  fmin_s    | fmax_s    | fmin_d    | fmax_d    |
+  feq_s     | flt_s     | fle_s     | feq_d     | flt_d     | fle_d     |
+  fclass_s  | fclass_d  |
+  fmv_x_w   | fmv_w_x   | fmv_x_d   | fmv_d_x   |  
+  fcvt_s_w  | fcvt_s_wu | fcvt_l_s  | fcvt_lu_s |
+  fcvt_s_l  | fcvt_s_lu | fcvt_s_d  | fcvt_d_s  |
+  fcvt_w_d  | fcvt_wu_d | fcvt_d_w  | fcvt_d_wu | fcvt_l_d  | fcvt_lu_d |
+  fcvt_d_l  | fcvt_d_lu | fcvt_w_s  | fcvt_wu_s |
+  fcsr_rw   | fcsr_rs   | fcsr_rc   | fcsr_rwi  | fcsr_rsi  | fcsr_rci
 
 
 }
@@ -521,7 +561,7 @@ class Instruction_set extends Bundle{
   val fpu_isa = new Fpu_isa
 
   def is_fwb =
-    lsu_isa.fwb | fpu_isa.fwb
+    lsu_isa.is_fwb | fpu_isa.is_fwb
 
   def is_ooo_dpt = alu_isa.is_alu | mul_isa.is_mul
   def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr | lsu_isa.is_lsu

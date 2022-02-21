@@ -64,29 +64,25 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm_
   val iReg = Module(new RegFiles(dp, rn_chn, rop_chn, wb_chn, cmm_chn))
   val fReg = Module(new RegFiles(dp, rn_chn, rop_chn=2, wb_chn=2, cmm_chn))
 
-  {
-    iReg.io.dpt_rename.req.valid := false.B
-    iReg.io.dpt_rename.req.bits := 0.U.asTypeOf(Reg_raw)
-    fReg.io.dpt_rename.req.valid := false.B
-    fReg.io.dpt_rename.req.bits := 0.U.asTypeOf(Reg_raw)
-    io.dpt_rename.req.ready := false.B
-    io.dpt_rename.rsp := 0.U.asTypeOf(Reg_phy(64))
-    when( io.dpt_rename.toX === true.B ) {iReg.io.dpt_rename <> io.dpt_rename}
-    .elsewhen( io.dpt_rename.toF === true.B ) {fReg.io.dpt_rename <> io.dpt_rename}    
+  for ( i <- 0 until rn_chn ) yield {
+    iReg.io.dpt_rename(i) <> io.dpt_Xrename(i)
+    fReg.io.dpt_rename(i) <> io.dpt_Frename(i)
+    iReg.io.dpt_lookup(i) <> io.dpt_Xlookup(i)
+    fReg.io.dpt_lookup(i) <> io.dpt_Flookup(i)
   }
 
-  {
-    for ( i <- 0 until cmm_chn ) yield {
-      iReg.io.commit(i).valid := false.B
-      iReg.io.commit(i).bits  := 0.U.asTypeOf(Info_commit_op(dp))
-      fReg.io.commit(i).valid := false.B
-      fReg.io.commit(i).bits  := 0.U.asTypeOf(Info_commit_op(dp))
-      io.commit(i).ready := false.B
 
-      when( io.commit.bits.toX === true.B ) {iReg.io.commit <> io.commit}
-      .elsewhen( io.commit.bits.toF === true.B ) {fReg.io.commit <> io.commit}
-    }
+  for ( i <- 0 until cmm_chn ) yield {
+    iReg.io.commit(i).valid := false.B
+    iReg.io.commit(i).bits  := 0.U.asTypeOf(new Info_commit_op(dp))
+    fReg.io.commit(i).valid := false.B
+    fReg.io.commit(i).bits  := 0.U.asTypeOf(new Info_commit_op(dp))
+    io.commit(i).ready := false.B
+
+    when( io.commit(i).bits.toX === true.B ) {iReg.io.commit(i) <> io.commit(i)}
+    .elsewhen( io.commit(i).bits.toF === true.B ) {fReg.io.commit(i) <> io.commit(i)}
   }
+
 
 
   iReg.io.diffReg <> io.diffXReg

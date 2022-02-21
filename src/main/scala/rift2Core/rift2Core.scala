@@ -304,10 +304,10 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   val diff = {
     val mdl = Module(new diff)
-    diff.io.diffXReg := iwb_stage.io.diffXReg
-    diff.io.diffFReg := iwb_stage.io.diffFReg
-    diff.io.commit   := cmm_stage.io.diff_commit
-    diff.io.csr      := cmm_stage.io.diff_csr
+    mdl.io.diffXReg := iwb_stage.io.diffXReg
+    mdl.io.diffFReg := iwb_stage.io.diffFReg
+    mdl.io.commit   := cmm_stage.io.diff_commit
+    mdl.io.csr      := cmm_stage.io.diff_csr
     mdl
   }
 

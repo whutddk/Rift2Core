@@ -20,6 +20,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
+import base._
 
 // object FloatS2Int32 {
 //   def apply(
@@ -123,30 +124,38 @@ import rift2Core.backend._
 
 
 
-class FPToInt() extends Module{
-  val io = new Bundle {
+class FPToInt() extends Module with HasFPUParameters{
+  val io = IO(new Bundle {
     val in = Input(new Fpu_iss_info)
     val out = Output(new Bundle{
       val lt = Bool()
       val toint = UInt(64.W)
       val exc = UInt(5.W)
       })
-    }
+  })
 
 
   val in = io.in
+  recode(load_wb_data, load_wb_typeTag)
+  val op1 = unbox(in.param.dat.op1, in.fun.FtypeTagIn, None)
+  val op2 = unbox(in.param.dat.op2, in.fun.FtypeTagIn, None)
+  val op3 = unbox(in.param.dat.op3, in.fun.FtypeTagIn, None)
 
-  val dcmp = Module(new hardfloat.CompareRecFN(maxExpWidth = 11, maxSigWidth = 53)) {
-    io.a := in.param.op1
-    io.b := in.param.op1
-    io.signaling := !in.param.rm(1)
+
+
+  val dcmp =  {
+    val mdl = Module(new hardfloat.CompareRecFN(expWidth = 11, sigWidth = 53))
+    mdl.io.a := op1
+    mdl.io.b := op1
+    mdl.io.signaling := !in.param.rm(1)
+    mdl
   }
 
   val tag = in.fun.FtypeTagOut
   val store = 
     Mux1H(Seq(
-      (in.fun.FtypeTagOut === 0.U) -> Fill(2, ieee(in.param.op1)(31, 0) ),
-      (in.fun.FtypeTagOut === 1.U) -> Fill(1, ieee(in.param.op1)(63, 0) ),
+      (in.fun.FtypeTagOut === 0.U) -> Fill(2, FType.S.ieee(op1)(31, 0) ),
+      (in.fun.FtypeTagOut === 1.U) -> Fill(1, FType.D.ieee(op1)(63, 0) ),
     ))
   val toint = Wire(UInt(64.W))
   toint := store
@@ -158,8 +167,8 @@ class FPToInt() extends Module{
   when ( in.fun.is_fun_class ) {
     val classify_out =
       Mux1H( Seq(
-        (in.fun.FtypeTagOut === 0.U) -> FType.S.classify(FType.D.unsafeConvert(in.param.op1, FType.S)),
-        (in.fun.FtypeTagOut === 1.U) -> FType.D.classify( in.param.op1 ),
+        (in.fun.FtypeTagOut === 0.U) -> FType.S.classify(FType.D.unsafeConvert(op1, FType.S)),
+        (in.fun.FtypeTagOut === 1.U) -> FType.D.classify( op1 ),
       ))
 
     toint := classify_out | (store >> 32 << 32)
@@ -168,53 +177,59 @@ class FPToInt() extends Module{
 
   when ( in.fun.is_fun_cmp | in.fun.is_fun_maxMin ) { // feq/flt/fle, fcvt
     toint := (~in.param.rm & Cat(dcmp.io.lt, dcmp.io.eq)).orR | (store >> 32 << 32)
-    io.out.bits.exc := dcmp.io.exceptionFlags
+    io.out.exc := dcmp.io.exceptionFlags
   }
 
   when ( in.fun.is_fun_fcvtX ) { // fcvt
-    val conv = Module(new hardfloat.RecFNToIN( 11, 53, 64)) {
-      io.in := in.param.op1
-      io.roundingMode := in.param.rm
-      io.signedOut := ~in.fun.is_usi      
+    val conv =  {
+      val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 64))
+      mdl.io.in := op1
+      mdl.io.roundingMode := in.param.rm
+      mdl.io.signedOut := ~in.fun.is_usi
+      mdl
     }
 
     toint := conv.io.out
-    io.out.bits.exc := Cat(conv.io.intExceptionFlags(2, 1).orR, 0.U(3.W), conv.io.intExceptionFlags(0))
+    io.out.exc := Cat(conv.io.intExceptionFlags(2, 1).orR, 0.U(3.W), conv.io.intExceptionFlags(0))
 
-    when (in.fun.XtypeTagOut === 0) {
-      val narrow = Module(new hardfloat.RecFNToIN( 11, 53, 32)) {
-        io.in := in.param.op1
-        io.roundingMode := in.param.rm
-        io.signedOut := ~in.fun.is_usi
+    when (in.fun.XtypeTagOut === 0.U) {
+      val narrow = {
+        val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 32)) 
+        mdl.io.in := op1
+        mdl.io.roundingMode := in.param.rm
+        mdl.io.signedOut := ~in.fun.is_usi
+        mdl
       }
 
 
-      val excSign = in.param.op1(64) && !FType.D.isNaN(in.param.op1)
+      val excSign = op1(64) && !FType.D.isNaN(op1)
       val excOut = Cat(conv.io.signedOut === excSign, Fill(31, !excSign))
       val invalid = conv.io.intExceptionFlags(2) || narrow.io.intExceptionFlags(1)
       when (invalid) { toint := Cat(conv.io.out >> 32, excOut) }
-      io.out.bits.exc := Cat(invalid, 0.U(3.W), !invalid && conv.io.intExceptionFlags(0))
+      io.out.exc := Cat(invalid, 0.U(3.W), !invalid && conv.io.intExceptionFlags(0))
     } 
     .otherwise {
-      assert(in.fun.XtypeTagOut === 1)
-      val narrow = Module(new hardfloat.RecFNToIN( 11, 53, 64)) {
-        io.in := in.param.op1
-        io.roundingMode := in.param.rm
-        io.signedOut := ~in.fun.is_usi        
+      assert(in.fun.XtypeTagOut === 1.U)
+      val narrow = {
+        val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 64)) 
+        mdl.io.in := op1
+        mdl.io.roundingMode := in.param.rm
+        mdl.io.signedOut := ~in.fun.is_usi
+        mdl
       }
 
 
-      val excSign = in.param.op1(64) && !FType.D.isNaN(in.param.op1)
+      val excSign = op1(64) && !FType.D.isNaN(op1)
       val excOut = Cat(conv.io.signedOut === excSign, Fill(63, !excSign))
       val invalid = conv.io.intExceptionFlags(2) || narrow.io.intExceptionFlags(1)
       when (invalid) { toint := Cat(conv.io.out >> 64, excOut) }
-      io.out.bits.exc := Cat(invalid, 0.U(3.W), !invalid && conv.io.intExceptionFlags(0))
+      io.out.exc := Cat(invalid, 0.U(3.W), !invalid && conv.io.intExceptionFlags(0))
     }
 
   }
 
-  io.out.bits.lt := dcmp.io.lt || (dcmp.io.a.asSInt < 0.S && dcmp.io.b.asSInt >= 0.S)
-  io.out.bits.toint := 
+  io.out.lt := dcmp.io.lt || (dcmp.io.a.asSInt < 0.S && dcmp.io.b.asSInt >= 0.S)
+  io.out.toint := 
     Mux1H( Seq(
       (in.fun.XtypeTagOut === 0.U) -> sextXTo(toint(31,0),64),
       (in.fun.XtypeTagOut === 1.U) -> toint(63,0),

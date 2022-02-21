@@ -121,9 +121,9 @@ class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm
   // )
 
   for ( i <- 0 until rn_chn ) {
-    val idx1 = io.dpt_lookup(i).req.bits.rs1
-    val idx2 = io.dpt_lookup(i).req.bits.rs2
-    val idx3 = io.dpt_lookup(i).req.bits.rs3
+    val idx1 = io.dpt_lookup(i).req.rs1
+    val idx2 = io.dpt_lookup(i).req.rs2
+    val idx3 = io.dpt_lookup(i).req.rs3
 
     if ( i == 0) {
       io.dpt_lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )

@@ -81,10 +81,10 @@ class Commit extends Privilege with Superscalar {
   io.cm_op(0).bits.raw := rd0_raw(0)
   io.cm_op(1).bits.raw := rd0_raw(1)
 
-  io.cm_op(0).bits.is_xcmm := is_xcmm(0)
-  io.cm_op(1).bits.is_xcmm := is_xcmm(1)
-  io.cm_op(0).bits.is_fcmm := is_fcmm(0)
-  io.cm_op(1).bits.is_fcmm := is_fcmm(1)
+  io.cm_op(0).bits.toX := is_xcmm(0)
+  io.cm_op(1).bits.toX := is_xcmm(1)
+  io.cm_op(0).bits.toF := is_fcmm(0)
+  io.cm_op(1).bits.toF := is_fcmm(1)
   
   val is_wb_v =
     VecInit(
