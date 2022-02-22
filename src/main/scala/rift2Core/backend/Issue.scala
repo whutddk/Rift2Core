@@ -349,9 +349,27 @@ class In_Order_Issue extends Module with HasFPUParameters{
 
     res.fun := dpt.fpu_isa
 
-    res.param.dat.op1 := Mux( dpt.fpu_isa.is_fop, Fop.dat.op1, Xop.dat.op1 )
-    res.param.dat.op2 := Mux( dpt.fpu_isa.is_fop, Fop.dat.op2, Xop.dat.op2 )
-    res.param.dat.op3 := Mux( dpt.fpu_isa.is_fop, Fop.dat.op3, Xop.dat.op3 )
+    res.param.dat.op1 :=
+      Mux(
+        dpt.fpu_isa.is_fop,
+        Fop.dat.op1,
+        Mux( dpt.fpu_isa.is_fun_fcsri, dpt.param.raw.rs1, Xop.dat.op1 )
+      )
+
+    res.param.dat.op2 :=
+      Mux(
+        dpt.fpu_isa.is_fop,
+        Fop.dat.op2,
+        Mux( dpt.fpu_isa.is_fun_fcsr, dpt.param.imm, Xop.dat.op2)
+      )
+    res.param.dat.op3 := Fop.dat.op3
+
+        // dpt.csr_isa.rw  -> op.dat.op1, dpt.csr_isa.rwi -> dpt.param.raw.rs1,
+        // dpt.csr_isa.rs  -> op.dat.op1, dpt.csr_isa.rsi -> dpt.param.raw.rs1,
+        // dpt.csr_isa.rc  -> op.dat.op1, dpt.csr_isa.rci -> dpt.param.raw.rs1
+  // val fcsr_rwi = Bool()
+  // val fcsr_rsi = Bool()
+  // val fcsr_rci = Bool()
 
 
     res.param.rd0 := dpt.phy.rd0

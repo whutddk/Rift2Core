@@ -222,7 +222,7 @@ abstract class CsrFiles_M extends CsrFiles_port {
     val spie = RegInit(0.U(1.W))
     val mie = RegInit(0.U(1.W))
     val sie = RegInit(0.U(1.W))
-    val sd = (xs | fs).orR
+    val sd = ((xs === 3.U) || (fs === 3.U)).asUInt
 
     val value = Cat( sd, 0.U(25.W), mbe, sbe, sxl, uxl, 0.U(9.W), tsr, tw, tvm, mxr, sum, mprv, xs, fs, mpp, 0.U(2.W), spp, mpie, ube, spie, 0.U(1.W), mie, 0.U(1.W), sie, 0.U(1.W) )
 
@@ -300,10 +300,11 @@ abstract class CsrFiles_M extends CsrFiles_port {
   misa := {
     val mxl = WireDefault(2.U(2.W))
     val extensions = {
-      if (true) {
-        WireDefault("b00000101000001000100000101".U(26.W))  
-      }
-      else {
+      if (true) { //fpu
+        WireDefault("b00000101000001000100101101".U(26.W))  
+      } else if (true) { //none fpu, has S-mode U-mode
+        WireDefault("b00000101000001000100000101".U(26.W))
+      } else {
         WireDefault("b00000000000001000100000101".U(26.W))
       }
     

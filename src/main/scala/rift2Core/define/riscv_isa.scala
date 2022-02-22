@@ -321,6 +321,8 @@ class Fpu_isa extends Bundle {
   def is_fun_frs = fcsr_rs | fcsr_rsi
   def is_fun_frc = fcsr_rc | fcsr_rci
 
+  def is_fun_fcsri = fcsr_rwi | fcsr_rsi | fcsr_rci
+
   def is_fun_fcsr =   
     is_fun_frw | is_fun_frs | is_fun_frc
 
