@@ -259,20 +259,13 @@ class Fpu_float2int_iss_info extends Bundle {
   val rd0_phy = UInt(6.W)
 }
 
-class Fpu_param extends Rd_Param(64){
-  val dat = new Operation_source
+class Fpu_param extends Register_dstntn(64){
+  val dat = new Operation_source(dw=65)
   val rm = UInt(3.W)
 
 }
 
 class Fpu_iss_info() extends Bundle {
-          // val rm = Bits(width = FPConstants.RM_SZ)
-  // val fmaCmd = Bits(width = 2)
-  // val typ = Bits(width = 2)
-  // val fmt = Bits(width = 2)
-          // val in1 = Bits(width = 64+1)
-          // val in2 = Bits(width = 64+1)
-          // val in3 = Bits(width = 64+1)
 
   val fun = new Fpu_isa
   val param = new Fpu_param
@@ -280,108 +273,16 @@ class Fpu_iss_info() extends Bundle {
 }
 
 
+// class FpuTile() extends Module with HasFPUParameters{
+//   val io = IO(new Bundle{
 
-// class Fpu_int2float_iss_info extends Bundle {
-//   val is_i32tof32 = Bool()
-//   val is_i64tof32 = Bool()
-//   val is_i32tof64 = Bool()
-//   val is_i64tof64 = Bool()
-//   val is_fmv32tof = Bool()
-//   val is_fmv64tof = Bool()
 
-//   val is_usi = Bool()
+//     val lsu_req
+//     val lsu_rsp
 
-//   val op1 = UInt(64.W)
-//   val rm = UInt(3.W)
 
-//   val rd0_phy = UInt(6.W)
+//   })
 // }
-
-// class Fpu_float2float_iss_info extends Bundle {
-//   val is_f32tof64 = Bool()
-//   val is_f64tof32 = Bool()
-//   val is_fSign32  = Bool()
-//   val is_fSign64  = Bool()
-
-//   val op1 = UInt(64.W)
-//   val op2 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_phy = UInt(6.W)
-// }
-
-// class Fpu_floatCmp_iss_info extends Bundle {
-//   val is_eq  = Bool()
-//   val is_lt  = Bool()
-//   val is_gt  = Bool()
-//   val is_min = Bool()
-//   val is_max = Bool()
-
-//   val is_in_64_32n  = Bool()
-
-//   val op1 = UInt(64.W)
-//   val op2 = UInt(64.W)
-//   val rm = UInt(3.W)
-
-//   val rd0_phy = UInt( (6 max 6).W)
-
-// }
-
-// class Fpu_floatFma_iss_info extends Bundle {
-//   val is_64_32n = Bool()
-//   val op_sel = UInt(4.W)
-//   val rm =  UInt(3.W)
-//   val op1 = UInt(64.W)
-//   val op2 = UInt(64.W)
-//   val op3 = UInt(64.W)
-
-//   val rd0_phy = UInt(6.W)
-// }
-
-// class Fpu_floatDivSqrt_iss_info extends Bundle {
-//   val is_div32 = Bool()
-//   val is_div64 = Bool()
-//   val is_sqrt32 = Bool()
-//   val is_sqrt64 = Bool()
-
-//   val op1 = UInt(64.W)
-//   val op2 = UInt(64.W)
-
-//   val rm = UInt(3.W)
-
-//   val rd0_phy = UInt(6.W)
-// }
-
-// class Fpu_floatCsr_iss_info extends Bundle {
-//   val is_frw = Bool()
-//   val is_frs = Bool()
-//   val is_frc = Bool()
-
-//   val data  = UInt(8.W)
-//   val addr  = UInt(2.W)
-//   val rd0_phy = UInt( (6 max 6).W)
-
-// }
-
-
-
-// maxType
-//   def unsafeConvert(x: UInt, to: FType) = if (this == to) x else {
-//     val sign = x(sig + exp)
-//     val fractIn = x(sig - 2, 0)
-//     val expIn = x(sig + exp - 1, sig - 1)
-//     val fractOut = fractIn << to.sig >> sig
-//     val expOut = {
-//       val expCode = expIn(exp, exp - 2)
-//       val commonCase = (expIn + (1 << to.exp)) - (1 << exp)
-//       Mux(expCode === 0 || expCode >= 6, Cat(expCode, commonCase(to.exp - 3, 0)), commonCase(to.exp, 0))
-//     }
-//     Cat(sign, expOut, fractOut)
-//   }
-
-
-
-
 
 
 

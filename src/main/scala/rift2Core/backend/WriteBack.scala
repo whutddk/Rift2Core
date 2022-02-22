@@ -28,7 +28,7 @@ import base._
 import rift2Core.define._
 import rift2Core.diff._
 
-class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm_chn: Int = 2) extends Module {
+class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm_chn: Int = 2) extends Module {
   val io = IO(new Bundle{
     val dpt_Xlookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
     val dpt_Flookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
@@ -36,23 +36,23 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm_
     val dpt_Frename = Vec( rn_chn, Flipped(new dpt_rename_info(dp)) )
 
 
-    val ooo_readOp  = Vec(2, Flipped( new iss_readOp_info(dp)))
-    val bru_readOp  = Flipped( new iss_readOp_info(dp))
-    val csr_readOp  = Flipped( new iss_readOp_info(dp))
-    val lsu_readXOp  = Flipped( new iss_readOp_info(dp))
-    val lsu_readFOp  = Flipped( new iss_readOp_info(dp))
-    val fpu_readXOp  = Flipped( new iss_readOp_info(dp))
-    val fpu_readFOp  = Flipped( new iss_readOp_info(dp))
+    val ooo_readOp  = Vec(2, Flipped( new iss_readOp_info(dw = 64,dp)))
+    val bru_readOp  = Flipped( new iss_readOp_info(dw = 64,dp))
+    val csr_readOp  = Flipped( new iss_readOp_info(dw = 64,dp))
+    val lsu_readXOp  = Flipped( new iss_readOp_info(dw = 64,dp))
+    val lsu_readFOp  = Flipped( new iss_readOp_info(dw = 65,dp))
+    val fpu_readXOp  = Flipped( new iss_readOp_info(dw = 64,dp))
+    val fpu_readFOp  = Flipped( new iss_readOp_info(dw = 65,dp))
 
-    val alu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
-    val bru_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
-    val csr_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
-    val mem_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
-    val mul_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
-    val fpu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
+    val alu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
+    val bru_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
+    val csr_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
+    val mem_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
+    val mul_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
+    val fpu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
 
-    val mem_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
-    val fpu_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dp)))
+    val mem_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65, dp)))
+    val fpu_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65, dp)))
 
     val commit = Vec(cmm_chn, Flipped(Decoupled(new Info_commit_op(dp))))
 
@@ -61,8 +61,8 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm_
   })
 
 
-  val iReg = Module(new RegFiles(dp, rn_chn, rop_chn, wb_chn, cmm_chn))
-  val fReg = Module(new RegFiles(dp, rn_chn, rop_chn=2, wb_chn=2, cmm_chn))
+  val iReg = Module(new RegFiles(dw = 64, dp, rn_chn, rop_chn, wb_chn, cmm_chn))
+  val fReg = Module(new RegFiles(dw = 65, dp, rn_chn, rop_chn=2, wb_chn=2, cmm_chn))
 
   for ( i <- 0 until rn_chn ) yield {
     iReg.io.dpt_rename(i) <> io.dpt_Xrename(i)
@@ -101,7 +101,7 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm_
 
 
   val iwriteBack_arb = {
-    val mdl = Module(new XArbiter(new WriteBack_info(dp), in = 6, out = wb_chn))
+    val mdl = Module(new XArbiter(new WriteBack_info(dw=64,dp), in = 6, out = wb_chn))
     mdl.io.enq(0) <> io.alu_iWriteBack
     mdl.io.enq(1) <> io.bru_iWriteBack
     mdl.io.enq(2) <> io.csr_iWriteBack
@@ -115,26 +115,6 @@ class WriteBack(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm_
 
   fReg.io.exe_writeBack(0) <> io.mem_fWriteBack
   fReg.io.exe_writeBack(1) <> io.fpu_fWriteBack
-
-  // {
-  //   iwriteBack_arb.io.enq(3).valid := false.B
-  //   iwriteBack_arb.io.enq(3).bits  := 0.U.asTypeOf(WriteBack_info(dp))
-  //   fReg.io.exe_writeBack(0).valid := false.B
-  //   fReg.io.exe_writeBack(0).bits  := 0.U.asTypeOf(WriteBack_info(dp)) 
-  //   io.mem_aWriteBack.ready := false.B
-
-  //   iwriteBack_arb.io.enq(4).valid := false.B
-  //   iwriteBack_arb.io.enq(4).bits  := 0.U.asTypeOf(WriteBack_info(dp))
-  //   fReg.io.exe_writeBack(1).valid := false.B
-  //   fReg.io.exe_writeBack(1).bits  := 0.U.asTypeOf(WriteBack_info(dp)) 
-  //   io.fpu_aWriteBack.ready := false.B
-
-  //   when(io.mem_aWriteBack.bits.is_iwb === true.B) {iwriteBack_arb.io.enq(3) <> io.mem_aWriteBack}
-  //   .elsewhen(io.mem_aWriteBack.bits.is_fwb === true.B) {}
-
-  //   when(io.fpu_aWriteBack.bits.is_iwb === true.B) {iwriteBack_arb.io.enq(5) <> io.fpu_aWriteBack}
-  //   .elsewhen(io.fpu_aWriteBack.bits.is_fwb === true.B) {}    
-  // }
 
 
 

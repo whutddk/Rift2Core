@@ -297,7 +297,7 @@ sim:
 	./verilator/sim_main.cpp  \
 	./verilator/diff.cpp \
 	-Mdir build \
-	-j 8
+	-j 128
 # 	rm ./obj_dir/*.d ./obj_dir/*.o ./obj_dir/*.cpp
 
 

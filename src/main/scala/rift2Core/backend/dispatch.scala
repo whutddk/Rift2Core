@@ -40,6 +40,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
     val bru_dpt_iss = new DecoupledIO(new Dpt_info)
     val csr_dpt_iss = new DecoupledIO(new Dpt_info)
     val lsu_dpt_iss = new DecoupledIO(new Dpt_info)
+    val fpu_dpt_iss = new DecoupledIO(new Dpt_info)
 
     val rod_i = Vec(cmm_chn,new DecoupledIO(new Info_reorder_i))
  
@@ -79,6 +80,13 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
     mdl
   }
 
+  val fpu_dpt_rePort = Module(new RePort( new Dpt_info, port = rn_chn))
+  val fpu_dpt_fifo = {
+    val mdl = Module(new MultiPortFifo( new Dpt_info, aw = 4, in = rn_chn, out = 1 ))
+    mdl.io.enq <> fpu_dpt_rePort.io.deq
+    mdl.io.deq(0) <> io.fpu_dpt_iss
+    mdl
+  }
 
   val reOrder_fifo_i = {
     val mdl = Module(new MultiPortFifo(new Info_reorder_i, 4, rn_chn, cmm_chn))
@@ -93,11 +101,13 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
     bru_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.bru_isa.is_bru
     csr_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.csr_isa.is_csr
     lsu_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.lsu_isa.is_lsu
+    fpu_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.fpu_isa.is_fpu
 
     ooo_dpt_rePort.io.enq(i).bits := Mux( ooo_dpt_rePort.io.enq(i).valid, Pkg_ooo_dpt(io.bd_dpt(i).bits.info, reg_phy), 0.U.asTypeOf(new Dpt_info) )
     bru_dpt_rePort.io.enq(i).bits := Mux( bru_dpt_rePort.io.enq(i).valid, Pkg_bru_dpt(io.bd_dpt(i).bits.info, reg_phy), 0.U.asTypeOf(new Dpt_info) )
     csr_dpt_rePort.io.enq(i).bits := Mux( csr_dpt_rePort.io.enq(i).valid, Pkg_csr_dpt(io.bd_dpt(i).bits.info, reg_phy), 0.U.asTypeOf(new Dpt_info) )
     lsu_dpt_rePort.io.enq(i).bits := Mux( lsu_dpt_rePort.io.enq(i).valid, Pkg_lsu_dpt(io.bd_dpt(i).bits.info, reg_phy), 0.U.asTypeOf(new Dpt_info) )
+    fpu_dpt_rePort.io.enq(i).bits := Mux( fpu_dpt_rePort.io.enq(i).valid, Pkg_fpu_dpt(io.bd_dpt(i).bits.info, reg_phy), 0.U.asTypeOf(new Dpt_info) )
 
     io.dpt_Xrename(i).req.valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.info.is_iwb
     io.dpt_Xrename(i).req.bits.rd0 := Mux( io.dpt_Xrename(i).req.valid, io.bd_dpt(i).bits.info.param.raw.rd0, 0.U )
@@ -133,7 +143,8 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
         ooo_dpt_rePort.io.enq(j).ready & io.dpt_Xrename(j).req.ready & io.dpt_Frename(j).req.ready & reOrder_fifo_i.io.enq(i).ready &
         bru_dpt_rePort.io.enq(j).ready &
         csr_dpt_rePort.io.enq(j).ready &
-        lsu_dpt_rePort.io.enq(j).ready
+        lsu_dpt_rePort.io.enq(j).ready &
+        fpu_dpt_rePort.io.enq(j).ready
       }      
     ).reduce(_&_)
 
@@ -202,6 +213,21 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
     return res
   }
 
+  def Pkg_fpu_dpt( instr:Info_instruction, rename: Reg_phy): Dpt_info = {
+    val res = Wire(new Dpt_info)
+
+    res.alu_isa    := 0.U.asTypeOf( new Alu_isa )
+    res.bru_isa    := 0.U.asTypeOf( new Bru_isa )
+    res.lsu_isa    := 0.U.asTypeOf( new Lsu_isa )
+    res.csr_isa    := 0.U.asTypeOf( new Csr_isa )
+    res.mul_isa    := 0.U.asTypeOf( new Mul_isa )
+    res.privil_isa := 0.U.asTypeOf( new Privil_isa )
+    res.fpu_isa    := instr.fpu_isa
+    res.param      := instr.param
+    res.phy        := rename
+    return res
+  }
+
   def Pkg_rod_i(instr:Info_instruction, rename: Reg_phy): Info_reorder_i = {
     val res = Wire(new Info_reorder_i)
 
@@ -231,6 +257,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
   bru_dpt_fifo.io.flush := false.B
   csr_dpt_fifo.io.flush := false.B
   lsu_dpt_fifo.io.flush := false.B
+  fpu_dpt_fifo.io.flush := false.B
   reOrder_fifo_i.io.flush := false.B
   
 }

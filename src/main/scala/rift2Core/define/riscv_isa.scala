@@ -162,7 +162,7 @@ class Lsu_isa extends Bundle {
 
   def is_fst = fsw | fsd
   def is_ist = ~is_fst
-  def is_fwb = flw | fld | fsw | fsd
+  def is_fwb = flw | fld
   def is_iwb = ~is_fwb
 }
 
@@ -407,10 +407,22 @@ class Fpu_isa extends Bundle {
 
   def is_iwb = 
     feq_s | flt_s | fle_s | feq_d | flt_d | fle_d |
-    fmv_x_w | fmv_x_d | 
-    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d
+    fmv_x_w | fmv_x_d | fclass_s | fclass_d |
+    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |
+    fmv_x_w | fmv_x_d |
+    fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
 
-  def is_fwb = ~is_iwb
+  def is_fwb =
+    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s | fdiv_s | fsqrt_s |
+    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d | fdiv_d | fsqrt_d |
+    fsgnj_s | fsgnjn_s | fsgnjx_s |
+    fsgnj_d | fsgnjn_d | fsgnjx_d |
+    fmin_s | fmax_s | fmin_d | fmax_d |
+    fcvt_s_w | fcvt_s_wu | fcvt_d_w | fcvt_d_wu |
+    fcvt_s_l | fcvt_s_lu |fcvt_d_l | fcvt_d_lu |
+    fcvt_s_d | fcvt_d_s |
+    fmv_w_x | fmv_d_x
+    
 
 
   def is_usi =
@@ -524,20 +536,17 @@ class Register_source(dp:Int) extends Bundle {
   val rs1 = UInt((log2Ceil(dp)).W)
   val rs2 = UInt((log2Ceil(dp)).W)
   val rs3 = UInt((log2Ceil(dp)).W)
-
-  // override def cloneType = ( new Register_source(dp:Int) ).asInstanceOf[this.type]
 }
 
 class Register_dstntn(dp:Int) extends Bundle {
   val rd0 = UInt((log2Ceil(dp)).W)
 
-  // override def cloneType = ( new Register_dstntn(dp:Int) ).asInstanceOf[this.type]
 }
 
-class Operation_source extends Bundle {
-  val op1 = UInt(64.W)
-  val op2 = UInt(64.W)
-  val op3 = UInt(64.W)
+class Operation_source(dw: Int) extends Bundle {
+  val op1 = UInt(dw.W)
+  val op2 = UInt(dw.W)
+  val op3 = UInt(dw.W)
 }
 
 
@@ -546,10 +555,6 @@ class Reg_phy(dp:Int) extends Register_source(dp) {
 }
 class Reg_raw extends Reg_phy(dp = 32)
 
-class Rd_Param(dp:Int) extends Register_dstntn(dp) {
-  val is_iwb = Bool()
-  val is_fwb = Bool()
-}
 
 class Instruction_set extends Bundle{
   val alu_isa = new Alu_isa
@@ -608,11 +613,11 @@ class Alu_function extends Bundle {
   val sra = Bool()
 }
 
-class Alu_param extends Rd_Param(64) {
+class Alu_param extends Register_dstntn(64) {
   val is_32w = Bool()
   val is_usi = Bool()
 
-  val dat = new Operation_source
+  val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Alu_param ).asInstanceOf[this.type]
 }
@@ -626,12 +631,12 @@ class Alu_iss_info extends Bundle {
 
 
 
-class Bru_param extends Rd_Param(64) {
+class Bru_param extends Register_dstntn(64) {
   val is_rvc = Bool()
   val pc = UInt(64.W)
   val imm = UInt(64.W)
 
-  val dat = new Operation_source
+  val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Bru_param ).asInstanceOf[this.type]
 }
@@ -645,8 +650,8 @@ class Bru_iss_info extends Bundle {
 
 
 
-class Lsu_param extends Rd_Param(64) {
-  val dat = new Operation_source
+class Lsu_param extends Register_dstntn(64) {
+  val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Lsu_param ).asInstanceOf[this.type]
 }
@@ -734,8 +739,8 @@ class Csr_function extends Bundle {
   val rc  = Bool()
 }
 
-class Csr_param extends Rd_Param(64) {
-  val dat = new Operation_source
+class Csr_param extends Register_dstntn(64) {
+  val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Csr_param ).asInstanceOf[this.type]
 }
@@ -745,8 +750,8 @@ class Csr_iss_info extends Bundle {
   val param = new Csr_param
 }
 
-class Mul_param extends Rd_Param(64) {
-  val dat = new Operation_source
+class Mul_param extends Register_dstntn(64) {
+  val dat = new Operation_source(dw=64)
 
 // override def cloneType = ( new Mul_param ).asInstanceOf[this.type]
 }
@@ -758,8 +763,8 @@ class Mul_iss_info extends Bundle {
 
 
 
-case class WriteBack_info(dp:Int) extends Rd_Param(dp) {
-  val res = UInt(64.W)
+case class WriteBack_info(dw:Int, dp:Int) extends Register_dstntn(dp) {
+  val res = UInt(dw.W)
 
   // override def cloneType = ( new WriteBack_info(dp:Int) ).asInstanceOf[this.type]
 }

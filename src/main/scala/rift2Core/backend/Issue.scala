@@ -33,7 +33,7 @@ class Out_of_Order_Issue() extends Module {
     val mul_iss_exe = new DecoupledIO(new Mul_iss_info)
 
 
-    val ooo_readOp  = Vec(2,  new iss_readOp_info(64))
+    val ooo_readOp  = Vec(2,  new iss_readOp_info(dw=64,dp=64))
 
   })
 
@@ -155,9 +155,6 @@ class Out_of_Order_Issue() extends Module {
     ))
     res.param.dat.op3 := 0.U
     res.param.rd0 := dpt.phy.rd0
-    res.param.is_iwb := true.B
-    res.param.is_fwb := false.B
-
     return res
   }
 
@@ -167,15 +164,13 @@ class Out_of_Order_Issue() extends Module {
  
     res.param.dat    := op.dat
     res.param.rd0    := dpt.phy.rd0
-    res.param.is_iwb := true.B
-    res.param.is_fwb := false.B
     return res
   }
 
 }
 
 
-class In_Order_Issue extends Module {
+class In_Order_Issue extends Module with HasFPUParameters{
     val io = IO(new Bundle{
       val bru_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
       val csr_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
@@ -187,12 +182,12 @@ class In_Order_Issue extends Module {
       val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
       val fpu_iss_exe = new DecoupledIO(new Fpu_iss_info)
 
-      val bru_readOp  = new iss_readOp_info(64)
-      val csr_readOp  = new iss_readOp_info(64)
-      val lsu_readXOp  = new iss_readOp_info(64)
-      val lsu_readFOp  = new iss_readOp_info(64)
-      val fpu_readXOp  = new iss_readOp_info(64)
-      val fpu_readFOp  = new iss_readOp_info(64)
+      val bru_readOp  = new iss_readOp_info(dw=64,dp=64)
+      val csr_readOp  = new iss_readOp_info(dw=64,dp=64)
+      val lsu_readXOp  = new iss_readOp_info(dw=64,dp=64)
+      val lsu_readFOp  = new iss_readOp_info(dw=65,dp=64)
+      val fpu_readXOp  = new iss_readOp_info(dw=64,dp=64)
+      val fpu_readFOp  = new iss_readOp_info(dw=65,dp=64)
 
   })
 
@@ -260,7 +255,7 @@ class In_Order_Issue extends Module {
   io.lsu_readFOp.reg.valid := io.lsu_dpt_iss.valid
   io.lsu_readFOp.reg.bits.rs1  := 63.U
   io.lsu_readFOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.lsu_isa.is_fst, io.lsu_dpt_iss.bits.phy.rs2, 63.U )
-  io.lsu_readFOp.reg.bits.rs2  := 63.U
+  io.lsu_readFOp.reg.bits.rs3  := 63.U
 
 
   lsu_iss_fifo.io.enq.valid := io.lsu_readXOp.reg.fire & io.lsu_readFOp.reg.fire
@@ -303,8 +298,7 @@ class In_Order_Issue extends Module {
     res.param.imm   := dpt.param.imm
     res.param.dat   := op.dat
     res.param.rd0    := dpt.phy.rd0
-    res.param.is_iwb := true.B
-    res.param.is_fwb := false.B
+
     return res
   }
 
@@ -325,8 +319,7 @@ class In_Order_Issue extends Module {
     res.param.dat.op2 := dpt.param.imm
     res.param.dat.op3 := 0.U
     res.param.rd0    := dpt.phy.rd0
-    res.param.is_iwb := true.B
-    res.param.is_fwb := false.B
+
     return res
   }
 
@@ -337,12 +330,17 @@ class In_Order_Issue extends Module {
     res.fun := dpt.lsu_isa
 
     res.param.dat.op1 := (Xop.dat.op1.asSInt + dpt.param.imm.asSInt()).asUInt()
-    res.param.dat.op2 := Mux( dpt.lsu_isa.is_fst, Fop.dat.op2, Xop.dat.op2 )
+    res.param.dat.op2 :=
+      Mux(
+        dpt.lsu_isa.is_fst,
+        ieee(Fop.dat.op2, t = FType.D),
+        Xop.dat.op2
+        
+      )
     res.param.dat.op3 := 0.U
 
     res.param.rd0 := dpt.phy.rd0
-    res.param.is_iwb := dpt.lsu_isa.is_iwb
-    res.param.is_fwb := dpt.lsu_isa.is_fwb
+
     return res
   }
 
@@ -351,13 +349,12 @@ class In_Order_Issue extends Module {
 
     res.fun := dpt.fpu_isa
 
-    res.param.dat := Mux( dpt.fpu_isa.is_fop, Fop.dat, Xop.dat )
+    res.param.dat.op1 := Mux( dpt.fpu_isa.is_fop, Fop.dat.op1, Xop.dat.op1 )
+    res.param.dat.op2 := Mux( dpt.fpu_isa.is_fop, Fop.dat.op2, Xop.dat.op2 )
+    res.param.dat.op3 := Mux( dpt.fpu_isa.is_fop, Fop.dat.op3, Xop.dat.op3 )
 
 
     res.param.rd0 := dpt.phy.rd0
-    res.param.is_iwb := dpt.fpu_isa.is_iwb
-    res.param.is_fwb := dpt.fpu_isa.is_fwb
-
 
     res.param.rm := dpt.param.rm
 
@@ -376,13 +373,13 @@ class Issue extends Module {
     val lsu_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
     val fpu_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
 
-    val ooo_readOp  = Vec(2,  new iss_readOp_info(64))
-    val bru_readOp  = new iss_readOp_info(64)
-    val csr_readOp  = new iss_readOp_info(64)
-    val lsu_readXOp  = new iss_readOp_info(64)
-    val lsu_readFOp  = new iss_readOp_info(64)
-    val fpu_readXOp  = new iss_readOp_info(64)
-    val fpu_readFOp  = new iss_readOp_info(64)
+    val ooo_readOp  = Vec(2,  new iss_readOp_info(dw=64,dp=64))
+    val bru_readOp  = new iss_readOp_info(dw=64,dp=64)
+    val csr_readOp  = new iss_readOp_info(dw=64,dp=64)
+    val lsu_readXOp  = new iss_readOp_info(dw=64,dp=64)
+    val lsu_readFOp  = new iss_readOp_info(dw=65,dp=64)
+    val fpu_readXOp  = new iss_readOp_info(dw=64,dp=64)
+    val fpu_readFOp  = new iss_readOp_info(dw=65,dp=64)
 
     val alu_iss_exe = new DecoupledIO(new Alu_iss_info)
     val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
@@ -408,6 +405,7 @@ class Issue extends Module {
     mdl.io.bru_dpt_iss <> io.bru_dpt_iss
     mdl.io.csr_dpt_iss <> io.csr_dpt_iss
     mdl.io.lsu_dpt_iss <> io.lsu_dpt_iss
+    mdl.io.fpu_dpt_iss <> io.fpu_dpt_iss
     mdl.io.bru_readOp  <> io.bru_readOp
     mdl.io.csr_readOp  <> io.csr_readOp
     mdl.io.lsu_readXOp  <> io.lsu_readXOp
@@ -417,6 +415,7 @@ class Issue extends Module {
     mdl.io.bru_iss_exe <> io.bru_iss_exe
     mdl.io.csr_iss_exe <> io.csr_iss_exe
     mdl.io.lsu_iss_exe <> io.lsu_iss_exe
+    mdl.io.fpu_iss_exe <> io.fpu_iss_exe
     mdl
   }
 }

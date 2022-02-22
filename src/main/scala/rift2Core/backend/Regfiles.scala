@@ -38,9 +38,9 @@ class dpt_rename_info(dp: Int) extends Bundle{
   val req = Decoupled(new Register_dstntn(32))
 }
 
-class iss_readOp_info(dp: Int) extends Bundle{
+class iss_readOp_info(dw: Int, dp: Int) extends Bundle{
   val reg = Decoupled(new Register_source(dp))
-  val dat = Input(new Operation_source)
+  val dat = Input(new Operation_source(dw))
 }
 
 class Info_commit_op(dp:Int) extends Bundle{
@@ -52,15 +52,15 @@ class Info_commit_op(dp:Int) extends Bundle{
   val toF = Bool()
 }
 
-class RegFiles(dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends Module{
+class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends Module{
   val io = IO( new Bundle{
 
     val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
     val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info(dp)) )
     /** read operators based on idx, must success */
-    val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dp)) )
+    val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dw, dp)) )
     /** writeBack request from exeUnit */
-    val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(64))))
+    val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(dw,dp))))
     /** Commit request from commitUnit */
     val commit = Vec(cmm_chn, Flipped(Decoupled(new Info_commit_op(dp))))
 

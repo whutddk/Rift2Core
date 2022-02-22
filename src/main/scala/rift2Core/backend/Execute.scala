@@ -37,19 +37,19 @@ import freechips.rocketchip.tilelink._
 class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
-    val alu_exe_iwb = new DecoupledIO(new WriteBack_info(64))
+    val alu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
-    val bru_exe_iwb = new DecoupledIO(new WriteBack_info(64))
+    val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
     val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
-    val csr_exe_iwb = new DecoupledIO(new WriteBack_info(64))
+    val csr_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(64))
-    val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(64))
+    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
+    val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65,dp=64))
     val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
-    val mul_exe_iwb = new DecoupledIO(new WriteBack_info(64))
+    val mul_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
     val fpu_iss_exe = Flipped(new DecoupledIO(new Fpu_iss_info))
-    val fpu_exe_iwb = new DecoupledIO(new WriteBack_info(64))
-    val fpu_exe_fwb = new DecoupledIO(new WriteBack_info(64))
+    val fpu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
+    val fpu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65,dp=64))
 
 
     val cmm_bru_ilp = Input(Bool())

@@ -136,7 +136,7 @@ class FPToInt() extends Module with HasFPUParameters{
 
 
   val in = io.in
-  recode(load_wb_data, load_wb_typeTag)
+
   val op1 = unbox(in.param.dat.op1, in.fun.FtypeTagIn, None)
   val op2 = unbox(in.param.dat.op2, in.fun.FtypeTagIn, None)
   val op3 = unbox(in.param.dat.op3, in.fun.FtypeTagIn, None)

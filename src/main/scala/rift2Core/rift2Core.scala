@@ -119,12 +119,21 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
     mdl.io.bru_dpt_iss <> dpt_stage.io.bru_dpt_iss
     mdl.io.csr_dpt_iss <> dpt_stage.io.csr_dpt_iss
     mdl.io.lsu_dpt_iss <> dpt_stage.io.lsu_dpt_iss
+    mdl.io.fpu_dpt_iss <> dpt_stage.io.fpu_dpt_iss
     mdl
   }
 
 
-  val exe_stage = Module(new Execute( ((for ( i <- 0 until 8 ) yield dcache_edge(i) ) ++ Seq( system_edge, periph_edge ) ) ) )
-
+  val exe_stage = {
+    val mdl = Module(new Execute( ((for ( i <- 0 until 8 ) yield dcache_edge(i) ) ++ Seq( system_edge, periph_edge ) ) ) )
+    iss_stage.io.alu_iss_exe <> mdl.io.alu_iss_exe
+    iss_stage.io.bru_iss_exe <> mdl.io.bru_iss_exe
+    iss_stage.io.lsu_iss_exe <> mdl.io.lsu_iss_exe
+    iss_stage.io.csr_iss_exe <> mdl.io.csr_iss_exe
+    iss_stage.io.mul_iss_exe <> mdl.io.mul_iss_exe
+    iss_stage.io.fpu_iss_exe <> mdl.io.fpu_iss_exe
+    mdl
+  }
 
 
   val iwb_stage = { 
@@ -149,7 +158,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
     mdl.io.mem_fWriteBack <> exe_stage.io.lsu_exe_fwb
     mdl.io.mul_iWriteBack <> exe_stage.io.mul_exe_iwb
     mdl.io.fpu_iWriteBack <> exe_stage.io.fpu_exe_iwb
-    mdl.io.fpu_fWriteBack <> exe_stage.io.fpu_exe_iwb
+    mdl.io.fpu_fWriteBack <> exe_stage.io.fpu_exe_fwb
 
 
     mdl
@@ -187,11 +196,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-  iss_stage.io.alu_iss_exe <> exe_stage.io.alu_iss_exe
-  iss_stage.io.bru_iss_exe <> exe_stage.io.bru_iss_exe
-  iss_stage.io.lsu_iss_exe <> exe_stage.io.lsu_iss_exe
-  iss_stage.io.csr_iss_exe <> exe_stage.io.csr_iss_exe
-  iss_stage.io.mul_iss_exe <> exe_stage.io.mul_iss_exe
+
 
 
 

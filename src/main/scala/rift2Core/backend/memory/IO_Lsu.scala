@@ -42,7 +42,7 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
   })
 
   val is_busy = RegInit(false.B)
-  val pending_wb = Reg(new WriteBack_info(dp=64))
+  val pending_wb = Reg(new WriteBack_info(dw=64,dp=64))
   val pending_paddr = Reg(UInt(64.W))
   val pending_fun = Reg(new Cache_op)
 
@@ -80,8 +80,6 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
   when( io.getPut.fire ) {
     assert( is_busy === false.B  )
     pending_wb.rd0 := io.enq.bits.rd.rd0
-    pending_wb.is_iwb := io.enq.bits.rd.is_iwb
-    pending_wb.is_fwb := io.enq.bits.rd.is_fwb
     pending_paddr := io.enq.bits.paddr
     pending_fun := io.enq.bits.fun
     is_busy := true.B
@@ -111,8 +109,12 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
 
   io.deq.bits.is_load_amo := (io.access.bits.opcode === TLMessages.AccessAckData)
   // io.deq.bits.paddr := pending_paddr
-  io.deq.bits.chk_idx := DontCare
-  
+  io.deq.bits.chk_idx := 0.U
+
+  io.deq.bits.is_flw := Mux( io.deq.valid, pending_fun.flw, false.B )
+  io.deq.bits.is_fld := Mux( io.deq.valid, pending_fun.fld, false.B )
+
+
   io.access.ready := io.deq.ready
 
 

@@ -26,19 +26,19 @@ import chisel3.experimental.dataview._
 class FAlu() extends Module with HasFPUParameters{
   val io = IO(new Bundle{
     val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
-    val fpu_exe_iwb = DecoupledIO(new WriteBack_info(64))
-    val fpu_exe_fwb = DecoupledIO(new WriteBack_info(64))
+    val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
+    val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
 
     val flush = Input(Bool())
   })
 
   val fpu_exe_iwb_fifo = {
-    val mdl = Module( new Queue( new WriteBack_info(64), 1, true, false ) )
+    val mdl = Module( new Queue( new WriteBack_info(dw=65, dp=64), 1, true, false ) )
     mdl.io.deq <> io.fpu_exe_iwb
     mdl
   }
   val fpu_exe_fwb_fifo = {
-    val mdl = Module( new Queue( new WriteBack_info(64), 1, true, false ) )
+    val mdl = Module( new Queue( new WriteBack_info(dw=65, dp=64), 1, true, false ) )
     mdl.io.deq <> io.fpu_exe_fwb
     mdl
   }
@@ -116,7 +116,7 @@ class FAlu() extends Module with HasFPUParameters{
       io.fpu_iss_exe.bits.fun.is_fun_fcvtX -> f2i.io.out.toint,
       // io.fpu_iss_exe.bits.fun.is_fun_cmp   -> f2i.io.out.lt,
     ))
-  fpu_exe_iwb_fifo.io.enq.bits.viewAsSupertype(new Rd_Param(64)) := io.fpu_iss_exe.bits.param.viewAsSupertype(new Rd_Param(64))
+  fpu_exe_iwb_fifo.io.enq.bits.viewAsSupertype(new Register_dstntn(64)) := io.fpu_iss_exe.bits.param.viewAsSupertype(new Register_dstntn(64))
   // fpu_exe_iwb_fifo.io.enq.bits.is_iwb := true.B
   // fpu_exe_iwb_fifo.io.enq.bits.is_fwb := false.B
   // fpu_exe_iwb_fifo.io.enq.bits.rd0 := io.fpu_iss_exe.bits.
@@ -124,9 +124,9 @@ class FAlu() extends Module with HasFPUParameters{
 
   fpu_exe_fwb_fifo.io.enq.valid := false.B//io.fpu_iss_exe.valid & io.fpu_iss_exe.fun.is_fwb
   fpu_exe_fwb_fifo.io.enq.bits.res := 0.U
-  fpu_exe_fwb_fifo.io.enq.bits.viewAsSupertype(new Rd_Param(64)) := io.fpu_iss_exe.bits.param.viewAsSupertype(new Rd_Param(64))
+  fpu_exe_fwb_fifo.io.enq.bits.viewAsSupertype(new Register_dstntn(64)) := io.fpu_iss_exe.bits.param.viewAsSupertype(new Register_dstntn(64))
 
-
+  io.fpu_iss_exe.ready := fpu_exe_iwb_fifo.io.enq.fire | fpu_exe_fwb_fifo.io.enq.fire
 }
 
 
