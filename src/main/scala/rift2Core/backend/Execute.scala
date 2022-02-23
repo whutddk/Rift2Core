@@ -50,7 +50,8 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     val fpu_iss_exe = Flipped(new DecoupledIO(new Fpu_iss_info))
     val fpu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
     val fpu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65,dp=64))
-
+    val fcsr = Input(UInt(24.W))
+    val fcsr_cmm_op = DecoupledIO( new Exe_Port )
 
     val cmm_bru_ilp = Input(Bool())
     val bru_pd_b = new ValidIO( Bool() )
@@ -158,6 +159,8 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     mdl.io.fpu_exe_iwb <> io.fpu_exe_iwb
     mdl.io.fpu_exe_fwb <> io.fpu_exe_fwb
     mdl.io.flush := io.flush
+    mdl.io.fcsr := io.fcsr
+    mdl.io.fcsr_cmm_op <> io.fcsr_cmm_op
 
     mdl
   }

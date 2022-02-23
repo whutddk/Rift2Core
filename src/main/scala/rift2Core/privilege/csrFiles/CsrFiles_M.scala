@@ -61,25 +61,39 @@ abstract class CsrFiles_M extends CsrFiles_port {
 
 
   //user floating point csrs
-  fflags := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h001".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // fflags := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h001".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
-  frm := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h002".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // frm := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h002".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
   fcsr := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h003".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
+    val frm    = RegInit(0.U(3.W))
+    val fflags = RegInit(0.U(5.W))
+    val fcsr   = Cat( 0.U(24.W),frm, fflags )
+
+    val (enable0, dnxt0) = Reg_Exe_Port( fflags, "h001".U, exe_fport )
+    val (enable1, dnxt1) = Reg_Exe_Port( frm, "h002".U, exe_fport )
+    val (enable2, dnxt2) = Reg_Exe_Port( fcsr, "h003".U, exe_fport )
+
+    when(enable0) {
+      fflags := dnxt0
+    } .elsewhen(enable1) {
+      frm := dnxt1
+    } .elsewhen(enable2) {
+      fflags := dnxt2(4,0)
+      frm := dnxt2(7,5)
+    }
+
+    Cat( 0.U(24.W),frm, fflags )
   }
 
   //user conter timers
@@ -286,6 +300,9 @@ abstract class CsrFiles_M extends CsrFiles_port {
       sie  := dnxt1(1)
     }
 
+    when(is_fpu_state_change & (fs =/= 0.U)) {
+      fs := 3.U
+    }
     value
   }
 

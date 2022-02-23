@@ -60,9 +60,11 @@ class Commit extends Privilege with Superscalar {
 
     val ifence = Output(Bool())
 
-
-
     val cmm_mmu = Output( new Info_cmm_mmu )
+
+
+    val fcsr = Output(UInt(24.W))
+    val fcsr_cmm_op = Flipped(DecoupledIO( new Exe_Port ) )
 
     val rtc_clock = Input(Bool())
 
@@ -164,10 +166,12 @@ class Commit extends Privilege with Superscalar {
 
     val is_illeage_v = {
       val is_csr_illegal = VecInit(
-        (is_csrr_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_csr & ~is_wb_v(0)) |
-        (is_csrw_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_csr & is_wb_v(0)) ,
-        (is_csrr_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_csr & ~is_wb_v(1)) |
-        (is_csrw_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_csr & is_wb_v(1))
+        (is_csrr_illegal  & io.rod_i(0).valid & io.rod_i(0).bits.is_csr  & ~is_wb_v(0)) |
+        (is_csrw_illegal  & io.rod_i(0).valid & io.rod_i(0).bits.is_csr  &  is_wb_v(0))  |
+        (is_fcsrw_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_fcsr &  is_wb_v(0)),
+        (is_csrr_illegal  & io.rod_i(1).valid & io.rod_i(1).bits.is_csr  & ~is_wb_v(1)) |
+        (is_csrw_illegal  & io.rod_i(1).valid & io.rod_i(1).bits.is_csr  &  is_wb_v(1)) |
+        (is_fcsrw_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_fcsr &  is_wb_v(1))
       )
 
       val is_ill_sfence = VecInit(
@@ -188,14 +192,20 @@ class Commit extends Privilege with Superscalar {
       val is_ill_sRet_v = VecInit(
         io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b01".U & mstatus(22)) ),
         io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b01".U & mstatus(22)) )
-      
       )
+
+      
+
+      val is_ill_fpus_v = ( 0 until 2 ).map{ i => 
+        (is_wb_v(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fcsr) & mstatus(14,13) === 0.U)
+      }: Seq[Bool]
+      
 
 
 
       VecInit(
-        (io.rod_i(0).bits.is_illeage | is_csr_illegal(0) | is_ill_sfence(0) | is_ill_wfi_v(0) | is_ill_mRet_v(0) | is_ill_sRet_v(0) ),
-        (io.rod_i(1).bits.is_illeage | is_csr_illegal(1) | is_ill_sfence(1) | is_ill_wfi_v(1) | is_ill_mRet_v(1) | is_ill_sRet_v(1)) & ~is_1st_solo
+        (io.rod_i(0).bits.is_illeage | is_csr_illegal(0) | is_ill_sfence(0) | is_ill_wfi_v(0) | is_ill_mRet_v(0) | is_ill_sRet_v(0) | is_ill_fpus_v(0) ),
+        (io.rod_i(1).bits.is_illeage | is_csr_illegal(1) | is_ill_sfence(1) | is_ill_wfi_v(1) | is_ill_mRet_v(1) | is_ill_sRet_v(1) | is_ill_fpus_v(1) ) & ~is_1st_solo
       )
     }
 
@@ -370,8 +380,14 @@ class Commit extends Privilege with Superscalar {
     io.csr_cmm_op.valid &
     ( io.csr_cmm_op.bits.op_rc | io.csr_cmm_op.bits.op_rs | io.csr_cmm_op.bits.op_rw ) &
     (
-      csr_write_denied(io.csr_cmm_op.bits.addr) |
-      csr_read_prilvl(io.csr_cmm_op.bits.addr)
+      csr_write_denied(io.csr_cmm_op.bits.addr) | csr_read_prilvl(io.csr_cmm_op.bits.addr)
+    )
+
+  is_fcsrw_illegal := 
+    io.fcsr_cmm_op.valid & 
+    ( io.fcsr_cmm_op.bits.op_rc | io.fcsr_cmm_op.bits.op_rs | io.fcsr_cmm_op.bits.op_rw ) &
+    (
+      mstatus(14,13) === 0.U
     )
 
   is_csrr_illegal := 
@@ -390,7 +406,11 @@ class Commit extends Privilege with Superscalar {
       (is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)		
     )
 
-
+  io.fcsr_cmm_op.ready :=
+    io.fcsr_cmm_op.valid & (
+      (is_commit_comfirm(0) & io.rod_i(0).bits.is_fcsr) | 
+      (is_commit_comfirm(1) & io.rod_i(1).bits.is_fcsr)		
+    )
 
 
 
@@ -402,6 +422,7 @@ class Commit extends Privilege with Superscalar {
 
 	rtc_clock               := io.rtc_clock	
 	exe_port                := Mux( io.csr_cmm_op.ready, io.csr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
+	exe_fport                := Mux( io.fcsr_cmm_op.ready, io.fcsr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
 	is_trap                 := io.rod_i(0).valid & is_trap_v(0)
 	is_mRet                 := io.rod_i(0).valid & is_mRet_v(0)
 	is_sRet                 := io.rod_i(0).valid & is_sRet_v(0)
@@ -447,6 +468,12 @@ class Commit extends Privilege with Superscalar {
     ( io.rod_i(0).valid & is_fence_i_v(0))
 
 
+  is_fpu_state_change := ( 0 until 2 ).map{
+    i => is_commit_comfirm(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fcsr)
+  }.reduce(_|_)
+    
+
+  io.fcsr := fcsr
 
 
   io.diff_commit.pc(0) := io.rod_i(0).bits.pc

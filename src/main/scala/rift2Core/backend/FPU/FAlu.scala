@@ -21,6 +21,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
+import rift2Core.privilege.csrFiles._
 import chisel3.experimental.dataview._
 
 class FAlu() extends Module with HasFPUParameters{
@@ -28,6 +29,9 @@ class FAlu() extends Module with HasFPUParameters{
     val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
     val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
     val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
+
+    val fcsr = Input(UInt(24.W))
+    val fcsr_cmm_op = DecoupledIO( new Exe_Port )
 
     val flush = Input(Bool())
   })
@@ -43,10 +47,11 @@ class FAlu() extends Module with HasFPUParameters{
     mdl
   }
 
-  val frm    = RegInit(0.U(3.W))
-  val fflags = RegInit(0.U(5.W))
-  val fcsr   = Cat( 0.U(24.W),frm, fflags )
-
+  // val frm    = RegInit(0.U(3.W))
+  // val fflags = RegInit(0.U(5.W))
+  // val fcsr   = Cat( 0.U(24.W),frm, fflags )
+  val exc = Wire(UInt(5.W))
+  exc := 0.U
 
   val f2i = {
     val mdl = Module(new FPToInt)
@@ -57,55 +62,53 @@ class FAlu() extends Module with HasFPUParameters{
 
 
 
+  val fcsr_op_fifo = Module(new Queue( new Exe_Port, 1, false, false ) )
+  io.fcsr_cmm_op <> fcsr_op_fifo.io.deq
+  fcsr_op_fifo.reset := reset.asBool | io.flush
+
+  def rw = io.fpu_iss_exe.bits.fun.is_fun_frw
+  def rs = io.fpu_iss_exe.bits.fun.is_fun_frs
+  def rc = io.fpu_iss_exe.bits.fun.is_fun_frc
+  
+  def dat  = 
+    Mux(
+      io.fpu_iss_exe.bits.fun.is_fun_fcsr,
+      io.fpu_iss_exe.bits.param.dat.op1,
+      exc
+    )
+  
+  
+  def addr = 
+    Mux(
+      io.fpu_iss_exe.bits.fun.is_fun_fcsr,
+      io.fpu_iss_exe.bits.param.dat.op2,
+      1.U
+    )
+  
+
+  def dontWrite = (dat === 0.U) & ( rs | rc )
+
+  fcsr_op_fifo.io.enq.bits.addr := addr
+  fcsr_op_fifo.io.enq.bits.dat_i := dat
+  fcsr_op_fifo.io.enq.bits.op_rw := rw & ~dontWrite
+  fcsr_op_fifo.io.enq.bits.op_rs := rs & ~dontWrite
+  fcsr_op_fifo.io.enq.bits.op_rc := rc & ~dontWrite
+
+  fcsr_op_fifo.io.enq.valid := fpu_exe_iwb_fifo.io.enq.fire | fpu_exe_fwb_fifo.io.enq.fire
+
+
+  val fcsr_res =
+    Mux1H(Seq(
+      (io.fpu_iss_exe.bits.param.dat.op2 === 1.U) -> io.fcsr(4,0),
+      (io.fpu_iss_exe.bits.param.dat.op2 === 2.U) -> io.fcsr(7,5),
+      (io.fpu_iss_exe.bits.param.dat.op2 === 3.U) -> io.fcsr,
+    ))
 
 
 
 
 
-  val fcsr_res = WireDefault(0.U(64.W))
-  when( fpu_exe_iwb_fifo.io.enq.fire | fpu_exe_fwb_fifo.io.enq.fire ) {
-    when( io.fpu_iss_exe.bits.fun.is_fun_fcsr ) {
-      fcsr_res := 
-        Mux1H(Seq(
-          (io.fpu_iss_exe.bits.param.dat.op2 === 1.U) -> fflags,
-          (io.fpu_iss_exe.bits.param.dat.op2 === 2.U) -> frm,
-          (io.fpu_iss_exe.bits.param.dat.op2 === 3.U) -> fcsr,
-        ))
 
-      when( io.fpu_iss_exe.bits.param.dat.op2 === 1.U ) {
-        fflags := Mux1H(Seq(
-          io.fpu_iss_exe.bits.fun.is_fun_frw -> (          io.fpu_iss_exe.bits.param.dat.op1),
-          io.fpu_iss_exe.bits.fun.is_fun_frs -> (fflags |  io.fpu_iss_exe.bits.param.dat.op1),
-          io.fpu_iss_exe.bits.fun.is_fun_frc -> (fflags & ~io.fpu_iss_exe.bits.param.dat.op1),
-        ))
-      } .elsewhen( io.fpu_iss_exe.bits.param.dat.op2 === 2.U ) {
-        frm := Mux1H(Seq(
-          io.fpu_iss_exe.bits.fun.is_fun_frw -> (       io.fpu_iss_exe.bits.param.dat.op1),
-          io.fpu_iss_exe.bits.fun.is_fun_frs -> (frm |  io.fpu_iss_exe.bits.param.dat.op1),
-          io.fpu_iss_exe.bits.fun.is_fun_frc -> (frm & ~io.fpu_iss_exe.bits.param.dat.op1),
-        ))
-      } .elsewhen( io.fpu_iss_exe.bits.param.dat.op2 === 3.U ) {
-        fflags := Mux1H(Seq(
-          io.fpu_iss_exe.bits.fun.is_fun_frw -> (          io.fpu_iss_exe.bits.param.dat.op1(4,0)),
-          io.fpu_iss_exe.bits.fun.is_fun_frs -> (fflags |  io.fpu_iss_exe.bits.param.dat.op1(4,0)),
-          io.fpu_iss_exe.bits.fun.is_fun_frc -> (fflags & ~io.fpu_iss_exe.bits.param.dat.op1(4,0)),
-        ))
-
-        frm := Mux1H(Seq(
-          io.fpu_iss_exe.bits.fun.is_fun_frw -> (       io.fpu_iss_exe.bits.param.dat.op1(7,5)),
-          io.fpu_iss_exe.bits.fun.is_fun_frs -> (frm |  io.fpu_iss_exe.bits.param.dat.op1(7,5)),
-          io.fpu_iss_exe.bits.fun.is_fun_frc -> (frm & ~io.fpu_iss_exe.bits.param.dat.op1(7,5)),
-        ))
-      } .otherwise {
-        assert( false.B, "Assert Failed at fpu exe, invalid csr address req" )
-      }
-    } .otherwise {
-      val fflags_dnxt =
-        0.U(5.W) |
-        f2i.io.out.exc
-      fflags := fflags | fflags_dnxt(4,0)
-    }
-  }
 
 
   fpu_exe_iwb_fifo.io.enq.valid := io.fpu_iss_exe.valid & io.fpu_iss_exe.bits.fun.is_iwb
@@ -126,7 +129,12 @@ class FAlu() extends Module with HasFPUParameters{
   fpu_exe_fwb_fifo.io.enq.bits.res := 0.U
   fpu_exe_fwb_fifo.io.enq.bits.viewAsSupertype(new Register_dstntn(64)) := io.fpu_iss_exe.bits.param.viewAsSupertype(new Register_dstntn(64))
 
-  io.fpu_iss_exe.ready := fpu_exe_iwb_fifo.io.enq.fire | fpu_exe_fwb_fifo.io.enq.fire
+  io.fpu_iss_exe.ready := 
+    fcsr_op_fifo.io.enq.ready & 
+    (fpu_exe_iwb_fifo.io.enq.fire | fpu_exe_fwb_fifo.io.enq.fire)
+
+  assert( io.fpu_iss_exe.fire === fcsr_op_fifo.io.enq.fire )
+  assert( io.fpu_iss_exe.fire === (fpu_exe_iwb_fifo.io.enq.fire | fpu_exe_fwb_fifo.io.enq.fire) )
 }
 
 
