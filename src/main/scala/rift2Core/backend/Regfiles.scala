@@ -71,9 +71,9 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
     * dp-1 (63) files exist in this version,'
     * @note the file(dp) is assert to be Zero
     */
-  val files_reg = RegInit( VecInit( Seq.fill(dp-1)(0.U(64.W)) ))
+  val files_reg = RegInit( VecInit( Seq.fill(dp-1)(0.U(dw.W)) ))
   val files = {
-    val res = Wire( Vec(dp, UInt(64.W)) )
+    val res = Wire( Vec(dp, UInt(dw.W)) )
     for ( i <- 0 until dp-1 ) yield { res(i) := files_reg(i) }
     res(dp-1) := 0.U
     res

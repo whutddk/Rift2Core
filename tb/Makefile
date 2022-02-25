@@ -210,7 +210,7 @@ isa += rv64uc-v-rvc
 # isa += rv64ud-v-fmadd
 # isa += rv64ud-p-fmin
 # isa += rv64ud-v-fmin
-# isa += rv64ud-p-ldst
+isa += rv64ud-p-ldst
 # isa += rv64ud-v-ldst
 # isa += rv64ud-p-move
 # isa += rv64ud-v-move
@@ -240,31 +240,6 @@ isa += rv64uf-p-ldst
 # isa += rv64uf-v-move
 # isa += rv64uf-p-recoding
 # isa += rv64uf-v-recoding
-
-# isa += rv64uzfh-p-fadd
-# isa += rv64uzfh-v-fadd
-# isa += rv64uzfh-p-fclass
-# isa += rv64uzfh-v-fclass
-# isa += rv64uzfh-p-fcmp
-# isa += rv64uzfh-v-fcmp
-# isa += rv64uzfh-p-fcvt
-# isa += rv64uzfh-v-fcvt
-# isa += rv64uzfh-p-fcvt_w
-# isa += rv64uzfh-v-fcvt_w
-# isa += rv64uzfh-p-fdiv
-# isa += rv64uzfh-v-fdiv
-# isa += rv64uzfh-p-fmadd
-# isa += rv64uzfh-v-fmadd
-# isa += rv64uzfh-p-fmin
-# isa += rv64uzfh-v-fmin
-# isa += rv64uzfh-p-ldst
-# isa += rv64uzfh-v-ldst
-# isa += rv64uzfh-p-move
-# isa += rv64uzfh-v-move
-# isa += rv64uzfh-p-recoding
-# isa += rv64uzfh-v-recoding
-
-
 
 
 
@@ -338,7 +313,7 @@ coremark: sim
 	./build/VSimTop  -f ./ci/coremark1_bare
 
 wave:
-	gtkwave ./build/wave.vcd
+	gtkwave ./build/wave.vcd &
 
 
 
