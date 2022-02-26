@@ -333,8 +333,13 @@ class Fpu_isa extends Bundle {
   def is_fun_fcvtX = 
     fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
     fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu 
-
-
+  def is_fun_xcvtF = 
+    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s |
+    fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d 
+  def is_fun_fmvX =
+    fmv_x_w | fmv_x_d
+  def is_fun_xmvF =
+    fmv_w_x | fmv_d_x
   // def is_fun_int2float =
   //   fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fmv_w_x |
   //   fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d | fmv_d_x
