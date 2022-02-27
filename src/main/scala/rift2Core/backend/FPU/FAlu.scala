@@ -95,7 +95,7 @@ class FAlu() extends Module with HasFPUParameters{
 
     mdl
   }
-  fcsr_op_fifo.io.enq.valid := fpu_exe_iwb_fifo.io.enq.fire | fpu_exe_fwb_fifo.io.enq.fire
+  fcsr_op_fifo.io.enq.valid := io.fpu_iss_exe.fire
 
 
   val fcsr_res =
@@ -112,22 +112,22 @@ class FAlu() extends Module with HasFPUParameters{
 
 
 
-  fpu_exe_iwb_fifo.io.enq.valid := io.fpu_iss_exe.valid & io.fpu_iss_exe.bits.fun.is_iwb
+  fpu_exe_iwb_fifo.io.enq.valid := io.fpu_iss_exe.fire & io.fpu_iss_exe.bits.fun.is_iwb
   fpu_exe_iwb_fifo.io.enq.bits.res :=
     Mux1H(Seq(
       io.fpu_iss_exe.bits.fun.is_fun_fcsr  -> fcsr_res,
       io.fpu_iss_exe.bits.fun.is_fun_class -> f2i.io.out.toint,
       io.fpu_iss_exe.bits.fun.is_fun_fcvtX -> f2i.io.out.toint,
-      io.fpu_iss_exe.bits.fun.flt_s | io.fpu_iss_exe.bits.fun.flt_d   -> Mux(f2i.io.out.lt, 1.U, 0.U),
-      io.fpu_iss_exe.bits.fun.fle_s | io.fpu_iss_exe.bits.fun.fle_d   -> Mux((~f2i.io.out.lt)|io.out.eq, 1.U, 0.U),
-      io.fpu_iss_exe.bits.fun.feq_s | io.fpu_iss_exe.bits.fun.feq_d   -> Mux(io.out.eq, 1.U, 0.U),
+      (io.fpu_iss_exe.bits.fun.flt_s | io.fpu_iss_exe.bits.fun.flt_d ) -> Mux(f2i.io.out.lt, 1.U, 0.U),
+      (io.fpu_iss_exe.bits.fun.fle_s | io.fpu_iss_exe.bits.fun.fle_d ) -> Mux((~f2i.io.out.lt)|f2i.io.out.eq, 1.U, 0.U),
+      (io.fpu_iss_exe.bits.fun.feq_s | io.fpu_iss_exe.bits.fun.feq_d ) -> Mux(f2i.io.out.eq, 1.U, 0.U),
       io.fpu_iss_exe.bits.fun.is_fun_fmvX -> f2i.io.out.toint,
     ))
   fpu_exe_iwb_fifo.io.enq.bits.viewAsSupertype(new Register_dstntn(64)) := io.fpu_iss_exe.bits.param.viewAsSupertype(new Register_dstntn(64))
 
 
 
-  fpu_exe_fwb_fifo.io.enq.valid := io.fpu_iss_exe.valid & io.fpu_iss_exe.fun.is_fwb
+  fpu_exe_fwb_fifo.io.enq.valid := io.fpu_iss_exe.fire & io.fpu_iss_exe.bits.fun.is_fwb
   fpu_exe_fwb_fifo.io.enq.bits.res := 
     Mux1H(Seq(
       io.fpu_iss_exe.bits.fun.is_fun_xcvtF -> i2f.io.out.toFloat,
@@ -136,8 +136,7 @@ class FAlu() extends Module with HasFPUParameters{
   fpu_exe_fwb_fifo.io.enq.bits.viewAsSupertype(new Register_dstntn(dp=64)) := io.fpu_iss_exe.bits.param.viewAsSupertype(new Register_dstntn(dp=64))
 
   io.fpu_iss_exe.ready := 
-    fcsr_op_fifo.io.enq.ready & 
-    (fpu_exe_iwb_fifo.io.enq.fire | fpu_exe_fwb_fifo.io.enq.fire)
+    fcsr_op_fifo.io.enq.ready & (fpu_exe_iwb_fifo.io.enq.ready & fpu_exe_fwb_fifo.io.enq.ready)
 
   assert( io.fpu_iss_exe.fire === fcsr_op_fifo.io.enq.fire )
   assert( io.fpu_iss_exe.fire === (fpu_exe_iwb_fifo.io.enq.fire | fpu_exe_fwb_fifo.io.enq.fire) )

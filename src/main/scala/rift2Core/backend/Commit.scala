@@ -168,10 +168,10 @@ class Commit extends Privilege with Superscalar {
       val is_csr_illegal = VecInit(
         (is_csrr_illegal  & io.rod_i(0).valid & io.rod_i(0).bits.is_csr  & ~is_wb_v(0)) |
         (is_csrw_illegal  & io.rod_i(0).valid & io.rod_i(0).bits.is_csr  &  is_wb_v(0))  |
-        (is_fcsrw_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_fcsr &  is_wb_v(0)),
+        (is_fcsrw_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_fpu &  is_wb_v(0)),
         (is_csrr_illegal  & io.rod_i(1).valid & io.rod_i(1).bits.is_csr  & ~is_wb_v(1)) |
         (is_csrw_illegal  & io.rod_i(1).valid & io.rod_i(1).bits.is_csr  &  is_wb_v(1)) |
-        (is_fcsrw_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_fcsr &  is_wb_v(1))
+        (is_fcsrw_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_fpu &  is_wb_v(1))
       )
 
       val is_ill_sfence = VecInit(
@@ -197,7 +197,7 @@ class Commit extends Privilege with Superscalar {
       
 
       val is_ill_fpus_v = ( 0 until 2 ).map{ i => 
-        (is_wb_v(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fcsr) & mstatus(14,13) === 0.U)
+        (is_wb_v(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fpu) & mstatus(14,13) === 0.U)
       }: Seq[Bool]
       
 
@@ -408,8 +408,8 @@ class Commit extends Privilege with Superscalar {
 
   io.fcsr_cmm_op.ready :=
     io.fcsr_cmm_op.valid & (
-      (is_commit_comfirm(0) & io.rod_i(0).bits.is_fcsr) | 
-      (is_commit_comfirm(1) & io.rod_i(1).bits.is_fcsr)		
+      (is_commit_comfirm(0) & io.rod_i(0).bits.is_fpu) | 
+      (is_commit_comfirm(1) & io.rod_i(1).bits.is_fpu)		
     )
 
 
@@ -469,7 +469,7 @@ class Commit extends Privilege with Superscalar {
 
 
   is_fpu_state_change := ( 0 until 2 ).map{
-    i => is_commit_comfirm(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fcsr)
+    i => is_commit_comfirm(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fpu)
   }.reduce(_|_)
     
 

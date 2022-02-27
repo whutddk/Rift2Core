@@ -44,7 +44,7 @@ class FPToInt() extends Module with HasFPUParameters{
     val mdl = Module(new hardfloat.CompareRecFN(expWidth = 11, sigWidth = 53))
     mdl.io.a := op1
     mdl.io.b := op2
-    mdl.io.signaling := !in.param.rm(1)
+    mdl.io.signaling := ~io.in.param.rm(1)
     mdl
   }
 
@@ -86,12 +86,12 @@ class FPToInt() extends Module with HasFPUParameters{
     toint := conv.io.out
     io.out.exc := Cat(conv.io.intExceptionFlags(2, 1).orR, 0.U(3.W), conv.io.intExceptionFlags(0))
 
-    when (in.fun.XtypeTagOut === 0.U) {
+    when (io.in.fun.XtypeTagOut === 0.U) {
       val narrow = {
         val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 32)) 
         mdl.io.in := op1
-        mdl.io.roundingMode := in.param.rm
-        mdl.io.signedOut := ~in.fun.is_usi
+        mdl.io.roundingMode := io.in.param.rm
+        mdl.io.signedOut := ~io.in.fun.is_usi
         mdl
       }
 
@@ -103,12 +103,12 @@ class FPToInt() extends Module with HasFPUParameters{
       io.out.exc := Cat(invalid, 0.U(3.W), !invalid && conv.io.intExceptionFlags(0))
     } 
     .otherwise {
-      assert(in.fun.XtypeTagOut === 1.U)
+      assert(io.in.fun.XtypeTagOut === 1.U)
       val narrow = {
         val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 64)) 
         mdl.io.in := op1
-        mdl.io.roundingMode := in.param.rm
-        mdl.io.signedOut := ~in.fun.is_usi
+        mdl.io.roundingMode := io.in.param.rm
+        mdl.io.signedOut := ~io.in.fun.is_usi
         mdl
       }
 
@@ -131,7 +131,7 @@ class FPToInt() extends Module with HasFPUParameters{
   io.out.lt := dcmp.io.lt || (dcmp.io.a.asSInt < 0.S && dcmp.io.b.asSInt >= 0.S)
   io.out.toint := 
     Mux1H( Seq(
-      (in.fun.XtypeTagOut === 0.U) -> sextXTo(toint(31,0),64),
-      (in.fun.XtypeTagOut === 1.U) -> toint(63,0),
+      (io.in.fun.XtypeTagOut === 0.U) -> sextXTo(toint(31,0),64),
+      (io.in.fun.XtypeTagOut === 1.U) -> toint(63,0),
     ))
 }
