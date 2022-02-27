@@ -340,61 +340,34 @@ class Fpu_isa extends Bundle {
     fmv_x_w | fmv_x_d
   def is_fun_xmvF =
     fmv_w_x | fmv_d_x
-  // def is_fun_int2float =
-  //   fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fmv_w_x |
-  //   fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d | fmv_d_x
-  // def is_fun_float2float =
-  //   fsgnj_s | fsgnjn_s | fsgnjx_s | 
-  //   fsgnj_d | fsgnjn_d | fsgnjx_d |
-  //   fcvt_s_d | fcvt_d_s
-  // def is_fun_floatCmp = fmin_s | fmax_s | feq_s | flt_s | fle_s | fmin_d | fmax_d | feq_d | flt_d | fle_d
-  // def is_fun_float2int =
-  //   fmv_x_w | fclass_s | fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
-  //   fmv_x_d | fclass_d | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu 
-  // def is_fun_floatFma =
-  //   fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s |
-  //   fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d
-  // def is_fun_floatDivSqrt = fdiv_s | fsqrt_s | fdiv_d | fsqrt_d
-  // def is_fun_floatCsr = fcsr_rw | fcsr_rs | fcsr_rc
 
+  def hasOneRs = 
+  fcvt_w_s | fcvt_wu_s |
+  fmv_x_w  | fmv_x_d |
+  fclass_s | fclass_d |
+  fcvt_s_w | fcvt_s_wu |
+  fmv_w_x  | fmv_d_x |
+  fcvt_l_s | fcvt_lu_s |
+  fcvt_s_l | fcvt_s_lu |
+  fcvt_s_d | fcvt_d_s |
+  fcvt_w_d | fcvt_wu_d |
+  fcvt_d_w | fcvt_d_wu |
+  fcvt_l_d | fcvt_lu_d |
+  fcvt_d_l | fcvt_d_lu
+  
+  
 
-  // def is_fma_addsub =
-  //     fadd_s | fsub_s |
-  //     fadd_d | fsub_d
+  def hasTwoRs = hasOneRs |
+  fadd_s | fsub_s | fmul_s | fdiv_s | fsqrt_s |
+  fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
+  fmin_s | fmax_s | fmin_d | fmax_d |
+  feq_s | flt_s |fle_s | feq_d | flt_d | fle_d |
+  fadd_d | fsub_d | fmul_d | fdiv_d | fsqrt_d |
+  fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
 
-  // def is_fma_mul =
-  //     fmul_s | fmul_d
-
-  // def is_fma_dual_op = is_fma_addsub | is_fma_mul
-  // def is_fma_trpl_op =
-  //   fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | 
-  //   fmadd_d | fmsub_d | fnmsub_d | fnmadd_d
-
-
-  // def is_int_iss =
-  //   fmv_w_x | fmv_d_x |
-  //   fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |fcsr_rw | fcsr_rs | fcsr_rc
-
-  // def is_fot_iss =
-  //   fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fmadd_d | fmsub_d | fnmsub_d | fnmadd_d |
-  //   fadd_s | fsub_s | fmul_s | fadd_d | fsub_d | fmul_d |
-  //   fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
-  //   feq_s | flt_s | fle_s | feq_d | flt_d | fle_d | fmin_s | fmax_s | fmin_d | fmax_d |
-  //   fmv_x_w | fmv_x_d |
-  //   fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_s_d | fcvt_d_s | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
-
-    
-  // def is_recFN32_in =
-  //   fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s |
-  //   fsgnj_s | fsgnjn_s | fsgnjx_s |
-  //   feq_s | flt_s | fle_s | fmin_s | fmax_s |
-  //   fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_s_d
-    
-  // def is_recFN64_in =
-  //   fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d |
-  //   fsgnj_d | fsgnjn_d | fsgnjx_d |
-  //   feq_d | flt_d | fle_d | fmin_d | fmax_d |
-  //   fcvt_d_s | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
+  def hasThreeRs = hasTwoRs |
+  fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | 
+  fmadd_d | fmsub_d | fnmsub_d | fnmadd_d
 
   def is_fop = 
     fmadd_s   | fmsub_s   | fnmsub_s  | fnmadd_s  |

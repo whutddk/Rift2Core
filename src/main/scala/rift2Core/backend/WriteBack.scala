@@ -61,8 +61,8 @@ class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm
   })
 
 
-  val iReg = Module(new RegFiles(dw = 64, dp, rn_chn, rop_chn, wb_chn, cmm_chn))
-  val fReg = Module(new RegFiles(dw = 65, dp, rn_chn, rop_chn=2, wb_chn=2, cmm_chn))
+  val iReg = Module(new XRegFiles(dw = 64, dp, rn_chn, rop_chn, wb_chn, cmm_chn))
+  val fReg = Module(new FRegFiles(dw = 65, dp, rn_chn, rop_chn=2, wb_chn=2, cmm_chn))
 
   for ( i <- 0 until rn_chn ) yield {
     iReg.io.dpt_rename(i) <> io.dpt_Xrename(i)

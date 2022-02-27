@@ -115,30 +115,9 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
       else { when( log(j) === 0.U && j.U > molloc_idx(i-1) ) { molloc_idx(i) := j.U } }
     }
   }
-  //   VecInit(
-  //   log.indexWhere( (x:UInt) => ( x === 0.U )),
-  //   log.lastIndexWhere( (x:UInt) => ( x === 0.U ))
-  // )
+
 
   for ( i <- 0 until rn_chn ) {
-    val idx1 = io.dpt_lookup(i).req.rs1
-    val idx2 = io.dpt_lookup(i).req.rs2
-    val idx3 = io.dpt_lookup(i).req.rs3
-
-    if ( i == 0) {
-      io.dpt_lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )
-      io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
-      io.dpt_lookup(i).rsp.rs3 := Mux( idx3 === 0.U, 63.U, rename_ptr(idx3) )
-    } else {
-      io.dpt_lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )
-      io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
-      io.dpt_lookup(i).rsp.rs3 := Mux( idx3 === 0.U, 63.U, rename_ptr(idx3) ) 
-      for ( j <- 0 until i ) {
-        when( (io.dpt_rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
-        when( (io.dpt_rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
-        when( (io.dpt_rename(j).req.bits.rd0 === idx3) && (idx3 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs3 := molloc_idx(j) }
-      }
-    }
 
 
     when( io.dpt_rename(i).req.fire ) {
@@ -234,6 +213,62 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
     io.diffReg(i) := files(archit_ptr(i))    
   }
 }
+
+class XRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends RegFiles(dw, dp, rn_chn, rop_chn, wb_chn, cmm_chn ) {
+
+  for ( i <- 0 until rn_chn ) {
+    val idx1 = io.dpt_lookup(i).req.rs1
+    val idx2 = io.dpt_lookup(i).req.rs2
+
+    if ( i == 0) {
+      io.dpt_lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )
+      io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
+      io.dpt_lookup(i).rsp.rs3 := 63.U
+    } else {
+      io.dpt_lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )
+      io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
+      io.dpt_lookup(i).rsp.rs3 := 63.U
+      for ( j <- 0 until i ) {
+        when( (io.dpt_rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
+        when( (io.dpt_rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
+      }
+    }
+  }
+
+
+
+}
+
+class FRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends RegFiles(dw, dp, rn_chn, rop_chn, wb_chn, cmm_chn ) {
+
+
+  for ( i <- 0 until rn_chn ) {
+    val idx1 = io.dpt_lookup(i).req.rs1
+    val idx2 = io.dpt_lookup(i).req.rs2
+    val idx3 = io.dpt_lookup(i).req.rs3
+
+    if ( i == 0) {
+      io.dpt_lookup(i).rsp.rs1 := rename_ptr(idx1)
+      io.dpt_lookup(i).rsp.rs2 := rename_ptr(idx2)
+      io.dpt_lookup(i).rsp.rs3 := rename_ptr(idx3)
+    } else {
+      io.dpt_lookup(i).rsp.rs1 := rename_ptr(idx1)
+      io.dpt_lookup(i).rsp.rs2 := rename_ptr(idx2)
+      io.dpt_lookup(i).rsp.rs3 := rename_ptr(idx3) 
+      for ( j <- 0 until i ) {
+        when( (io.dpt_rename(j).req.bits.rd0 === idx1) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
+        when( (io.dpt_rename(j).req.bits.rd0 === idx2) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
+        when( (io.dpt_rename(j).req.bits.rd0 === idx3) ) { io.dpt_lookup(i).rsp.rs3 := molloc_idx(j) }
+      }
+    }
+  }
+
+
+
+
+
+}
+
 
 
 

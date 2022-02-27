@@ -224,7 +224,13 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
     res.privil_isa := 0.U.asTypeOf( new Privil_isa )
     res.fpu_isa    := instr.fpu_isa
     res.param      := instr.param
+
+
     res.phy        := rename
+
+    when(~instr.fpu_isa.hasTwoRs) { res.phy.rs2 := 63.U }
+    when(~instr.fpu_isa.hasThreeRs) { res.phy.rs3 := 63.U }
+
     return res
   }
 
