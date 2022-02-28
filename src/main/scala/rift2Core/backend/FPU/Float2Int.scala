@@ -26,6 +26,7 @@ import base._
 class FPToInt() extends Module with HasFPUParameters{
   val io = IO(new Bundle {
     val in = Input(new Fpu_iss_info)
+    val frm = Input(UInt(3.W))
     val out = Output(new Bundle{
       val lt = Bool()
       val eq = Bool()
@@ -78,7 +79,7 @@ class FPToInt() extends Module with HasFPUParameters{
     val conv =  {
       val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 64))
       mdl.io.in := op1
-      mdl.io.roundingMode := io.in.param.rm
+      mdl.io.roundingMode := Mux(io.in.param.rm === "b111".U, io.frm, io.in.param.rm)
       mdl.io.signedOut := ~io.in.fun.is_usi
       mdl
     }
@@ -90,7 +91,7 @@ class FPToInt() extends Module with HasFPUParameters{
       val narrow = {
         val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 32)) 
         mdl.io.in := op1
-        mdl.io.roundingMode := io.in.param.rm
+        mdl.io.roundingMode := Mux(io.in.param.rm === "b111".U, io.frm, io.in.param.rm)
         mdl.io.signedOut := ~io.in.fun.is_usi
         mdl
       }
@@ -107,7 +108,7 @@ class FPToInt() extends Module with HasFPUParameters{
       val narrow = {
         val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 64)) 
         mdl.io.in := op1
-        mdl.io.roundingMode := io.in.param.rm
+        mdl.io.roundingMode := Mux(io.in.param.rm === "b111".U, io.frm, io.in.param.rm)
         mdl.io.signedOut := ~io.in.fun.is_usi
         mdl
       }
@@ -123,7 +124,7 @@ class FPToInt() extends Module with HasFPUParameters{
   }
 
   when ( io.in.fun.is_fun_fmvX ) {
-    toint := ieee(io.in.param.dat.op1, t = FType.D)
+    toint := ieee(op1, t = FType.D)
     io.out.exc := 0.U
   }
 

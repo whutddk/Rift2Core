@@ -53,23 +53,35 @@ class FAlu() extends Module with HasFPUParameters{
   val f2i = {
     val mdl = Module(new FPToInt)
     mdl.io.in := io.fpu_iss_exe.bits
-
+    mdl.io.frm := io.fcsr(7,5)
     mdl
   }
 
   val i2f = {
     val mdl = Module(new IntToFP())
     mdl.io.in := io.fpu_iss_exe.bits
+    mdl.io.frm := io.fcsr(7,5)
     mdl
   }
 
+  val f2f = {
+    val mdl = Module(new FPToFP())
+    mdl.io.in := io.fpu_iss_exe.bits
+    mdl.io.is_lt := f2i.io.out.lt
+    mdl.io.frm := io.fcsr(7,5)
+    mdl
+  }
 
   exc := 
     Mux1H(Seq(
       io.fpu_iss_exe.bits.fun.is_fun_class -> f2i.io.out.exc,
       io.fpu_iss_exe.bits.fun.is_fun_fcvtX -> f2i.io.out.exc,
       io.fpu_iss_exe.bits.fun.is_fun_xcvtF -> i2f.io.out.exc,
+      io.fpu_iss_exe.bits.fun.is_fun_fcvtF -> f2f.io.out.exc,
+      io.fpu_iss_exe.bits.fun.is_fun_fsgn  -> f2f.io.out.exc,
+      io.fpu_iss_exe.bits.fun.is_fun_maxMin -> f2f.io.out.exc,
       io.fpu_iss_exe.bits.fun.is_fun_cmp   -> f2i.io.out.exc,
+
       
     ))
 
@@ -132,6 +144,9 @@ class FAlu() extends Module with HasFPUParameters{
     Mux1H(Seq(
       io.fpu_iss_exe.bits.fun.is_fun_xcvtF -> i2f.io.out.toFloat,
       io.fpu_iss_exe.bits.fun.is_fun_xmvF  -> i2f.io.out.toFloat,
+      io.fpu_iss_exe.bits.fun.is_fun_fcvtF -> f2f.io.out.toFloat,
+      io.fpu_iss_exe.bits.fun.is_fun_fsgn  -> f2f.io.out.toFloat,
+      io.fpu_iss_exe.bits.fun.is_fun_maxMin -> f2f.io.out.toFloat,
     ))
   fpu_exe_fwb_fifo.io.enq.bits.viewAsSupertype(new Register_dstntn(dp=64)) := io.fpu_iss_exe.bits.param.viewAsSupertype(new Register_dstntn(dp=64))
 

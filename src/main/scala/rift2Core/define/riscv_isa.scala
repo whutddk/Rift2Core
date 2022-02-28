@@ -331,15 +331,21 @@ class Fpu_isa extends Bundle {
   def is_fun_cmp =  feq_s | flt_s | fle_s | feq_d | flt_d | fle_d
   def is_fun_maxMin = fmin_s | fmax_s | fmin_d | fmax_d
   def is_fun_fcvtX = 
-    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
-    fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu 
-  def is_fun_xcvtF = 
     fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s |
     fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d 
+  def is_fun_xcvtF = 
+    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
+    fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu 
+  def is_fun_fcvtF = 
+    fcvt_s_d | fcvt_d_s
   def is_fun_fmvX =
     fmv_x_w | fmv_x_d
   def is_fun_xmvF =
     fmv_w_x | fmv_d_x
+  def is_fun_fsgn = 
+    fsgnj_s | fsgnjn_s | fsgnjx_s |
+    fsgnj_d | fsgnjn_d | fsgnjx_d
+
 
   def hasOneRs = 
   fcvt_w_s | fcvt_wu_s |
@@ -355,8 +361,6 @@ class Fpu_isa extends Bundle {
   fcvt_l_d | fcvt_lu_d |
   fcvt_d_l | fcvt_d_lu
   
-  
-
   def hasTwoRs = hasOneRs |
   fadd_s | fsub_s | fmul_s | fdiv_s | fsqrt_s |
   fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
@@ -399,7 +403,7 @@ class Fpu_isa extends Bundle {
     fsgnj_d | fsgnjn_d | fsgnjx_d |
     fmin_s | fmax_s | fmin_d | fmax_d |
     fcvt_s_w | fcvt_s_wu | fcvt_d_w | fcvt_d_wu |
-    fcvt_s_l | fcvt_s_lu |fcvt_d_l | fcvt_d_lu |
+    fcvt_s_l | fcvt_s_lu | fcvt_d_l | fcvt_d_lu |
     fcvt_s_d | fcvt_d_s |
     fmv_w_x | fmv_d_x
     

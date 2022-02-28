@@ -24,7 +24,8 @@ import rift2Core.backend._
 
 class IntToFP() extends Module with HasFPUParameters {
   val io = IO(new Bundle {
-    val in = Input(new Fpu_iss_info) 
+    val in = Input(new Fpu_iss_info)
+    val frm = Input(UInt(3.W))
     val out = Output(new Bundle{
       val toFloat = UInt(65.W)
       val exc = UInt(5.W)
@@ -57,7 +58,7 @@ class IntToFP() extends Module with HasFPUParameters {
         val mdl = Module(new hardfloat.INToRecFN(64, t.exp, t.sig))
         mdl.io.signedIn := ~io.in.fun.is_usi
         mdl.io.in := intValue
-        mdl.io.roundingMode := io.in.param.rm
+        mdl.io.roundingMode := Mux(io.in.param.rm === "b111".U, io.frm, io.in.param.rm)
         mdl.io.detectTininess := hardfloat.consts.tininess_afterRounding
         mdl
       }

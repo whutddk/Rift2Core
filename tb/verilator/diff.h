@@ -22,7 +22,8 @@
 #include "riscv_machine.h"
 
 struct diff {
-	uint64_t ireg[64];
+  uint64_t ireg[32];
+	uint64_t freg[32];
 
 	uint64_t pc;
 

@@ -43,6 +43,7 @@ void dromajo_step() {
 
 	for ( uint8_t i = 0; i < 32; i++) {
 		diff.ireg[i] = virt_machine_get_reg(machine, 0, i);
+		diff.freg[i] = virt_machine_get_fpreg(machine, 0, i);
 		// printf("reg %d = 0x%lx   ", i, virt_machine_get_reg(machine, 0, i));
 	}
 
@@ -138,7 +139,7 @@ int diff_chk_pc(VSimTop *top) {
 }
 
 int diff_chk_reg(VSimTop *top) {
-	printf( "pc = %lx, real a1 = %lx, should be = %lx\n", diff.pc, top->trace_abi_a1, diff.ireg[11] );
+	// printf( "pc = %lx, real a1 = %lx, should be = %lx\n", diff.pc, top->trace_abi_a1, diff.ireg[11] );
 
 	// if (diff.ireg[0]  != top->trace_abi_zero) { printf( "Failed at zero, real is 0x%lx, should be 0x%lx\n", top->trace_abi_zero , diff.ireg[0] ); return -1; }
 	CHK_REG( "ra", diff.ireg[1] , top->trace_abi_ra  )
@@ -172,6 +173,40 @@ int diff_chk_reg(VSimTop *top) {
 	CHK_REG( "t4", diff.ireg[29], top->trace_abi_t4  )
 	CHK_REG( "t5", diff.ireg[30], top->trace_abi_t5  )
 	CHK_REG( "t6", diff.ireg[31], top->trace_abi_t6  )
+
+	CHK_REG( "ft0", diff.freg[0], top->trace_abi_ft0 )
+	CHK_REG( "ft1", diff.freg[1], top->trace_abi_ft1 )
+	CHK_REG( "ft2", diff.freg[2], top->trace_abi_ft2 )
+	CHK_REG( "ft3", diff.freg[3], top->trace_abi_ft3 )
+	CHK_REG( "ft4", diff.freg[4], top->trace_abi_ft4 )
+	CHK_REG( "ft5", diff.freg[5], top->trace_abi_ft5 )
+	CHK_REG( "ft6", diff.freg[6], top->trace_abi_ft6 )
+	CHK_REG( "ft7", diff.freg[7], top->trace_abi_ft7 )
+	CHK_REG( "fs0", diff.freg[8], top->trace_abi_fs0 )
+	CHK_REG( "fs1", diff.freg[9], top->trace_abi_fs1 )
+	CHK_REG( "fa0", diff.freg[10], top->trace_abi_fa0 )
+	CHK_REG( "fa1", diff.freg[11], top->trace_abi_fa1 )
+	CHK_REG( "fa2", diff.freg[12], top->trace_abi_fa2 )
+	CHK_REG( "fa3", diff.freg[13], top->trace_abi_fa3 )
+	CHK_REG( "fa4", diff.freg[14], top->trace_abi_fa4 )
+	CHK_REG( "fa5", diff.freg[15], top->trace_abi_fa5 )
+	CHK_REG( "fa6", diff.freg[16], top->trace_abi_fa6 )
+	CHK_REG( "fa7", diff.freg[17], top->trace_abi_fa7 )
+	CHK_REG( "fs2", diff.freg[18], top->trace_abi_fs2 )
+	CHK_REG( "fs3", diff.freg[19], top->trace_abi_fs3 )
+	CHK_REG( "fs4", diff.freg[20], top->trace_abi_fs4 )
+	CHK_REG( "fs5", diff.freg[21], top->trace_abi_fs5 )
+	CHK_REG( "fs6", diff.freg[22], top->trace_abi_fs6 )
+	CHK_REG( "fs7", diff.freg[23], top->trace_abi_fs7 )
+	CHK_REG( "fs8", diff.freg[24], top->trace_abi_fs8 )
+	CHK_REG( "fs9", diff.freg[25], top->trace_abi_fs9 )
+	CHK_REG( "fs1", diff.freg[26], top->trace_abi_fs10 )
+	CHK_REG( "fs1", diff.freg[27], top->trace_abi_fs11 )
+	CHK_REG( "ft8", diff.freg[28], top->trace_abi_ft8 )
+	CHK_REG( "ft9", diff.freg[29], top->trace_abi_ft9 )
+	CHK_REG( "ft1", diff.freg[30], top->trace_abi_ft10 )
+	CHK_REG( "ft1", diff.freg[31], top->trace_abi_ft11 )
+
 
 
 	CHK_REG( "mstatus", diff.mstatus,     top->trace_mstatus  )

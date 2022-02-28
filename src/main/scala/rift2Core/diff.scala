@@ -79,10 +79,10 @@ class Info_csr_reg extends Bundle {
   // val dscratch;  = UInt(64.W)
 }
 
-class diff extends Module {
+class diff extends Module with HasFPUParameters{
   val io = IO(new Bundle{
     val diffXReg = Input(Vec(32, UInt(64.W)))
-    val diffFReg = Input(Vec(32, UInt(64.W)))
+    val diffFReg = Input(Vec(32, UInt(65.W)))
 
     val commit = Input(new Info_cmm_diff)
     val csr = Input(new Info_csr_reg)
@@ -149,11 +149,11 @@ class diff extends Module {
   val FReg = Wire(new Info_abi_Freg)
   dontTouch(FReg)
 
-  for ( i <- 0 until 8 )  yield { FReg.ft(i) := io.diffFReg(i) }
-  for ( i <- 0 until 2 )  yield { FReg.fs(i) := io.diffFReg(8+i) }
-  for ( i <- 0 until 8 )  yield { FReg.fa(i) := io.diffFReg(10+i) }
-  for ( i <- 0 until 10 ) yield { FReg.fs(2+i) := io.diffFReg(18+i) }
-  for ( i <- 0 until 4 )  yield { FReg.ft(8+i) := io.diffFReg(28+i) }
+  for ( i <- 0 until 8 )  yield { FReg.ft(i)   := ieee( io.diffFReg(i),    t = FType.D) }
+  for ( i <- 0 until 2 )  yield { FReg.fs(i)   := ieee( io.diffFReg(8+i),  t = FType.D) }
+  for ( i <- 0 until 8 )  yield { FReg.fa(i)   := ieee( io.diffFReg(10+i), t = FType.D) }
+  for ( i <- 0 until 10 ) yield { FReg.fs(2+i) := ieee( io.diffFReg(18+i), t = FType.D) }
+  for ( i <- 0 until 4 )  yield { FReg.ft(8+i) := ieee( io.diffFReg(28+i), t = FType.D) }
 
 
 }
