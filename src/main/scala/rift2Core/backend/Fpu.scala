@@ -100,8 +100,8 @@ trait HasFPUParameters {
   val minXLen = 32
   val nIntTypes = 2
   val floatTypes = FType.all
-  // def minType = FType.S
-  // def maxType = FType.D
+  def minType = FType.S
+  def maxType = FType.D
   def prevType(t: FType) = floatTypes(typeTag(t) - 1)
   def maxExpWidth = 11
   def maxSigWidth = 53
@@ -137,12 +137,13 @@ trait HasFPUParameters {
         if (t == FType.S) {
           Seq()
         } else { //FType.D
+          val prevT = prevType(t)
           val unswizzled = Cat(
-            x(31),
-            x(53 - 1),
-            x(30, 0))
-          val prev = helper(unswizzled, FType.S)
-          val isbox = isBox(x, FType.D)
+            x(prevT.sig + prevT.exp - 1),
+            x(t.sig - 1),
+            x(prevT.sig + prevT.exp - 2, 0))
+          val prev = helper(unswizzled, prevT)
+          val isbox = isBox(x, t)
           prev.map(p => (isbox && p._1, p._2))
         }        
       }
@@ -164,13 +165,17 @@ trait HasFPUParameters {
 
   // make sure that the redundant bits in the NaN-boxed encoding are consistent
   def consistent(x: UInt): Bool = {
-    val unswizzled = Cat(
-      x(31),
-      x(52),
-      x(30, 0))
-    val prevOK = !isBox(x, FType.D) || true.B
-    val curOK = !FType.D.isNaN(x) || x(60) === x(51, 32).andR
-    prevOK && curOK
+    def helper(x: UInt, t: FType): Bool = if (typeTag(t) == 0) true.B else {
+      val prevT = prevType(t)
+      val unswizzled = Cat(
+        x(prevT.sig + prevT.exp - 1),
+        x(t.sig - 1),
+        x(prevT.sig + prevT.exp - 2, 0))
+      val prevOK = !isBox(x, t) || helper(unswizzled, prevT)
+      val curOK = !t.isNaN(x) || x(t.sig + t.exp - 4) === x(t.sig - 2, prevT.recodedWidth - 1).andR
+      prevOK && curOK
+    }
+    helper(x, maxType)
   }
 
   // generate a NaN box from an FU result
@@ -178,8 +183,9 @@ trait HasFPUParameters {
     if (t == FType.D) {
       x
     } else { //FType.S
-      val bigger = box(((BigInt(1) << 65)-1).U, FType.D, x, FType.S)
-      bigger
+      val nt = floatTypes(typeTag(t) + 1)
+      val bigger = box(((BigInt(1) << nt.recodedWidth)-1).U, nt, x, t)
+      bigger | ((BigInt(1) << maxType.recodedWidth) - (BigInt(1) << nt.recodedWidth)).U
     }
   }
 
@@ -197,7 +203,7 @@ trait HasFPUParameters {
     if ( t == FType.S ) {
       x
     } else { //FType.D
-      val maskedNaN = x & ~(((BigInt(1) << 52 ) | ( BigInt(1) << 60 )).U)(65.W)
+      val maskedNaN = x & ~(((BigInt(1) << (t.sig-1) ) | ( BigInt(1) << (t.sig+t.exp-4) )).U)((t.recodedWidth).W)
 
       // val maskedNaN = Wire(UInt(65.W))
       //   maskedNaN := x & ~(( 1 << 52).U | ( 1 << 60).U )
@@ -211,13 +217,14 @@ trait HasFPUParameters {
       if ( t == FType.S ) {
         t.recode(x)
       } else {
-        box(t.recode(x), t, helper(x, FType.S), FType.S)
+        val prevT = prevType(t)
+        box(t.recode(x), t, helper(x, prevT), prevT)
       }
     }
 
     // fill MSBs of subword loads to emulate a wider load of a NaN-boxed value
-    val boxes = floatTypes.map(t => ((BigInt(1) << 64) - (BigInt(1) << t.ieeeWidth)).U )
-    helper(boxes(tag) | x, FType.D)
+    val boxes = floatTypes.map(t => ((BigInt(1) << maxType.ieeeWidth) - (BigInt(1) << t.ieeeWidth)).U )
+    helper(boxes(tag) | x, maxType)
   }
 
   // implement NaN unboxing and un-recoding for FS*/fmv.x.*

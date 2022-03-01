@@ -196,7 +196,7 @@ isa += rv64uc-v-rvc
 
 # isa += rv64ud-p-fadd
 # isa += rv64ud-v-fadd
-# isa += rv64ud-p-fclass
+isa += rv64ud-p-fclass
 # isa += rv64ud-v-fclass
 # isa += rv64ud-p-fcmp
 # isa += rv64ud-v-fcmp
@@ -220,7 +220,7 @@ isa += rv64ud-p-ldst
 # isa += rv64ud-v-structural
 # isa += rv64uf-p-fadd
 # isa += rv64uf-v-fadd
-# isa += rv64uf-p-fclass
+isa += rv64uf-p-fclass
 # isa += rv64uf-v-fclass
 # isa += rv64uf-p-fcmp
 # isa += rv64uf-v-fcmp
