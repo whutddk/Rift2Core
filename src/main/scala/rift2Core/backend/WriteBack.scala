@@ -57,7 +57,7 @@ class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm
     val commit = Vec(cmm_chn, Flipped(Decoupled(new Info_commit_op(dp))))
 
     val diffXReg = Output(Vec(32, UInt(64.W)))
-    val diffFReg = Output(Vec(32, UInt(64.W)))
+    val diffFReg = Output(Vec(32, UInt(65.W)))
   })
 
 

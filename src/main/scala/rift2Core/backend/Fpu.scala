@@ -133,28 +133,29 @@ trait HasFPUParameters {
   def unbox(x: UInt, tag: UInt, exactType: Option[FType]): UInt = {
     val outType = exactType.getOrElse(FType.D)
     def helper(x: UInt, t: FType): Seq[(Bool, UInt)] = {
-      val prev =
+      val prev = {
         if (t == FType.S) {
           Seq()
         } else { //FType.D
           val unswizzled = Cat(
             x(31),
-            x(24 - 1),
+            x(53 - 1),
             x(30, 0))
           val prev = helper(unswizzled, FType.S)
-          val isbox = isBox(x, t)
+          val isbox = isBox(x, FType.D)
           prev.map(p => (isbox && p._1, p._2))
-        }
+        }        
+      }
+
       prev :+ (true.B, t.unsafeConvert(x, outType))
     }
 
     val (oks, floats) = helper(x, FType.D).unzip
-    if (exactType.isEmpty || floatTypes.size == 1) {
+    if (exactType.isEmpty) {
       Mux1H(Seq(
         ( tag === 0.U ) -> Mux(oks(0), floats(0), FType.D.qNaN),
         ( tag === 1.U ) -> Mux(oks(1), floats(1), FType.D.qNaN),
       ))
-
     } else {
       val t = exactType.get
       floats(typeTag(t)) | Mux(oks(typeTag(t)), 0.U, t.qNaN)
@@ -183,17 +184,20 @@ trait HasFPUParameters {
   }
 
   // generate a NaN box from an FU result
-  // def box(x: UInt, tag: UInt): UInt = {
-  //   val opts = floatTypes.map(t => box(x, t))
-  //   opts(tag)
-  // }
+  def box(x: UInt, tag: UInt): UInt = {
+    val opts = floatTypes.map(t => box(x, t))
+    Mux1H(Seq(
+      (tag === 0.U) -> opts(0),
+      (tag === 1.U) -> opts(1),
+    ))
+  }
 
   // zap bits that hardfloat thinks are don't-cares, but we do care about
   def sanitizeNaN(x: UInt, t: FType): UInt = {
     if ( t == FType.S ) {
       x
-    } else {
-      val maskedNaN = x & ~(((BigInt(1) << (t.sig-1)) | (BigInt(1) << (t.sig+t.exp-4))).U)((t.recodedWidth).W)
+    } else { //FType.D
+      val maskedNaN = x & ~(((BigInt(1) << 52 ) | ( BigInt(1) << 60 )).U)(65.W)
 
       // val maskedNaN = Wire(UInt(65.W))
       //   maskedNaN := x & ~(( 1 << 52).U | ( 1 << 60).U )
@@ -218,16 +222,17 @@ trait HasFPUParameters {
 
   // implement NaN unboxing and un-recoding for FS*/fmv.x.*
   def ieee(x: UInt, t: FType = FType.D): UInt = {
-    if ( t == FType.S ) {
+    if (typeTag(t) == 0) {
       t.ieee(x)
-    } else { //FType.D
+    } else {
       val unrecoded = t.ieee(x)
+      val prevT = prevType(t)
       val prevRecoded = Cat(
-        x(31),
-        x(53-1),
-        x(30, 0))
-      val prevUnrecoded = ieee(prevRecoded, FType.S)
-      Cat(unrecoded >> 32, Mux(t.isNaN(x), prevUnrecoded, unrecoded(32-1, 0)))
+        x(prevT.recodedWidth-2),
+        x(t.sig-1),
+        x(prevT.recodedWidth-3, 0))
+      val prevUnrecoded = ieee(prevRecoded, prevT)
+      Cat(unrecoded >> prevT.ieeeWidth, Mux(t.isNaN(x), prevUnrecoded, unrecoded(prevT.ieeeWidth-1, 0)))
     }
   }
 }

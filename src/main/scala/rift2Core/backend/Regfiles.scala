@@ -64,7 +64,7 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
     /** Commit request from commitUnit */
     val commit = Vec(cmm_chn, Flipped(Decoupled(new Info_commit_op(dp))))
 
-    val diffReg = Output(Vec(32, UInt(64.W)))
+    val diffReg = Output(Vec(32, UInt(dw.W)))
   })
 
   /**

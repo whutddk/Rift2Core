@@ -80,8 +80,8 @@ class FPToFP() extends Module with HasFPUParameters{
       narrower.io.in := op1
       narrower.io.roundingMode := Mux(io.in.param.rm === "b111".U, io.frm, io.in.param.rm)
       narrower.io.detectTininess := hardfloat.consts.tininess_afterRounding
-      val narrowed = sanitizeNaN(narrower.io.out, FType.S)
-      io.out.toFloat := Cat(fsgnjMux_toFloat >> narrowed.getWidth, narrowed)
+      // val narrowed = sanitizeNaN(narrower.io.out, FType.S)
+      io.out.toFloat := Cat(widened >> 33, narrower.io.out)
       io.out.exc := narrower.io.exceptionFlags
     }
 

@@ -18,6 +18,7 @@ package rift2Core.diff
 
 import chisel3._
 import chisel3.util._
+import base._
 
 import rift2Core.define._
 
@@ -146,15 +147,21 @@ class diff extends Module with HasFPUParameters{
     val fa = Vec(8, UInt(64.W))
   }
 
-  val FReg = Wire(new Info_abi_Freg)
-  dontTouch(FReg)
+  val FReg1 = Wire(new Info_abi_Freg)
+  val FReg2 = Wire(new Info_abi_Freg)
+  dontTouch(FReg1)
+  dontTouch(FReg2)
 
-  for ( i <- 0 until 8 )  yield { FReg.ft(i)   := ieee( io.diffFReg(i),    t = FType.D) }
-  for ( i <- 0 until 2 )  yield { FReg.fs(i)   := ieee( io.diffFReg(8+i),  t = FType.D) }
-  for ( i <- 0 until 8 )  yield { FReg.fa(i)   := ieee( io.diffFReg(10+i), t = FType.D) }
-  for ( i <- 0 until 10 ) yield { FReg.fs(2+i) := ieee( io.diffFReg(18+i), t = FType.D) }
-  for ( i <- 0 until 4 )  yield { FReg.ft(8+i) := ieee( io.diffFReg(28+i), t = FType.D) }
+  for ( i <- 0 until 8 )  yield { FReg1.ft(i)   := {val unbx = unbox(io.diffFReg(i)   , 0.U, Some(FType.S)); val ie = ieee(unbx, t = FType.S); sextXTo(ie(31,0),64)} }
+  for ( i <- 0 until 2 )  yield { FReg1.fs(i)   := {val unbx = unbox(io.diffFReg(8+i) , 0.U, Some(FType.S)); val ie = ieee(unbx, t = FType.S); sextXTo(ie(31,0),64)} }
+  for ( i <- 0 until 8 )  yield { FReg1.fa(i)   := {val unbx = unbox(io.diffFReg(10+i), 0.U, Some(FType.S)); val ie = ieee(unbx, t = FType.S); sextXTo(ie(31,0),64)} }
+  for ( i <- 0 until 10 ) yield { FReg1.fs(2+i) := {val unbx = unbox(io.diffFReg(18+i), 0.U, Some(FType.S)); val ie = ieee(unbx, t = FType.S); sextXTo(ie(31,0),64)} }
+  for ( i <- 0 until 4 )  yield { FReg1.ft(8+i) := {val unbx = unbox(io.diffFReg(28+i), 0.U, Some(FType.S)); val ie = ieee(unbx, t = FType.S); sextXTo(ie(31,0),64)} }
 
-
+  for ( i <- 0 until 8 )  yield { FReg2.ft(i)   := {val unbx = unbox(io.diffFReg(i)   , 1.U, None); ieee(unbx, t = FType.D)} }
+  for ( i <- 0 until 2 )  yield { FReg2.fs(i)   := {val unbx = unbox(io.diffFReg(8+i) , 1.U, None); ieee(unbx, t = FType.D)} }
+  for ( i <- 0 until 8 )  yield { FReg2.fa(i)   := {val unbx = unbox(io.diffFReg(10+i), 1.U, None); ieee(unbx, t = FType.D)} }
+  for ( i <- 0 until 10 ) yield { FReg2.fs(2+i) := {val unbx = unbox(io.diffFReg(18+i), 1.U, None); ieee(unbx, t = FType.D)} }
+  for ( i <- 0 until 4 )  yield { FReg2.ft(8+i) := {val unbx = unbox(io.diffFReg(28+i), 1.U, None); ieee(unbx, t = FType.D)} }
 }
 
