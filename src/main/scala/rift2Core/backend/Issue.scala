@@ -333,7 +333,7 @@ class In_Order_Issue extends Module with HasFPUParameters{
     res.param.dat.op2 :=
       Mux(
         dpt.lsu_isa.is_fst,
-        ieee(Fop.dat.op2, t = FType.D),
+        ieee(unbox(Fop.dat.op2, 1.U, None), t = FType.D),
         Xop.dat.op2
         
       )

@@ -200,9 +200,9 @@ isa += rv64ud-p-fclass
 # isa += rv64ud-v-fclass
 # isa += rv64ud-p-fcmp
 # isa += rv64ud-v-fcmp
-# isa += rv64ud-p-fcvt
+isa += rv64ud-p-fcvt
 # isa += rv64ud-v-fcvt
-# isa += rv64ud-p-fcvt_w
+isa += rv64ud-p-fcvt_w
 # isa += rv64ud-v-fcvt_w
 # isa += rv64ud-p-fdiv
 # isa += rv64ud-v-fdiv
@@ -224,7 +224,7 @@ isa += rv64uf-p-fclass
 # isa += rv64uf-v-fclass
 # isa += rv64uf-p-fcmp
 # isa += rv64uf-v-fcmp
-# isa += rv64uf-p-fcvt
+isa += rv64uf-p-fcvt
 # isa += rv64uf-v-fcvt
 # isa += rv64uf-p-fcvt_w
 # isa += rv64uf-v-fcvt_w
@@ -245,20 +245,26 @@ isa += rv64uf-p-ldst
 
 .DEFAULT_GOAL = unit
 
-.PHONY: sim unit clean
+.PHONY: unit clean
 
 
 
 clean:
-	rm ./build/*.cpp
-	rm ./build/*.o
-	rm ./build/*.d
-	rm ./build/*.h
-	rm ./build/*.mk
-	rm ./build/*.a
+	rm -f ./build/*.cpp
+	rm -f ./build/*.o
+	rm -f ./build/*.d
+	rm -f ./build/*.h
+	rm -f ./build/*.mk
+	rm -f ./build/*.a
 
 
-sim:
+VSimTop: 
+	rm -f ./build/*.cpp
+	rm -f ./build/*.o
+	rm -f ./build/*.d
+	rm -f ./build/*.h
+	rm -f ./build/*.mk
+	rm -f ./build/*.a
 	verilator -Wno-fatal  \
 	--timescale "1 ns / 1 ps" \
 	-y ${R2}/generated/ \
@@ -277,12 +283,12 @@ sim:
 
 
 
-unit: sim
+unit: VSimTop
 	$(foreach test, $(isa), ./build/VSimTop -l -f ./ci/$(test); )
 
 
 # TESTFILE ?= rv64ui-p-add
-single: sim
+single: VSimTop
 	./build/VSimTop -w -d -l -f ./ci/$(TESTFILE)
 
 dromajo:
@@ -302,14 +308,14 @@ dromajo:
 	-Mdir build \
 	-j 8
 
-dhrystone5: sim
+dhrystone5: VSimTop
 	./build/VSimTop -w -f ./ci/dhrystone5.riscv
 
-dhrystone500: sim
+dhrystone500: VSimTop
 	./build/VSimTop -f ./ci/dhrystone500.riscv
 
 
-coremark: sim
+coremark: VSimTop
 	./build/VSimTop  -f ./ci/coremark1_bare
 
 wave:

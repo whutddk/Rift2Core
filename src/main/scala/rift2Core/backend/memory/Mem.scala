@@ -255,8 +255,8 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     mdl.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
     mdl.io.enq.bits.res := 
       Mux1H(Seq(
-        lu_wb_arb.io.out.bits.is_flw -> recode(lu_wb_arb.io.out.bits.wb.res, 0),
-        lu_wb_arb.io.out.bits.is_fld -> recode(lu_wb_arb.io.out.bits.wb.res, 1),
+        lu_wb_arb.io.out.bits.is_flw -> box(recode(lu_wb_arb.io.out.bits.wb.res, 0), FType.D),
+        lu_wb_arb.io.out.bits.is_fld -> box(recode(lu_wb_arb.io.out.bits.wb.res, 1), FType.D),
       ))
     mdl.io.deq <> io.lsu_exe_fwb
     mdl.reset := reset.asBool | io.flush

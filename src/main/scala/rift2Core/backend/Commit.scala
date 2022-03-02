@@ -527,6 +527,9 @@ class Commit extends Privilege with Superscalar {
   // io.diff_csr.dcsr       := dcsr
   // io.diff_csr.dpc        := dpc
   // io.diff_csr.dscratch   := dscratch
+  io.diff_csr.fflags  := fcsr(4,0)
+  io.diff_csr.frm     := fcsr(7,5)
+
 
   assert( ~(is_wb_v(0) & ~io.rod_i(0).valid) )
   assert( ~(is_wb_v(1) & ~io.rod_i(1).valid) )

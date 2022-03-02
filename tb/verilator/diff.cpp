@@ -51,6 +51,7 @@ void dromajo_step() {
 	}
 
 
+
 	diff.priv = riscv_get_priv_level(cpu);
 	diff.mstatus = riscv_cpu_get_mstatus(cpu);
 	diff.mtvec = cpu -> mtvec;
@@ -95,6 +96,9 @@ void dromajo_step() {
     // diff.dcsr = cpu -> dcsr;
     // diff.dpc = cpu -> dpc;
     // diff.dscratch = cpu -> dscratch;
+
+    diff.fflags = cpu -> fflags;
+    diff.frm    = cpu -> frm;
 }
 
 
@@ -260,7 +264,8 @@ int diff_chk_reg(VSimTop *top) {
     // CHK_REG( "dcsr",     diff.dcsr,     top->trace_dcsr )
     // CHK_REG( "dpc",      diff.dpc,      top->trace_dpc )
     // CHK_REG( "dscratch", diff.dscratch, top->trace_dscratch )
-
+    CHK_REG( "fflags",      diff.fflags,      top->trace_fflags )
+    CHK_REG( "frm",       diff.frm,       top->trace_frm )
 
 
 	return 0;

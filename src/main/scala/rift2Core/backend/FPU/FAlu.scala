@@ -89,7 +89,7 @@ class FAlu() extends Module with HasFPUParameters{
     val mdl = Module(new Queue( new Exe_Port, 1, false, false ) )
 
     val rw = io.fpu_iss_exe.bits.fun.is_fun_frw
-    val rs = io.fpu_iss_exe.bits.fun.is_fun_frs
+    val rs = Mux( io.fpu_iss_exe.bits.fun.is_fun_fcsr, io.fpu_iss_exe.bits.fun.is_fun_frs, true.B )
     val rc = io.fpu_iss_exe.bits.fun.is_fun_frc
     
     val dat = Mux( io.fpu_iss_exe.bits.fun.is_fun_fcsr, io.fpu_iss_exe.bits.param.dat.op1, exc )

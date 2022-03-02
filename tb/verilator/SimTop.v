@@ -189,7 +189,8 @@ module SimTop (
   // output [63:0] trace_dcsr,
   // output [63:0] trace_dpc,
   // output [63:0] trace_dscratch,
-
+  output [31:0] trace_fflags,
+  output [7:0] trace_frm,
 
 	input CLK,
 
@@ -693,6 +694,8 @@ end
 	// assign trace_dpc        = s_Rift2Chip.i_rift2Core.diff.io_csr_dpc;
 	// assign trace_dscratch   = s_Rift2Chip.i_rift2Core.diff.io_csr_dscratch;
 
+	assign trace_fflags    = s_Rift2Chip.i_rift2Core.diff.io_csr_fflags;
+	assign trace_frm     = s_Rift2Chip.i_rift2Core.diff.io_csr_frm;
 
 
 

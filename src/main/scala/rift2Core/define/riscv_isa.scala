@@ -419,7 +419,6 @@ class Fpu_isa extends Bundle {
     fadd_s    | fsub_s    | fmul_s    | fdiv_s    | fsqrt_s   | 
     fsgnj_s   | fsgnjn_s  | fsgnjx_s  |
     fmin_s    | fmax_s    |
-    fmv_x_w   |
     feq_s     | flt_s     | fle_s     |
     fclass_s  |
     fcvt_w_s  | fcvt_wu_s | fcvt_l_s  | fcvt_lu_s |
@@ -430,7 +429,7 @@ class Fpu_isa extends Bundle {
     fadd_d    | fsub_d    | fmul_d    | fdiv_d    | fsqrt_d   |    
     fsgnj_d   | fsgnjn_d  | fsgnjx_d  |
     fmin_d    | fmax_d    |
-    fmv_x_d   |
+    fmv_x_w   | fmv_x_d   |
     feq_d     | flt_d     | fle_d     |
     fclass_d  |
     fcvt_w_d  | fcvt_wu_d | fcvt_l_d  | fcvt_lu_d |
@@ -448,7 +447,6 @@ class Fpu_isa extends Bundle {
       fadd_s | fsub_s | fmul_s |
       fsgnj_s | fsgnjn_s | fsgnjx_s |
       fmin_s | fmax_s |
-      fmv_w_x   |
       fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
       fcvt_s_d
 
@@ -457,7 +455,7 @@ class Fpu_isa extends Bundle {
       fadd_d | fsub_d | fmul_d | 
       fsgnj_d | fsgnjn_d | fsgnjx_d |
       fmin_d | fmax_d |
-      fmv_d_x   |
+      fmv_d_x   | fmv_w_x   |
       fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu |
       fcvt_d_s
     
@@ -483,12 +481,12 @@ class Fpu_isa extends Bundle {
   def XtypeTagOut = {
     def XtypeTagOut_0 =
     fmv_x_w |  
-    fcvt_s_w | fcvt_s_wu | fcvt_d_w | fcvt_d_wu
+    fcvt_w_s | fcvt_wu_s | fcvt_w_d | fcvt_wu_d
 
     def XtypeTagOut_1 =
     feq_s | flt_s | fle_s | feq_d | flt_d | fle_d |
     fmv_x_d | 
-    fcvt_s_l | fcvt_s_lu | fcvt_d_l | fcvt_d_lu
+    fcvt_l_s | fcvt_lu_s | fcvt_l_d | fcvt_lu_d
     
     Mux1H(Seq(
       XtypeTagOut_0 -> 0.U, XtypeTagOut_1 -> 1.U,

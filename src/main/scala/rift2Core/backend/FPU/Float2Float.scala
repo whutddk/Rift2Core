@@ -49,7 +49,7 @@ class FPToFP() extends Module with HasFPUParameters{
   fsgnjMux_exc := 0.U
   fsgnjMux_toFloat := fsgnj
 
-  io.out.toFloat := fsgnjMux_toFloat
+  io.out.toFloat := box( fsgnjMux_toFloat, io.in.fun.FtypeTagOut)
   io.out.exc := fsgnjMux_exc
 
   when ( io.in.fun.is_fun_maxMin) { // fmin/fmax
@@ -64,7 +64,7 @@ class FPToFP() extends Module with HasFPUParameters{
 
 
   when ( io.in.fun.FtypeTagOut === 0.U) {
-    io.out.toFloat := Cat(fsgnjMux_toFloat >> 33, FType.D.unsafeConvert(fsgnjMux_toFloat, FType.S))
+    io.out.toFloat := box( Cat(fsgnjMux_toFloat >> 33, FType.D.unsafeConvert(fsgnjMux_toFloat, FType.S)), 0.U)
   }
 
 
@@ -81,7 +81,7 @@ class FPToFP() extends Module with HasFPUParameters{
       narrower.io.roundingMode := Mux(io.in.param.rm === "b111".U, io.frm, io.in.param.rm)
       narrower.io.detectTininess := hardfloat.consts.tininess_afterRounding
       // val narrowed = sanitizeNaN(narrower.io.out, FType.S)
-      io.out.toFloat := Cat(widened >> 33, narrower.io.out)
+      io.out.toFloat := box(Cat(widened >> 33, narrower.io.out), 0.U )
       io.out.exc := narrower.io.exceptionFlags
     }
 

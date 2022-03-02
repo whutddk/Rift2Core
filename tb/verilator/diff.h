@@ -68,6 +68,9 @@ struct diff {
     // uint64_t dcsr;
     // uint64_t dpc;
     // uint64_t dscratch;
+
+    uint32_t fflags;
+    uint8_t  frm;
 };
 
 

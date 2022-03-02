@@ -36,11 +36,7 @@ class IntToFP() extends Module with HasFPUParameters {
   val op1 = io.in.param.dat.op1
 
 
-  io.out.toFloat := 
-    Mux1H(Seq(
-      (io.in.fun.FtypeTagOut === 0.U) -> recode(op1, 0),
-      (io.in.fun.FtypeTagOut === 1.U) -> recode(op1, 1),      
-    ))
+  io.out.toFloat := 0.U
   io.out.exc     := 0.U
 
   val intValue = {
@@ -70,8 +66,8 @@ class IntToFP() extends Module with HasFPUParameters {
 
     io.out.toFloat :=
       Mux1H(Seq(
-        (io.in.fun.FtypeTagOut === 0.U ) -> dataPadded(0),
-        (io.in.fun.FtypeTagOut === 1.U ) -> dataPadded(1),
+        (io.in.fun.FtypeTagOut === 0.U ) -> box(dataPadded(0), 0.U),
+        (io.in.fun.FtypeTagOut === 1.U ) -> box(dataPadded(1), 1.U),
       ))
 
     io.out.exc :=
@@ -84,8 +80,8 @@ class IntToFP() extends Module with HasFPUParameters {
   when ( io.in.fun.is_fun_xmvF ) {
     io.out.toFloat :=
       Mux1H(Seq(
-        (io.in.fun.FtypeTagOut === 0.U ) -> recode(intValue, 0),
-        (io.in.fun.FtypeTagOut === 1.U ) -> recode(intValue, 1),
+        (io.in.fun.FtypeTagOut === 0.U ) -> box(recode(intValue, 0), 0.U),
+        (io.in.fun.FtypeTagOut === 1.U ) -> box(recode(intValue, 1), 1.U),
       ))
     io.out.exc     := 0.U
   }

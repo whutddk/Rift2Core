@@ -78,6 +78,10 @@ class Info_csr_reg extends Bundle {
   // val dcsr = UInt(64.W)
   // val dpc = UInt(64.W)
   // val dscratch;  = UInt(64.W)
+
+  val fflags = UInt(32.W)
+  val frm = UInt(8.W)
+
 }
 
 class diff extends Module with HasFPUParameters{

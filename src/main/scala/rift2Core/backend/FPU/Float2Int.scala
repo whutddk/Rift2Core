@@ -87,6 +87,7 @@ class FPToInt() extends Module with HasFPUParameters{
     toint := conv.io.out
     io.out.exc := Cat(conv.io.intExceptionFlags(2, 1).orR, 0.U(3.W), conv.io.intExceptionFlags(0))
 
+
     when (io.in.fun.XtypeTagOut === 0.U) {
       val narrow = {
         val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 32)) 
@@ -95,31 +96,14 @@ class FPToInt() extends Module with HasFPUParameters{
         mdl.io.signedOut := ~io.in.fun.is_usi
         mdl
       }
-
-
       val excSign = op1(64) && !FType.D.isNaN(op1)
       val excOut = Cat(conv.io.signedOut === excSign, Fill(31, !excSign))
       val invalid = conv.io.intExceptionFlags(2) || narrow.io.intExceptionFlags(1)
       when (invalid) { toint := Cat(conv.io.out >> 32, excOut) }
       io.out.exc := Cat(invalid, 0.U(3.W), !invalid && conv.io.intExceptionFlags(0))
     } 
-    .otherwise {
-      assert(io.in.fun.XtypeTagOut === 1.U)
-      val narrow = {
-        val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 64)) 
-        mdl.io.in := op1
-        mdl.io.roundingMode := Mux(io.in.param.rm === "b111".U, io.frm, io.in.param.rm)
-        mdl.io.signedOut := ~io.in.fun.is_usi
-        mdl
-      }
 
 
-      val excSign = op1(64) && !FType.D.isNaN(op1)
-      val excOut = Cat(conv.io.signedOut === excSign, Fill(63, !excSign))
-      val invalid = conv.io.intExceptionFlags(2) || narrow.io.intExceptionFlags(1)
-      when (invalid) { toint := Cat(conv.io.out >> 64, excOut) }
-      io.out.exc := Cat(invalid, 0.U(3.W), !invalid && conv.io.intExceptionFlags(0))
-    }
 
   }
 
