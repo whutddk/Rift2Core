@@ -21,25 +21,35 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 import base._
+import chisel3.experimental.dataview._
 
 
-class FPToInt() extends Module with HasFPUParameters{
+class FPToInt(latency: Int) extends Module with HasFPUParameters{
   val io = IO(new Bundle {
-    val in = Input(new Fpu_iss_info)
+    val in = Flipped(ValidIO(new Fpu_iss_info))
     val frm = Input(UInt(3.W))
-    val out = Output(new Bundle{
-      val lt = Bool()
-      val toint = UInt(64.W)
-      val exc = UInt(5.W)
-      })
+    val out = ValidIO(new Xres_Info)
+    val is_empty = Output(Bool)
   })
 
-
+  val cnt = RegInit(0.U(3.W))
+  when( io.in.valid & io.out.valid ) {
+    cnt := cnt
+  } .elsewhen( io.in.valid ) {
+    cnt := cnt + 1.U
+    assert(cnt =/= (latency-1).U)
+  } .elsewhen( io.out.valid ) {
+    cnt := cnt - 1.U
+    assert(cnt =/= 0.U)
+  }
+  io.is_empty := (cnt === 0.U)
+  
+  val out = Wire(new Xres_Info)
+  out.viewAsSupertype(new Fpu_iss_info) := io.fpu_iss_exe.bits
 
   val op1 = unbox(io.in.param.dat.op1, io.in.fun.FtypeTagIn, None)
   val op2 = unbox(io.in.param.dat.op2, io.in.fun.FtypeTagIn, None)
  
-  io.out.lt := false.B
 
   val store = 
     Mux1H(Seq(
@@ -49,7 +59,7 @@ class FPToInt() extends Module with HasFPUParameters{
   val toint = Wire(UInt(64.W))
   toint := store
 
-  io.out.exc := 0.U
+  out.exc := 0.U
 
   when ( io.in.fun.is_fun_class ) {
     val classify_out =
@@ -60,7 +70,7 @@ class FPToInt() extends Module with HasFPUParameters{
     toint := classify_out | (store >> 32 << 32)
   }
 
-  when ( io.in.fun.is_fun_fcmp | io.in.fun.is_fun_maxMin ) { // feq/flt/fle,
+  when ( io.in.fun.is_fun_fcmp ) { // feq/flt/fle,
 
     val dcmp =  {
       val mdl = Module(new hardfloat.CompareRecFN(expWidth = 11, sigWidth = 53))
@@ -69,10 +79,9 @@ class FPToInt() extends Module with HasFPUParameters{
       mdl.io.signaling := ~io.in.param.rm(1)
       mdl
     }
-    io.out.lt := dcmp.io.lt | (dcmp.io.a.asSInt < 0.S && dcmp.io.b.asSInt >= 0.S)  
 
     toint := (~io.in.param.rm & Cat(dcmp.io.lt, dcmp.io.eq)).orR
-    io.out.exc := dcmp.io.exceptionFlags
+    out.exc := dcmp.io.exceptionFlags
   }
 
   when ( io.in.fun.is_fun_fcvtX ) { // fcvt
@@ -85,7 +94,7 @@ class FPToInt() extends Module with HasFPUParameters{
     }
 
     toint := conv.io.out
-    io.out.exc := Cat(conv.io.intExceptionFlags(2, 1).orR, 0.U(3.W), conv.io.intExceptionFlags(0))
+    out.exc := Cat(conv.io.intExceptionFlags(2, 1).orR, 0.U(3.W), conv.io.intExceptionFlags(0))
     when (io.in.fun.XtypeTagOut === 0.U) {
       val narrow = {
         val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 32)) 
@@ -98,18 +107,20 @@ class FPToInt() extends Module with HasFPUParameters{
       val excOut = Cat(conv.io.signedOut === excSign, Fill(31, !excSign))
       val invalid = conv.io.intExceptionFlags(2) || narrow.io.intExceptionFlags(1)
       when (invalid) { toint := Cat(conv.io.out >> 32, excOut) }
-      io.out.exc := Cat(invalid, 0.U(3.W), !invalid && conv.io.intExceptionFlags(0))
+      out.exc := Cat(invalid, 0.U(3.W), !invalid && conv.io.intExceptionFlags(0))
     } 
   }
 
   when ( io.in.fun.is_fun_fmvX ) {
     toint := ieee(op1, t = FType.D)
-    io.out.exc := 0.U
+    out.exc := 0.U
   }
 
-  io.out.toint := 
+  out.toInt := 
     Mux1H( Seq(
       (io.in.fun.XtypeTagOut === 0.U) -> sextXTo(toint(31,0),64),
       (io.in.fun.XtypeTagOut === 1.U) -> toint(63,0),
     ))
+
+  io.out := Pipe.apply(enqValid = io.in.valid, enqBits = out, latency = latency)
 }

@@ -20,24 +20,36 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
+import chisel3.experimental.dataview._
 
-
-class IntToFP() extends Module with HasFPUParameters {
+class IntToFP(latency: Int) extends Module with HasFPUParameters {
   val io = IO(new Bundle {
-    val in = Input(new Fpu_iss_info)
+    val in = Flipped(ValidIO(new Fpu_iss_info))
     val frm = Input(UInt(3.W))
-    val out = Output(new Bundle{
-      val toFloat = UInt(65.W)
-      val exc = UInt(5.W)
-    })
+    val out = ValidIO(new Fres_Info)
+    val is_empty = Output(Bool)
   })
 
+  val cnt = RegInit(0.U(3.W))
+  when( io.in.valid & io.out.valid ) {
+    cnt := cnt
+  } .elsewhen( io.in.valid ) {
+    cnt := cnt + 1.U
+    assert(cnt =/= (latency-1).U)
+  } .elsewhen( io.out.valid ) {
+    cnt := cnt - 1.U
+    assert(cnt =/= 0.U)
+  }
+  io.is_empty := (cnt === 0.U)
+
+  val out = Wire(new Fres_Info)
+  out.viewAsSupertype(new Fpu_iss_info) := io.fpu_iss_exe.bits
 
   val op1 = io.in.param.dat.op1
 
 
-  io.out.toFloat := 0.U
-  io.out.exc     := 0.U
+  out.toFloat := 0.U
+  out.exc     := 0.U
 
   val intValue = {
     val res = WireDefault(op1.asSInt)
@@ -64,13 +76,13 @@ class IntToFP() extends Module with HasFPUParameters {
     val (data, exc) = i2fResults.unzip
     val dataPadded = data.init.map(d => Cat(data.last >> d.getWidth, d)) :+ data.last
 
-    io.out.toFloat :=
+    out.toFloat :=
       Mux1H(Seq(
         (io.in.fun.FtypeTagOut === 0.U ) -> box(dataPadded(0), 0.U),
         (io.in.fun.FtypeTagOut === 1.U ) -> box(dataPadded(1), 1.U),
       ))
 
-    io.out.exc :=
+    out.exc :=
       Mux1H(Seq(
         (io.in.fun.FtypeTagOut === 0.U ) -> exc(0),
         (io.in.fun.FtypeTagOut === 1.U ) -> exc(1),
@@ -78,15 +90,15 @@ class IntToFP() extends Module with HasFPUParameters {
   }
 
   when ( io.in.fun.is_fun_xmvF ) {
-    io.out.toFloat :=
+    out.toFloat :=
       Mux1H(Seq(
         (io.in.fun.XtypeTagIn === 0.U ) -> box(recode(op1, 0), 1.U),
         (io.in.fun.XtypeTagIn === 1.U ) -> box(recode(op1, 1), 1.U),
       ))
-    io.out.exc     := 0.U
+    out.exc     := 0.U
   }
 
-
+  io.out := Pipe.apply(enqValid = io.in.valid, enqBits = out, latency = latency)
 }
 
 
