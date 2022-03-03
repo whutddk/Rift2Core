@@ -29,7 +29,6 @@ class FPToInt() extends Module with HasFPUParameters{
     val frm = Input(UInt(3.W))
     val out = Output(new Bundle{
       val lt = Bool()
-      val eq = Bool()
       val toint = UInt(64.W)
       val exc = UInt(5.W)
       })
@@ -40,14 +39,7 @@ class FPToInt() extends Module with HasFPUParameters{
   val op1 = unbox(io.in.param.dat.op1, io.in.fun.FtypeTagIn, None)
   val op2 = unbox(io.in.param.dat.op2, io.in.fun.FtypeTagIn, None)
  
-
-  val dcmp =  {
-    val mdl = Module(new hardfloat.CompareRecFN(expWidth = 11, sigWidth = 53))
-    mdl.io.a := op1
-    mdl.io.b := op2
-    mdl.io.signaling := ~io.in.param.rm(1)
-    mdl
-  }
+  io.out.lt := false.B
 
   val store = 
     Mux1H(Seq(
@@ -65,13 +57,21 @@ class FPToInt() extends Module with HasFPUParameters{
         (io.in.fun.FtypeTagIn === 0.U) -> FType.S.classify(FType.D.unsafeConvert(op1, FType.S)),
         (io.in.fun.FtypeTagIn === 1.U) -> FType.D.classify( op1 ),
       ))
-
     toint := classify_out | (store >> 32 << 32)
-
   }
 
-  when ( io.in.fun.is_fun_cmp | io.in.fun.is_fun_maxMin ) { // feq/flt/fle, fcvt
-    toint := (~io.in.param.rm & Cat(dcmp.io.lt, dcmp.io.eq)).orR | (store >> 32 << 32)
+  when ( io.in.fun.is_fun_fcmp | io.in.fun.is_fun_maxMin ) { // feq/flt/fle,
+
+    val dcmp =  {
+      val mdl = Module(new hardfloat.CompareRecFN(expWidth = 11, sigWidth = 53))
+      mdl.io.a := op1
+      mdl.io.b := op2
+      mdl.io.signaling := ~io.in.param.rm(1)
+      mdl
+    }
+    io.out.lt := dcmp.io.lt | (dcmp.io.a.asSInt < 0.S && dcmp.io.b.asSInt >= 0.S)  
+
+    toint := (~io.in.param.rm & Cat(dcmp.io.lt, dcmp.io.eq)).orR
     io.out.exc := dcmp.io.exceptionFlags
   }
 
@@ -86,8 +86,6 @@ class FPToInt() extends Module with HasFPUParameters{
 
     toint := conv.io.out
     io.out.exc := Cat(conv.io.intExceptionFlags(2, 1).orR, 0.U(3.W), conv.io.intExceptionFlags(0))
-
-
     when (io.in.fun.XtypeTagOut === 0.U) {
       val narrow = {
         val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 32)) 
@@ -102,9 +100,6 @@ class FPToInt() extends Module with HasFPUParameters{
       when (invalid) { toint := Cat(conv.io.out >> 32, excOut) }
       io.out.exc := Cat(invalid, 0.U(3.W), !invalid && conv.io.intExceptionFlags(0))
     } 
-
-
-
   }
 
   when ( io.in.fun.is_fun_fmvX ) {
@@ -112,8 +107,6 @@ class FPToInt() extends Module with HasFPUParameters{
     io.out.exc := 0.U
   }
 
-  io.out.eq := dcmp.io.eq
-  io.out.lt := dcmp.io.lt || (dcmp.io.a.asSInt < 0.S && dcmp.io.b.asSInt >= 0.S)
   io.out.toint := 
     Mux1H( Seq(
       (io.in.fun.XtypeTagOut === 0.U) -> sextXTo(toint(31,0),64),

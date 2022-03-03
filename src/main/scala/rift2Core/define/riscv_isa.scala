@@ -328,7 +328,7 @@ class Fpu_isa extends Bundle {
 
 
   def is_fun_class = fclass_s | fclass_d
-  def is_fun_cmp =  feq_s | flt_s | fle_s | feq_d | flt_d | fle_d
+  def is_fun_fcmp =  feq_s | flt_s | fle_s | feq_d | flt_d | fle_d
   def is_fun_maxMin = fmin_s | fmax_s | fmin_d | fmax_d
   def is_fun_fcvtX = 
     fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s |

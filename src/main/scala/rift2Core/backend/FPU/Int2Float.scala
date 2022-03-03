@@ -80,8 +80,8 @@ class IntToFP() extends Module with HasFPUParameters {
   when ( io.in.fun.is_fun_xmvF ) {
     io.out.toFloat :=
       Mux1H(Seq(
-        (io.in.fun.FtypeTagOut === 0.U ) -> box(recode(intValue, 0), 0.U),
-        (io.in.fun.FtypeTagOut === 1.U ) -> box(recode(intValue, 1), 1.U),
+        (io.in.fun.XtypeTagIn === 0.U ) -> box(recode(op1, 0), 1.U),
+        (io.in.fun.XtypeTagIn === 1.U ) -> box(recode(op1, 1), 1.U),
       ))
     io.out.exc     := 0.U
   }

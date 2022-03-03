@@ -80,7 +80,7 @@ class FAlu() extends Module with HasFPUParameters{
       io.fpu_iss_exe.bits.fun.is_fun_fcvtF -> f2f.io.out.exc,
       io.fpu_iss_exe.bits.fun.is_fun_fsgn  -> f2f.io.out.exc,
       io.fpu_iss_exe.bits.fun.is_fun_maxMin -> f2f.io.out.exc,
-      io.fpu_iss_exe.bits.fun.is_fun_cmp   -> f2i.io.out.exc,
+      io.fpu_iss_exe.bits.fun.is_fun_fcmp   -> f2i.io.out.exc,
 
       
     ))
@@ -130,9 +130,7 @@ class FAlu() extends Module with HasFPUParameters{
       io.fpu_iss_exe.bits.fun.is_fun_fcsr  -> fcsr_res,
       io.fpu_iss_exe.bits.fun.is_fun_class -> f2i.io.out.toint,
       io.fpu_iss_exe.bits.fun.is_fun_fcvtX -> f2i.io.out.toint,
-      (io.fpu_iss_exe.bits.fun.flt_s | io.fpu_iss_exe.bits.fun.flt_d ) -> Mux(f2i.io.out.lt, 1.U, 0.U),
-      (io.fpu_iss_exe.bits.fun.fle_s | io.fpu_iss_exe.bits.fun.fle_d ) -> Mux((~f2i.io.out.lt)|f2i.io.out.eq, 1.U, 0.U),
-      (io.fpu_iss_exe.bits.fun.feq_s | io.fpu_iss_exe.bits.fun.feq_d ) -> Mux(f2i.io.out.eq, 1.U, 0.U),
+      io.fpu_iss_exe.bits.fun.is_fun_fcmp -> f2i.io.out.toint,
       io.fpu_iss_exe.bits.fun.is_fun_fmvX -> f2i.io.out.toint,
     ))
   fpu_exe_iwb_fifo.io.enq.bits.viewAsSupertype(new Register_dstntn(64)) := io.fpu_iss_exe.bits.param.viewAsSupertype(new Register_dstntn(64))
