@@ -308,7 +308,6 @@ class Fpu_isa extends Bundle {
   val fcvt_d_lu = Bool()
   val fmv_d_x = Bool()
 
-
   val fcsr_rw = Bool()
   val fcsr_rs = Bool()
   val fcsr_rc = Bool()
@@ -345,9 +344,27 @@ class Fpu_isa extends Bundle {
   def is_fun_fsgn = 
     fsgnj_s | fsgnjn_s | fsgnjx_s |
     fsgnj_d | fsgnjn_d | fsgnjx_d
+  def is_fun_fma = 
+    fmadd_s  | fmsub_s  | fnmsub_s | fnmadd_s | fadd_s   | fsub_s   | fmul_s   |
+    fmadd_d  | fmsub_d  | fnmsub_d | fnmadd_d | fadd_d   | fsub_d   | fmul_d
+  def is_fun_divSqrt = 
+    fdiv_s  | fdiv_d  | fsqrt_s | fsqrt_d
+    
+  
 
+  def hasThreeRs = 
+  fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | 
+  fmadd_d | fmsub_d | fnmsub_d | fnmadd_d
 
-  def hasOneRs = 
+  def hasTwoRs = hasThreeRs |
+  fadd_s | fsub_s | fmul_s | fdiv_s | fsqrt_s |
+  fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
+  fmin_s | fmax_s | fmin_d | fmax_d |
+  feq_s | flt_s |fle_s | feq_d | flt_d | fle_d |
+  fadd_d | fsub_d | fmul_d | fdiv_d | fsqrt_d |
+  fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
+
+  def hasOneRs = hasTwoRs |
   fcvt_w_s | fcvt_wu_s |
   fmv_x_w  | fmv_x_d |
   fclass_s | fclass_d |
@@ -360,18 +377,6 @@ class Fpu_isa extends Bundle {
   fcvt_d_w | fcvt_d_wu |
   fcvt_l_d | fcvt_lu_d |
   fcvt_d_l | fcvt_d_lu
-  
-  def hasTwoRs = hasOneRs |
-  fadd_s | fsub_s | fmul_s | fdiv_s | fsqrt_s |
-  fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
-  fmin_s | fmax_s | fmin_d | fmax_d |
-  feq_s | flt_s |fle_s | feq_d | flt_d | fle_d |
-  fadd_d | fsub_d | fmul_d | fdiv_d | fsqrt_d |
-  fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
-
-  def hasThreeRs = hasTwoRs |
-  fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | 
-  fmadd_d | fmsub_d | fnmsub_d | fnmadd_d
 
   def is_fop = 
     fmadd_s   | fmsub_s   | fnmsub_s  | fnmadd_s  |

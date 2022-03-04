@@ -27,23 +27,10 @@ class FPToFP(latency: Int) extends Module with HasFPUParameters{
     val in = Flipped(ValidIO(new Fpu_iss_info))
     val frm = Input(UInt(3.W))
     val out = ValidIO(new Fres_Info)
-    val is_empty = Output(Bool)
   })
 
-  val cnt = RegInit(0.U(3.W))
-  when( io.in.valid & io.out.valid ) {
-    cnt := cnt
-  } .elsewhen( io.in.valid ) {
-    cnt := cnt + 1.U
-    assert(cnt =/= (latency-1).U)
-  } .elsewhen( io.out.valid ) {
-    cnt := cnt - 1.U
-    assert(cnt =/= 0.U)
-  }
-  io.is_empty := (cnt === 0.U)
-
   val out = Wire(new Fres_Info)
-  out.viewAsSupertype(new Fpu_iss_info) := io.fpu_iss_exe.bits
+  out.viewAsSupertype(new Fpu_iss_info) := io.in.bits
 
 
 
@@ -51,21 +38,22 @@ class FPToFP(latency: Int) extends Module with HasFPUParameters{
   val op1 = unbox(io.in.bits.param.dat.op1, io.in.bits.fun.FtypeTagIn, None)
   val op2 = unbox(io.in.bits.param.dat.op2, io.in.bits.fun.FtypeTagIn, None)
 
+  val fsgnjMux_exc     = WireDefault(0.U(5.W))
+  val fsgnjMux_toFloat = WireDefault(0.U(65.W))
 
+  when( io.in.bits.fun.is_fun_fsgn ) {
+    val signNum = Mux(io.in.bits.param.rm(1), op1 ^ op2, Mux(io.in.bits.param.rm(0), ~op2, op2))
+    val fsgnj = Cat(signNum(64), op1(63, 0))
 
-  val signNum = Mux(io.in.bits.param.rm(1), op1 ^ op2, Mux(io.in.bits.param.rm(0), ~op2, op2))
-  val fsgnj = Cat(signNum(64), op1(63, 0))
-
-  val fsgnjMux_exc     = Wire(UInt(5.W))
-  val fsgnjMux_toFloat = Wire(UInt(65.W))
-  fsgnjMux_exc := 0.U
-  fsgnjMux_toFloat := fsgnj
+    fsgnjMux_exc := 0.U
+    fsgnjMux_toFloat := fsgnj
+  }
 
   out.toFloat := box( fsgnjMux_toFloat, io.in.bits.fun.FtypeTagOut)
   out.exc := fsgnjMux_exc
 
 
-  when ( io.in.fun.is_fun_maxMin ) { // fmin/fmax
+  when ( io.in.bits.fun.is_fun_maxMin ) { // fmin/fmax
 
     val dcmp =  {
       val mdl = Module(new hardfloat.CompareRecFN(expWidth = 11, sigWidth = 53))
@@ -81,7 +69,7 @@ class FPToFP(latency: Int) extends Module with HasFPUParameters{
     val isInvalid = FType.D.isSNaN(op1) || FType.D.isSNaN(op2)
     val isNaNOut = isnan1 && isnan2
     val isLHS = isnan2 || io.in.bits.param.rm(0) =/= is_lt && !isnan1
-    fsgnjMux_exc := (isInvalid << 4) | dcmp.io.exceptionFlags
+    fsgnjMux_exc := (isInvalid << 4)
     fsgnjMux_toFloat := Mux(isNaNOut, FType.D.qNaN, Mux(isLHS, op1, op2))
   }
 
@@ -112,6 +100,16 @@ class FPToFP(latency: Int) extends Module with HasFPUParameters{
 
 
   }
-    io.out := Pipe.apply(enqValid = io.in.valid, enqBits = out, latency = latency)
+    io.out :=
+      Pipe.apply(
+        enqValid =
+          io.in.valid & (
+            io.in.bits.fun.is_fun_fsgn |
+            io.in.bits.fun.is_fun_maxMin |
+            io.in.bits.fun.is_fun_fcvtF
+          ),
+        enqBits = out,
+        latency = latency
+      )
 }
 

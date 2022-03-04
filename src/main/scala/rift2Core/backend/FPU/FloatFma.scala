@@ -122,40 +122,83 @@ import chisel3.experimental.dataview._
 //   io.exceptionFlags := roundRawFNToRecFN.io.exceptionFlags
 // }
 
-// class FPUFMAPipe(val latency: Int, val t: FType)
-//                 (implicit p: Parameters) extends FPUModule()(p) with ShouldBeRetimed {
-//   require(latency>0)
+class FPUFMAPipe(latency: Int, val t: FType) extends Module with HasFPUParameters {
+  val io = IO(new Bundle {
+    val in = Flipped(ValidIO(new Fpu_iss_info))
+    val frm = Input(UInt(3.W))
+    val out = ValidIO(new Fres_Info)
+  })
 
-//   val io = new Bundle {
-//     val in = Valid(new FPInput).flip
-//     val out = Valid(new FPResult)
-//   }
+  val out = Wire(new Fres_Info)
+  out.viewAsSupertype(new Fpu_iss_info) := io.in.bits
 
-//   val valid = Reg(next=io.in.valid)
-//   val in = Reg(new FPInput)
-//   when (io.in.valid) {
-//     val one = UInt(1) << (t.sig + t.exp - 1)
-//     val zero = (io.in.bits.in1 ^ io.in.bits.in2) & (UInt(1) << (t.sig + t.exp))
-//     val cmd_fma = io.in.bits.ren3
-//     val cmd_addsub = io.in.bits.swap23
-//     in := io.in.bits
-//     when (cmd_addsub) { in.in2 := one }
-//     when (!(cmd_fma || cmd_addsub)) { in.in3 := zero }
-//   }
+  val op1 = unbox(io.in.bits.param.dat.op1, 0.U, Some(t))
+  val op2 = unbox(io.in.bits.param.dat.op2, 0.U, Some(t))
+  val op3 = unbox(io.in.bits.param.dat.op3, 0.U, Some(t))
 
-//   val fma = Module(new MulAddRecFNPipe((latency-1) min 2, t.exp, t.sig))
-//   fma.io.validin := valid
-//   fma.io.op := in.fmaCmd
-//   fma.io.roundingMode := in.rm
-//   fma.io.detectTininess := hardfloat.consts.tininess_afterRounding
-//   fma.io.a := in.in1
-//   fma.io.b := in.in2
-//   fma.io.c := in.in3
 
-//   val res = Wire(new FPResult)
-//   res.data := sanitizeNaN(fma.io.out, t)
-//   res.exc := fma.io.exceptionFlags
 
-//   io.out := Pipe(fma.io.validout, res, (latency-3) max 0)
-// }
+  val one = 1.U << (t.sig + t.exp - 1)
+  val zero = (op1 ^ op2) & (1.U << (t.sig + t.exp))
+
+  def fmadd_s  = io.in.bits.fun.fmadd_s 
+  def fmsub_s  = io.in.bits.fun.fmsub_s 
+  def fnmsub_s = io.in.bits.fun.fnmsub_s
+  def fnmadd_s = io.in.bits.fun.fnmadd_s
+  def fadd_s   = io.in.bits.fun.fadd_s  
+  def fsub_s   = io.in.bits.fun.fsub_s  
+  def fmul_s   = io.in.bits.fun.fmul_s  
+  def fmadd_d  = io.in.bits.fun.fmadd_d 
+  def fmsub_d  = io.in.bits.fun.fmsub_d 
+  def fnmsub_d = io.in.bits.fun.fnmsub_d
+  def fnmadd_d = io.in.bits.fun.fnmadd_d
+  def fadd_d   = io.in.bits.fun.fadd_d  
+  def fsub_d   = io.in.bits.fun.fsub_d  
+  def fmul_d   = io.in.bits.fun.fmul_d  
+
+    val op = 
+      Mux1H(Seq(
+        ( fmadd_s | fmadd_d | fadd_s | fadd_d | fmul_s | fmul_d ) -> "b00".U,
+        ( fmsub_s | fmsub_d | fsub_s | fsub_d                   ) -> "b01".U,
+        ( fnmsub_s | fnmsub_d                                   ) -> "b10".U,
+        ( fnmadd_s | fnmadd_d                                   ) -> "b11".U,
+      ))
+
+    val in1 = op1
+    val in2 = 
+      Mux( (fadd_s | fadd_d | fsub_s | fsub_d), one, op2 )
+    val in3 = 
+      Mux(
+        (fmul_s | fmul_d), zero,
+        Mux( fadd_s | fadd_d | fsub_s | fsub_d, op2, op3 )
+       )
+
+
+
+  val fma = {
+    val mdl = Module(new hardfloat.MulAddRecFN(t.exp, t.sig))
+    mdl.io.op := op
+    mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+    mdl.io.detectTininess := hardfloat.consts.tininess_afterRounding
+    mdl.io.a := in1
+    mdl.io.b := in2
+    mdl.io.c := in3
+    mdl
+  }
+
+
+  out.toFloat := box(sanitizeNaN(fma.io.out, t), t)
+  out.exc := fma.io.exceptionFlags
+
+
+  io.out :=
+    Pipe.apply(
+      enqValid =
+        io.in.valid & (
+          io.in.bits.fun.is_fun_fma
+        ),
+      enqBits = out,
+      latency = latency
+    )
+}
 

@@ -29,78 +29,68 @@ class FPToInt(latency: Int) extends Module with HasFPUParameters{
     val in = Flipped(ValidIO(new Fpu_iss_info))
     val frm = Input(UInt(3.W))
     val out = ValidIO(new Xres_Info)
-    val is_empty = Output(Bool)
+
   })
 
-  val cnt = RegInit(0.U(3.W))
-  when( io.in.valid & io.out.valid ) {
-    cnt := cnt
-  } .elsewhen( io.in.valid ) {
-    cnt := cnt + 1.U
-    assert(cnt =/= (latency-1).U)
-  } .elsewhen( io.out.valid ) {
-    cnt := cnt - 1.U
-    assert(cnt =/= 0.U)
-  }
-  io.is_empty := (cnt === 0.U)
+
   
   val out = Wire(new Xres_Info)
-  out.viewAsSupertype(new Fpu_iss_info) := io.fpu_iss_exe.bits
+  out.viewAsSupertype(new Fpu_iss_info) := io.in.bits
 
-  val op1 = unbox(io.in.param.dat.op1, io.in.fun.FtypeTagIn, None)
-  val op2 = unbox(io.in.param.dat.op2, io.in.fun.FtypeTagIn, None)
+  val op1 = unbox(io.in.bits.param.dat.op1, io.in.bits.fun.FtypeTagIn, None)
+  val op2 = unbox(io.in.bits.param.dat.op2, io.in.bits.fun.FtypeTagIn, None)
  
 
   val store = 
     Mux1H(Seq(
-      (io.in.fun.FtypeTagIn === 0.U) -> Fill(2, FType.S.ieee(op1)(31, 0) ),
-      (io.in.fun.FtypeTagIn === 1.U) -> Fill(1, FType.D.ieee(op1)(63, 0) ),
+      (io.in.bits.fun.FtypeTagIn === 0.U) -> Fill(2, FType.S.ieee(op1)(31, 0) ),
+      (io.in.bits.fun.FtypeTagIn === 1.U) -> Fill(1, FType.D.ieee(op1)(63, 0) ),
     ))
   val toint = Wire(UInt(64.W))
   toint := store
 
   out.exc := 0.U
 
-  when ( io.in.fun.is_fun_class ) {
+  when ( io.in.bits.fun.is_fun_class ) {
     val classify_out =
       Mux1H( Seq(
-        (io.in.fun.FtypeTagIn === 0.U) -> FType.S.classify(FType.D.unsafeConvert(op1, FType.S)),
-        (io.in.fun.FtypeTagIn === 1.U) -> FType.D.classify( op1 ),
+        (io.in.bits.fun.FtypeTagIn === 0.U) -> FType.S.classify(FType.D.unsafeConvert(op1, FType.S)),
+        (io.in.bits.fun.FtypeTagIn === 1.U) -> FType.D.classify( op1 ),
       ))
     toint := classify_out | (store >> 32 << 32)
   }
 
-  when ( io.in.fun.is_fun_fcmp ) { // feq/flt/fle,
+  when ( io.in.bits.fun.is_fun_fcmp ) { // feq/flt/fle,
 
     val dcmp =  {
       val mdl = Module(new hardfloat.CompareRecFN(expWidth = 11, sigWidth = 53))
       mdl.io.a := op1
       mdl.io.b := op2
-      mdl.io.signaling := ~io.in.param.rm(1)
+      mdl.io.signaling := ~io.in.bits.param.rm(1)
       mdl
     }
 
-    toint := (~io.in.param.rm & Cat(dcmp.io.lt, dcmp.io.eq)).orR
+    toint := (~io.in.bits.param.rm & Cat(dcmp.io.lt, dcmp.io.eq)).orR
     out.exc := dcmp.io.exceptionFlags
   }
 
-  when ( io.in.fun.is_fun_fcvtX ) { // fcvt
+  when ( io.in.bits.fun.is_fun_fcvtX ) { // fcvt
     val conv =  {
       val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 64))
       mdl.io.in := op1
-      mdl.io.roundingMode := Mux(io.in.param.rm === "b111".U, io.frm, io.in.param.rm)
-      mdl.io.signedOut := ~io.in.fun.is_usi
+      mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+      mdl.io.signedOut := ~io.in.bits.fun.is_usi
       mdl
     }
 
     toint := conv.io.out
     out.exc := Cat(conv.io.intExceptionFlags(2, 1).orR, 0.U(3.W), conv.io.intExceptionFlags(0))
-    when (io.in.fun.XtypeTagOut === 0.U) {
+    when (io.in.bits.fun.XtypeTagOut === 0.U) {
       val narrow = {
         val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 32)) 
         mdl.io.in := op1
-        mdl.io.roundingMode := Mux(io.in.param.rm === "b111".U, io.frm, io.in.param.rm)
-        mdl.io.signedOut := ~io.in.fun.is_usi
+        mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+        mdl.io.signedOut := ~io.in.bits.fun.is_usi
         mdl
       }
       val excSign = op1(64) && !FType.D.isNaN(op1)
@@ -111,16 +101,28 @@ class FPToInt(latency: Int) extends Module with HasFPUParameters{
     } 
   }
 
-  when ( io.in.fun.is_fun_fmvX ) {
+  when ( io.in.bits.fun.is_fun_fmvX ) {
     toint := ieee(op1, t = FType.D)
     out.exc := 0.U
   }
 
   out.toInt := 
     Mux1H( Seq(
-      (io.in.fun.XtypeTagOut === 0.U) -> sextXTo(toint(31,0),64),
-      (io.in.fun.XtypeTagOut === 1.U) -> toint(63,0),
+      (io.in.bits.fun.XtypeTagOut === 0.U) -> sextXTo(toint(31,0),64),
+      (io.in.bits.fun.XtypeTagOut === 1.U) -> toint(63,0),
     ))
 
-  io.out := Pipe.apply(enqValid = io.in.valid, enqBits = out, latency = latency)
+  io.out :=
+    Pipe.apply(
+      enqValid =
+        io.in.valid & (
+          io.in.bits.fun.is_fun_class |
+          io.in.bits.fun.is_fun_fcmp |
+          io.in.bits.fun.is_fun_fcvtX |
+          io.in.bits.fun.is_fun_fmvX
+        ),
+      enqBits = out,
+      latency = latency
+    )
+
 }

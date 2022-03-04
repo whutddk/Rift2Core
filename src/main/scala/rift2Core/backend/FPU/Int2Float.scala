@@ -27,25 +27,14 @@ class IntToFP(latency: Int) extends Module with HasFPUParameters {
     val in = Flipped(ValidIO(new Fpu_iss_info))
     val frm = Input(UInt(3.W))
     val out = ValidIO(new Fres_Info)
-    val is_empty = Output(Bool)
   })
 
-  val cnt = RegInit(0.U(3.W))
-  when( io.in.valid & io.out.valid ) {
-    cnt := cnt
-  } .elsewhen( io.in.valid ) {
-    cnt := cnt + 1.U
-    assert(cnt =/= (latency-1).U)
-  } .elsewhen( io.out.valid ) {
-    cnt := cnt - 1.U
-    assert(cnt =/= 0.U)
-  }
-  io.is_empty := (cnt === 0.U)
+
 
   val out = Wire(new Fres_Info)
-  out.viewAsSupertype(new Fpu_iss_info) := io.fpu_iss_exe.bits
+  out.viewAsSupertype(new Fpu_iss_info) := io.in.bits
 
-  val op1 = io.in.param.dat.op1
+  val op1 = io.in.bits.param.dat.op1
 
 
   out.toFloat := 0.U
@@ -54,19 +43,19 @@ class IntToFP(latency: Int) extends Module with HasFPUParameters {
   val intValue = {
     val res = WireDefault(op1.asSInt)
     val smallInt = op1(31, 0)
-    when (io.in.fun.XtypeTagIn === 0.U) {
-      res := Mux(io.in.fun.is_usi, smallInt.zext, smallInt.asSInt)
+    when (io.in.bits.fun.XtypeTagIn === 0.U) {
+      res := Mux(io.in.bits.fun.is_usi, smallInt.zext, smallInt.asSInt)
     }
     res.asUInt
   }
 
-  when ( io.in.fun.is_fun_xcvtF ) { // fcvt
+  when ( io.in.bits.fun.is_fun_xcvtF ) { // fcvt
     val i2fResults = for (t <- floatTypes) yield {
       val i2f = {
         val mdl = Module(new hardfloat.INToRecFN(64, t.exp, t.sig))
-        mdl.io.signedIn := ~io.in.fun.is_usi
+        mdl.io.signedIn := ~io.in.bits.fun.is_usi
         mdl.io.in := intValue
-        mdl.io.roundingMode := Mux(io.in.param.rm === "b111".U, io.frm, io.in.param.rm)
+        mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
         mdl.io.detectTininess := hardfloat.consts.tininess_afterRounding
         mdl
       }
@@ -78,27 +67,36 @@ class IntToFP(latency: Int) extends Module with HasFPUParameters {
 
     out.toFloat :=
       Mux1H(Seq(
-        (io.in.fun.FtypeTagOut === 0.U ) -> box(dataPadded(0), 0.U),
-        (io.in.fun.FtypeTagOut === 1.U ) -> box(dataPadded(1), 1.U),
+        (io.in.bits.fun.FtypeTagOut === 0.U ) -> box(dataPadded(0), 0.U),
+        (io.in.bits.fun.FtypeTagOut === 1.U ) -> box(dataPadded(1), 1.U),
       ))
 
     out.exc :=
       Mux1H(Seq(
-        (io.in.fun.FtypeTagOut === 0.U ) -> exc(0),
-        (io.in.fun.FtypeTagOut === 1.U ) -> exc(1),
+        (io.in.bits.fun.FtypeTagOut === 0.U ) -> exc(0),
+        (io.in.bits.fun.FtypeTagOut === 1.U ) -> exc(1),
       ))
   }
 
-  when ( io.in.fun.is_fun_xmvF ) {
+  when ( io.in.bits.fun.is_fun_xmvF ) {
     out.toFloat :=
       Mux1H(Seq(
-        (io.in.fun.XtypeTagIn === 0.U ) -> box(recode(op1, 0), 1.U),
-        (io.in.fun.XtypeTagIn === 1.U ) -> box(recode(op1, 1), 1.U),
+        (io.in.bits.fun.XtypeTagIn === 0.U ) -> box(recode(op1, 0), 1.U),
+        (io.in.bits.fun.XtypeTagIn === 1.U ) -> box(recode(op1, 1), 1.U),
       ))
     out.exc     := 0.U
   }
 
-  io.out := Pipe.apply(enqValid = io.in.valid, enqBits = out, latency = latency)
+  io.out :=
+    Pipe.apply(
+      enqValid =
+        io.in.valid & (
+          io.in.bits.fun.is_fun_xcvtF |
+          io.in.bits.fun.is_fun_xmvF
+        ),
+      enqBits = out,
+      latency = latency
+    )
 }
 
 
