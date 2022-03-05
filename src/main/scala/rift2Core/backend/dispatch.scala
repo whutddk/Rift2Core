@@ -249,7 +249,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
       res.is_sfence_vma  := instr.lsu_isa.sfence_vma
       res.is_wfi         := instr.alu_isa.wfi
       res.is_csr         := instr.csr_isa.is_csr
-      res.is_fpu         := instr.fpu_isa.is_fpu
+      res.is_fpu         := instr.fpu_isa.is_fpu | instr.lsu_isa.is_fpu
       res.privil         := instr.privil_isa
       res.is_illeage     := instr.is_illeage
 

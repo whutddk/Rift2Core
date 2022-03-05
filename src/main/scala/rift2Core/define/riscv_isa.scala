@@ -164,6 +164,7 @@ class Lsu_isa extends Bundle {
   def is_ist = ~is_fst
   def is_fwb = flw | fld
   def is_iwb = ~is_fwb
+  def is_fpu = flw | fsw | fld | fsd
 }
 
 class Csr_isa extends Bundle {
