@@ -42,13 +42,13 @@ class Decode32 (x:UInt, pc: UInt) {
   def shamt_imm = Cat( Fill(58, 0.U), x(25,20) )
 
 
-  def is_iType = info.bru_isa.jalr | info.lsu_isa.lb | info.lsu_isa.lh |info.lsu_isa.lw | info.lsu_isa.lbu | info.lsu_isa.lhu | info.lsu_isa.lwu | info.lsu_isa.ld | info.alu_isa.addi | info.alu_isa.addiw | info.alu_isa.slti | info.alu_isa.sltiu | info.alu_isa.xori | info.alu_isa.ori | info.alu_isa.andi | info.lsu_isa.fence | info.lsu_isa.fence_i | info.csr_isa.rw | info.csr_isa.rs | info.csr_isa.rc | info.csr_isa.rwi | info.csr_isa.rsi | info.csr_isa.rci | info.lsu_isa.flw | info.lsu_isa.fld
+  def is_iType = info.bru_isa.jalr | info.lsu_isa.lb | info.lsu_isa.lh |info.lsu_isa.lw | info.lsu_isa.lbu | info.lsu_isa.lhu | info.lsu_isa.lwu | info.lsu_isa.ld | info.alu_isa.addi | info.alu_isa.addiw | info.alu_isa.slti | info.alu_isa.sltiu | info.alu_isa.xori | info.alu_isa.ori | info.alu_isa.andi | info.lsu_isa.fence | info.lsu_isa.fence_i | info.csr_isa.rw | info.csr_isa.rs | info.csr_isa.rc | info.csr_isa.rwi | info.csr_isa.rsi | info.csr_isa.rci | info.lsu_isa.flw | info.lsu_isa.fld | info.fpu_isa.is_fun_fcsr
   def is_sType = info.lsu_isa.sb | info.lsu_isa.sh | info.lsu_isa.sw | info.lsu_isa.sd | info.lsu_isa.fsw | info.lsu_isa.fsd 
   def is_bType = info.bru_isa.beq | info.bru_isa.bne | info.bru_isa.blt | info.bru_isa.bge | info.bru_isa.bltu | info.bru_isa.bgeu;
   def is_uType = info.alu_isa.lui | info.alu_isa.auipc;
   def is_jType = info.bru_isa.jal;
   def is_aType = info.lsu_isa.is_lrsc | info.lsu_isa.is_amo
-  def is_mType = info.fpu_isa.is_fpu
+  def is_mType = info.fpu_isa.is_fpu & ~(info.fpu_isa.is_fun_fcsr)
   def is_shamt = info.alu_isa.slli | info.alu_isa.srli | info.alu_isa.srai | info.alu_isa.slliw | info.alu_isa.srliw | info.alu_isa.sraiw
 
 
@@ -371,7 +371,7 @@ class Decode32 (x:UInt, pc: UInt) {
   info.fpu_isa.fmin_s      := ( x === BitPat("b0010100??????????000?????1010011") )
   info.fpu_isa.fmax_s      := ( x === BitPat("b0010100??????????001?????1010011") )
   info.fpu_isa.fcvt_w_s    := ( x === BitPat("b110000000000?????????????1010011") )
-  info.fpu_isa.fcvt_wu_s   := ( x === BitPat("b110000100001?????????????1010011") )
+  info.fpu_isa.fcvt_wu_s   := ( x === BitPat("b110000000001?????????????1010011") )
   info.fpu_isa.fmv_x_w     := ( x === BitPat("b111000000000?????000?????1010011") )
   info.fpu_isa.feq_s       := ( x === BitPat("b1010000??????????010?????1010011") )
   info.fpu_isa.flt_s       := ( x === BitPat("b1010000??????????001?????1010011") )

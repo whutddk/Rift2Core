@@ -47,6 +47,7 @@ object Reg_Exe_Port {
 
 abstract class CsrFiles_port extends Module{
   val exe_port = Wire(new Exe_Port)
+  val exe_fport = Wire(new Exe_Port)
   val is_trap = Wire(Bool())
   // val is_exception = Wire(Bool())
   val is_mRet = Wire(Bool())
@@ -60,6 +61,7 @@ abstract class CsrFiles_port extends Module{
   val ill_dvaddr = Wire(UInt(64.W))
 
   val is_csrw_illegal = Wire(Bool())
+  val is_fcsrw_illegal = Wire(Bool())
   val is_csrr_illegal = Wire(Bool())
 
   val is_instr_misAlign = WireDefault(false.B)
@@ -99,8 +101,8 @@ abstract class CsrFiles_port extends Module{
   // val ucause = Wire(UInt(64.W))
   // val utval = Wire(UInt(64.W))
   // val uip = Wire(UInt(64.W))
-  val fflags = Wire(UInt(64.W))
-  val frm = Wire(UInt(64.W))
+  // val fflags = Wire(UInt(64.W))
+  // val frm = Wire(UInt(64.W))
   val fcsr = Wire(UInt(64.W))
   val cycle = Wire(UInt(64.W))
   val time = Wire(UInt(64.W))
@@ -178,6 +180,7 @@ abstract class CsrFiles_port extends Module{
   val mhpmcounter = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
   val mhpmevent = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
 
+  val is_fpu_state_change = Wire(Bool())
 
   val priv_lvl_dnxt = Wire(UInt(2.W))
   val priv_lvl_enable = Wire(Bool())

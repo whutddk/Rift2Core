@@ -27,7 +27,10 @@ struct diff diff;
 extern char* img;
 
 #define CHK_REG( NAME, DIFF, TRACE ) \
-	if ( DIFF != TRACE ) { printf( "Failed at %s, real is 0x%lx, should be 0x%lx\n", NAME, TRACE, DIFF ); return -1; }
+	if ( DIFF != TRACE ) { printf( "Failed at %s, real is 0x%lx, should be 0x%lx, pc is 0x%lx\n", NAME, TRACE, DIFF, diff.pc ); return -1; }
+
+#define CHK_FREG( NAME, DIFF, TRACE1, TRACE2 ) \
+	if ( DIFF != TRACE1 && DIFF != TRACE2 ) { printf( "Failed at %s, real is 0x%lx OR 0x%lx, should be 0x%lx, pc is 0x%lx\n", NAME, TRACE1, TRACE2, DIFF, diff.pc ); }//return -1; }
 
 
 void dromajo_step() {
@@ -43,8 +46,10 @@ void dromajo_step() {
 
 	for ( uint8_t i = 0; i < 32; i++) {
 		diff.ireg[i] = virt_machine_get_reg(machine, 0, i);
+		diff.freg[i] = virt_machine_get_fpreg(machine, 0, i);
 		// printf("reg %d = 0x%lx   ", i, virt_machine_get_reg(machine, 0, i));
 	}
+
 
 
 	diff.priv = riscv_get_priv_level(cpu);
@@ -91,6 +96,9 @@ void dromajo_step() {
     // diff.dcsr = cpu -> dcsr;
     // diff.dpc = cpu -> dpc;
     // diff.dscratch = cpu -> dscratch;
+
+    diff.fflags = cpu -> fflags;
+    diff.frm    = cpu -> frm;
 }
 
 
@@ -138,7 +146,8 @@ int diff_chk_pc(VSimTop *top) {
 }
 
 int diff_chk_reg(VSimTop *top) {
-	printf( "pc = %lx, real a1 = %lx, should be = %lx\n", diff.pc, top->trace_abi_a1, diff.ireg[11] );
+	// printf( "pc = %lx, real a1 = %lx, should be = %lx\n", diff.pc, top->trace_abi_a1, diff.ireg[11] );
+	printf( "pc = %lx\n", diff.pc );
 
 	// if (diff.ireg[0]  != top->trace_abi_zero) { printf( "Failed at zero, real is 0x%lx, should be 0x%lx\n", top->trace_abi_zero , diff.ireg[0] ); return -1; }
 	CHK_REG( "ra", diff.ireg[1] , top->trace_abi_ra  )
@@ -172,6 +181,40 @@ int diff_chk_reg(VSimTop *top) {
 	CHK_REG( "t4", diff.ireg[29], top->trace_abi_t4  )
 	CHK_REG( "t5", diff.ireg[30], top->trace_abi_t5  )
 	CHK_REG( "t6", diff.ireg[31], top->trace_abi_t6  )
+
+	CHK_FREG( "ft0", diff.freg[0],  top->trace1_abi_ft0,  top->trace2_abi_ft0 )
+	CHK_FREG( "ft1", diff.freg[1],  top->trace1_abi_ft1,  top->trace2_abi_ft1 )
+	CHK_FREG( "ft2", diff.freg[2],  top->trace1_abi_ft2,  top->trace2_abi_ft2 )
+	CHK_FREG( "ft3", diff.freg[3],  top->trace1_abi_ft3,  top->trace2_abi_ft3 )
+	CHK_FREG( "ft4", diff.freg[4],  top->trace1_abi_ft4,  top->trace2_abi_ft4 )
+	CHK_FREG( "ft5", diff.freg[5],  top->trace1_abi_ft5,  top->trace2_abi_ft5 )
+	CHK_FREG( "ft6", diff.freg[6],  top->trace1_abi_ft6,  top->trace2_abi_ft6 )
+	CHK_FREG( "ft7", diff.freg[7],  top->trace1_abi_ft7,  top->trace2_abi_ft7 )
+	CHK_FREG( "fs0", diff.freg[8],  top->trace1_abi_fs0,  top->trace2_abi_fs0 )
+	CHK_FREG( "fs1", diff.freg[9],  top->trace1_abi_fs1,  top->trace2_abi_fs1 )
+	CHK_FREG( "fa0", diff.freg[10], top->trace1_abi_fa0,  top->trace2_abi_fa0 )
+	CHK_FREG( "fa1", diff.freg[11], top->trace1_abi_fa1,  top->trace2_abi_fa1 )
+	CHK_FREG( "fa2", diff.freg[12], top->trace1_abi_fa2,  top->trace2_abi_fa2 )
+	CHK_FREG( "fa3", diff.freg[13], top->trace1_abi_fa3,  top->trace2_abi_fa3 )
+	CHK_FREG( "fa4", diff.freg[14], top->trace1_abi_fa4,  top->trace2_abi_fa4 )
+	CHK_FREG( "fa5", diff.freg[15], top->trace1_abi_fa5,  top->trace2_abi_fa5 )
+	CHK_FREG( "fa6", diff.freg[16], top->trace1_abi_fa6,  top->trace2_abi_fa6 )
+	CHK_FREG( "fa7", diff.freg[17], top->trace1_abi_fa7,  top->trace2_abi_fa7 )
+	CHK_FREG( "fs2", diff.freg[18], top->trace1_abi_fs2,  top->trace2_abi_fs2 )
+	CHK_FREG( "fs3", diff.freg[19], top->trace1_abi_fs3,  top->trace2_abi_fs3 )
+	CHK_FREG( "fs4", diff.freg[20], top->trace1_abi_fs4,  top->trace2_abi_fs4 )
+	CHK_FREG( "fs5", diff.freg[21], top->trace1_abi_fs5,  top->trace2_abi_fs5 )
+	CHK_FREG( "fs6", diff.freg[22], top->trace1_abi_fs6,  top->trace2_abi_fs6 )
+	CHK_FREG( "fs7", diff.freg[23], top->trace1_abi_fs7,  top->trace2_abi_fs7 )
+	CHK_FREG( "fs8", diff.freg[24], top->trace1_abi_fs8,  top->trace2_abi_fs8 )
+	CHK_FREG( "fs9", diff.freg[25], top->trace1_abi_fs9,  top->trace2_abi_fs9 )
+	CHK_FREG( "fs1", diff.freg[26], top->trace1_abi_fs10, top->trace2_abi_fs10 )
+	CHK_FREG( "fs1", diff.freg[27], top->trace1_abi_fs11, top->trace2_abi_fs11 )
+	CHK_FREG( "ft8", diff.freg[28], top->trace1_abi_ft8,  top->trace2_abi_ft8 )
+	CHK_FREG( "ft9", diff.freg[29], top->trace1_abi_ft9,  top->trace2_abi_ft9 )
+	CHK_FREG( "ft1", diff.freg[30], top->trace1_abi_ft10, top->trace2_abi_ft10 )
+	CHK_FREG( "ft1", diff.freg[31], top->trace1_abi_ft11, top->trace2_abi_ft11 )
+
 
 
 	CHK_REG( "mstatus", diff.mstatus,     top->trace_mstatus  )
@@ -222,7 +265,8 @@ int diff_chk_reg(VSimTop *top) {
     // CHK_REG( "dcsr",     diff.dcsr,     top->trace_dcsr )
     // CHK_REG( "dpc",      diff.dpc,      top->trace_dpc )
     // CHK_REG( "dscratch", diff.dscratch, top->trace_dscratch )
-
+    CHK_REG( "fflags",      diff.fflags,      top->trace_fflags )
+    CHK_REG( "frm",       diff.frm,       top->trace_frm )
 
 
 	return 0;

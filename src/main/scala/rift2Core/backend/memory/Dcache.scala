@@ -79,7 +79,7 @@ trait Info_cache_raw extends DcacheBundle {
   val wstrb  = UInt(8.W)
 
   val fun    = new Cache_op
-  val rd = new Rd_Param(64)
+  val rd = new Register_dstntn(64)
 
   def tag_sel = paddr(31,32-tag_w)
   def bk_sel  = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
@@ -106,8 +106,15 @@ class Info_cache_s1s2(implicit p: Parameters) extends DcacheBundle with Info_cac
 class Info_cache_sb extends Lsu_iss_info
 
 class Info_cache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc_idx {
-  val wb = new WriteBack_info(64)
+  val wb = new WriteBack_info(dw=64,dp=64)
   val is_load_amo = Bool()
+
+  val is_flw = Bool()
+  val is_fld = Bool()
+
+  def is_iwb = ~is_fwb
+  def is_fwb = is_flw | is_fld
+
   // val paddr = UInt(64.W)
 }
 
@@ -424,7 +431,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     Mux( io.reload.valid, io.wr_in.bits.fun, 0.U.asTypeOf(new Cache_op) )
 
   io.reload.bits.rd :=
-    Mux( io.reload.valid, io.wr_in.bits.rd, 0.U.asTypeOf(new Rd_Param(64)) )
+    Mux( io.reload.valid, io.wr_in.bits.rd, 0.U.asTypeOf(new Register_dstntn(64)) )
 
   io.reload.bits.chk_idx :=
     Mux( io.reload.valid, io.wr_in.bits.chk_idx, 0.U )
@@ -456,21 +463,14 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
   io.deq.bits.wb.rd0 := 
     Mux( io.deq.valid, io.wr_in.bits.rd.rd0, 0.U )  
 
-  io.deq.bits.wb.is_iwb := 
-    Mux( io.deq.valid, io.wr_in.bits.rd.is_iwb, false.B )  
-
-  io.deq.bits.wb.is_fwb := 
-    Mux( io.deq.valid, io.wr_in.bits.rd.is_fwb, false.B )  
-
   io.deq.bits.chk_idx :=
     Mux( io.deq.valid, io.wr_in.bits.chk_idx, 0.U )
     
   io.deq.bits.is_load_amo :=
     Mux( io.deq.valid, io.wr_in.bits.fun.is_wb, false.B )
     
-  // io.deq.bits.paddr := 
-  //   Mux( io.deq.valid, io.wr_in.bits.paddr, 0.U )
-
+  io.deq.bits.is_flw := Mux( io.deq.valid, io.wr_in.bits.fun.flw, false.B )
+  io.deq.bits.is_fld := Mux( io.deq.valid, io.wr_in.bits.fun.fld, false.B )
 
 
 

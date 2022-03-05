@@ -159,6 +159,12 @@ class Lsu_isa extends Bundle {
 
   def is_R = is_lu | is_lr | is_amo
   def is_W = is_su | is_sc | is_amo
+
+  def is_fst = fsw | fsd
+  def is_ist = ~is_fst
+  def is_fwb = flw | fld
+  def is_iwb = ~is_fwb
+  def is_fpu = flw | fsw | fld | fsd
 }
 
 class Csr_isa extends Bundle {
@@ -303,7 +309,6 @@ class Fpu_isa extends Bundle {
   val fcvt_d_lu = Bool()
   val fmv_d_x = Bool()
 
-
   val fcsr_rw = Bool()
   val fcsr_rs = Bool()
   val fcsr_rc = Bool()
@@ -312,114 +317,204 @@ class Fpu_isa extends Bundle {
   val fcsr_rsi = Bool()
   val fcsr_rci = Bool()
 
+  def is_fun_frw = fcsr_rw | fcsr_rwi
+  def is_fun_frs = fcsr_rs | fcsr_rsi
+  def is_fun_frc = fcsr_rc | fcsr_rci
+
+  def is_fun_fcsri = fcsr_rwi | fcsr_rsi | fcsr_rci
+
+  def is_fun_fcsr =   
+    is_fun_frw | is_fun_frs | is_fun_frc
 
 
-  def is_fun_int2float =
-    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fmv_w_x |
-    fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d | fmv_d_x
-  def is_fun_float2float =
-    fsgnj_s | fsgnjn_s | fsgnjx_s | 
-    fsgnj_d | fsgnjn_d | fsgnjx_d |
-    fcvt_s_d | fcvt_d_s
-  def is_fun_floatCmp = fmin_s | fmax_s | feq_s | flt_s | fle_s | fmin_d | fmax_d | feq_d | flt_d | fle_d
-  def is_fun_float2int =
-    fmv_x_w | fclass_s | fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
-    fmv_x_d | fclass_d | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu 
-  def is_fun_floatFma =
-    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s |
-    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d
-  def is_fun_floatDivSqrt = fdiv_s | fsqrt_s | fdiv_d | fsqrt_d
-  def is_fun_floatCsr = fcsr_rw | fcsr_rs | fcsr_rc
-
-
-  def is_fma_addsub =
-      fadd_s | fsub_s |
-      fadd_d | fsub_d
-
-  def is_fma_mul =
-      fmul_s | fmul_d
-
-  def is_fma_dual_op = is_fma_addsub | is_fma_mul
-  def is_fma_trpl_op =
-    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | 
-    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d
-
-
-  def is_int_iss =
-    fmv_w_x | fmv_d_x |
-    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |fcsr_rw | fcsr_rs | fcsr_rc
-
-  def is_fot_iss =
-    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fmadd_d | fmsub_d | fnmsub_d | fnmadd_d |
-    fadd_s | fsub_s | fmul_s | fadd_d | fsub_d | fmul_d |
-    fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
-    feq_s | flt_s | fle_s | feq_d | flt_d | fle_d | fmin_s | fmax_s | fmin_d | fmax_d |
-    fmv_x_w | fmv_x_d |
-    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_s_d | fcvt_d_s | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
-
-    
-  def is_recFN32_in =
-    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s |
-    fsgnj_s | fsgnjn_s | fsgnjx_s |
-    feq_s | flt_s | fle_s | fmin_s | fmax_s |
-    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_s_d
-    
-  def is_recFN64_in =
-    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d |
-    fsgnj_d | fsgnjn_d | fsgnjx_d |
-    feq_d | flt_d | fle_d | fmin_d | fmax_d |
-    fcvt_d_s | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
-
-
-
-  def is_int_rtn = 
-    feq_s | flt_s | fle_s | feq_d | flt_d | fle_d |
-    fmv_x_w | fmv_x_d | 
-    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu | fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu
-
-  def is_fot_rtn =
-    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fmadd_d | fmsub_d | fnmsub_d | fnmadd_d |
-    fadd_s | fsub_s | fmul_s | fadd_d | fsub_d | fmul_d | 
-    fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
-    fmin_s | fmax_s | fmin_d | fmax_d |
-    fmv_w_x | fmv_d_x | 
-    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_s_d | fcvt_d_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d
-
-  def is_recFN32_out =
-    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s |
-    fadd_s | fsub_s | fmul_s |
-    fsgnj_s | fsgnjn_s | fsgnjx_s |
-    fmin_s | fmax_s |
+  def is_fun_class = fclass_s | fclass_d
+  def is_fun_fcmp =  feq_s | flt_s | fle_s | feq_d | flt_d | fle_d
+  def is_fun_maxMin = fmin_s | fmax_s | fmin_d | fmax_d
+  def is_fun_fcvtX = 
     fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s |
-    fcvt_d_s
+    fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d 
+  def is_fun_xcvtF = 
+    fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
+    fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu 
+  def is_fun_fcvtF = 
+    fcvt_s_d | fcvt_d_s
+  def is_fun_fmvX =
+    fmv_x_w | fmv_x_d
+  def is_fun_xmvF =
+    fmv_w_x | fmv_d_x
+  def is_fun_fsgn = 
+    fsgnj_s | fsgnjn_s | fsgnjx_s |
+    fsgnj_d | fsgnjn_d | fsgnjx_d
+  def is_fun_fma = 
+    fmadd_s  | fmsub_s  | fnmsub_s | fnmadd_s | fadd_s   | fsub_s   | fmul_s   |
+    fmadd_d  | fmsub_d  | fnmsub_d | fnmadd_d | fadd_d   | fsub_d   | fmul_d
+  def is_fun_divSqrt = 
+    fdiv_s  | fdiv_d  | fsqrt_s | fsqrt_d
+    
+  
 
-  def is_recFN64_out =
-    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d |
-    fadd_d | fsub_d | fmul_d | 
+  def hasThreeRs = 
+  fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | 
+  fmadd_d | fmsub_d | fnmsub_d | fnmadd_d
+
+  def hasTwoRs = hasThreeRs |
+  fadd_s | fsub_s | fmul_s | fdiv_s | fsqrt_s |
+  fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
+  fmin_s | fmax_s | fmin_d | fmax_d |
+  feq_s | flt_s |fle_s | feq_d | flt_d | fle_d |
+  fadd_d | fsub_d | fmul_d | fdiv_d | fsqrt_d |
+  fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
+
+  def hasOneRs = hasTwoRs |
+  fcvt_w_s | fcvt_wu_s |
+  fmv_x_w  | fmv_x_d |
+  fclass_s | fclass_d |
+  fcvt_s_w | fcvt_s_wu |
+  fmv_w_x  | fmv_d_x |
+  fcvt_l_s | fcvt_lu_s |
+  fcvt_s_l | fcvt_s_lu |
+  fcvt_s_d | fcvt_d_s |
+  fcvt_w_d | fcvt_wu_d |
+  fcvt_d_w | fcvt_d_wu |
+  fcvt_l_d | fcvt_lu_d |
+  fcvt_d_l | fcvt_d_lu
+
+  def is_fop = 
+    fmadd_s   | fmsub_s   | fnmsub_s  | fnmadd_s  |
+    fmadd_d   | fmsub_d   | fnmsub_d  | fnmadd_d  |    
+    fadd_s    | fsub_s    | fmul_s    | fdiv_s    | fsqrt_s   |
+    fadd_d    | fsub_d    | fmul_d    | fdiv_d    | fsqrt_d   |    
+    fsgnj_s   | fsgnjn_s  | fsgnjx_s  |
+    fsgnj_d   | fsgnjn_d  | fsgnjx_d  |
+    fmin_s    | fmax_s    | fmin_d    | fmax_d    |
+    fmv_x_w   | fmv_x_d   |
+    feq_s     | flt_s     | fle_s     |
+    feq_d     | flt_d     | fle_d     |
+    fclass_s  | fclass_d  |
+    fcvt_w_s  | fcvt_wu_s | fcvt_l_s  | fcvt_lu_s |
+    fcvt_w_d  | fcvt_wu_d | fcvt_l_d  | fcvt_lu_d |
+    fcvt_s_d  | fcvt_d_s
+
+  def is_iwb = 
+    feq_s | flt_s | fle_s | feq_d | flt_d | fle_d |
+    fmv_x_w | fmv_x_d | fclass_s | fclass_d |
+    fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |
+    fmv_x_w | fmv_x_d |
+    fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
+
+  def is_fwb =
+    fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s | fdiv_s | fsqrt_s |
+    fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d | fdiv_d | fsqrt_d |
+    fsgnj_s | fsgnjn_s | fsgnjx_s |
     fsgnj_d | fsgnjn_d | fsgnjx_d |
-    fmin_d | fmax_d |
-    fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |
-    fcvt_s_d
-     
-     
-
-     
+    fmin_s | fmax_s | fmin_d | fmax_d |
+    fcvt_s_w | fcvt_s_wu | fcvt_d_w | fcvt_d_wu |
+    fcvt_s_l | fcvt_s_lu | fcvt_d_l | fcvt_d_lu |
+    fcvt_s_d | fcvt_d_s |
+    fmv_w_x | fmv_d_x
+    
 
 
   def is_usi =
     fcvt_s_wu | fcvt_s_lu| fcvt_d_wu | fcvt_d_lu | fcvt_wu_s | fcvt_lu_s | fcvt_wu_d | fcvt_lu_d
 
+
+  def FtypeTagIn = {
+    def FtypeTagIn_0 =
+    fmadd_s   | fmsub_s   | fnmsub_s  | fnmadd_s  |  
+    fadd_s    | fsub_s    | fmul_s    | fdiv_s    | fsqrt_s   | 
+    fsgnj_s   | fsgnjn_s  | fsgnjx_s  |
+    fmin_s    | fmax_s    |
+    feq_s     | flt_s     | fle_s     |
+    fclass_s  |
+    fcvt_w_s  | fcvt_wu_s | fcvt_l_s  | fcvt_lu_s |
+    fcvt_d_s
+
+    def FtypeTagIn_1 =
+    fmadd_d   | fmsub_d   | fnmsub_d  | fnmadd_d  |    
+    fadd_d    | fsub_d    | fmul_d    | fdiv_d    | fsqrt_d   |    
+    fsgnj_d   | fsgnjn_d  | fsgnjx_d  |
+    fmin_d    | fmax_d    |
+    fmv_x_w   | fmv_x_d   |
+    feq_d     | flt_d     | fle_d     |
+    fclass_d  |
+    fcvt_w_d  | fcvt_wu_d | fcvt_l_d  | fcvt_lu_d |
+    fcvt_s_d
+    
+    Mux1H(Seq(
+      FtypeTagIn_0 -> 0.U, FtypeTagIn_1 -> 1.U,
+    ))
+  }
+
+
+  def FtypeTagOut = {
+    def FtypeTagOut_0 =
+      fmadd_s | fmsub_s | fnmsub_s | fnmadd_s |
+      fadd_s | fsub_s | fmul_s |
+      fsgnj_s | fsgnjn_s | fsgnjx_s |
+      fmin_s | fmax_s |
+      fcvt_s_w | fcvt_s_wu | fcvt_s_l | fcvt_s_lu |
+      fcvt_s_d
+
+    def FtypeTagOut_1 =
+      fmadd_d | fmsub_d | fnmsub_d | fnmadd_d |
+      fadd_d | fsub_d | fmul_d | 
+      fsgnj_d | fsgnjn_d | fsgnjx_d |
+      fmin_d | fmax_d |
+      fmv_d_x   | fmv_w_x   |
+      fcvt_d_w | fcvt_d_wu | fcvt_d_l | fcvt_d_lu |
+      fcvt_d_s
+    
+    Mux1H(Seq(
+      FtypeTagOut_0 -> 0.U, FtypeTagOut_1 -> 1.U,
+    ))
+  }
+
+  def XtypeTagIn = {
+    def XtypeTagIn_0 =
+      fmv_w_x   |
+      fcvt_s_w | fcvt_s_wu | fcvt_d_w | fcvt_d_wu 
+
+    def XtypeTagIn_1 =
+      fmv_d_x   |
+      fcvt_s_l | fcvt_s_lu | fcvt_d_l | fcvt_d_lu
+    
+    Mux1H(Seq(
+      XtypeTagIn_0 -> 0.U, XtypeTagIn_1 -> 1.U,
+    ))
+  }
+
+  def XtypeTagOut = {
+    def XtypeTagOut_0 =
+    fmv_x_w |  
+    fcvt_w_s | fcvt_wu_s | fcvt_w_d | fcvt_wu_d
+
+    def XtypeTagOut_1 =
+    feq_s | flt_s | fle_s | feq_d | flt_d | fle_d |
+    fmv_x_d | 
+    fcvt_l_s | fcvt_lu_s | fcvt_l_d | fcvt_lu_d
+    
+    Mux1H(Seq(
+      XtypeTagOut_0 -> 0.U, XtypeTagOut_1 -> 1.U,
+    ))
+  }
+
+
+
+
   def is_fpu =
-    is_fun_int2float |
-    is_fun_float2float |
-    is_fun_floatCmp |
-    is_fun_float2int |
-    is_fun_floatFma |
-    is_fun_floatDivSqrt |
-    is_fun_floatCsr
-
-
-
+  fmadd_s   | fmsub_s   | fnmsub_s  | fnmadd_s  | fadd_s    | fsub_s    | fmul_s    | fdiv_s    | fsqrt_s   |
+  fmadd_d   | fmsub_d   | fnmsub_d  | fnmadd_d  | fadd_d    | fsub_d    | fmul_d    | fdiv_d    | fsqrt_d   |
+  fsgnj_s   | fsgnjn_s  | fsgnjx_s  | fsgnj_d   | fsgnjn_d  | fsgnjx_d  |
+  fmin_s    | fmax_s    | fmin_d    | fmax_d    |
+  feq_s     | flt_s     | fle_s     | feq_d     | flt_d     | fle_d     |
+  fclass_s  | fclass_d  |
+  fmv_x_w   | fmv_w_x   | fmv_x_d   | fmv_d_x   |  
+  fcvt_s_w  | fcvt_s_wu | fcvt_l_s  | fcvt_lu_s |
+  fcvt_s_l  | fcvt_s_lu | fcvt_s_d  | fcvt_d_s  |
+  fcvt_w_d  | fcvt_wu_d | fcvt_d_w  | fcvt_d_wu | fcvt_l_d  | fcvt_lu_d |
+  fcvt_d_l  | fcvt_d_lu | fcvt_w_s  | fcvt_wu_s |
+  fcsr_rw   | fcsr_rs   | fcsr_rc   | fcsr_rwi  | fcsr_rsi  | fcsr_rci
 
 
 }
@@ -429,36 +524,25 @@ class Register_source(dp:Int) extends Bundle {
   val rs1 = UInt((log2Ceil(dp)).W)
   val rs2 = UInt((log2Ceil(dp)).W)
   val rs3 = UInt((log2Ceil(dp)).W)
-
-  // override def cloneType = ( new Register_source(dp:Int) ).asInstanceOf[this.type]
 }
 
 class Register_dstntn(dp:Int) extends Bundle {
   val rd0 = UInt((log2Ceil(dp)).W)
 
-  // override def cloneType = ( new Register_dstntn(dp:Int) ).asInstanceOf[this.type]
 }
 
-class Operation_source extends Bundle {
-  val op1 = UInt(64.W)
-  val op2 = UInt(64.W)
-  val op3 = UInt(64.W)
+class Operation_source(dw: Int) extends Bundle {
+  val op1 = UInt(dw.W)
+  val op2 = UInt(dw.W)
+  val op3 = UInt(dw.W)
 }
 
 
 class Reg_phy(dp:Int) extends Register_source(dp) {
   val rd0 = UInt((log2Ceil(dp)).W)
-
-  // override def cloneType = ( new Reg_phy(dp:Int) ).asInstanceOf[this.type]
 }
 class Reg_raw extends Reg_phy(dp = 32)
 
-class Rd_Param(dp:Int) extends Register_dstntn(dp) {
-  val is_iwb = Bool()
-  val is_fwb = Bool()
-
-  // override def cloneType = ( new Rd_Param(dp:Int) ).asInstanceOf[this.type]
-}
 
 class Instruction_set extends Bundle{
   val alu_isa = new Alu_isa
@@ -469,16 +553,8 @@ class Instruction_set extends Bundle{
   val privil_isa = new Privil_isa
   val fpu_isa = new Fpu_isa
 
-  def is_fwb = lsu_isa.flw | lsu_isa.fld | lsu_isa.lr_w | lsu_isa.lr_d |
-      fpu_isa.fmadd_s | fpu_isa.fmsub_s | fpu_isa.fnmsub_s | 
-      fpu_isa.fnmadd_s | fpu_isa.fadd_s | fpu_isa.fsub_s | 
-      fpu_isa.fmul_s | fpu_isa.fdiv_s | fpu_isa.fsqrt_s | fpu_isa.fsgnj_s | 
-      fpu_isa.fsgnjn_s | fpu_isa.fsgnjx_s | fpu_isa.fmin_s | fpu_isa.fmax_s | 
-      fpu_isa.feq_s | fpu_isa.flt_s | fpu_isa.fle_s |
-      fpu_isa.fmadd_d | fpu_isa.fmsub_d | fpu_isa.fnmsub_d |
-      fpu_isa.fnmadd_d | fpu_isa.fadd_d | fpu_isa.fsub_d | fpu_isa.fmul_d |
-      fpu_isa.fdiv_d | fpu_isa.fsqrt_d | fpu_isa.fsgnj_d | fpu_isa.fsgnjn_d |
-      fpu_isa.fsgnjx_d | fpu_isa.fmin_d | fpu_isa. fmax_d
+  def is_fwb =
+    lsu_isa.is_fwb | fpu_isa.is_fwb
 
   def is_ooo_dpt = alu_isa.is_alu | mul_isa.is_mul
   def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr | lsu_isa.is_lsu
@@ -525,11 +601,11 @@ class Alu_function extends Bundle {
   val sra = Bool()
 }
 
-class Alu_param extends Rd_Param(64) {
+class Alu_param extends Register_dstntn(64) {
   val is_32w = Bool()
   val is_usi = Bool()
 
-  val dat = new Operation_source
+  val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Alu_param ).asInstanceOf[this.type]
 }
@@ -543,12 +619,12 @@ class Alu_iss_info extends Bundle {
 
 
 
-class Bru_param extends Rd_Param(64) {
+class Bru_param extends Register_dstntn(64) {
   val is_rvc = Bool()
   val pc = UInt(64.W)
   val imm = UInt(64.W)
 
-  val dat = new Operation_source
+  val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Bru_param ).asInstanceOf[this.type]
 }
@@ -562,8 +638,8 @@ class Bru_iss_info extends Bundle {
 
 
 
-class Lsu_param extends Rd_Param(64) {
-  val dat = new Operation_source
+class Lsu_param extends Register_dstntn(64) {
+  val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Lsu_param ).asInstanceOf[this.type]
 }
@@ -611,19 +687,23 @@ class Info_reorder_i extends Bundle {
   val is_sfence_vma = Bool()
   val is_wfi = Bool()
   val is_csr = Bool()
+  val is_fpu = Bool()
+
+  val is_xcmm = Bool()
+  val is_fcmm = Bool()
 
   val privil = new Privil_isa
   val is_illeage = Bool()
 
 }
 
-class Info_reorder_f extends Bundle {
-  val pc = UInt(64.W)
-  val rd0_phy = UInt(6.W)
+// class Info_reorder_f extends Bundle {
+//   val pc = UInt(64.W)
+//   val rd0_phy = UInt(6.W)
 
-  val is_lu = Bool()
-  val is_su = Bool()
-}
+//   val is_lu = Bool()
+//   val is_su = Bool()
+// }
 
 
 
@@ -648,8 +728,8 @@ class Csr_function extends Bundle {
   val rc  = Bool()
 }
 
-class Csr_param extends Rd_Param(64) {
-  val dat = new Operation_source
+class Csr_param extends Register_dstntn(64) {
+  val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Csr_param ).asInstanceOf[this.type]
 }
@@ -659,8 +739,8 @@ class Csr_iss_info extends Bundle {
   val param = new Csr_param
 }
 
-class Mul_param extends Rd_Param(64) {
-  val dat = new Operation_source
+class Mul_param extends Register_dstntn(64) {
+  val dat = new Operation_source(dw=64)
 
 // override def cloneType = ( new Mul_param ).asInstanceOf[this.type]
 }
@@ -672,21 +752,14 @@ class Mul_iss_info extends Bundle {
 
 
 
-case class WriteBack_info(dp:Int) extends Rd_Param(dp) {
-  val res = UInt(64.W)
+case class WriteBack_info(dw:Int, dp:Int) extends Register_dstntn(dp) {
+  val res = UInt(dw.W)
 
   // override def cloneType = ( new WriteBack_info(dp:Int) ).asInstanceOf[this.type]
 }
 
 
-class Info_commit_op(dp:Int) extends Bundle{
-  val raw = UInt(5.W)  
-  val phy = UInt((log2Ceil(dp)).W)
 
-  val is_abort = Bool()
-
-  // override def cloneType = ( new Info_commit_op(dp:Int) ).asInstanceOf[this.type]
-}
 
 
 class Info_cmm_csr extends Bundle {

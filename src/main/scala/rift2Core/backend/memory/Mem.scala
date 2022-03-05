@@ -29,6 +29,7 @@ import freechips.rocketchip.tilelink._
 import rift2Core.L1Cache._
 import rift2Core.privilege._
 
+
 trait Fence_op{
   /** when a flush comes, flush all uncommit write & amo request in pending-fifo, and block all request from issue until scoreboard is empty */
   val trans_kill = RegInit(false.B)
@@ -41,11 +42,12 @@ trait Fence_op{
 }
 
 
-class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with Fence_op{
+class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with Fence_op with HasFPUParameters{
   def nm = 8
   val io = IO(new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_wb = new DecoupledIO(new WriteBack_info(64))
+    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
+    val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65, dp=64))
 
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
@@ -238,28 +240,39 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     * @return WriteBack_info
     */
   val lu_wb_fifo = {
-    val mdl = Module( new Queue( new WriteBack_info(64), 1, false, true ) )
-    mdl.io.enq.valid := lu_wb_arb.io.out.valid & ~trans_kill
+    val mdl = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, false, true ) )
+    mdl.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.is_iwb &  ~trans_kill 
     mdl.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
-    mdl.io.enq.bits.is_iwb := lu_wb_arb.io.out.bits.wb.is_iwb
-    mdl.io.enq.bits.is_fwb := lu_wb_arb.io.out.bits.wb.is_fwb
     mdl.io.enq.bits.res := lu_wb_arb.io.out.bits.wb.res
-
-    lu_wb_arb.io.out.ready := mdl.io.enq.ready | trans_kill
+    
     mdl.reset := reset.asBool | io.flush
     mdl
   }
+
+  val flu_wb_fifo = {
+    val mdl = Module( new Queue( new WriteBack_info(dw=65,dp=64), 1, false, true ) )
+    mdl.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.is_fwb & ~trans_kill 
+    mdl.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
+    mdl.io.enq.bits.res := 
+      Mux1H(Seq(
+        lu_wb_arb.io.out.bits.is_flw -> box(recode(lu_wb_arb.io.out.bits.wb.res, 0), FType.D),
+        lu_wb_arb.io.out.bits.is_fld -> box(recode(lu_wb_arb.io.out.bits.wb.res, 1), FType.D),
+      ))
+    mdl.io.deq <> io.lsu_exe_fwb
+    mdl.reset := reset.asBool | io.flush
+    mdl 
+  }
+
+  lu_wb_arb.io.out.ready := (lu_wb_fifo.io.enq.ready & flu_wb_fifo.io.enq.ready) | trans_kill
 
   /** store operations will write-back dircetly from opMux
     * @param in Lsu_iss_info
     * @return WriteBack_info
     */
   val su_wb_fifo = {
-    val mdl = Module( new Queue( new WriteBack_info(64), 1, false, true ) )
+    val mdl = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, false, true ) )
     mdl.io.enq.valid := opMux.io.st_deq.fire
     mdl.io.enq.bits.rd0  := opMux.io.st_deq.bits.param.rd0
-    mdl.io.enq.bits.is_iwb  := opMux.io.st_deq.bits.param.is_iwb
-    mdl.io.enq.bits.is_fwb  := opMux.io.st_deq.bits.param.is_fwb
     mdl.io.enq.bits.res := 0.U
     mdl.reset := reset.asBool | io.flush
     mdl
@@ -275,12 +288,10 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   val is_empty = Wire(Bool())
 
   val fe_wb_fifo = {
-    val mdl = Module( new Queue( new WriteBack_info(64), 1, false, true ) )
+    val mdl = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, false, true ) )
     mdl.reset := reset.asBool | io.flush
     mdl.io.enq.valid := is_empty & is_fence_op & io.lsu_iss_exe.valid
     mdl.io.enq.bits.rd0 := io.lsu_iss_exe.bits.param.rd0
-    mdl.io.enq.bits.is_iwb := true.B
-    mdl.io.enq.bits.is_fwb := false.B
     mdl.io.enq.bits.res := 0.U
     mdl.reset := reset.asBool | io.flush
     mdl
@@ -300,11 +311,11 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     * @return WriteBack_info
     */
   val rtn_arb = {
-    val mdl = Module(new Arbiter( new WriteBack_info(64), 3))
+    val mdl = Module(new Arbiter( new WriteBack_info(dw=64,dp=64), 3))
     mdl.io.in(0) <> su_wb_fifo.io.deq
     mdl.io.in(1) <> lu_wb_fifo.io.deq
     mdl.io.in(2) <> fe_wb_fifo.io.deq
-    mdl.io.out   <> io.lsu_exe_wb
+    mdl.io.out <> io.lsu_exe_iwb
     mdl
   }
 

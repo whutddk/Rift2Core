@@ -61,25 +61,39 @@ abstract class CsrFiles_M extends CsrFiles_port {
 
 
   //user floating point csrs
-  fflags := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h001".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // fflags := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h001".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
-  frm := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h002".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
+  // frm := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h002".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
 
   fcsr := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h003".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
+    val frm    = RegInit(0.U(3.W))
+    val fflags = RegInit(0.U(5.W))
+    val fcsr   = Cat( 0.U(24.W),frm, fflags )
+
+    val (enable0, dnxt0) = Reg_Exe_Port( fflags, "h001".U, exe_fport )
+    val (enable1, dnxt1) = Reg_Exe_Port( frm, "h002".U, exe_fport )
+    val (enable2, dnxt2) = Reg_Exe_Port( fcsr, "h003".U, exe_fport )
+
+    when(enable0) {
+      fflags := dnxt0
+    } .elsewhen(enable1) {
+      frm := dnxt1
+    } .elsewhen(enable2) {
+      fflags := dnxt2(4,0)
+      frm := dnxt2(7,5)
+    }
+
+    Cat( 0.U(24.W),frm, fflags )
   }
 
   //user conter timers
@@ -222,7 +236,7 @@ abstract class CsrFiles_M extends CsrFiles_port {
     val spie = RegInit(0.U(1.W))
     val mie = RegInit(0.U(1.W))
     val sie = RegInit(0.U(1.W))
-    val sd = (xs | fs).orR
+    val sd = ((xs === 3.U) || (fs === 3.U)).asUInt
 
     val value = Cat( sd, 0.U(25.W), mbe, sbe, sxl, uxl, 0.U(9.W), tsr, tw, tvm, mxr, sum, mprv, xs, fs, mpp, 0.U(2.W), spp, mpie, ube, spie, 0.U(1.W), mie, 0.U(1.W), sie, 0.U(1.W) )
 
@@ -286,6 +300,9 @@ abstract class CsrFiles_M extends CsrFiles_port {
       sie  := dnxt1(1)
     }
 
+    when(is_fpu_state_change & (fs =/= 0.U)) {
+      fs := 3.U
+    }
     value
   }
 
@@ -300,10 +317,11 @@ abstract class CsrFiles_M extends CsrFiles_port {
   misa := {
     val mxl = WireDefault(2.U(2.W))
     val extensions = {
-      if (true) {
-        WireDefault("b00000101000001000100000101".U(26.W))  
-      }
-      else {
+      if (true) { //fpu
+        WireDefault("b00000101000001000100101101".U(26.W))  
+      } else if (true) { //none fpu, has S-mode U-mode
+        WireDefault("b00000101000001000100000101".U(26.W))
+      } else {
         WireDefault("b00000000000001000100000101".U(26.W))
       }
     

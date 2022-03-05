@@ -241,7 +241,7 @@ class BP_ID_ss extends Module with BHT with Superscalar{
 
 
   // assert( ~(bhq.io.enq.valid & ~bhq.io.enq.ready), "Assert Fail at BHQ.push(0)" )
-  assert( ~(bhq.io.deq.ready & ~bhq.io.deq.valid), "Assert Fail at BHQ.pop" )
+  assert( ~(bhq.io.deq.ready & ~bhq.io.deq.valid & ~io.flush), "Assert Fail at BHQ.pop" )
 
 
 

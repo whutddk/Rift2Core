@@ -29,12 +29,12 @@ import rift2Core.define._
 class Mul extends Module {
   val io = IO(new Bundle {
     val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
-    val mul_exe_iwb = new DecoupledIO(new WriteBack_info(64))
+    val mul_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
 
     val flush = Input(Bool())
   })
 
-  val mul_exe_iwb_fifo = Module( new Queue( new WriteBack_info(64), 1, true, false ) )
+  val mul_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, true, false ) )
   io.mul_exe_iwb <> mul_exe_iwb_fifo.io.deq
   mul_exe_iwb_fifo.reset := reset.asBool | io.flush
 
@@ -211,8 +211,7 @@ class Mul extends Module {
   mul_exe_iwb_fifo.io.enq.valid := is_fun_end
   mul_exe_iwb_fifo.io.enq.bits.res := res
   mul_exe_iwb_fifo.io.enq.bits.rd0 := io.mul_iss_exe.bits.param.rd0
-  mul_exe_iwb_fifo.io.enq.bits.is_iwb := true.B
-  mul_exe_iwb_fifo.io.enq.bits.is_fwb := false.B
+
 
 }
 
