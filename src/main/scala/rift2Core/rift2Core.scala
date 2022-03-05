@@ -74,12 +74,11 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
 
   val icacheClientNode = TLClientNode(Seq(icacheClientParameters))
   val dcacheClientNode = 
-    for ( i <- 0 until 8 ) yield {
-      TLClientNode(Seq(dcacheClientParameters))
-    }
+    for ( i <- 0 until 8 ) yield { TLClientNode(Seq(dcacheClientParameters)) }
   val systemClientNode = TLClientNode(Seq(systemClientParameters))
   val periphClientNode = TLClientNode(Seq(periphClientParameters))
-  val    mmuClientNode = TLClientNode(Seq(   mmuClientParameters))
+  val    mmuClientNode =
+    for ( i <- 0 until 2 ) yield { TLClientNode(Seq(   mmuClientParameters)) }
 
   lazy val module = new Rift2CoreImp(this)
 }
@@ -95,8 +94,9 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val  dcache_edge = for ( i <- 0 until 8 ) yield { outer.dcacheClientNode(i).out.head._2}
   val ( system_bus, system_edge ) = outer.systemClientNode.out.head
   val ( periph_bus, periph_edge ) = outer.periphClientNode.out.head
-  val (    mmu_bus,    mmu_edge ) = outer.mmuClientNode.out.head
-
+  // val (    mmu_bus,    mmu_edge ) = outer.mmuClientNode.out.head
+  val  mmu_bus  = for ( i <- 0 until 2 ) yield { outer.mmuClientNode(i).out.head._1}
+  val  mmu_edge = for ( i <- 0 until 2 ) yield { outer.mmuClientNode(i).out.head._2}
 
 
 
@@ -169,7 +169,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val cmm_stage = Module(new Commit)
 
   val i_mmu = {
-    val mdl = Module(new MMU(edge = mmu_edge))
+    val mdl = Module(new MMU(edge = for ( i <- 0 until 2 ) yield mmu_edge(i) ))
     mdl.io.if_mmu <> if_stage.io.if_mmu
     mdl.io.mmu_if <> if_stage.io.mmu_if
     mdl.io.lsu_mmu <> exe_stage.io.lsu_mmu
@@ -298,15 +298,19 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   periph_bus.a.bits  := exe_stage.io.periph_getPut.bits
   exe_stage.io.periph_getPut.ready := periph_bus.a.ready
 
-  mmu_bus.a.valid := i_mmu.io.ptw_get.valid
-  mmu_bus.a.bits := i_mmu.io.ptw_get.bits
-  i_mmu.io.ptw_get.ready := mmu_bus.a.ready
+  mmu_bus(0).a.valid := i_mmu.io.iptw_get.valid
+  mmu_bus(0).a.bits := i_mmu.io.iptw_get.bits
+  i_mmu.io.iptw_get.ready := mmu_bus(0).a.ready
+  mmu_bus(0).d.ready := i_mmu.io.iptw_access.ready
+  i_mmu.io.iptw_access.bits  := mmu_bus(0).d.bits
+  i_mmu.io.iptw_access.valid := mmu_bus(0).d.valid
 
-  mmu_bus.d.ready := i_mmu.io.ptw_access.ready
-  i_mmu.io.ptw_access.bits := mmu_bus.d.bits
-  i_mmu.io.ptw_access.valid := mmu_bus.d.valid
-
-
+  mmu_bus(1).a.valid := i_mmu.io.dptw_get.valid
+  mmu_bus(1).a.bits := i_mmu.io.dptw_get.bits
+  i_mmu.io.dptw_get.ready := mmu_bus(1).a.ready
+  mmu_bus(1).d.ready := i_mmu.io.dptw_access.ready
+  i_mmu.io.dptw_access.bits := mmu_bus(1).d.bits
+  i_mmu.io.dptw_access.valid := mmu_bus(1).d.valid
 
 
   val diff = {

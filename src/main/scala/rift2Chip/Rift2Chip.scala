@@ -127,15 +127,17 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     // TLXbar() :=
     // TLBuffer() := 
 
-    for ( i <-0 until 8 ) {
+    for ( i <- 0 until 8 ) {
       l1_xbar :=
       TLBuffer() := 
       i_rift2Core.dcacheClientNode(i)
     }
 
-    l1_xbar :=
-    TLBuffer() := 
-    i_rift2Core.mmuClientNode
+    for ( i <- 0 until 2 ) {
+      l1_xbar :=
+      TLBuffer() := 
+      i_rift2Core.mmuClientNode(i)
+    }
 
     sys_xbar :=
     TLBuffer() := 
