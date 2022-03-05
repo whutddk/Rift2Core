@@ -81,6 +81,13 @@ class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm
 
     when( io.commit(i).bits.toX === true.B ) {iReg.io.commit(i) <> io.commit(i)}
     .elsewhen( io.commit(i).bits.toF === true.B ) {fReg.io.commit(i) <> io.commit(i)}
+
+    when( io.commit(i).bits.is_abort & io.commit(i).valid ) {
+      iReg.io.commit(i).valid := true.B
+      fReg.io.commit(i).valid := true.B
+      iReg.io.commit(i).bits.is_abort := true.B
+      fReg.io.commit(i).bits.is_abort := true.B
+    }
   }
 
 

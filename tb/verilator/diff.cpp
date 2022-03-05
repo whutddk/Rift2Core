@@ -147,6 +147,7 @@ int diff_chk_pc(VSimTop *top) {
 
 int diff_chk_reg(VSimTop *top) {
 	// printf( "pc = %lx, real a1 = %lx, should be = %lx\n", diff.pc, top->trace_abi_a1, diff.ireg[11] );
+	printf( "pc = %lx\n", diff.pc );
 
 	// if (diff.ireg[0]  != top->trace_abi_zero) { printf( "Failed at zero, real is 0x%lx, should be 0x%lx\n", top->trace_abi_zero , diff.ireg[0] ); return -1; }
 	CHK_REG( "ra", diff.ireg[1] , top->trace_abi_ra  )
