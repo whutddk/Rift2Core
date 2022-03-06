@@ -1,13 +1,7 @@
-/*
-* @Author: Ruige Lee
-* @Date:   2021-03-29 14:38:05
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-29 14:39:39
-*/
 
 
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -34,7 +28,7 @@ import rift2Core.define._
 class Bru extends Module {
   val io = IO(new Bundle{
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
-    val bru_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+    val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
 
     val cmm_bru_ilp = Input(Bool())
 
@@ -44,7 +38,7 @@ class Bru extends Module {
     val flush = Input(Bool())
   })
 
-  val bru_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, false, false ) ) // to block back-to back branch
+  val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, false, false ) ) // to block back-to back branch
   io.bru_exe_iwb <> bru_exe_iwb_fifo.io.deq
   bru_exe_iwb_fifo.reset := reset.asBool | io.flush
 
@@ -52,8 +46,8 @@ class Bru extends Module {
   def iwb_ack = bru_exe_iwb_fifo.io.enq.valid & bru_exe_iwb_fifo.io.enq.ready
 
 
-  def op1 = io.bru_iss_exe.bits.param.op1
-  def op2 = io.bru_iss_exe.bits.param.op2
+  def op1 = io.bru_iss_exe.bits.param.dat.op1
+  def op2 = io.bru_iss_exe.bits.param.dat.op2
   
   def is_branchTaken = MuxCase(DontCare, Array(
     io.bru_iss_exe.bits.fun.beq  -> (op1 === op2),
@@ -70,7 +64,7 @@ class Bru extends Module {
 
   io.bru_pd_b.bits  := is_branchTaken
   io.bru_pd_b.valid := iwb_ack & io.bru_iss_exe.bits.fun.is_branch
-  io.bru_pd_j.bits  := (io.bru_iss_exe.bits.param.op1 + io.bru_iss_exe.bits.param.imm) & ~("b1".U(64.W))
+  io.bru_pd_j.bits  := (io.bru_iss_exe.bits.param.dat.op1 + io.bru_iss_exe.bits.param.imm) & ~("b1".U(64.W))
   io.bru_pd_j.valid := iwb_ack & io.bru_iss_exe.bits.fun.jalr
 
 
@@ -79,8 +73,7 @@ class Bru extends Module {
 
   bru_exe_iwb_fifo.io.enq.valid := is_clear_ilp & io.bru_iss_exe.valid
   bru_exe_iwb_fifo.io.enq.bits.res := io.bru_iss_exe.bits.param.pc + Mux( io.bru_iss_exe.bits.param.is_rvc, 2.U, 4.U)
-  bru_exe_iwb_fifo.io.enq.bits.rd0_phy := io.bru_iss_exe.bits.param.rd0_phy
-
+  bru_exe_iwb_fifo.io.enq.bits.rd0 := io.bru_iss_exe.bits.param.rd0
 
 
 }

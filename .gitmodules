@@ -7,3 +7,6 @@
 [submodule "sifive-blocks"]
 	path = sifive-blocks
 	url = git@github.com:sifive/sifive-blocks.git
+[submodule "berkeley-hardfloat"]
+	path = berkeley-hardfloat
+	url = git@github.com:ucb-bar/berkeley-hardfloat.git

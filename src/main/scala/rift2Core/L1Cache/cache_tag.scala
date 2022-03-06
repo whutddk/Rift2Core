@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -23,11 +23,10 @@ import chisel3.util._
 import base._
 
 
-class Cache_tag( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int ) {
-
+class Cache_tag( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int, nm: Int ) {
   val addr_lsb = log2Ceil(dw*bk/8)
   val line_w   = log2Ceil(cl)
-  val tag_w   = aw - addr_lsb - line_w
+  val tag_w   = aw - addr_lsb - line_w - log2Ceil(nm)
 
 
   val tag_addr_r = Wire(UInt(aw.W))

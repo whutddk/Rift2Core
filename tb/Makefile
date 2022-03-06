@@ -194,95 +194,77 @@ isa += rv64uc-v-rvc
 
 # isa += rv64ssvnapot-p-napot
 
-# isa += rv64ud-p-fadd
-# isa += rv64ud-v-fadd
-# isa += rv64ud-p-fclass
-# isa += rv64ud-v-fclass
-# isa += rv64ud-p-fcmp
-# isa += rv64ud-v-fcmp
-# isa += rv64ud-p-fcvt
-# isa += rv64ud-v-fcvt
-# isa += rv64ud-p-fcvt_w
-# isa += rv64ud-v-fcvt_w
-# isa += rv64ud-p-fdiv
-# isa += rv64ud-v-fdiv
-# isa += rv64ud-p-fmadd
-# isa += rv64ud-v-fmadd
-# isa += rv64ud-p-fmin
-# isa += rv64ud-v-fmin
-# isa += rv64ud-p-ldst
-# isa += rv64ud-v-ldst
-# isa += rv64ud-p-move
-# isa += rv64ud-v-move
-# isa += rv64ud-p-recoding
-# isa += rv64ud-v-recoding
-# isa += rv64ud-p-structural
-# isa += rv64ud-v-structural
-# isa += rv64uf-p-fadd
-# isa += rv64uf-v-fadd
-# isa += rv64uf-p-fclass
-# isa += rv64uf-v-fclass
-# isa += rv64uf-p-fcmp
-# isa += rv64uf-v-fcmp
-# isa += rv64uf-p-fcvt
-# isa += rv64uf-v-fcvt
-# isa += rv64uf-p-fcvt_w
-# isa += rv64uf-v-fcvt_w
-# isa += rv64uf-p-fdiv
-# isa += rv64uf-v-fdiv
-# isa += rv64uf-p-fmadd
-# isa += rv64uf-v-fmadd
-# isa += rv64uf-p-fmin
-# isa += rv64uf-v-fmin
-# isa += rv64uf-p-ldst
-# isa += rv64uf-v-ldst
-# isa += rv64uf-p-move
-# isa += rv64uf-v-move
-# isa += rv64uf-p-recoding
-# isa += rv64uf-v-recoding
-
-# isa += rv64uzfh-p-fadd
-# isa += rv64uzfh-v-fadd
-# isa += rv64uzfh-p-fclass
-# isa += rv64uzfh-v-fclass
-# isa += rv64uzfh-p-fcmp
-# isa += rv64uzfh-v-fcmp
-# isa += rv64uzfh-p-fcvt
-# isa += rv64uzfh-v-fcvt
-# isa += rv64uzfh-p-fcvt_w
-# isa += rv64uzfh-v-fcvt_w
-# isa += rv64uzfh-p-fdiv
-# isa += rv64uzfh-v-fdiv
-# isa += rv64uzfh-p-fmadd
-# isa += rv64uzfh-v-fmadd
-# isa += rv64uzfh-p-fmin
-# isa += rv64uzfh-v-fmin
-# isa += rv64uzfh-p-ldst
-# isa += rv64uzfh-v-ldst
-# isa += rv64uzfh-p-move
-# isa += rv64uzfh-v-move
-# isa += rv64uzfh-p-recoding
-# isa += rv64uzfh-v-recoding
-
-
+isa += rv64ud-p-fadd
+isa += rv64ud-v-fadd
+isa += rv64ud-p-fclass
+isa += rv64ud-v-fclass
+isa += rv64ud-p-fcmp
+isa += rv64ud-v-fcmp
+isa += rv64ud-p-fcvt
+isa += rv64ud-v-fcvt
+isa += rv64ud-p-fcvt_w
+isa += rv64ud-v-fcvt_w
+isa += rv64ud-p-fdiv
+isa += rv64ud-v-fdiv
+isa += rv64ud-p-fmadd
+isa += rv64ud-v-fmadd
+isa += rv64ud-p-fmin
+isa += rv64ud-v-fmin
+isa += rv64ud-p-ldst
+isa += rv64ud-v-ldst
+isa += rv64ud-p-move
+isa += rv64ud-v-move
+isa += rv64ud-p-recoding
+isa += rv64ud-v-recoding
+isa += rv64ud-p-structural
+isa += rv64ud-v-structural
+isa += rv64uf-p-fadd
+isa += rv64uf-v-fadd
+isa += rv64uf-p-fclass
+isa += rv64uf-v-fclass
+isa += rv64uf-p-fcmp
+isa += rv64uf-v-fcmp
+isa += rv64uf-p-fcvt
+isa += rv64uf-v-fcvt
+isa += rv64uf-p-fcvt_w
+isa += rv64uf-v-fcvt_w
+isa += rv64uf-p-fdiv
+isa += rv64uf-v-fdiv
+isa += rv64uf-p-fmadd
+isa += rv64uf-v-fmadd
+isa += rv64uf-p-fmin
+isa += rv64uf-v-fmin
+isa += rv64uf-p-ldst
+isa += rv64uf-v-ldst
+isa += rv64uf-p-move
+isa += rv64uf-v-move
+isa += rv64uf-p-recoding
+isa += rv64uf-v-recoding
 
 
 
 .DEFAULT_GOAL = unit
 
-.PHONY: sim unit clean
+.PHONY: unit clean
 
 
 
 clean:
-	rm ./build/*.cpp
-	rm ./build/*.o
-	rm ./build/*.d
-	rm ./build/*.h
-	rm ./build/*.mk
+	rm -f ./build/*.cpp
+	rm -f ./build/*.o
+	rm -f ./build/*.d
+	rm -f ./build/*.h
+	rm -f ./build/*.mk
+	rm -f ./build/*.a
 
 
-sim:
+VSimTop: 
+	rm -f ./build/*.cpp
+	rm -f ./build/*.o
+	rm -f ./build/*.d
+	rm -f ./build/*.h
+	rm -f ./build/*.mk
+	rm -f ./build/*.a
 	verilator -Wno-fatal  \
 	--timescale "1 ns / 1 ps" \
 	-y ${R2}/generated/ \
@@ -296,17 +278,17 @@ sim:
 	./verilator/sim_main.cpp  \
 	./verilator/diff.cpp \
 	-Mdir build \
-	-j 8
+	-j 128
 # 	rm ./obj_dir/*.d ./obj_dir/*.o ./obj_dir/*.cpp
 
 
 
-unit: sim
+unit: VSimTop
 	$(foreach test, $(isa), ./build/VSimTop -l -f ./ci/$(test); )
 
 
 # TESTFILE ?= rv64ui-p-add
-single: sim
+single: VSimTop
 	./build/VSimTop -w -d -l -f ./ci/$(TESTFILE)
 
 dromajo:
@@ -326,15 +308,35 @@ dromajo:
 	-Mdir build \
 	-j 8
 
-dhrystone5: sim
+dhrystone5: VSimTop
 	./build/VSimTop -w -f ./ci/dhrystone5.riscv
 
-dhrystone500: sim
+dhrystone500: VSimTop
 	./build/VSimTop -f ./ci/dhrystone500.riscv
 
 
-coremark: sim
-	./build/VSimTop  -f ./ci/coremark1_bare
+coremark: VSimTop
+	./build/VSimTop -f ./ci/coremark1_bare
 
 wave:
-	gtkwave ./build/wave.vcd
+	gtkwave ./build/wave.vcd &
+
+
+
+module:
+	verilator -Wno-fatal  \
+	--timescale "1 ns / 1 ps" \
+	-y ${R2}/generated/ \
+	-y ${R2}/tb/verilator/mdl_test/ \
+	-y ${R2}/tb/ \
+	-y ${R2}/tb/vtb/ \
+	-y ${R2}/tb/vtb/ \
+	--top-module $(TOP) \
+	--trace \
+	--cc ${R2}/tb/verilator/mdl_test/$(TOP).v  \
+	--exe --build \
+	./verilator/mdl_test/$(TOP).cpp  \
+	-Mdir build \
+	-j 8
+
+	./build/V$(TOP)

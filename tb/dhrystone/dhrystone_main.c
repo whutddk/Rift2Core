@@ -1,9 +1,4 @@
-/*
-* @Author: Ruige Lee
-* @Date:   2021-02-01 11:27:23
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-18 16:04:12
-*/
+
 // See LICENSE for license details.
 
 //**************************************************************************

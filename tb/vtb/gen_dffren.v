@@ -1,19 +1,8 @@
-/*
-* @File name: gen_dffren
-* @Author: Ruige Lee
-* @Email: wut.ruigeli@gmail.com
-* @Date:   2020-12-28 10:04:54
-* @Last Modified by:   Ruige Lee
-<<<<<<< HEAD:element/gen_dffren.v
-* @Last Modified time: 2020-12-28 10:09:35
-=======
-* @Last Modified time: 2021-01-03 12:04:22
->>>>>>> master:core/debug/DMI.v
-*/
+
 
 
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.

@@ -1,17 +1,11 @@
 
 
-/*
-* @Author: Ruige Lee
-* @Date:   2021-03-19 16:24:13
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-24 11:23:40
-*/
 
 
 
 
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -93,8 +87,8 @@ class Decode16 (x:UInt, pc: UInt) {
   def c_sdsp     = ( x === BitPat("b????????????????111???????????10") )
 
 
-  info.param.rd0_raw        :=
-    MuxCase( DontCare, Array(
+  info.param.raw.rd0        :=
+    Mux1H( Seq(
       c_addi4spn -> Cat(1.U(2.W), x(4,2)),
       c_fld      -> Cat(1.U(2.W), x(4,2)),
       c_lw       -> Cat(1.U(2.W), x(4,2)),
@@ -136,8 +130,8 @@ class Decode16 (x:UInt, pc: UInt) {
     )
 
 
-  info.param.rs1_raw        := 
-    MuxCase( DontCare, Array(
+  info.param.raw.rs1        := 
+    Mux1H( Seq(
 
       c_addi4spn -> 2.U,
       c_fld      -> Cat(1.U(2.W), x(9,7)),
@@ -161,7 +155,7 @@ class Decode16 (x:UInt, pc: UInt) {
       c_and      -> Cat(1.U(2.W), x(9,7)),
       c_subw     -> Cat(1.U(2.W), x(9,7)),
       c_addw     -> Cat(1.U(2.W), x(9,7)),
-      c_j        -> DontCare,
+      c_j        -> 0.U,
       c_beqz     -> Cat(1.U(2.W), x(9,7)),
       c_bnez     -> Cat(1.U(2.W), x(9,7)),
       c_slli     -> x(11,7),
@@ -170,7 +164,7 @@ class Decode16 (x:UInt, pc: UInt) {
       c_ldsp     -> 2.U,
       c_jr       -> x(11,7),
       c_mv       -> 0.U,
-      c_ebreak   -> DontCare,
+      c_ebreak   -> 0.U,
       c_jalr     -> x(11,7),
       c_add      -> x(11,7),
       c_fsdsp    -> 2.U,
@@ -181,41 +175,41 @@ class Decode16 (x:UInt, pc: UInt) {
     )
 
 
-  info.param.rs2_raw       := 
-    MuxCase( DontCare, Array(
-      c_addi4spn -> DontCare,
-      c_fld      -> DontCare,
-      c_lw       -> DontCare,
-      c_ld       -> DontCare,
+  info.param.raw.rs2       := 
+    Mux1H( Seq(
+      c_addi4spn -> 0.U,
+      c_fld      -> 0.U,
+      c_lw       -> 0.U,
+      c_ld       -> 0.U,
       c_fsd      -> Cat(1.U(2.W), x(4,2)),
       c_sw       -> Cat(1.U(2.W), x(4,2)),
       c_sd       -> Cat(1.U(2.W), x(4,2)),
-      c_nop      -> DontCare,
-      c_addi     -> DontCare,
-      c_addiw    -> DontCare,
-      c_li       -> DontCare,
-      c_addi16sp -> DontCare,
-      c_lui      -> DontCare,
-      c_srli     -> DontCare,
-      c_srai     -> DontCare,
-      c_andi     -> DontCare,
+      c_nop      -> 0.U,
+      c_addi     -> 0.U,
+      c_addiw    -> 0.U,
+      c_li       -> 0.U,
+      c_addi16sp -> 0.U,
+      c_lui      -> 0.U,
+      c_srli     -> 0.U,
+      c_srai     -> 0.U,
+      c_andi     -> 0.U,
       c_sub      -> Cat(1.U(2.W), x(4,2)),
       c_xor      -> Cat(1.U(2.W), x(4,2)),
       c_or       -> Cat(1.U(2.W), x(4,2)),
       c_and      -> Cat(1.U(2.W), x(4,2)),
       c_subw     -> Cat(1.U(2.W), x(4,2)),
       c_addw     -> Cat(1.U(2.W), x(4,2)),
-      c_j        -> DontCare,
+      c_j        -> 0.U,
       c_beqz     -> 0.U,
       c_bnez     -> 0.U,
-      c_slli     -> DontCare,
-      c_fldsp    -> DontCare,
-      c_lwsp     -> DontCare,
-      c_ldsp     -> DontCare,
-      c_jr       -> DontCare,
+      c_slli     -> 0.U,
+      c_fldsp    -> 0.U,
+      c_lwsp     -> 0.U,
+      c_ldsp     -> 0.U,
+      c_jr       -> 0.U,
       c_mv       -> x(6,2),
-      c_ebreak   -> DontCare,
-      c_jalr     -> DontCare,
+      c_ebreak   -> 0.U,
+      c_jalr     -> 0.U,
       c_add      -> x(6,2),
       c_fsdsp    -> x(6,2),
       c_swsp     -> x(6,2),
@@ -223,11 +217,11 @@ class Decode16 (x:UInt, pc: UInt) {
       )
     )
   
-  info.param.rs3_raw       := 0.U
+  info.param.raw.rs3       := 0.U
 
 
   info.param.imm        :=
-    MuxCase( 0.U, Array(
+    Mux1H( Seq(
         c_addi4spn -> addi4spnImm,
         c_fld -> ldImm,
         c_lw -> lwImm,
@@ -257,7 +251,7 @@ class Decode16 (x:UInt, pc: UInt) {
       )
     )
 
-
+  info.param.rm := Mux( info.fpu_isa.is_fpu, x(14,12), 0.U )
 
 
 
@@ -450,6 +444,12 @@ class Decode16 (x:UInt, pc: UInt) {
   info.fpu_isa.fcvt_d_l    := false.B
   info.fpu_isa.fcvt_d_lu   := false.B
   info.fpu_isa.fmv_d_x     := false.B
+  info.fpu_isa.fcsr_rw     := false.B
+  info.fpu_isa.fcsr_rs     := false.B
+  info.fpu_isa.fcsr_rc     := false.B
+  info.fpu_isa.fcsr_rwi    := false.B
+  info.fpu_isa.fcsr_rsi    := false.B
+  info.fpu_isa.fcsr_rci    := false.B
 
   info.privil_isa.is_access_fault := ( x === BitPat("b1001110001000001") )
   info.privil_isa.is_paging_fault := ( x === BitPat("b1001110001000101") )

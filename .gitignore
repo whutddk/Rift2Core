@@ -359,3 +359,4 @@ tb/null
 *.vsdx
 *.fir
 tb/obj_dir/
+*metals.sbt

@@ -3,15 +3,7 @@
 
 
 /*
-* @Author: Ruige Lee
-* @Date:   2021-03-19 10:40:09
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-24 11:33:27
-*/
-
-
-/*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -50,13 +42,13 @@ class Decode32 (x:UInt, pc: UInt) {
   def shamt_imm = Cat( Fill(58, 0.U), x(25,20) )
 
 
-  def is_iType = info.bru_isa.jalr | info.lsu_isa.lb | info.lsu_isa.lh |info.lsu_isa.lw | info.lsu_isa.lbu | info.lsu_isa.lhu | info.lsu_isa.lwu | info.lsu_isa.ld | info.alu_isa.addi | info.alu_isa.addiw | info.alu_isa.slti | info.alu_isa.sltiu | info.alu_isa.xori | info.alu_isa.ori | info.alu_isa.andi | info.lsu_isa.fence | info.lsu_isa.fence_i | info.csr_isa.rw | info.csr_isa.rs | info.csr_isa.rc | info.csr_isa.rwi | info.csr_isa.rsi | info.csr_isa.rci | info.lsu_isa.flw | info.lsu_isa.fld
+  def is_iType = info.bru_isa.jalr | info.lsu_isa.lb | info.lsu_isa.lh |info.lsu_isa.lw | info.lsu_isa.lbu | info.lsu_isa.lhu | info.lsu_isa.lwu | info.lsu_isa.ld | info.alu_isa.addi | info.alu_isa.addiw | info.alu_isa.slti | info.alu_isa.sltiu | info.alu_isa.xori | info.alu_isa.ori | info.alu_isa.andi | info.lsu_isa.fence | info.lsu_isa.fence_i | info.csr_isa.rw | info.csr_isa.rs | info.csr_isa.rc | info.csr_isa.rwi | info.csr_isa.rsi | info.csr_isa.rci | info.lsu_isa.flw | info.lsu_isa.fld | info.fpu_isa.is_fun_fcsr
   def is_sType = info.lsu_isa.sb | info.lsu_isa.sh | info.lsu_isa.sw | info.lsu_isa.sd | info.lsu_isa.fsw | info.lsu_isa.fsd 
   def is_bType = info.bru_isa.beq | info.bru_isa.bne | info.bru_isa.blt | info.bru_isa.bge | info.bru_isa.bltu | info.bru_isa.bgeu;
   def is_uType = info.alu_isa.lui | info.alu_isa.auipc;
   def is_jType = info.bru_isa.jal;
   def is_aType = info.lsu_isa.is_lrsc | info.lsu_isa.is_amo
-  def is_mType = info.fpu_isa.is_fpu
+  def is_mType = info.fpu_isa.is_fpu & ~(info.fpu_isa.is_fun_fcsr)
   def is_shamt = info.alu_isa.slli | info.alu_isa.srli | info.alu_isa.srai | info.alu_isa.slliw | info.alu_isa.srliw | info.alu_isa.sraiw
 
 
@@ -77,7 +69,8 @@ class Decode32 (x:UInt, pc: UInt) {
 
 
 
-  info.param.rd0_raw        := MuxCase( x(11,7), Array(
+  info.param.raw.rd0 := MuxCase( x(11,7), Array(
+    info.alu_isa.wfi         -> 0.U,
     info.bru_isa.beq         -> 0.U,
     info.bru_isa.bne         -> 0.U,
     info.bru_isa.blt         -> 0.U,
@@ -88,18 +81,144 @@ class Decode32 (x:UInt, pc: UInt) {
     info.lsu_isa.sh          -> 0.U,
     info.lsu_isa.sw          -> 0.U,
     info.lsu_isa.sd          -> 0.U,
-    info.lsu_isa.fence       -> 0.U,
-    info.lsu_isa.fence_i     -> 0.U
+    info.lsu_isa.fsw         -> 0.U,
+    info.lsu_isa.fsd         -> 0.U,
+    info.privil_isa.ecall       -> 0.U,
+    info.privil_isa.ebreak      -> 0.U,
+    info.privil_isa.mret        -> 0.U,
+    info.privil_isa.uret        -> 0.U,
+    info.privil_isa.sret        -> 0.U,
+    info.privil_isa.dret        -> 0.U,
+    info.privil_isa.hfence_vvma -> 0.U,
+    info.privil_isa.hfence_gvma -> 0.U,
+    info.privil_isa.hsv_b       -> 0.U,
+    info.privil_isa.hsv_h       -> 0.U,
+    info.privil_isa.hsv_w       -> 0.U,
+    info.privil_isa.hsv_d       -> 0.U,
+ 
+
   ))
 
 
 
 
 
-  info.param.rs1_raw        := x(19,15)
-  info.param.rs2_raw        := x(24,20)
-  info.param.rs3_raw        := x(31,27)
+  info.param.raw.rs1 := MuxCase( x(19,15), Array(
+    info.alu_isa.lui       -> 0.U,
+    info.alu_isa.auipc     -> 0.U,
+    info.alu_isa.wfi       -> 0.U,
+    info.bru_isa.jal       -> 0.U,
+    info.privil_isa.ecall  -> 0.U,
+    info.privil_isa.ebreak -> 0.U,
+    info.privil_isa.uret   -> 0.U,
+    info.privil_isa.sret   -> 0.U,
+    info.privil_isa.mret   -> 0.U,
+    info.privil_isa.dret   -> 0.U,
+  ))
+    
 
+  info.param.raw.rs2 := MuxCase( x(24,20), Array(
+    info.alu_isa.lui   -> 0.U,
+    info.alu_isa.auipc -> 0.U,
+    info.alu_isa.addi  -> 0.U,
+    info.alu_isa.slti  -> 0.U,
+    info.alu_isa.sltiu -> 0.U,
+    info.alu_isa.xori  -> 0.U,
+    info.alu_isa.ori   -> 0.U,
+    info.alu_isa.andi  -> 0.U,
+    info.alu_isa.slli  -> 0.U,
+    info.alu_isa.srli  -> 0.U,
+    info.alu_isa.srai  -> 0.U,
+    info.alu_isa.slli  -> 0.U,
+    info.alu_isa.srli  -> 0.U,
+    info.alu_isa.srai  -> 0.U,
+    info.alu_isa.addiw -> 0.U,
+    info.alu_isa.slliw -> 0.U,
+    info.alu_isa.srliw -> 0.U,
+    info.alu_isa.sraiw -> 0.U,
+    info.alu_isa.wfi   -> 0.U,
+    info.bru_isa.jal   -> 0.U,
+    info.bru_isa.jalr  -> 0.U,
+    info.lsu_isa.lb    -> 0.U,
+    info.lsu_isa.lh    -> 0.U,
+    info.lsu_isa.lw    -> 0.U,
+    info.lsu_isa.lbu   -> 0.U,
+    info.lsu_isa.lhu   -> 0.U,
+    info.lsu_isa.lwu   -> 0.U,
+    info.lsu_isa.ld    -> 0.U,
+    info.lsu_isa.fence -> 0.U,
+    info.lsu_isa.fence_i -> 0.U,
+    info.lsu_isa.lr_w  -> 0.U,
+    info.lsu_isa.lr_d  -> 0.U,
+    info.lsu_isa.flw       -> 0.U,
+
+    info.privil_isa.ecall  -> 0.U,
+    info.privil_isa.ebreak -> 0.U,
+    info.privil_isa.uret   -> 0.U,
+    info.privil_isa.sret   -> 0.U,
+    info.privil_isa.mret   -> 0.U,
+    info.privil_isa.dret   -> 0.U,
+
+    info.csr_isa.is_csr -> 0.U,
+    info.fpu_isa.fcsr_rw   -> 0.U,
+    info.fpu_isa.fcsr_rs   -> 0.U,
+    info.fpu_isa.fcsr_rc   -> 0.U,
+    info.fpu_isa.fcsr_rwi   -> 0.U,
+    info.fpu_isa.fcsr_rsi   -> 0.U,
+    info.fpu_isa.fcsr_rci   -> 0.U,
+    info.fpu_isa.fsqrt_s   -> 0.U,
+    info.fpu_isa.fcvt_w_s  -> 0.U,
+    info.fpu_isa.fcvt_wu_s -> 0.U,
+    info.fpu_isa.fmv_x_w   -> 0.U,
+    info.fpu_isa.fclass_s  -> 0.U,
+    info.fpu_isa.fcvt_s_w  -> 0.U,
+    info.fpu_isa.fcvt_s_wu -> 0.U,
+    info.fpu_isa.fmv_w_x   -> 0.U,
+    info.fpu_isa.fcvt_l_s  -> 0.U,
+    info.fpu_isa.fcvt_lu_s -> 0.U,
+    info.fpu_isa.fcvt_s_l  -> 0.U,
+    info.fpu_isa.fcvt_s_lu -> 0.U,
+    info.fpu_isa.fsqrt_d   -> 0.U,
+    info.fpu_isa.fcvt_s_d  -> 0.U,
+    info.fpu_isa.fcvt_d_s  -> 0.U,
+    info.fpu_isa.fclass_d  -> 0.U,
+    info.fpu_isa.fcvt_w_d  -> 0.U,
+    info.fpu_isa.fcvt_wu_d -> 0.U,
+    info.fpu_isa.fcvt_d_w  -> 0.U,
+    info.fpu_isa.fcvt_d_wu -> 0.U,
+    info.fpu_isa.fcvt_l_d  -> 0.U,
+    info.fpu_isa.fcvt_lu_d -> 0.U,
+    info.fpu_isa.fmv_x_d   -> 0.U,
+    info.fpu_isa.fcvt_d_l  -> 0.U,
+    info.fpu_isa.fcvt_d_lu -> 0.U,
+    info.fpu_isa.fmv_d_x   -> 0.U,
+
+
+    info.privil_isa.hlv_b   -> 0.U,
+    info.privil_isa.hlv_bu  -> 0.U,
+    info.privil_isa.hlv_h   -> 0.U,
+    info.privil_isa.hlv_hu  -> 0.U,
+    info.privil_isa.hlvx_hu -> 0.U,
+    info.privil_isa.hlv_w   -> 0.U,
+    info.privil_isa.hlvx_wu -> 0.U,
+    info.privil_isa.hlv_wu  -> 0.U,
+    info.privil_isa.hlv_d   -> 0.U,
+  ))
+
+
+
+  info.param.raw.rs3 := MuxCase( 0.U, Array(
+    info.fpu_isa.fmadd_s  -> x(31,27),
+    info.fpu_isa.fmsub_s  -> x(31,27),
+    info.fpu_isa.fnmsub_s -> x(31,27),
+    info.fpu_isa.fnmadd_s -> x(31,27),
+    info.fpu_isa.fmadd_d  -> x(31,27),
+    info.fpu_isa.fmsub_d  -> x(31,27),
+    info.fpu_isa.fnmsub_d -> x(31,27),
+    info.fpu_isa.fnmadd_d -> x(31,27),
+  ))
+
+  info.param.rm := Mux( info.fpu_isa.is_fpu, x(14,12), 0.U )
 
   info.alu_isa.lui         := ( x === BitPat("b?????????????????????????0110111") )
   info.alu_isa.auipc       := ( x === BitPat("b?????????????????????????0010111") )
@@ -157,12 +276,19 @@ class Decode32 (x:UInt, pc: UInt) {
   info.lsu_isa.fence_i     := ( x === BitPat("b?????????????????001?????0001111") )
   info.lsu_isa.sfence_vma  := ( x === BitPat("b0001001??????????000000001110011") )
 
-  info.csr_isa.rw          := ( x === BitPat("b?????????????????001?????1110011") )
-  info.csr_isa.rs          := ( x === BitPat("b?????????????????010?????1110011") )
-  info.csr_isa.rc          := ( x === BitPat("b?????????????????011?????1110011") )
-  info.csr_isa.rwi         := ( x === BitPat("b?????????????????101?????1110011") )
-  info.csr_isa.rsi         := ( x === BitPat("b?????????????????110?????1110011") )
-  info.csr_isa.rci         := ( x === BitPat("b?????????????????111?????1110011") )
+  info.csr_isa.rw          := ( x === BitPat("b?????????????????001?????1110011") ) & ( x(31,20) =/= 1.U & x(31,20) =/= 2.U & x(31,20) =/= 3.U ) 
+  info.csr_isa.rs          := ( x === BitPat("b?????????????????010?????1110011") ) & ( x(31,20) =/= 1.U & x(31,20) =/= 2.U & x(31,20) =/= 3.U ) 
+  info.csr_isa.rc          := ( x === BitPat("b?????????????????011?????1110011") ) & ( x(31,20) =/= 1.U & x(31,20) =/= 2.U & x(31,20) =/= 3.U ) 
+  info.csr_isa.rwi         := ( x === BitPat("b?????????????????101?????1110011") ) & ( x(31,20) =/= 1.U & x(31,20) =/= 2.U & x(31,20) =/= 3.U ) 
+  info.csr_isa.rsi         := ( x === BitPat("b?????????????????110?????1110011") ) & ( x(31,20) =/= 1.U & x(31,20) =/= 2.U & x(31,20) =/= 3.U ) 
+  info.csr_isa.rci         := ( x === BitPat("b?????????????????111?????1110011") ) & ( x(31,20) =/= 1.U & x(31,20) =/= 2.U & x(31,20) =/= 3.U ) 
+
+    info.fpu_isa.fcsr_rw   := ( x === BitPat("b?????????????????001?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
+    info.fpu_isa.fcsr_rs   := ( x === BitPat("b?????????????????010?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
+    info.fpu_isa.fcsr_rc   := ( x === BitPat("b?????????????????011?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
+    info.fpu_isa.fcsr_rwi  := ( x === BitPat("b?????????????????101?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
+    info.fpu_isa.fcsr_rsi  := ( x === BitPat("b?????????????????110?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
+    info.fpu_isa.fcsr_rci  := ( x === BitPat("b?????????????????111?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
 
   info.mul_isa.mul         := ( x === BitPat("b0000001??????????000?????0110011") )
   info.mul_isa.mulh        := ( x === BitPat("b0000001??????????001?????0110011") )
@@ -245,7 +371,7 @@ class Decode32 (x:UInt, pc: UInt) {
   info.fpu_isa.fmin_s      := ( x === BitPat("b0010100??????????000?????1010011") )
   info.fpu_isa.fmax_s      := ( x === BitPat("b0010100??????????001?????1010011") )
   info.fpu_isa.fcvt_w_s    := ( x === BitPat("b110000000000?????????????1010011") )
-  info.fpu_isa.fcvt_wu_s   := ( x === BitPat("b110000100001?????????????1010011") )
+  info.fpu_isa.fcvt_wu_s   := ( x === BitPat("b110000000001?????????????1010011") )
   info.fpu_isa.fmv_x_w     := ( x === BitPat("b111000000000?????000?????1010011") )
   info.fpu_isa.feq_s       := ( x === BitPat("b1010000??????????010?????1010011") )
   info.fpu_isa.flt_s       := ( x === BitPat("b1010000??????????001?????1010011") )

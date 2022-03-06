@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -70,8 +70,8 @@ abstract class CsrFiles extends CsrFiles_H{
           // ( addr === "h042".U ) -> ucause,
           // ( addr === "h043".U ) -> utval,
           // ( addr === "h044".U ) -> uip,
-          ( addr === "h001".U ) -> fflags,
-          ( addr === "h002".U ) -> frm,
+          ( addr === "h001".U ) -> fcsr(4,0),
+          ( addr === "h002".U ) -> fcsr(7,5),
           ( addr === "h003".U ) -> fcsr,
           ( addr === "hC00".U ) -> cycle,
           ( addr === "hC01".U ) -> time,

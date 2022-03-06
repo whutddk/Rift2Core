@@ -1,15 +1,7 @@
-/*
-* @Author: Ruige Lee
-* @Date:   2021-03-26 17:41:24
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-28 10:52:23
-*/
-
-
 
 
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -115,10 +107,10 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 
 
   for ( i <- 0 until in; j <- 0 until in ) yield 
-    assert( !(io.enq(i).valid == true.B && io.enq(j).valid == false.B && i >= j), "Assert Fail! in port illegal")
+    assert( !(io.enq(i).valid === true.B && io.enq(j).valid === false.B && i.U >= j.U), "Assert Fail! in port illegal")
 
   for ( i <- 0 until out; j <- 0 until out ) yield 
-    assert( !(io.deq(i).valid == true.B && io.deq(j).valid == false.B && i >= j), "Assert Fail! out port illegal")
+    assert( !(io.deq(i).valid === true.B && io.deq(j).valid === false.B && i.U >= j.U), "Assert Fail! out port illegal")
 
 
 }

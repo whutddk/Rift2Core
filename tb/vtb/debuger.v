@@ -1,15 +1,8 @@
-/*
-* @File name: debuger
-* @Author: Ruige Lee
-* @Email: wut.ruigeli@gmail.com
-* @Date:   2021-03-17 15:15:31
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-09-28 09:43:06
-*/
+
 
 
 /*
-	Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+	Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
 	 Licensed under the Apache License, Version 2.0 (the "License");
 	 you may not use this file except in compliance with the License.
@@ -29,6 +22,11 @@
 
 
 module debuger (
+
+	input [3:0] DEBUGER_AWID,
+	output [3:0] DEBUGER_BID,
+	input [3:0] DEBUGER_ARID,
+	output [3:0] DEBUGER_RID,
 
 	input [31:0] DEBUGER_AWADDR,
 	input DEBUGER_AWVALID,
@@ -59,7 +57,8 @@ module debuger (
 
 
  
-
+	gen_dffren # (.DW(4)) awid_dffren (.dnxt(DEBUGER_AWID), .qout(DEBUGER_BID), .en(DEBUGER_AWVALID & DEBUGER_AWREADY), .CLK(CLK), .RSTn(RSTn));
+	gen_dffren # (.DW(4)) arid_dffren (.dnxt(DEBUGER_ARID), .qout(DEBUGER_RID), .en(DEBUGER_ARVALID & DEBUGER_ARREADY), .CLK(CLK), .RSTn(RSTn));
 
 	assign DEBUGER_AWREADY	= debuger_awready_qout;
 	assign DEBUGER_WREADY	= debuger_wready_qout;

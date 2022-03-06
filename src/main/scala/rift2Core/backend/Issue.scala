@@ -1,14 +1,6 @@
-/*
-* @Author: Ruige Lee
-* @Date:   2021-03-25 17:55:52
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-29 15:09:55
-*/
-
-
 
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -29,713 +21,411 @@ package rift2Core.backend
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
+import base._
 
-/**
-  * read operator 
-  * 
-  * @note the chn is litmited to 4
-  * @note alu req is 0,1,2
-  * @note bru req is 0,1,2
-  * @note lsu req is 0,1,2
-  * @note csr req is 0,1
-  * @note mul req is 0,2
-  * 
-  */ 
 
-class read_op(files: Vec[UInt]) {
 
-  val alu_chn_valid_i = Wire( UInt(2.W) )
-  val bru_chn_valid_i = Wire( UInt(2.W) )
-  val lsu_chn_valid_i = Wire( UInt(2.W) )
-  val csr_chn_valid_i = Wire( UInt(1.W) )
-  val mul_chn_valid_i = Wire( UInt(2.W) )
+class Out_of_Order_Issue() extends Module {
 
-  val alu_chn_phy_i = Wire(Vec(2, UInt(6.W) ))
-  val bru_chn_phy_i = Wire(Vec(2, UInt(6.W) ))
-  val lsu_chn_phy_i = Wire(Vec(2, UInt(6.W) ))
-  val csr_chn_phy_i = Wire(Vec(1, UInt(6.W) ))
-  val mul_chn_phy_i = Wire(Vec(2, UInt(6.W) ))
-
-  val alu_chn_valid_o = alu_chn_valid_i === 1.U | alu_chn_valid_i === 2.U
-  val csr_chn_valid_o = csr_chn_valid_i === 1.U
-  val bru_chn_valid_o = ((alu_chn_valid_i +& bru_chn_valid_i +& csr_chn_valid_i) <= 4.U) & bru_chn_valid_i =/= 0.U
-  val lsu_chn_valid_o = ((alu_chn_valid_i +& bru_chn_valid_i +& lsu_chn_valid_i +& csr_chn_valid_i) <= 4.U) & lsu_chn_valid_i =/= 0.U
-  val mul_chn_valid_o = ((alu_chn_valid_i +& bru_chn_valid_i +& lsu_chn_valid_i +& csr_chn_valid_i +& mul_chn_valid_i) <= 4.U) & mul_chn_valid_i =/= 0.U
-
-
-  val phy = {
-    val seq0_0 = (alu_chn_valid_i =/= 0.U)
-    val seq0_1 = (alu_chn_valid_i === 0.U & csr_chn_valid_i =/= 0.U)
-    val seq0_2 = (alu_chn_valid_i === 0.U & csr_chn_valid_i === 0.U & bru_chn_valid_i =/= 0.U)
-    val seq0_3 = (alu_chn_valid_i === 0.U & csr_chn_valid_i === 0.U & bru_chn_valid_i === 0.U & lsu_chn_valid_i =/= 0.U)
-
-    val seq0 = Seq(
-      (alu_chn_valid_i =/= 0.U) -> alu_chn_phy_i(0),
-      (alu_chn_valid_i === 0.U & csr_chn_valid_i =/= 0.U) -> csr_chn_phy_i(0),
-      (alu_chn_valid_i === 0.U & csr_chn_valid_i === 0.U & bru_chn_valid_i =/= 0.U) -> bru_chn_phy_i(0),
-      (alu_chn_valid_i === 0.U & csr_chn_valid_i === 0.U & bru_chn_valid_i === 0.U & lsu_chn_valid_i =/= 0.U) -> lsu_chn_phy_i(0)
-    )
-
-    val seq1_0 = (alu_chn_valid_i === 2.U)
-    val seq1_1 = (alu_chn_valid_i === 1.U & csr_chn_valid_i === 1.U)
-    val seq1_2 = (( (alu_chn_valid_i +& csr_chn_valid_i) === 0.U ) & bru_chn_valid_i === 2.U )
-    val seq1_3 = (( (alu_chn_valid_i +& csr_chn_valid_i) === 1.U ) & bru_chn_valid_i =/= 0.U )
-    val seq1_4 = (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 0.U ) & lsu_chn_valid_i === 2.U )
-    val seq1_5 = (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 1.U ) & lsu_chn_valid_i =/= 0.U )
-
-    val seq1 = Seq(
-      (alu_chn_valid_i === 2.U) -> alu_chn_phy_i(1),
-      (alu_chn_valid_i === 1.U & csr_chn_valid_i === 1.U) -> csr_chn_phy_i(0),
-      (( (alu_chn_valid_i +& csr_chn_valid_i) === 0.U ) & bru_chn_valid_i === 2.U ) -> bru_chn_phy_i(1),
-      (( (alu_chn_valid_i +& csr_chn_valid_i) === 1.U ) & bru_chn_valid_i =/= 0.U ) -> bru_chn_phy_i(0),
-      (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 0.U ) & lsu_chn_valid_i === 2.U ) -> lsu_chn_phy_i(1),
-      (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 1.U ) & lsu_chn_valid_i =/= 0.U ) -> lsu_chn_phy_i(0)
-    )
-
-    val seq2_0 = (alu_chn_valid_i === 2.U & csr_chn_valid_i === 1.U )
-    val seq2_1 = (( (alu_chn_valid_i +& csr_chn_valid_i) === 1.U & bru_chn_valid_i === 2.U ) )
-    val seq2_2 = (( (alu_chn_valid_i +& csr_chn_valid_i) === 2.U & bru_chn_valid_i =/= 0.U ) )
-    val seq2_3 = (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 1.U & lsu_chn_valid_i === 2.U ) )
-    val seq2_4 = (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 2.U & lsu_chn_valid_i =/= 0.U ) )
-    val seq2_5 = (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i +& lsu_chn_valid_i ) <= 2.U) & (mul_chn_valid_i === 2.U))
-
-    val seq2 = Seq(
-      (alu_chn_valid_i === 2.U & csr_chn_valid_i === 1.U ) -> csr_chn_phy_i(0),
-      (( (alu_chn_valid_i +& csr_chn_valid_i) === 1.U & bru_chn_valid_i === 2.U ) ) -> bru_chn_phy_i(1),
-      (( (alu_chn_valid_i +& csr_chn_valid_i) === 2.U & bru_chn_valid_i =/= 0.U ) ) -> bru_chn_phy_i(0),
-      (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 1.U & lsu_chn_valid_i === 2.U ) ) -> lsu_chn_phy_i(1),
-      (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 2.U & lsu_chn_valid_i =/= 0.U ) ) -> lsu_chn_phy_i(0),
-      (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i +& lsu_chn_valid_i ) <= 2.U) & (mul_chn_valid_i === 2.U)) -> mul_chn_phy_i(0)
-    )
-
-    val seq3_0 = ( (alu_chn_valid_i +& csr_chn_valid_i) === 2.U & bru_chn_valid_i === 2.U)
-    val seq3_1 = ( (alu_chn_valid_i +& csr_chn_valid_i) === 3.U & bru_chn_valid_i === 1.U)
-    val seq3_2 = ( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 2.U & lsu_chn_valid_i === 2.U)
-    val seq3_3 = ( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 3.U & lsu_chn_valid_i === 1.U)
-    val seq3_4 = (( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i +& lsu_chn_valid_i ) <= 2.U) & (mul_chn_valid_i === 2.U))
-
-    val seq3 = Seq(
-      ( (alu_chn_valid_i +& csr_chn_valid_i) === 2.U & bru_chn_valid_i === 2.U) -> bru_chn_phy_i(1),
-      ( (alu_chn_valid_i +& csr_chn_valid_i) === 3.U & bru_chn_valid_i === 1.U) -> bru_chn_phy_i(0),
-      ( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 2.U & lsu_chn_valid_i === 2.U) -> lsu_chn_phy_i(1),
-      ( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i) === 3.U & lsu_chn_valid_i === 1.U) -> lsu_chn_phy_i(0),
-      ( (alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i +& lsu_chn_valid_i ) <= 2.U & (mul_chn_valid_i === 2.U)) -> mul_chn_phy_i(1)
-    )
-
-    assert( PopCount(seq0.map(_._1)) <= 1.U )
-    assert( PopCount(seq1.map(_._1)) <= 1.U )
-    assert( PopCount(seq2.map(_._1)) <= 1.U )
-    assert( PopCount(seq3.map(_._1)) <= 1.U )
-
-
-    VecInit( Mux1H(seq0), Mux1H(seq1), Mux1H(seq2), Mux1H(seq3))
-  }
-   
-    
-
-
-
-
-
-  val src = VecInit( for ( i <- 0 until 4 ) yield { files(phy(i)) } )
-
-  val alu_chn_src_o = VecInit( src(0), src(1) )
-
-  val csr_chn_src_o = {
-    val usdge = alu_chn_valid_i
-    Mux1H(Seq(
-      (usdge === 0.U) -> VecInit( src(0) ),
-      (usdge === 1.U) -> VecInit( src(1) ),
-      (usdge === 2.U) -> VecInit( src(2) )
-    ))
-  }
-
-  val bru_chn_src_o = {
-    val usdge = alu_chn_valid_i +& csr_chn_valid_i
-
-    Mux1H(Seq(
-      (usdge === 0.U) -> VecInit( src(0), src(1) ),
-      (usdge === 1.U) -> VecInit( src(1), src(2) ),
-      (usdge === 2.U) -> VecInit( src(2), src(3) ),
-      (usdge === 3.U) -> VecInit( src(3), DontCare )
-    ))
-  }
- 
-  val lsu_chn_src_o = {
-    val usdge = alu_chn_valid_i +& csr_chn_valid_i +& bru_chn_valid_i
-
-    Mux1H(Seq(
-      (usdge === 0.U) -> VecInit( src(0), src(1) ),
-      (usdge === 1.U) -> VecInit( src(1), src(2) ),
-      (usdge === 2.U) -> VecInit( src(2), src(3) ),
-      (usdge === 3.U) -> VecInit( src(3), DontCare )
-    ))
-  }
-
-
-  val mul_chn_src_o = VecInit( src(2), src(3) )
-
-
-
-  assert( alu_chn_valid_i < 3.U, "Assert Fail at read op, alu cannot req src3" )
-  assert( bru_chn_valid_i < 3.U, "Assert Fail at read op, bru cannot req src3" )
-  assert( lsu_chn_valid_i < 3.U, "Assert Fail at read op, lsu cannot req src3" )
-  assert( mul_chn_valid_i < 3.U, "Assert Fail at read op, mul cannot req src3" )
-
-}
-
-abstract class Ele_issue(param: Instruction_param, phy: Reg_phy, log: Vec[UInt]) {
-
-  val rs1_raw = param.rs1_raw
-  val rs2_raw = param.rs2_raw
-  val rs1_phy = phy.rs1
-  val rs2_phy = phy.rs2
-
-
-  /**
-    * check if the rs(i) is x0
-    */
-  val is_rs1_x0 = rs1_raw === 0.U
-  val is_rs2_x0 = rs2_raw === 0.U
-
-
-
-  /**
-    * check if the rs1 is wrote back
-    */ 
-  val is_rs1_ready = (log(rs1_phy) === 3.U) | is_rs1_x0
-
-  /**
-  * check if the rs2 is wrote back
-  */ 
-  val is_rs2_ready = (log(rs2_phy) === 3.U) | is_rs2_x0
-
-  // check if an instruction is RAW clearence, each instruction has different rs requirement
-  val is_clearRAW = Wire(Bool())
-
-  val src1 = Wire(UInt(64.W))
-  val src2 = Wire(UInt(64.W))
-
-  val op_cnt = Wire(UInt(2.W))
-}
-
-
-class Alu_issue(dpt_info: Alu_dpt_info, buf_valid: Bool, log: Vec[UInt], op: read_op) extends Ele_issue(dpt_info.param, dpt_info.phy, log) {
-  val alu_iss_info = Wire(new Alu_iss_info)
-
-  is_clearRAW := Mux(
-    buf_valid === false.B, false.B, 
-      Mux1H(Seq(
-        ( dpt_info.isa.lui   === true.B) -> true.B,
-        ( dpt_info.isa.auipc === true.B) -> true.B,
-        ( dpt_info.isa.addi  === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.addiw === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.slti  === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.sltiu === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.xori  === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.ori   === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.andi  === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.slli  === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.slliw === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.srli  === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.srliw === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.srai  === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.sraiw === true.B) -> (is_rs1_ready),
-        ( dpt_info.isa.add   === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.addw  === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.sub   === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.subw  === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.sll   === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.sllw  === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.slt   === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.sltu  === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.xor   === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.srl   === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.srlw  === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.sra   === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.sraw  === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.or    === true.B) -> (is_rs1_ready & is_rs2_ready),
-        ( dpt_info.isa.and   === true.B) -> (is_rs1_ready & is_rs2_ready),
-        
-        ( dpt_info.isa.wfi   === true.B) -> true.B,
-
-      ))
-    )
-
-  op_cnt := {
-    val nzero_cnt = PopCount( Cat(~is_rs1_x0, ~is_rs2_x0) )
-
-    Mux1H(Seq(
-      ( dpt_info.isa.lui   === true.B) -> 0.U,
-      ( dpt_info.isa.auipc === true.B) -> 0.U,
-      ( dpt_info.isa.addi  === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.addiw === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.slti  === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.sltiu === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.xori  === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.ori   === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.andi  === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.slli  === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.slliw === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.srli  === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.srliw === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.srai  === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.sraiw === true.B) -> Mux( is_rs1_x0, 0.U, 1.U ),
-      ( dpt_info.isa.add   === true.B) -> nzero_cnt,
-      ( dpt_info.isa.addw  === true.B) -> nzero_cnt,
-      ( dpt_info.isa.sub   === true.B) -> nzero_cnt,
-      ( dpt_info.isa.subw  === true.B) -> nzero_cnt,
-      ( dpt_info.isa.sll   === true.B) -> nzero_cnt,
-      ( dpt_info.isa.sllw  === true.B) -> nzero_cnt,
-      ( dpt_info.isa.slt   === true.B) -> nzero_cnt,
-      ( dpt_info.isa.sltu  === true.B) -> nzero_cnt,
-      ( dpt_info.isa.xor   === true.B) -> nzero_cnt,
-      ( dpt_info.isa.srl   === true.B) -> nzero_cnt,
-      ( dpt_info.isa.srlw  === true.B) -> nzero_cnt,
-      ( dpt_info.isa.sra   === true.B) -> nzero_cnt,
-      ( dpt_info.isa.sraw  === true.B) -> nzero_cnt,
-      ( dpt_info.isa.or    === true.B) -> nzero_cnt,
-      ( dpt_info.isa.and   === true.B) -> nzero_cnt,
-      ( dpt_info.isa.wfi   === true.B) -> 0.U,
-    ))	
-
-  }
-
-
-  op.alu_chn_phy_i(0) := Mux(~is_rs1_x0, dpt_info.phy.rs1, dpt_info.phy.rs2)
-  op.alu_chn_phy_i(1) := dpt_info.phy.rs2
-          
-  src1 := Mux(~is_rs1_x0, op.alu_chn_src_o(0), 0.U )
-  src2 := Mux(~is_rs2_x0, Mux(~is_rs1_x0, op.alu_chn_src_o(1), op.alu_chn_src_o(0)), 0.U )
-
-
-  {
-    alu_iss_info.fun.add := dpt_info.isa.is_fun_add
-    alu_iss_info.fun.slt := dpt_info.isa.is_fun_slt
-    alu_iss_info.fun.xor := dpt_info.isa.is_fun_xor
-    alu_iss_info.fun.or  := dpt_info.isa.is_fun_or
-    alu_iss_info.fun.and := dpt_info.isa.is_fun_and
-    alu_iss_info.fun.sll := dpt_info.isa.is_fun_sll
-    alu_iss_info.fun.srl := dpt_info.isa.is_fun_srl
-    alu_iss_info.fun.sra := dpt_info.isa.is_fun_sra
-
-    alu_iss_info.param.is_32w  := dpt_info.isa.is_32w
-    alu_iss_info.param.is_usi  := dpt_info.isa.is_usi
-
-    alu_iss_info.param.op1 :=
-      Mux1H(Seq(
-        dpt_info.isa.lui    -> 0.U,
-        dpt_info.isa.auipc  -> dpt_info.param.pc,
-        dpt_info.isa.addi   -> src1,
-        dpt_info.isa.addiw  -> src1,
-        dpt_info.isa.slti   -> src1,
-        dpt_info.isa.sltiu  -> src1,
-        dpt_info.isa.xori   -> src1,
-        dpt_info.isa.ori    -> src1,
-        dpt_info.isa.andi   -> src1,
-        dpt_info.isa.slli   -> src1,
-        dpt_info.isa.slliw  -> src1,
-        dpt_info.isa.srli   -> src1,
-        dpt_info.isa.srliw  -> src1,
-        dpt_info.isa.srai   -> src1,
-        dpt_info.isa.sraiw  -> src1,
-        dpt_info.isa.add    -> src1,
-        dpt_info.isa.addw   -> src1,
-        dpt_info.isa.sub    -> src1,
-        dpt_info.isa.subw   -> src1,
-        dpt_info.isa.sll    -> src1,
-        dpt_info.isa.sllw   -> src1,
-        dpt_info.isa.slt    -> src1,
-        dpt_info.isa.sltu   -> src1,
-        dpt_info.isa.xor    -> src1,
-        dpt_info.isa.srl    -> src1,
-        dpt_info.isa.srlw   -> src1,
-        dpt_info.isa.sra    -> src1,
-        dpt_info.isa.sraw   -> src1,
-        dpt_info.isa.or     -> src1,
-        dpt_info.isa.and    -> src1,
-
-        dpt_info.isa.wfi    -> 0.U,
-
-    ))
-
-    alu_iss_info.param.op2 :=
-      Mux1H(Seq(
-        dpt_info.isa.lui    -> dpt_info.param.imm,
-        dpt_info.isa.auipc  -> dpt_info.param.imm,
-        dpt_info.isa.addi   -> dpt_info.param.imm,
-        dpt_info.isa.addiw  -> dpt_info.param.imm,
-        dpt_info.isa.slti   -> dpt_info.param.imm,
-        dpt_info.isa.sltiu  -> dpt_info.param.imm,
-        dpt_info.isa.xori   -> dpt_info.param.imm,
-        dpt_info.isa.ori    -> dpt_info.param.imm,
-        dpt_info.isa.andi   -> dpt_info.param.imm,
-        dpt_info.isa.slli   -> dpt_info.param.imm(5,0),
-        dpt_info.isa.slliw  -> dpt_info.param.imm(5,0),
-        dpt_info.isa.srli   -> dpt_info.param.imm(5,0),
-        dpt_info.isa.srliw  -> dpt_info.param.imm(5,0),
-        dpt_info.isa.srai   -> dpt_info.param.imm(5,0),
-        dpt_info.isa.sraiw  -> dpt_info.param.imm(5,0),
-        dpt_info.isa.add    -> src2,
-        dpt_info.isa.addw   -> src2,
-        dpt_info.isa.sub    -> (~src2 + 1.U),
-        dpt_info.isa.subw   -> (~src2 + 1.U),
-        dpt_info.isa.sll    -> src2,
-        dpt_info.isa.sllw   -> src2,
-        dpt_info.isa.slt    -> src2,
-        dpt_info.isa.sltu   -> src2,
-        dpt_info.isa.xor    -> src2,
-        dpt_info.isa.srl    -> src2,
-        dpt_info.isa.srlw   -> src2,
-        dpt_info.isa.sra    -> src2,
-        dpt_info.isa.sraw   -> src2,
-        dpt_info.isa.or     -> src2,
-        dpt_info.isa.and    -> src2,
-
-        dpt_info.isa.wfi    -> 0.U
-    ))
-
-    alu_iss_info.param.rd0_phy := dpt_info.phy.rd0
-  }
-
-
-}
-
-class Bru_issue(dpt_info: Bru_dpt_info, buf_valid: Bool, log: Vec[UInt], op: read_op) extends Ele_issue(dpt_info.param, dpt_info.phy, log) {
-  val bru_iss_info = Wire(new Bru_iss_info)
-
-  is_clearRAW := 
-    Mux( buf_valid === false.B, false.B,
-        Mux1H(Seq(
-            dpt_info.isa.jal  -> true.B,
-            dpt_info.isa.jalr -> is_rs1_ready,
-            dpt_info.isa.beq  -> (is_rs1_ready & is_rs2_ready),
-            dpt_info.isa.bne  -> (is_rs1_ready & is_rs2_ready),
-            dpt_info.isa.blt  -> (is_rs1_ready & is_rs2_ready),
-            dpt_info.isa.bge  -> (is_rs1_ready & is_rs2_ready),
-            dpt_info.isa.bltu -> (is_rs1_ready & is_rs2_ready),
-            dpt_info.isa.bgeu -> (is_rs1_ready & is_rs2_ready)
-        ))
-      )
-
-  op_cnt := {
-    val nzero_cnt = PopCount( Cat(~is_rs1_x0, ~is_rs2_x0) )
-    Mux1H(Seq(
-      dpt_info.isa.jal  -> 0.U,
-      dpt_info.isa.jalr -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.beq  -> nzero_cnt,
-      dpt_info.isa.bne  -> nzero_cnt,
-      dpt_info.isa.blt  -> nzero_cnt,
-      dpt_info.isa.bge  -> nzero_cnt,
-      dpt_info.isa.bltu -> nzero_cnt,
-      dpt_info.isa.bgeu -> nzero_cnt
-    ))
-  }
-
-
-  op.bru_chn_phy_i(0) := Mux(~is_rs1_x0, dpt_info.phy.rs1, dpt_info.phy.rs2)
-  op.bru_chn_phy_i(1) := dpt_info.phy.rs2
-          
-  src1 := Mux(~is_rs1_x0, op.bru_chn_src_o(0), 0.U )
-  src2 := Mux(~is_rs2_x0, Mux(~is_rs1_x0, op.bru_chn_src_o(1), op.bru_chn_src_o(0)), 0.U )
-
-
-  {
-    bru_iss_info.fun  := dpt_info.isa
-
-
-    bru_iss_info.param.is_rvc   := dpt_info.param.is_rvc
-    bru_iss_info.param.pc   := dpt_info.param.pc
-    bru_iss_info.param.imm   := dpt_info.param.imm
-
-    bru_iss_info.param.op1 := src1
-    bru_iss_info.param.op2 := src2
-
-
-    bru_iss_info.param.rd0_phy := dpt_info.phy.rd0
-  }
-
-
-}
-
-class Lsu_issue (dpt_info: Lsu_dpt_info, buf_valid: Bool, log: Vec[UInt], op: read_op) extends Ele_issue(dpt_info.param, dpt_info.phy, log) {
-  val lsu_iss_info = Wire(new Lsu_iss_info)
-
-  is_clearRAW := 
-    Mux( buf_valid === false.B, false.B,
-      Mux1H(Seq(
-        dpt_info.isa.lb        -> is_rs1_ready,
-        dpt_info.isa.lh        -> is_rs1_ready,
-        dpt_info.isa.lw        -> is_rs1_ready,
-        dpt_info.isa.ld        -> is_rs1_ready,
-        dpt_info.isa.lbu       -> is_rs1_ready,
-        dpt_info.isa.lhu       -> is_rs1_ready,
-        dpt_info.isa.lwu       -> is_rs1_ready,
-        dpt_info.isa.sb        -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.sh        -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.sw        -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.sd        -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.fence     -> is_rs1_ready,
-        dpt_info.isa.fence_i   -> is_rs1_ready,
-        dpt_info.isa.sfence_vma -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.lr_w      -> is_rs1_ready,
-        dpt_info.isa.sc_w      -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amoswap_w -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amoadd_w  -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amoxor_w  -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amoand_w  -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amoor_w   -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amomin_w  -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amomax_w  -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amominu_w -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amomaxu_w -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.lr_d      -> is_rs1_ready,
-        dpt_info.isa.sc_d      -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amoswap_d -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amoadd_d  -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amoxor_d  -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amoand_d  -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amoor_d   -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amomin_d  -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amomax_d  -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amominu_d -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.amomaxu_d -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.flw       -> is_rs1_ready,
-        dpt_info.isa.fsw       -> (is_rs1_ready & is_rs2_ready),
-        dpt_info.isa.fld       -> is_rs1_ready,
-        dpt_info.isa.fsd       -> (is_rs1_ready & is_rs2_ready)
-      ))
-    )
-
-  op_cnt := {
-    val nzero_cnt = PopCount( Cat(~is_rs1_x0, ~is_rs2_x0) )
-    Mux1H(Seq(
-      dpt_info.isa.lb        -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.lh        -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.lw        -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.ld        -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.lbu       -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.lhu       -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.lwu       -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.sb        -> nzero_cnt,
-      dpt_info.isa.sh        -> nzero_cnt,
-      dpt_info.isa.sw        -> nzero_cnt,
-      dpt_info.isa.sd        -> nzero_cnt,
-      dpt_info.isa.fence     -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.fence_i   -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.sfence_vma -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.lr_w      -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.sc_w      -> nzero_cnt,
-      dpt_info.isa.amoswap_w -> nzero_cnt,
-      dpt_info.isa.amoadd_w  -> nzero_cnt,
-      dpt_info.isa.amoxor_w  -> nzero_cnt,
-      dpt_info.isa.amoand_w  -> nzero_cnt,
-      dpt_info.isa.amoor_w   -> nzero_cnt,
-      dpt_info.isa.amomin_w  -> nzero_cnt,
-      dpt_info.isa.amomax_w  -> nzero_cnt,
-      dpt_info.isa.amominu_w -> nzero_cnt,
-      dpt_info.isa.amomaxu_w -> nzero_cnt,
-      dpt_info.isa.lr_d      -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.sc_d      -> nzero_cnt,
-      dpt_info.isa.amoswap_d -> nzero_cnt,
-      dpt_info.isa.amoadd_d  -> nzero_cnt,
-      dpt_info.isa.amoxor_d  -> nzero_cnt,
-      dpt_info.isa.amoand_d  -> nzero_cnt,
-      dpt_info.isa.amoor_d   -> nzero_cnt,
-      dpt_info.isa.amomin_d  -> nzero_cnt,
-      dpt_info.isa.amomax_d  -> nzero_cnt,
-      dpt_info.isa.amominu_d -> nzero_cnt,
-      dpt_info.isa.amomaxu_d -> nzero_cnt,
-      dpt_info.isa.flw       -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.fsw       -> nzero_cnt,
-      dpt_info.isa.fld       -> Mux( is_rs1_x0, 0.U, 1.U ),
-      dpt_info.isa.fsd       -> nzero_cnt
-    ))
-  }
-
-
-  op.lsu_chn_phy_i(0) := Mux(~is_rs1_x0, dpt_info.phy.rs1, dpt_info.phy.rs2)
-  op.lsu_chn_phy_i(1) := dpt_info.phy.rs2
-          
-  src1 := Mux(~is_rs1_x0, op.lsu_chn_src_o(0), 0.U )
-  src2 := Mux(~is_rs2_x0, Mux(~is_rs1_x0, op.lsu_chn_src_o(1), op.lsu_chn_src_o(0)), 0.U )
-
-  lsu_iss_info.fun  := dpt_info.isa
-
-  lsu_iss_info.param.op1 := (src1.asSInt + dpt_info.param.imm.asSInt()).asUInt()
-  lsu_iss_info.param.op2 := src2
-
-
-  lsu_iss_info.param.rd0_phy := dpt_info.phy.rd0
-}
-
-class Csr_issue (dpt_info: Csr_dpt_info, buf_valid: Bool, log: Vec[UInt], op: read_op) extends Ele_issue(dpt_info.param, dpt_info.phy, log) {
-  val csr_iss_info = Wire(new Csr_iss_info)
-
-  is_clearRAW := 
-    Mux( buf_valid === false.B, false.B, 
-      Mux1H(Seq(
-        dpt_info.isa.rw  -> is_rs1_ready,
-        dpt_info.isa.rs  -> is_rs1_ready,
-        dpt_info.isa.rc  -> is_rs1_ready,
-        dpt_info.isa.rwi -> true.B,
-        dpt_info.isa.rsi -> true.B,
-        dpt_info.isa.rci -> true.B
-      ))
-    )
-
-  op_cnt := {
-      val nzero_cnt = PopCount( Cat(~is_rs1_x0, ~is_rs2_x0) )
-      Mux1H(Seq(
-        dpt_info.isa.rw  -> Mux( is_rs1_x0, 0.U, 1.U ),
-        dpt_info.isa.rs  -> Mux( is_rs1_x0, 0.U, 1.U ),
-        dpt_info.isa.rc  -> Mux( is_rs1_x0, 0.U, 1.U ),
-        dpt_info.isa.rwi -> 0.U,
-        dpt_info.isa.rsi -> 0.U,
-        dpt_info.isa.rci -> 0.U
-      ))
-    }
-
-
-  op.csr_chn_phy_i(0) := dpt_info.phy.rs1
-          
-  src1 := Mux(~is_rs1_x0, op.csr_chn_src_o(0), 0.U )
-  src2 := DontCare
-
-
-  {
-    csr_iss_info.fun.rc  := dpt_info.isa.rc | dpt_info.isa.rci
-    csr_iss_info.fun.rs  := dpt_info.isa.rs | dpt_info.isa.rsi
-    csr_iss_info.fun.rw  := dpt_info.isa.rw | dpt_info.isa.rwi
-
-    csr_iss_info.param.op1  := 
-      Mux1H(Seq(
-        dpt_info.isa.rw  -> src1,
-        dpt_info.isa.rs  -> src1,
-        dpt_info.isa.rc  -> src1,
-        dpt_info.isa.rwi -> dpt_info.param.rs1_raw,
-        dpt_info.isa.rsi -> dpt_info.param.rs1_raw,
-        dpt_info.isa.rci -> dpt_info.param.rs1_raw
-      ))
-
-    csr_iss_info.param.op2  := dpt_info.param.imm
-
-
-    csr_iss_info.param.rd0_phy := dpt_info.phy.rd0
-  }
-
-}
-
-class Mul_issue (dpt_info: Mul_dpt_info, buf_valid: Bool, log: Vec[UInt], op: read_op) extends Ele_issue(dpt_info.param, dpt_info.phy, log) {
-  val mul_iss_info = Wire(new Mul_iss_info)
-
-  is_clearRAW := Mux( buf_valid === false.B, false.B, (is_rs1_ready & is_rs2_ready))
-
-  op_cnt := PopCount( Cat(~is_rs1_x0, ~is_rs2_x0) )
-
-
-  op.mul_chn_phy_i(0) := Mux(~is_rs1_x0, dpt_info.phy.rs1, dpt_info.phy.rs2)
-  op.mul_chn_phy_i(1) := dpt_info.phy.rs2
-          
-  src1 := Mux(~is_rs1_x0, op.mul_chn_src_o(0), 0.U )
-  src2 := Mux(~is_rs2_x0, Mux(~is_rs1_x0, op.mul_chn_src_o(1), op.mul_chn_src_o(0)), 0.U )
-
-
-
-  {
-    mul_iss_info.fun  := dpt_info.isa
-
-    mul_iss_info.param.op1  := src1
-    mul_iss_info.param.op2  := src2
-
-    mul_iss_info.param.rd0_phy := dpt_info.phy.rd0
-  }
-}
-
-
-
-class Issue() extends Module {
   val io = IO(new Bundle{
-    val alu_dpt_iss = Flipped(new DecoupledIO(new Alu_dpt_info))
-    val bru_dpt_iss = Flipped(new DecoupledIO(new Bru_dpt_info))
-    val lsu_dpt_iss = Flipped(new DecoupledIO(new Lsu_dpt_info))
-    val csr_dpt_iss = Flipped(new DecoupledIO(new Csr_dpt_info))
-    val mul_dpt_iss = Flipped(new DecoupledIO(new Mul_dpt_info))
-    // val fpu_dpt_iss = Flipped(new DecoupledIO(new Fpu_dpt_info))
-
-
+    val ooo_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Dpt_info)))
     val alu_iss_exe = new DecoupledIO(new Alu_iss_info)
-    val bru_iss_exe = new DecoupledIO(new Bru_iss_info)
-    val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
-    val csr_iss_exe = new DecoupledIO(new Csr_iss_info)
     val mul_iss_exe = new DecoupledIO(new Mul_iss_info)
 
-    val log = Vec(64, Input(UInt(2.W)) )
-    val files = Vec(64, Input(UInt(64.W)))
 
+    val ooo_readOp  = Vec(2,  new iss_readOp_info(dw=64,dp=64))
 
-    val flush = Input(Bool())
   })
-    //dpt buf here
-
-    val op = new read_op(io.files)
-
-    //issue mux: issue fifo <> issue logic
-    val alu_issue = new Alu_issue (io.alu_dpt_iss.bits, io.alu_dpt_iss.valid, io.log, op)
-    val bru_issue = new Bru_issue (io.bru_dpt_iss.bits, io.bru_dpt_iss.valid, io.log, op)
-    val lsu_issue = new Lsu_issue (io.lsu_dpt_iss.bits, io.lsu_dpt_iss.valid, io.log, op)
-    val csr_issue = new Csr_issue (io.csr_dpt_iss.bits, io.csr_dpt_iss.valid, io.log, op)
-    val mul_issue = new Mul_issue (io.mul_dpt_iss.bits, io.mul_dpt_iss.valid, io.log, op)
-
-    //as a ping-pong buf
-    val alu_iss_exe_fifo = Module(new Queue (new Alu_iss_info, 1, true, false))
-    val bru_iss_exe_fifo = Module(new Queue (new Bru_iss_info, 2))
-    val lsu_iss_exe_fifo = Module(new Queue (new Lsu_iss_info, 2))
-    val csr_iss_exe_fifo = Module(new Queue (new Csr_iss_info, 2))
-    val mul_iss_exe_fifo = Module(new Queue (new Mul_iss_info, 2))
-  
-    alu_iss_exe_fifo.reset := reset.asBool | io.flush
-    bru_iss_exe_fifo.reset := reset.asBool | io.flush
-    lsu_iss_exe_fifo.reset := reset.asBool | io.flush
-    csr_iss_exe_fifo.reset := reset.asBool | io.flush
-    mul_iss_exe_fifo.reset := reset.asBool | io.flush
-
-    io.alu_dpt_iss.ready := alu_iss_exe_fifo.io.enq.fire
-    io.bru_dpt_iss.ready := bru_iss_exe_fifo.io.enq.fire
-    io.lsu_dpt_iss.ready := lsu_iss_exe_fifo.io.enq.fire
-    io.csr_dpt_iss.ready := csr_iss_exe_fifo.io.enq.fire
-    io.mul_dpt_iss.ready := mul_iss_exe_fifo.io.enq.fire
-
-    alu_iss_exe_fifo.io.enq.valid := alu_issue.is_clearRAW & (alu_issue.op_cnt === 0.U | op.alu_chn_valid_o)
-    bru_iss_exe_fifo.io.enq.valid := bru_issue.is_clearRAW & (bru_issue.op_cnt === 0.U | op.bru_chn_valid_o)
-    lsu_iss_exe_fifo.io.enq.valid := lsu_issue.is_clearRAW & (lsu_issue.op_cnt === 0.U | op.lsu_chn_valid_o)
-    csr_iss_exe_fifo.io.enq.valid := csr_issue.is_clearRAW & (csr_issue.op_cnt === 0.U | op.csr_chn_valid_o)
-    mul_iss_exe_fifo.io.enq.valid := mul_issue.is_clearRAW & (mul_issue.op_cnt === 0.U | op.mul_chn_valid_o)
-
-    op.alu_chn_valid_i := Mux(alu_issue.is_clearRAW & alu_iss_exe_fifo.io.enq.ready, alu_issue.op_cnt, 0.U)
-    op.bru_chn_valid_i := Mux(bru_issue.is_clearRAW & bru_iss_exe_fifo.io.enq.ready, bru_issue.op_cnt, 0.U)
-    op.lsu_chn_valid_i := Mux(lsu_issue.is_clearRAW & lsu_iss_exe_fifo.io.enq.ready, lsu_issue.op_cnt, 0.U)
-    op.csr_chn_valid_i := Mux(csr_issue.is_clearRAW & csr_iss_exe_fifo.io.enq.ready, csr_issue.op_cnt, 0.U)
-    op.mul_chn_valid_i := Mux(mul_issue.is_clearRAW & mul_iss_exe_fifo.io.enq.ready, mul_issue.op_cnt, 0.U)
 
 
 
 
-    alu_iss_exe_fifo.io.enq.bits := alu_issue.alu_iss_info
-    bru_iss_exe_fifo.io.enq.bits := bru_issue.bru_iss_info
-    lsu_iss_exe_fifo.io.enq.bits := lsu_issue.lsu_iss_info
-    csr_iss_exe_fifo.io.enq.bits := csr_issue.csr_iss_info
-    mul_iss_exe_fifo.io.enq.bits := mul_issue.mul_iss_info
+  val alu_iss_rePort = {
+    val mdl = Module(new RePort( new Alu_iss_info, port=2))
+    mdl
+  }
+
+  val alu_iss_fifo = {
+    val mdl = Module(new MultiPortFifo( new Alu_iss_info, aw = 4, in = 2, out = 1 ))
+    mdl.io.enq <> alu_iss_rePort.io.deq
+    mdl.io.deq(0) <> io.alu_iss_exe
+    mdl.io.flush := false.B
+    mdl 
+  }
 
 
 
+  val mul_iss_rePort = {
+    val mdl = Module(new RePort( new Mul_iss_info, port=2))
+    mdl
+  }
 
-    alu_iss_exe_fifo.io.deq <> io.alu_iss_exe
-    bru_iss_exe_fifo.io.deq <> io.bru_iss_exe
-    lsu_iss_exe_fifo.io.deq <> io.lsu_iss_exe
-    csr_iss_exe_fifo.io.deq <> io.csr_iss_exe
-    mul_iss_exe_fifo.io.deq <> io.mul_iss_exe
+  val mul_iss_fifo = {
+    val mdl = Module(new MultiPortFifo( new Mul_iss_info, aw = 4, in = 2, out = 1 ))
+    mdl.io.enq <> mul_iss_rePort.io.deq
+    mdl.io.deq(0) <> io.mul_iss_exe
+    mdl.io.flush := false.B
+    mdl 
+  }
 
+
+  for ( i <- 0 until 2 ) yield {
+    io.ooo_readOp(i).reg.valid := io.ooo_dpt_iss(i).valid
+    io.ooo_readOp(i).reg.bits  := io.ooo_dpt_iss(i).bits.phy
+
+    alu_iss_rePort.io.enq(i).valid := io.ooo_readOp(i).reg.fire & io.ooo_dpt_iss(i).bits.alu_isa.is_alu
+    mul_iss_rePort.io.enq(i).valid := io.ooo_readOp(i).reg.fire & io.ooo_dpt_iss(i).bits.mul_isa.is_mul
+
+    alu_iss_rePort.io.enq(i).bits := Mux( alu_iss_rePort.io.enq(i).valid, Pkg_alu_iss(io.ooo_readOp(i), io.ooo_dpt_iss(i).bits), 0.U.asTypeOf(new Alu_iss_info) )
+    mul_iss_rePort.io.enq(i).bits := Mux( mul_iss_rePort.io.enq(i).valid, Pkg_mul_iss(io.ooo_readOp(i), io.ooo_dpt_iss(i).bits), 0.U.asTypeOf(new Mul_iss_info) )
+
+    io.ooo_dpt_iss(i).ready :=
+      io.ooo_readOp(i).reg.ready & 
+      Mux1H(Seq(
+        io.ooo_dpt_iss(i).bits.alu_isa.is_alu -> alu_iss_rePort.io.enq(i).ready,
+        io.ooo_dpt_iss(i).bits.mul_isa.is_mul -> mul_iss_rePort.io.enq(i).ready,
+      ))
+
+
+    when( io.ooo_dpt_iss(i).fire ) {
+      assert( io.ooo_readOp(i).reg.fire )
+      assert( PopCount( Seq(alu_iss_rePort.io.enq(i).fire, mul_iss_rePort.io.enq(i).fire) ) === 1.U )    
+    }
+
+  }
+
+  def Pkg_alu_iss(op: iss_readOp_info, dpt: Dpt_info): Alu_iss_info = {
+    val res = Wire(new Alu_iss_info)
+    val src1 = op.dat.op1
+    val src2 = op.dat.op2
+    res.fun.add := dpt.alu_isa.is_fun_add
+    res.fun.slt := dpt.alu_isa.is_fun_slt
+    res.fun.xor := dpt.alu_isa.is_fun_xor
+    res.fun.or  := dpt.alu_isa.is_fun_or
+    res.fun.and := dpt.alu_isa.is_fun_and
+    res.fun.sll := dpt.alu_isa.is_fun_sll
+    res.fun.srl := dpt.alu_isa.is_fun_srl
+    res.fun.sra := dpt.alu_isa.is_fun_sra
+
+    res.param.is_32w  := dpt.alu_isa.is_32w
+    res.param.is_usi  := dpt.alu_isa.is_usi
+
+
+    res.param.dat.op1 :=
+      Mux1H(Seq(
+        dpt.alu_isa.lui    -> 0.U,  dpt.alu_isa.auipc  -> dpt.param.pc,
+        dpt.alu_isa.addi   -> src1, dpt.alu_isa.addiw  -> src1,
+        dpt.alu_isa.slti   -> src1, dpt.alu_isa.sltiu  -> src1,
+        dpt.alu_isa.xori   -> src1, dpt.alu_isa.ori    -> src1,
+        dpt.alu_isa.andi   -> src1, dpt.alu_isa.slli   -> src1,
+        dpt.alu_isa.slliw  -> src1, dpt.alu_isa.srli   -> src1,
+        dpt.alu_isa.srliw  -> src1, dpt.alu_isa.srai   -> src1,
+        dpt.alu_isa.sraiw  -> src1, dpt.alu_isa.add    -> src1,
+        dpt.alu_isa.addw   -> src1, dpt.alu_isa.sub    -> src1,
+        dpt.alu_isa.subw   -> src1, dpt.alu_isa.sll    -> src1,
+        dpt.alu_isa.sllw   -> src1, dpt.alu_isa.slt    -> src1,
+        dpt.alu_isa.sltu   -> src1, dpt.alu_isa.xor    -> src1,
+        dpt.alu_isa.srl    -> src1, dpt.alu_isa.srlw   -> src1,
+        dpt.alu_isa.sra    -> src1, dpt.alu_isa.sraw   -> src1,
+        dpt.alu_isa.or     -> src1, dpt.alu_isa.and    -> src1,
+
+        dpt.alu_isa.wfi    -> 0.U,
+
+    ))
+
+    res.param.dat.op2 :=
+      Mux1H(Seq(
+        dpt.alu_isa.lui    -> dpt.param.imm,      dpt.alu_isa.auipc  -> dpt.param.imm,
+        dpt.alu_isa.addi   -> dpt.param.imm,      dpt.alu_isa.addiw  -> dpt.param.imm,
+        dpt.alu_isa.slti   -> dpt.param.imm,      dpt.alu_isa.sltiu  -> dpt.param.imm,
+        dpt.alu_isa.xori   -> dpt.param.imm,      dpt.alu_isa.ori    -> dpt.param.imm,
+        dpt.alu_isa.andi   -> dpt.param.imm,      dpt.alu_isa.slli   -> dpt.param.imm(5,0),
+        dpt.alu_isa.slliw  -> dpt.param.imm(5,0), dpt.alu_isa.srli   -> dpt.param.imm(5,0),
+        dpt.alu_isa.srliw  -> dpt.param.imm(5,0), dpt.alu_isa.srai   -> dpt.param.imm(5,0),
+        dpt.alu_isa.sraiw  -> dpt.param.imm(5,0), dpt.alu_isa.add    -> src2,
+        dpt.alu_isa.addw   -> src2,               dpt.alu_isa.sub    -> (~src2 + 1.U),
+        dpt.alu_isa.subw   -> (~src2 + 1.U),      dpt.alu_isa.sll    -> src2,
+        dpt.alu_isa.sllw   -> src2,               dpt.alu_isa.slt    -> src2,
+        dpt.alu_isa.sltu   -> src2,               dpt.alu_isa.xor    -> src2,
+        dpt.alu_isa.srl    -> src2,               dpt.alu_isa.srlw   -> src2,
+        dpt.alu_isa.sra    -> src2,               dpt.alu_isa.sraw   -> src2,
+        dpt.alu_isa.or     -> src2,               dpt.alu_isa.and    -> src2,
+
+        dpt.alu_isa.wfi    -> 0.U
+    ))
+    res.param.dat.op3 := 0.U
+    res.param.rd0 := dpt.phy.rd0
+    return res
+  }
+
+  def Pkg_mul_iss(op: iss_readOp_info, dpt: Dpt_info): Mul_iss_info = {
+    val res = Wire(new Mul_iss_info)
+    res.fun := dpt.mul_isa
+ 
+    res.param.dat    := op.dat
+    res.param.rd0    := dpt.phy.rd0
+    return res
+  }
 
 }
 
+
+class In_Order_Issue extends Module with HasFPUParameters{
+    val io = IO(new Bundle{
+      val bru_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
+      val csr_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
+      val lsu_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
+      val fpu_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
+
+      val bru_iss_exe = new DecoupledIO(new Bru_iss_info)
+      val csr_iss_exe = new DecoupledIO(new Csr_iss_info)
+      val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
+      val fpu_iss_exe = new DecoupledIO(new Fpu_iss_info)
+
+      val bru_readOp  = new iss_readOp_info(dw=64,dp=64)
+      val csr_readOp  = new iss_readOp_info(dw=64,dp=64)
+      val lsu_readXOp  = new iss_readOp_info(dw=64,dp=64)
+      val lsu_readFOp  = new iss_readOp_info(dw=65,dp=64)
+      val fpu_readXOp  = new iss_readOp_info(dw=64,dp=64)
+      val fpu_readFOp  = new iss_readOp_info(dw=65,dp=64)
+
+  })
+
+
+
+  val bru_iss_fifo = {
+    val mdl = Module(new Queue( new Bru_iss_info, 4, pipe = true, false ))
+    mdl.io.deq <> io.bru_iss_exe
+    mdl 
+  }
+
+  val csr_iss_fifo = {
+    val mdl = Module(new Queue( new Csr_iss_info, 4, pipe = true, false ))
+    mdl.io.deq <> io.csr_iss_exe
+    mdl 
+  }
+
+  val lsu_iss_fifo = {
+    val mdl = Module(new Queue( new Lsu_iss_info, 4, pipe = true, false ))
+    mdl.io.deq <> io.lsu_iss_exe
+    mdl 
+  }
+
+  val fpu_iss_fifo = {
+    val mdl = Module(new Queue( new Fpu_iss_info, 4, pipe = true, false ))
+    mdl.io.deq <> io.fpu_iss_exe
+    mdl 
+  }
+
+  io.bru_readOp.reg.valid := io.bru_dpt_iss.valid
+  io.bru_readOp.reg.bits  := io.bru_dpt_iss.bits.phy
+
+  bru_iss_fifo.io.enq.valid := io.bru_readOp.reg.fire
+  bru_iss_fifo.io.enq.bits := Mux( bru_iss_fifo.io.enq.valid, Pkg_bru_iss(io.bru_readOp, io.bru_dpt_iss.bits), 0.U.asTypeOf(new Bru_iss_info) )
+
+  io.bru_dpt_iss.ready := io.bru_readOp.reg.ready & bru_iss_fifo.io.enq.ready
+
+  when( io.bru_dpt_iss.fire ) {
+    assert( io.bru_readOp.reg.fire )
+    assert( bru_iss_fifo.io.enq.fire )
+  }
+
+
+
+
+  io.csr_readOp.reg.valid := io.csr_dpt_iss.valid
+  io.csr_readOp.reg.bits  := io.csr_dpt_iss.bits.phy
+
+  csr_iss_fifo.io.enq.valid := io.csr_readOp.reg.fire
+  csr_iss_fifo.io.enq.bits := Mux( csr_iss_fifo.io.enq.valid, Pkg_csr_iss(io.csr_readOp, io.csr_dpt_iss.bits), 0.U.asTypeOf(new Csr_iss_info) )
+
+  io.csr_dpt_iss.ready := io.csr_readOp.reg.ready & csr_iss_fifo.io.enq.ready
+
+  when( io.csr_dpt_iss.fire ) {
+    assert( io.csr_readOp.reg.fire )
+    assert( csr_iss_fifo.io.enq.fire )
+  }
+
+
+  io.lsu_readXOp.reg.valid := io.lsu_dpt_iss.valid
+  io.lsu_readXOp.reg.bits.rs1  := io.lsu_dpt_iss.bits.phy.rs1
+  io.lsu_readXOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.lsu_isa.is_fst, 63.U, io.lsu_dpt_iss.bits.phy.rs2 )
+  io.lsu_readXOp.reg.bits.rs3  := 63.U
+
+  io.lsu_readFOp.reg.valid := io.lsu_dpt_iss.valid
+  io.lsu_readFOp.reg.bits.rs1  := 63.U
+  io.lsu_readFOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.lsu_isa.is_fst, io.lsu_dpt_iss.bits.phy.rs2, 63.U )
+  io.lsu_readFOp.reg.bits.rs3  := 63.U
+
+
+  lsu_iss_fifo.io.enq.valid := io.lsu_readXOp.reg.fire & io.lsu_readFOp.reg.fire
+  lsu_iss_fifo.io.enq.bits := Mux( lsu_iss_fifo.io.enq.valid, Pkg_lsu_iss(io.lsu_readXOp, io.lsu_readFOp, io.lsu_dpt_iss.bits), 0.U.asTypeOf(new Lsu_iss_info) )
+
+  io.lsu_dpt_iss.ready :=
+    io.lsu_readXOp.reg.ready & io.lsu_readFOp.reg.ready & lsu_iss_fifo.io.enq.ready
+
+  when( io.lsu_dpt_iss.fire ) {
+    assert( io.lsu_readXOp.reg.fire & io.lsu_readFOp.reg.fire )
+    assert( lsu_iss_fifo.io.enq.fire )
+  }
+
+
+  io.fpu_readXOp.reg.valid := io.fpu_dpt_iss.valid
+  io.fpu_readXOp.reg.bits.rs1  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, 63.U, io.fpu_dpt_iss.bits.phy.rs1 )
+  io.fpu_readXOp.reg.bits.rs2  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, 63.U, io.fpu_dpt_iss.bits.phy.rs2 )
+  io.fpu_readXOp.reg.bits.rs3  := 63.U
+  io.fpu_readFOp.reg.valid := io.fpu_dpt_iss.valid
+  io.fpu_readFOp.reg.bits.rs1  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs1, 63.U )
+  io.fpu_readFOp.reg.bits.rs2  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs2, 63.U )
+  io.fpu_readFOp.reg.bits.rs3  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs3, 63.U )
+
+  fpu_iss_fifo.io.enq.valid := io.fpu_readXOp.reg.fire & io.fpu_readFOp.reg.fire
+  fpu_iss_fifo.io.enq.bits := Mux( fpu_iss_fifo.io.enq.valid, Pkg_fpu_iss(io.fpu_readXOp, io.fpu_readFOp, io.fpu_dpt_iss.bits), 0.U.asTypeOf(new Fpu_iss_info) )
+
+  io.fpu_dpt_iss.ready :=
+    io.fpu_readXOp.reg.ready & io.fpu_readFOp.reg.ready & fpu_iss_fifo.io.enq.ready
+
+  when( io.fpu_dpt_iss.fire ) {
+    assert( io.fpu_readXOp.reg.fire & io.fpu_readFOp.reg.fire )
+    assert( fpu_iss_fifo.io.enq.fire )
+  }
+
+  def Pkg_bru_iss(op: iss_readOp_info, dpt: Dpt_info): Bru_iss_info = {
+    val res = Wire(new Bru_iss_info)
+    res.fun  := dpt.bru_isa
+    res.param.is_rvc   := dpt.param.is_rvc
+    res.param.pc   := dpt.param.pc
+    res.param.imm   := dpt.param.imm
+    res.param.dat   := op.dat
+    res.param.rd0    := dpt.phy.rd0
+
+    return res
+  }
+
+  def Pkg_csr_iss(op: iss_readOp_info, dpt: Dpt_info): Csr_iss_info = {
+    val res = Wire(new Csr_iss_info)
+
+    res.fun.rc  := dpt.csr_isa.rc | dpt.csr_isa.rci
+    res.fun.rs  := dpt.csr_isa.rs | dpt.csr_isa.rsi
+    res.fun.rw  := dpt.csr_isa.rw | dpt.csr_isa.rwi
+
+    res.param.dat.op1 := 
+      Mux1H(Seq(
+        dpt.csr_isa.rw  -> op.dat.op1, dpt.csr_isa.rwi -> dpt.param.raw.rs1,
+        dpt.csr_isa.rs  -> op.dat.op1, dpt.csr_isa.rsi -> dpt.param.raw.rs1,
+        dpt.csr_isa.rc  -> op.dat.op1, dpt.csr_isa.rci -> dpt.param.raw.rs1
+      ))
+
+    res.param.dat.op2 := dpt.param.imm
+    res.param.dat.op3 := 0.U
+    res.param.rd0    := dpt.phy.rd0
+
+    return res
+  }
+
+
+  def Pkg_lsu_iss(Xop: iss_readOp_info, Fop: iss_readOp_info, dpt: Dpt_info): Lsu_iss_info = {
+    val res = Wire(new Lsu_iss_info)
+
+    res.fun := dpt.lsu_isa
+
+    res.param.dat.op1 := (Xop.dat.op1.asSInt + dpt.param.imm.asSInt()).asUInt()
+    res.param.dat.op2 :=
+      Mux(
+        dpt.lsu_isa.is_fst,
+        ieee(unbox(Fop.dat.op2, 1.U, None), t = FType.D),
+        Xop.dat.op2
+        
+      )
+    res.param.dat.op3 := 0.U
+
+    res.param.rd0 := dpt.phy.rd0
+
+    return res
+  }
+
+  def Pkg_fpu_iss(Xop: iss_readOp_info, Fop: iss_readOp_info, dpt: Dpt_info): Fpu_iss_info = {
+    val res = Wire(new Fpu_iss_info)
+
+    res.fun := dpt.fpu_isa
+
+    res.param.dat.op1 :=
+      Mux(
+        dpt.fpu_isa.is_fop,
+        Fop.dat.op1,
+        Mux( dpt.fpu_isa.is_fun_fcsri, dpt.param.raw.rs1, Xop.dat.op1 )
+      )
+
+    res.param.dat.op2 :=
+      Mux(
+        dpt.fpu_isa.is_fop,
+        Fop.dat.op2,
+        Mux( dpt.fpu_isa.is_fun_fcsr, dpt.param.imm, Xop.dat.op2)
+      )
+    res.param.dat.op3 := Fop.dat.op3
+
+    res.param.rd0 := dpt.phy.rd0
+
+    res.param.rm := dpt.param.rm
+
+    return res
+  }
+}
+
+
+
+
+class Issue extends Module {
+  val io = IO(new Bundle{
+    val ooo_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Dpt_info)))
+    val bru_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
+    val csr_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
+    val lsu_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
+    val fpu_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
+
+    val ooo_readOp  = Vec(2,  new iss_readOp_info(dw=64,dp=64))
+    val bru_readOp  = new iss_readOp_info(dw=64,dp=64)
+    val csr_readOp  = new iss_readOp_info(dw=64,dp=64)
+    val lsu_readXOp  = new iss_readOp_info(dw=64,dp=64)
+    val lsu_readFOp  = new iss_readOp_info(dw=65,dp=64)
+    val fpu_readXOp  = new iss_readOp_info(dw=64,dp=64)
+    val fpu_readFOp  = new iss_readOp_info(dw=65,dp=64)
+
+    val alu_iss_exe = new DecoupledIO(new Alu_iss_info)
+    val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
+    val mul_iss_exe = new DecoupledIO(new Mul_iss_info)
+    val bru_iss_exe = new DecoupledIO(new Bru_iss_info)
+    val csr_iss_exe = new DecoupledIO(new Csr_iss_info)
+    val fpu_iss_exe = new DecoupledIO(new Fpu_iss_info)
+
+  })
+
+
+  val ooo_issue = {
+    val mdl = Module(new Out_of_Order_Issue)
+    mdl.io.ooo_dpt_iss <> io.ooo_dpt_iss
+    mdl.io.ooo_readOp  <> io.ooo_readOp
+    mdl.io.alu_iss_exe <> io.alu_iss_exe
+    mdl.io.mul_iss_exe <> io.mul_iss_exe
+    mdl
+  }
+
+  val ito_issue = {
+    val mdl = Module(new In_Order_Issue)
+    mdl.io.bru_dpt_iss <> io.bru_dpt_iss
+    mdl.io.csr_dpt_iss <> io.csr_dpt_iss
+    mdl.io.lsu_dpt_iss <> io.lsu_dpt_iss
+    mdl.io.fpu_dpt_iss <> io.fpu_dpt_iss
+    mdl.io.bru_readOp  <> io.bru_readOp
+    mdl.io.csr_readOp  <> io.csr_readOp
+    mdl.io.lsu_readXOp  <> io.lsu_readXOp
+    mdl.io.lsu_readFOp  <> io.lsu_readFOp
+    mdl.io.fpu_readXOp  <> io.fpu_readXOp
+    mdl.io.fpu_readFOp  <> io.fpu_readFOp
+    mdl.io.bru_iss_exe <> io.bru_iss_exe
+    mdl.io.csr_iss_exe <> io.csr_iss_exe
+    mdl.io.lsu_iss_exe <> io.lsu_iss_exe
+    mdl.io.fpu_iss_exe <> io.fpu_iss_exe
+    mdl
+  }
+}

@@ -1,13 +1,7 @@
-/*
-* @Author: Ruige Lee
-* @Date:   2021-03-29 14:37:39
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-04-15 11:42:22
-*/
 
 
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -35,7 +29,7 @@ import rift2Core.privilege.csrFiles._
 class Csr extends Module {
   val io = IO(new Bundle{
     val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
-    val csr_exe_iwb = new DecoupledIO(new Exe_iwb_info)
+    val csr_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
 
     val csr_addr = ValidIO(UInt(12.W))
     val csr_data = Flipped(ValidIO(UInt(64.W)))
@@ -45,7 +39,7 @@ class Csr extends Module {
     val flush = Input(Bool())
   })
 
-  val csr_exe_iwb_fifo = Module( new Queue( new Exe_iwb_info, 1, true, false ) )
+  val csr_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, true, false ) )
   io.csr_exe_iwb <> csr_exe_iwb_fifo.io.deq
   csr_exe_iwb_fifo.reset := reset.asBool | io.flush
 
@@ -59,8 +53,8 @@ class Csr extends Module {
   def rs = io.csr_iss_exe.bits.fun.rs
   def rc = io.csr_iss_exe.bits.fun.rc
   
-  def dat = io.csr_iss_exe.bits.param.op1
-  def addr = io.csr_iss_exe.bits.param.op2
+  def dat = io.csr_iss_exe.bits.param.dat.op1
+  def addr = io.csr_iss_exe.bits.param.dat.op2
 
   def dontWrite = (dat === 0.U) & ( rs | rc )
 
@@ -78,8 +72,8 @@ class Csr extends Module {
 
   csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready & io.csr_data.valid
   csr_exe_iwb_fifo.io.enq.bits.res := io.csr_data.bits
+  csr_exe_iwb_fifo.io.enq.bits.rd0 := io.csr_iss_exe.bits.param.rd0
 
-  csr_exe_iwb_fifo.io.enq.bits.rd0_phy := io.csr_iss_exe.bits.param.rd0_phy
 
 }
 

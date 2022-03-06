@@ -1,14 +1,5 @@
-
-
 /*
-* @Author: Ruige Lee
-* @Date:   2021-03-23 10:42:59
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-03-23 19:17:18
-*/
-
-/*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -27,271 +18,253 @@ package rift2Core.backend
 
 import chisel3._
 import chisel3.util._
-
 import rift2Core.define._
+
 import rift2Core.diff._
 
-class Info_rename_op extends Bundle{
-  val raw = UInt(5.W)
-  val phy = UInt(6.W)
+
+class dpt_lookup_info(dp: Int) extends Bundle{
+  val rsp = Input(new Register_source(dp))
+  val req = Output(new Register_source(32))
 }
 
-class Info_writeback_op extends Bundle{
-  val phy = UInt(6.W)
-  val dnxt   = UInt(64.W)
+/**
+  * rename channel is located in dpt-stage,
+  * the raw-rs needs lookup the phy-rs num ( 1x, 2x, 3x raw-rs -> phy-rs ),
+  * the rd should rename and malloc 1 new phy, 
+  */
+class dpt_rename_info(dp: Int) extends Bundle{
+  val rsp = Input(new Register_dstntn(dp))
+  val req = Decoupled(new Register_dstntn(32))
 }
 
-class Info_commit_op extends Bundle{
-  val raw = UInt(5.W)
-  val phy = UInt(6.W)
+class iss_readOp_info(dw: Int, dp: Int) extends Bundle{
+  val reg = Decoupled(new Register_source(dp))
+  val dat = Input(new Operation_source(dw))
 }
 
+class Info_commit_op(dp:Int) extends Bundle{
+  val raw = UInt(5.W)  
+  val phy = UInt((log2Ceil(dp)).W)
 
-class Regfiles extends Module{
-  val io = IO(new Bundle{
+  val is_abort = Bool()
+  val toX = Bool()
+  val toF = Bool()
+}
 
+class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends Module{
+  val io = IO( new Bundle{
 
+    val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
+    val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info(dp)) )
+    /** read operators based on idx, must success */
+    val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dw, dp)) )
+    /** writeBack request from exeUnit */
+    val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(dw,dp))))
+    /** Commit request from commitUnit */
+    val commit = Vec(cmm_chn, Flipped(Decoupled(new Info_commit_op(dp))))
 
-    val rn_op = Vec(2, Flipped(ValidIO( new Info_rename_op )))
-    val wb_op = Vec(2, Flipped(ValidIO( new Info_writeback_op)))
-    val cm_op = Vec(2, Flipped(ValidIO( new Info_commit_op )))
-
-
-    val files = Vec(64, Output(UInt(64.W)))
-    val log = Vec(64, Output(UInt(2.W)))
-    val rn_ptr = Vec(32, Output(UInt(6.W)))
-
-
-    val flush = Input(Bool())
-
-    val diff_register = Output(new Info_abi_reg)
+    val diffReg = Output(Vec(32, UInt(dw.W)))
   })
 
-
-
-
   /**
-  * Physical register files
-  */
-  val files = RegInit( VecInit(Seq.fill(64)(0.U(64.W)) ))
-
-  /**
-    * register files' operation log
-    * 
-    * @note "b00".U at Free
-    * @note "b01".U at Rename
-    * @note "b1x".U at WriteBack
+    * dp-1 (63) files exist in this version,'
+    * @note the file(dp) is assert to be Zero
     */
-  val regLog = RegInit( VecInit( Seq.fill(32)("b11".U(2.W) ) ++ Seq.fill(32)(0.U(2.W) )) )
-
-  
-  /**
-  * Indicate which physical register is the rename one
-  * 
-  * @note don't care at reset
-  * @note 0.U ~ 63.U
-  */
-  val rename_ptr = RegInit( VecInit( for ( i <- 0 until 32 ) yield (i.U(6.W))  ))
-
+  val files_reg = RegInit( VecInit( Seq.fill(dp-1)(0.U(dw.W)) ))
+  val files = {
+    val res = Wire( Vec(dp, UInt(dw.W)) )
+    for ( i <- 0 until dp-1 ) yield { res(i) := files_reg(i) }
+    res(dp-1) := 0.U
+    res
+  }
   
 
   /**
-  * Indicate which physical register is the archiitecture one
-  * 
-  * @note don't care at reset
-  * @note 0.U ~ 63.U
-  */
-  val archit_ptr = RegInit( VecInit( for ( i <- 0 until 32 ) yield (i.U(6.W))  ))
+    * dp-1 (63) log exist in this version,
+    * @note the log(dp) is assert to be "b11".U
+    */ 
+  val log_reg = 
+    RegInit( VecInit( Seq.fill(32)("b11".U(2.W) ) ++ Seq.fill(dp-32-1)(0.U(2.W) )))
+
+  val log = {
+    val res = Wire( Vec(dp, UInt(2.W)) )
+    for ( i <- 0 until dp-1 ) yield { res(i) := log_reg(i) }
+    res(dp-1) := "b11".U
+    res
+  }
+
+  /**
+    * index that 32 renamed register-sources point to
+    */
+  val rename_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U(log2Ceil(dp).W)} ) )
+
+  /**
+    * index that 32 commited register-sources point to
+    */  
+  val archit_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U(log2Ceil(dp).W)} ) )
+
+  /**
+    * finding out the first Free-phy-register
+    */ 
+  val molloc_idx = Wire(Vec(rn_chn, UInt((log2Ceil(dp)).W)))
+  for ( i <- 0 until rn_chn ) {
+    molloc_idx(i) := 0.U
+    for ( j <- dp-1 to 0 by -1 ) {
+      if ( i == 0 ) { when( log(j) === 0.U ) { molloc_idx(i) := j.U }  }
+      else { when( log(j) === 0.U && j.U > molloc_idx(i-1) ) { molloc_idx(i) := j.U } }
+    }
+  }
 
 
+  for ( i <- 0 until rn_chn ) {
 
 
-  io.files := files
-  io.log := regLog
-  io.rn_ptr := rename_ptr
+    when( io.dpt_rename(i).req.fire ) {
+      val idx = io.dpt_rename(i).req.bits.rd0
+      assert( log(molloc_idx(i)) === "b00".U )
+      log_reg(molloc_idx(i)) := "b01".U //may be override by flush
+      rename_ptr(idx) := molloc_idx(i) //may be override by flush
+    }
 
-  for ( i <- 0 until 2 ) yield {
-    when( io.wb_op(i).valid ) {
-      files(io.wb_op(i).bits.phy) := io.wb_op(i).bits.dnxt
+    io.dpt_rename(i).req.ready := log.count( (x:UInt) => ( x === 0.U ) ) > i.U
+    io.dpt_rename(i).rsp.rd0 := molloc_idx(i)
+
+  }
+
+
+  for ( i <- 0 until rop_chn ) yield {
+    val idx1 = io.iss_readOp(i).reg.bits.rs1
+    val idx2 = io.iss_readOp(i).reg.bits.rs2
+    val idx3 = io.iss_readOp(i).reg.bits.rs3
+
+    when( io.iss_readOp(i).reg.fire ) {
+      io.iss_readOp(i).dat.op1 := Mux(idx1 === 63.U, 0.U, files(idx1))
+      io.iss_readOp(i).dat.op2 := Mux(idx2 === 63.U, 0.U, files(idx2))
+      io.iss_readOp(i).dat.op3 := Mux(idx3 === 63.U, 0.U, files(idx3))
+    } .otherwise {
+      io.iss_readOp(i).dat.op1 := 0.U
+      io.iss_readOp(i).dat.op2 := 0.U
+      io.iss_readOp(i).dat.op3 := 0.U
+    }
+    io.iss_readOp(i).reg.ready :=
+      (log(idx1) === "b11".U | idx1 === 63.U ) &
+      (log(idx2) === "b11".U | idx2 === 63.U ) &
+      (log(idx3) === "b11".U | idx3 === 63.U ) 
+
+  }
+
+  for ( i <- 0 until wb_chn ) yield {
+    when( io.exe_writeBack(i).fire ) {
+      val idx = io.exe_writeBack(i).bits.rd0
+      assert( log(idx) === "b01".U, "Assert Failed when writeback at chn" + i + ", log(" + idx + ")" )
+      log_reg(idx) := "b11".U
+      files_reg(idx) := io.exe_writeBack(i).bits.res
+    }
+    io.exe_writeBack(i).ready := true.B
+  }
+
+  {
+    val raw = io.commit.map{ x => x.bits.raw }
+    val phy = io.commit.map{ x => x.bits.phy }
+    val idx_pre = io.commit.map{ x => archit_ptr(x.bits.raw) }
+
+    for ( i <- 0 until cmm_chn ) {
+      def m = cmm_chn-1-i
+
+      //ready 和abort可能互斥，需要优化接口
+      io.commit(m).ready := log(phy(m)) === "b11".U
+
+      //暂时CMM只支持chn0 进行abort
+      when( io.commit(m).valid & io.commit(m).bits.is_abort & m.U === 0.U) {
+        /** clear all log to 0, except that archit_ptr point to, may be override */
+        for ( j <- 0 until dp-1 ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
+        for ( n <- 0 until m ) yield { assert( io.commit(n).valid & ~io.commit(n).bits.is_abort) }
+      }
+      when( io.commit(m).fire & ~io.commit(m).bits.is_abort ) {
+        /** override the log(clear) */
+        for ( j <- 0 until dp-1 ) yield { when(j.U === idx_pre(m) ) {log_reg(j) := 0.U}  }
+      }
+
+
+      when( io.commit(m).fire & ~io.commit(m).bits.is_abort) {
+        archit_ptr(raw(m)) := phy(m)
+      }
+
+      //暂时CMM只支持chn0 进行abort
+      when (io.commit(m).valid & io.commit(m).bits.is_abort & m.U === 0.U) {
+        for ( j <- 0 until 32 ) yield {
+          rename_ptr(j) := archit_ptr(j)
+          for ( n <- 0 until m ) {
+            when( j.U === raw(n) ) { rename_ptr(j) := phy(n) }
+          }
+
+        }
+      }
+    }
+  }
+
+
+  archit_ptr.map{
+    i => assert( log(i) === "b11".U, "Assert Failed, archit point to should be b11.U!\n")
+  }
+
+  for ( i <- 0 until 32 ) yield {
+    io.diffReg(i) := files(archit_ptr(i))    
+  }
+}
+
+class XRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends RegFiles(dw, dp, rn_chn, rop_chn, wb_chn, cmm_chn ) {
+
+  for ( i <- 0 until rn_chn ) {
+    val idx1 = io.dpt_lookup(i).req.rs1
+    val idx2 = io.dpt_lookup(i).req.rs2
+
+    if ( i == 0) {
+      io.dpt_lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )
+      io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
+      io.dpt_lookup(i).rsp.rs3 := 63.U
+    } else {
+      io.dpt_lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )
+      io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
+      io.dpt_lookup(i).rsp.rs3 := 63.U
+      for ( j <- 0 until i ) {
+        when( (io.dpt_rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
+        when( (io.dpt_rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
+      }
     }
   }
 
 
 
+}
+
+class FRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends RegFiles(dw, dp, rn_chn, rop_chn, wb_chn, cmm_chn ) {
 
 
-  val is_rn  = VecInit( io.rn_op(0).valid,    io.rn_op(1).valid )
-  val rn_raw = VecInit( io.rn_op(0).bits.raw, io.rn_op(1).bits.raw )
-  val rn_phy = VecInit( io.rn_op(0).bits.phy, io.rn_op(1).bits.phy )
+  for ( i <- 0 until rn_chn ) {
+    val idx1 = io.dpt_lookup(i).req.rs1
+    val idx2 = io.dpt_lookup(i).req.rs2
+    val idx3 = io.dpt_lookup(i).req.rs3
 
-  val is_wb  = VecInit( for ( k <- 0 until 2 ) yield { io.wb_op(k).valid } )
-  val wb_phy = VecInit( for ( k <- 0 until 2 ) yield { io.wb_op(k).bits.phy } )
-
-  val is_cm = VecInit( io.cm_op(0).valid,     io.cm_op(1).valid )
-  val cm_raw = VecInit( io.cm_op(0).bits.raw, io.cm_op(1).bits.raw )
-  val cm_phy = VecInit( io.cm_op(0).bits.phy, io.cm_op(1).bits.phy )
-
-
-  for ( i <- 0 until 64 ) yield {
-    regLog(i) := MuxCase( regLog(i), Array(
-      ( is_cm(1) & archit_ptr(cm_raw(1)) === i.U ) -> 0.U(2.W), //when reg i is commit, the last one should be free
-    
-      ( is_cm(0) & Mux( is_cm(1) & cm_raw(1) === cm_raw(0), cm_phy(0), archit_ptr(cm_raw(0))) === i.U ) -> 0.U(2.W), //when reg i is commit, the last one should be free
-      
-      ( io.flush & is_cm(0) & cm_phy(0) === i.U ) -> regLog(i),
-      ( io.flush )                                -> Mux( archit_ptr.contains(i.U), 3.U, 0.U ),
-      ( is_rn(0) & rn_phy(0) === i.U )           -> 1.U(2.W),
-      ( is_rn(1) & rn_phy(1) === i.U )           -> 1.U(2.W),
-
-      ( is_wb(0) & wb_phy(0) === i.U )            -> (regLog(i) | "b10".U),
-      ( is_wb(1) & wb_phy(1) === i.U )            -> (regLog(i) | "b10".U),
-      // ( is_wb(2) & wb_phy(2) === i.U )            -> (regLog(i) | "b10".U),
-      // ( is_wb(3) & wb_phy(3) === i.U )            -> (regLog(i) | "b10".U),
-      // ( is_wb(4) & wb_phy(4) === i.U )            -> (regLog(i) | "b10".U)
-    ))
-
-    assert( ~(is_cm(1) & archit_ptr(cm_raw(1)) === i.U & regLog(i) =/= "b11".U),  "Assert Fail at register Files, when cm_op(1) commit, regLog(i) in cm_op(1) should be \"b11\".U"  )
-    assert( ~(is_cm(0) & Mux( is_cm(1) & cm_raw(1) === cm_raw(0), cm_phy(0), archit_ptr(cm_raw(0))) === i.U & regLog(i) =/= "b11".U ),  "Assert Fail at register Files, when cm_op(0) commit, regLog(i) in cm_op(0) should be \"b11\".U"  )
-    assert( ~((io.flush & is_cm(0) & cm_phy(0) === i.U) & regLog(i) =/= "b11".U), "Assert Fail at register Files, when cm_op(0) commit, and cm_op(1) is flush, regLog(i) in cm_op(0) should be \"b11\".U" )
-    assert( ~(is_rn(0) & rn_phy(0) === i.U & regLog(i) =/= 0.U), "Assert Fail at register Files, when rn_op(0), regLog(i) in cm_op(0) should be \"b00\".U" )
-    assert( ~(is_rn(1) & rn_phy(1) === i.U & regLog(i) =/= 0.U), "Assert Fail at register Files, when rn_op(0), regLog(i) in cm_op(0) should be \"b00\".U" )
-    
-    assert( ~(is_wb(0) & wb_phy(0) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(0), regLog(i) in cm_op(0) should be \"b01\".U" )
-    assert( ~(is_wb(1) & wb_phy(1) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(1), regLog(i) in cm_op(0) should be \"b01\".U" )
-    // assert( ~(is_wb(2) & wb_phy(2) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(2), regLog(i) in cm_op(0) should be \"b01\".U" )
-    // assert( ~(is_wb(3) & wb_phy(3) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(3), regLog(i) in cm_op(0) should be \"b01\".U" )
-    // assert( ~(is_wb(4) & wb_phy(4) === i.U & regLog(i) =/= "b01".U), "Assert Fail at register Files, when wb_op(4), regLog(i) in cm_op(0) should be \"b01\".U" )
+    if ( i == 0) {
+      io.dpt_lookup(i).rsp.rs1 := rename_ptr(idx1)
+      io.dpt_lookup(i).rsp.rs2 := rename_ptr(idx2)
+      io.dpt_lookup(i).rsp.rs3 := rename_ptr(idx3)
+    } else {
+      io.dpt_lookup(i).rsp.rs1 := rename_ptr(idx1)
+      io.dpt_lookup(i).rsp.rs2 := rename_ptr(idx2)
+      io.dpt_lookup(i).rsp.rs3 := rename_ptr(idx3) 
+      for ( j <- 0 until i ) {
+        when( (io.dpt_rename(j).req.bits.rd0 === idx1) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
+        when( (io.dpt_rename(j).req.bits.rd0 === idx2) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
+        when( (io.dpt_rename(j).req.bits.rd0 === idx3) ) { io.dpt_lookup(i).rsp.rs3 := molloc_idx(j) }
+      }
+    }
   }
 
 
 
-  when( is_cm(1) ) { archit_ptr(cm_raw(1)) := cm_phy(1) }
-  when( is_cm(0) & ~(cm_raw(0) === cm_raw(1) & is_cm(1)) ) { archit_ptr(cm_raw(0)) := cm_phy(0) }
-
-  for( i <- 0 until 64 ) yield {
-    assert(
-      PopCount( archit_ptr.map{_ === i.U} ) <= 1.U, "Assert Failed at Regfiles, More than one archit_ptr point to "+i
-    )
-  }
-
-
-
-  for ( i <- 0 until 32 ) yield {
-    assert( regLog(archit_ptr(i)) === "b11".U, "Assert Fail at regisiter Files, the reglog archit_ptr, where pointer: " + i + ", points to should be \"b11\".U" )
-  }
-
-
-
-  for ( i <- 0 until 32 ) yield {
-    // for ( j <- 0 until 2 ) yield {
-      rename_ptr(i) := MuxCase( rename_ptr(i), Array(
-        io.flush                       -> Mux(
-                                            is_cm(1) & i.U === cm_raw(1), cm_phy(1),
-                                            Mux(
-                                              is_cm(0) & i.U === cm_raw(0), cm_phy(0), archit_ptr(i) )
-                                            ),
-
-        (is_rn(1) & i.U === rn_raw(1)) -> rn_phy(1),
-        (is_rn(0) & i.U === rn_raw(0)) -> rn_phy(0)
-      ))
-
-  }
-
-
-
-
-
-  // for ( i <- 0 until 64) yield {
-
-
-  //   when(io.cm_op(i)) {
-  //     // it asserts in commit state that only one archit_ptr will commit in one cycle
-  //     regLog(archit_ptr(i)) := 0.U(2.W) //when reg i is commit, the last one should be free
-  //     archit_ptr(i) := j.U
-  //     when( io.flush ) {
-  //       rename_ptr(i) := j.U				
-  //     }
-
-  //   }
-  //   .elsewhen(io.flush) {
-  //     regLog(i)(j) := Mux( archit_ptr(i) === j.U , 3.U , 0.U)
-  //     when(~(io.cm_op(i).contains(true.B))) {
-  //       rename_ptr(i) := archit_ptr(i)				
-  //     }
-        
-
-
-  //   }
-  //   .otherwise{
-  //     when(io.rn_op(i)(j)) {
-  //       regLog(i)(j) := 1.U(2.W)
-  //       rename_ptr(i) := j.asUInt()
-  //     }
-  //     when(wb_op(i)(j)) {
-  //       regLog(i)(j) := (regLog(i)(j) | "b10".U) //when hint will stay on 2, when normal wb will be 3
-  //     }
-
-
-  //   }
-
-  
-  // }
-
-
-  assert( ~(io.rn_op(0).valid & io.rn_op(1).valid & (io.rn_op(0).bits.phy === io.rn_op(1).bits.phy)), "Assert Fail at Register Files, a physical register is renamed twice in one cycle, that's impossible!")
-  assert( ~(io.wb_op(0).valid & io.wb_op(1).valid & (io.wb_op(0).bits.phy === io.wb_op(1).bits.phy)), "Assert Fail at Register Files, a physical register is written back twice in one cycle, that's impossible!")
-  assert( ~(io.cm_op(0).valid & io.cm_op(1).valid & (io.cm_op(0).bits.phy === io.cm_op(1).bits.phy)), "Assert Fail at Register Files, a physical register is committed twice in one cycle, that's impossible!")
-
-  // assert( ~(io.rn_op(0).valid & io.rn_op(1).valid & (io.rn_op(0).bits.raw === io.rn_op(1).bits.raw)), "Assert Fail at Register Files, a RAW register is renamed twice in one cycle, it's not allow in this version")
-  // assert( ~(io.cm_op(0).valid & io.cm_op(1).valid & (io.cm_op(0).bits.raw === io.cm_op(1).bits.raw)), "Assert Fail at Register Files, a RAW register is committed twice in one cycle, it's not allow in this version")
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  io.diff_register.zero := files(archit_ptr(0))
-  io.diff_register.ra   := files(archit_ptr(1))
-  io.diff_register.sp   := files(archit_ptr(2))
-  io.diff_register.gp   := files(archit_ptr(3))
-  io.diff_register.tp   := files(archit_ptr(4))
-  io.diff_register.t0   := files(archit_ptr(5))
-  io.diff_register.t1   := files(archit_ptr(6))
-  io.diff_register.t2   := files(archit_ptr(7))
-  io.diff_register.s0   := files(archit_ptr(8))
-  io.diff_register.s1   := files(archit_ptr(9))
-  io.diff_register.a0   := files(archit_ptr(10))
-  io.diff_register.a1   := files(archit_ptr(11))
-  io.diff_register.a2   := files(archit_ptr(12))
-  io.diff_register.a3   := files(archit_ptr(13))
-  io.diff_register.a4   := files(archit_ptr(14))
-  io.diff_register.a5   := files(archit_ptr(15))
-  io.diff_register.a6   := files(archit_ptr(16))
-  io.diff_register.a7   := files(archit_ptr(17))
-  io.diff_register.s2   := files(archit_ptr(18))
-  io.diff_register.s3   := files(archit_ptr(19))
-  io.diff_register.s4   := files(archit_ptr(20))
-  io.diff_register.s5   := files(archit_ptr(21))
-  io.diff_register.s6   := files(archit_ptr(22))
-  io.diff_register.s7   := files(archit_ptr(23))
-  io.diff_register.s8   := files(archit_ptr(24))
-  io.diff_register.s9   := files(archit_ptr(25))
-  io.diff_register.s10  := files(archit_ptr(26))
-  io.diff_register.s11  := files(archit_ptr(27))
-  io.diff_register.t3   := files(archit_ptr(28))
-  io.diff_register.t4   := files(archit_ptr(29))
-  io.diff_register.t5   := files(archit_ptr(30))
-  io.diff_register.t6   := files(archit_ptr(31))
 
 
 }

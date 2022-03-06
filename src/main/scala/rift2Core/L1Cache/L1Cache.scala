@@ -2,7 +2,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2021 Ruige Lee <m201772520@hust.edu.cn>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -43,9 +43,9 @@ trait HasL1CacheParameters extends HasCacheParameters
 
 
 
-abstract class L1CacheModule(implicit val p: Parameters) extends MultiIOModule with HasL1CacheParameters { def io: Record }
+abstract class L1CacheModule(implicit val p: Parameters) extends Module with HasL1CacheParameters { def io: Record }
 abstract class L1CacheBundle(implicit val p: Parameters) extends Bundle with HasL1CacheParameters
-
+abstract class L1CacheObject(implicit val p: Parameters) extends HasL1CacheParameters
 
 
 

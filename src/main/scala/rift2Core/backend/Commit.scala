@@ -1,13 +1,6 @@
 
 /*
-* @Author: Ruige Lee
-* @Date:   2021-04-14 11:24:59
-* @Last Modified by:   Ruige Lee
-* @Last Modified time: 2021-05-17 17:02:17
-*/
-
-/*
-  Copyright (c) 2020 - 2021 Ruige Lee <wut.ruigeli@gmail.com>
+  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -38,15 +31,14 @@ import rift2Core.privilege.csrFiles._
 import rift2Core.diff._
 
 /** commit
-  * @author Ruige Lee
+  * 
   * 
   * 
   */
 class Commit extends Privilege with Superscalar {
   val io = IO(new Bundle{
-
-    val cm_op = Vec(2, ValidIO( new Info_commit_op ))
-    val log = Input(Vec(64, UInt(2.W)))
+    val cm_op = Vec(2, Decoupled(new Info_commit_op(64)))
+    // val log = Input(Vec(64, UInt(2.W)))
 
 
     val rod_i = Vec(2, Flipped(new DecoupledIO( new Info_reorder_i ) ))
@@ -68,9 +60,11 @@ class Commit extends Privilege with Superscalar {
 
     val ifence = Output(Bool())
 
-
-
     val cmm_mmu = Output( new Info_cmm_mmu )
+
+
+    val fcsr = Output(UInt(24.W))
+    val fcsr_cmm_op = Flipped(DecoupledIO( new Exe_Port ) )
 
     val rtc_clock = Input(Bool())
 
@@ -81,16 +75,27 @@ class Commit extends Privilege with Superscalar {
 
   val rd0_raw = VecInit( io.rod_i(0).bits.rd0_raw, io.rod_i(1).bits.rd0_raw )
   val rd0_phy = VecInit( io.rod_i(0).bits.rd0_phy, io.rod_i(1).bits.rd0_phy )
+  val is_xcmm = VecInit( io.rod_i.map{ x => x.bits.is_xcmm }: Seq[Bool] )
+  val is_fcmm = VecInit( io.rod_i.map{ x => x.bits.is_fcmm }: Seq[Bool] )
 
+  io.cm_op(0).bits.phy := rd0_phy(0)
+  io.cm_op(1).bits.phy := rd0_phy(1)
+  io.cm_op(0).bits.raw := rd0_raw(0)
+  io.cm_op(1).bits.raw := rd0_raw(1)
 
+  io.cm_op(0).bits.toX := is_xcmm(0)
+  io.cm_op(1).bits.toX := is_xcmm(1)
+  io.cm_op(0).bits.toF := is_fcmm(0)
+  io.cm_op(1).bits.toF := is_fcmm(1)
+  
   val is_wb_v =
     VecInit(
-      (io.log(rd0_phy(0)) === 3.U) & (io.rod_i(0).valid),
-      (io.log(rd0_phy(1)) === 3.U) & (io.rod_i(1).valid)
+      (io.cm_op(0).ready & (io.rod_i(0).valid)),
+      (io.cm_op(1).ready & (io.rod_i(1).valid))
     )
 
   //bru commit ilp
-  io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (io.log(rd0_phy(0)) =/= 3.U)
+  io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (~io.cm_op(0).ready)
 
   val is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | io.rod_i(0).bits.is_su | ~is_wb_v(0) | (io.rod_i(0).bits.rd0_raw === io.rod_i(1).bits.rd0_raw)
   val is_2nd_solo = io.is_commit_abort(1) | io.rod_i(1).bits.is_csr | io.rod_i(1).bits.is_su
@@ -161,10 +166,12 @@ class Commit extends Privilege with Superscalar {
 
     val is_illeage_v = {
       val is_csr_illegal = VecInit(
-        (is_csrr_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_csr & ~is_wb_v(0)) |
-        (is_csrw_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_csr & is_wb_v(0)) ,
-        (is_csrr_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_csr & ~is_wb_v(1)) |
-        (is_csrw_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_csr & is_wb_v(1))
+        (is_csrr_illegal  & io.rod_i(0).valid & io.rod_i(0).bits.is_csr  & ~is_wb_v(0)) |
+        (is_csrw_illegal  & io.rod_i(0).valid & io.rod_i(0).bits.is_csr  &  is_wb_v(0))  |
+        (is_fcsrw_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_fpu &  is_wb_v(0)),
+        (is_csrr_illegal  & io.rod_i(1).valid & io.rod_i(1).bits.is_csr  & ~is_wb_v(1)) |
+        (is_csrw_illegal  & io.rod_i(1).valid & io.rod_i(1).bits.is_csr  &  is_wb_v(1)) |
+        (is_fcsrw_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_fpu &  is_wb_v(1))
       )
 
       val is_ill_sfence = VecInit(
@@ -185,14 +192,20 @@ class Commit extends Privilege with Superscalar {
       val is_ill_sRet_v = VecInit(
         io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b01".U & mstatus(22)) ),
         io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b01".U & mstatus(22)) )
-      
       )
+
+      
+
+      val is_ill_fpus_v = ( 0 until 2 ).map{ i => 
+        (is_wb_v(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fpu) & mstatus(14,13) === 0.U)
+      }: Seq[Bool]
+      
 
 
 
       VecInit(
-        (io.rod_i(0).bits.is_illeage | is_csr_illegal(0) | is_ill_sfence(0) | is_ill_wfi_v(0) | is_ill_mRet_v(0) | is_ill_sRet_v(0) ),
-        (io.rod_i(1).bits.is_illeage | is_csr_illegal(1) | is_ill_sfence(1) | is_ill_wfi_v(1) | is_ill_mRet_v(1) | is_ill_sRet_v(1)) & ~is_1st_solo
+        (io.rod_i(0).bits.is_illeage | is_csr_illegal(0) | is_ill_sfence(0) | is_ill_wfi_v(0) | is_ill_mRet_v(0) | is_ill_sRet_v(0) | is_ill_fpus_v(0) ),
+        (io.rod_i(1).bits.is_illeage | is_csr_illegal(1) | is_ill_sfence(1) | is_ill_wfi_v(1) | is_ill_mRet_v(1) | is_ill_sRet_v(1) | is_ill_fpus_v(1) ) & ~is_1st_solo
       )
     }
 
@@ -271,22 +284,18 @@ class Commit extends Privilege with Superscalar {
   // when( is_commit_comfirm(1) ) { printf("comfirm pc=%x\n", io.rod_i(1).bits.pc) }
 
 
-  io.cm_op(0).valid := is_commit_comfirm(0)
-  io.cm_op(1).valid := is_commit_comfirm(1)
+  io.cm_op(0).valid := is_commit_comfirm(0) | io.is_commit_abort(0)
+  io.cm_op(1).valid := is_commit_comfirm(1) | io.is_commit_abort(1)
 
-  io.cm_op(0).bits.phy := rd0_phy(0)
-  io.cm_op(1).bits.phy := rd0_phy(1)
-
-  io.cm_op(0).bits.raw := rd0_raw(0)
-  io.cm_op(1).bits.raw := rd0_raw(1)
-
+  io.cm_op(0).bits.is_abort := io.is_commit_abort(0)
+  io.cm_op(1).bits.is_abort := io.is_commit_abort(1)
 
 
   io.rod_i(0).ready := is_commit_comfirm(0) | io.is_commit_abort(0)
   io.rod_i(1).ready := is_commit_comfirm(1)
 
   io.cmm_lsu.is_amo_pending := io.rod_i(0).valid & io.rod_i(0).bits.is_amo & ~is_commit_comfirm(0) //only pending amo in rod0 is send out
-  io.cmm_lsu.is_lr_clear := io.is_commit_abort(1) | io.is_commit_abort(0)
+  // io.cmm_lsu.is_lr_clear := io.is_commit_abort(1) | io.is_commit_abort(0)
 
     //  |
     // (io.rod_i(1).bits.is_amo & ~is_commit_comfirm(1) ~is_1st_solo )
@@ -371,8 +380,14 @@ class Commit extends Privilege with Superscalar {
     io.csr_cmm_op.valid &
     ( io.csr_cmm_op.bits.op_rc | io.csr_cmm_op.bits.op_rs | io.csr_cmm_op.bits.op_rw ) &
     (
-      csr_write_denied(io.csr_cmm_op.bits.addr) |
-      csr_read_prilvl(io.csr_cmm_op.bits.addr)
+      csr_write_denied(io.csr_cmm_op.bits.addr) | csr_read_prilvl(io.csr_cmm_op.bits.addr)
+    )
+
+  is_fcsrw_illegal := 
+    io.fcsr_cmm_op.valid & 
+    ( io.fcsr_cmm_op.bits.op_rc | io.fcsr_cmm_op.bits.op_rs | io.fcsr_cmm_op.bits.op_rw ) &
+    (
+      mstatus(14,13) === 0.U
     )
 
   is_csrr_illegal := 
@@ -391,7 +406,11 @@ class Commit extends Privilege with Superscalar {
       (is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)		
     )
 
-
+  io.fcsr_cmm_op.ready :=
+    io.fcsr_cmm_op.valid & (
+      (is_commit_comfirm(0) & io.rod_i(0).bits.is_fpu) | 
+      (is_commit_comfirm(1) & io.rod_i(1).bits.is_fpu)		
+    )
 
 
 
@@ -403,6 +422,7 @@ class Commit extends Privilege with Superscalar {
 
 	rtc_clock               := io.rtc_clock	
 	exe_port                := Mux( io.csr_cmm_op.ready, io.csr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
+	exe_fport                := Mux( io.fcsr_cmm_op.ready, io.fcsr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
 	is_trap                 := io.rod_i(0).valid & is_trap_v(0)
 	is_mRet                 := io.rod_i(0).valid & is_mRet_v(0)
 	is_sRet                 := io.rod_i(0).valid & is_sRet_v(0)
@@ -448,6 +468,12 @@ class Commit extends Privilege with Superscalar {
     ( io.rod_i(0).valid & is_fence_i_v(0))
 
 
+  is_fpu_state_change := ( 0 until 2 ).map{
+    i => is_commit_comfirm(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fpu)
+  }.reduce(_|_)
+    
+
+  io.fcsr := fcsr
 
 
   io.diff_commit.pc(0) := io.rod_i(0).bits.pc
@@ -501,6 +527,9 @@ class Commit extends Privilege with Superscalar {
   // io.diff_csr.dcsr       := dcsr
   // io.diff_csr.dpc        := dpc
   // io.diff_csr.dscratch   := dscratch
+  io.diff_csr.fflags  := fcsr(4,0)
+  io.diff_csr.frm     := fcsr(7,5)
+
 
   assert( ~(is_wb_v(0) & ~io.rod_i(0).valid) )
   assert( ~(is_wb_v(1) & ~io.rod_i(1).valid) )
