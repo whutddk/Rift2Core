@@ -14,9 +14,11 @@
    limitations under the License.
 */
 
-package Debug
+package Debug.DTM
 
 import chisel3._
 import chisel3.util._
+
+
 
 
