@@ -42,7 +42,7 @@ MODIFICATIONS.
    limitations under the License.
 */
 
-package Debug.DTM
+package Debug
 
 import chisel3._
 import chisel3.experimental.DataMirror
@@ -177,7 +177,7 @@ class JtagStateMachine() extends Module{
 
 class Capture[+T <: Data](gen: T) extends Bundle {
   val bits = Input(gen)  // data to capture, should be always valid
-  val out = Output(Bool())  // will be high in capture state (single cycle), captured on following rising edge
+  val is_valid = Output(Bool())  // will be high in capture state (single cycle), captured on following rising edge
 }
 
 
@@ -279,18 +279,18 @@ class CaptureUpdateChain[+T <: Data](gen: T) extends Module {
 
     when(io.chainIn.capture) {
       for( i <- 0 until n ) yield { regs(i) := io.capture.bits(i) }
-      io.capture.out := true.B
+      io.capture.is_valid := true.B
       io.update.valid := false.B
     } .elsewhen(io.chainIn.update) {
-      io.capture.out := false.B
+      io.capture.is_valid := false.B
       io.update.valid := true.B
     } .elsewhen(io.chainIn.shift) {
       regs(n-1) := io.chainIn.data
       for ( i <- 0 until n-1 ) yield { regs(i) := regs(i+1) }
-      io.capture.out := false.B
+      io.capture.is_valid := false.B
       io.update.valid := false.B
     } .otherwise {
-      io.capture.out := false.B
+      io.capture.is_valid := false.B
       io.update.valid := false.B
     }
 
