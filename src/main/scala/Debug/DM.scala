@@ -85,13 +85,30 @@ class DMSTATUSFields extends Bundle {
   // val version = UInt(4.W)
 }
 
+object DebugRomNonzeroContents {
+
+  def apply() : Array[Byte] = { Array (
+  0x73, 0x90, 0x34, 0x7b, 0x6f, 0x00, 0xc0, 0x00, 0xf3, 0x94, 0x34, 0x7b,
+  0x23, 0xa6, 0x04, 0x90, 0x0f, 0x00, 0xf0, 0x0f, 0x73, 0x10, 0x24, 0x7b,
+  0x97, 0x04, 0x00, 0x00, 0x93, 0x84, 0x84, 0xfe, 0x73, 0x24, 0x40, 0xf1,
+  0x23, 0xa0, 0x84, 0x90, 0x33, 0x04, 0x94, 0x00, 0x03, 0x44, 0x04, 0xc0,
+  0x13, 0x74, 0x34, 0x00, 0xe3, 0x06, 0x04, 0xfe, 0x13, 0x74, 0x14, 0x00,
+  0x63, 0x0c, 0x04, 0x00, 0x73, 0x24, 0x20, 0x7b, 0x67, 0x80, 0x84, 0x04,
+  0x23, 0xa2, 0x04, 0x90, 0xf3, 0x94, 0x34, 0x7b, 0x6f, 0xf0, 0x1f, 0xab,
+  0x73, 0x24, 0x40, 0xf1, 0x23, 0xa4, 0x84, 0x90, 0x73, 0x24, 0x20, 0x7b,
+  0xf3, 0x24, 0x30, 0x7b, 0x73, 0x00, 0x20, 0x7b
+  ).map(_.toByte) }
+
+}
+
+
 
 class DebugModule(device: Device, nComponents: Int = 1) extends Module{
   require( nComponents <= 10 )
 
   val io = IO(new Bundle{
     val ctrl = new DebugCtrlBundle(nComponents)
-    val dmi = new DMIIO()
+    val dmi = Flipped(new DMIIO())
 
     val extTrigger = new DebugExtTriggerIO()
     val hartIsInReset = Input(Vec(nComponents, Bool()))
@@ -100,13 +117,12 @@ class DebugModule(device: Device, nComponents: Int = 1) extends Module{
   })
 
 
-  val dmiNode = TLRegisterNode(
-  
-    address = AddressSet.misaligned(0, "h40".U << 2): Seq[AddressSet],
-    device = device,
-    beatBytes = 4,
-    executable = false
-  )
+  // val dmiNode = TLRegisterNode(
+  //   address = AddressSet.misaligned(0, "h40".U << 2): Seq[AddressSet],
+  //   device = device,
+  //   beatBytes = 4,
+  //   executable = false
+  // )
 
   val peripNode = TLRegisterNode(
     address = AddressSet.misaligned(0, "hffff".U): Seq[AddressSet],
@@ -247,53 +263,10 @@ class DebugModule(device: Device, nComponents: Int = 1) extends Module{
     Seq( RegField.r(32, is_halt, RegFieldDesc("haltsum", "halt summmary")) )
 
 
-  dmiNode.remap(
-    ("h04".U << 2) -> dataRegFields(0),
-    ("h05".U << 2) -> dataRegFields(1),
-    ("h06".U << 2) -> dataRegFields(2),
-    ("h07".U << 2) -> dataRegFields(3),
-    ("h08".U << 2) -> dataRegFields(4),
-    ("h09".U << 2) -> dataRegFields(5),
-    ("h0A".U << 2) -> dataRegFields(6),
-    ("h0B".U << 2) -> dataRegFields(7),
-    ("h0C".U << 2) -> dataRegFields(8),
-    ("h0D".U << 2) -> dataRegFields(9),
-    ("h0E".U << 2) -> dataRegFields(10),
-    ("h0F".U << 2) -> dataRegFields(11),
 
-    ("h10".U << 2) -> dmcontrolRegFields,
-    ("h11".U << 2) -> dmstatusRegFields,
-    ("h12".U << 2) -> hartInfoRegFields,
-
-    ("h16".U << 2) -> abstractcsRegFields,
-    ("h17".U << 2) -> commandRegFields,
-    ("h18".U << 2) -> abstractautoRegFields,
-
-    ("h1D".U << 2) -> nextdmRegFields,
-    ("h20".U << 2) -> progbufRegFields(0),
-    ("h21".U << 2) -> progbufRegFields(1),
-    ("h22".U << 2) -> progbufRegFields(2),
-    ("h23".U << 2) -> progbufRegFields(3),
-    ("h24".U << 2) -> progbufRegFields(4),
-    ("h25".U << 2) -> progbufRegFields(5),
-    ("h26".U << 2) -> progbufRegFields(6),
-    ("h27".U << 2) -> progbufRegFields(7),
-    ("h28".U << 2) -> progbufRegFields(8),
-    ("h29".U << 2) -> progbufRegFields(9),
-    ("h2A".U << 2) -> progbufRegFields(10),
-    ("h2B".U << 2) -> progbufRegFields(11),
-    ("h2C".U << 2) -> progbufRegFields(12),
-    ("h2D".U << 2) -> progbufRegFields(13),
-    ("h2E".U << 2) -> progbufRegFields(14),
-    ("h2F".U << 2) -> progbufRegFields(15),
-
-    ("h38".U << 2) -> sbcsRegFields,
-    ("h39".U << 2) -> sbaddressRegFields,
-    ("h3C".U << 2) -> sbdataRegFields,
-
-    ("h40".U << 2) -> haltsum0RegFields,
-  )
-
+  io.dmi.rsp
+  val dmi_req = Wire(new RegMapperInput( params = RegMapperParams(indexBits: Int, maskBits: Int)) )
+  io.dmi.rsp := RegMapper(bytes = 4, concurrency = 0, undefZero = true.B, in: DecoupledIO[RegMapperInput], mapping: RegField.Map*)
 
 
 
@@ -311,36 +284,27 @@ class DebugModule(device: Device, nComponents: Int = 1) extends Module{
 
 
 
-  peripNode.remap(
-    ("h00".U << 2) -> instructionFields(0),
-    ("h01".U << 2) -> instructionFields(1),
-    ("h02".U << 2) -> instructionFields(2),
-    ("h03".U << 2) -> instructionFields(3),
-    ("h04".U << 2) -> instructionFields(4),
-    ("h05".U << 2) -> instructionFields(5),
-    ("h06".U << 2) -> instructionFields(6),
-    ("h07".U << 2) -> instructionFields(7),
-    ("h08".U << 2) -> instructionFields(8),
-    ("h09".U << 2) -> instructionFields(9),
-    ("h0A".U << 2) -> instructionFields(10),
-    ("h0B".U << 2) -> instructionFields(11),
-    ("h0C".U << 2) -> instructionFields(12),
-    ("h0D".U << 2) -> instructionFields(13),
-    ("h0E".U << 2) -> instructionFields(14),
-    ("h0F".U << 2) -> instructionFields(15),
+  peripNode.regmap(
+    ("h000".U ) -> RegFieldGroup("debug_rom", Some("Debug ROM"),
+        (DebugRomContents().zipWithIndex.map{case (x, i) => RegField.r(8, (x & 0xFF).U(8.W))})
+    ("h100".U ) -> Seq(RegField.r(32, jalAbstract.asUInt, RegFieldDesc("debug_whereto", "Instruction filled in by Debug Module to control hart in Debug Mode", volatile = true))),
+    ("h200".U ) -> RegFieldGroup("debug_progbuf", Some("Program buffer used to communicate with Debug Module"),
+        programBufferMem.zipWithIndex.map {case (x, i) => RegField(8, x)}),
+    ("h300".U ) -> RegFieldGroup("debug_abstract", Some("Instructions generated by Debug Module"),
+        abstractGeneratedMem.zipWithIndex.map{ case (x,i) => RegField.r(32, x)}),
 
-    ("h10".U << 2) -> exchangeFields(0),
-    ("h11".U << 2) -> exchangeFields(1),
-    ("h12".U << 2) -> exchangeFields(2),
-    ("h13".U << 2) -> exchangeFields(3),
-    ("h14".U << 2) -> exchangeFields(4),
-    ("h15".U << 2) -> exchangeFields(5),
-    ("h16".U << 2) -> exchangeFields(6),
-    ("h17".U << 2) -> exchangeFields(7),
-    ("h18".U << 2) -> exchangeFields(8),
-    ("h19".U << 2) -> exchangeFields(9),
-    ("h1a".U << 2) -> exchangeFields(10),
-    ("h1b".U << 2) -> exchangeFields(11),
+    ("h400".U ) -> Seq(WNotifyWire(sbIdWidth, hartHaltedId, hartHaltedWrEn,
+        "debug_hart_halted", "Debug ROM Causes hart to write its hartID here when it is in Debug Mode.")), //HALTED
+    ("h404".U ) -> Seq(WNotifyWire(sbIdWidth, hartGoingId,  hartGoingWrEn,
+        "debug_hart_going", "Debug ROM causes hart to write 0 here when it begins executing Debug Mode instructions.")) //GOING
+    ("h408".U ) -> Seq(WNotifyWire(sbIdWidth, hartResumingId,  hartResumingWrEn,
+        "debug_hart_resuming", "Debug ROM causes hart to write its hartID here when it leaves Debug Mode.")), //RESUMING
+    ("h40C".U ) -> Seq(WNotifyWire(sbIdWidth, hartExceptionId,  hartExceptionWrEn,
+        "debug_hart_exception", "Debug ROM causes hart to write 0 here if it gets an exception in Debug Mode.")), //EXCEPTION
+    ("h500".U ) -> RegFieldGroup("debug_data", Some("Data used to communicate with Debug Module"),
+        abstractDataMem.zipWithIndex.map {case (x, i) => RegField(8, x)}),
+    ("h600".U ) -> RegFieldGroup("debug_flags", Some("Memory region used to control hart going/resuming in Debug Mode"),
+          flags.zipWithIndex.map{case(x, i) => RegField.r(8, x.asUInt())}),
   )
 
 }
