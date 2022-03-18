@@ -45,11 +45,11 @@ class DMIIO() extends Bundle {
 }
 
 
-class ClockedDMIIO(implicit val p: Parameters) extends ParameterizedBundle()(p){
-  val dmi      = new DMIIO()(p)
-  val dmiClock = Output(Clock())
-  val dmiReset = Output(Reset())
-}
+// class ClockedDMIIO(implicit val p: Parameters) extends ParameterizedBundle()(p){
+//   val dmi      = new DMIIO()(p)
+//   val dmiClock = Output(Clock())
+//   val dmiReset = Output(Reset())
+// }
 
 
 
