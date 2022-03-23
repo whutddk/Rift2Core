@@ -117,6 +117,15 @@ class DebugModule(device: Device, nComponents: Int = 1) extends Module{
     val hartIsInReset = Input(Vec(nComponents, Bool()))
     val hartResetReq = Output(Vec(nComponents, Bool()))
     val auth = new DebugAuthenticationIO()
+
+
+      val dmactive = Input(Bool())
+      val innerCtrl = Flipped(new DecoupledIO(new DebugInternalBundle(nComponents)))
+      val debugUnavail = Input(Vec(nComponents, Bool()))
+      val hgDebugInt = Output(Vec(nComponents, Bool()))
+
+
+
   })
 
 
@@ -171,6 +180,7 @@ class DebugModule(device: Device, nComponents: Int = 1) extends Module{
   for ( i <- 0 until 12 ) yield {
     when( abstractDataMem_en1(i) ) { abstractDataMem_qout(i) := abstractDataMem_dnxt1(i) }
     .elsewhen( abstractDataMem_en2(i) ) { abstractDataMem_qout(i) := abstractDataMem_dnxt2(i) }
+
   }
 
 
@@ -194,16 +204,35 @@ class DebugModule(device: Device, nComponents: Int = 1) extends Module{
   val commandVal = Wire(UInt(32.W))
   val commandEn  = Wire(Bool())
 
-  val whereTo = RegInit(0.U(32.W))
+  val whereTo = RegInit("b000000000001000000000000001110011".U(32.W))
   val flags   = RegInit(0.U.asTypeOf(new Bundle{
       val is_resume = Bool()
       val is_going  = Bool()
   }))
 
+  val abstractGeneratedMem = RegInit(VecInit(
+    "b0010011".U(32.W),
+    "b0010011".U(32.W),
+    "b0010011".U(32.W),
+    "b0010011".U(32.W),
+    "b0010011".U(32.W),
+    "b0010011".U(32.W),
+    "b0010011".U(32.W),
+    "b000000000001000000000000001110011".U
+  ))
+
+  val cmdTpye = RegInit(0.U(8.W))
+  val control = RegInit(0.U(24.W))
+
+  val sba_addr = RegInit(0.U(64.W))
+  val sba_wdata = RegInit(0.U(64.W))
+  val sba_wstrb = RegInit(0.U(8.W))
+  val sba_isWrite = RegInit(false.B)
+
   //abstract command
   when(commandEn) {
-    val cmdTpye = commandVal(31,24)
-    val control = commandVal(23,0)
+    cmdTpye := commandVal(31,24)
+    control := commandVal(23,0)
 
     val is_access_register = (cmdTpye === 0.U)
     val is_quick_access    = (cmdTpye === 1.U)
@@ -216,14 +245,79 @@ class DebugModule(device: Device, nComponents: Int = 1) extends Module{
       val transfer = control(17).asBool
       val write = control(16).asBool
       val regno = control(15,0)
+      val error = aarsize === 4.U
+      val is_access_CSR = ~error & regno(15,12) === 0.U
+      val is_access_GPR = ~error & regno(15, 5) === "b00010000000".U
+      val is_access_FPR = ~error & regno(15, 5) === "b00010000001".U
 
-      whereTo := 
+      whereTo := Cat(("h200".U)(20), ("h200".U)(10,1), ("h200".U)(11), ("h200".U)(19,12), "b000001101111".U )
       flags.is_resume := false.B
       flags.is_going  := true.B
+
+      abstractGeneratedMem(5) := Mux( postexec, 
+        Cat(("h300".U)(20), ("h300".U)(10,1), ("h300".U)(11), ("h300".U)(19,12), "b000001101111".U ),
+        "b0010011".U(32.W) )
+
+
+      when( is_access_CSR ) {
+        val reg_sel = regno(11,0)
+
+        // csrw s0 dscratch1,
+        abstractGeneratedMem(0) := Cat("h7b3".U(12.W), 8.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W))
+        // csrr s0 regno
+        abstractGeneratedMem(1) := Cat(       reg_sel, 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
+        
+        abstractGeneratedMem(2) := Cat(
+          ("h500".U)(11,5), // offset h500
+          Mux( transfer & write, ("h500".U)(4,0), 8.U(5.W)),          // offset h500 / rs2 = s0
+          0.U(5.W),         // rs1 = 0 base
+          Mux( aarsize === 2.U, "b010".U(3.W), "b011".U(3.W)),       // word / double-word
+          Mux( transfer & write, 8.U(5.W), ("h500".U)(4,0)),       // rd = s0 / offset h500
+          Mux( transfer & write, "b0000011".U(7.W),  "b0100011".U ), // ld or st
+        )
+        // csrw s0 regno / nop
+        abstractGeneratedMem(3) := Mux(
+          transfer & write,
+          Cat(     reg_sel, 8.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W)),
+          "b0010011".U(32.W)
+        )
+        // csrr s0 dscratch1   
+        abstractGeneratedMem(4) := Cat("h7b3".U(12.W), 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
+        abstractGeneratedMem(5) := "b0010011".U(32.W)
+        abstractGeneratedMem(6) := "b0010011".U(32.W)
+        abstractGeneratedMem(7) := "b000000000001000000000000001110011".U
+
+      } .elsewhen( is_access_GPR ) {
+        val reg_sel = regno(4,0)
+
+        abstractGeneratedMem(2) := Cat(
+          ("h500".U)(11,5), // offset h500
+          Mux( transfer & write, ("h500".U)(4,0), reg_sel),          // offset h500 / rs2 = s0
+          0.U(5.W),         // rs1 = 0 base
+          Mux( aarsize === 2.U, "b010".U(3.W), "b011".U(3.W)),       // word / double-word
+          Mux( transfer & write, reg_sel, ("h500".U)(4,0)),       // rd = s0 / offset h500
+          Mux( transfer & write, "b0000011".U(7.W),  "b0100011".U ), // ld or st
+        )
+
+      } .elsewhen( is_access_FPR ) {
+        val reg_sel = regno(4,0)
+
+        abstractGeneratedMem(2) := Cat(
+          ("h500".U)(11,5), // offset h500
+          Mux( transfer & write, ("h500".U)(4,0), reg_sel),          // offset h500 / rs2 = s0
+          0.U(5.W),         // rs1 = 0 base
+          Mux( aarsize === 2.U, "b010".U(3.W), "b011".U(3.W)),       // word / double-word
+          Mux( transfer & write, reg_sel, ("h500".U)(4,0)),       // rd = s0 / offset h500
+          Mux( transfer & write, "b0000111".U(7.W),  "b0100111".U ), // ld or st
+        )
+      }
+
+
+
     } 
 
     when( is_quick_access ) {
-      whereTo := 
+      whereTo := Cat(("h300".U)(20), ("h300".U)(10,1), ("h300".U)(11), ("h300".U)(19,12), "b000001101111".U )
       flags.is_resume := false.B
       flags.is_going  := true.B
     } 
@@ -235,10 +329,65 @@ class DebugModule(device: Device, nComponents: Int = 1) extends Module{
       val write = control(16).asBool
       val target_specific = control(15,14)
 
-      whereTo := 
+      val is_misalign = Mux1H(Seq(
+        (aamsize === 0.U) -> false.B,
+        (aamsize === 1.U) -> (abstractDataMem_qout(2)(0) =/= 0.U ),
+        (aamsize === 2.U) -> (abstractDataMem_qout(2)(1,0) =/= 0.U ),
+        (aamsize === 3.U) -> (abstractDataMem_qout(2)(2,0) =/= 0.U ),
+      ))
+
+
+      whereTo := Cat(("h300".U)(20), ("h300".U)(10,1), ("h300".U)(11), ("h300".U)(19,12), "b000001101111".U )
       flags.is_resume := false.B
       flags.is_going  := true.B
+
+
+      // csrw s0 dscratch1,
+      abstractGeneratedMem(0) := Cat("h7b3".U(12.W), 8.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W))
+      // csrw s1 dscratch2,
+      abstractGeneratedMem(1) := Cat("h7b4".U(12.W), 9.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W))
+    
+      
+      //load s0, h508
+      abstractGeneratedMem(2) := Cat(
+        ("h508".U), // offset h500
+        0.U(5.W),         // rs1 = 0 base
+        "b011".U(3.W),       // word / double-word
+        8.U(5.W),       //rd=s0
+        "b0000011".U(7.W)
+      )
+      
+      //write ld/lw/lh/lb s1 h500 / read ld s1 s0
+      abstractGeneratedMem(3) := Cat(
+        Mux(write, ("h500".U(12.W)),  0.U(12.W)), // offset h500
+        Mux(write, 0.U(5.W), 8.U(5.W) ),        // rs1 = 0 base rs1 = s0
+        aamsize,       // word / double-word
+        9.U(5.W),                              //rd=s1
+        "b0000011".U(7.W)
+      )
+
+      //write st/sw/sh/sb s1 s0(0) / read st s1 h500
+      abstractGeneratedMem(4) := Cat(
+        Mux(write, 0.U(7.W), ("h500".U)(11,5) ), // offset h00 / h500
+        9.U(5.W),                               //  rs2 = s1
+        Mux(write, 8.U(5.W), 0.U(5.W)),          // rs1 = s0 / rs1 = 0 base
+        aamsize,                                 // word / double-word
+        Mux(write, 0.U(5.W), ("h500".U)(4,0)),   //  offset h00 / h500
+        "b0100011".U ,                          //  st
+      )
+
+      // csrr s0 dscratch1   
+      abstractGeneratedMem(5) := Cat("h7b3".U(12.W), 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
+      // csrr s1 dscratch2   
+      abstractGeneratedMem(6) := Cat("h7b4".U(12.W), 0.U(5.W), "b010".U(3.W), 9.U(5.W), "b1110011".U(7.W))
+
+      abstractGeneratedMem(7) := "b000000000001000000000000001110011".U
+
+
+
     }
+
+
 
   } 
 
@@ -419,9 +568,9 @@ class DebugModule(device: Device, nComponents: Int = 1) extends Module{
   peripNode.regmap(
     ("h000".U ) -> RegFieldGroup("debug_rom", Some("Debug ROM"), DebugRomContents().zipWithIndex.map{case (x, i) => RegField.r(8, (x & 0xFF).U(8.W))}),
     ("h100".U ) -> Seq(RegField.r(32, whereTo, RegFieldDesc("debug_whereto", "Instruction filled in by Debug Module to control hart in Debug Mode", volatile = true))),
-    ("h200".U ) -> RegFieldGroup("debug_progbuf", Some("Program buffer used to communicate with Debug Module"), (0 to 15).map{ i => WNotifyVal(32, programBufferMem_qout(i), programBufferMem_dnxt2(i), programBufferMem_en2(i))}),
-    ("h300".U ) -> RegFieldGroup("debug_abstract", Some("Instructions generated by Debug Module"), abstractGeneratedMem.zipWithIndex.map{ case (x,i) => RegField.r(32, x)}),
-
+    ("h200".U ) -> RegFieldGroup("debug_abstract", Some("Instructions generated by Debug Module"), abstractGeneratedMem.zipWithIndex.map{ case (x,i) => RegField.r(32, x)}),
+    ("h300".U ) -> RegFieldGroup("debug_progbuf", Some("Program buffer used to communicate with Debug Module"), (0 to 15).map{ i => WNotifyVal(32, programBufferMem_qout(i), programBufferMem_dnxt2(i), programBufferMem_en2(i))}),
+    
     ("h400".U ) -> Seq(WNotifyVal(32, 0.U, hartHaltedId, hartHaltedWrEn, "debug_hart_halted", "Debug ROM Causes hart to write its hartID here when it is in Debug Mode.")), //HALTED
     ("h404".U ) -> Seq(WNotifyVal(32, 0.U, hartGoingId,  hartGoingWrEn, "debug_hart_going", "Debug ROM causes hart to write 0 here when it begins executing Debug Mode instructions.")) //GOING
     ("h408".U ) -> Seq(WNotifyVal(32, 0.U, hartResumingId,  hartResumingWrEn, "debug_hart_resuming", "Debug ROM causes hart to write its hartID here when it leaves Debug Mode.")), //RESUMING
