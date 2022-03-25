@@ -139,7 +139,8 @@ abstract class CsrFiles extends CsrFiles_H{
           ( addr === "h7B0".U ) -> dcsr,
           ( addr === "h7B1".U ) -> dpc,
           ( addr === "h7B2".U ) -> dscratch0,
-          ( addr === "h7B3".U ) -> dscratch1
+          ( addr === "h7B3".U ) -> dscratch1,
+          ( addr === "h7B4".U ) -> dscratch2,
         )
 
     Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )

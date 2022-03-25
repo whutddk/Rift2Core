@@ -194,7 +194,10 @@ class Commit extends Privilege with Superscalar {
         io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b01".U & mstatus(22)) )
       )
 
-      
+      val is_ill_dRet_v = VecInit(
+        io.rod_i(0).bits.privil.dret & ~is_inDebugMode,
+        io.rod_i(1).bits.privil.dret & ~is_inDebugMode
+      )      
 
       val is_ill_fpus_v = ( 0 until 2 ).map{ i => 
         (is_wb_v(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fpu) & mstatus(14,13) === 0.U)
@@ -204,8 +207,8 @@ class Commit extends Privilege with Superscalar {
 
 
       VecInit(
-        (io.rod_i(0).bits.is_illeage | is_csr_illegal(0) | is_ill_sfence(0) | is_ill_wfi_v(0) | is_ill_mRet_v(0) | is_ill_sRet_v(0) | is_ill_fpus_v(0) ),
-        (io.rod_i(1).bits.is_illeage | is_csr_illegal(1) | is_ill_sfence(1) | is_ill_wfi_v(1) | is_ill_mRet_v(1) | is_ill_sRet_v(1) | is_ill_fpus_v(1) ) & ~is_1st_solo
+        (io.rod_i(0).bits.is_illeage | is_csr_illegal(0) | is_ill_sfence(0) | is_ill_wfi_v(0) | is_ill_mRet_v(0) | is_ill_sRet_v(0) | is_ill_dRet_v(0) | is_ill_fpus_v(0) ),
+        (io.rod_i(1).bits.is_illeage | is_csr_illegal(1) | is_ill_sfence(1) | is_ill_wfi_v(1) | is_ill_mRet_v(1) | is_ill_sRet_v(1) | is_ill_dRet_v(1) | is_ill_fpus_v(1) ) & ~is_1st_solo
       )
     }
 
@@ -219,6 +222,12 @@ class Commit extends Privilege with Superscalar {
       VecInit(
         io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b01".U & ~mstatus(22)) ),
         io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b01".U & ~mstatus(22)) ) & ~is_1st_solo
+      )
+
+    val is_dRet_v =
+      VecInit(
+        io.rod_i(0).bits.privil.dret & is_inDebugMode,
+        io.rod_i(1).bits.privil.dret & is_inDebugMode & ~is_1st_solo
       )
 
     val is_fence_i_v =
@@ -261,12 +270,12 @@ class Commit extends Privilege with Superscalar {
   // val is_xRet_v = Wire(Vec(2, Bool()))
 
 	val is_trap_v = VecInit( is_interrupt | is_exception_v(0), is_interrupt | is_exception_v(1) )
-  val is_xRet_v = VecInit( is_mRet_v(0) | is_sRet_v(0), is_mRet_v(1) | is_sRet_v(1) )
+  val is_xRet_v = VecInit( is_mRet_v(0) | is_sRet_v(0) | is_dRet_v(0), is_mRet_v(1) | is_sRet_v(1) | is_dRet_v(1) )
 
 
 
   io.is_commit_abort(1) :=
-    (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) | is_fence_i_v(1) | is_sfence_vma_v(1) ) & ~is_1st_solo
+    (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) | is_fence_i_v(1) | is_sfence_vma_v(1)  ) & ~is_1st_solo 
   // assert( io.is_commit_abort(1) === false.B )
 
 
@@ -277,7 +286,7 @@ class Commit extends Privilege with Superscalar {
   //only one privilege can commit once
   val is_commit_comfirm = VecInit(
     is_wb_v(0) & ~io.is_commit_abort(0),
-    is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo
+    is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo & ~is_step
   )
 
   // when( is_commit_comfirm(0) ) { printf("comfirm pc=%x\n", io.rod_i(0).bits.pc) }
@@ -314,6 +323,7 @@ class Commit extends Privilege with Superscalar {
   (    
     (io.rod_i(0).valid & is_mRet_v(0)) |
     (io.rod_i(0).valid & is_sRet_v(0)) |
+    (io.rod_i(0).valid & is_dRet_v(0)) |
     (io.rod_i(0).valid & is_trap_v(0)) |
     (io.rod_i(0).valid & is_fence_i_v(0)) |
     (io.rod_i(0).valid & is_sfence_vma_v(0))
@@ -323,6 +333,7 @@ class Commit extends Privilege with Superscalar {
 
   //   (io.rod_i(1).valid & is_mRet_v(1)) |
   //   (io.rod_i(1).valid & is_sRet_v(1)) |
+  //   (io.rod_i(1).valid & is_dRet_v(1)) |
   //   (io.rod_i(1).valid & is_trap_v(1)) |
   //   (io.rod_i(1).valid & is_fence_i_v(1)) |    
   //   (io.rod_i(1).valid & is_sfence_vma_v(1))  
@@ -332,12 +343,19 @@ class Commit extends Privilege with Superscalar {
   io.cmm_pc.bits.addr := Mux1H(Seq(
     (io.rod_i(0).valid & is_mRet_v(0)) -> mepc,
     (io.rod_i(0).valid & is_sRet_v(0)) -> sepc,
-    (io.rod_i(0).valid & is_trap_v(0)) -> Mux1H(Seq( (priv_lvl_dnxt === "b11".U) -> mtvec, (priv_lvl_dnxt === "b01".U) -> stvec)),
+    (io.rod_i(0).valid & is_dRet_v(0)) -> dpc,
+    (io.rod_i(0).valid & is_trap_v(0)) -> MuxCase(0.U, Array(
+      emu_reset -> "h80000000".U
+      is_debug_interrupt -> "h00000000".U,
+      (priv_lvl_dnxt === "b11".U) -> mtvec,
+      (priv_lvl_dnxt === "b01".U) -> stvec)
+    ),
     (io.rod_i(0).valid & is_fence_i_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
     (io.rod_i(0).valid & is_sfence_vma_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
 
     // (io.rod_i(1).valid & is_mRet_v(1)) -> mepc,
     // (io.rod_i(1).valid & is_sRet_v(1)) -> sepc,
+    // (io.rod_i(1).valid & is_dRet_v(1)) -> dpc,
     // (io.rod_i(1).valid & is_trap_v(1)) -> mtvec,
     // (io.rod_i(1).valid & is_fence_i_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
     // (io.rod_i(1).valid & is_sfence_vma_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
@@ -426,14 +444,20 @@ class Commit extends Privilege with Superscalar {
 	is_trap                 := io.rod_i(0).valid & is_trap_v(0)
 	is_mRet                 := io.rod_i(0).valid & is_mRet_v(0)
 	is_sRet                 := io.rod_i(0).valid & is_sRet_v(0)
+	is_dRet                 := io.rod_i(0).valid & is_dRet_v(0)
 	commit_pc               := Mux(is_1st_solo, io.rod_i(0).bits.pc, io.rod_i(1).bits.pc)
+  // cmmnxt_pc               :=
+  //   Mux(is_1st_solo,
+  //   io.rod_i(0).bits.pc + Mux( io.rod_i(0).bits.is_rvc, 2.U, 4.U ),
+  //   io.rod_i(1).bits.pc + Mux( io.rod_i(1).bits.is_rvc, 2.U, 4.U ))
+
 	ill_instr               := 0.U
   ill_ivaddr               := io.if_cmm.ill_vaddr
 	ill_dvaddr               := io.lsu_cmm.trap_addr
 	is_instr_access_fault    := io.rod_i(0).valid & is_instr_access_fault_v(0)
 	is_instr_paging_fault    := io.rod_i(0).valid & is_instr_paging_fault_v(0)
 	is_instr_illeage        := io.rod_i(0).valid & is_illeage_v(0)
-	is_breakPoint           := io.rod_i(0).valid & is_ebreak_v(0)
+	is_breakPoint           := io.rod_i(0).valid & is_ebreak_v(0) & ~is_ebreak_breakpointn
 	is_load_misAlign        := io.rod_i(0).valid & is_load_misAlign_ack_v(0)
 	is_load_access_fault     := io.rod_i(0).valid & is_load_accessFault_ack_v(0)
 	is_storeAMO_misAlign    := io.rod_i(0).valid & is_store_misAlign_ack_v(0)
@@ -474,6 +498,38 @@ class Commit extends Privilege with Superscalar {
     
 
   io.fcsr := fcsr
+
+
+  is_single_step    := RegNext(next = is_commit_comfirm(0) & is_step, init = false.B)
+  is_trigger        := false.B
+  is_halt_request   := io.dm.hartHaltReq
+  is_ebreak_retired := io.rod_i(0).valid & is_ebreak_v(0) & is_ebreak_breakpointn
+
+
+  is_debug_interrupt :=
+    is_single_step |
+    is_trigger |
+    is_halt_request |
+    is_ebreak_retired
+
+
+  is_nomask_interrupt := is_debug_interrupt | emu_reset
+
+  io.dm.harthartIsInReset := emu_reset
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   io.diff_commit.pc(0) := io.rod_i(0).bits.pc
