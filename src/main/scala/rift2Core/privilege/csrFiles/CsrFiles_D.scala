@@ -23,7 +23,7 @@ import rift2Core.define._
 
 abstract class CsrFiles_D extends CsrFiles_M {
   val ResetReq  = Wire(Bool())
-  // val HaltReq   = Wire(Bool())
+  val is_halt_request   = Wire(Bool())
 
   val is_inDebugMode_dnxt = Wire(Bool())
   val is_inDebugMode = RegNext(init=false.B,next = is_inDebugMode_dnxt)
@@ -36,7 +36,7 @@ abstract class CsrFiles_D extends CsrFiles_M {
   val is_trigger = Wire(Bool())
   val is_halt_int = Wire(Bool())
 
-  val is_step_int_block = ~dcsr(11) & is_inDebugMode
+  is_step_int_block := ~dcsr(11) & is_inDebugMode
 
   val is_ebreak_breakpointn = Mux1H(Seq(
     (priv_lvl_qout === "b11".U) -> dcsr(15),

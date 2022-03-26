@@ -56,7 +56,7 @@ class DMIIO() extends Bundle {
 class DebugTransportModuleJTAG extends RawModule {
   val io = IO(new Bundle {
     val dmi = new DMIIO
-    val JtagIO = Flipped(new JTAGIO(hasTRSTn = false)) // TODO: re-use SystemJTAGIO here?
+    val JtagIO = Flipped(new JtagIO())
   })
 
   withClockAndReset(io.JtagIO.TCK, io.JtagIO.jtag_reset) {
@@ -71,14 +71,14 @@ class DebugTransportModuleJTAG extends RawModule {
 
     val busyResp    = Wire(new DMIAccess)
     busyResp.addr  := 0.U
-    busyResp.resp  := 3.U
+    busyResp.op  := 3.U
     busyResp.data  := 0.U
 
     val dmiResp     = Wire(new DMIAccess)
     val nopResp     = Wire(0.U.asTypeOf(new DMIAccess))
 
 
-    val dmiReqReg  = RegInit(0.U.asTypeOf(new DMIReq(8)))
+    val dmiReqReg  = RegInit(0.U.asTypeOf(new DMIReq))
     val dmiReqValidReg = RegInit(false.B)
 
     val dmiStatus = Wire(UInt(2.W))
@@ -92,7 +92,7 @@ class DebugTransportModuleJTAG extends RawModule {
     dtmcs.debugVersion  := 1.U
     dtmcs.debugAddrBits := 8.U
     dtmcs.dmiStatus     := dmiStatus
-    dtmcs.dmiIdleCycles := c.debugIdleCycles.U
+    dtmcs.dmiIdleCycles := 8.U
     dtmcs.reserved0     := 0.U
     dtmcs.dmireset      := false.B // This is write-only
     dtmcs.reserved1     := 0.U
@@ -144,12 +144,12 @@ class DebugTransportModuleJTAG extends RawModule {
     // Especially for the first request, we must consider dtmResp.valid,
     // so that we don't consider junk in the FIFO to be an error response.
     // The current specification says that any non-zero response is an error.
-    nonzeroResp := stickyNonzeroRespReg | (io.dmi.resp.valid & (io.dmi.resp.bits.resp =/= 0.U))
+    nonzeroResp := stickyNonzeroRespReg | (io.dmi.resp.valid & (io.dmi.resp.bits.op =/= 0.U))
    
 
 
     dmiResp.addr := dmiReqReg.addr
-    dmiResp.resp := io.dmi.resp.bits.resp
+    dmiResp.op := io.dmi.resp.bits.op
     dmiResp.data := io.dmi.resp.bits.data
 
     //--------------------------------------------------------
@@ -181,7 +181,7 @@ class DebugTransportModuleJTAG extends RawModule {
 
     io.dmi.resp.ready := Mux1H(Seq(
       (dmiReqReg.op === 2.U) -> io.dmi.resp.valid, // for write operations confirm resp immediately because we don't care about data
-      (dmiReqReg.op === 1.U) -> dmiAccessChain.io.capture.is_valid & ~is_busy,// for read operations confirm resp when we capture the data
+      (dmiReqReg.op === 1.U) -> (dmiAccessChain.io.capture.is_valid & ~is_busy),// for read operations confirm resp when we capture the data
     ))
  
     io.dmi.req.valid := dmiReqValidReg

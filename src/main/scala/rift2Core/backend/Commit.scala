@@ -27,6 +27,7 @@ import rift2Core.L1Cache._
 import rift2Core.backend._
 import rift2Core.privilege._
 import rift2Core.privilege.csrFiles._
+import Debug._
 
 import rift2Core.diff._
 
@@ -65,6 +66,8 @@ class Commit extends Privilege with Superscalar {
 
     val fcsr = Output(UInt(24.W))
     val fcsr_cmm_op = Flipped(DecoupledIO( new Exe_Port ) )
+
+    val dm = Flipped(new Info_DM_cmm(nComponents = 1))
 
     val rtc_clock = Input(Bool())
 
@@ -345,7 +348,7 @@ class Commit extends Privilege with Superscalar {
     (io.rod_i(0).valid & is_sRet_v(0)) -> sepc,
     (io.rod_i(0).valid & is_dRet_v(0)) -> dpc,
     (io.rod_i(0).valid & is_trap_v(0)) -> MuxCase(0.U, Array(
-      emu_reset -> "h80000000".U
+      emu_reset -> "h80000000".U,
       is_debug_interrupt -> "h00000000".U,
       (priv_lvl_dnxt === "b11".U) -> mtvec,
       (priv_lvl_dnxt === "b01".U) -> stvec)
@@ -515,7 +518,7 @@ class Commit extends Privilege with Superscalar {
 
   is_nomask_interrupt := is_debug_interrupt | emu_reset
 
-  io.dm.harthartIsInReset := emu_reset
+  io.dm.hartIsInReset := emu_reset
 
 
 

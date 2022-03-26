@@ -46,6 +46,7 @@ package Debug
 
 import chisel3._
 import chisel3.experimental.DataMirror
+import chisel3.internal.firrtl.KnownWidth
 import chisel3.util._
 
 class JtagIO() extends Bundle {
@@ -132,47 +133,62 @@ class JtagStateMachine() extends Module{
     val currState = Output(JtagState.State.chiselType)
   })
 
-  withClockAndReset(io.JtagIO.TCK, io.JtagIO.jtag_reset) {
-    val nextState = WireDefault(JtagState.TestLogicReset.U)
-    val currState = RegNext(next=nextState, init=JtagState.TestLogicReset.U)
-    switch (currState) {
-      is (JtagState.TestLogicReset.U) {
-        nextState := Mux(io.tms, JtagState.TestLogicReset.U, JtagState.RunTestIdle.U)
-      } is (JtagState.RunTestIdle.U) {
-        nextState := Mux(io.tms, JtagState.SelectDRScan.U, JtagState.RunTestIdle.U)
-      } is (JtagState.SelectDRScan.U) {
-        nextState := Mux(io.tms, JtagState.SelectIRScan.U, JtagState.CaptureDR.U)
-      } is (JtagState.CaptureDR.U) {
-        nextState := Mux(io.tms, JtagState.Exit1DR.U, JtagState.ShiftDR.U)
-      } is (JtagState.ShiftDR.U) {
-        nextState := Mux(io.tms, JtagState.Exit1DR.U, JtagState.ShiftDR.U)
-      } is (JtagState.Exit1DR.U) {
-        nextState := Mux(io.tms, JtagState.UpdateDR.U, JtagState.PauseDR.U)
-      } is (JtagState.PauseDR.U) {
-        nextState := Mux(io.tms, JtagState.Exit2DR.U, JtagState.PauseDR.U)
-      } is (JtagState.Exit2DR.U) {
-        nextState := Mux(io.tms, JtagState.UpdateDR.U, JtagState.ShiftDR.U)
-      } is (JtagState.UpdateDR.U) {
-        nextState := Mux(io.tms, JtagState.SelectDRScan.U, JtagState.RunTestIdle.U)
-      } is (JtagState.SelectIRScan.U) {
-        nextState := Mux(io.tms, JtagState.TestLogicReset.U, JtagState.CaptureIR.U)
-      } is (JtagState.CaptureIR.U) {
-        nextState := Mux(io.tms, JtagState.Exit1IR.U, JtagState.ShiftIR.U)
-      } is (JtagState.ShiftIR.U) {
-        nextState := Mux(io.tms, JtagState.Exit1IR.U, JtagState.ShiftIR.U)
-      } is (JtagState.Exit1IR.U) {
-        nextState := Mux(io.tms, JtagState.UpdateIR.U, JtagState.PauseIR.U)
-      } is (JtagState.PauseIR.U) {
-        nextState := Mux(io.tms, JtagState.Exit2IR.U, JtagState.PauseIR.U)
-      } is (JtagState.Exit2IR.U) {
-        nextState := Mux(io.tms, JtagState.UpdateIR.U, JtagState.ShiftIR.U)
-      } is (JtagState.UpdateIR.U) {
-        nextState := Mux(io.tms, JtagState.SelectDRScan.U, JtagState.RunTestIdle.U)
-      }
+  //work with TCK and jtag_reset
+  val nextState = WireDefault(JtagState.TestLogicReset.U)
+  val currState = RegNext(next=nextState, init=JtagState.TestLogicReset.U)
+  switch (currState) {
+    is (JtagState.TestLogicReset.U) {
+      nextState := Mux(io.tms, JtagState.TestLogicReset.U, JtagState.RunTestIdle.U)
+    } 
+    is (JtagState.RunTestIdle.U) {
+      nextState := Mux(io.tms, JtagState.SelectDRScan.U, JtagState.RunTestIdle.U)
+    } 
+    is (JtagState.SelectDRScan.U) {
+      nextState := Mux(io.tms, JtagState.SelectIRScan.U, JtagState.CaptureDR.U)
+    } 
+    is (JtagState.CaptureDR.U) {
+      nextState := Mux(io.tms, JtagState.Exit1DR.U, JtagState.ShiftDR.U)
+    } 
+    is (JtagState.ShiftDR.U) {
+      nextState := Mux(io.tms, JtagState.Exit1DR.U, JtagState.ShiftDR.U)
+    } 
+    is (JtagState.Exit1DR.U) {
+      nextState := Mux(io.tms, JtagState.UpdateDR.U, JtagState.PauseDR.U)
+    } 
+    is (JtagState.PauseDR.U) {
+      nextState := Mux(io.tms, JtagState.Exit2DR.U, JtagState.PauseDR.U)
+    } 
+    is (JtagState.Exit2DR.U) {
+      nextState := Mux(io.tms, JtagState.UpdateDR.U, JtagState.ShiftDR.U)
+    } 
+    is (JtagState.UpdateDR.U) {
+      nextState := Mux(io.tms, JtagState.SelectDRScan.U, JtagState.RunTestIdle.U)
+    } 
+    is (JtagState.SelectIRScan.U) {
+      nextState := Mux(io.tms, JtagState.TestLogicReset.U, JtagState.CaptureIR.U)
+    } 
+    is (JtagState.CaptureIR.U) {
+      nextState := Mux(io.tms, JtagState.Exit1IR.U, JtagState.ShiftIR.U)
+    } 
+    is (JtagState.ShiftIR.U) {
+      nextState := Mux(io.tms, JtagState.Exit1IR.U, JtagState.ShiftIR.U)
+    } 
+    is (JtagState.Exit1IR.U) {
+      nextState := Mux(io.tms, JtagState.UpdateIR.U, JtagState.PauseIR.U)
+    } 
+    is (JtagState.PauseIR.U) {
+      nextState := Mux(io.tms, JtagState.Exit2IR.U, JtagState.PauseIR.U)
+    } 
+    is (JtagState.Exit2IR.U) {
+      nextState := Mux(io.tms, JtagState.UpdateIR.U, JtagState.ShiftIR.U)
+    } 
+    is (JtagState.UpdateIR.U) {
+      nextState := Mux(io.tms, JtagState.SelectDRScan.U, JtagState.RunTestIdle.U)
     }
+  }
 
     io.currState := currState
-  }
+
 }
 
 class Capture[+T <: Data](gen: T) extends Bundle {
@@ -196,14 +212,21 @@ class ShifterIO extends Bundle {
   }
 }
 
+trait ChainIO extends Bundle {
+  val chainIn = Input(new ShifterIO)
+  val chainOut = Output(new ShifterIO)
+}
 
-class JtagBypassChain extends RawModule {
-  val io = IO(new Bundle{
-    val chainIn = Input(new ShifterIO)
-    val chainOut = Output(new ShifterIO)
+trait Chain extends Module {
+  val io: ChainIO
+}
 
+
+class JtagBypassChain extends Chain {
+  class JtagBypassChainIO extends ChainIO {
     val JtagIO = new JtagIO
-  })
+  }
+  val io = IO(new JtagBypassChainIO)
 
   withClockAndReset(io.JtagIO.TCK, io.JtagIO.jtag_reset) {
     io.chainOut.chainControlFrom(io.chainIn)
@@ -223,13 +246,12 @@ class JtagBypassChain extends RawModule {
   }
 }
 
-class CaptureChain[+T <: Data](gen: T) extends RawModule {
-  val io = IO(new Bundle{
-    val chainIn = Input(new ShifterIO)
-    val chainOut = Output(new ShifterIO)
+class CaptureChain[+T <: Data](gen: T) extends Chain {
+  class CaptureChainIO extends ChainIO {
     val capture = new Capture(gen)
-    val JtagIO = new JtagIO
-  })
+    val JtagIO = new JtagIO    
+  }
+  val io = IO(new CaptureChainIO)
 
   withClockAndReset(io.JtagIO.TCK, io.JtagIO.jtag_reset) {
     io.chainOut.chainControlFrom(io.chainIn)
@@ -245,13 +267,13 @@ class CaptureChain[+T <: Data](gen: T) extends RawModule {
     
     when (io.chainIn.capture) {
       (0 until n) map (x => regs(x) := io.capture.bits.asUInt()(x))
-      io.capture.capture := true.B
+      io.capture.is_valid := true.B
     } .elsewhen (io.chainIn.shift) {
       regs(n-1) := io.chainIn.data
       (0 until n-1) map (x => regs(x) := regs(x+1))
-      io.capture.capture := false.B
+      io.capture.is_valid := false.B
     } .otherwise {
-      io.capture.capture := false.B
+      io.capture.is_valid := false.B
     }
     assert(!(io.chainIn.capture && io.chainIn.update)
         && !(io.chainIn.capture && io.chainIn.shift)
@@ -259,13 +281,12 @@ class CaptureChain[+T <: Data](gen: T) extends RawModule {
   }
 }
 
-class CaptureUpdateChain[+T <: Data](gen: T) extends Module {
-  val io = IO(new Bundle{
-    val chainIn = Input(new ShifterIO)
-    val chainOut = Output(new ShifterIO)
+class CaptureUpdateChain[+T <: Data](gen: T) extends Chain {
+  class CaptureUpdateChainIO extends ChainIO {
     val capture = new Capture(gen)
-    val update = Valid(gen)
-  })
+    val update = Valid(gen)    
+  }
+  val io = IO(new CaptureUpdateChainIO)
 
     val n = DataMirror.widthOf(gen) match {
       case KnownWidth(x) => x
@@ -278,7 +299,7 @@ class CaptureUpdateChain[+T <: Data](gen: T) extends Module {
     io.update.bits := Cat(regs.reverse)
 
     when(io.chainIn.capture) {
-      for( i <- 0 until n ) yield { regs(i) := io.capture.bits(i) }
+      for( i <- 0 until n ) yield { regs(i) := io.capture.bits.asUInt()(i) }
       io.capture.is_valid := true.B
       io.update.valid := false.B
     } .elsewhen(io.chainIn.update) {
@@ -301,25 +322,25 @@ class CaptureUpdateChain[+T <: Data](gen: T) extends Module {
 }
 
 class JtagBlockIO(irLength: Int = 5) extends Bundle {
-  val JtagIO = new JTAGIO()
+  val JtagIO = new JtagIO()
   val out = new JtagOutput(irLength)
   val idcode = Input(new JTAGIdcodeBundle())
 }
 
-class JtagControllerIO(irLength: Int) extends JtagBlockIO(irLength) {
+class JtagControllerIO(irLength: Int = 5) extends JtagBlockIO(irLength) {
   val dataChainOut = Output(new ShifterIO)
   val dataChainIn = Input(new ShifterIO)
 }
 
 
-class JtagTapController() extends RAWModule {
+class JtagTapController() extends Module {
   val io = IO(new JtagControllerIO)
 
   // val io = IO(new JtagControllerIO(5))
   val tdo = Wire(Bool())  // 4.4.1c TDI should appear here uninverted after shifting
   val tdo_driven = Wire(Bool())
 
-  val clock_falling = WireDefault((~io.JtagIO.TCK.asUInt).asClock)
+  val clock_falling = WireDefault((~io.JtagIO.TCK.asBool).asClock)
 
   val tapIsInTestLogicReset = Wire(Bool())
 
@@ -330,8 +351,8 @@ class JtagTapController() extends RAWModule {
   val stateMachine = {
     val mdl = Module(new JtagStateMachine)
     mdl.suggestName("stateMachine")
-    mdl.io.clock := io.JtagIO.TCK
-    mdl.io.reset := io.JtagIO.jtag_reset
+    mdl.clock := io.JtagIO.TCK
+    mdl.reset := io.JtagIO.jtag_reset
     mdl.io.tms := io.JtagIO.TMS
     currState := mdl.io.currState
     mdl
@@ -343,13 +364,13 @@ class JtagTapController() extends RAWModule {
   }
 
   val irChain = {
-    val mdl = Module(CaptureUpdateChain(UInt(5.W)))
+    val mdl = Module(new CaptureUpdateChain(UInt(5.W)))
     mdl.suggestName("irChain")
-    mdl.io.clock := io.JtagIO.TCK
-    mdl.io.reset := io.JtagIO.Jtag_reset
+    mdl.clock := io.JtagIO.TCK
+    mdl.reset := io.JtagIO.jtag_reset
 
     mdl.io.chainIn.shift := currState === JtagState.ShiftIR.U
-    mdl.io.chainIn.data := io.jtag.TDI
+    mdl.io.chainIn.data := io.JtagIO.TDI
     mdl.io.chainIn.capture := currState === JtagState.CaptureIR.U
     mdl.io.chainIn.update := currState === JtagState.UpdateIR.U
     mdl.io.capture.bits := "b01".U
@@ -411,7 +432,7 @@ object JtagTapGenerator {
         idcodeChain.suggestName("idcodeChain")
         idcodeChain.io.capture.bits := internalIo.idcode
 
-        instructions + ("h01".U -> idcodeChain)
+        instructions + (0x01 -> idcodeChain)
       }
 
 

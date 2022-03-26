@@ -183,7 +183,12 @@ abstract class CsrFiles_port extends Module{
   val mhpmcounter = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
   val mhpmevent = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
 
+
+
   val is_fpu_state_change = Wire(Bool())
+
+  val is_step_int_block = Wire(Bool())
+
 
   val priv_lvl_dnxt = Wire(UInt(2.W))
   val priv_lvl_enable = Wire(Bool())

@@ -18,7 +18,8 @@ package Debug
 
 import chisel3._
 import chisel3.util._
-
+import rift._
+import chipsalliance.rocketchip.config._
 import freechips.rocketchip.tilelink._
 
 class Info_sba_req extends Bundle{
@@ -27,7 +28,7 @@ class Info_sba_req extends Bundle{
   val is_byte = Bool()
   val is_half = Bool()
   val is_word = Bool()
-  val is_double = Bool()
+  val is_dubl = Bool()
   val is_rd_wrn = Bool()
 }
 
@@ -35,7 +36,7 @@ class Info_sba_rsp extends Bundle{
   val rdata = UInt(64.W)
 }
 
-class SBA extends Module{
+class SBA(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val req = Flipped(Decoupled(new Info_sba_req))
     val rsp = Decoupled(new Info_sba_rsp)
@@ -57,7 +58,7 @@ class SBA extends Module{
         io.getPut.bits := 
           edge.Get(
             fromSource = 0.U,
-            toAddress = io.enq.bits.paddr << 3 >> 3,
+            toAddress = io.req.bits.paddr << 3 >> 3,
             lgSize = log2Ceil(64/8).U
           )._2    
       } .elsewhen( ~io.req.bits.is_rd_wrn ) {
@@ -66,10 +67,10 @@ class SBA extends Module{
             fromSource = 0.U,
             toAddress = io.req.bits.paddr << 3 >> 3,
             lgSize = log2Ceil(64/8).U,
-            data = io.req.bits.wdata << Cat( io.req.bits.paddr(2,0), 0.U(3.W) )
+            data = io.req.bits.wdata << Cat( io.req.bits.paddr(2,0), 0.U(3.W) ),
             mask = Mux1H(Seq(
-                    io.req.bits..is_byte -> "b00000001".U, io.req.bits..is_half -> "b00000011".U,
-                    io.req.bits..is_word -> "b00001111".U, io.req.bits..is_dubl -> "b11111111".U
+                    io.req.bits.is_byte -> "b00000001".U, io.req.bits.is_half -> "b00000011".U,
+                    io.req.bits.is_word -> "b00001111".U, io.req.bits.is_dubl -> "b11111111".U
                   )) << io.req.bits.paddr(2,0)
           )._2
       } .otherwise{
@@ -83,10 +84,10 @@ class SBA extends Module{
 
   when( io.getPut.fire ) {
     assert( is_busy === false.B  )
-    when( io.req.bits.is_byte )   assert( true.B )
-    when( io.req.bits.is_half )   assert( io.req.bits.paddr(0) === 0.U  , "Assert Failed, sba mis-align" )
-    when( io.req.bits.is_word )   assert( io.req.bits.paddr(1,0) === 0.U, "Assert Failed, sba mis-align" )
-    when( io.req.bits.is_double ) assert( io.req.bits.paddr(2,0) === 0.U, "Assert Failed, sba mis-align" )
+    when( io.req.bits.is_byte ) { assert( true.B ) }
+    when( io.req.bits.is_half ) { assert( io.req.bits.paddr(0) === 0.U  , "Assert Failed, sba mis-align" ) }
+    when( io.req.bits.is_word ) { assert( io.req.bits.paddr(1,0) === 0.U, "Assert Failed, sba mis-align" ) }
+    when( io.req.bits.is_dubl ) { assert( io.req.bits.paddr(2,0) === 0.U, "Assert Failed, sba mis-align" ) }
 
     pending := io.req.bits
     is_busy := true.B
