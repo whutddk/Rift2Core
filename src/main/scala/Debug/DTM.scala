@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package Debug
+package debug
 
 import chisel3._
 import chisel3.util._
@@ -195,11 +195,18 @@ class DebugTransportModuleJTAG extends RawModule {
     idcode.partNumber := 0.U(16.W)
     idcode.mfrId      := 0.U(11.W)
 
+  object dtmJTAGAddrs {
+    def IDCODE       = 0x1
+    def DTM_INFO     = 0x10
+    def DMI_ACCESS = 0x11
+  }
+
     val tapIO = JtagTapGenerator(
       instructions = Map(
-        dtmJTAGAddrs.DMI_ACCESS -> dmiAccessChain,
-        dtmJTAGAddrs.DTM_INFO   -> dtmcsChain
-      )
+        BigInt(dtmJTAGAddrs.DMI_ACCESS) -> dmiAccessChain,
+        BigInt(dtmJTAGAddrs.DTM_INFO  ) -> dtmcsChain,
+      ),
+      icode = BigInt(dtmJTAGAddrs.IDCODE)
     )
 
     tapIO.idcode := idcode
@@ -208,7 +215,7 @@ class DebugTransportModuleJTAG extends RawModule {
     //--------------------------------------------------------
     // TAP Test-Logic-Reset state synchronously resets the debug registers.
 
-    when (tapIO.output.tapIsInTestLogicReset) {
+    when (tapIO.out.tapIsInTestLogicReset) {
       dmiInFlight := false.B
       stickyBusyReg := false.B
       stickyNonzeroRespReg := false.B

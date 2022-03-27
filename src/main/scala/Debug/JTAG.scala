@@ -42,12 +42,13 @@ MODIFICATIONS.
    limitations under the License.
 */
 
-package Debug
+package debug
 
 import chisel3._
 import chisel3.experimental.DataMirror
 import chisel3.internal.firrtl.KnownWidth
 import chisel3.util._
+import scala.collection.SortedMap
 
 class JtagIO() extends Bundle {
   val jtag_reset = Input(AsyncReset())
@@ -421,7 +422,7 @@ object JtagTapGenerator {
     * @note all other instruction codes (not part of instructions or idcode) map to BYPASS
     * @note initial instruction is idcode (if supported), otherwise all ones BYPASS
     */
-  def apply(instructions: Map[BigInt, Chain]): JtagBlockIO = {
+  def apply(instructions: Map[BigInt, Chain], icode: BigInt): JtagBlockIO = {
 
     val internalIo = Wire(new JtagBlockIO(irLength = 5))
 
@@ -432,12 +433,12 @@ object JtagTapGenerator {
         idcodeChain.suggestName("idcodeChain")
         idcodeChain.io.capture.bits := internalIo.idcode
 
-        instructions + (0x01 -> idcodeChain)
+        instructions + (icode -> idcodeChain)
       }
 
 
-    val bypassIcode = "h1f".U
-    val initialInstruction = "h01".U
+    val bypassIcode = 0x1f
+    val initialInstruction = icode
 
 
 

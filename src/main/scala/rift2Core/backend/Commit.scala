@@ -27,7 +27,7 @@ import rift2Core.L1Cache._
 import rift2Core.backend._
 import rift2Core.privilege._
 import rift2Core.privilege.csrFiles._
-import Debug._
+import debug._
 
 import rift2Core.diff._
 
