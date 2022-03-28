@@ -74,6 +74,7 @@ class SBA(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
                   )) << io.req.bits.paddr(2,0)
           )._2
       } .otherwise{
+        io.getPut.bits := DontCare
         assert(false.B, "Assert Failed at sba")      
       }    
   } .otherwise {

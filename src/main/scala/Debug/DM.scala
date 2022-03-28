@@ -26,7 +26,7 @@ import freechips.rocketchip.diplomacy._
 import chipsalliance.rocketchip.config._
 
 object WNotifyVal {
-  def apply(n: Int, rVal: UInt, wVal: UInt, wNotify: Bool, desc: RegFieldDesc = RegFieldDesc("N/A", "N/A") ): RegField = {
+  def apply(n: Int, rVal: UInt, wVal: UInt, wNotify: Bool, desc: RegFieldDesc = RegFieldDesc("NA", "NA") ): RegField = {
     RegField(n, rVal, RegWriteFn((valid, data) => {
       wNotify := valid
       wVal := data
@@ -101,10 +101,10 @@ class DMSTATUSFields extends Bundle {
 
 
 
-class Info_DM_cmm(nComponents: Int) extends Bundle{
-  val hartIsInReset = Input(Vec(nComponents, Bool()))
-  val hartResetReq = Output(Vec(nComponents, Bool()))
-  val hartHaltReq = Output(Vec(nComponents, Bool()))  
+class Info_DM_cmm() extends Bundle{
+  val hartIsInReset = Input(Bool())
+  val hartResetReq = Output(Bool())
+  val hartHaltReq = Output(Bool())
 }
 
 
@@ -119,9 +119,9 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
   require( nComponents <= 10 )
 
   val peripNode = TLRegisterNode(
-    address = AddressSet.misaligned(0, 0xffff): Seq[AddressSet],
+    address = Seq(AddressSet(BigInt(0), BigInt(0xffff))),
     device = device,
-    beatBytes = 4,
+    beatBytes = 8,
     executable = true
   )
 
@@ -142,7 +142,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       // val dmactiveAck     = Input(Bool())
 
       // val extTrigger = new DebugExtTriggerIO()
-      val dm_cmm = new Info_DM_cmm(nComponents)
+      val dm_cmm = Vec( nComponents, new Info_DM_cmm )
       // val debugResetReq  = Input(Vec(nComponents, Bool()))
 
       // val sba_getPut    = new DecoupledIO(new TLBundleA(edgeOut.bundle))
@@ -184,10 +184,34 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
 
     val abstractDataMem_qout = RegInit(VecInit(Seq.fill(12)(0.U(32.W))))
-    val abstractDataMem_dnxt1 = Wire(VecInit(Seq.fill(12)(0.U(32.W))))
-    val abstractDataMem_dnxt2 = Wire(VecInit(Seq.fill(12)(0.U(32.W))))
-    val abstractDataMem_en1   = Wire(Vec(16, Bool() ))
-    val abstractDataMem_en2   = Wire(Vec(16, Bool() ))
+    val abstractDataMem_dnxt1 = Wire(Vec(12,UInt(32.W)))
+    val abstractDataMem_dnxt2 = Wire(Vec(12,UInt(32.W)))
+    val abstractDataMem_en1   = Wire(Vec(12, Bool() ))
+    val abstractDataMem_en2   = Wire(Vec(12, Bool() ))
+
+
+    val hartHaltedId   = Wire(UInt(32.W))
+    val hartHaltedWrEn = Wire(Bool())
+
+    val hartGoingId   = Wire(UInt(32.W))
+    val hartGoingWrEn = Wire(Bool())
+
+    val hartResumingId = Wire(UInt(32.W))  
+    val hartResumingWrEn = Wire(Bool())
+
+    val hartExceptionId = Wire(UInt(32.W))
+    val hartExceptionWrEn = Wire(Bool())
+
+    val abstract_hartId = RegInit(0.U( (log2Ceil(nComponents) max 1).W))
+
+    val cmdTpye = RegInit(0.U(8.W))
+    val control = RegInit(0.U(24.W))
+
+    val flags   = RegInit( VecInit(Seq.fill(nComponents)(0.U.asTypeOf(new Bundle{
+      val is_going  = Bool()
+      val is_resume = Bool()
+    }))))
+
 
     for ( i <- 0 until 12 ) yield {
       when( abstractDataMem_en1(i) ) { abstractDataMem_qout(i) := abstractDataMem_dnxt1(i) }
@@ -206,23 +230,13 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     .elsewhen( setresethaltEn ) { resethaltreq(hartsel) := true.B }
 
 
-    val hartHaltedId   = Wire(UInt(32.W))
-    val hartHaltedWrEn = Wire(Bool())
 
-    val hartGoingId   = Wire(UInt(32.W))
-    val hartGoingWrEn = Wire(Bool())
-
-    val hartResumingId = Wire(UInt(32.W))  
-    val hartResumingWrEn = Wire(Bool())
-
-    val hartExceptionId = Wire(UInt(32.W))
-    val hartExceptionWrEn = Wire(Bool())
 
     val ackhavereset_W1 = Wire(Bool())
     for ( i <- 0 until nComponents) yield {
       when( ~dmactive ) {
         havereset(i) := false.B
-      } .elsewhen( io.dm_cmm.hartIsInReset(i) ) {
+      } .elsewhen( io.dm_cmm(i).hartIsInReset ) {
         havereset(i) := true.B       
       } .elsewhen( ackhavereset_W1 ) {
         havereset(hartsel) := false.B
@@ -231,8 +245,8 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
 
     for ( i <- 0 until nComponents) yield {
-      io.dm_cmm.hartResetReq(i) := hartreset(i)
-      io.dm_cmm.hartHaltReq(i)  := haltreq(i) | resethaltreq(i)
+      io.dm_cmm(i).hartResetReq := hartreset(i)
+      io.dm_cmm(i).hartHaltReq  := haltreq(i) | resethaltreq(i)
     }
 
 
@@ -244,7 +258,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         flags(i).is_resume := false.B
       }
 
-      when( io.dm_cmm.hartIsInReset(i) ) {
+      when( io.dm_cmm(i).hartIsInReset ) {
         is_halted(i) := false.B
         resumeack(i) := false.B
       } .elsewhen( resumeReq_W1 & (i.U === hartsel)) {
@@ -266,10 +280,10 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     dmstatus.allresumeack := resumeack(hartsel) === true.B
     dmstatus.anynonexistent := hartsel >= nComponents.U
     dmstatus.allnonexistent := hartsel >= nComponents.U
-    dmstatus.anyunavail := io.dm_cmm.hartIsInReset(hartsel) === true.B
-    dmstatus.allunavail := io.dm_cmm.hartIsInReset(hartsel) === true.B
-    dmstatus.anyrunning := ~io.dm_cmm.hartIsInReset(hartsel) & ~is_halted(hartsel)
-    dmstatus.allrunning := ~io.dm_cmm.hartIsInReset(hartsel) & ~is_halted(hartsel)
+    dmstatus.anyunavail := io.dm_cmm(hartsel).hartIsInReset === true.B
+    dmstatus.allunavail := io.dm_cmm(hartsel).hartIsInReset === true.B
+    dmstatus.anyrunning := ~io.dm_cmm(hartsel).hartIsInReset & ~is_halted(hartsel)
+    dmstatus.allrunning := ~io.dm_cmm(hartsel).hartIsInReset & ~is_halted(hartsel)
     dmstatus.anyhalted := is_halted(hartsel) === true.B
     dmstatus.allhalted := is_halted(hartsel) === true.B
 
@@ -299,10 +313,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     val commandEn  = Wire(Bool())
 
     val whereTo = RegInit("b000000000001000000000000001110011".U(32.W))
-    val flags   = RegInit( VecInit(Seq.fill(nComponents)(0.U.asTypeOf(new Bundle{
-      val is_going  = Bool()
-      val is_resume = Bool()
-    }))))
+
 
     val abstractGeneratedMem = RegInit(VecInit(
       "b0010011".U(32.W),
@@ -315,8 +326,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       "b000000000001000000000000001110011".U
     ))
 
-    val cmdTpye = RegInit(0.U(8.W))
-    val control = RegInit(0.U(24.W))
+
 
     // val sba_addr = RegInit(0.U(64.W))
     // val sba_wdata = RegInit(0.U(64.W))
@@ -324,7 +334,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     // val sba_isWrite = RegInit(false.B)
 
     //abstract command
-    val abstract_hartId = RegInit(0.U( (log2Ceil(nComponents) max 1).W))
+
 
     when(commandEn) {
       cmdTpye := commandVal(31,24)
@@ -518,7 +528,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     val sbautoincrement = RegInit(false.B)
     val sbaccess = RegInit(2.U(3.W))
     val sbreadonaddr = RegInit(false.B)
-    val sbbusy = Wire(Bool())
+    val sbbusy = RegInit(false.B)
     val sbbusyerror = RegInit(false.B)
     val sbaddress = RegInit(VecInit(Seq.fill(2)(0.U(32.W))))
     val sbdata = RegInit(VecInit(Seq.fill(2)(0.U(32.W))))
@@ -608,7 +618,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       sba_req_valid := false.B
     }
 
-
+    sba.io.rsp.ready := true.B
 
     when( sba.io.rsp.fire ) {
       sbbusy := false.B
@@ -727,7 +737,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         )),
 
         (0x17 << 2) -> RegFieldGroup("command", Some("Abstract Command"), Seq(
-          WNotifyVal(32, 0.U, wVal = commandVal, wNotify = commandEn, RegFieldDesc("cmdTpye + control", "cmdTpye + control")),
+          WNotifyVal(32, 0.U, wVal = commandVal, wNotify = commandEn, RegFieldDesc("cmdTpye_control", "cmdTpye + control")),
         )),
 
         (0x18 << 2) -> RegFieldGroup("abstractauto", Some("Abstract Command Auto execute"), Seq(
@@ -764,7 +774,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         )),
 
         (0x3C << 2) -> RegFieldGroup("sbdata", Some("System Bus Data"), Seq(
-          RegField(32, RegReadFn( _ => (sbdataRdEn, sbdata(0))), RegWriteFn( (valid, data) => { sbdataWrEn := valid; sbdataWrData := data; true.B } ),               RegFieldDesc("sbdata0",         "sbdata[31:0]",         reset=Some(0))),
+          RegField(32, RegReadFn( ivalid => { sbdataRdEn := ivalid; (true.B, sbdata(0))}), RegWriteFn( (valid, data) => { sbdataWrEn := valid; sbdataWrData := data; true.B } ),               RegFieldDesc("sbdata0",         "sbdata[31:0]",         reset=Some(0))),
           RegField(32, sbdata(1),                RegFieldDesc("sbdata1",         "sbdata[63:32]",        reset=Some(0))),
         )),
 

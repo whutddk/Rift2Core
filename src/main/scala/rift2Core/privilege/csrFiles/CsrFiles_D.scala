@@ -23,10 +23,11 @@ import rift2Core.define._
 
 abstract class CsrFiles_D extends CsrFiles_M {
   val ResetReq  = Wire(Bool())
-  val is_halt_request   = Wire(Bool())
+  // val is_halt_request   = Wire(Bool())
 
   val is_inDebugMode_dnxt = Wire(Bool())
-  val is_inDebugMode = RegNext(init=false.B,next = is_inDebugMode_dnxt)
+  val is_inDebugMode_en = Wire(Bool())
+  val is_inDebugMode = RegEnable(next = is_inDebugMode_dnxt, init=false.B, enable=is_inDebugMode_en)
   val is_step = WireDefault(dcsr(2).asBool & is_inDebugMode)
 
   val is_debug_interrupt = Wire(Bool())
@@ -101,8 +102,8 @@ abstract class CsrFiles_D extends CsrFiles_M {
     val (enable, dnxt) = Reg_Exe_Port( value, "h7B0".U, exe_port )
 
     when(false.B) {}
-    .elsewhen( priv_lvl_enable ){
-      prv := priv_lvl_dnxt
+    .elsewhen( is_inDebugMode_dnxt & is_inDebugMode_en ){
+      prv := priv_lvl_qout
 
     }
     .elsewhen(enable) {
@@ -124,7 +125,7 @@ abstract class CsrFiles_D extends CsrFiles_M {
         is_ebreak_retired -> commit_pc,
         is_single_step  -> commit_pc,
         is_trigger      -> 0.U,
-        is_halt_request -> commit_pc,
+        is_halt_int -> commit_pc,
       ))
     }
     value 

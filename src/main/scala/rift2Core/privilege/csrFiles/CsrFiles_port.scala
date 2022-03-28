@@ -57,7 +57,7 @@ abstract class CsrFiles_port extends Module{
   // lazy val is_xRet = is_mRet | is_sRet //| is_uRet
 
   val commit_pc = Wire(UInt(64.W))
-  val cmmnxt_pc = Wire(UInt(64.W))
+  // val cmmnxt_pc = Wire(UInt(64.W))
   val ill_instr = Wire(UInt(64.W))
   val ill_ivaddr = Wire(UInt(64.W))
   val ill_dvaddr = Wire(UInt(64.W))

@@ -224,62 +224,57 @@ trait Chain extends Module {
 
 
 class JtagBypassChain extends Chain {
-  class JtagBypassChainIO extends ChainIO {
-    val JtagIO = new JtagIO
-  }
+  class JtagBypassChainIO extends ChainIO
   val io = IO(new JtagBypassChainIO)
+  io.chainOut.chainControlFrom(io.chainIn)
 
-  withClockAndReset(io.JtagIO.TCK, io.JtagIO.jtag_reset) {
-    io.chainOut.chainControlFrom(io.chainIn)
+  val reg = Reg(Bool())  // 10.1.1a single shift register stage
 
-    val reg = Reg(Bool())  // 10.1.1a single shift register stage
+  io.chainOut.data := reg
 
-    io.chainOut.data := reg
-
-    when (io.chainIn.capture) {
-      reg := false.B  // 10.1.1b capture logic 0 on TCK rising
-    } .elsewhen (io.chainIn.shift) {
-      reg := io.chainIn.data
-    }
-    assert(!(io.chainIn.capture && io.chainIn.update)
-        && !(io.chainIn.capture && io.chainIn.shift)
-        && !(io.chainIn.update && io.chainIn.shift))
+  when (io.chainIn.capture) {
+    reg := false.B  // 10.1.1b capture logic 0 on TCK rising
+  } .elsewhen (io.chainIn.shift) {
+    reg := io.chainIn.data
   }
+  assert(!(io.chainIn.capture && io.chainIn.update)
+      && !(io.chainIn.capture && io.chainIn.shift)
+      && !(io.chainIn.update && io.chainIn.shift))
+
 }
 
 class CaptureChain[+T <: Data](gen: T) extends Chain {
   class CaptureChainIO extends ChainIO {
-    val capture = new Capture(gen)
-    val JtagIO = new JtagIO    
+    val capture = new Capture(gen) 
   }
   val io = IO(new CaptureChainIO)
 
-  withClockAndReset(io.JtagIO.TCK, io.JtagIO.jtag_reset) {
-    io.chainOut.chainControlFrom(io.chainIn)
 
-    val n = DataMirror.widthOf(gen) match {
-      case KnownWidth(x) => x
-      case _ => require(false, s"can't generate chain for unknown width data type $gen"); -1
-    }
+  io.chainOut.chainControlFrom(io.chainIn)
 
-    val regs = (0 until n).map(x => Reg(Bool()))
-
-    io.chainOut.data := regs(0)
-    
-    when (io.chainIn.capture) {
-      (0 until n) map (x => regs(x) := io.capture.bits.asUInt()(x))
-      io.capture.is_valid := true.B
-    } .elsewhen (io.chainIn.shift) {
-      regs(n-1) := io.chainIn.data
-      (0 until n-1) map (x => regs(x) := regs(x+1))
-      io.capture.is_valid := false.B
-    } .otherwise {
-      io.capture.is_valid := false.B
-    }
-    assert(!(io.chainIn.capture && io.chainIn.update)
-        && !(io.chainIn.capture && io.chainIn.shift)
-        && !(io.chainIn.update && io.chainIn.shift))
+  val n = DataMirror.widthOf(gen) match {
+    case KnownWidth(x) => x
+    case _ => require(false, s"can't generate chain for unknown width data type $gen"); -1
   }
+
+  val regs = (0 until n).map(x => Reg(Bool()))
+
+  io.chainOut.data := regs(0)
+  
+  when (io.chainIn.capture) {
+    (0 until n) map (x => regs(x) := io.capture.bits.asUInt()(x))
+    io.capture.is_valid := true.B
+  } .elsewhen (io.chainIn.shift) {
+    regs(n-1) := io.chainIn.data
+    (0 until n-1) map (x => regs(x) := regs(x+1))
+    io.capture.is_valid := false.B
+  } .otherwise {
+    io.capture.is_valid := false.B
+  }
+  assert(!(io.chainIn.capture && io.chainIn.update)
+      && !(io.chainIn.capture && io.chainIn.shift)
+      && !(io.chainIn.update && io.chainIn.shift))
+
 }
 
 class CaptureUpdateChain[+T <: Data](gen: T) extends Chain {
@@ -297,7 +292,7 @@ class CaptureUpdateChain[+T <: Data](gen: T) extends Chain {
     val regs = (0 until n).map(x => Reg(Bool()))
     io.chainOut.data := regs(0)
     io.chainOut.chainControlFrom(io.chainIn)
-    io.update.bits := Cat(regs.reverse)
+    io.update.bits := (Cat(regs.reverse)).asTypeOf(io.update.bits)
 
     when(io.chainIn.capture) {
       for( i <- 0 until n ) yield { regs(i) := io.capture.bits.asUInt()(i) }
@@ -468,7 +463,7 @@ object JtagTapGenerator {
       }
     }
 
-    // controllerInternal.io.dataChainIn := bypassChain.io.chainOut  // default
+    controllerInternal.io.dataChainIn := bypassChain.io.chainOut  // default
 
     val emptyWhen = when (false.B) { }  // Empty WhenContext to start things off
     chainToSelect.toSeq.foldLeft(emptyWhen)(foldOutSelect).otherwise {
@@ -481,8 +476,11 @@ object JtagTapGenerator {
 
     internalIo.JtagIO <> controllerInternal.io.JtagIO
     internalIo.out    <> controllerInternal.io.out
+    controllerInternal.io.idcode := DontCare
 
-
+    // internalIo.jtag <> controllerInternal.io.jtag
+    // internalIo.control <> controllerInternal.io.control
+    // internalIo.output <> controllerInternal.io.output
 
     def foldOutSelect(res: WhenContext, x: (Chain, Bool)): WhenContext = {
       val (chain, select) = x

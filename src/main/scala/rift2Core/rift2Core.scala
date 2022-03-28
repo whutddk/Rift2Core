@@ -61,7 +61,7 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
     Seq(TLMasterParameters.v1(
       name = "icache",
       sourceId = IdRange(0, 1),
-      supportsProbe = TransferSizes(32)
+      // supportsProbe = TransferSizes(32)
     ))
   )
 
@@ -86,7 +86,7 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
  
 class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val io = IO(new Bundle{
-    val dm      = Flipped(new Info_DM_cmm(nComponents = 1))
+    val dm      = Flipped(new Info_DM_cmm)
     val rtc_clock = Input(Bool())
   })
 

@@ -30,6 +30,41 @@ import freechips.rocketchip.tilelink._
 import freechips.rocketchip.amba.axi4._
 import sifive.blocks.inclusivecache._
 
+
+/*
+
+periph(64)        sba(64)      sys(64)      l1i(128*2)      l1d(128*2)     mmu(128*2) 
+    \                 |            /             |               |              |
+     \               |            /              \               |              /
+                  sys_xbar(64)                                 l1_xbar(128)    
+                 /     |                                           |
+               /      |          \                                 |
+             /       |            \                                |
+           /         |             \                         L2cache(128-128)   
+         /           |            Widget(64)                    |
+    io(64)       io(64)               \                        /
+                                    mem_xbar(128)
+                                       |
+                                    io(128)
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Rift2Chip(implicit p: Parameters) extends LazyModule {
 
   val i_rift2Core = LazyModule( new Rift2Core )
@@ -58,7 +93,7 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     )
   ))
 
-  val sysRange = Seq(AddressSet(0x00000000L, 0x7fffffffL)) //.subtract(AddressSet(0x00000000L, 0x1fffffffL))
+  val sysRange = AddressSet(0x00000000L, 0x7fffffffL).subtract(AddressSet(0x00000000L, 0x1fffffffL))
   val sysAXI4SlaveNode = AXI4SlaveNode(Seq(
     AXI4SlavePortParameters(
       slaves = Seq(
@@ -87,37 +122,37 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
   //   )
 
 
-  val mem_xbar = TLXbar()
-  val l1_xbar = TLXbar()
-  val sys_xbar = TLXbar()
-  val tlcork = TLCacheCork()
+  val mem_xbar128 = TLXbar()
+  val l1_xbar128 = TLXbar()
+  val sys_xbar64 = TLXbar()
+  // val tlcork = TLCacheCork()
 
 
-  sys_xbar := TLBuffer() := mem_xbar
+
 
   memAXI4SlaveNode := 
     AXI4UserYanker() := 
     AXI4IdIndexer(4) :=
     AXI4Deinterleaver(256/8) :=
     TLToAXI4() :=
-    TLWidthWidget(128 / 8) := mem_xbar
+    TLWidthWidget(128 / 8) := mem_xbar128
 
   sysAXI4SlaveNode := 
     AXI4UserYanker() := 
     AXI4IdIndexer(4) :=
     AXI4Deinterleaver(256/8) :=
     TLToAXI4() :=
-    TLWidthWidget(64 / 8) := sys_xbar
+    TLWidthWidget(64 / 8) := sys_xbar64
 
-    mem_xbar :=* 
+    mem_xbar128 :=* 
     TLBuffer() :=* 
     TLCacheCork() := 
     sifiveCache.node :=
     TLBuffer() := 
-    l1_xbar
+    l1_xbar128
 
 
-    l1_xbar := TLBuffer() := i_rift2Core.icacheClientNode
+    l1_xbar128 := TLBuffer() := i_rift2Core.icacheClientNode
     // mem_xbar :=* 
     // TLBuffer() :=* 
     // TLCacheCork() := 
@@ -128,17 +163,19 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     // TLBuffer() := 
 
     for ( i <- 0 until 8 ) {
-      l1_xbar := TLBuffer() := i_rift2Core.dcacheClientNode(i)
+      l1_xbar128 := TLBuffer() := i_rift2Core.dcacheClientNode(i)
     }
 
     for ( i <- 0 until 2 ) {
-      l1_xbar := TLBuffer() := i_rift2Core.mmuClientNode(i)
+      l1_xbar128 := TLBuffer() := i_rift2Core.mmuClientNode(i)
     }
 
-    sys_xbar := TLBuffer() := i_rift2Core.systemClientNode
-    sys_xbar := TLBuffer() := i_rift2Core.periphClientNode
-    i_debugger.dm.peripNode := TLBuffer() := sys_xbar := TLBuffer() := i_debugger.dm.sbaClientNode
+    sys_xbar64 := TLBuffer() := i_rift2Core.systemClientNode
+    sys_xbar64 := TLBuffer() := i_rift2Core.periphClientNode
+    sys_xbar64 := TLBuffer() := i_debugger.dm.sbaClientNode
 
+    i_debugger.dm.peripNode := TLBuffer() := sys_xbar64
+    mem_xbar128 := TLBuffer() := TLWidthWidget(64/8) := TLBuffer() := sys_xbar64
 
   val memory = InModuleBody {
     memAXI4SlaveNode.makeIOs()
@@ -177,7 +214,7 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
 
   lazy val module = new LazyModuleImp(this) {
     val io = IO( new Bundle{
-      val JtagIO = Flipped(new JtagIO())
+      val JtagIO = new JtagIO()
       val ndreset     = Output(Bool())
 
 
@@ -190,7 +227,7 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
 
     i_debugger.module.io.JtagIO <> io.JtagIO
     io.ndreset := i_debugger.module.io.ndreset
-    i_debugger.module.io.dm_cmm <> i_rift2Core.module.io.dm
+    i_debugger.module.io.dm_cmm(0) <> i_rift2Core.module.io.dm
     i_rift2Core.module.io.rtc_clock := io.rtc_clock
   }
 

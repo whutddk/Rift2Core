@@ -67,7 +67,7 @@ class Commit extends Privilege with Superscalar {
     val fcsr = Output(UInt(24.W))
     val fcsr_cmm_op = Flipped(DecoupledIO( new Exe_Port ) )
 
-    val dm = Flipped(new Info_DM_cmm(nComponents = 1))
+    val dm = Flipped(new Info_DM_cmm)
 
     val rtc_clock = Input(Bool())
 
@@ -318,7 +318,7 @@ class Commit extends Privilege with Superscalar {
 
 
 
-  
+
 
 
 
@@ -505,22 +505,30 @@ class Commit extends Privilege with Superscalar {
 
   is_single_step    := RegNext(next = is_commit_comfirm(0) & is_step, init = false.B)
   is_trigger        := false.B
-  is_halt_request   := io.dm.hartHaltReq
+  is_halt_int   := io.dm.hartHaltReq
   is_ebreak_retired := io.rod_i(0).valid & is_ebreak_v(0) & is_ebreak_breakpointn
 
 
   is_debug_interrupt :=
     is_single_step |
     is_trigger |
-    is_halt_request |
+    is_halt_int |
     is_ebreak_retired
 
 
   is_nomask_interrupt := is_debug_interrupt | emu_reset
 
   io.dm.hartIsInReset := emu_reset
+  ResetReq := io.dm.hartResetReq
 
+  is_inDebugMode_en := 
+    (io.rod_i(0).valid & is_trap_v(0) & is_debug_interrupt) |
+    is_dRet
 
+  is_inDebugMode_dnxt := Mux1H(Seq(
+    ( io.rod_i(0).valid & is_trap_v(0) & is_debug_interrupt ) -> true.B,
+    is_dRet -> false.B,
+  ))
 
 
 

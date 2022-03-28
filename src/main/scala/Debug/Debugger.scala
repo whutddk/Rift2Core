@@ -44,11 +44,11 @@ class Debugger(nComponents: Int = 1)(implicit p: Parameters) extends LazyModule{
 
   lazy val module = new LazyModuleImp(this) {
     val io = IO(new Bundle{
-      val JtagIO = Flipped(new JtagIO())
+      val JtagIO = new JtagIO()
       val ndreset     = Output(Bool())
       // val dmactive    = Output(Bool())
       // val dmactiveAck = Input(Bool())
-      val dm_cmm      = new Info_DM_cmm(nComponents)
+      val dm_cmm      = Vec(nComponents, new Info_DM_cmm )
       // val sba_getPut  = new DecoupledIO(new TLBundleA(edge.bundle))
       // val sba_access  = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
     })

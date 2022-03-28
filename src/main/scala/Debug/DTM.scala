@@ -56,7 +56,7 @@ class DMIIO() extends Bundle {
 class DebugTransportModuleJTAG extends RawModule {
   val io = IO(new Bundle {
     val dmi = new DMIIO
-    val JtagIO = Flipped(new JtagIO())
+    val JtagIO = new JtagIO()
   })
 
   withClockAndReset(io.JtagIO.TCK, io.JtagIO.jtag_reset) {
@@ -75,7 +75,7 @@ class DebugTransportModuleJTAG extends RawModule {
     busyResp.data  := 0.U
 
     val dmiResp     = Wire(new DMIAccess)
-    val nopResp     = Wire(0.U.asTypeOf(new DMIAccess))
+    val nopResp     = WireDefault(0.U.asTypeOf(new DMIAccess))
 
 
     val dmiReqReg  = RegInit(0.U.asTypeOf(new DMIReq))
@@ -194,6 +194,7 @@ class DebugTransportModuleJTAG extends RawModule {
     idcode.version    := 0.U(4.W)
     idcode.partNumber := 0.U(16.W)
     idcode.mfrId      := 0.U(11.W)
+
 
   object dtmJTAGAddrs {
     def IDCODE       = 0x1
