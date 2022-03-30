@@ -36,13 +36,7 @@ class DTMcs extends Bundle {
 }
 
 
-class DMIReq extends DMIAccess
-class DMIResp extends DMIAccess
 
-class DMIIO() extends Bundle {
-  val req = new DecoupledIO(new DMIReq())
-  val resp = Flipped(new DecoupledIO(new DMIResp))
-}
 
 
 // class ClockedDMIIO(implicit val p: Parameters) extends ParameterizedBundle()(p){
@@ -59,7 +53,7 @@ class DebugTransportModuleJTAG extends RawModule {
     val JtagIO = new JtagIO()
   })
 
-  withClockAndReset(io.JtagIO.TCK, io.JtagIO.jtag_reset) {
+  withClockAndReset(io.JtagIO.TCK, (~io.JtagIO.TRSTn)) {
 
     val dmiInFlight = RegInit(false.B)
     val stickyBusyReg = RegInit(false.B)

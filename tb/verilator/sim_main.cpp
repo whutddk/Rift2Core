@@ -30,6 +30,8 @@
 #include "verilated_vcd_c.h"
 #endif
 
+#include "remote_bitbang.h"
+
 char* img;
 vluint64_t main_time = 0;
 
@@ -41,10 +43,11 @@ double sc_time_stamp () {
 uint8_t flag_waveEnable = 0;
 uint8_t flag_diffEnable = 0;
 uint8_t flag_limitEnable = 0;
+uint8_t flag_jtagMode = 0;
 
 int prase_arg(int argc, char **argv) {
 	int opt;
-	while( -1 != ( opt = getopt( argc, argv, "ldwf:" ) ) ) {
+	while( -1 != ( opt = getopt( argc, argv, "jldwf:" ) ) ) {
 		switch(opt) {
 			case 'l':
 			flag_limitEnable = 1;
@@ -60,9 +63,14 @@ int prase_arg(int argc, char **argv) {
 				img = strdup(optarg);
 				// std::cout << "load in image is " << img << std::endl;
 				break;
+			case 'j':
+				flag_jtagMode = 1;
+				std::cout << "jtag Mode is Enable, bypassing memory load" << std::endl;
+				break;
 			case '?':
 				std::cout << "-w to enable waveform" << std::endl;
 				std::cout << "-f FILENAME to testfile" << std::endl;
+				std::cout << "-j to enable jtag mode" << std::endl;
 				return -1;
 				break;
 			default:
@@ -79,7 +87,7 @@ int prase_arg(int argc, char **argv) {
 
 
 
-
+extern remote_bitbang_t * jtag;
 
 int main(int argc, char **argv, char **env) {
 
@@ -95,8 +103,8 @@ int main(int argc, char **argv, char **env) {
 		}		
 	}
 
+	jtag = new remote_bitbang_t(16666);
 
-	
 	char * temp[2];
 	char cmd[64] = "+";
 	strcat(cmd, img);
@@ -104,7 +112,9 @@ int main(int argc, char **argv, char **env) {
 	temp[0] = "Verilated";
 	temp[1] = cmd;
 	char **argv_temp = temp;
-	Verilated::commandArgs(2, argv_temp);
+	Verilated::commandArgs(2, argv_temp);		
+
+
 
 	VSimTop *top = new VSimTop();
 

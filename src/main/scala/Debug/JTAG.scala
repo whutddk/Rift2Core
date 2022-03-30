@@ -51,13 +51,15 @@ import chisel3.util._
 import scala.collection.SortedMap
 
 class JtagIO() extends Bundle {
-  val jtag_reset = Input(AsyncReset())
+  // val jtag_reset = Input(AsyncReset())
 
+  val TRSTn      = Input(Bool())
   val TCK        = Input(Clock())
   val TMS        = Input(Bool())
   val TDI        = Input(Bool())
   val TDO        = Output(Bool())
   val TDO_driven = Output(Bool())
+
 }
 
 
@@ -348,13 +350,13 @@ class JtagTapController() extends Module {
     val mdl = Module(new JtagStateMachine)
     mdl.suggestName("stateMachine")
     mdl.clock := io.JtagIO.TCK
-    mdl.reset := io.JtagIO.jtag_reset
+    mdl.reset := (~io.JtagIO.TRSTn)
     mdl.io.tms := io.JtagIO.TMS
     currState := mdl.io.currState
     mdl
   }
   
-  withClockAndReset(clock_falling, io.JtagIO.jtag_reset) {
+  withClockAndReset(clock_falling, (~io.JtagIO.TRSTn)) {
     io.JtagIO.TDO   := RegNext(next=tdo, init=false.B).suggestName("tdoReg")
     io.JtagIO.TDO_driven := RegNext(next=tdo_driven, init=false.B).suggestName("tdoeReg")
   }
@@ -363,7 +365,7 @@ class JtagTapController() extends Module {
     val mdl = Module(new CaptureUpdateChain(UInt(5.W)))
     mdl.suggestName("irChain")
     mdl.clock := io.JtagIO.TCK
-    mdl.reset := io.JtagIO.jtag_reset
+    mdl.reset := (~io.JtagIO.TRSTn)
 
     mdl.io.chainIn.shift := currState === JtagState.ShiftIR.U
     mdl.io.chainIn.data := io.JtagIO.TDI
@@ -373,7 +375,7 @@ class JtagTapController() extends Module {
     mdl
   }
 
-  withClockAndReset(clock_falling, io.JtagIO.jtag_reset) {
+  withClockAndReset(clock_falling, (~io.JtagIO.TRSTn)) {
     val activeInstruction = RegInit("b00001".U(5.W))
     when (tapIsInTestLogicReset) {
       activeInstruction := "h01".U

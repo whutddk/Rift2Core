@@ -19,6 +19,31 @@ package debug
 import chisel3._
 import chisel3.util._
 
-class DMI() extends RawModule {
-  
+import freechips.rocketchip.util._
+
+
+class DMIReq extends DMIAccess
+class DMIResp extends DMIAccess
+
+class DMIIO() extends Bundle {
+  val req = new DecoupledIO(new DMIReq())
+  val resp = Flipped(new DecoupledIO(new DMIResp))
+}
+
+class DMI() extends Module {
+  val io = IO(new Bundle {
+    val tck = Input(Clock())
+    val trstn = Input(Bool())
+    val dtm_dmi = Flipped(new DMIIO)
+
+    val dmi_dm = new DMIIO()
+  })
+
+    io.dmi_dm.req  <> FromAsyncBundle( ToAsyncBundle( io.dtm_dmi.req ))
+
+    withClockAndReset(io.tck, (~io.trstn)) {
+      io.dtm_dmi.resp <> FromAsyncBundle( ToAsyncBundle( io.dmi_dm.resp  ))      
+    }
+
+
 }

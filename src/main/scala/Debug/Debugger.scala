@@ -60,10 +60,14 @@ class Debugger(nComponents: Int = 1)(implicit p: Parameters) extends LazyModule{
 
 
     val dtm = Module(new DebugTransportModuleJTAG)
+    val dmi = Module(new DMI)
     
+    dmi.io.tck := io.JtagIO.TCK
+    dmi.io.trstn := io.JtagIO.TRSTn
 
     dtm.io.JtagIO <> io.JtagIO
-    dtm.io.dmi <> dm.module.io.dmi
+    dtm.io.dmi <> dmi.io.dtm_dmi
+    dmi.io.dmi_dm <> dm.module.io.dmi
     io.ndreset := dm.module.io.ndreset
     // io.dmactive := dm.io.dmactive
     // dm.io.dmactiveAck     = Input(Bool())

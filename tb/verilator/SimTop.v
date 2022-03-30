@@ -192,6 +192,9 @@ module SimTop (
   output [31:0] trace_fflags,
   output [7:0] trace_frm,
 
+
+
+
 	input CLK,
 
 	input RSTn
@@ -199,6 +202,13 @@ module SimTop (
 );
 
 	reg rtc_clock;
+
+  wire         trstn;
+  wire         tck;
+  wire         tms;
+  wire         tdi;
+  wire         tdo;
+  wire tdo_en;
 
 
 	wire         io_mem_chn_ar_ready;
@@ -279,6 +289,27 @@ wire [3:0] io_mem_chn_ar_bits_id;
 wire [3:0] io_mem_chn_r_bits_id;
 wire [3:0] io_mem_chn_aw_bits_id;
 wire [3:0] io_mem_chn_b_bits_id;
+
+
+SimJTAG s_simJtag(
+  .clock(CLK),
+  .reset(~RSTn),
+  
+  .enable(1'b1),
+  .init_done(1'b1),
+
+  .jtag_TCK(tck),
+  .jtag_TMS(tms),
+  .jtag_TDI(tdi),
+  .jtag_TRSTn(trstn),
+
+  .jtag_TDO_data(tdo),
+  .jtag_TDO_driven(tdo_en),
+        
+  .exit()
+  );
+
+
 
 Rift2Chip s_Rift2Chip(
 	.clock(CLK),
@@ -363,6 +394,13 @@ Rift2Chip s_Rift2Chip(
   .memory_0_r_bits_resp(io_mem_chn_r_bits_rsp),
   .memory_0_r_bits_last(io_mem_chn_r_bits_last),
 
+  .io_JtagIO_TRSTn(trstn),
+  .io_JtagIO_TCK(tck),
+  .io_JtagIO_TMS(tms),
+  .io_JtagIO_TDI(tdi),
+  .io_JtagIO_TDO(tdo),
+  .io_JtagIO_TDO_driven(tdo_en),
+  .io_ndreset(),
 
 	.io_rtc_clock            (rtc_clock)
 );

@@ -277,6 +277,8 @@ VSimTop:
 	--exe --build \
 	./verilator/sim_main.cpp  \
 	./verilator/diff.cpp \
+	./verilator/SimJTAG.cc \
+	./verilator/remote_bitbang.cc \
 	-Mdir build \
 	-j 128
 # 	rm ./obj_dir/*.d ./obj_dir/*.o ./obj_dir/*.cpp
