@@ -39,11 +39,19 @@ class DMI() extends Module {
     val dmi_dm = new DMIIO()
   })
 
-    io.dmi_dm.req  <> FromAsyncBundle( ToAsyncBundle( io.dtm_dmi.req ))
+  val req_ToAsync = Wire(new AsyncBundle(new DMIReq))
+  val resp_ToAsync = Wire(new AsyncBundle(new DMIResp))
 
+
+  
+
+
+    io.dmi_dm.req  <> FromAsyncBundle( req_ToAsync )
+    resp_ToAsync <> ToAsyncBundle( io.dmi_dm.resp )
+    
     withClockAndReset(io.tck, (~io.trstn)) {
-      io.dtm_dmi.resp <> FromAsyncBundle( ToAsyncBundle( io.dmi_dm.resp  ))      
-    }
-
+      io.dtm_dmi.resp <> FromAsyncBundle( resp_ToAsync )      
+      req_ToAsync <> ToAsyncBundle( io.dtm_dmi.req )
+}
 
 }
