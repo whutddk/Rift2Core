@@ -48,12 +48,16 @@ abstract class CsrFiles_M extends CsrFiles_port {
     is_ecall_M              |
     is_ecall_S              |
     is_ecall_U              |
-    is_load_paging_fault       
+    is_load_paging_fault
 
+  val is_interrupt = Wire(Bool())
   val is_nomask_interrupt = Wire(Bool())
-  val is_m_interrupt = is_msi | is_mti | is_mei
-  val is_s_interrupt = is_ssi | is_sti | is_sei
-  val is_interrupt = ((is_m_interrupt | is_s_interrupt) & ~is_step_int_block) | is_nomask_interrupt
+  val is_m_interrupt = Wire(Bool())
+  val is_s_interrupt = Wire(Bool())
+
+  is_m_interrupt := is_msi | is_mti | is_mei
+  is_s_interrupt := is_ssi | is_sti | is_sei
+  is_interrupt := ((is_m_interrupt | is_s_interrupt) & ~is_step_int_block) | is_nomask_interrupt
 
 
 

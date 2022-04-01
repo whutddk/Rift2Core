@@ -71,7 +71,7 @@ class Debugger(nComponents: Int = 1)(implicit p: Parameters) extends LazyModule{
     io.ndreset := dm.module.io.ndreset
     // io.dmactive := dm.io.dmactive
     // dm.io.dmactiveAck     = Input(Bool())
-    // dm.io.dm_cmm <> io.dm_cmm
+    dm.module.io.dm_cmm <> io.dm_cmm
     // dm.io.sba_getPut <> io.sba_getPut
     // dm.io.sba_access <> io.sba_access
   }

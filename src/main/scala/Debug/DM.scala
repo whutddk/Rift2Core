@@ -119,7 +119,8 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
   require( nComponents <= 10 )
 
   val peripNode = TLRegisterNode(
-    address = Seq(AddressSet(BigInt(0), BigInt(0xffff))),
+    address = Seq(AddressSet(0x00000000L, 0x0000ffffL)),
+    // Seq(AddressSet(0x00000000L, 0x0000ffffL)),
     device = device,
     beatBytes = 8,
     executable = true
@@ -158,7 +159,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
   val dmstatus = WireInit(0.U.asTypeOf(new DMSTATUSFields()))
     val dmactive = RegInit(false.B)
     val ndmreset = RegInit(false.B)
-  val hartsel = RegInit(0.U( (log2Ceil(nComponents) max 1).W))
+  val hartsel = WireDefault(0.U(1.W))//RegInit(0.U( (log2Ceil(nComponents) max 1).W))
   val havereset = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
   val hartreset = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
   // val resumereq = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
@@ -683,14 +684,14 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         (0x10 << 2) -> RegFieldGroup("dmcontrol", Some("debug module control register"), Seq(
           RegField(1,  dmactive, RegFieldDesc("dmactive",         "dmactive",         reset=Some(0))),
           RegField(1,  ndmreset, RegFieldDesc("ndmreset",         "ndmreset",         reset=Some(0))),
-          RegField.w(1, RegWriteFn((valid, data) => { {clrresethaltEn := (valid & data === 1.U)} ; true.B} ),RegFieldDesc("clrresethaltreq", "clrresethaltreq")),
-          RegField.w(1, RegWriteFn((valid, data) => { {setresethaltEn := (valid & data === 1.U)} ; true.B} ),RegFieldDesc("setresethaltreq", "setresethaltreq")),
+          RegField.w(1, RegWriteFn((valid, data) => { clrresethaltEn := (valid & (data === 1.U)) ; true.B} ),RegFieldDesc("clrresethaltreq", "clrresethaltreq")),
+          RegField.w(1, RegWriteFn((valid, data) => { setresethaltEn := (valid & (data === 1.U)) ; true.B} ),RegFieldDesc("setresethaltreq", "setresethaltreq")),
           RegField(2),
           RegField.r(10, 0.U, RegFieldDesc("hartselhi",         "hartselhi(ignore)")),
-          RegField(10, hartsel, RegFieldDesc("hartsello",         "hartsello(ignore)")),
+          RegField.r(10, 0.U, RegFieldDesc("hartsello",         "hartsello(ignore)")),
           RegField.r(1, 0.U, RegFieldDesc("hasel",         "hasel",         reset=Some(0))),
           RegField(1),
-          RegField.w(1, RegWriteFn((valid, data) => { { ackhavereset_W1 := valid & data }; true.B }), RegFieldDesc("ackhavereset", "0: No effect; 1: Clear havereset for any selected harts")),
+          RegField.w(1, RegWriteFn((valid, data) => { { ackhavereset_W1 := valid & (data === 1.U) }; true.B }), RegFieldDesc("ackhavereset", "0: No effect; 1: Clear havereset for any selected harts")),
           RegField(1, hartreset(hartsel), RegFieldDesc("hartreset",         "hartreset",         reset=Some(0))),
           RegField.w(1, RegWriteFn((valid, data) => { resumeReq_W1 := (haltreq(hartsel) === 0.U & valid & data === 1.U); true.B }), RegFieldDesc("resumereq", "Writing 1 causes the currently selected harts to resume once, if they are halted when the write occurs. It also clears the resume ack bit for those harts.resumereq is ignored if haltreq is set.")),
           RegField.w(1, RegWriteFn((valid, data) => { when(valid) {haltreq(hartsel) := data}; true.B }), RegFieldDesc("haltreq",         "haltreq"))
