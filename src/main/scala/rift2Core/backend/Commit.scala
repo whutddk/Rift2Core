@@ -510,10 +510,13 @@ class Commit extends Privilege with Superscalar {
 
 
   is_debug_interrupt :=
-    is_single_step |
-    is_trigger |
-    is_halt_int |
-    is_ebreak_retired
+    ~is_inDebugMode & (
+      is_single_step |
+      is_trigger |
+      is_halt_int |
+      is_ebreak_retired      
+    )
+
 
 
   is_nomask_interrupt := is_debug_interrupt | emu_reset

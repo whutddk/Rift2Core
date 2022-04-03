@@ -209,8 +209,8 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     val control = RegInit(0.U(24.W))
 
     val flags   = RegInit( VecInit(Seq.fill(nComponents)(0.U.asTypeOf(new Bundle{
-      val is_going  = Bool()
       val is_resume = Bool()
+      val is_going  = Bool()
     }))))
 
 
