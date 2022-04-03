@@ -205,8 +205,9 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
     val abstract_hartId = RegInit(0.U( (log2Ceil(nComponents) max 1).W))
 
-    val cmdTpye = RegInit(0.U(8.W))
-    val control = RegInit(0.U(24.W))
+    val cmdTpye = WireDefault(0.U(8.W))
+    val control = WireDefault(0.U(24.W))
+    // val abstract_command_reg = RegInit(0.U(32.W))
 
     val flags   = RegInit( VecInit(Seq.fill(nComponents)(0.U.asTypeOf(new Bundle{
       val is_resume = Bool()
@@ -313,7 +314,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     val commandVal = Wire(UInt(32.W))
     val commandEn  = Wire(Bool())
 
-    val whereTo = RegInit("b000000000001000000000000001110011".U(32.W))
+    val whereTo = RegInit("b000000000001000000000000001110011".U(32.W))  //ebreak
 
 
     val abstractGeneratedMem = RegInit(VecInit(
@@ -324,7 +325,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       "b0010011".U(32.W),
       "b0010011".U(32.W),
       "b0010011".U(32.W),
-      "b000000000001000000000000001110011".U
+      "b000000000001000000000000001110011".U  //ebreak
     ))
 
 
@@ -337,9 +338,13 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     //abstract command
 
 
+
     when(commandEn) {
       cmdTpye := commandVal(31,24)
       control := commandVal(23,0)
+      // abstract_command_reg := commandVal
+
+
 
       when( dmstatus.anynonexistent | dmstatus.anyunavail | dmstatus.anyrunning | ~dmstatus.allhalted) {
         cmderr := 4.U
@@ -371,12 +376,12 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
             busy := true.B
             abstract_hartId := hartsel
 
-            whereTo := Cat(("h200".U)(20), ("h200".U)(10,1), ("h200".U)(11), ("h200".U)(19,12), "b000001101111".U )
+            whereTo := Cat(("h100".U)(20), ("h100".U)(10,1), ("h100".U)(11), ("h100".U)(19,12), "b000001101111".U(12.W) ) //to h200(h100+h100) jal h100
             flags(hartsel).is_going  := true.B
 
             abstractGeneratedMem(5) := Mux( postexec, 
-              Cat(("h300".U)(20), ("h300".U)(10,1), ("h300".U)(11), ("h300".U)(19,12), "b000001101111".U ),
-              "b0010011".U(32.W) )
+              Cat(("hec".U)(20), ("hec".U)(10,1), ("hec".U)(11), ("hec".U)(19,12), "b000001101111".U(12.W) ), //to h300 (h214+hec) jal ec
+              "b0010011".U(32.W) ) //nop
 
             when( is_access_CSR ) {
               val reg_sel = regno(11,0)
@@ -402,8 +407,8 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
               )
               // csrr s0 dscratch1   
               abstractGeneratedMem(4) := Cat("h7b3".U(12.W), 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
-              abstractGeneratedMem(5) := "b0010011".U(32.W)
-              abstractGeneratedMem(6) := "b0010011".U(32.W)
+              abstractGeneratedMem(5) := "b0010011".U(32.W)  //nop
+              abstractGeneratedMem(6) := "b0010011".U(32.W)  //nop
               abstractGeneratedMem(7) := "b000000000001000000000000001110011".U
 
             } .elsewhen( is_access_GPR ) {
@@ -415,7 +420,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
                 0.U(5.W),         // rs1 = 0 base
                 Mux( aarsize === 2.U, "b010".U(3.W), "b011".U(3.W)),       // word / double-word
                 Mux( transfer & write, reg_sel, ("h500".U)(4,0)),       // rd = s0 / offset h500
-                Mux( transfer & write, "b0000011".U(7.W),  "b0100011".U ), // ld or st
+                Mux( transfer & write, "b0000011".U(7.W),  "b0100011".U(7.W) ), // ld or st
               )
 
             } .elsewhen( is_access_FPR ) {
@@ -427,7 +432,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
                 0.U(5.W),         // rs1 = 0 base
                 Mux( aarsize === 2.U, "b010".U(3.W), "b011".U(3.W)),       // word / double-word
                 Mux( transfer & write, reg_sel, ("h500".U)(4,0)),       // rd = s0 / offset h500
-                Mux( transfer & write, "b0000111".U(7.W),  "b0100111".U ), // ld or st
+                Mux( transfer & write, "b0000111".U(7.W),  "b0100111".U(7.W) ), // ld or st
               )
             }
           }
@@ -435,7 +440,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         } 
 
         when( is_quick_access ) {
-          whereTo := Cat(("h300".U)(20), ("h300".U)(10,1), ("h300".U)(11), ("h300".U)(19,12), "b000001101111".U )
+          whereTo := Cat(("h200".U)(20), ("h200".U)(10,1), ("h200".U)(11), ("h200".U)(19,12), "b000001101111".U(12.W) ) //to h300(h100+h200) jal h200
           flags(hartsel).is_going  := true.B
 
           busy := true.B
@@ -462,7 +467,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
             busy := true.B
             abstract_hartId := hartsel
 
-            whereTo := Cat(("h300".U)(20), ("h300".U)(10,1), ("h300".U)(11), ("h300".U)(19,12), "b000001101111".U )
+            whereTo := Cat(("h200".U)(20), ("h200".U)(10,1), ("h200".U)(11), ("h200".U)(19,12), "b000001101111".U(12.W) ) //to h300 (h100+h200) jal h200
             flags(hartsel).is_going  := true.B
 
 
@@ -496,7 +501,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
               Mux(write, 8.U(5.W), 0.U(5.W)),          // rs1 = s0 / rs1 = 0 base
               aamsize,                                 // word / double-word
               Mux(write, 0.U(5.W), ("h500".U)(4,0)),   //  offset h00 / h500
-              "b0100011".U ,                          //  st
+              "b0100011".U(7.W) ,                          //  st
             )
 
             // csrr s0 dscratch1   
