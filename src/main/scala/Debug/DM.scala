@@ -314,7 +314,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     val commandVal = Wire(UInt(32.W))
     val commandEn  = Wire(Bool())
 
-    val whereTo = RegInit("b000000000001000000000000001110011".U(32.W))  //ebreak
+    val whereTo = RegInit("b000000000000100000000000001110011".U(32.W))  //ebreak
 
 
     val abstractGeneratedMem = RegInit(VecInit(
@@ -325,7 +325,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       "b0010011".U(32.W),
       "b0010011".U(32.W),
       "b0010011".U(32.W),
-      "b000000000001000000000000001110011".U  //ebreak
+      "b000000000000100000000000001110011".U  //ebreak
     ))
 
 
@@ -353,9 +353,9 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       } .elsewhen( cmderr =/= 0.U ) {}
       .otherwise {
 
-        val is_access_register = (cmdTpye === 0.U)
-        val is_quick_access    = (cmdTpye === 1.U)
-        val is_access_memory   = (cmdTpye === 2.U)
+        val is_access_register = commandEn & (cmdTpye === 0.U)
+        val is_quick_access    = commandEn & (cmdTpye === 1.U)
+        val is_access_memory   = commandEn & (cmdTpye === 2.U)
 
         when( is_access_register ) {
           val aarsize = control(22,20)
@@ -365,9 +365,9 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
           val write = control(16).asBool
           val regno = control(15,0)
 
-          val is_access_CSR = regno(15,12) === 0.U
-          val is_access_GPR = regno(15, 5) === "b00010000000".U
-          val is_access_FPR = regno(15, 5) === "b00010000001".U
+          val is_access_CSR = is_access_register & (regno(15,12) === 0.U )
+          val is_access_GPR = is_access_register & (regno(15, 5) === "b00010000000".U )
+          val is_access_FPR = is_access_register & (regno(15, 5) === "b00010000001".U )
 
 
           when( aarsize === 4.U ) {
@@ -409,7 +409,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
               abstractGeneratedMem(4) := Cat("h7b3".U(12.W), 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
               abstractGeneratedMem(5) := "b0010011".U(32.W)  //nop
               abstractGeneratedMem(6) := "b0010011".U(32.W)  //nop
-              abstractGeneratedMem(7) := "b000000000001000000000000001110011".U
+              abstractGeneratedMem(7) := "b000000000000100000000000001110011".U
 
             } .elsewhen( is_access_GPR ) {
               val reg_sel = regno(4,0)
@@ -508,7 +508,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
             abstractGeneratedMem(5) := Cat("h7b3".U(12.W), 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
             // csrr s1 dscratch2   
             abstractGeneratedMem(6) := Cat("h7b4".U(12.W), 0.U(5.W), "b010".U(3.W), 9.U(5.W), "b1110011".U(7.W))
-            abstractGeneratedMem(7) := "b000000000001000000000000001110011".U
+            abstractGeneratedMem(7) := "b000000000000100000000000001110011".U
 
           }
         }
