@@ -30,7 +30,6 @@
 #include "verilated_vcd_c.h"
 #endif
 
-#include "remote_bitbang.h"
 
 char* img;
 vluint64_t main_time = 0;
@@ -43,7 +42,6 @@ double sc_time_stamp () {
 uint8_t flag_waveEnable = 0;
 uint8_t flag_diffEnable = 0;
 uint8_t flag_limitEnable = 0;
-uint8_t flag_jtagMode = 0;
 
 int prase_arg(int argc, char **argv) {
 	int opt;
@@ -63,10 +61,6 @@ int prase_arg(int argc, char **argv) {
 				img = strdup(optarg);
 				// std::cout << "load in image is " << img << std::endl;
 				break;
-			case 'j':
-				flag_jtagMode = 1;
-				std::cout << "jtag Mode is Enable, bypassing memory load" << std::endl;
-				break;
 			case '?':
 				std::cout << "-w to enable waveform" << std::endl;
 				std::cout << "-f FILENAME to testfile" << std::endl;
@@ -85,10 +79,6 @@ int prase_arg(int argc, char **argv) {
 
 
 
-
-
-extern remote_bitbang_t * jtag;
-
 int main(int argc, char **argv, char **env) {
 
 
@@ -102,8 +92,6 @@ int main(int argc, char **argv, char **env) {
 			return -1;
 		}		
 	}
-
-	jtag = new remote_bitbang_t(16666);
 
 	char * temp[2];
 	char cmd[64] = "+";
