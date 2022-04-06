@@ -33,8 +33,12 @@ abstract class Privilege extends CsrFiles{
   priv_lvl_dnxt :=
     WireDefault(
       Mux1H( Seq(
+        emu_reset -> "b11".U,
+
         is_mRet -> mstatus(12,11),
         is_sRet -> mstatus(8),
+        is_dRet -> dcsr(1,0),
+        
 
         is_ssi -> Mux( priv_lvl_qout === "b11".U, "b11".U, Mux( ~mideleg(1),  "b11".U, "b01".U ) ),
         is_msi -> Mux( priv_lvl_qout === "b11".U, "b11".U, Mux( ~mideleg(3),  "b11".U, "b01".U ) ),
@@ -42,6 +46,8 @@ abstract class Privilege extends CsrFiles{
         is_mti -> Mux( priv_lvl_qout === "b11".U, "b11".U, Mux( ~mideleg(7),  "b11".U, "b01".U ) ),
         is_sei -> Mux( priv_lvl_qout === "b11".U, "b11".U, Mux( ~mideleg(9),  "b11".U, "b01".U ) ),
         is_mei -> Mux( priv_lvl_qout === "b11".U, "b11".U, Mux( ~mideleg(11), "b11".U, "b01".U ) ),
+        is_nomask_interrupt -> "b11".U,
+
 
         is_instr_misAlign        -> Mux( priv_lvl_qout === "b11".U, "b11".U, Mux(~medeleg(0),  "b11".U, "b01".U) ),
         is_instr_access_fault    -> Mux( priv_lvl_qout === "b11".U, "b11".U, Mux(~medeleg(1),  "b11".U, "b01".U) ),
@@ -61,7 +67,7 @@ abstract class Privilege extends CsrFiles{
       ))
     )
 
-  priv_lvl_enable := is_trap | is_mRet | is_sRet
+  priv_lvl_enable := is_trap | is_mRet | is_sRet | is_dRet | emu_reset
 
 }
 

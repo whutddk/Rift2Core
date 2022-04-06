@@ -52,10 +52,12 @@ abstract class CsrFiles_port extends Module{
   // val is_exception = Wire(Bool())
   val is_mRet = Wire(Bool())
   val is_sRet = Wire(Bool())
+  val is_dRet = Wire(Bool())
   // val is_uRet: Bool
   // lazy val is_xRet = is_mRet | is_sRet //| is_uRet
 
   val commit_pc = Wire(UInt(64.W))
+  // val cmmnxt_pc = Wire(UInt(64.W))
   val ill_instr = Wire(UInt(64.W))
   val ill_ivaddr = Wire(UInt(64.W))
   val ill_dvaddr = Wire(UInt(64.W))
@@ -170,6 +172,7 @@ abstract class CsrFiles_port extends Module{
   val dpc = Wire(UInt(64.W))
   val dscratch0 = Wire(UInt(64.W))
   val dscratch1 = Wire(UInt(64.W))
+  val dscratch2 = Wire(UInt(64.W))
 
 
   val pmpcfg  = Wire(Vec( 16, UInt(64.W)) )
@@ -180,7 +183,12 @@ abstract class CsrFiles_port extends Module{
   val mhpmcounter = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
   val mhpmevent = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
 
+
+
   val is_fpu_state_change = Wire(Bool())
+
+  val is_step_int_block = Wire(Bool())
+
 
   val priv_lvl_dnxt = Wire(UInt(2.W))
   val priv_lvl_enable = Wire(Bool())

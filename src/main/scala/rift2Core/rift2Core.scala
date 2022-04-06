@@ -25,6 +25,7 @@ import rift2Core.backend._
 import rift2Core.diff._
 import rift2Core.privilege._
 import axi._
+import debug._
 
 import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
@@ -60,7 +61,7 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
     Seq(TLMasterParameters.v1(
       name = "icache",
       sourceId = IdRange(0, 1),
-      supportsProbe = TransferSizes(32)
+      // supportsProbe = TransferSizes(32)
     ))
   )
 
@@ -85,7 +86,7 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
  
 class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val io = IO(new Bundle{
-
+    val dm      = Flipped(new Info_DM_cmm)
     val rtc_clock = Input(Bool())
   })
 
@@ -239,7 +240,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
   cmm_stage.io.rtc_clock := io.rtc_clock
-  
+  cmm_stage.io.dm <> io.dm
 
 
 

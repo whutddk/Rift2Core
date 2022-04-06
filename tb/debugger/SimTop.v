@@ -203,12 +203,12 @@ module SimTop (
 
 	reg rtc_clock;
 
-  wire         trstn = 1'b1;
-  wire         tck = 1'b0;
-  wire         tms = 1'b0;
-  wire         tdi = 1'b0;
+  wire         trstn;
+  wire         tck;
+  wire         tms;
+  wire         tdi;
   wire         tdo;
-  wire         tdo_en;
+  wire tdo_en;
 
 
 	wire         io_mem_chn_ar_ready;
@@ -289,6 +289,25 @@ wire [3:0] io_mem_chn_ar_bits_id;
 wire [3:0] io_mem_chn_r_bits_id;
 wire [3:0] io_mem_chn_aw_bits_id;
 wire [3:0] io_mem_chn_b_bits_id;
+
+
+SimJTAG s_simJtag(
+  .clock(CLK),
+  .reset(~RSTn),
+  
+  .enable(1'b1),
+  .init_done(1'b1),
+
+  .jtag_TCK(tck),
+  .jtag_TMS(tms),
+  .jtag_TDI(tdi),
+  .jtag_TRSTn(trstn),
+
+  .jtag_TDO_data(tdo),
+  .jtag_TDO_driven(tdo_en),
+        
+  .exit()
+  );
 
 
 
@@ -389,7 +408,7 @@ Rift2Chip s_Rift2Chip(
 
 
 
-axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram 
+axi_full_slv_sram # ( .DW(128), .AW(6) ) s_axi_full_slv_sram 
 (
 
 	.MEM_AWID   (io_mem_chn_aw_bits_id),

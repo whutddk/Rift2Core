@@ -267,6 +267,8 @@ VSimTop:
 	rm -f ./build/*.a
 	verilator -Wno-fatal  \
 	--timescale "1 ns / 1 ps" \
+	-O3 \
+	--threads 30 \
 	-y ${R2}/generated/ \
 	-y ${R2}/tb/ \
 	-y ${R2}/tb/vtb/ \
@@ -340,3 +342,34 @@ module:
 	-j 8
 
 	./build/V$(TOP)
+
+
+VSimDebugger: 
+	rm -f ./build/*.cpp
+	rm -f ./build/*.o
+	rm -f ./build/*.d
+	rm -f ./build/*.h
+	rm -f ./build/*.mk
+	rm -f ./build/*.a
+	verilator -Wno-fatal  \
+	--timescale "1 ns / 1 ps" \
+	-O3 \
+	--x-assign fast \
+	--x-initial fast \
+	--threads 30 \
+	-y ${R2}/generated/ \
+	-y ${R2}/tb/ \
+	-y ${R2}/tb/vtb/ \
+	--top-module SimTop \
+	--trace \
+	-LDFLAGS -ldromajo_cosim \
+	--cc ${R2}/tb/debugger/SimTop.v  \
+	--exe --build \
+	./debugger/sim_main.cpp  \
+	./verilator/diff.cpp \
+	./debugger/SimJTAG.cc \
+	./debugger/remote_bitbang.cc \
+	-Mdir build \
+	-j 128
+
+	

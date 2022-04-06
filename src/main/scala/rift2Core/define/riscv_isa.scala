@@ -688,6 +688,7 @@ class Info_reorder_i extends Bundle {
   val is_wfi = Bool()
   val is_csr = Bool()
   val is_fpu = Bool()
+  val is_rvc = Bool()
 
   val is_xcmm = Bool()
   val is_fcmm = Bool()
