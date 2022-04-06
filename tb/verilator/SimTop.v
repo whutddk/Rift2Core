@@ -408,7 +408,7 @@ Rift2Chip s_Rift2Chip(
 
 
 
-axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram 
+axi_full_slv_sram # ( .DW(128), .AW(6) ) s_axi_full_slv_sram 
 (
 
 	.MEM_AWID   (io_mem_chn_aw_bits_id),

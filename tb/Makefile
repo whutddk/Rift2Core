@@ -267,6 +267,10 @@ VSimTop:
 	rm -f ./build/*.a
 	verilator -Wno-fatal  \
 	--timescale "1 ns / 1 ps" \
+	-O3 \
+	--x-assign fast \
+	--x-initial fast \
+	--threads 30 \
 	-y ${R2}/generated/ \
 	-y ${R2}/tb/ \
 	-y ${R2}/tb/vtb/ \
