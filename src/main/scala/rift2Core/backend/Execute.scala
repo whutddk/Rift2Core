@@ -205,7 +205,7 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
 
   mul.io.mul_iss_exe <> io.mul_iss_exe
   mul.io.mul_exe_iwb <> io.mul_exe_iwb
-  mul.io.flush <> io.flush
+  mul.reset := reset.asBool | io.flush
 
 
 
