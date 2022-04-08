@@ -84,9 +84,9 @@ abstract class CsrFiles_D extends CsrFiles_M {
   dcsr := {
 
   val xdebugver = 4.U(4.W)
-    val ebreakm = RegInit(1.U(1.W))//ebreak will trap in debugMode
-    val ebreaks = RegInit(1.U(1.W))//ebreak will trap in debugMode
-    val ebreaku = RegInit(1.U(1.W))//ebreak will trap in debugMode
+    val ebreakm = RegInit(0.U(1.W))//ebreak will trap in debugMode
+    val ebreaks = RegInit(0.U(1.W))//ebreak will trap in debugMode
+    val ebreaku = RegInit(0.U(1.W))//ebreak will trap in debugMode
     val stepie  = 0.U(1.W) //Interrupts will be ban in step mode
     val stopcount = 0.U(1.W)
     val stoptime = 0.U(1.W)

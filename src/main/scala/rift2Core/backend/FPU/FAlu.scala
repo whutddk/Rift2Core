@@ -19,6 +19,7 @@ package rift2Core.backend.fpu
 
 import chisel3._
 import chisel3.util._
+import base._
 import rift2Core.define._
 import rift2Core.backend._
 import rift2Core.privilege.csrFiles._
@@ -34,7 +35,7 @@ class FAlu(latency: Int = 5, infly: Int = 8) extends Module with HasFPUParameter
     val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
     val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
     val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
-    val fcsr_cmm_op = DecoupledIO( new Exe_Port )
+    val fcsr_cmm_op = Vec(2, DecoupledIO( new Exe_Port ))
     val fcsr = Input(UInt(24.W))
 
 
@@ -44,12 +45,18 @@ class FAlu(latency: Int = 5, infly: Int = 8) extends Module with HasFPUParameter
   val cnt = RegInit(0.U((log2Ceil(infly)).W))
   when( io.flush ) {
     cnt := 0.U
-  } .elsewhen( io.fpu_iss_exe.fire & io.fcsr_cmm_op.fire ) {
+  }.elsewhen( io.fpu_iss_exe.fire & io.fcsr_cmm_op(0).fire & io.fcsr_cmm_op(1).fire) {
+    cnt := cnt - 1.U
+    assert(cnt =/= 0.U)
+  } elsewhen( io.fpu_iss_exe.fire & io.fcsr_cmm_op(0).fire ) {
     cnt := cnt
   } .elsewhen( io.fpu_iss_exe.fire ) {
     cnt := cnt + 1.U
     assert(cnt =/= (infly-1).U)
-  } .elsewhen( io.fcsr_cmm_op.fire ) {
+  } .elsewhen( io.fcsr_cmm_op(0).fire & io.fcsr_cmm_op(1).fire) {
+    cnt := cnt - 2.U
+    assert(cnt =/= 1.U); assert(cnt =/= 0.U)
+  } .elsewhen( io.fcsr_cmm_op(0).fire ) {
     cnt := cnt - 1.U
     assert(cnt =/= 0.U)
   }
@@ -144,7 +151,7 @@ class FAlu(latency: Int = 5, infly: Int = 8) extends Module with HasFPUParameter
     ))
 
   val fcsr_op_fifo = {
-    val mdl = Module(new Queue( new Exe_Port, infly ) )
+    val mdl = Module( new MultiPortFifo( new Exe_Port, log2Ceil(infly), in = 1, out = 2 ))
 
     val rw = io.fpu_iss_exe.bits.fun.is_fun_frw
     val rs = 
@@ -172,11 +179,11 @@ class FAlu(latency: Int = 5, infly: Int = 8) extends Module with HasFPUParameter
     mdl.io.deq <> io.fcsr_cmm_op
     mdl.reset := reset.asBool | io.flush
 
-    mdl.io.enq.bits.addr := addr
-    mdl.io.enq.bits.dat_i := dat
-    mdl.io.enq.bits.op_rw := rw & ~dontWrite
-    mdl.io.enq.bits.op_rs := rs & ~dontWrite
-    mdl.io.enq.bits.op_rc := rc & ~dontWrite
+    mdl.io.enq(0).bits.addr := addr
+    mdl.io.enq(0).bits.dat_i := dat
+    mdl.io.enq(0).bits.op_rw := rw & ~dontWrite
+    mdl.io.enq(0).bits.op_rs := rs & ~dontWrite
+    mdl.io.enq(0).bits.op_rc := rc & ~dontWrite
 
     mdl
   }
