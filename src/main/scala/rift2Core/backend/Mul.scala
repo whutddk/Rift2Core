@@ -92,7 +92,7 @@ class Mul extends Module {
     Cat ( 0.U(64.W),
       Mux(
         is_usi, 
-        op1,
+        Mux(is_32w, op1(31,0), op1),
         Mux(  
           is_32w,
           Cat( 0.U(32.W), Mux(op1(31), (~op1(31,0) + 1.U), op1(31,0))),
@@ -104,7 +104,7 @@ class Mul extends Module {
   val divisor_load =
     Mux(
       is_usi,
-      op2,
+      Mux(is_32w, op2(31,0), op2),
       Mux( 
         is_32w,
         Cat( Fill(32, 0.U), Mux(op2(31), (~op2(31,0) + 1.U), op2(31,0))),
