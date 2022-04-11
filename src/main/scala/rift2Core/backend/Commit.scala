@@ -32,13 +32,18 @@ import debug._
 import rift2Core.diff._
 
 /** commit
-  * 
-  * 
-  * 
+  * @note for every commit-chn, it can be:
+  * comfirm: commit at this tick
+  * abort: cancel and flush at this tick
+  * cancel: the perivious chn abort
+  * idle: empty line or waitting to check whether is comfirm or abort
+  *
+  * @note new feature
+  * 1. abort can only emmit at chn0 -> abort can emmit at any chn
   */
 class Commit(cm: Int=2) extends Privilege with Superscalar {
   val io = IO(new Bundle{
-    val cm_op = Vec(cm, Decoupled(new Info_commit_op(64)))
+    val cm_op = Vec(cm, new Info_commit_op(64))
     val rod_i = Vec(cm, Flipped(new DecoupledIO( new Info_reorder_i ) ))
 
     val cmm_lsu = Output(new Info_cmm_lsu)
@@ -73,102 +78,75 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
   })
 
 
+
+
+  val commit_state = Wire(Vec(cm, UInt(2.W)))
+  val commit_state_is_comfirm = ( 0 until cm ).map{ commit_state(i) === 3.U }
+  val commit_state_is_abort   = ( 0 until cm ).map{ commit_state(i) === 2.U }
+  val commit_state_is_cancel = ( 0 until cm ).map{ commit_state(i) === 1.U }
+  val commit_state_is_idle    = ( 0 until cm ).map{ commit_state(i) === 0.U }
+  val abort_chn = Wire(UInt(log2Ceil(cm).W))
+
+  ( 1 until cm ).map{ i => assert( commit_state(i) <= commit_state(i-1) ) }
+
+
   val rd0_raw = io.rod_i.map{ _.bits.rd0_raw }
   val rd0_phy = io.rod_i.map{ _.bits.rd0_phy }
   val is_xcmm = io.rod_i.map{ _.bits.is_xcmm }
   val is_fcmm = io.rod_i.map{ _.bits.is_fcmm }
 
   for ( i <- 0 until cm ) yield {
-    io.cm_op(i).bits.phy := rd0_phy(i)
-    io.cm_op(i).bits.raw := rd0_raw(i)
-    io.cm_op(i).bits.toX := is_xcmm(i)
-    io.cm_op(i).bits.toF := is_fcmm(i) 
+    io.cm_op(i).phy := rd0_phy(i)
+    io.cm_op(i).raw := rd0_raw(i)
+    io.cm_op(i).toX := is_xcmm(i)
+    io.cm_op(i).toF := is_fcmm(i) 
   }
 
-  val is_wb_v = ( 0 until cm ).map{ i =>
-    io.cm_op(i).ready & io.rod_i(i).valid
-  }
+  val is_wb_v = io.cm_op.map{ _ => _.is_writeback }
+  
 
 
   //bru commit ilp
   io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (~io.cm_op(0).ready)
+  printf("Warning, preformance enhance require: 1. branch pending only resolved in chn0 -> only one branch pending can be resolved, in any chn.")
 
-  val is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | io.rod_i(0).bits.is_su | ~is_wb_v(0) | (io.rod_i(0).bits.rd0_raw === io.rod_i(1).bits.rd0_raw)
-  val is_2nd_solo = io.is_commit_abort(1) | io.rod_i(1).bits.is_csr | io.rod_i(1).bits.is_su
+  // val is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | io.rod_i(0).bits.is_su | ~is_wb_v(0) | (io.rod_i(0).bits.rd0_raw === io.rod_i(1).bits.rd0_raw)
+  // val is_2nd_solo = io.is_commit_abort(1) | io.rod_i(1).bits.is_csr | io.rod_i(1).bits.is_su
 
     val is_load_accessFault_ack_v = ( 0 until cm ).map{ i =>
       io.lsu_cmm.is_access_fault & io.rod_i(i).bits.is_lu & ~is_wb_v(i)
     }
-      // VecInit(
-      //   io.lsu_cmm.is_access_fault & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
-      //   io.lsu_cmm.is_access_fault & io.rod_i(1).bits.is_lu & ~is_wb_v(1) & ~is_1st_solo
-      // )
+
 
     val is_store_accessFault_ack_v = ( 0 until cm ).map{ i =>
       io.lsu_cmm.is_access_fault & ( io.rod_i(i).bits.is_su | io.rod_i(i).bits.is_amo ) & ~is_wb_v(i),
     }
-      // VecInit(
-      //   io.lsu_cmm.is_access_fault & ( io.rod_i(0).bits.is_su | io.rod_i(0).bits.is_amo ) & ~is_wb_v(0),
-      //   io.lsu_cmm.is_access_fault & ( io.rod_i(1).bits.is_su | io.rod_i(1).bits.is_amo ) & ~is_wb_v(1) & ~is_1st_solo
-      // )
 
     val is_load_pagingFault_ack_v = ( 0 until cm ).map{ i =>
       io.lsu_cmm.is_paging_fault & io.rod_i(i).bits.is_lu & ~is_wb_v(i),
     }
-      // VecInit(
-      //   io.lsu_cmm.is_paging_fault & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
-      //   io.lsu_cmm.is_paging_fault & io.rod_i(1).bits.is_lu & ~is_wb_v(1) & ~is_1st_solo
-      // )
 
     val is_store_pagingFault_ack_v = ( 0 until cm ).map{ i =>
       io.lsu_cmm.is_paging_fault & ( io.rod_i(i).bits.is_su | io.rod_i(i).bits.is_amo ) & ~is_wb_v(i)
     }
-      // VecInit(
-      //   io.lsu_cmm.is_paging_fault & ( io.rod_i(0).bits.is_su | io.rod_i(0).bits.is_amo ) & ~is_wb_v(0),
-      //   io.lsu_cmm.is_paging_fault & ( io.rod_i(1).bits.is_su | io.rod_i(1).bits.is_amo ) & ~is_wb_v(1) & ~is_1st_solo
-      // )
 
       
     val is_load_misAlign_ack_v = ( 0 until cm ).map{ i =>
       io.lsu_cmm.is_misAlign & io.rod_i(i).bits.is_lu & ~is_wb_v(i)
     }
-      // VecInit(
-      //   io.lsu_cmm.is_misAlign & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
-      //   io.lsu_cmm.is_misAlign & io.rod_i(1).bits.is_lu & ~is_wb_v(1) & ~is_1st_solo
-      // )
 
     val is_store_misAlign_ack_v = ( 0 until cm ).map{ i =>
       io.lsu_cmm.is_misAlign & (io.rod_i(i).bits.is_su | io.rod_i(i).bits.is_amo) & ~is_wb_v(i)
     }
-      // VecInit(
-      //   io.lsu_cmm.is_misAlign & (io.rod_i(0).bits.is_su | io.rod_i(0).bits.is_amo) & ~is_wb_v(0),
-      //   io.lsu_cmm.is_misAlign & (io.rod_i(1).bits.is_su | io.rod_i(1).bits.is_amo) & ~is_wb_v(1) & ~is_1st_solo
-      // )
 
     val is_ecall_v = io.rod_i.map{ _.bits.privil.ecall }
 
-      // VecInit(
-      //   io.rod_i(0).bits.privil.ecall,
-      //   io.rod_i(1).bits.privil.ecall & ~is_1st_solo
-      // )
 
     val is_ebreak_v = io.rod_i.map{ _.bits.privil.ebreak }
-      // VecInit(
-      //   io.rod_i(0).bits.privil.ebreak,
-      //   io.rod_i(1).bits.privil.ebreak & ~is_1st_solo
-      // )
  
     val is_instr_access_fault_v = io.rod_i.map{ _.bits.privil.is_access_fault }
-      // VecInit(
-      //   io.rod_i(0).bits.privil.is_access_fault,
-      //   io.rod_i(1).bits.privil.is_access_fault & ~is_1st_solo
-      // )
-
     val is_instr_paging_fault_v = io.rod_i.map{ _.bits.privil.is_paging_fault }
-      // VecInit(
-      //   io.rod_i(0).bits.privil.is_paging_fault,
-      //   io.rod_i(1).bits.privil.is_paging_fault & ~is_1st_solo
-      // )
+
 
     val is_illeage_v = ( 0 until cm ).map{ i =>
       val is_csr_illegal = 
@@ -188,93 +166,28 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
       io.rod_i(i).bits.is_illeage | is_csr_illegal | is_ill_sfence | is_ill_wfi_v | is_ill_mRet_v | is_ill_sRet_v | is_ill_dRet_v | is_ill_fpus_v
     }
     
-    {
-      // val is_csr_illegal = VecInit(
-      //   (is_csrr_illegal  & io.rod_i(0).valid & io.rod_i(0).bits.is_csr  & ~is_wb_v(0)) |
-      //   (is_csrw_illegal  & io.rod_i(0).valid & io.rod_i(0).bits.is_csr  &  is_wb_v(0))  |
-      //   (is_fcsrw_illegal(0) & io.rod_i(0).valid & io.rod_i(0).bits.is_fpu &  is_wb_v(0)),
-      //   (is_csrr_illegal  & io.rod_i(1).valid & io.rod_i(1).bits.is_csr  & ~is_wb_v(1)) |
-      //   (is_csrw_illegal  & io.rod_i(1).valid & io.rod_i(1).bits.is_csr  &  is_wb_v(1)) |
-      //   (is_fcsrw_illegal(1) & io.rod_i(1).valid & io.rod_i(1).bits.is_fpu &  is_wb_v(1))
-      // )
-
-      // val is_ill_sfence = VecInit(
-      //   is_wb_v(0) & io.rod_i(0).bits.is_sfence_vma & ( (mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b00".U),
-      //   is_wb_v(1) & io.rod_i(1).bits.is_sfence_vma & ( (mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b00".U)
-      // )
-
-      // val is_ill_wfi_v = VecInit(
-      //   is_wb_v(0) & io.rod_i(0).bits.is_wfi & (mstatus(21) & priv_lvl_qout < "b11".U),
-      //   is_wb_v(1) & io.rod_i(1).bits.is_wfi & (mstatus(21) & priv_lvl_qout < "b11".U)
-      // )
-
-      // val is_ill_mRet_v = VecInit(
-      //   io.rod_i(0).bits.privil.mret & priv_lvl_qout =/= "b11".U,
-      //   io.rod_i(1).bits.privil.mret & priv_lvl_qout =/= "b11".U
-      // )
-
-      // val is_ill_sRet_v = VecInit(
-      //   io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b01".U & mstatus(22)) ),
-      //   io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b01".U & mstatus(22)) )
-      // )
-
-      // val is_ill_dRet_v = VecInit(
-      //   io.rod_i(0).bits.privil.dret & ~is_inDebugMode,
-      //   io.rod_i(1).bits.privil.dret & ~is_inDebugMode
-      // )      
-
-      // val is_ill_fpus_v = ( 0 until 2 ).map{ i => 
-      //   (is_wb_v(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fpu) & mstatus(14,13) === 0.U)
-      // }: Seq[Bool]
-      
-
-
-
-      // VecInit(
-      //   (io.rod_i(0).bits.is_illeage | is_csr_illegal(0) | is_ill_sfence(0) | is_ill_wfi_v(0) | is_ill_mRet_v(0) | is_ill_sRet_v(0) | is_ill_dRet_v(0) | is_ill_fpus_v(0) ),
-      //   (io.rod_i(1).bits.is_illeage | is_csr_illegal(1) | is_ill_sfence(1) | is_ill_wfi_v(1) | is_ill_mRet_v(1) | is_ill_sRet_v(1) | is_ill_dRet_v(1) | is_ill_fpus_v(1) ) & ~is_1st_solo
-      // )
-    }
+    
 
     val is_mRet_v = ( 0 until cm ).map{ i =>
       io.rod_i(i).bits.privil.mret & priv_lvl(i) === "b11".U,
     }
-      // VecInit(
-      //   io.rod_i(0).bits.privil.mret & priv_lvl_qout === "b11".U,
-      //   io.rod_i(1).bits.privil.mret & priv_lvl_qout === "b11".U & ~is_1st_solo
-      // )
 
     val is_sRet_v = ( 0 until cm ).map{ i =>
       io.rod_i(i).bits.privil.sret & ( priv_lvl(i) === "b11".U | ( priv_lvl(i) === "b01".U & ~mstatus(i)(22)) ),
     }
-      // VecInit(
-      //   io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b01".U & ~mstatus(22)) ),
-      //   io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b01".U & ~mstatus(22)) ) & ~is_1st_solo
-      // )
 
     val is_dRet_v = ( 0 until cm ).map{ i =>
       io.rod_i(i).bits.privil.dret & is_inDebugMode(i)
     }
-      // VecInit(
-      //   io.rod_i(0).bits.privil.dret & is_inDebugMode,
-      //   io.rod_i(1).bits.privil.dret & is_inDebugMode & ~is_1st_solo
-      // )
 
     val is_fence_i_v = ( 0 until cm ).map{ i =>
       io.rod_i(i).bits.is_fence_i & is_wb_v(i)
     }
-      // VecInit(
-      //   io.rod_i(0).bits.is_fence_i & is_wb_v(0),
-      //   io.rod_i(1).bits.is_fence_i & is_wb_v(1) & ~is_1st_solo
-      // )
+
 
     val is_sfence_vma_v = ( 0 until cm ).map{ i =>
       io.rod_i(i).bits.is_sfence_vma & is_wb_v(i) & ( (~mstatus(i)(20) & priv_lvl(i) === "b01".U) | priv_lvl(i) === "b11".U)
     }
-      // VecInit(
-      //   io.rod_i(0).bits.is_sfence_vma & is_wb_v(0) & ( (~mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b11".U),
-      //   io.rod_i(1).bits.is_sfence_vma & is_wb_v(1) & ( (~mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b11".U) & ~is_1st_solo
-      // )
 
 
 	val is_exception_v = ( 0 until cm ).map{ i =>
@@ -290,133 +203,132 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
     is_load_pagingFault_ack_v(i) |
     is_store_pagingFault_ack_v(i)         
   }
-    // VecInit( for (i <- 0 until 2) yield {
-    //   (
-    //     is_ecall_v(i)  |
-    //     is_ebreak_v(i)  |
-    //     is_instr_access_fault_v(i)  |
-    //     is_instr_paging_fault_v(i)  |
-    //     is_illeage_v(i) |
-    //     is_load_accessFault_ack_v(i)  |
-    //     is_store_accessFault_ack_v(i) |
-    //     is_load_misAlign_ack_v(i)  |
-    //     is_store_misAlign_ack_v(i) |
-    //     is_load_pagingFault_ack_v(i) |
-    //     is_store_pagingFault_ack_v(i)         
-    //   )
 
-    // })
 
-	// val is_trap_v = Wire(Vec(2, Bool()))
-  // val is_xRet_v = Wire(Vec(2, Bool()))
+
 
 	val is_trap_v = ( 0 until cm ).map{ i =>
     is_interrupt | is_exception_v(i)
   }
   
-  // VecInit( is_interrupt | is_exception_v(0), is_interrupt | is_exception_v(1) )
 
   val is_xRet_v = ( 0 until cm ).map{ i =>
     is_mRet_v(i) | is_sRet_v(i) | is_dRet_v(i)
   }
-  // VecInit( is_mRet_v(0) | is_sRet_v(0) | is_dRet_v(0), is_mRet_v(1) | is_sRet_v(1) | is_dRet_v(1) )
+
+  abort_chn := DontCare
+  for ( i <- 0 until cm ) yield {
+    when( ~io.rod_i(i).valid ) {
+      commit_state(i) := 0.U //IDLE
+    } .otherwise {
+      when(
+          (io.rod_i(i).bits.is_branch & io.is_misPredict ) |
+          is_xRet_v(i) |
+          is_trap_v(i) |
+          is_fence_i_v(i) |
+          is_sfence_vma_v(i)
+        ) {
+        commit_state(i) := 2.U //abort
+        abort_chn := i.U
+      } .elsewhen(
+        is_wb_v(i) & {
+          if ( i =/= 0 ) {~is_step}
+          else { true.B }          
+        }) { //when writeback and no-step
+        commit_state(i) := 3.U
+      } .otherwise {
+        commit_state(i) := 0.U //idle
+      }
+      if ( i =/= 0 ) {commit_state(i-1) === 1.U} //abort override following as cancel
+    }
+  }
+    
 
 
+  // io.is_commit_abort(1) :=
+  //   (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) | is_fence_i_v(1) | is_sfence_vma_v(1)  ) & ~is_1st_solo 
 
-  io.is_commit_abort(1) :=
-    (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) | is_fence_i_v(1) | is_sfence_vma_v(1)  ) & ~is_1st_solo 
-
-  io.is_commit_abort(0) :=
-    (io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet_v(0) | is_trap_v(0) | is_fence_i_v(0) | is_sfence_vma_v(0) )
+  // io.is_commit_abort(0) :=
+  //   (io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet_v(0) | is_trap_v(0) | is_fence_i_v(0) | is_sfence_vma_v(0) )
 
 
   //only one privilege can commit once
-  val is_commit_comfirm = VecInit(
-    is_wb_v(0) & ~io.is_commit_abort(0),
-    is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo & ~is_step
-  )
-
-
-
-
-  io.cm_op(0).valid := is_commit_comfirm(0) | io.is_commit_abort(0)
-  io.cm_op(1).valid := is_commit_comfirm(1) | io.is_commit_abort(1)
-
-  io.cm_op(0).bits.is_abort := io.is_commit_abort(0)
-  io.cm_op(1).bits.is_abort := io.is_commit_abort(1)
-
-
-  io.rod_i(0).ready := is_commit_comfirm(0) | io.is_commit_abort(0)
-  io.rod_i(1).ready := is_commit_comfirm(1)
-
-  io.cmm_lsu.is_amo_pending := io.rod_i(0).valid & io.rod_i(0).bits.is_amo & ~is_commit_comfirm(0) //only pending amo in rod0 is send out
-  // io.cmm_lsu.is_lr_clear := io.is_commit_abort(1) | io.is_commit_abort(0)
-
-    //  |
-    // (io.rod_i(1).bits.is_amo & ~is_commit_comfirm(1) ~is_1st_solo )
-
-  io.cmm_lsu.is_store_commit(0) := io.rod_i(0).bits.is_su & is_commit_comfirm(0)
-  io.cmm_lsu.is_store_commit(1) := io.rod_i(1).bits.is_su & is_commit_comfirm(1)
-
-
-
-
-
-
-
-
-  io.cmm_pc.valid :=
-  (    
-    (io.rod_i(0).valid & is_mRet_v(0)) |
-    (io.rod_i(0).valid & is_sRet_v(0)) |
-    (io.rod_i(0).valid & is_dRet_v(0)) |
-    (io.rod_i(0).valid & is_trap_v(0)) |
-    (io.rod_i(0).valid & is_fence_i_v(0)) |
-    (io.rod_i(0).valid & is_sfence_vma_v(0))
-  ) 
-  // |
-  // (
-
-  //   (io.rod_i(1).valid & is_mRet_v(1)) |
-  //   (io.rod_i(1).valid & is_sRet_v(1)) |
-  //   (io.rod_i(1).valid & is_dRet_v(1)) |
-  //   (io.rod_i(1).valid & is_trap_v(1)) |
-  //   (io.rod_i(1).valid & is_fence_i_v(1)) |    
-  //   (io.rod_i(1).valid & is_sfence_vma_v(1))  
-
+  // val is_commit_comfirm = VecInit(
+  //   is_wb_v(0) & ~io.is_commit_abort(0),
+  //   is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo & ~is_step
   // )
-    
+
+
+
+  ( 0 until cm ).map{ i =>
+    io.cm_op(i).is_comfirm := commit_state_is_comfirm(i)
+    io.cm_op(i).is_abort   := commit_state_is_abort(i)
+
+  }
+  // io.cm_op(0).valid := is_commit_comfirm(0) | io.is_commit_abort(0)
+  // io.cm_op(1).valid := is_commit_comfirm(1) | io.is_commit_abort(1)
+
+  // io.cm_op(0).bits.is_abort := io.is_commit_abort(0)
+  // io.cm_op(1).bits.is_abort := io.is_commit_abort(1)
+
+  ( 0 until cm ).map{ i =>
+    io.rod_i(i).ready := commit_state_is_comfirm(i) | commit_state_is_abort(i)
+  }
+
+
+  io.cmm_lsu.is_amo_pending := {
+    io.rod_i(0).valid & io.rod_i(0).bits.is_amo & ~is_wb_v(0) //only pending amo in rod0 is send out
+  }
+  printf("Warning, amo_pending can only emmit at chn0")
+  
+
+  ( 0 until cm ).map{ i =>
+    io.cmm_lsu.is_store_commit(i) := io.rod_i(i).bits.is_su & commit_state_is_comfirm(i)
+  }
+
+
+  for ( i <- 0 until cm ) yield {
+    when( commit_state_is_abort(i) )    
+  }
+
+
+
+
+
+  io.cmm_pc.valid := ( 0 until cm ).map{
+     commit_state_is_abort(i) & (
+      is_mRet_v(i) |
+      is_sRet_v(i) |
+      is_dRet_v(i) |
+      is_trap_v(i) |
+      is_fence_i_v(i) |
+      is_sfence_vma_v(i)
+    )
+  }.reduce(_|_)
+
   io.cmm_pc.bits.addr := Mux1H(Seq(
-    (io.rod_i(0).valid & is_mRet_v(0)) -> mepc,
-    (io.rod_i(0).valid & is_sRet_v(0)) -> sepc,
-    (io.rod_i(0).valid & is_dRet_v(0)) -> dpc,
-    (io.rod_i(0).valid & is_trap_v(0)) -> MuxCase(0.U, Array(
+    ( is_mRet_v(abort_chn) ) -> mepc,
+    ( is_sRet_v(abort_chn) ) -> sepc,
+    ( is_dRet_v(abort_chn) ) -> dpc ,
+    ( is_trap_v(abort_chn) ) -> MuxCase(0.U, Array(
       emu_reset -> "h80000000".U,
       is_debug_interrupt -> "h00000000".U,
-      (priv_lvl_dnxt === "b11".U) -> mtvec,
-      (priv_lvl_dnxt === "b01".U) -> stvec)
+      (priv_lvl_dnxt(abort_chn) === "b11".U) -> mtvec,
+      (priv_lvl_dnxt(abort_chn) === "b01".U) -> stvec)
     ),
-    (io.rod_i(0).valid & is_fence_i_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
-    (io.rod_i(0).valid & is_sfence_vma_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
+    (is_fence_i_v(abort_chn)) -> (io.rod_i(abort_chn).bits.pc + 4.U),
+    (is_sfence_vma_v(abort_chn)) -> (io.rod_i(abort_chn).bits.pc + 4.U),
 
-    // (io.rod_i(1).valid & is_mRet_v(1)) -> mepc,
-    // (io.rod_i(1).valid & is_sRet_v(1)) -> sepc,
-    // (io.rod_i(1).valid & is_dRet_v(1)) -> dpc,
-    // (io.rod_i(1).valid & is_trap_v(1)) -> mtvec,
-    // (io.rod_i(1).valid & is_fence_i_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
-    // (io.rod_i(1).valid & is_sfence_vma_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
   ))
+
+
 
   assert(
     PopCount(Seq(
-      (io.rod_i(0).valid & is_xRet_v(0)),
-      (io.rod_i(0).valid & is_trap_v(0)),
-      (io.rod_i(0).valid & is_fence_i_v(0)),
-      (io.rod_i(0).valid & is_sfence_vma_v(0)),
-      // (io.rod_i(1).valid & is_xRet_v(1)),
-      // (io.rod_i(1).valid & is_trap_v(1)),
-      // (io.rod_i(1).valid & is_fence_i_v(1)),    
-      // (io.rod_i(1).valid & is_sfence_vma_v(1)),    
+      ( commit_state_is_abort(i) & is_xRet_v(0)),
+      (is_trap_v(0)),
+      (is_fence_i_v(0)),
+      (is_sfence_vma_v(0)),
     )) <= 1.U
   )
 
@@ -650,6 +562,5 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
   io.diff_csr.frm     := fcsr(7,5)
 
 
-  assert( ~(is_wb_v(0) & ~io.rod_i(0).valid) )
-  assert( ~(is_wb_v(1) & ~io.rod_i(1).valid) )
+
 }
