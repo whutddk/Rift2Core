@@ -45,7 +45,32 @@ object Reg_Exe_Port {
   }
 }
 
-abstract class CsrFiles_port extends Module{
+object Reg_Exe_Port_EN {
+  def apply( addr: UInt, ep: Exe_Port ): Bool = {
+    val enable = (ep.addr === addr) & (ep.op_rw | ep.op_rs | ep.op_rc)
+    return enable
+  }
+}
+
+object Reg_Exe_Port_Dnxt {
+  def apply( csr_reg: UInt, ep: Exe_Port ): UInt = {
+    val dnxt = Mux1H(Seq(
+        ep.op_rw -> ( ep.dat_i),
+        ep.op_rs -> (csr_reg | ep.dat_i),
+        ep.op_rc -> (csr_reg & ~ep.dat_i),
+      ))
+    return dnxt
+  }
+}
+
+object Csr_WR {
+  def apply( out: UInt, csr_reg: UInt, addr: UInt, ep: Exe_Port ) = {
+    val (enable, dnxt) = Reg_Exe_Port ( csr_reg, addr, ep )
+    when( enable ) { out := dnxt }
+  }
+}
+
+abstract class CsrFiles_port(cm: Int) extends Module{
   val exe_port = Wire(new Exe_Port)
   val exe_fport = Wire(new Exe_Port)
   val is_trap = Wire(Bool())
@@ -62,9 +87,9 @@ abstract class CsrFiles_port extends Module{
   val ill_ivaddr = Wire(UInt(64.W))
   val ill_dvaddr = Wire(UInt(64.W))
 
-  val is_csrw_illegal = Wire(Bool())
-  val is_fcsrw_illegal = Wire(Vec(2,Bool()))
-  val is_csrr_illegal = Wire(Bool())
+  val is_csrw_illegal = Wire(Vec(cm,Bool())
+  val is_fcsrw_illegal = Wire(Vec(cm,Bool()))
+  val is_csrr_illegal = Wire(Vec(cm,Bool())
 
   val is_instr_misAlign = WireDefault(false.B)
   val is_instr_access_fault      = Wire(Bool())

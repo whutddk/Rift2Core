@@ -31,6 +31,11 @@ import debug._
 
 import rift2Core.diff._
 
+abstarct BaseCommit extends RawModule
+
+
+
+
 /** commit
   * @note for every commit-chn, it can be:
   * comfirm: commit at this tick
@@ -287,63 +292,97 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
   }
 
 
+  io.cmm_pc.valid := false.B
+  io.cmm_pc.bits.addr := 0.U
   for ( i <- 0 until cm ) yield {
-    when( commit_state_is_abort(i) )    
+    when( commit_state_is_abort(i) ) {
+      when( is_mRet_v(i) ) {
+        io.cmm_pc.valid := true.B
+        io.cmm_pc.bits.addr := mepc
+      } 
+      when( is_sRet_v(i) ) {
+        io.cmm_pc.valid := true.B
+        io.cmm_pc.bits.addr := sepc
+      } 
+      when( is_dRet_v(i) ) {
+        io.cmm_pc.valid := true.B
+        io.cmm_pc.bits.addr := dpc
+      } 
+      when( is_trap_v(i) ) {
+        io.cmm_pc.valid := true.B
+        io.cmm_pc.bits.addr := Mux1H(Seq(
+            emu_reset                              -> "h80000000".U,
+            is_debug_interrupt                     -> "h00000000".U,
+            (priv_lvl_dnxt(abort_chn) === "b11".U) -> mtvec,
+            (priv_lvl_dnxt(abort_chn) === "b01".U) -> stvec
+          )),
+      } 
+      when( is_fence_i_v(i) | is_sfence_vma_v(i) ) {
+        io.cmm_pc.valid := true.B
+        io.cmm_pc.bits.addr := (io.rod_i(i).bits.pc + 4.U)
+      }
+    }
+
+    assert( PopCount(Seq( is_xRet_v(i), is_trap_v(i), is_fence_i_v(i), is_sfence_vma_v(i))) <= 1.U )
   }
 
 
 
 
 
-  io.cmm_pc.valid := ( 0 until cm ).map{
-     commit_state_is_abort(i) & (
-      is_mRet_v(i) |
-      is_sRet_v(i) |
-      is_dRet_v(i) |
-      is_trap_v(i) |
-      is_fence_i_v(i) |
-      is_sfence_vma_v(i)
-    )
-  }.reduce(_|_)
+  // io.cmm_pc.valid := ( 0 until cm ).map{
+  //    commit_state_is_abort(i) & (
+  //     is_mRet_v(i) |
+  //     is_sRet_v(i) |
+  //     is_dRet_v(i) |
+  //     is_trap_v(i) |
+  //     is_fence_i_v(i) |
+  //     is_sfence_vma_v(i)
+  //   )
+  // }.reduce(_|_)
 
-  io.cmm_pc.bits.addr := Mux1H(Seq(
-    ( is_mRet_v(abort_chn) ) -> mepc,
-    ( is_sRet_v(abort_chn) ) -> sepc,
-    ( is_dRet_v(abort_chn) ) -> dpc ,
-    ( is_trap_v(abort_chn) ) -> MuxCase(0.U, Array(
-      emu_reset -> "h80000000".U,
-      is_debug_interrupt -> "h00000000".U,
-      (priv_lvl_dnxt(abort_chn) === "b11".U) -> mtvec,
-      (priv_lvl_dnxt(abort_chn) === "b01".U) -> stvec)
-    ),
-    (is_fence_i_v(abort_chn)) -> (io.rod_i(abort_chn).bits.pc + 4.U),
-    (is_sfence_vma_v(abort_chn)) -> (io.rod_i(abort_chn).bits.pc + 4.U),
+  // io.cmm_pc.bits.addr := Mux1H(Seq(
+  //   ( is_mRet_v(abort_chn) ) -> mepc,
+  //   ( is_sRet_v(abort_chn) ) -> sepc,
+  //   ( is_dRet_v(abort_chn) ) -> dpc ,
+  //   ( is_trap_v(abort_chn) ) -> MuxCase(0.U, Array(
+  //     emu_reset -> "h80000000".U,
+  //     is_debug_interrupt -> "h00000000".U,
+  //     (priv_lvl_dnxt(abort_chn) === "b11".U) -> mtvec,
+  //     (priv_lvl_dnxt(abort_chn) === "b01".U) -> stvec)
+  //   ),
+  //   (is_fence_i_v(abort_chn)) ->    (io.rod_i(abort_chn).bits.pc + 4.U),
+  //   (is_sfence_vma_v(abort_chn)) -> (io.rod_i(abort_chn).bits.pc + 4.U),
 
-  ))
-
-
-
-  assert(
-    PopCount(Seq(
-      ( commit_state_is_abort(i) & is_xRet_v(0)),
-      (is_trap_v(0)),
-      (is_fence_i_v(0)),
-      (is_sfence_vma_v(0)),
-    )) <= 1.U
-  )
-
-  assert( ~(io.cmm_pc.valid & ~io.is_commit_abort(0) & ~io.is_commit_abort(1)) )
-
-
-    val is_retired_v = 
-      VecInit(
-        is_commit_comfirm(0) | io.is_commit_abort(0),
-        is_commit_comfirm(1),
-      )
+  // ))
 
 
 
+  // assert(
+  //   PopCount(Seq(
+  //     ( commit_state_is_abort(i) & is_xRet_v(0)),
+  //     (is_trap_v(0)),
+  //     (is_fence_i_v(0)),
+  //     (is_sfence_vma_v(0)),
+  //   )) <= 1.U
+  // )
 
+  // assert( ~(io.cmm_pc.valid & ~io.is_commit_abort(0) & ~io.is_commit_abort(1)) )
+
+
+    val is_retired_v = ( 0 until cm ).map{ i => 
+      commit_state_is_comfirm(i) | commit_state_is_abort(i)
+    }
+
+    ( 1 until cm ).map{ i => 
+      assert( ~(is_retired_v(i) & ~is_retired_v(i-1)) )
+    }
+
+
+      // VecInit(
+      //   is_commit_comfirm(0) | io.is_commit_abort(0),
+      //   is_commit_comfirm(1),
+      // )
 
 
 
@@ -357,17 +396,7 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
     ( io.csr_cmm_op.bits.op_rc | io.csr_cmm_op.bits.op_rs | io.csr_cmm_op.bits.op_rw ) &
     (
       csr_write_denied(io.csr_cmm_op.bits.addr) | csr_read_prilvl(io.csr_cmm_op.bits.addr)
-    )
-
-  for ( i <- 0 until 2 ) yield {
-    is_fcsrw_illegal(i) := 
-      io.fcsr_cmm_op(i).valid & 
-      ( io.fcsr_cmm_op(i).bits.op_rc | io.fcsr_cmm_op(i).bits.op_rs | io.fcsr_cmm_op(i).bits.op_rw ) &
-      (
-        mstatus(14,13) === 0.U
-      )
-    println("Warning! unsafe mstatus\n")
-  }  
+    )  
 
   is_csrr_illegal := 
     io.csr_addr.valid & csr_read_prilvl(io.csr_addr.bits)
@@ -376,23 +405,37 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
 
   io.csr_data.bits := csr_read_res(io.csr_addr.bits)
   io.csr_data.valid := io.csr_addr.valid & ~is_csrr_illegal
-
-
   
-  io.csr_cmm_op.ready :=
-    io.csr_cmm_op.valid & (
-      (is_commit_comfirm(0) & io.rod_i(0).bits.is_csr) | 
-      (is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)		
-    )
+  
+  io.csr_cmm_op.ready := ( 0 until cm ).map{ i =>
+    commit_state_is_comfirm(i) & io.rod_i(i).bits.is_csr
+  }.reduce(_|_)
 
-  for ( i <- 0 until 2 ) yield {
+  assert( ~(io.csr_cmm_op.ready & ~io.csr_cmm_op.valid) )
+  printf("Warning, csr can only execute one by one")
+    // io.csr_cmm_op.valid & (
+    //   (is_commit_comfirm(0) & io.rod_i(0).bits.is_csr) | 
+    //   (is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)		
+    // )
+
+
+  ( 0 until cm ).map{ i =>
+  
+    is_fcsrw_illegal(i) := 
+      io.fcsr_cmm_op(i).valid & 
+      ( io.fcsr_cmm_op(i).bits.op_rc | io.fcsr_cmm_op(i).bits.op_rs | io.fcsr_cmm_op(i).bits.op_rw ) &
+      (
+        mstatus(i)(14,13) === 0.U
+      )
+
     io.fcsr_cmm_op(i).ready :=
-      io.fcsr_cmm_op(i).valid & (
-          (is_commit_comfirm(i) & io.rod_i(i).bits.is_fpu)		
-        )
-  }
-  
+      commit_state_is_comfirm(i) & io.rod_i(i).bits.is_fpu
 
+    assert( ~(io.fcsr_cmm_op(i).ready & ~io.fcsr_cmm_op(i).valid) )
+  }
+
+  /** @note fcsr-read will request after cmm_op_fifo clear, frm will never change until fcsr-write */
+  io.fcsr := fcsr 
 
 
 
@@ -403,35 +446,44 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
 
 
 	rtc_clock               := io.rtc_clock	
-	exe_port                := Mux( io.csr_cmm_op.ready, io.csr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
-	exe_fport                := Mux( io.fcsr_cmm_op.ready, io.fcsr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
-	is_trap                 := io.rod_i(0).valid & is_trap_v(0)
-	is_mRet                 := io.rod_i(0).valid & is_mRet_v(0)
-	is_sRet                 := io.rod_i(0).valid & is_sRet_v(0)
-	is_dRet                 := io.rod_i(0).valid & is_dRet_v(0)
-	commit_pc               := Mux(is_1st_solo, io.rod_i(0).bits.pc, io.rod_i(1).bits.pc)
-  // cmmnxt_pc               :=
-  //   Mux(is_1st_solo,
-  //   io.rod_i(0).bits.pc + Mux( io.rod_i(0).bits.is_rvc, 2.U, 4.U ),
-  //   io.rod_i(1).bits.pc + Mux( io.rod_i(1).bits.is_rvc, 2.U, 4.U ))
+	exe_port                := Mux( io.csr_cmm_op.fire, io.csr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
+
+  ( 0 until cm ).map{ i => 
+    exe_fport(i) := Mux( io.fcsr_cmm_op(i).fire, io.fcsr_cmm_op(i).bits, 0.U.asTypeOf(new Exe_Port))
+  }
+
+	// is_trap                 := io.rod_i(0).valid & is_trap_v(0)
+	// is_mRet                 := io.rod_i(0).valid & is_mRet_v(0)
+	// is_sRet                 := io.rod_i(0).valid & is_sRet_v(0)
+	// is_dRet                 := io.rod_i(0).valid & is_dRet_v(0)
+  ( 0 until cm ).map{ i => 
+    commit_pc(i) := io.rod_i(i).bits.pc
+  }
+
 
 	ill_instr               := 0.U
   ill_ivaddr               := io.if_cmm.ill_vaddr
 	ill_dvaddr               := io.lsu_cmm.trap_addr
-	is_instr_access_fault    := io.rod_i(0).valid & is_instr_access_fault_v(0)
-	is_instr_paging_fault    := io.rod_i(0).valid & is_instr_paging_fault_v(0)
-	is_instr_illeage        := io.rod_i(0).valid & is_illeage_v(0)
-	is_breakPoint           := io.rod_i(0).valid & is_ebreak_v(0) & ~is_ebreak_breakpointn
-	is_load_misAlign        := io.rod_i(0).valid & is_load_misAlign_ack_v(0)
-	is_load_access_fault     := io.rod_i(0).valid & is_load_accessFault_ack_v(0)
-	is_storeAMO_misAlign    := io.rod_i(0).valid & is_store_misAlign_ack_v(0)
-	is_storeAMO_access_fault := io.rod_i(0).valid & is_store_accessFault_ack_v(0)
-	is_storeAMO_paging_fault := io.rod_i(0).valid & is_store_pagingFault_ack_v(0)
-	is_ecall_M                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b11".U
-	is_ecall_S                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b01".U
-	is_ecall_U                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b00".U
-	is_load_paging_fault       := io.rod_i(0).valid & is_load_pagingFault_ack_v(0)
-	retired_cnt             := Mux( is_retired_v(1), 2.U, Mux(is_retired_v(0), 1.U, 0.U) )
+
+	// is_instr_access_fault    := io.rod_i(0).valid & is_instr_access_fault_v(0)
+	// is_instr_paging_fault    := io.rod_i(0).valid & is_instr_paging_fault_v(0)
+	// is_instr_illeage        := io.rod_i(0).valid & is_illeage_v(0)
+	// is_breakPoint           := io.rod_i(0).valid & is_ebreak_v(0) & ~is_ebreak_breakpointn
+	// is_load_misAlign        := io.rod_i(0).valid & is_load_misAlign_ack_v(0)
+	// is_load_access_fault     := io.rod_i(0).valid & is_load_accessFault_ack_v(0)
+	// is_storeAMO_misAlign    := io.rod_i(0).valid & is_store_misAlign_ack_v(0)
+	// is_storeAMO_access_fault := io.rod_i(0).valid & is_store_accessFault_ack_v(0)
+	// is_storeAMO_paging_fault := io.rod_i(0).valid & is_store_pagingFault_ack_v(0)
+	// is_ecall_M                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b11".U
+	// is_ecall_S                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b01".U
+	// is_ecall_U                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b00".U
+	// is_load_paging_fault       := io.rod_i(0).valid & is_load_pagingFault_ack_v(0)
+
+	retired_cnt :=
+    MuxCase( 0.U, Array(
+      ( cm-1 to 0 ).map{ i => (is_retired_v(i) -> i.U) }
+    ))
+
 	clint_sw_m              := false.B
 	clint_sw_s              := false.B
 	clint_tm_m              := false.B
@@ -448,26 +500,33 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
   io.cmm_mmu.priv_lvl_ls   := priv_lvl_ls
   io.cmm_mmu.mstatus    := mstatus
   io.cmm_mmu.sstatus    := sstatus
-  io.cmm_mmu.sfence_vma := 
-    ( io.rod_i(0).valid & is_sfence_vma_v(0))
+  io.cmm_mmu.sfence_vma := ( 0 until cm ).map{ i => 
+    is_commit_abort(i) & is_sfence_vma_v(i) 
+  }
+    // ( io.rod_i(0).valid & is_sfence_vma_v(0))  
 
 
-  io.ifence := 
-    ( io.rod_i(0).valid & is_fence_i_v(0))
+  io.ifence := ( 0 until cm ).map{ i => 
+    is_commit_abort(i) & is_fence_i_v(i)
+  }
+    // ( io.rod_i(0).valid & is_fence_i_v(0))
 
 
-  is_fpu_state_change := ( 0 until 2 ).map{
-    i => is_commit_comfirm(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fpu)
+  is_fpu_state_change := ( 0 until cm ).map{ i => 
+    is_commit_comfirm(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fpu)
   }.reduce(_|_)
     
 
-  io.fcsr := fcsr
 
 
-  is_single_step    := RegNext(next = is_commit_comfirm(0) & is_step, init = false.B)
+
+  is_single_step    := RegNext(next = is_retired_v(0) & is_step, init = false.B)
   is_trigger        := false.B
   is_halt_int   := io.dm.hartHaltReq
-  is_ebreak_retired := io.rod_i(0).valid & is_ebreak_v(0) & is_ebreak_breakpointn
+  is_ebreak_retired := ( 0 until cm ).map{ i =>
+      is_retired_v(i) & is_ebreak_v(i) & is_ebreak_breakpointn
+    }.reduce(_|_)
+
 
 
   is_debug_interrupt :=

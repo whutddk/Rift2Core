@@ -30,19 +30,22 @@ class Fres_Info extends Exc_Info { val toFloat = UInt(65.W) }
 class Xres_Info extends Exc_Info { val toInt = UInt(64.W) }
 
 
-class FAlu(latency: Int = 5, infly: Int = 8) extends Module with HasFPUParameters{
+class FAlu(latency: Int = 5, infly: Int = 8, cm: Int = 2) extends Module with HasFPUParameters{
   val io = IO(new Bundle{
     val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
     val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
     val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
-    val fcsr_cmm_op = Vec(2, DecoupledIO( new Exe_Port ))
+    val fcsr_cmm_op = Vec(cm, DecoupledIO( new Exe_Port ))
     val fcsr = Input(UInt(24.W))
 
 
     val flush = Input(Bool())
   })
 
+
+
   val cnt = RegInit(0.U((log2Ceil(infly)).W))
+  require( cm == 2 )
   when( io.flush ) {
     cnt := 0.U
   }.elsewhen( io.fpu_iss_exe.fire & io.fcsr_cmm_op(0).fire & io.fcsr_cmm_op(1).fire) {
@@ -151,7 +154,7 @@ class FAlu(latency: Int = 5, infly: Int = 8) extends Module with HasFPUParameter
     ))
 
   val fcsr_op_fifo = {
-    val mdl = Module( new MultiPortFifo( new Exe_Port, log2Ceil(infly), in = 1, out = 2 ))
+    val mdl = Module( new MultiPortFifo( new Exe_Port, log2Ceil(infly), in = 1, out = cm ))
 
     val rw = io.fpu_iss_exe.bits.fun.is_fun_frw
     val rs = 
