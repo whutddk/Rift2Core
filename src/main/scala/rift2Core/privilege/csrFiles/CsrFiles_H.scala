@@ -20,7 +20,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 
-trait class CsrFiles_H { this: BaseXSSoc =>
+trait CsrFiles_H { this: BaseCsrFiles =>
 
   // //hypervisor trap setup
   // hstatus := {

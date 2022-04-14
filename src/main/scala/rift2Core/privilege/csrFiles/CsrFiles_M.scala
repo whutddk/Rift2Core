@@ -24,7 +24,7 @@ import rift2Core.define._
 
 
 
-trait CsrFiles_M { this: BaseXSSoc =>
+trait CsrFiles_M { this: BaseCsrFiles =>
 
 
   val is_ssi = mip(1)  & mie(1)  & mstatus(1)

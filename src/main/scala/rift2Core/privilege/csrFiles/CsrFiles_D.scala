@@ -22,7 +22,7 @@ import chisel3.util._
 import rift2Core.define._
 import base._
 
-trait CsrFiles_D { this: BaseXSSoc =>
+trait CsrFiles_D { this: BaseCsrFiles =>
   val ResetReq  = Wire(Bool())
   // val is_halt_request   = Wire(Bool())
 

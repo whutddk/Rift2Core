@@ -23,9 +23,109 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.privilege._
 
+abstract class  BaseCsrFiles extends BaseCommit
+
+class CSR_Info extends Bundle {
+
+  // val ustatus  = UInt(64.W)
+  // val uie      = UInt(64.W)
+  // val utvec    = UInt(64.W)
+  // val uscratch = UInt(64.W)
+  // val uepc     = Wire(UInt(64.W))
+  // val ucause   = Wire(UInt(64.W))
+  // val utval    = Wire(UInt(64.W))
+  // val uip      = Wire(UInt(64.W))
+  // val fflags   = Wire(UInt(64.W))
+  // val frm      = Wire(UInt(64.W))
+  val fcsr        = Wire(UInt(64.W))
+  val cycle       = Wire(UInt(64.W))
+  val time        = Wire(UInt(64.W))
+  val instret     = Wire(UInt(64.W))
+  val sstatus     = Wire(UInt(64.W))
+  // val sedeleg  = Wire(UInt(64.W))
+  // val sideleg  = Wire(UInt(64.W))
+  val sie         = Wire(UInt(64.W))
+  val stvec       = Wire(UInt(64.W))
+  val scounteren  = Wire(UInt(64.W))
+  val sscratch    = Wire(UInt(64.W))
+  val sepc        = Wire(UInt(64.W))
+  val scause      = Wire(UInt(64.W))
+  val stval       = Wire(UInt(64.W))
+  val sip         = Wire(UInt(64.W))
+  val satp        = Wire(UInt(64.W))
+  val hstatus     = Wire(UInt(64.W))
+  val hedeleg     = Wire(UInt(64.W))
+  val hideleg     = Wire(UInt(64.W))
+  val hie         = Wire(UInt(64.W))
+  val hcounteren  = Wire(UInt(64.W))
+  val hgeie       = Wire(UInt(64.W))
+  val htval       = Wire(UInt(64.W))
+  val hip         = Wire(UInt(64.W))
+  val hvip        = Wire(UInt(64.W))
+  val htinst      = Wire(UInt(64.W))
+  val hgeip       = Wire(UInt(64.W))
+  val hgatp       = Wire(UInt(64.W))
+  val htimedelta  = Wire(UInt(64.W))
+  val vsstatus    = Wire(UInt(64.W))
+  val vsie        = Wire(UInt(64.W))
+  val vstvec      = Wire(UInt(64.W))
+  val vsscratch   = Wire(UInt(64.W))
+  val vsepc       = Wire(UInt(64.W))
+  val vscause     = Wire(UInt(64.W))
+  val vstval      = Wire(UInt(64.W))
+  val vsip        = Wire(UInt(64.W))
+  val vsatp       = Wire(UInt(64.W))
+  val mvendorid   = Wire(UInt(64.W))
+  val marchid     = Wire(UInt(64.W))
+  val mimpid      = Wire(UInt(64.W))
+  val mhartid     = Wire(UInt(64.W))
+  val mstatus     = Wire(UInt(64.W))
+  val misa        = Wire(UInt(64.W))
+  val medeleg     = Wire(UInt(64.W))
+  val mideleg     = Wire(UInt(64.W))
+  val mie         = Wire(UInt(64.W))
+  val mtvec       = Wire(UInt(64.W))
+  val mcounteren  = Wire(UInt(64.W))
+  val mscratch    = Wire(UInt(64.W))
+  val mepc        = Wire(UInt(64.W))
+  val mcause      = Wire(UInt(64.W))
+  val mtval       = Wire(UInt(64.W))
+  val mip         = Wire(UInt(64.W))
+  val mtinst      = Wire(UInt(64.W))
+  val mtval2      = Wire(UInt(64.W))
+  val mcycle      = Wire(UInt(64.W))
+  val minstret    = Wire(UInt(64.W))
+  val mcountinhibit = Wire(UInt(64.W))
+  val tselect     = Wire(UInt(64.W))
+  val tdata1      = Wire(UInt(64.W))
+  val tdata2      = Wire(UInt(64.W))
+  val tdata3      = Wire(UInt(64.W))
+  val dcsr        = Wire(UInt(64.W))
+  val dpc         = Wire(UInt(64.W))
+  val dscratch0   = Wire(UInt(64.W))
+  val dscratch1   = Wire(UInt(64.W))
+  val dscratch2   = Wire(UInt(64.W))
+
+
+  val pmpcfg  = Wire(Vec( 16, UInt(64.W)) )
+  val pmpaddr = Wire(Vec( 64, UInt(64.W)) )
+
+
+  val hpmcounter = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
+  val mhpmcounter = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
+  val mhpmevent = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
 
 
 
+
+}
+
+trait CsrFiles { this: BaseCsrFiles => 
+
+
+
+
+}
 
 abstract class CsrFiles extends CsrFiles_H{
 

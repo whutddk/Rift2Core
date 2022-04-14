@@ -21,7 +21,7 @@ import chisel3.util._
 import rift2Core.define._
 import base._
 
-trait CsrFiles_S { this: BaseXSSoc =>
+trait CsrFiles_S { this: BaseCsrFiles =>
 
 
 

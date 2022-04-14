@@ -31,7 +31,7 @@ import debug._
 
 import rift2Core.diff._
 
-abstarct BaseCommit extends RawModule
+abstract class BaseCommit extends RawModule
 
 
 
