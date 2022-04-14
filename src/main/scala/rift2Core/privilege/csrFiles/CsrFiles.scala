@@ -35,31 +35,31 @@ abstract class CsrFiles extends CsrFiles_H{
   def csr_read_res(addr: UInt) = {
     val pmpcfg_arr = {
       val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
-      val reg_sel  = for ( i <- 0 until 16 ) yield { pmpcfg(i) }
+      val reg_sel  = for ( i <- 0 until 16 ) yield { Seq(pmpcfg(i)) ++ pmpcfg_dnxt(i) }
       addr_chk zip reg_sel
     }
 
     val pmpaddr_arr = {
       val addr_chk = for ( i <- 0 until 64 ) yield { addr === ("h3B0".U + i.U) }
-      val reg_sel  = for ( i <- 0 until 64 ) yield { pmpaddr(i) }
+      val reg_sel  = for ( i <- 0 until 64 ) yield { Seq(pmpaddr(i)) ++ pmpaddr_dnxt(i) }
       addr_chk zip reg_sel
     }
 
     val hpmcounter_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hC00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { hpmcounter(i) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { Seq(hpmcounter(i)) ++ hpmcounter_dnxt(i) }
       addr_chk zip reg_sel
     }
 
     val mhpmcounter_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hB00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { mhpmcounter(i) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { Seq(mhpmcounter(i)) ++ mhpmcounter_dnxt(i) }
       addr_chk zip reg_sel      
     }
 
     val mhpmevent_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("h320".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { mhpmevent(i) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { Seq(mhpmevent(i)) ++ mhpmevent_dnxt(i) }
       addr_chk zip reg_sel      
     }
 
@@ -72,13 +72,13 @@ abstract class CsrFiles extends CsrFiles_H{
           // ( addr === "h042".U ) -> ucause,
           // ( addr === "h043".U ) -> utval,
           // ( addr === "h044".U ) -> uip,
-          ( addr === "h001".U ) -> fcsr(4,0),
-          ( addr === "h002".U ) -> fcsr(7,5),
-          ( addr === "h003".U ) -> fcsr,
-          ( addr === "hC00".U ) -> cycle,
-          ( addr === "hC01".U ) -> time,
-          ( addr === "hC02".U ) -> instret,
-          ( addr === "h100".U ) -> sstatus,
+          ( addr === "h001".U ) -> ( Seq(fcsr(4,0) ++ fcsr_dnxt.map(_(4,0))), 
+          ( addr === "h002".U ) -> ( Seq(fcsr(7,5) ++ fcsr_dnxt.map(_(7,5))),
+          ( addr === "h003".U ) -> ( Seq(fcsr      ++ fcsr_dnxt),
+          ( addr === "hC00".U ) -> ( Seq(cycle     ++ cycle_dnxt),
+          ( addr === "hC01".U ) -> ( Seq(time      ++ time_dnxt),
+          ( addr === "hC02".U ) -> ( Seq(instret   ++ instret_dnxt),
+          ( addr === "h100".U ) -> ( Seq(sstatus   ++ sstatus_dnxt),
           // ( addr === "h102".U ) -> sedeleg,
           // ( addr === "h103".U ) -> sideleg,
           ( addr === "h104".U ) -> sie,
@@ -90,28 +90,28 @@ abstract class CsrFiles extends CsrFiles_H{
           ( addr === "h143".U ) -> stval,
           ( addr === "h144".U ) -> sip,
           ( addr === "h180".U ) -> satp,
-          ( addr === "h600".U ) -> hstatus,
-          ( addr === "h602".U ) -> hedeleg,
-          ( addr === "h603".U ) -> hideleg,
-          ( addr === "h604".U ) -> hie,
-          ( addr === "h606".U ) -> hcounteren,
-          ( addr === "h607".U ) -> hgeie,
-          ( addr === "h643".U ) -> htval,
-          ( addr === "h644".U ) -> hip,
-          ( addr === "h645".U ) -> hvip,
-          ( addr === "h64A".U ) -> htinst,
-          ( addr === "hE12".U ) -> hgeip,
-          ( addr === "h680".U ) -> hgatp,
-          ( addr === "h605".U ) -> htimedelta,
-          ( addr === "h200".U ) -> vsstatus,
-          ( addr === "h204".U ) -> vsie,
-          ( addr === "h205".U ) -> vstvec,
-          ( addr === "h240".U ) -> vsscratch,
-          ( addr === "h241".U ) -> vsepc,
-          ( addr === "h242".U ) -> vscause,
-          ( addr === "h243".U ) -> vstval,
-          ( addr === "h244".U ) -> vsip,
-          ( addr === "h280".U ) -> vsatp,
+          // ( addr === "h600".U ) -> hstatus,
+          // ( addr === "h602".U ) -> hedeleg,
+          // ( addr === "h603".U ) -> hideleg,
+          // ( addr === "h604".U ) -> hie,
+          // ( addr === "h606".U ) -> hcounteren,
+          // ( addr === "h607".U ) -> hgeie,
+          // ( addr === "h643".U ) -> htval,
+          // ( addr === "h644".U ) -> hip,
+          // ( addr === "h645".U ) -> hvip,
+          // ( addr === "h64A".U ) -> htinst,
+          // ( addr === "hE12".U ) -> hgeip,
+          // ( addr === "h680".U ) -> hgatp,
+          // ( addr === "h605".U ) -> htimedelta,
+          // ( addr === "h200".U ) -> vsstatus,
+          // ( addr === "h204".U ) -> vsie,
+          // ( addr === "h205".U ) -> vstvec,
+          // ( addr === "h240".U ) -> vsscratch,
+          // ( addr === "h241".U ) -> vsepc,
+          // ( addr === "h242".U ) -> vscause,
+          // ( addr === "h243".U ) -> vstval,
+          // ( addr === "h244".U ) -> vsip,
+          // ( addr === "h280".U ) -> vsatp,
           ( addr === "hF11".U ) -> mvendorid,
           ( addr === "hF12".U ) -> marchid,
           ( addr === "hF13".U ) -> mimpid,

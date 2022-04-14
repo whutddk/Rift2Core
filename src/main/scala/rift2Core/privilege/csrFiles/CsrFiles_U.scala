@@ -20,7 +20,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 
-abstract class CsrFiles_U extends CsrFiles_D {
+trait CsrFiles_U { this: BaseXSSoc =>
     
 
   //user trap setup

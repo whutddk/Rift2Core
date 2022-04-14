@@ -24,9 +24,21 @@ object SuperscalarReg {
   def apply[T<:Data]( init: T, is_reitred: Seq[Bool] ): (T, Seq[T]) = 
   val len = is_reitred.length
   val qout = RegInit(init)
-  val dnxt = WireDefault( VecInit( Seq.fill(len)(qout) ) )
+  val dnxt = Wire(Vec( len, new init.cloneType() ))
+  
+  // WireDefault( VecInit( Seq.fill(len)(qout) ) )
+  ( 0 until len ).map{ t => { if ( t == 0 ) dnxt(t) := qout else dnxt(t) := dnxt(t-1) } }
   qout := MuxCase(qout, Array( ( len-1 to 0 ).map{ i => is_retired(i) -> dnxt(i) } ) )
 
+  // def idx_fun( i: Int ) = {
+  //   if ( i >=0 && i < len ) dnxt(0)
+  //   else qout
+  // } 
+
   return ( qout, dnxt )
+}
+
+object PkgSSReg {
+
 }
 

@@ -24,7 +24,7 @@ import rift2Core.define._
 
 
 
-abstract class CsrFiles_M extends CsrFiles_port {
+trait CsrFiles_M { this: BaseXSSoc =>
 
 
   val is_ssi = mip(1)  & mie(1)  & mstatus(1)
@@ -358,14 +358,20 @@ abstract class CsrFiles_M extends CsrFiles_port {
     * @param base (63,2)
     * @param mode (1,0) read only in this version
     */
-  mtvec := {
-    val base = RegInit(0.U(62.W))
-    val mode = WireDefault(0.U(2.W))
-    val value = Cat( base, mode )
-    val (enable, dnxt) = Reg_Exe_Port( value, "h305".U, exe_port )
-    when(enable) { base := dnxt(63,2) }
-    value
+  val (mtvec_base, mtvec_base_dnxt) = SuperscalarReg( init = 0.U(62.W), is_reitred = is_retired_v )
+  val mtvec_mode = 0.U(2.W)
+  val mtvec = Cat( mtvec_base, mtvec_mode )
+
+  ( 0 until cm ).map{ i => {
+    val value = if( i == 0 ) mtvec_base else mtvec_base_dnxt(i-1)
+    val (enable, dnxt) = Reg_Exe_Port( value, "h305".U, exe_port(i) )
+      when(enable) {
+        mtvec_base_dnxt(i) := dnxt(63,2)
+      }    
+    }
   }
+
+
 
   /**
     * Machine Counter-Enable Register -- mcounteren
@@ -375,16 +381,25 @@ abstract class CsrFiles_M extends CsrFiles_port {
     * @param TM (1) Whether is allowed to access time in S-mode
     * @param CY (0) Whether is allowed to access cycle in S-mode
     */
-  mcounteren := {
-    val hpm = RegInit(0.U(32.W))
-    val ir  = RegInit(0.U(1.W))
-    val tm  = RegInit(0.U(1.W))
-    val cy  = RegInit(0.U(1.W))
-    val value = Cat( hpm(31,3), ir, tm, cy )
-    val (enable, dnxt) = Reg_Exe_Port( value, "h306".U, exe_port )
-    when(enable) { hpm := dnxt; ir := dnxt(2); tm := dnxt(1); cy := dnxt(0) }
-    value 
+  val (mhpm, mhpm_dnxt) = SuperscalarReg( init = 0.U(32.W), is_reitred = is_retired_v )
+  val (mir , mir_dnxt)  = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  val (mtm , mtm_dnxt)  = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  val (mcy , mcy_dnxt)  = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+
+  val mcounteren = Cat( mhpm(31,3), mir, mtm, mcy )
+
+  ( 0 until cm ).map{ i => {
+    val value = if( i == 0 ) mcounteren else Cat( mhpm_dnxt(i-1)(31,3), mir_dnxt(i-1), mtm_dnxt(i-1), mcy_dnxt(i-1) )
+    val (enable, dnxt) = Reg_Exe_Port( value, "h306".U, exe_port(i) )
+      when(enable) {
+        mhpm_dnxt(i) := dnxt(31,3)
+        mir_dnxt(i)  := dnxt(2)
+        mtm_dnxt(i)  := dnxt(1)
+        mcy_dnxt(i)  := dnxt(0)
+      }    
+    }
   }
+
 
 
 
@@ -394,11 +409,15 @@ abstract class CsrFiles_M extends CsrFiles_port {
     *
     * it's used to hold a pointer to a M-mode hart-local context space and swapped with a user register upon entry to an M-mode trap handler
     */
-  mscratch := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h340".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
+  val ( mscratch, mscratch_dnxt )  = SuperscalarReg( init = 0.U(64.W), is_reitred = is_retired_v )
+
+  ( 0 until cm ).map{ i => {
+    val value = if( i == 0 ) mscratch else mscratch_dnxt(i-1)
+    val (enable, dnxt) = Reg_Exe_Port( value, "h340".U, exe_port(i) )
+      when(enable) {
+        mscratch_dnxt(i) := dnxt
+      }    
+    }
   }
 
   /**
@@ -406,19 +425,19 @@ abstract class CsrFiles_M extends CsrFiles_port {
     * @note hold all valid virtual addresses 
     * when a ***trap*** is taken into ***M-mode***, update to the ***virtual address*** that was interrupted or encountered the exception 
     */
-  mepc := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h341".U, exe_port )
+  val ( mepc, mepc_dnxt )  = SuperscalarReg( init = 0.U(64.W), is_reitred = is_retired_v )
 
-    when(is_trap & priv_lvl_dnxt === "b11".U){
-      value := commit_pc
+  ( 0 until cm ).map{ i => {
+    val value = if( i == 0 ) mepc else mepc_dnxt(i-1)
+    val (enable, dnxt) = Reg_Exe_Port( value, "h341".U, exe_port(i) )
+
+    when(is_trap_v(i) & priv_lvl_dnxt(i) === "b11".U){
+      mepc_dnxt(i) := commit_pc(i)(63,1)
+    } .elsewhen(enable) {
+        mepc_dnxt(i) := dnxt(63,1)
+      }
     }
-    .elsewhen(enable) { value := dnxt }
-
-    value & ~(1.U(64.W))
   }
-
-
 
   /**
     * Machine Cause Register
@@ -428,49 +447,51 @@ abstract class CsrFiles_M extends CsrFiles_port {
     * @param exception_code
     */
 
-  mcause := {
-    val interrupt = RegInit(0.U(1.W))
-    val exception_code = RegInit(0.U(63.W))
-    val value = Cat(interrupt, exception_code)
-    val (enable, dnxt) = Reg_Exe_Port( value, "h342".U, exe_port )
+  val (mcause_int, mcause_int_dnxt)  = SuperscalarReg( init = 0.U(1.W),  is_reitred = is_retired_v )
+  val (mcause_exc, mcause_exc_dnxt)  = SuperscalarReg( init = 0.U(63.W), is_reitred = is_retired_v )
+  val mcause = Cat(mcause_int, mcause_exc)
 
-    when( (is_m_interrupt) & priv_lvl_dnxt === "b11".U ) {
-      interrupt := 1.U
-      exception_code := Mux1H( Seq(
+  ( 0 until cm ).map{ i => {
+    val value = if( i == 0 ) mcause else Cat(mcause_int_dnxt(i-1), mcause_exc_dnxt(i-1))
+
+    val (enable, dnxt) = Reg_Exe_Port( value, "h342".U, exe_port(i) )
+
+   when( is_m_interrupt & priv_lvl_dnxt(i) === "b11".U ) {
+      mcause_int_dnxt(i) := 1.U
+      mcause_exc_dnxt(i) := Mux1H( Seq(
         // is_ssi -> 1.U,
-        is_msi -> 3.U,
+        is_msi(i) -> 3.U,
         // is_sti -> 5.U,
-        is_mti -> 7.U,
+        is_mti(i) -> 7.U,
         // is_sei -> 9.U,
-        is_mei -> 11.U
+        is_mei(i) -> 11.U
       ))
     }
-    .elsewhen( is_exception & priv_lvl_dnxt === "b11".U ) {
-      interrupt := 0.U
-      exception_code := Mux1H( Seq(
-        is_instr_misAlign        -> 0.U,
-        is_instr_access_fault    -> 1.U,
-        is_instr_illeage         -> 2.U,
-        is_breakPoint            -> 3.U,
-        is_load_misAlign         -> 4.U,
-        is_load_access_fault     -> 5.U,
-        is_storeAMO_misAlign     -> 6.U,
-        is_storeAMO_access_fault -> 7.U,
-        is_ecall_U               -> 8.U,
-        is_ecall_S               -> 9.U,
-        is_ecall_M               -> 11.U,
-        is_instr_paging_fault    -> 12.U,
-        is_load_paging_fault     -> 13.U,
-        is_storeAMO_paging_fault -> 15.U,
+    .elsewhen( is_exception_v(i) & priv_lvl_dnxt(i) === "b11".U ) {
+      mcause_int_dnxt(i) := 0.U
+      mcause_exc_dnxt(i) := Mux1H( Seq(
+        is_instr_misAlign_v(i)        -> 0.U,
+        is_instr_access_fault_v(i)    -> 1.U,
+        is_instr_illeage_v(i)         -> 2.U,
+        is_breakPoint_v(i)            -> 3.U,
+        is_load_misAlign_v(i)         -> 4.U,
+        is_load_access_fault_v(i)     -> 5.U,
+        is_storeAMO_misAlign_v(i)     -> 6.U,
+        is_storeAMO_access_fault_v(i) -> 7.U,
+        is_ecall_U_v(i)               -> 8.U,
+        is_ecall_S_v(i)               -> 9.U,
+        is_ecall_M_v(i)               -> 11.U,
+        is_instr_paging_fault_v(i)    -> 12.U,
+        is_load_paging_fault_v(i)     -> 13.U,
+        is_storeAMO_paging_fault_v(i) -> 15.U,
       ))
     }
     .elsewhen(enable) {
-      interrupt := dnxt(63)
-      exception_code := dnxt(62,0)
+      mcause_int_dnxt(i) := dnxt(63)
+      mcause_exc_dnxt(i) := dnxt(62,0)
     }
-
-    value
   }
+
   
 
   /**
@@ -478,26 +499,29 @@ abstract class CsrFiles_M extends CsrFiles_port {
     * 
     * When a trap is taken into ***M-mode***, update to ***virtual address*** or ***faulting instruction***
     */
-  mtval := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h343".U, exe_port )
-    when( priv_lvl_dnxt === "b11".U ) {
-      value := Mux1H( Seq(
-        is_instr_access_fault    -> ill_ivaddr,
-        is_instr_paging_fault    -> ill_ivaddr,
-        is_instr_illeage         -> ill_instr,
-        is_breakPoint            -> 0.U,
-        is_load_misAlign         -> ill_dvaddr,
-        is_load_access_fault     -> ill_dvaddr,
-        is_storeAMO_misAlign     -> ill_dvaddr,
-        is_storeAMO_access_fault -> ill_dvaddr,
-        is_load_paging_fault     -> ill_dvaddr,
-        is_storeAMO_paging_fault -> ill_dvaddr    
-      ))
-    }
-    .elsewhen(enable) { value := dnxt }
+  val (mtval, mtval_dnxt) = SuperscalarReg( init = 0.U(64.W),  is_reitred = is_retired_v )
 
-    value 
+  ( 0 until cm ).map{ i => {
+    val value = if( i == 0 ) mtval else mtval_dnxt(i-1)
+    val (enable, dnxt) = Reg_Exe_Port( value, "h343".U, exe_port(i) )
+
+      when( priv_lvl_dnxt(i) === "b11".U ) {
+        mtval_dnxt(i) := Mux1H( Seq(
+          is_instr_access_fault_v(i)    -> ill_ivaddr_v(i),
+          is_instr_paging_fault_v(i)    -> ill_ivaddr_v(i),
+          is_instr_illeage_v(i)         -> ill_instr_v(i),
+          is_breakPoint_v(i)            -> 0.U,
+          is_load_misAlign_v(i)         -> ill_dvaddr_v(i),
+          is_load_access_fault_v(i)     -> ill_dvaddr_v(i),
+          is_storeAMO_misAlign_v(i)     -> ill_dvaddr_v(i),
+          is_storeAMO_access_fault_v(i) -> ill_dvaddr_v(i),
+          is_load_paging_fault_v(i)     -> ill_dvaddr_v(i),
+          is_storeAMO_paging_fault_v(i) -> ill_dvaddr_v(i)    
+        ))
+      }
+      .elsewhen(enable) { mtval_dnxt(i) := dnxt }
+
+    }
   }
 
 
@@ -513,76 +537,150 @@ abstract class CsrFiles_M extends CsrFiles_port {
     * @param msip (3)
     * @param ssip (1)
     */
-  mip := {
-    val meip = clint_ex_m
-    val seip = clint_ex_s
-    val mtip = clint_tm_m
-    val stip = clint_tm_s
-    val msip = clint_sw_m
-    val ssip = clint_sw_s
-    val value =
-      Cat(
-        0.U(4.W), meip, 0.U(1.W), seip,
-        0.U(1.W), mtip, 0.U(1.W), stip,
-        0.U(1.W), msip, 0.U(1.W), ssip, 0.U(1.W) )
+  val meip = clint_ex_m
+  val seip = clint_ex_s
+  val mtip = clint_tm_m
+  val stip = clint_tm_s
+  val msip = clint_sw_m
+  val ssip = clint_sw_s 
 
-    value
+  val mip = 
+    Cat(
+      0.U(4.W), meip, 0.U(1.W), seip,
+      0.U(1.W), mtip, 0.U(1.W), stip,
+      0.U(1.W), msip, 0.U(1.W), ssip, 0.U(1.W) )
+
+
+  val ( mtinst, mtinst_dnxt ) = SuperscalarReg( init = 0.U(64.W),  is_reitred = is_retired_v )
+
+  ( 0 until cm ).map{ i => {
+    val value = if( i == 0 ) mtinst else mtinst_dnxt(i-1)
+    val (enable, dnxt) = Reg_Exe_Port( value, "h34A".U, exe_port(i) )
+      when(enable) {
+        mtinst_dnxt(i) := dnxt
+      }    
+    }
   }
 
-  mtinst := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h34A".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
-  }
 
-  mtval2 := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "h34B".U, exe_port )
-    when(enable) { value := dnxt }
-    value 
+  val (mtval2, mtval2_dnxt) = SuperscalarReg( init = 0.U(64.W),  is_reitred = is_retired_v )
+  ( 0 until cm ).map{ i => {
+    val value = if( i == 0 ) mtval2 else mtval2_dnxt(i-1)
+    val (enable, dnxt) = Reg_Exe_Port( value, "h34B".U, exe_port(i) )
+      when(enable) {
+        mtval2_dnxt(i) := dnxt
+      }    
+    }
   }
-
 
   //Machine Memory Protection
-  for ( i <- 0 until 16 ) yield {
-  // for ( i <- 0 until 16 if i%2 != 0) yield {
-    pmpcfg(i) := {
-      val buf = RegInit( VecInit(Seq.fill(8)(0.U(8.W))))
-      val value = Cat( for ( i <- 0 until 8 ) yield { buf(7-i) } )
-      val lock = VecInit(
-        for( j <- 0 until 8 ) yield { buf(j)(7).asBool }
-      )
-      val (enable, dnxt) = Reg_Exe_Port( value, "h3A0".U + i.U, exe_port )
-      for ( j <- 0 until 8 ) yield {
-        when( enable & ~lock(j) ) {
-          buf(j) := dnxt(8*j+7, 8*j)
 
-          }
-      }
-      value 
+
+  val (pmpcfg_L, pmpcfg_L_dnxt) =  for ( i <- 0 until 64 ) yield { SuperscalarReg( init = 0.U(1.W),  is_reitred = is_retired_v )}
+  val (pmpcfg_A, pmpcfg_A_dnxt) =  for ( i <- 0 until 64 ) yield { SuperscalarReg( init = 0.U(2.W),  is_reitred = is_retired_v )}
+  val (pmpcfg_X, pmpcfg_X_dnxt) =  for ( i <- 0 until 64 ) yield { SuperscalarReg( init = 0.U(1.W),  is_reitred = is_retired_v )}
+  val (pmpcfg_W, pmpcfg_W_dnxt) =  for ( i <- 0 until 64 ) yield { SuperscalarReg( init = 0.U(1.W),  is_reitred = is_retired_v )}
+  val (pmpcfg_R, pmpcfg_R_dnxt) =  for ( i <- 0 until 64 ) yield { SuperscalarReg( init = 0.U(1.W),  is_reitred = is_retired_v )}
+  
+  val pmpcfg_buf = for ( i <- 0 until 64 ) yield 
+    Cat(  pmpcfg_L(i), 0.U(2.W), pmpcfg_A(i), pmpcfg_X(i), pmpcfg_W(i), pmpcfg_R(i) )
+
+  val pmpcfg_buf_dnxt = for ( i <- 0 until 64 ) yield {
+    ( 0 until cm ).map { t =>
+      Cat(  pmpcfg_L_dnxt(i)(t), 0.U(2.W), pmpcfg_A_dnxt(i)(t), pmpcfg_X_dnxt(i)(t), pmpcfg_W_dnxt(i)(t), pmpcfg_R_dnxt(i)(t) )
     }
+  }
 
+  val pmpcfg = for ( i <- 0 until 16 ) yield {
+    Cat( for ( j <- 7 to 0 ) yield { pmpcfg_buf(8*i+j) }
+  }
+
+  val pmpcfg_dnxt = 
+  for ( i <- 0 until 16 ) yield {
+    ( 0 until cm ).map{ t => {
+      Cat( for ( j <- 7 to 0 ) yield { pmpcfg_buf_dnxt(8*i+j) }
+    }} 
+  }
+
+  for ( i <- 0 until 16 ) yield {
+    ( 0 until cm ).map{ t => {
+      
+      val value =
+        if ( t == 0 ) pmpcfg
+        else pmpcfg_dnxt
+      
+      val (enable, dnxt) = Reg_Exe_Port( value, "h3A0".U + i.U, exe_port(t) )
+        for( j <- 0 unitl 8 ) yield {
+          when(enable & 
+                {if ( t == 0 ) ~pmpcfg_L(i*8+j) else ~pmpcfg_L_dnxt(i*8+j)(t-1) }
+          ) {
+
+              pmpcfg_L_dnxt(i*8+j)(t) := dnxt(t)(8*j+7)
+              pmpcfg_A_dnxt(i*8+j)(t) := dnxt(t)(8*j+4,8*j+3)
+              pmpcfg_X_dnxt(i*8+j)(t) := dnxt(t)(8*j+2)
+              pmpcfg_W_dnxt(i*8+j)(t) := dnxt(t)(8*j+1)
+              pmpcfg_R_dnxt(i*8+j)(t) := dnxt(t)(8*j+0)
+
+          }              
+        }
+
+      }
+    }
+  }
+
+  // for ( i <- 0 until 16 ) yield {  
+  //   pmpcfg(i) := {
+  //     val buf = RegInit( VecInit(Seq.fill(8)(0.U(8.W))))
+  //     val value = Cat( for ( i <- 0 until 8 ) yield { buf(7-i) } )
+  //     val lock = VecInit(
+  //       for( j <- 0 until 8 ) yield { buf(j)(7).asBool }
+  //     )
+  //     val (enable, dnxt) = Reg_Exe_Port( value, "h3A0".U + i.U, exe_port )
+  //     for ( j <- 0 until 8 ) yield {
+  //       when( enable & ~lock(j) ) {
+  //         buf(j) := dnxt(8*j+7, 8*j)
+
+  //         }
+  //     }
+  //     value 
+  //   }
+
+  // }
+
+  val (pmpaddr, pmpaddr_dnxt) = for ( i <- 0 until 64 ) yield SuperscalarReg( init = 0.U(38.W),  is_reitred = is_retired_v ) }
+
+  for( i <- 0 until 64 ) yield {
+    ( 0 until cm ).map{ t => {
+      val value = if( t == 0 ) pmpaddr else pmpaddr_dnxt(t-1)
+      val (enable, dnxt) = Reg_Exe_Port( value, "h3B0".U + i.U, exe_port(t) )
+      // val cfg_idx = i/8*2
+      // val bit_idx = 8*(i%8) + 7
+      val lock = if ( t == 0 ) pmpcfg_L(i) else pmpcfg_L_dnxt(i)(t-1)
+        when(enable & lock =/= 1.U ) {
+          pmpaddr_dnxt(i)(t) := dnxt
+        }    
+      }
+    }
   }
 
 
-   
-    for ( i <- 0 until 64 ) yield {
-      pmpaddr(i) := {
-        val value = RegInit(0.U(38.W)) // for dromajo diff-test, support sv39 only
-        val cfg_idx = i/8*2
-        val bit_idx = 8*(i%8) + 7
-        val lock = pmpcfg(cfg_idx)(bit_idx)
-        val (enable, dnxt) = Reg_Exe_Port( value, "h3B0".U + i.U, exe_port )
-        when(enable) {
-          when( lock =/= 1.U ) {
-            value := dnxt
-          }
 
-        }
-        value 
-      }
-    }
+    // for ( i <- 0 until 64 ) yield {
+    //   pmpaddr(i) := {
+    //     val value = RegInit(0.U(38.W)) // for dromajo diff-test, support sv39 only
+    //     val cfg_idx = i/8*2
+    //     val bit_idx = 8*(i%8) + 7
+    //     val lock = pmpcfg(cfg_idx)(bit_idx)
+    //     val (enable, dnxt) = Reg_Exe_Port( value, "h3B0".U + i.U, exe_port )
+    //     when(enable) {
+    //       when( lock =/= 1.U ) {
+    //         value := dnxt
+    //       }
+
+    //     }
+    //     value 
+    //   }
+    // }
 
 
   //Machine Counter/Timer
@@ -593,12 +691,15 @@ abstract class CsrFiles_M extends CsrFiles_port {
     *
     * @return the number of clock cycles executed by the processor core
     */
-  mcycle := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "hB00".U, exe_port )
-    when(enable) { value := dnxt }
-    .otherwise { value := value + 1.U }
-    value 
+  val (mcycle, mcycle_dnxt) = SuperscalarReg( init = 0.U(64.W),  is_reitred = is_retired_v )
+
+  ( 0 until cm ).map{ t => {
+    val value = if( t == 0 ) mcycle else mcycle_dnxt(t-1)
+    val (enable, dnxt) = Reg_Exe_Port( value, "hB00".U, exe_port(t) )
+      when(enable) {
+        mcycle_dnxt(t) := dnxt
+      }.otherwise { mcycle_dnxt(t) := mcycle + 1.U }
+    }
   }
 
   /**
@@ -606,33 +707,36 @@ abstract class CsrFiles_M extends CsrFiles_port {
     *
     * @return the number of instructions the hart has retired
     */
-  minstret := {
-    val value = RegInit(0.U(64.W))
-    val (enable, dnxt) = Reg_Exe_Port( value, "hB02".U, exe_port )
-    when(enable) { value := dnxt }
-    .otherwise { value := value + retired_cnt }
-    value 
-  }
+  val (minstret, minstret_dnxt) = SuperscalarReg( init = 0.U(64.W),  is_reitred = is_retired_v )
+
+  ( 0 until cm ).map{ t => {
+    val value = if( t == 0 ) minstret else minstret_dnxt(t-1)
+    val (enable, dnxt) = Reg_Exe_Port( value, "hB02".U, exe_port(t) )
+      when(enable) {
+        minstret_dnxt(t) := dnxt
+      }.otherwise { minstret_dnxt(t) := minstret + retired_cnt(t) }
+    }
+  }  
+
 
   /**
     * Hardware Performance Monitor -- mhpmcounter 3~31
     *
     * @return 
     */
+  val ( mhpmcounter, mhpmcounter_dnxt ) =  for ( i <- 0 until 32 ) yield SuperscalarReg( init = 0.U(64.W),  is_reitred = is_retired_v )
 
   for ( i <- 0 until 32 ) yield {
-    mhpmcounter(i) := {
-      if ( i == 0 || i == 1 || i == 2 ) { 0.U }
-      else {
-        val value = RegInit(0.U(64.W))
-        val (enable, dnxt) = Reg_Exe_Port( value, "hB00".U + i.U, exe_port )
-        when(enable) { value := dnxt }
-        value 
+    ( 0 until cm ).map{ t => {
+      val value = if( t == 0 ) mhpmcounter(i) else mhpmcounter_dnxt(i-1)(t-1)
+      val (enable, dnxt) = Reg_Exe_Port( value, "hB00".U, exe_port(t) )
+        when(enable) {
+          mhpmcounter_dnxt(i)(t) := dnxt
+        }
       }
-    }
+    }    
   }
-
-
+  
 
   //Machine Counter Setup
   /**
@@ -640,25 +744,36 @@ abstract class CsrFiles_M extends CsrFiles_port {
     * when set, the counter will not increase, all hard-wire to 0 in this version
     * 
     */
-  mcountinhibit := {
-    val value = WireDefault(0.U(64.W))
-    // val (enable, dnxt) = Reg_Exe_Port( value, "h320".U, exe_port )
-    // when(enable) { value := dnxt }
-    value 
+  val mcountinhibit = 0.U(64.W)
+
+  val (mhpmevent, mhpmevent_dnxt) = for ( i <- 0 until 32 ) yield { SuperscalarReg( init = 0.U(64.W),  is_reitred = is_retired_v ) }
+
+  for ( i <- 0 until 32 ) yield {
+    ( 0 until cm ).map{ t => {
+      if ( i == 0 || i == 1 || i == 2 ) { mhpmevent_dnxt(i)(t) := 0.U }
+      else {
+        val (enable, dnxt) = Reg_Exe_Port( mhpmevent_dnxt(i)(t-1), "hB20".U + i.U, exe_port(t) )
+          when(enable) {
+            mhpmevent_dnxt(i)(t) := dnxt
+          }
+        }        
+      }
+
+    }    
   }
 
-  
-  for ( i <- 0 until 32 ) yield {
-    mhpmevent(i) := {
-      if ( i == 0 || i == 1 || i == 2 ) { 0.U }
-      else {
-        val value = RegInit(0.U(64.W))
-        val (enable, dnxt) = Reg_Exe_Port( value, "hB20".U + i.U, exe_port )
-        when(enable) { value := dnxt }
-        value 
-      }
-    }
-  }
+
+  // for ( i <- 0 until 32 ) yield {
+  //   mhpmevent(i) := {
+  //     if ( i == 0 || i == 1 || i == 2 ) { 0.U }
+  //     else {
+  //       val value = RegInit(0.U(64.W))
+  //       val (enable, dnxt) = Reg_Exe_Port( value, "hB20".U + i.U, exe_port )
+  //       when(enable) { value := dnxt }
+  //       value 
+  //     }
+  //   }
+  // }
 
 
 }
