@@ -61,6 +61,13 @@ trait CsrFiles_M { this: BaseCommit =>
   is_interrupt := ((is_m_interrupt | is_s_interrupt) & ~is_step_int_block) | is_nomask_interrupt
 
 
+  def update_priv( in: CMMState_Bundle): UInt = {
+    val priv = WireDefault( in.priv )
+    priv := in.new_priv
+    return priv
+  }
+  
+
 
 
 

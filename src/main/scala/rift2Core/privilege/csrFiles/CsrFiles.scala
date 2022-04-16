@@ -23,7 +23,7 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.privilege._
 
-abstract class  BaseCsrFiles extends BaseCommit
+// abstract class  BaseCsrFiles extends BaseCommit
 
 class FCSRBundle extends Bundle{
   val frm      = UInt(3.W)
@@ -244,12 +244,12 @@ class CSR_Bundle extends Bundle {
   def sip = (mip.asUInt & Cat()).asTypeOf(new MSIntBundle)
 }
 
-trait CsrFiles { this: BaseCsrFiles => 
+// trait CsrFiles { this: BaseCsrFiles => 
 
 
 
 
-}
+// }
 
 abstract class CsrFiles extends CsrFiles_H{
 
