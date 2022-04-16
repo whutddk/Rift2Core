@@ -21,7 +21,7 @@ import chisel3.util._
 import rift2Core.define._
 import base._
 
-trait CsrFiles_S { this: BaseCsrFiles =>
+trait CsrFiles_S {  this: BaseCommit =>
 
 
 
@@ -41,10 +41,11 @@ trait CsrFiles_S { this: BaseCsrFiles =>
     * @param SPIE (5) When SRet, SPIE set to 1
     * @param SIE (1) S-mode Interrupt Enable; When SRet, update to SPIE
     * 
-    */  
-  val sstatus = {
-    mstatus & Cat( "b1".U, 0.U(29.W), "b11".U, 0.U(12.W), "b11011110000101100010".U )
-  }
+    */
+
+  // val sstatus = {
+  //   mstatus & Cat( "b1".U, 0.U(29.W), "b11".U, 0.U(12.W), "b11011110000101100010".U )
+  // }
 
 
 
@@ -53,46 +54,46 @@ trait CsrFiles_S { this: BaseCsrFiles =>
   * @note read-only, meie(11), mtie(7), msie(3) is visible and maskable when mideleg(x) set
   * 
   */
-  val (meie, meie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
-  val (seie, seie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
-  val (mtie, mtie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
-  val (stie, stie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
-  val (msie, msie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
-  val (ssie, ssie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  // val (meie, meie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  // val (seie, seie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  // val (mtie, mtie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  // val (stie, stie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  // val (msie, msie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  // val (ssie, ssie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
 
-  val sie =
-      Cat(
-        0.U(4.W), meie & mideleg(11), 0.U(1.W), seie,
-        0.U(1.W), mtie & mideleg(7),  0.U(1.W), stie,
-        0.U(1.W), msie & mideleg(3),  0.U(1.W), ssie, 0.U(1.W) )
+  // val sie = mie
+  //     Cat(
+  //       0.U(4.W), meie & mideleg(11), 0.U(1.W), seie,
+  //       0.U(1.W), mtie & mideleg(7),  0.U(1.W), stie,
+  //       0.U(1.W), msie & mideleg(3),  0.U(1.W), ssie, 0.U(1.W) )
 
-  val sie_dnxt = ( 0 until cm ).map{ t =>
-    Cat(
-      0.U(4.W), meie_dnxt(t) & mideleg_dnxt(t)(11), 0.U(1.W), seie_dnxt(t),
-      0.U(1.W), mtie_dnxt(t) & mideleg_dnxt(t)(7),  0.U(1.W), stie_dnxt(t),
-      0.U(1.W), msie_dnxt(t) & mideleg_dnxt(t)(3),  0.U(1.W), ssie_dnxt(t), 0.U(1.W) )    
-  }
+  // val sie_dnxt = ( 0 until cm ).map{ t =>
+  //   Cat(
+  //     0.U(4.W), meie_dnxt(t) & mideleg_dnxt(t)(11), 0.U(1.W), seie_dnxt(t),
+  //     0.U(1.W), mtie_dnxt(t) & mideleg_dnxt(t)(7),  0.U(1.W), stie_dnxt(t),
+  //     0.U(1.W), msie_dnxt(t) & mideleg_dnxt(t)(3),  0.U(1.W), ssie_dnxt(t), 0.U(1.W) )    
+  // }
 
-  ( 0 until cm ).map{ t => {
-    val value = if ( t == 0 ) sie else sie_dnxt(t-1)
-    val (enable0, dnxt0) = Reg_Exe_Port( value, "h104".U, exe_port(t) )
-    val (enable1, dnxt1) = Reg_Exe_Port( value, "h304".U, exe_port(t) )
+  // ( 0 until cm ).map{ t => {
+  //   val value = if ( t == 0 ) sie else sie_dnxt(t-1)
+  //   val (enable0, dnxt0) = Reg_Exe_Port( value, "h104".U, exe_port(t) )
+  //   val (enable1, dnxt1) = Reg_Exe_Port( value, "h304".U, exe_port(t) )
 
-    when(enable0) {
-      meie_dnxt(t) := dnxt0(11)
-      seie_dnxt(t) := dnxt0(9)
-      mtie_dnxt(t) := dnxt0(7)
-      stie_dnxt(t) := dnxt0(5)
-      msie_dnxt(t) := dnxt0(3)
-      ssie_dnxt(t) := dnxt0(1)
+  //   when(enable0) {
+  //     meie_dnxt(t) := dnxt0(11)
+  //     seie_dnxt(t) := dnxt0(9)
+  //     mtie_dnxt(t) := dnxt0(7)
+  //     stie_dnxt(t) := dnxt0(5)
+  //     msie_dnxt(t) := dnxt0(3)
+  //     ssie_dnxt(t) := dnxt0(1)
 
-    }
-    .elsewhen(enable1) {
-      seie_dnxt(t) := dnxt1(9)
-      stie_dnxt(t) := dnxt1(5)
-      ssie_dnxt(t) := dnxt1(1)
-    }
-  }}
+  //   }
+  //   .elsewhen(enable1) {
+  //     seie_dnxt(t) := dnxt1(9)
+  //     stie_dnxt(t) := dnxt1(5)
+  //     ssie_dnxt(t) := dnxt1(1)
+  //   }
+  // }}
 
 
   /**
@@ -102,17 +103,17 @@ trait CsrFiles_S { this: BaseCsrFiles =>
     * @param base (63,2) vector base address, either va or pa
     * @param mode (1,0) vector mode,hard-wire to 0 in this version
     */
-  val stvec_mode = 0.U(2.W)
-  val (stvec_base, stvec_base_dnxt) = SuperscalarReg( init = 0.U(62.W), is_reitred = is_retired_v )
+  def update_stvec( in: CMMState_Bundle ): TVecBundle = {
+    val stvec = WireDefault( in.csrfiles.stvec )
 
-  val stvec = Cat(stvec_base, stvec_mode)
-  val stvec_dnxt = ( 0 until cm ).map{ t => Cat(stvec_base_dnxt(t), stvec_mode) }
+    stvec.mode := 0.U(2.W)
 
-  ( 0 until cm ).map{ t => {
-    val value = if ( t == 0 ) stvec else stvec_dnxt(t-1)
-    val (enable, dnxt) = Reg_Exe_Port( value, "h105".U, exe_port(t) )
-    when(enable) { stvec_base_dnxt(t) := dnxt(63,2) }
-  }}
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.stvec, "h105".U, exe_port )
+    when(enable) { stvec.base := dnxt(63,2) }
+
+    return stvec
+  }
+
 
   /**
     * Supervisor Timers and Performance Counters -- Counter-Enable Register -- scounteren
@@ -123,25 +124,16 @@ trait CsrFiles_S { this: BaseCsrFiles =>
     * @param TM (1) Whether is allowed to access time in U-mode
     * @param CY (0) Whether is allowed to access cycle in U-mode
     */
-  val (shpm, shpm_dnxt) = SuperscalarReg( init = 0.U(32.W), is_reitred = is_retired_v )
-  val (sir , sir_dnxt)  = SuperscalarReg( init = 0.U(1.W),  is_reitred = is_retired_v )
-  val (stm , stm_dnxt)  = SuperscalarReg( init = 0.U(1.W),  is_reitred = is_retired_v )
-  val (scy , scy_dnxt)  = SuperscalarReg( init = 0.U(1.W),  is_reitred = is_retired_v )
 
-  val scounteren = Cat( shpm(31,3), sir, stm, scy )
-
-  ( 0 until cm ).map{ t => {
-    val value = if( t == 0 ) mcounteren else Cat( shpm_dnxt(i-1)(31,3), sir_dnxt(i-1), stm_dnxt(i-1), scy_dnxt(i-1) )
-    val (enable, dnxt) = Reg_Exe_Port( value, "h306".U, exe_port(i) )
-      when(enable) {
-        shpm_dnxt(t) := dnxt(31,3)
-        sir_dnxt(t)  := dnxt(2)
-        stm_dnxt(t)  := dnxt(1)
-        scy_dnxt(t)  := dnxt(0)
-      }    
+  def update_scounteren( in: CMMState_Bundle ): CounterenBundle = {
+    val scounteren = WireDefault( in.csrfiles.scounteren )
+ 
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.scounteren, "h306".U, exe_port )
+      when(enable) { scounteren.hpm := dnxt }    
     }
-  }
 
+    return scounteren
+  }
 
   //supervisor trap handling
 
@@ -150,13 +142,12 @@ trait CsrFiles_S { this: BaseCsrFiles =>
     *
     * @note used to hold a pointer to the hart-local supervisor context while the hart is executing user code
     */
-  val (sscratch, sscratch_dnxt) = SuperscalarReg( init = 0.U(64.W), is_reitred = is_retired_v )
-
-  ( 0 until cm ).map{ t => {
-    val value = if ( t == 0 ) sscratch else sscratch_dnxt(t-1)
-    val (enable, dnxt) = Reg_Exe_Port( value, "h140".U, exe_port(t) )
-    when(enable) { sscratch_dnxt(t) := dnxt }
-  }}
+  def update_sscratch( in: CMMState_Bundle ): UInt = {
+    val sscratch = WireDefault( in.csrfiles.sscratch )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.sscratch, "h140".U, exe_port )
+    when(enable) { sscratch := dnxt }
+    return sscratch
+  }
 
 
   /**
@@ -165,18 +156,14 @@ trait CsrFiles_S { this: BaseCsrFiles =>
     * hold virtual addresses: when a trap is taken into S-mode, sepc is written with the virtual address of
     * the instruction that was interrupted or that encountered the exception
     */
+  def update_sepc( in: CMMState_Bundle ): UInt = {
+    val sepc = WireDefault( in.csrfiles.sepc )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.sepc, "h141".U, exe_port )
 
-  val (sepc, sepc_dnxt) = SuperscalarReg( init = 0.U(64.W), is_reitred = is_retired_v )
-
-  ( 0 until cm ).map{ t => {
-    val value = if ( t == 0 ) sepc else sepc_dnxt(t-1)
-    val (enable, dnxt) = Reg_Exe_Port( value, "h141".U, exe_port(t) )
-
-    when( is_trap_v(t) & priv_lvl_dnxt(t) === "b01".U ) {
-      sepc_dnxt(t) := commit_pc(t)(63,1)
-    }
-    .elsewhen(enable) { sepc_dnxt(t) := dnxt(63,1) }
-  }}
+    when( in.is_trap & in.priv_lvl_dnxt === "b01".U ) { sepc := commit_pc }
+    .elsewhen(enable) { sepc := dnxt }
+    return sepc
+  }
 
   /**
     * Supervisor Cause Register -- scause
@@ -184,53 +171,46 @@ trait CsrFiles_S { this: BaseCsrFiles =>
     * when a trap is taken into S-mode, scause is written with a code indicating the event that cause the trap
     * @return
     */
+  def update_scause( in: CMMState_Bundle ): UInt = {
+    val scause = WireDefault( in.csrfiles.scause )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.scause, "h142".U, exe_port )
 
-  val (scause_int, scause_int_dnxt) = SuperscalarReg( init = 0.U(1.W),  is_reitred = is_retired_v )
-  val (scause_exc, scause_int_dnxt) = SuperscalarReg( init = 0.U(63.W), is_reitred = is_retired_v )
-
-  val scause = Cat(scause_int, scause_exc)
-  val scause_dnxt = ( 0 until cm ).map{ t => Cat(scause_int_dnxt(t), scause_exc_dnxt(t)) }
-
-  ( 0 until cm ).map{ t => {
-    val value = if ( t == 0 ) scause else scause_dnxt(t-1)
-    val (enable, dnxt) = Reg_Exe_Port( value, "h142".U, exe_port(t) )
-
-    when( (is_m_interrupt_v(t) | is_s_interrupt_v(t) ) & priv_lvl_dnxt(t) === "b01".U ) {
-      scause_int_dnxt(t) := 1.U
-      scause_int_dnxt(t) := Mux1H( Seq(
-        is_ssi(t) -> 1.U,
-        is_msi(t) -> 3.U,
-        is_sti(t) -> 5.U,
-        is_mti(t) -> 7.U,
-        is_sei(t) -> 9.U,
-        is_mei(t) -> 11.U
+    when( ( in.is_m_interrupt | in.is_s_interrupt ) & in.priv_lvl_dnxt(t) === "b01".U ) {
+      scause.interrupt := 1.U
+      scause.exception_code := Mux1H( Seq(
+        in.is_ssi -> 1.U,
+        in.is_msi -> 3.U,
+        in.is_sti -> 5.U,
+        in.is_mti -> 7.U,
+        in.is_sei -> 9.U,
+        in.is_mei -> 11.U
       ))
     }
-    .elsewhen( is_exception_v(t) & priv_lvl_dnxt(t) === "b01".U ) {
-      scause_int_dnxt(t) := 0.U
-      scause_int_dnxt(t) := Mux1H( Seq(
-        is_instr_misAlign_v(t)        -> 0.U,
-        is_instr_access_fault_v(t)    -> 1.U,
-        is_instr_illeage_v(t)         -> 2.U,
-        is_breakPoint_v(t)            -> 3.U,
-        is_load_misAlign_v(t)         -> 4.U,
-        is_load_access_fault_v(t)     -> 5.U,
-        is_storeAMO_misAlign_v(t)     -> 6.U,
-        is_storeAMO_access_fault_v(t) -> 7.U,
-        is_ecall_U_v(t)               -> 8.U,
-        is_ecall_S_v(t)               -> 9.U,
-        is_ecall_M_v(t)               -> 11.U,
-        is_instr_paging_fault_v(t)    -> 12.U,
-        is_load_paging_fault_v(t)     -> 13.U,
-        is_storeAMO_paging_fault_v(t) -> 15.U,
+    .elsewhen( in.is_exception & in.priv_lvl_dnxt === "b01".U ) {
+      scause.interrupt := 0.U
+      scause.exception_code := Mux1H( Seq(
+        in.is_instr_misAlign        -> 0.U,
+        in.is_instr_access_fault    -> 1.U,
+        in.is_instr_illeage         -> 2.U,
+        in.is_breakPoint            -> 3.U,
+        in.is_load_misAlign         -> 4.U,
+        in.is_load_access_fault     -> 5.U,
+        in.is_storeAMO_misAlign     -> 6.U,
+        in.is_storeAMO_access_fault -> 7.U,
+        in.is_ecall_U               -> 8.U,
+        in.is_ecall_S               -> 9.U,
+        in.is_ecall_M               -> 11.U,
+        in.is_instr_paging_fault    -> 12.U,
+        in.is_load_paging_fault     -> 13.U,
+        in.is_storeAMO_paging_fault -> 15.U,
       ))
     }
     .elsewhen(enable) {
-      scause_int_dnxt(t) := dnxt(63)
-      scause_int_dnxt(t) := dnxt(62,0)
+      scause.interrupt      := dnxt(63)
+      scause.exception_code := dnxt(62,0)
     }
-
-  }}
+    return scause
+  }
 
   /**
     * Supervisor Trap Value Register -- stval
@@ -239,29 +219,28 @@ trait CsrFiles_S { this: BaseCsrFiles =>
     *
     * @return
     */
-  val (stval, stval_dnxt) = SuperscalarReg( init = 0.U(64.W), is_reitred = is_retired_v )
+  def update_stval( in: CMMState_Bundle ): UInt = {
+    val stval = WireDefault( in.csrfiles.stval )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.stval, "h143".U, exe_port )
 
-  ( 0 until cm ).map{ t => {
-    val value = if ( t == 0 ) stval else stval_dnxt(t-1)
-    val (enable, dnxt) = Reg_Exe_Port( value, "h143".U, exe_port(t) )
-
-    when( priv_lvl_dnxt(t) === "b01".U ) {
-      stval_dnxt(t) := Mux1H( Seq(
-        is_instr_access_fault_v(t)    -> ill_ivaddr(t),
-        is_instr_paging_fault_v(t)    -> ill_ivaddr(t),
-        is_instr_illeage_v(t)         -> ill_instr(t),
-        is_breakPoint_v(t)            -> 0.U,
-        is_load_misAlign_v(t)         -> ill_dvaddr(t),
-        is_load_access_fault_v(t)     -> ill_dvaddr(t),
-        is_storeAMO_misAlign_v(t)     -> ill_dvaddr(t),
-        is_storeAMO_access_fault_v(t) -> ill_dvaddr(t),
-        is_load_paging_fault_v(t)     -> ill_dvaddr(t),
-        is_storeAMO_paging_fault_v(t) -> ill_dvaddr(t)       
+    when( in.priv_lvl_dnxt === "b01".U ) {
+      stval := Mux1H( Seq(
+        in.is_instr_access_fault    -> ill_ivaddr,
+        in.is_instr_paging_fault    -> ill_ivaddr,
+        in.is_instr_illeage         -> ill_instr,
+        in.is_breakPoint            -> 0.U,
+        in.is_load_misAlign         -> ill_dvaddr,
+        in.is_load_access_fault     -> ill_dvaddr,
+        in.is_storeAMO_misAlign     -> ill_dvaddr,
+        in.is_storeAMO_access_fault -> ill_dvaddr,
+        in.is_load_paging_fault     -> ill_dvaddr,
+        in.is_storeAMO_paging_fault -> ill_dvaddr       
       ))
     }
-    .elsewhen(enable) { stval_dnxt(t) := dnxt }
+    .elsewhen(enable) { stval := dnxt }
+    return stval
+  }
 
-  }}
 
 
 /**
@@ -270,25 +249,25 @@ trait CsrFiles_S { this: BaseCsrFiles =>
   * 
   */
 
-    val meip = clint_ex_m
-    val seip = clint_ex_s
-    val mtip = clint_tm_m
-    val stip = clint_tm_s
-    val msip = clint_sw_m
-    val ssip = clint_sw_s
+  //   val meip = clint_ex_m
+  //   val seip = clint_ex_s
+  //   val mtip = clint_tm_m
+  //   val stip = clint_tm_s
+  //   val msip = clint_sw_m
+  //   val ssip = clint_sw_s
 
-  val sip =
-    Cat(
-      0.U(4.W), meip & mideleg(11), 0.U(1.W), seip,
-      0.U(1.W), mtip & mideleg(7),  0.U(1.W), stip,
-      0.U(1.W), msip & mideleg(3),  0.U(1.W), ssip, 0.U(1.W) )
+  // val sip =
+  //   Cat(
+  //     0.U(4.W), meip & mideleg(11), 0.U(1.W), seip,
+  //     0.U(1.W), mtip & mideleg(7),  0.U(1.W), stip,
+  //     0.U(1.W), msip & mideleg(3),  0.U(1.W), ssip, 0.U(1.W) )
 
-  val sip_dnxt = ( 0 until cm ).map{ t => 
-    Cat(
-      0.U(4.W), meip & mideleg_dnxt(t)(11), 0.U(1.W), seip,
-      0.U(1.W), mtip & mideleg_dnxt(t)(7),  0.U(1.W), stip,
-      0.U(1.W), msip & mideleg_dnxt(t)(3),  0.U(1.W), ssip, 0.U(1.W) )
-  }
+  // val sip_dnxt = ( 0 until cm ).map{ t => 
+  //   Cat(
+  //     0.U(4.W), meip & mideleg_dnxt(t)(11), 0.U(1.W), seip,
+  //     0.U(1.W), mtip & mideleg_dnxt(t)(7),  0.U(1.W), stip,
+  //     0.U(1.W), msip & mideleg_dnxt(t)(3),  0.U(1.W), ssip, 0.U(1.W) )
+  // }
 
 
   /**
@@ -299,30 +278,19 @@ trait CsrFiles_S { this: BaseCsrFiles =>
     * @param PPN (43,0) physical page number (ppn) of the root page table
     */
 
-  // val (satp, satp_dnxt) = SuperscalarReg( init = 0.U(64.W), is_reitred = is_retired_v )
+  def update_satp( in: CMMState_Bundle ): SatpBundle = {
+    val satp = WireDefault( in.csrfiles.satp )
 
-  // ( 0 until cm ).map{ t => {
-  //   val value = if ( t == 0 ) sepc else sepc_dnxt(t-1)
-  //   val (enable, dnxt) = Reg_Exe_Port( value, "h141".U, exe_port(t) )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.satp, "h180".U, exe_port )
+    when(enable) {
+      /** @note only sv39 supportted */
+      satp.mode := dnxt(63,60) & "b1000".U
+      satp.asid := dnxt(59,44)
+      satp.ppn  := dnxt(43,0)
+    }
 
-  //   when( is_trap_v(t) & priv_lvl_dnxt(t) === "b01".U ) {
-  //     sepc_dnxt(t) := commit_pc(t)(63,1)
-  //   }
-  //   .elsewhen(enable) { sepc_dnxt(t) := dnxt(63,1) }
-  // }}
-  val (mode, mode_dnxt) = SuperscalarReg( init = 0.U(4.W), is_reitred = is_retired_v )
-  val (asid, asid_dnxt) = SuperscalarReg( init = 0.U(16.W), is_reitred = is_retired_v )
-  val (ppn , ppn_dnxt)  = SuperscalarReg( init = 0.U(44.W), is_reitred = is_retired_v )
-
-  /** @note only sv39 supportted */
-  val satp = Cat( mode & "b1000".U, asid, ppn ) 
-  val satp_dnxt = ( 0 until cm ).map{ t => Cat( mode_dnxt(t) & "b1000".U, asid_dnxt(t), ppn_dnxt(t) ) }
-
-  ( 0 until cm ).map{ t => {
-    val value = if( t == 0 ) satp else satp_dnxt(t-1) 
-    val (enable, dnxt) = Reg_Exe_Port( value, "h180".U, exe_port(t) )
-    when(enable) { mode_dnxt(t) := dnxt(63,60); asid_dnxt(t) := dnxt(59,44); ppn_dnxt(t) := dnxt(43,0) }
-  }}
+    return stap
+  }
 
 
 

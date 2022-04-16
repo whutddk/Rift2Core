@@ -31,6 +31,11 @@ import debug._
 
 import rift2Core.diff._
 
+class CMMState_Bundle extends Bundle{
+  
+}
+
+
 abstract class BaseCommit extends RawModule
 
 

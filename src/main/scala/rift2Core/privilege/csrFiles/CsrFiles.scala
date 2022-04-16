@@ -25,99 +25,223 @@ import rift2Core.privilege._
 
 abstract class  BaseCsrFiles extends BaseCommit
 
-class CSR_Info extends Bundle {
+class FCSRBundle extends Bundle{
+  val frm      = UInt(3.W)
+  val fflags   = UInt(5.W)
+}
+
+/**
+  * Machine Status Registers
+  * @param SD (63) whether either fs or xs is dirty
+  * @param MBE (37) endian of M-mode, when 0, is little-endian, hard-wire to 0.U(64.bits)
+  * @param SBE (36) endian of S-mode, when 0, is little-endian, hard-wire to 0.U(64.bits)
+  * @param SXL (35,34) XLEN of S-mode, hard-wire to 2.U(64.bits)
+  * @param UXL (33,32) XLEN of U-mode, hard-wire to 2.U(64.bits)
+  * @param TSR (22) trap sret, when 1, sret in s-mode cause illegal instruction exception
+  * @param TW (21) Time out wait for WFI, when 1 wfi cause illegal instruction exception in U\S-MODE
+  * @param TVM (20) Trap Virtual Memory, when 1, access satp or Sfence.vma will cause illegal instruction exception
+  * @param MXR (19) Make executable Readable. When 0, only loads form pages marked readable
+  * @param SUM (18) permit Supervisor User Memory access. When 0, S-mode accesses to page.U === 1 will fault.
+  * @param MPRV (17) Memory Privilege; When 1, load store using trans&protect in M-mode; When MRET or SRet to S\U-mode, set to 0.
+  * @param XS (16,15) aditional user-mode extension and associated state
+  * @param FS (14,13) float point statuw=s
+  * @param MPP (12,11) Previous Mode is U-mode or S-mode or M-mode? When MRet, privilege mode update to MPP, MPP set to "U"
+  * @param SPP (8) Previous Mode is U-mode or S-mode? When SRet, privilege mode update to SPP, SPP set to "U"
+  * @param MPIE (7)  When MRet, MPIE set to 1
+  * @param UBE (6) endian of U-mode, when 0, is little-endian, hard-wire to 0.U(64.bits)
+  * @param SPIE (5) When SRet, SPIE set to 1
+  * @param MIE (3) M-mode Interrupt Enable; When MRet, update to MPIE
+  * @param SIE (1) S-mode Interrupt Enable; When SRet, update to SPIE
+  */
+class MStatusBundle extends Bundle{
+  val sd = UInt(1.W)
+  val reserved0 = UInt(25.W)
+  val mbe = UInt(1.W)
+  val sbe = UInt(1.W)
+  val sxl = UInt(2.W)
+  val uxl = UInt(2.W)
+  val reserved1 = UInt(9.W)
+  val tsr = UInt(1.W)
+  val tw = UInt(1.W)
+  val tvm = UInt(1.W)
+  val mxr = UInt(1.W)
+  val sum = UInt(1.W)
+  val mprv = UInt(1.W)
+  val xs = UInt(2.W)
+  val fs = UInt(2.W)
+  val mpp = UInt(2.W)
+  val reserved2 = UInt(2.W)
+  val spp = UInt(1.W)
+  val mpie = UInt(1.W)
+  val ube = UInt(1.W)
+  val spie = UInt(1.W)
+  val reserved3 = UInt(1.W)
+  val mie = UInt(1.W)
+  val reserved4 = UInt(1.W)
+  val sie = UInt(1.W)
+  val reserved5 = UInt(1.W)
+}
+
+class MSIntBundle extends Bundle{
+  val reserved0 = UInt(4.W)
+  val mei       = UInt(1.W)
+  val reserved1 = UInt(1.W)
+  val sei       = UInt(1.W)
+  val reserved2 = UInt(1.W)
+  val mti       = UInt(1.W)
+  val reserved3 = UInt(1.W)
+  val sti       = UInt(1.W)
+  val reserved4 = UInt(1.W)
+  val msi       = UInt(1.W)
+  val reserved5 = UInt(1.W)
+  val ssi       = UInt(1.W)
+  val reserved6 = UInt(1.W)
+}
+
+class TVecBundle extends Bundle{
+  val base = UInt(62.W)
+  val mode = UInt(2.W)
+}
+
+class CounterenBundle extends Bundle{
+  val hpm = UInt(32.W)
+  def ir = hpm(2)
+  def tm = hpm(1)
+  def cy = hpm(0)
+}
+
+class CauseBundle extends Bundle{
+  val Interrupt = UInt(1.W)
+  val exception_code = UInt(63.W)
+}
+
+class PmpcfgBundle extends Bundle{
+  val L = UInt(1.W)
+  val reserved0 = UInt(2.W)
+  val A = UInt(2.W)
+  val X = UInt(1.W)
+  val W = UInt(1.W)
+  val R = UInt(1.W)
+}
+
+class SatpBundle extends Bundle{
+  val mode = UInt(1.W)
+  val asid = UInt(9.W)
+  val ppn = UInt(22.W)
+}
+
+class DcsrBundle extends Bundle{
+  val xdebugver = UInt(4.W)
+  val reserved0 = UInt(12.W)
+  val ebreakm   = UInt(1.W)
+  val reserved1 = UInt(1.W)
+  val ebreaks   = UInt(1.W)
+  val ebreaku   = UInt(1.W)
+  val stepie    = UInt(1.W)
+  val stopcount = UInt(1.W)
+  val stoptime  = UInt(1.W)
+  val cause     = UInt(3.W)
+  val reserved2 = UInt(1.W)
+  val mprven    = UInt(1.W)
+  val nmip      = UInt(1.W)
+  val step      = UInt(1.W)
+  val prv       = UInt(2.W)
+}
+
+class CSR_Bundle extends Bundle {
 
   // val ustatus  = UInt(64.W)
   // val uie      = UInt(64.W)
   // val utvec    = UInt(64.W)
   // val uscratch = UInt(64.W)
-  // val uepc     = Wire(UInt(64.W))
-  // val ucause   = Wire(UInt(64.W))
-  // val utval    = Wire(UInt(64.W))
-  // val uip      = Wire(UInt(64.W))
-  // val fflags   = Wire(UInt(64.W))
-  // val frm      = Wire(UInt(64.W))
-  val fcsr        = Wire(UInt(64.W))
-  val cycle       = Wire(UInt(64.W))
-  val time        = Wire(UInt(64.W))
-  val instret     = Wire(UInt(64.W))
-  val sstatus     = Wire(UInt(64.W))
-  // val sedeleg  = Wire(UInt(64.W))
-  // val sideleg  = Wire(UInt(64.W))
-  val sie         = Wire(UInt(64.W))
-  val stvec       = Wire(UInt(64.W))
-  val scounteren  = Wire(UInt(64.W))
-  val sscratch    = Wire(UInt(64.W))
-  val sepc        = Wire(UInt(64.W))
-  val scause      = Wire(UInt(64.W))
-  val stval       = Wire(UInt(64.W))
-  val sip         = Wire(UInt(64.W))
-  val satp        = Wire(UInt(64.W))
-  val hstatus     = Wire(UInt(64.W))
-  val hedeleg     = Wire(UInt(64.W))
-  val hideleg     = Wire(UInt(64.W))
-  val hie         = Wire(UInt(64.W))
-  val hcounteren  = Wire(UInt(64.W))
-  val hgeie       = Wire(UInt(64.W))
-  val htval       = Wire(UInt(64.W))
-  val hip         = Wire(UInt(64.W))
-  val hvip        = Wire(UInt(64.W))
-  val htinst      = Wire(UInt(64.W))
-  val hgeip       = Wire(UInt(64.W))
-  val hgatp       = Wire(UInt(64.W))
-  val htimedelta  = Wire(UInt(64.W))
-  val vsstatus    = Wire(UInt(64.W))
-  val vsie        = Wire(UInt(64.W))
-  val vstvec      = Wire(UInt(64.W))
-  val vsscratch   = Wire(UInt(64.W))
-  val vsepc       = Wire(UInt(64.W))
-  val vscause     = Wire(UInt(64.W))
-  val vstval      = Wire(UInt(64.W))
-  val vsip        = Wire(UInt(64.W))
-  val vsatp       = Wire(UInt(64.W))
-  val mvendorid   = Wire(UInt(64.W))
-  val marchid     = Wire(UInt(64.W))
-  val mimpid      = Wire(UInt(64.W))
-  val mhartid     = Wire(UInt(64.W))
-  val mstatus     = Wire(UInt(64.W))
-  val misa        = Wire(UInt(64.W))
-  val medeleg     = Wire(UInt(64.W))
-  val mideleg     = Wire(UInt(64.W))
-  val mie         = Wire(UInt(64.W))
-  val mtvec       = Wire(UInt(64.W))
-  val mcounteren  = Wire(UInt(64.W))
-  val mscratch    = Wire(UInt(64.W))
-  val mepc        = Wire(UInt(64.W))
-  val mcause      = Wire(UInt(64.W))
-  val mtval       = Wire(UInt(64.W))
-  val mip         = Wire(UInt(64.W))
-  val mtinst      = Wire(UInt(64.W))
-  val mtval2      = Wire(UInt(64.W))
-  val mcycle      = Wire(UInt(64.W))
-  val minstret    = Wire(UInt(64.W))
-  val mcountinhibit = Wire(UInt(64.W))
-  val tselect     = Wire(UInt(64.W))
-  val tdata1      = Wire(UInt(64.W))
-  val tdata2      = Wire(UInt(64.W))
-  val tdata3      = Wire(UInt(64.W))
-  val dcsr        = Wire(UInt(64.W))
-  val dpc         = Wire(UInt(64.W))
-  val dscratch0   = Wire(UInt(64.W))
-  val dscratch1   = Wire(UInt(64.W))
-  val dscratch2   = Wire(UInt(64.W))
+  // val uepc     = UInt(64.W)
+  // val ucause   = UInt(64.W)
+  // val utval    = UInt(64.W)
+  // val uip      = UInt(64.W)
+  // val fflags   = UInt(64.W)
+  // val frm      = UInt(64.W)
+  val fcsr        = new FCSRBundle
+  val cycle       = UInt(64.W)
+  val time        = UInt(64.W)
+  val instret     = UInt(64.W)
+  // val sstatus     = UInt(64.W)
+  // val sedeleg  = UInt(64.W)
+  // val sideleg  = UInt(64.W)
+  // val sie         = new MSIntBundle
+  val stvec       = new TVecBundle
+  val scounteren  = new CounterenBundle
+  val sscratch    = UInt(64.W)
+  val sepc        = UInt(64.W)
+  val scause      = new CauseBundle
+  val stval       = UInt(64.W)
+  val sip         = new MSIntBundle
+  val satp        = new SatpBundle
+  // val hstatus     = UInt(64.W)
+  // val hedeleg     = UInt(64.W)
+  // val hideleg     = UInt(64.W)
+  // val hie         = UInt(64.W)
+  // val hcounteren  = UInt(64.W)
+  // val hgeie       = UInt(64.W)
+  // val htval       = UInt(64.W)
+  // val hip         = UInt(64.W)
+  // val hvip        = UInt(64.W)
+  // val htinst      = UInt(64.W)
+  // val hgeip       = UInt(64.W)
+  // val hgatp       = UInt(64.W)
+  // val htimedelta  = UInt(64.W)
+  // val vsstatus    = UInt(64.W)
+  // val vsie        = UInt(64.W)
+  // val vstvec      = UInt(64.W)
+  // val vsscratch   = UInt(64.W)
+  // val vsepc       = UInt(64.W)
+  // val vscause     = UInt(64.W)
+  // val vstval      = UInt(64.W)
+  // val vsip        = UInt(64.W)
+  // val vsatp       = UInt(64.W)
+  val mvendorid   = UInt(64.W)
+  val marchid     = UInt(64.W)
+  val mimpid      = UInt(64.W)
+  val mhartid     = UInt(64.W)
+  val mstatus     = new MStatusBundle
+  val misa        = UInt(64.W)
+  val medeleg     = UInt(64.W)
+  val mideleg     = UInt(64.W)
+  val mie         = new MSIntBundle
+  val mtvec       = new TVecBundle
+  val mcounteren  = new CounterenBundle
+  val mscratch    = UInt(64.W)
+  val mepc        = UInt(64.W)
+  val mcause      = new CauseBundle
+  val mtval       = UInt(64.W)
+  val mip         = new MSIntBundle
+  val mtinst      = UInt(64.W)
+  val mtval2      = UInt(64.W)
+  val mcycle      = UInt(64.W)
+  val minstret    = UInt(64.W)
+  val mcountinhibit = UInt(64.W)
+  val tselect     = UInt(64.W)
+  val tdata1      = UInt(64.W)
+  val tdata2      = UInt(64.W)
+  val tdata3      = UInt(64.W)
+  val dcsr        = UInt(64.W)
+  val dpc         = new DcsrBundle
+  val dscratch0   = UInt(64.W)
+  val dscratch1   = UInt(64.W)
+  val dscratch2   = UInt(64.W)
 
 
-  val pmpcfg  = Wire(Vec( 16, UInt(64.W)) )
-  val pmpaddr = Wire(Vec( 64, UInt(64.W)) )
+  val pmpcfg  = Vec( 16, Vec(8, new PmpcfgBundle) )
+  val pmpaddr = Vec( 64, UInt(64.W))
 
 
-  val hpmcounter = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
-  val mhpmcounter = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
-  val mhpmevent = WireDefault(VecInit( Seq.fill(32)(0.U(64.W)) ))
+  val hpmcounter  = Vec( 32, UInt(64.W))
+  val mhpmcounter = Vec( 32, UInt(64.W))
+  val mhpmevent   = Vec( 32, UInt(64.W))
 
 
-
-
+  def sstatus = mstatus & Cat( "b1".U, 0.U(29.W), "b11".U, 0.U(12.W), "b11011110000101100010".U )
+  def sie = (mie.asUInt & Cat()).asTypeOf(new MSIntBundle)
+  def sip = (mip.asUInt & Cat()).asTypeOf(new MSIntBundle)
 }
 
 trait CsrFiles { this: BaseCsrFiles => 
