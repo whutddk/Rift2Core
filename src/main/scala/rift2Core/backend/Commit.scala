@@ -33,163 +33,158 @@ import rift2Core.diff._
 
 @chiselName
 class CMMState_Bundle extends Bundle{
-  val rod
-  val is_misPredict
-  val is_xRet
-  val is_trap
-  val is_fence_i
-  val is_sfence_vma
-  val is_wb
-  val is_step //judge whether is chn0
-  val is_peri_abort
-  val is_access_fault
-  val is_paging_fault
-  val is_misAlign
-  val csr_cmm_op
+  val rod = new Info_reorder_i
+  val csrFiles = new CSR_Bundle
+  val lsu_cmm = new Info_lsu_cmm
 
+  val csrExe = new Exe_Port
+  val fcsrExe = new Exe_Port
+  val is_wb = Bool()
 
 
   def is_load_accessFault: Bool = {
-    val is_load_accessFault = is_access_fault & rod.bits.is_lu & ~is_wb
+    val is_load_accessFault = lsu_cmm.is_access_fault & rod.is_lu & ~is_wb
     return is_load_accessFault
   }
 
   def is_store_accessFault: Bool = {
-    val is_store_accessFault = is_access_fault & ( rod.bits.is_su | rod.bits.is_amo ) & ~is_wb
+    val is_store_accessFault = lsu_cmm.is_access_fault & ( rod.is_su | rod.is_amo ) & ~is_wb
     return is_store_accessFault
   }
 
   def is_load_pagingFault: Bool = {
-    val is_load_pagingFault = is_paging_fault & rod.bits.is_lu & ~is_wb
+    val is_load_pagingFault = lsu_cmm.is_paging_fault & rod.is_lu & ~is_wb
     return is_load_pagingFault
   }
 
   def is_store_pagingFault: Bool = {
-    val is_store_pagingFault = is_paging_fault & ( rod.bits.is_su | rod.bits.is_amo ) & ~is_wb
+    val is_store_pagingFault = lsu_cmm.is_paging_fault & ( rod.is_su | rod.is_amo ) & ~is_wb
   }
 
   def is_load_misAlign: Bool = {
-    val is_load_misAlign = is_misAlign & rod.bits.is_lu & ~is_wb
+    val is_load_misAlign = lsu_cmm.is_misAlign & rod.is_lu & ~is_wb
     return is_load_misAlign
   }
 
   def is_store_misAlign: Bool = {
-    val is_store_misAlign = is_misAlign & (rod_i.bits.is_su | rod_i.bits.is_amo) & ~is_wb
+    val is_store_misAlign = lsu_cmm.is_misAlign & (rod.is_su | rod.is_amo) & ~is_wb
     return is_store_misAlign
   }
 
   def is_ecall: Bool = {
-    val is_ecall = rod.bits.privil.ecall
+    val is_ecall = rod.privil.ecall
     return is_ecall
   }
 
   def is_ebreak: Bool = {
-    val is_ebreak = rod.bits.privil.ebreak
+    val is_ebreak = rod.privil.ebreak
     return is_ebreak
   }
 
   def is_instr_access_fault: Bool = {
-    val is_instr_access_fault = rod.bits.privil.is_access_fault
+    val is_instr_access_fault = rod.privil.is_access_fault
     return is_instr_access_fault
   }
 
   def is_instr_paging_fault: Bool = {
-    val is_instr_paging_fault = rod.bits.privil.is_paging_fault
+    val is_instr_paging_fault = rod.privil.is_paging_fault
     return is_instr_paging_fault
   }
 
-  def is_csrw_illegal = {
-    val is_csrw_illegal = ( csr_cmm_op.op_rc | csr_cmm_op.op_rs | csr_cmm_op.op_rw ) & ( csr_cmm_op.csr_write_denied(csr_cmm_op.addr) | csr_cmm_op.csr_read_prilvl(csr_cmm_op.addr) )
+  def is_csrw_illegal: Bool = {
+    val is_csrw_illegal = ( csrExe.op_rc | csrExe.op_rs | csrExe.op_rw ) & ( csrExe.csr_write_denied(csrFiles.DMode) | csrExe.csr_read_prilvl(csrFiles.priv_lvl, csrFiles.DMode) )
     return is_csrw_illegal
   }
 
-  def is_csrr_illegal = {
-    val is_csrr_illegal = csr_cmm_op.csr_read_prilvl(io.csr_addr.bits)
+  def is_csrr_illegal: Bool = {
+    val is_csrr_illegal = csrExe.csr_read_prilvl(csrFiles.priv_lvl, csrFiles.DMode)
     return is_csrr_illegal
   }
 
-  def is_fcsrw_illegal = {
-    val is_fcsrw_illegal = ( fcsr_cmm_op.op_rc | fcsr_cmm_op.op_rs | fcsr_cmm_op.op_rw ) & (csrfiles.mstatus.fs === 0.U)
+  def is_fcsrw_illegal: Bool = {
+    val is_fcsrw_illegal = ( fcsrExe.op_rc | fcsrExe.op_rs | fcsrExe.op_rw ) & (csrFiles.mstatus.fs === 0.U)
     return is_fcsrw_illegal
   }
 
       
 
-  def is_illeage = {
+  def is_illeage: Bool = {
     val is_csr_illegal = 
       (is_csrr_illegal  & rod.is_csr & ~is_wb) |
       (is_csrw_illegal  & rod.is_csr &  is_wb) |
       (is_fcsrw_illegal & rod.is_fpu &  is_wb)
 
-    val is_ill_sfence = is_wb & rod.is_sfence_vma & ( (csrfiles.mstatus(20) & priv === "b01".U) | priv === "b00".U)
-    val is_ill_wfi_v  = is_wb & rod.is_wfi        & ( csrfiles.mstatus(21)  & priv < "b11".U )
+    val is_ill_sfence = is_wb & rod.is_sfence_vma & ( (csrFiles.mstatus.tvm & priv === "b01".U) | priv === "b00".U)
+    val is_ill_wfi_v  = is_wb & rod.is_wfi        & (  csrFiles.mstatus.tw & priv < "b11".U )
 
     val is_ill_mRet_v = rod.privil.mret & priv =/= "b11".U
-    val is_ill_sRet_v = rod.privil.sret & ( priv === "b00".U | ( priv === "b01".U & csrfiles.mstatus(22)) )
-    val is_ill_dRet_v = rod.privil.dret & ~is_inDebugMode
-    val is_ill_fpus_v = (is_wb & (rod.is_fcmm | rod.is_fpu) & csrfiles.mstatus.fs === 0.U)
+    val is_ill_sRet_v = rod.privil.sret & ( priv === "b00".U | ( priv === "b01".U & csrFiles.mstatus.tsr) )
+    val is_ill_dRet_v = rod.privil.dret & ~csrFiles.DMode
+    val is_ill_fpus_v = (is_wb & (rod.is_fcmm | rod.is_fpu) & csrFiles.mstatus.fs === 0.U)
 
     val is_illeage = rod.is_illeage | is_csr_illegal | is_ill_sfence | is_ill_wfi | is_ill_mRet | is_ill_sRet | is_ill_dRet | is_ill_fpus
     return is_illeage
   }
      
-  def is_mRet = {
+  def is_mRet: Bool = {
     val is_mRet = rod.privil.mret & priv === "b11".U
     return is_mRet
   }
 
-  def is_sRet = {
-    val is_sRet =rod.privil.sret & ( priv === "b11".U | ( priv === "b01".U & ~mstatus(22)) ),
+  def is_sRet: Bool = {
+    val is_sRet = rod.privil.sret & ( priv === "b11".U | ( priv === "b01".U & ~csrFiles.mstatus.tsr) )
     return is_sRet
   }
 
-  def is_dRet = {
-    val is_dRet = rod.privil.dret & is_inDebugMode
+  def is_dRet: Bool = {
+    val is_dRet = rod.privil.dret & csrFiles.DMode
     return is_dRet
   }
 
-  def is_fence_i = {
+  def is_fence_i: Bool = {
     val is_fence_i = rod.is_fence_i & is_wb
     return is_fence_i
   }
 
-  def is_sfence_vma = {
-    val is_sfence_vma = rod.is_sfence_vma & is_wb & ( (~mstatus(20) & priv === "b01".U) | priv === "b11".U)
+  def is_sfence_vma: Bool = {
+    val is_sfence_vma = rod.is_sfence_vma & is_wb & ( (~csrFiles.mstatus.tvm & priv === "b01".U) | priv === "b11".U)
     return is_sfence_vma
   }
 
 
-  def is_exception = {
+  def is_exception: Bool = {
     val is_exception = 
       is_ecall                 |
       is_ebreak                |
       is_instr_access_fault    |
       is_instr_paging_fault    |
       is_illeage               |
-      is_load_accessFault_ack  |
-      is_store_accessFault_ack |
-      is_load_misAlign_ack     |
-      is_store_misAlign_ack    |
-      is_load_pagingFault_ack  |
-      is_store_pagingFault_ack
+      is_load_accessFault      |
+      is_store_accessFault     |
+      is_load_misAlign         |
+      is_store_misAlign        |
+      is_load_pagingFault      |
+      is_store_pagingFault
     return is_exception
   }
 
+  def is_interrupt: Bool = {
+    val is_interrupt = ((csrfiles.is_m_interrupt | csrfiles.is_s_interrupt) & ~is_step_int_block) | is_nomask_interrupt
+    return is_interrupt
+  }
 
-
-
-	def is_trap = {
+	def is_trap: Bool = {
     val is_trap = is_interrupt | is_exception
     return is_trap
   } 
 
-  def is_xRet = {
+  def is_xRet: Bool = {
     val is_xRet = is_mRet | is_sRet | is_dRet
     return is_xRet
   }
 
-  def is_fpu_state_change = {
-    val is_fpu_state_change = ~is_trap & (rod.bits.is_fcmm | rod.bits.is_fpu)
+  def is_fpu_state_change: Bool = {
+    val is_fpu_state_change = ~is_trap & (rod.is_fcmm | rod.is_fpu)
     return is_fpu_state_change
   }
 
@@ -301,7 +296,7 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
     io.cm_op(i).toF := is_fcmm(i) 
   }
 
-  val is_wb_v = io.cm_op.map{ _ => _.is_writeback }
+
   
 
 
@@ -309,8 +304,7 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
   io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (~io.cm_op(0).ready)
   printf("Warning, preformance enhance require: 1. branch pending only resolved in chn0 -> only one branch pending can be resolved, in any chn.")
 
-  // val is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | io.rod_i(0).bits.is_su | ~is_wb_v(0) | (io.rod_i(0).bits.rd0_raw === io.rod_i(1).bits.rd0_raw)
-  // val is_2nd_solo = io.is_commit_abort(1) | io.rod_i(1).bits.is_csr | io.rod_i(1).bits.is_su
+
 
 
 
@@ -320,31 +314,11 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
     
 
 
-  // io.is_commit_abort(1) :=
-  //   (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) | is_fence_i_v(1) | is_sfence_vma_v(1)  ) & ~is_1st_solo 
-
-  // io.is_commit_abort(0) :=
-  //   (io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet_v(0) | is_trap_v(0) | is_fence_i_v(0) | is_sfence_vma_v(0) )
-
-
-  //only one privilege can commit once
-  // val is_commit_comfirm = VecInit(
-  //   is_wb_v(0) & ~io.is_commit_abort(0),
-  //   is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo & ~is_step
-  // )
-
-
-
   ( 0 until cm ).map{ i =>
     io.cm_op(i).is_comfirm := commit_state_is_comfirm(i)
     io.cm_op(i).is_abort   := commit_state_is_abort(i)
-
   }
-  // io.cm_op(0).valid := is_commit_comfirm(0) | io.is_commit_abort(0)
-  // io.cm_op(1).valid := is_commit_comfirm(1) | io.is_commit_abort(1)
 
-  // io.cm_op(0).bits.is_abort := io.is_commit_abort(0)
-  // io.cm_op(1).bits.is_abort := io.is_commit_abort(1)
 
   ( 0 until cm ).map{ i =>
     io.rod_i(i).ready := commit_state_is_comfirm(i) | commit_state_is_abort(i)
@@ -530,7 +504,7 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
 
 
   is_debug_interrupt :=
-    ~is_inDebugMode & (
+    ~csrFiles.DMode & (
       is_single_step |
       is_trigger |
       is_halt_int |
@@ -544,14 +518,7 @@ class Commit(cm: Int=2) extends Privilege with Superscalar {
   io.dm.hartIsInReset := emu_reset
   ResetReq := io.dm.hartResetReq
 
-  is_inDebugMode_en := 
-    (io.rod_i(0).valid & is_trap_v(0) & is_debug_interrupt) |
-    is_dRet
 
-  is_inDebugMode_dnxt := Mux1H(Seq(
-    ( io.rod_i(0).valid & is_trap_v(0) & is_debug_interrupt ) -> true.B,
-    is_dRet -> false.B,
-  ))
 
 
 

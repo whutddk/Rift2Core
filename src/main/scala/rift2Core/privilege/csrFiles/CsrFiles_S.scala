@@ -130,7 +130,7 @@ trait CsrFiles_S {  this: BaseCommit =>
  
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.scounteren, "h306".U, exe_port )
       when(enable) { scounteren.hpm := dnxt }    
-    }
+
 
     return scounteren
   }

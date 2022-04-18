@@ -24,11 +24,16 @@ import base._
 
 trait CsrFiles_D {  this: BaseCommit =>
   val ResetReq  = Wire(Bool())
-  // val is_halt_request   = Wire(Bool())
 
-  val is_inDebugMode_dnxt = Wire(Bool())
-  val is_inDebugMode_en = Wire(Bool())
-  val is_inDebugMode = RegEnable(next = is_inDebugMode_dnxt, init=false.B, enable=is_inDebugMode_en)
+
+  def update_DMode( in: CMMState_Bundle ): Bool = {
+    val DMode = WireDefault( in.csrFiles.DMode )
+    when( in.is_debug_interrupt ) { DMode := true.B }
+    .elsewhen( in.is_dRet ) { DMode := false.B }
+    return DMode
+  }
+
+
   val is_step = WireDefault(dcsr(2).asBool & is_inDebugMode)
 
   val is_debug_interrupt = Wire(Bool())
@@ -96,7 +101,7 @@ trait CsrFiles_D {  this: BaseCommit =>
 
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dcsr, "h7B0".U, exe_port )
     when(false.B) {}
-    .elsewhen( in.is_inDebugMode_dnxt & in.is_inDebugMode_en ){
+    .elsewhen( is_debug_interrupt ){
       dcsr.prv := in.priv_lvl
     }
     .elsewhen(enable) {
