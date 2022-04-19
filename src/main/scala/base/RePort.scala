@@ -73,5 +73,36 @@ object RePort{
     enq <> mdl.io.enq
     return mdl.io.deq
   }
-
 }
+
+class ReDirect[T<:Data]( dw: T, port: Int) extends Module{
+  val io = IO( new Bundle{
+    val enq = Vec(port, Flipped(new DecoupledIO(dw)) )
+    val deq  = Vec(port, new DecoupledIO(dw) )
+    val mapper = Input(Vec(port, Bool()))
+    } )
+
+  for ( i <- 0 until port ) yield {
+    io.deq(i).valid := false.B 
+    io.deq(i).bits  := DontCare
+    io.enq(i).ready  := false.B
+  }
+
+  for ( i <- 0 until port ) {
+    for ( j <- port-1 to i  ) {
+      when( io.mapper(j) ) {
+        io.deq(j) <> io.enq(i) //override
+      }
+    }
+  }
+}
+
+object ReDirect{
+  def apply[T <: Data]( enq: Vec[ReadyValidIO[T]], mapper: Vec[Bool] ): Vec[DecoupledIO[T]] = {
+    require( enq.length == mapper.length )
+    val mdl = Module(new ReDirect( chiselTypeOf(enq(0).bits), enq.length ))
+    enq <> mdl.io.enq
+    return mdl.io.deq
+  }
+}
+

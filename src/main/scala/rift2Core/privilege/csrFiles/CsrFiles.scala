@@ -151,7 +151,7 @@ class DcsrBundle extends Bundle{
 class CSR_Bundle extends Bundle {
 
   val priv_lvl = UInt(2.W)
-  val new_priv = UInt(2.W)
+  // val new_priv = UInt(2.W)
   val DMode    = Bool()
 
   // val ustatus  = UInt(64.W)
@@ -280,10 +280,363 @@ class CSR_Bundle extends Bundle {
     return is_s_interrupt
   }
 
+  def csr_read_prilvl(addr: UInt, priv_lvl: UInt, DMode: Bool) = {
+    val pmpcfg_arr = {
+      val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
+      val reg_sel  = for ( i <- 0 until 16 ) yield { priv_lvl >= "b11".U }
+      addr_chk zip reg_sel
+    }
+
+    val pmpaddr_arr = {
+      val addr_chk = for ( i <- 0 until 64 ) yield { addr === ("h3B0".U + i.U) }
+      val reg_sel  = for ( i <- 0 until 64 ) yield { priv_lvl >= "b11".U }
+      addr_chk zip reg_sel
+    }
+
+    val hpmcounter_arr = {
+      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hC00".U + i.U) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      addr_chk zip reg_sel
+    }
+
+    val mhpmcounter_arr = {
+      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hB00".U + i.U) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      addr_chk zip reg_sel      
+    }
+
+    val mhpmevent_arr = {
+      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("h320".U + i.U) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      addr_chk zip reg_sel      
+    }
+
+    val normal_arr = Array(
+          // ( addr === "h000".U ) -> ustatus,
+          // ( addr === "h004".U ) -> uie,
+          // ( addr === "h005".U ) -> utvec,
+          // ( addr === "h040".U ) -> uscratch,
+          // ( addr === "h041".U ) -> uepc,
+          // ( addr === "h042".U ) -> ucause,
+          // ( addr === "h043".U ) -> utval,
+          // ( addr === "h044".U ) -> uip,
+          ( addr === "h001".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "h002".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "h003".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "hC00".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "hC01".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "hC02".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "h100".U ) -> (priv_lvl >= "b00".U),
+          // ( addr === "h102".U ) -> sedeleg,
+          // ( addr === "h103".U ) -> sideleg,
+          ( addr === "h104".U ) -> (priv_lvl >= "b01".U),
+          ( addr === "h105".U ) -> (priv_lvl >= "b01".U),
+          ( addr === "h106".U ) -> (priv_lvl >= "b01".U),
+          ( addr === "h140".U ) -> (priv_lvl >= "b01".U),
+          ( addr === "h141".U ) -> (priv_lvl >= "b01".U),
+          ( addr === "h142".U ) -> (priv_lvl >= "b01".U),
+          ( addr === "h143".U ) -> (priv_lvl >= "b01".U),
+          ( addr === "h144".U ) -> (priv_lvl >= "b01".U),
+          ( addr === "h180".U ) -> ((priv_lvl === "b11".U) | (priv_lvl === "b01".U & mstatus(20) === 0.U)), //TVM IN S-MODE
+          ( addr === "h600".U ) -> false.B,
+          ( addr === "h602".U ) -> false.B,
+          ( addr === "h603".U ) -> false.B,
+          ( addr === "h604".U ) -> false.B,
+          ( addr === "h606".U ) -> false.B,
+          ( addr === "h607".U ) -> false.B,
+          ( addr === "h643".U ) -> false.B,
+          ( addr === "h644".U ) -> false.B,
+          ( addr === "h645".U ) -> false.B,
+          ( addr === "h64A".U ) -> false.B,
+          ( addr === "hE12".U ) -> false.B,
+          ( addr === "h680".U ) -> false.B,
+          ( addr === "h605".U ) -> false.B,
+          ( addr === "h200".U ) -> false.B,
+          ( addr === "h204".U ) -> false.B,
+          ( addr === "h205".U ) -> false.B,
+          ( addr === "h240".U ) -> false.B,
+          ( addr === "h241".U ) -> false.B,
+          ( addr === "h242".U ) -> false.B,
+          ( addr === "h243".U ) -> false.B,
+          ( addr === "h244".U ) -> false.B,
+          ( addr === "h280".U ) -> false.B,
+          ( addr === "hF11".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "hF12".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "hF13".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "hF14".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h300".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h301".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h302".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h303".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h304".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h305".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h306".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h340".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h341".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h342".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h343".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h344".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h34A".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h34B".U ) -> (priv_lvl >= "b11".U),
+
+          ( addr === "hB00".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "hB02".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h320".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h7A0".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h7A1".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h7A2".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h7A3".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "h7B0".U ) -> DMode,
+          ( addr === "h7B1".U ) -> DMode,
+          ( addr === "h7B2".U ) -> DMode,
+          ( addr === "h7B3".U ) -> DMode
+        )
+
+    val res = Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
+    ~res
+  }
+
+
+  def csr_write_denied(addr: UInt, DMode: Bool) = {
+    val pmpcfg_arr = {
+      val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
+      val reg_sel  = for ( i <- 0 until 16 ) yield { true.B }
+      addr_chk zip reg_sel
+    }
+
+    val pmpaddr_arr = {
+      val addr_chk = for ( i <- 0 until 64 ) yield { addr === ("h3B0".U + i.U) }
+      val reg_sel  = for ( i <- 0 until 64 ) yield { true.B}
+      addr_chk zip reg_sel
+    }
+
+    val hpmcounter_arr = {
+      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hC00".U + i.U) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      addr_chk zip reg_sel
+    }
+
+    val mhpmcounter_arr = {
+      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hB00".U + i.U) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      addr_chk zip reg_sel      
+    }
+
+    val mhpmevent_arr = {
+      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("h320".U + i.U) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      addr_chk zip reg_sel      
+    }
+
+    val normal_arr = Array(
+          // ( addr === "h000".U ) -> ustatus,
+          // ( addr === "h004".U ) -> uie,
+          // ( addr === "h005".U ) -> utvec,
+          // ( addr === "h040".U ) -> uscratch,
+          // ( addr === "h041".U ) -> uepc,
+          // ( addr === "h042".U ) -> ucause,
+          // ( addr === "h043".U ) -> utval,
+          // ( addr === "h044".U ) -> uip,
+          ( addr === "h001".U ) -> true.B,
+          ( addr === "h002".U ) -> true.B,
+          ( addr === "h003".U ) -> true.B,
+          ( addr === "hC00".U ) -> false.B,
+          ( addr === "hC01".U ) -> false.B,
+          ( addr === "hC02".U ) -> false.B,
+          ( addr === "h100".U ) -> true.B,
+          // ( addr === "h102".U ) -> sedeleg,
+          // ( addr === "h103".U ) -> sideleg,
+          ( addr === "h104".U ) -> true.B,
+          ( addr === "h105".U ) -> true.B,
+          ( addr === "h106".U ) -> true.B,
+          ( addr === "h140".U ) -> true.B,
+          ( addr === "h141".U ) -> true.B,
+          ( addr === "h142".U ) -> true.B,
+          ( addr === "h143".U ) -> true.B,
+          ( addr === "h144".U ) -> true.B,
+          ( addr === "h180".U ) -> true.B,
+          ( addr === "h600".U ) -> false.B,
+          ( addr === "h602".U ) -> false.B,
+          ( addr === "h603".U ) -> false.B,
+          ( addr === "h604".U ) -> false.B,
+          ( addr === "h606".U ) -> false.B,
+          ( addr === "h607".U ) -> false.B,
+          ( addr === "h643".U ) -> false.B,
+          ( addr === "h644".U ) -> false.B,
+          ( addr === "h645".U ) -> false.B,
+          ( addr === "h64A".U ) -> false.B,
+          ( addr === "hE12".U ) -> false.B,
+          ( addr === "h680".U ) -> false.B,
+          ( addr === "h605".U ) -> false.B,
+          ( addr === "h200".U ) -> false.B,
+          ( addr === "h204".U ) -> false.B,
+          ( addr === "h205".U ) -> false.B,
+          ( addr === "h240".U ) -> false.B,
+          ( addr === "h241".U ) -> false.B,
+          ( addr === "h242".U ) -> false.B,
+          ( addr === "h243".U ) -> false.B,
+          ( addr === "h244".U ) -> false.B,
+          ( addr === "h280".U ) -> false.B,
+          ( addr === "hF11".U ) -> true.B,
+          ( addr === "hF12".U ) -> true.B,
+          ( addr === "hF13".U ) -> true.B,
+          ( addr === "hF14".U ) -> true.B,
+          ( addr === "h300".U ) -> true.B,
+          ( addr === "h301".U ) -> true.B,
+          ( addr === "h302".U ) -> true.B,
+          ( addr === "h303".U ) -> true.B,
+          ( addr === "h304".U ) -> true.B,
+          ( addr === "h305".U ) -> true.B,
+          ( addr === "h306".U ) -> true.B,
+          ( addr === "h340".U ) -> true.B,
+          ( addr === "h341".U ) -> true.B,
+          ( addr === "h342".U ) -> true.B,
+          ( addr === "h343".U ) -> true.B,
+          ( addr === "h344".U ) -> true.B,
+          ( addr === "h34A".U ) -> true.B,
+          ( addr === "h34B".U ) -> true.B,
+
+          ( addr === "hB00".U ) -> true.B,
+          ( addr === "hB02".U ) -> true.B,
+          ( addr === "h320".U ) -> true.B,
+          ( addr === "h7A0".U ) -> true.B,
+          ( addr === "h7A1".U ) -> true.B,
+          ( addr === "h7A2".U ) -> true.B,
+          ( addr === "h7A3".U ) -> true.B,
+          ( addr === "h7B0".U ) -> DMode,
+          ( addr === "h7B1".U ) -> DMode,
+          ( addr === "h7B2".U ) -> DMode,
+          ( addr === "h7B3".U ) -> DMode
+        )
+
+    val res = Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
+    ~res
+  }
+
+  def csr_read_res(addr: UInt, csrfiles: CSR_Bundle) = {
+    val pmpcfg_arr = {
+      val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
+      val reg_sel  = for ( i <- 0 until 16 ) yield {csrfiles.pmpcfg(i) }
+      addr_chk zip reg_sel
+    }
+
+    val pmpaddr_arr = {
+      val addr_chk = for ( i <- 0 until 64 ) yield { addr === ("h3B0".U + i.U) }
+      val reg_sel  = for ( i <- 0 until 64 ) yield { csrfiles.pmpaddr(i)}
+      addr_chk zip reg_sel
+    }
+
+    val hpmcounter_arr = {
+      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hC00".U + i.U) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { csrfiles.hpmcounter(i) }
+      addr_chk zip reg_sel
+    }
+
+    val mhpmcounter_arr = {
+      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hB00".U + i.U) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { csrfiles.mhpmcounter(i) }
+      addr_chk zip reg_sel      
+    }
+
+    val mhpmevent_arr = {
+      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("h320".U + i.U) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { csrfiles.mhpmevent(i) }
+      addr_chk zip reg_sel      
+    }
+
+    val normal_arr = Array(
+          // ( addr === "h000".U ) -> ustatus,
+          // ( addr === "h004".U ) -> uie,
+          // ( addr === "h005".U ) -> utvec,
+          // ( addr === "h040".U ) -> uscratch,
+          // ( addr === "h041".U ) -> uepc,
+          // ( addr === "h042".U ) -> ucause,
+          // ( addr === "h043".U ) -> utval,
+          // ( addr === "h044".U ) -> uip,
+          ( addr === "h001".U ) -> csrfiles.fcsr(4,0), 
+          ( addr === "h002".U ) -> csrfiles.fcsr(7,5),
+          ( addr === "h003".U ) -> csrfiles.fcsr,
+          ( addr === "hC00".U ) -> csrfiles.cycle,
+          ( addr === "hC01".U ) -> csrfiles.time,
+          ( addr === "hC02".U ) -> csrfiles.instret,
+          ( addr === "h100".U ) -> csrfiles.sstatus,
+          // ( addr === "h102".U ) -> sedeleg,
+          // ( addr === "h103".U ) -> sideleg,
+          ( addr === "h104".U ) -> csrfiles.sie,
+          ( addr === "h105".U ) -> csrfiles.stvec,
+          ( addr === "h106".U ) -> csrfiles.scounteren,
+          ( addr === "h140".U ) -> csrfiles.sscratch,
+          ( addr === "h141".U ) -> csrfiles.sepc,
+          ( addr === "h142".U ) -> csrfiles.scause,
+          ( addr === "h143".U ) -> csrfiles.stval,
+          ( addr === "h144".U ) -> csrfiles.sip,
+          ( addr === "h180".U ) -> csrfiles.satp,
+          // ( addr === "h600".U ) -> hstatus,
+          // ( addr === "h602".U ) -> hedeleg,
+          // ( addr === "h603".U ) -> hideleg,
+          // ( addr === "h604".U ) -> hie,
+          // ( addr === "h606".U ) -> hcounteren,
+          // ( addr === "h607".U ) -> hgeie,
+          // ( addr === "h643".U ) -> htval,
+          // ( addr === "h644".U ) -> hip,
+          // ( addr === "h645".U ) -> hvip,
+          // ( addr === "h64A".U ) -> htinst,
+          // ( addr === "hE12".U ) -> hgeip,
+          // ( addr === "h680".U ) -> hgatp,
+          // ( addr === "h605".U ) -> htimedelta,
+          // ( addr === "h200".U ) -> vsstatus,
+          // ( addr === "h204".U ) -> vsie,
+          // ( addr === "h205".U ) -> vstvec,
+          // ( addr === "h240".U ) -> vsscratch,
+          // ( addr === "h241".U ) -> vsepc,
+          // ( addr === "h242".U ) -> vscause,
+          // ( addr === "h243".U ) -> vstval,
+          // ( addr === "h244".U ) -> vsip,
+          // ( addr === "h280".U ) -> vsatp,
+          ( addr === "hF11".U ) -> csrfiles.mvendorid,
+          ( addr === "hF12".U ) -> csrfiles.marchid,
+          ( addr === "hF13".U ) -> csrfiles.mimpid,
+          ( addr === "hF14".U ) -> csrfiles.mhartid,
+          ( addr === "h300".U ) -> csrfiles.mstatus,
+          ( addr === "h301".U ) -> csrfiles.misa,
+          ( addr === "h302".U ) -> csrfiles.medeleg,
+          ( addr === "h303".U ) -> csrfiles.mideleg,
+          ( addr === "h304".U ) -> csrfiles.mie,
+          ( addr === "h305".U ) -> csrfiles.mtvec,
+          ( addr === "h306".U ) -> csrfiles.mcounteren,
+          ( addr === "h340".U ) -> csrfiles.mscratch,
+          ( addr === "h341".U ) -> csrfiles.mepc,
+          ( addr === "h342".U ) -> csrfiles.mcause,
+          ( addr === "h343".U ) -> csrfiles.mtval,
+          ( addr === "h344".U ) -> csrfiles.mip,
+          ( addr === "h34A".U ) -> csrfiles.mtinst,
+          ( addr === "h34B".U ) -> csrfiles.mtval2,
+
+          ( addr === "hB00".U ) -> csrfiles.mcycle,
+          ( addr === "hB02".U ) -> csrfiles.minstret,
+          ( addr === "h320".U ) -> csrfiles.mcountinhibit,
+          ( addr === "h7A0".U ) -> csrfiles.tselect,
+          ( addr === "h7A1".U ) -> csrfiles.tdata1,
+          ( addr === "h7A2".U ) -> csrfiles.tdata2,
+          ( addr === "h7A3".U ) -> csrfiles.tdata3,
+          ( addr === "h7B0".U ) -> csrfiles.dcsr,
+          ( addr === "h7B1".U ) -> csrfiles.dpc,
+          ( addr === "h7B2".U ) -> csrfiles.dscratch0,
+          ( addr === "h7B3".U ) -> csrfiles.dscratch1,
+          ( addr === "h7B4".U ) -> csrfiles.dscratch2,
+        )
+
+    Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
+  }
+
+
 
 }
 
 trait CsrFiles { this: BaseCommit =>
+
+
+
 
   def update_fcsr( in: CMMState_Bundle): FCSRBundle = {
     val fcsr = WireDefault( in.csrfiles.fcsr )
@@ -337,7 +690,7 @@ trait CsrFiles { this: BaseCommit =>
     * @return the number of instructions the hart has retired
     */
   def update_instret( in: CMMState_Bundle ): UInt = {
-    val instret = in.csrfiles.instret + in.retired_cnt
+    val instret = in.csrfiles.instret + 1.U //we dont need to know if it's retired here, for that cancel, will not commit
     return instret
   }
   
@@ -492,7 +845,7 @@ trait CsrFiles { this: BaseCommit =>
     }
     Cat(mxl, 0.U(36.W), extensions)
   }
-  
+
   
   
 
@@ -630,7 +983,7 @@ trait CsrFiles { this: BaseCommit =>
     */
   def update_mcause( in: CMMState_Bundle ): CauseBundle = {
     val mcause = WireDefault( in.csrfiles.mcause )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mcause, "h342".U, exe_port(i) )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mcause, "h342".U, exe_port )
 
     when( in.is_m_interrupt & update_priv_lvl(in) === "b11".U ) {
       mcause.interrupt := 1.U
@@ -683,16 +1036,16 @@ trait CsrFiles { this: BaseCommit =>
 
     when( update_priv_lvl(in) === "b11".U ) {
       mtval := Mux1H( Seq(
-        is_instr_access_fault    -> ill_ivaddr,
-        is_instr_paging_fault    -> ill_ivaddr,
-        is_instr_illeage         -> ill_instr,
-        is_breakPoint            -> 0.U,
-        is_load_misAlign         -> ill_dvaddr,
-        is_load_access_fault     -> ill_dvaddr,
-        is_storeAMO_misAlign     -> ill_dvaddr,
-        is_storeAMO_access_fault -> ill_dvaddr,
-        is_load_paging_fault     -> ill_dvaddr,
-        is_storeAMO_paging_fault -> ill_dvaddr    
+        in.is_instr_access_fault    -> in.ill_ivaddr,
+        in.is_instr_paging_fault    -> in.ill_ivaddr,
+        in.is_instr_illeage         -> 0.U,
+        in.is_breakPoint            -> 0.U,
+        in.is_load_misAlign         -> in.ill_dvaddr,
+        in.is_load_access_fault     -> in.ill_dvaddr,
+        in.is_storeAMO_misAlign     -> in.ill_dvaddr,
+        in.is_storeAMO_access_fault -> in.ill_dvaddr,
+        in.is_load_paging_fault     -> in.ill_dvaddr,
+        in.is_storeAMO_paging_fault -> in.ill_dvaddr    
       ))
     }
     .elsewhen(enable) { mtval := dnxt }
@@ -850,7 +1203,7 @@ trait CsrFiles { this: BaseCommit =>
 
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.minstret, "hB02".U, exe_port )
     when(enable) { minstret := dnxt }
-    .otherwise { minstret := in.csrfiles.minstret + in.retired_cnt }
+    .otherwise { minstret := in.csrfiles.minstret + 1.U } //we don't need to know whether it's retired here
 
     return minstret  
   }
@@ -896,6 +1249,661 @@ trait CsrFiles { this: BaseCommit =>
     return mhpmevent
   }
 
+  //supervisor trap setup
+  
+  /**
+    * Supervisor Status Register -- sstatus
+    * 
+    * @param SD (63) whether either fs or xs is dirty
+    * @param UXL (33,32) XLEN of U-mode, hard-wire to 2.U(64.bits)
+    * @param MXR (19) Make executable Readable. When 0, only loads form pages marked readable
+    * @param SUM (18) permit Supervisor User Memory access. When 0, S-mode accesses to page.U === 1 will fault.
+    * @param XS (16,15) aditional user-mode extension and associated state
+    * @param FS (14,13) float point statuw=s
+    * @param SPP (8) Previous Mode is U-mode or S-mode? When SRet, privilege mode update to SPP, SPP set to "U"
+    * @param UBE (6) endian of U-mode, when 0, is little-endian
+    * @param SPIE (5) When SRet, SPIE set to 1
+    * @param SIE (1) S-mode Interrupt Enable; When SRet, update to SPIE
+    * 
+    */
+
+  // val sstatus = {
+  //   mstatus & Cat( "b1".U, 0.U(29.W), "b11".U, 0.U(12.W), "b11011110000101100010".U )
+  // }
+
+
+
+/**
+  * Supervisor Interrupt Register -- sie (enable)
+  * @note read-only, meie(11), mtie(7), msie(3) is visible and maskable when mideleg(x) set
+  * 
+  */
+  // val (meie, meie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  // val (seie, seie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  // val (mtie, mtie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  // val (stie, stie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  // val (msie, msie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+  // val (ssie, ssie_dnxt) = SuperscalarReg( init = 0.U(1.W), is_reitred = is_retired_v )
+
+  // val sie = mie
+  //     Cat(
+  //       0.U(4.W), meie & mideleg(11), 0.U(1.W), seie,
+  //       0.U(1.W), mtie & mideleg(7),  0.U(1.W), stie,
+  //       0.U(1.W), msie & mideleg(3),  0.U(1.W), ssie, 0.U(1.W) )
+
+  // val sie_dnxt = ( 0 until cm ).map{ t =>
+  //   Cat(
+  //     0.U(4.W), meie_dnxt(t) & mideleg_dnxt(t)(11), 0.U(1.W), seie_dnxt(t),
+  //     0.U(1.W), mtie_dnxt(t) & mideleg_dnxt(t)(7),  0.U(1.W), stie_dnxt(t),
+  //     0.U(1.W), msie_dnxt(t) & mideleg_dnxt(t)(3),  0.U(1.W), ssie_dnxt(t), 0.U(1.W) )    
+  // }
+
+  // ( 0 until cm ).map{ t => {
+  //   val value = if ( t == 0 ) sie else sie_dnxt(t-1)
+  //   val (enable0, dnxt0) = Reg_Exe_Port( value, "h104".U, exe_port(t) )
+  //   val (enable1, dnxt1) = Reg_Exe_Port( value, "h304".U, exe_port(t) )
+
+  //   when(enable0) {
+  //     meie_dnxt(t) := dnxt0(11)
+  //     seie_dnxt(t) := dnxt0(9)
+  //     mtie_dnxt(t) := dnxt0(7)
+  //     stie_dnxt(t) := dnxt0(5)
+  //     msie_dnxt(t) := dnxt0(3)
+  //     ssie_dnxt(t) := dnxt0(1)
+
+  //   }
+  //   .elsewhen(enable1) {
+  //     seie_dnxt(t) := dnxt1(9)
+  //     stie_dnxt(t) := dnxt1(5)
+  //     ssie_dnxt(t) := dnxt1(1)
+  //   }
+  // }}
+
+
+  /**
+    * Supervisor Trap Vector Base Address Register --stvec
+    *
+    * @note holdstrap vector configuration
+    * @param base (63,2) vector base address, either va or pa
+    * @param mode (1,0) vector mode,hard-wire to 0 in this version
+    */
+  def update_stvec( in: CMMState_Bundle ): TVecBundle = {
+    val stvec = WireDefault( in.csrfiles.stvec )
+
+    stvec.mode := 0.U(2.W)
+
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.stvec, "h105".U, exe_port )
+    when(enable) { stvec.base := dnxt(63,2) }
+
+    return stvec
+  }
+
+
+  /**
+    * Supervisor Timers and Performance Counters -- Counter-Enable Register -- scounteren
+    * 
+    * @note controls the availability of the hardware performance monitoring counters to U-mode
+    * @param HPM (31,3) Whether is allowed to access hpmcounter(x) in U-mode
+    * @param IR (2) Whether is allowed to access instret in U-mode
+    * @param TM (1) Whether is allowed to access time in U-mode
+    * @param CY (0) Whether is allowed to access cycle in U-mode
+    */
+
+  def update_scounteren( in: CMMState_Bundle ): CounterenBundle = {
+    val scounteren = WireDefault( in.csrfiles.scounteren )
+ 
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.scounteren, "h306".U, exe_port )
+      when(enable) { scounteren.hpm := dnxt }    
+
+
+    return scounteren
+  }
+
+  //supervisor trap handling
+
+  /**
+    * Supervisor Scratch Register -- sscratch
+    *
+    * @note used to hold a pointer to the hart-local supervisor context while the hart is executing user code
+    */
+  def update_sscratch( in: CMMState_Bundle ): UInt = {
+    val sscratch = WireDefault( in.csrfiles.sscratch )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.sscratch, "h140".U, exe_port )
+    when(enable) { sscratch := dnxt }
+    return sscratch
+  }
+
+
+  /**
+    * Supervisor Exception Program Counter -- sepc
+    * 
+    * hold virtual addresses: when a trap is taken into S-mode, sepc is written with the virtual address of
+    * the instruction that was interrupted or that encountered the exception
+    */
+  def update_sepc( in: CMMState_Bundle ): UInt = {
+    val sepc = WireDefault( in.csrfiles.sepc )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.sepc, "h141".U, exe_port )
+
+    when( in.is_trap & in.priv_lvl_dnxt === "b01".U ) { sepc := commit_pc }
+    .elsewhen(enable) { sepc := dnxt }
+    return sepc
+  }
+
+  /**
+    * Supervisor Cause Register -- scause
+    * 
+    * when a trap is taken into S-mode, scause is written with a code indicating the event that cause the trap
+    * @return
+    */
+  def update_scause( in: CMMState_Bundle ): UInt = {
+    val scause = WireDefault( in.csrfiles.scause )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.scause, "h142".U, exe_port )
+
+    when( ( in.is_m_interrupt | in.is_s_interrupt ) & in.priv_lvl_dnxt(t) === "b01".U ) {
+      scause.interrupt := 1.U
+      scause.exception_code := Mux1H( Seq(
+        in.is_ssi -> 1.U,
+        in.is_msi -> 3.U,
+        in.is_sti -> 5.U,
+        in.is_mti -> 7.U,
+        in.is_sei -> 9.U,
+        in.is_mei -> 11.U
+      ))
+    }
+    .elsewhen( in.is_exception & in.priv_lvl_dnxt === "b01".U ) {
+      scause.interrupt := 0.U
+      scause.exception_code := Mux1H( Seq(
+        in.is_instr_misAlign        -> 0.U,
+        in.is_instr_access_fault    -> 1.U,
+        in.is_instr_illeage         -> 2.U,
+        in.is_breakPoint            -> 3.U,
+        in.is_load_misAlign         -> 4.U,
+        in.is_load_access_fault     -> 5.U,
+        in.is_storeAMO_misAlign     -> 6.U,
+        in.is_storeAMO_access_fault -> 7.U,
+        in.is_ecall_U               -> 8.U,
+        in.is_ecall_S               -> 9.U,
+        in.is_ecall_M               -> 11.U,
+        in.is_instr_paging_fault    -> 12.U,
+        in.is_load_paging_fault     -> 13.U,
+        in.is_storeAMO_paging_fault -> 15.U,
+      ))
+    }
+    .elsewhen(enable) {
+      scause.interrupt      := dnxt(63)
+      scause.exception_code := dnxt(62,0)
+    }
+    return scause
+  }
+
+  /**
+    * Supervisor Trap Value Register -- stval
+    * 
+    * when a trap is taken into S-mode, stval is written with exception-specific information to assist softwave in handling the trap
+    *
+    * @return
+    */
+  def update_stval( in: CMMState_Bundle ): UInt = {
+    val stval = WireDefault( in.csrfiles.stval )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.stval, "h143".U, exe_port )
+
+    when( update_priv_lvl(in) === "b01".U ) {
+      stval := Mux1H( Seq(
+        in.is_instr_access_fault    -> in.ill_ivaddr,
+        in.is_instr_paging_fault    -> in.ill_ivaddr,
+        in.is_instr_illeage         -> 0.U,
+        in.is_breakPoint            -> 0.U,
+        in.is_load_misAlign         -> in.ill_dvaddr,
+        in.is_load_access_fault     -> in.ill_dvaddr,
+        in.is_storeAMO_misAlign     -> in.ill_dvaddr,
+        in.is_storeAMO_access_fault -> in.ill_dvaddr,
+        in.is_load_paging_fault     -> in.ill_dvaddr,
+        in.is_storeAMO_paging_fault -> in.ill_dvaddr       
+      ))
+    }
+    .elsewhen(enable) { stval := dnxt }
+    return stval
+  }
+
+
+
+/**
+  * Supervisor Interrupt Register -- sip
+  * @note read-only, meip(11), mtip(7), msip(3) is visible when mideleg(x) set
+  * 
+  */
+
+  //   val meip = clint_ex_m
+  //   val seip = clint_ex_s
+  //   val mtip = clint_tm_m
+  //   val stip = clint_tm_s
+  //   val msip = clint_sw_m
+  //   val ssip = clint_sw_s
+
+  // val sip =
+  //   Cat(
+  //     0.U(4.W), meip & mideleg(11), 0.U(1.W), seip,
+  //     0.U(1.W), mtip & mideleg(7),  0.U(1.W), stip,
+  //     0.U(1.W), msip & mideleg(3),  0.U(1.W), ssip, 0.U(1.W) )
+
+  // val sip_dnxt = ( 0 until cm ).map{ t => 
+  //   Cat(
+  //     0.U(4.W), meip & mideleg_dnxt(t)(11), 0.U(1.W), seip,
+  //     0.U(1.W), mtip & mideleg_dnxt(t)(7),  0.U(1.W), stip,
+  //     0.U(1.W), msip & mideleg_dnxt(t)(3),  0.U(1.W), ssip, 0.U(1.W) )
+  // }
+
+
+  /**
+    * Supervisor Address protection and translation Register -- satp
+    *
+    * @param mode (63,60) select the current address-translation scheme  
+    * @param asid (59,44) address space identifier, which facilitates address-translation fences on a per-address-space basis
+    * @param PPN (43,0) physical page number (ppn) of the root page table
+    */
+
+  def update_satp( in: CMMState_Bundle ): SatpBundle = {
+    val satp = WireDefault( in.csrfiles.satp )
+
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.satp, "h180".U, exe_port )
+    when(enable) {
+      /** @note only sv39 supportted */
+      satp.mode := dnxt(63,60) & "b1000".U
+      satp.asid := dnxt(59,44)
+      satp.ppn  := dnxt(43,0)
+    }
+
+    return stap
+  }
+
+
+  //user trap setup
+  // ustatus := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h000".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // uie := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h004".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // utvec := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h005".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  //user trap handling
+  // uscratch := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h040".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // uepc := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h041".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // ucause := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h042".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // utval := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h043".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // uip := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h044".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // sedeleg := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h102".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // sideleg := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h103".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+
+
+  // //hypervisor trap setup
+  // hstatus := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h600".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // hedeleg := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h602".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // hideleg := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h603".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // hie := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h604".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // hcounteren := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h606".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // hgeie := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h607".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // //hypervisor trap handling
+  // htval := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h643".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // hip := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h644".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // hvip := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h645".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // htinst := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h64A".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // hgeip := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "hE12".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // //hypervisor protection and translation
+  // hgatp := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h680".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // //hypervisor counter timer virtualization registers
+  // htimedelta := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h605".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // //virtual supervisor registers
+  // vsstatus := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h200".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // vsie := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h204".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // vstvec := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h205".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // vsscratch := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h240".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // vsepc := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h241".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // vscause := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h242".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // vstval := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h243".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // vsip := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h244".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+  // vsatp := {
+  //   val value = RegInit(0.U(64.W))
+  //   val (enable, dnxt) = Reg_Exe_Port( value, "h280".U, exe_port )
+  //   when(enable) { value := dnxt }
+  //   value 
+  // }
+
+
+  //Debug/Trace Register
+  def update_tselect( in: CMMState_Bundle): UInt = {
+    val tselect = WireDefault( in.csrfiles.tselect )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tselect, "h7A0".U, exe_port )
+    when(enable) { tselect := Mux( dnxt >= 0.U, ~dnxt, dnxt ) }
+    return tselect
+  }
+
+  def update_tdata1( in: CMMState_Bundle): UInt = {
+    val tdata1 = WireDefault( in.csrfiles.tdata1 )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata1, "h7A1".U, exe_port )
+    when(enable) { tdata1 := dnxt }
+    return tdata1
+  }
+
+  def update_tdata2( in: CMMState_Bundle): UInt = {
+    val tdata2 = WireDefault( in.csrfiles.tdata2 )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata2, "h7A2".U, exe_port )
+    when(enable) { tdata2 := dnxt }
+    return tdata2
+  }
+
+  def update_tdata3( in: CMMState_Bundle ): UInt = {
+    val tdata3 = WireDefault( in.csrfiles.tdata3 )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata3, "h7A3".U, exe_port )
+    when(enable) { tdata3 := dnxt }
+    return tdata3
+  }
+
+  def update_dcsr( in: CMMState_Bundle ): DcsrBundle = {
+    val dcsr = WireDefault( in.csrfiles.dcsr )
+    dcsr.xdebugver := 4.U(4.W)
+    dcsr.reserved0 := 0.U
+    dcsr.reserved1 := 0.U
+    dcsr.stepie    := 0.U(1.W) 
+    dcsr.stopcount := 0.U(1.W)
+    dcsr.stoptime  := 0.U(1.W)
+    dcsr.reserved2 := 0.U
+    dcsr.mprven    := 0.U(1.W)
+
+
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dcsr, "h7B0".U, exe_port )
+    when(false.B) {}
+    .elsewhen( is_debug_interrupt ){
+      dcsr.prv := in.priv_lvl
+    }
+    .elsewhen(enable) {
+      dcsr.step := dnxt(2)
+      dcsr.prv  := dnxt(1,0)
+    }
+
+    return dcsr
+  } 
+
+  def update_dpc( in: CMMState_Bundle ): UInt = {
+    val dpc  = WireDefault( in.csrfiles.dpc )
+
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dpc, "h7B1".U, exe_port )
+    when(enable) { dpc := dnxt }
+    .elsewhen( in.is_inDebugMode_dnxt === true.B ) {
+      dpc := Mux1H(Seq(
+        in.is_ebreak_dm -> in.commit_pc,
+        in.is_single_step    -> in.commit_pc,
+        in.is_trigger        -> 0.U,
+        in.is_halt_int       -> in.commit_pc,
+      ))
+    }
+
+    return dpc
+  }
+
+  def update_dscratch0( in: CMMState_Bundle ): UInt = {
+    val dscratch0 = WireDefault( in.csrfiles.dscratch0 )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch0, "h7B2".U, exe_port )
+    when(enable) { dscratch0 := dnxt }
+    return dscratch0
+  }
+
+  def update_dscratch1( in: CMMState_Bundle ): UInt = {
+    val dscratch1 = WireDefault( in.csrfiles.dscratch1 )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch1, "h7B3".U, exe_port )
+    when(enable) { dscratch1 := dnxt }
+    return dscratch1
+  }
+
+  def update_dscratch2( in: CMMState_Bundle ): UInt = {
+    val dscratch2 = WireDefault( in.csrfiles.dscratch2 )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch2, "h7B4".U, exe_port )
+    when(enable) { dscratch2 := dnxt }
+    return dscratch2
+  }
+
+  def update_DMode( in: CMMState_Bundle ): Bool = {
+    val DMode = WireDefault( in.csrFiles.DMode )
+    when( in.is_debug_interrupt ) { DMode := true.B }
+    .elsewhen( in.is_dRet ) { DMode := false.B }
+    return DMode
+  }
+  
+  def update_csrfiles( in: CMMState_Bundle ): Bool = {
+    val csrfiles = Wire( new CSR_Bundle )
+    csrfiles.priv_lvl      := update_priv_lvl(in)
+    csrfiles.DMode         := update_DMode(in)
+    csrfiles.fcsr          := update_fcsr(in)
+    csrfiles.cycle         := update_cycle(in)
+    csrfiles.time          := update_time(in)
+    csrfiles.instret       := update_instret(in)
+    csrfiles.stvec         := update_stvec(in)
+    csrfiles.scounteren    := update_scounteren(in)
+    csrfiles.sscratch      := update_sscratch(in)
+    csrfiles.sepc          := update_sepc(in)
+    csrfiles.scause        := update_scause(in)
+    csrfiles.stval         := update_stval(in)
+    csrfiles.sip           := update_sip(in)
+    csrfiles.satp          := update_satp(in)
+    csrfiles.mvendorid     := update_mvendorid(in)
+    csrfiles.marchid       := update_marchid(in)
+    csrfiles.mimpid        := update_mimpid(in)
+    csrfiles.mhartid       := update_mhartid(in)
+    csrfiles.mstatus       := update_mstatus(in)
+    csrfiles.misa          := update_misa(in)
+    csrfiles.medeleg       := update_medeleg(in)
+    csrfiles.mideleg       := update_mideleg(in)
+    csrfiles.mie           := update_mie(in)
+    csrfiles.mtvec         := update_mtvec(in)
+    csrfiles.mcounteren    := update_mcounteren(in)
+    csrfiles.mscratch      := update_mscratch(in)
+    csrfiles.mepc          := update_mepc(in)
+    csrfiles.mcause        := update_mcause(in)
+    csrfiles.mtval         := update_mtval(in)
+    csrfiles.mip           := update_mip(in)
+    csrfiles.mtinst        := update_mtinst(in)
+    csrfiles.mtval2        := update_mtval2(in)
+    csrfiles.mcycle        := update_mcycle(in)
+    csrfiles.minstret      := update_minstret(in)
+    csrfiles.mcountinhibit := update_mcountinhibit(in)
+    csrfiles.tselect       := update_tselect (in)
+    csrfiles.tdata1        := update_tdata1 (in)
+    csrfiles.tdata2        := update_tdata2 (in)
+    csrfiles.tdata3        := update_tdata3(in)
+    csrfiles.dcsr          := update_dcsr (in)
+    csrfiles.dpc           := update_dpc(in)
+    csrfiles.dscratch0     := update_dscratch0 (in)
+    csrfiles.dscratch1     := update_dscratch1 (in)
+    csrfiles.dscratch2     := update_dscratch2 (in)
+    csrfiles.pmpcfg        := update_pmpcfg(in)
+    csrfiles.pmpaddr       := update_pmpaddr(in)
+    csrfiles.hpmcounter    := update_hpmcounter(in)
+    csrfiles.mhpmcounter   := update_mhpmcounter(in)
+    csrfiles.mhpmevent     := update_mhpmevent(in)
+
+    return csrfiles
+  }
 }
 
 

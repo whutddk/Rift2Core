@@ -224,7 +224,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
   cmm_stage.io.cm_op <> iwb_stage.io.commit
-  cmm_stage.io.rod_i <> dpt_stage.io.rod_i
+  cmm_stage.io.rod <> dpt_stage.io.rod_i
   cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
   cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
   cmm_stage.io.cmm_bru_ilp <> exe_stage.io.cmm_bru_ilp
