@@ -16,7 +16,7 @@
    limitations under the License.
 */
 
-package rift2Core.privilege.csrFiles
+package rift2Core.privilege
 
 import chisel3._
 import chisel3.util._

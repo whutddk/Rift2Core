@@ -22,7 +22,7 @@ import chisel3.util._
 import base._
 import rift2Core.define._
 import rift2Core.backend._
-import rift2Core.privilege.csrFiles._
+import rift2Core.privilege._
 import chisel3.experimental.dataview._
 
 class Exc_Info extends Fpu_iss_info { val exc = UInt(5.W) }
@@ -48,10 +48,10 @@ class FAlu(latency: Int = 5, infly: Int = 8, cm: Int = 2) extends Module with Ha
   require( cm == 2 )
   when( io.flush ) {
     cnt := 0.U
-  }.elsewhen( io.fpu_iss_exe.fire & io.fcsr_cmm_op(0).fire & io.fcsr_cmm_op(1).fire) {
+  } .elsewhen( io.fpu_iss_exe.fire & io.fcsr_cmm_op(0).fire & io.fcsr_cmm_op(1).fire) {
     cnt := cnt - 1.U
     assert(cnt =/= 0.U)
-  } elsewhen( io.fpu_iss_exe.fire & io.fcsr_cmm_op(0).fire ) {
+  } .elsewhen( io.fpu_iss_exe.fire & io.fcsr_cmm_op(0).fire ) {
     cnt := cnt
   } .elsewhen( io.fpu_iss_exe.fire ) {
     cnt := cnt + 1.U
@@ -180,7 +180,7 @@ class FAlu(latency: Int = 5, infly: Int = 8, cm: Int = 2) extends Module with Ha
     val dontWrite = (dat === 0.U) & ( rs | rc )
 
     mdl.io.deq <> io.fcsr_cmm_op
-    mdl.reset := reset.asBool | io.flush
+    mdl.io.flush := io.flush
 
     mdl.io.enq(0).bits.addr := addr
     mdl.io.enq(0).bits.dat_i := dat
@@ -190,7 +190,7 @@ class FAlu(latency: Int = 5, infly: Int = 8, cm: Int = 2) extends Module with Ha
 
     mdl
   }
-  fcsr_op_fifo.io.enq.valid :=
+  fcsr_op_fifo.io.enq(0).valid :=
       (io.fpu_iss_exe.fire & io.fpu_iss_exe.bits.fun.is_fun_fcsr) |
       (f2i.io.out.valid | f2f.io.out.valid | i2f.io.out.valid | sfma.io.out.valid | dfma.io.out.valid | divSqrt.io.out.valid)
 
@@ -242,7 +242,7 @@ class FAlu(latency: Int = 5, infly: Int = 8, cm: Int = 2) extends Module with Ha
 
   io.fpu_iss_exe.ready := Mux( io.fpu_iss_exe.bits.fun.is_fun_fcsr | io.fpu_iss_exe.bits.fun.is_fun_divSqrt, infly_empty, ~infly_full & ~pending_csr & ~divSqrt.io.pending )
 
-  assert( ~(fcsr_op_fifo.io.enq.valid     & ~fcsr_op_fifo.io.enq.ready)    , "Assert Failed, the pipeline assert all fifo enq will success" )
+  assert( ~(fcsr_op_fifo.io.enq(0).valid     & ~fcsr_op_fifo.io.enq(0).ready)    , "Assert Failed, the pipeline assert all fifo enq will success" )
   assert( ~(fpu_exe_iwb_fifo.io.enq.valid & ~fpu_exe_iwb_fifo.io.enq.ready), "Assert Failed, the pipeline assert all fifo enq will success" )
   assert( ~(fpu_exe_fwb_fifo.io.enq.valid & ~fpu_exe_fwb_fifo.io.enq.ready), "Assert Failed, the pipeline assert all fifo enq will success" )
 

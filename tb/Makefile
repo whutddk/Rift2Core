@@ -288,7 +288,7 @@ unit: VSimTop
 
 
 # TESTFILE ?= rv64ui-p-add
-single:
+single: VSimTop
 	./build/VSimTop -w -d -l -f ./ci/$(TESTFILE)
 
 torture:

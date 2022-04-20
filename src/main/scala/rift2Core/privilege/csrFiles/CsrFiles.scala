@@ -15,13 +15,14 @@
    limitations under the License.
 */
 
-package rift2Core.privilege.csrFiles
+package rift2Core.privilege
 
 
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
-import rift2Core.privilege._
+import rift2Core.backend._
+
 
 // abstract class  BaseCsrFiles extends BaseCommit
 
@@ -111,7 +112,7 @@ class CounterenBundle extends Bundle{
 }
 
 class CauseBundle extends Bundle{
-  val Interrupt = UInt(1.W)
+  val interrupt = UInt(1.W)
   val exception_code = UInt(63.W)
 }
 
@@ -178,7 +179,7 @@ class CSR_Bundle extends Bundle {
   val sepc        = UInt(64.W)
   val scause      = new CauseBundle
   val stval       = UInt(64.W)
-  val sip         = new MSIntBundle
+  // val sip         = new MSIntBundle
   val satp        = new SatpBundle
   // val hstatus     = UInt(64.W)
   // val hedeleg     = UInt(64.W)
@@ -227,8 +228,8 @@ class CSR_Bundle extends Bundle {
   val tdata1      = UInt(64.W)
   val tdata2      = UInt(64.W)
   val tdata3      = UInt(64.W)
-  val dcsr        = UInt(64.W)
-  val dpc         = new DcsrBundle
+  val dcsr        = new DcsrBundle
+  val dpc         = UInt(64.W)
   val dscratch0   = UInt(64.W)
   val dscratch1   = UInt(64.W)
   val dscratch2   = UInt(64.W)
@@ -243,33 +244,33 @@ class CSR_Bundle extends Bundle {
   val mhpmevent   = Vec( 32, UInt(64.W))
 
 
-  def sstatus = mstatus & Cat( "b1".U, 0.U(29.W), "b11".U, 0.U(12.W), "b11011110000101100010".U )
-  def sie = (mie.asUInt & Cat()).asTypeOf(new MSIntBundle)
-  def sip = (mip.asUInt & Cat()).asTypeOf(new MSIntBundle)
+  def sstatus = (mstatus.asUInt & Cat( "b1".U, 0.U(29.W), "b11".U, 0.U(12.W), "b11011110000101100010".U )).asTypeOf(new MStatusBundle)
+  def sie = mie
+  def sip = mip
 
   def is_ssi: Bool = { 
     val is_ssi = mip.ssi & mie.ssi & mstatus.sie & ~( priv_lvl === "b11".U & mideleg(1) )
-    return is_ssi
+    return is_ssi.asBool
   }
   def is_msi: Bool = { 
     val is_msi = mip.msi & mie.msi & mstatus.mie
-    return is_msi
+    return is_msi.asBool
   }
   def is_sti: Bool = { 
     val is_sti = mip.sti & mie.sti & mstatus.sie & ~( priv_lvl === "b11".U & mideleg(5) )
-    return is_sti
+    return is_sti.asBool
   }
   def is_mti: Bool = { 
     val is_mti = mip.mti & mie.mti & mstatus.mie
-    return is_mti
+    return is_mti.asBool
   }
   def is_sei: Bool = { 
     val is_sei = mip.sei & mie.sei & mstatus.sie & ~( priv_lvl === "b11".U & mideleg(9) )
-    return is_set
+    return is_sei.asBool
   }
   def is_mei: Bool = { 
     val is_mei = mip.mei & mie.mei & mstatus.mie
-    return is_mei
+    return is_mei.asBool
   }
   def is_m_interrupt: Bool = {
     val is_m_interrupt = is_msi | is_mti | is_mei
@@ -280,7 +281,7 @@ class CSR_Bundle extends Bundle {
     return is_s_interrupt
   }
 
-  def csr_read_prilvl(addr: UInt, priv_lvl: UInt, DMode: Bool) = {
+  def csr_read_prilvl(addr: UInt) = {
     val pmpcfg_arr = {
       val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
       val reg_sel  = for ( i <- 0 until 16 ) yield { priv_lvl >= "b11".U }
@@ -337,7 +338,7 @@ class CSR_Bundle extends Bundle {
           ( addr === "h142".U ) -> (priv_lvl >= "b01".U),
           ( addr === "h143".U ) -> (priv_lvl >= "b01".U),
           ( addr === "h144".U ) -> (priv_lvl >= "b01".U),
-          ( addr === "h180".U ) -> ((priv_lvl === "b11".U) | (priv_lvl === "b01".U & mstatus(20) === 0.U)), //TVM IN S-MODE
+          ( addr === "h180".U ) -> ((priv_lvl === "b11".U) | (priv_lvl === "b01".U & mstatus.tvm === 0.U)), //TVM IN S-MODE
           ( addr === "h600".U ) -> false.B,
           ( addr === "h602".U ) -> false.B,
           ( addr === "h603".U ) -> false.B,
@@ -397,7 +398,7 @@ class CSR_Bundle extends Bundle {
   }
 
 
-  def csr_write_denied(addr: UInt, DMode: Bool) = {
+  def csr_write_denied(addr: UInt) = {
     val pmpcfg_arr = {
       val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
       val reg_sel  = for ( i <- 0 until 16 ) yield { true.B }
@@ -513,34 +514,34 @@ class CSR_Bundle extends Bundle {
     ~res
   }
 
-  def csr_read_res(addr: UInt, csrfiles: CSR_Bundle) = {
+  def csr_read_res(addr: UInt) = {
     val pmpcfg_arr = {
       val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
-      val reg_sel  = for ( i <- 0 until 16 ) yield {csrfiles.pmpcfg(i) }
+      val reg_sel  = for ( i <- 0 until 16 ) yield {pmpcfg(i).asUInt }
       addr_chk zip reg_sel
     }
 
     val pmpaddr_arr = {
       val addr_chk = for ( i <- 0 until 64 ) yield { addr === ("h3B0".U + i.U) }
-      val reg_sel  = for ( i <- 0 until 64 ) yield { csrfiles.pmpaddr(i)}
+      val reg_sel  = for ( i <- 0 until 64 ) yield { pmpaddr(i)}
       addr_chk zip reg_sel
     }
 
     val hpmcounter_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hC00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { csrfiles.hpmcounter(i) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { hpmcounter(i) }
       addr_chk zip reg_sel
     }
 
     val mhpmcounter_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hB00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { csrfiles.mhpmcounter(i) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { mhpmcounter(i) }
       addr_chk zip reg_sel      
     }
 
     val mhpmevent_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("h320".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { csrfiles.mhpmevent(i) }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { mhpmevent(i) }
       addr_chk zip reg_sel      
     }
 
@@ -553,24 +554,24 @@ class CSR_Bundle extends Bundle {
           // ( addr === "h042".U ) -> ucause,
           // ( addr === "h043".U ) -> utval,
           // ( addr === "h044".U ) -> uip,
-          ( addr === "h001".U ) -> csrfiles.fcsr(4,0), 
-          ( addr === "h002".U ) -> csrfiles.fcsr(7,5),
-          ( addr === "h003".U ) -> csrfiles.fcsr,
-          ( addr === "hC00".U ) -> csrfiles.cycle,
-          ( addr === "hC01".U ) -> csrfiles.time,
-          ( addr === "hC02".U ) -> csrfiles.instret,
-          ( addr === "h100".U ) -> csrfiles.sstatus,
+          ( addr === "h001".U ) -> fcsr.fflags, 
+          ( addr === "h002".U ) -> fcsr.frm,
+          ( addr === "h003".U ) -> fcsr.asUInt,
+          ( addr === "hC00".U ) -> cycle,
+          ( addr === "hC01".U ) -> time,
+          ( addr === "hC02".U ) -> instret,
+          ( addr === "h100".U ) -> sstatus.asUInt,
           // ( addr === "h102".U ) -> sedeleg,
           // ( addr === "h103".U ) -> sideleg,
-          ( addr === "h104".U ) -> csrfiles.sie,
-          ( addr === "h105".U ) -> csrfiles.stvec,
-          ( addr === "h106".U ) -> csrfiles.scounteren,
-          ( addr === "h140".U ) -> csrfiles.sscratch,
-          ( addr === "h141".U ) -> csrfiles.sepc,
-          ( addr === "h142".U ) -> csrfiles.scause,
-          ( addr === "h143".U ) -> csrfiles.stval,
-          ( addr === "h144".U ) -> csrfiles.sip,
-          ( addr === "h180".U ) -> csrfiles.satp,
+          ( addr === "h104".U ) -> sie.asUInt,
+          ( addr === "h105".U ) -> stvec.asUInt,
+          ( addr === "h106".U ) -> scounteren.asUInt,
+          ( addr === "h140".U ) -> sscratch,
+          ( addr === "h141".U ) -> sepc,
+          ( addr === "h142".U ) -> scause.asUInt,
+          ( addr === "h143".U ) -> stval,
+          ( addr === "h144".U ) -> sip.asUInt,
+          ( addr === "h180".U ) -> satp.asUInt,
           // ( addr === "h600".U ) -> hstatus,
           // ( addr === "h602".U ) -> hedeleg,
           // ( addr === "h603".U ) -> hideleg,
@@ -593,37 +594,37 @@ class CSR_Bundle extends Bundle {
           // ( addr === "h243".U ) -> vstval,
           // ( addr === "h244".U ) -> vsip,
           // ( addr === "h280".U ) -> vsatp,
-          ( addr === "hF11".U ) -> csrfiles.mvendorid,
-          ( addr === "hF12".U ) -> csrfiles.marchid,
-          ( addr === "hF13".U ) -> csrfiles.mimpid,
-          ( addr === "hF14".U ) -> csrfiles.mhartid,
-          ( addr === "h300".U ) -> csrfiles.mstatus,
-          ( addr === "h301".U ) -> csrfiles.misa,
-          ( addr === "h302".U ) -> csrfiles.medeleg,
-          ( addr === "h303".U ) -> csrfiles.mideleg,
-          ( addr === "h304".U ) -> csrfiles.mie,
-          ( addr === "h305".U ) -> csrfiles.mtvec,
-          ( addr === "h306".U ) -> csrfiles.mcounteren,
-          ( addr === "h340".U ) -> csrfiles.mscratch,
-          ( addr === "h341".U ) -> csrfiles.mepc,
-          ( addr === "h342".U ) -> csrfiles.mcause,
-          ( addr === "h343".U ) -> csrfiles.mtval,
-          ( addr === "h344".U ) -> csrfiles.mip,
-          ( addr === "h34A".U ) -> csrfiles.mtinst,
-          ( addr === "h34B".U ) -> csrfiles.mtval2,
+          ( addr === "hF11".U ) -> mvendorid,
+          ( addr === "hF12".U ) -> marchid,
+          ( addr === "hF13".U ) -> mimpid,
+          ( addr === "hF14".U ) -> mhartid,
+          ( addr === "h300".U ) -> mstatus.asUInt,
+          ( addr === "h301".U ) -> misa,
+          ( addr === "h302".U ) -> medeleg,
+          ( addr === "h303".U ) -> mideleg,
+          ( addr === "h304".U ) -> mie.asUInt,
+          ( addr === "h305".U ) -> mtvec.asUInt,
+          ( addr === "h306".U ) -> mcounteren.asUInt,
+          ( addr === "h340".U ) -> mscratch,
+          ( addr === "h341".U ) -> mepc,
+          ( addr === "h342".U ) -> mcause.asUInt,
+          ( addr === "h343".U ) -> mtval.asUInt,
+          ( addr === "h344".U ) -> mip.asUInt,
+          ( addr === "h34A".U ) -> mtinst,
+          ( addr === "h34B".U ) -> mtval2,
 
-          ( addr === "hB00".U ) -> csrfiles.mcycle,
-          ( addr === "hB02".U ) -> csrfiles.minstret,
-          ( addr === "h320".U ) -> csrfiles.mcountinhibit,
-          ( addr === "h7A0".U ) -> csrfiles.tselect,
-          ( addr === "h7A1".U ) -> csrfiles.tdata1,
-          ( addr === "h7A2".U ) -> csrfiles.tdata2,
-          ( addr === "h7A3".U ) -> csrfiles.tdata3,
-          ( addr === "h7B0".U ) -> csrfiles.dcsr,
-          ( addr === "h7B1".U ) -> csrfiles.dpc,
-          ( addr === "h7B2".U ) -> csrfiles.dscratch0,
-          ( addr === "h7B3".U ) -> csrfiles.dscratch1,
-          ( addr === "h7B4".U ) -> csrfiles.dscratch2,
+          ( addr === "hB00".U ) -> mcycle,
+          ( addr === "hB02".U ) -> minstret,
+          ( addr === "h320".U ) -> mcountinhibit,
+          ( addr === "h7A0".U ) -> tselect,
+          ( addr === "h7A1".U ) -> tdata1,
+          ( addr === "h7A2".U ) -> tdata2,
+          ( addr === "h7A3".U ) -> tdata3,
+          ( addr === "h7B0".U ) -> dcsr.asUInt,
+          ( addr === "h7B1".U ) -> dpc,
+          ( addr === "h7B2".U ) -> dscratch0,
+          ( addr === "h7B3".U ) -> dscratch1,
+          ( addr === "h7B4".U ) -> dscratch2,
         )
 
     Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
@@ -641,9 +642,9 @@ trait CsrFiles { this: BaseCommit =>
   def update_fcsr( in: CMMState_Bundle): FCSRBundle = {
     val fcsr = WireDefault( in.csrfiles.fcsr )
 
-    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.fcsr.fflags, "h001".U, in.exe_fport )
-    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.fcsr.frm,    "h002".U, in.exe_fport )
-    val (enable2, dnxt2) = Reg_Exe_Port( in.csrfiles.fcsr.asUInt, "h003".U, in.exe_fport )  
+    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.fcsr.fflags, "h001".U, in.fcsrExe )
+    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.fcsr.frm,    "h002".U, in.fcsrExe )
+    val (enable2, dnxt2) = Reg_Exe_Port( in.csrfiles.fcsr.asUInt, "h003".U, in.fcsrExe )  
         
 
     when(enable0) { fcsr.fflags := dnxt0 }
@@ -663,7 +664,7 @@ trait CsrFiles { this: BaseCommit =>
   def update_cycle( in: CMMState_Bundle): UInt = {
     val cycle = WireDefault( in.csrfiles.cycle )
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.cycle, "hC00".U, in.exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.cycle, "hC00".U, in.csrExe )
     when( enable ) { cycle := dnxt }
     .otherwise { cycle := in.csrfiles.cycle + 1.U }
 
@@ -679,7 +680,7 @@ trait CsrFiles { this: BaseCommit =>
     */
   def update_time( in: CMMState_Bundle ): UInt = {
     val time = WireDefault( in.csrfiles.time )
-    val rtc = ShiftRegisters( in.rtc_clock, 3, false.B, true.B )
+    val rtc = ShiftRegisters( in.rtc_clock, 4, false.B, true.B )
     when(rtc(3) ^ rtc(2)) { time := in.csrfiles.time + 1.U }
     return time
   }
@@ -695,12 +696,12 @@ trait CsrFiles { this: BaseCommit =>
   }
   
   def update_hpmcounter( in: CMMState_Bundle ): Vec[UInt] = {
-    val hpmcounter = WireDefault( VecInit(in.csrfiles.hpmcounter) )
+    val hpmcounter = WireDefault( in.csrfiles.hpmcounter )
     ( 0 until 32 ).map{ i => {
       if ( i == 0 || i == 1 || i == 2 ) {}
       else {
-        val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.hpmcounter(i), "hC00".U + i.U, in.exe_port )
-        when(enable) { hpmcounter := dnxt }
+        val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.hpmcounter(i), "hC00".U + i.U, in.csrExe )
+        when(enable) { hpmcounter(i) := dnxt }
       }      
     }}
     return hpmcounter
@@ -716,37 +717,37 @@ trait CsrFiles { this: BaseCommit =>
 
 
   def update_priv_lvl( in: CMMState_Bundle ): UInt = {
-    val priv_lvl = WireDefault( in.csrfiles.pirv )
+    val priv_lvl = WireDefault( in.csrfiles.priv_lvl )
 
-    when(in.emu_reset) { priv_lvl := "b11".U}
+    when(in.exint.emu_reset) { priv_lvl := "b11".U}
 
-    when(in.is_mRet) { priv_lvl := in.mstatus.mpp }
-    when(in.is_sRet) { priv_lvl := in.mstatus.spp }
-    when(in.is_dRet) { priv_lvl := in.dcsr.prv }
+    when(in.is_mRet) { priv_lvl := in.csrfiles.mstatus.mpp }
+    when(in.is_sRet) { priv_lvl := in.csrfiles.mstatus.spp }
+    when(in.is_dRet) { priv_lvl := in.csrfiles.dcsr.prv }
         
-    when(in.is_ssi) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux( ~mideleg(1), "b11".U, "b01".U ) ) }
-    when(in.is_msi) { priv_lvl := "b11".U }
-    when(in.is_sti) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux( ~mideleg(5), "b11".U, "b01".U ) ) }
-    when(in.is_mti) { priv_lvl := "b11".U }
-    when(in.is_sei) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux( ~mideleg(9), "b11".U, "b01".U ) ) }
-    when(in.is_mei) { priv_lvl := "b11".U }
+    when(in.csrfiles.is_ssi) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux( ~in.csrfiles.mideleg(1), "b11".U, "b01".U ) ) }
+    when(in.csrfiles.is_msi) { priv_lvl := "b11".U }
+    when(in.csrfiles.is_sti) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux( ~in.csrfiles.mideleg(5), "b11".U, "b01".U ) ) }
+    when(in.csrfiles.is_mti) { priv_lvl := "b11".U }
+    when(in.csrfiles.is_sei) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux( ~in.csrfiles.mideleg(9), "b11".U, "b01".U ) ) }
+    when(in.csrfiles.is_mei) { priv_lvl := "b11".U }
     when(in.is_nomask_interrupt ) { priv_lvl := "b11".U }
 
 
-    when(in.is_instr_misAlign       ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(0),  "b11".U, "b01".U) )}
-    when(in.is_instr_access_fault   ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(1),  "b11".U, "b01".U) )}
-    when(in.is_instr_illeage        ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(2),  "b11".U, "b01".U) )}
-    when(in.is_breakPoint           ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(3),  "b11".U, "b01".U) )}
-    when(in.is_load_misAlign        ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(4),  "b11".U, "b01".U) )}
-    when(in.is_load_access_fault    ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(5),  "b11".U, "b01".U) )}
-    when(in.is_storeAMO_misAlign    ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(6),  "b11".U, "b01".U) )}
-    when(in.is_storeAMO_access_fault) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(7),  "b11".U, "b01".U) )}
-    when(in.is_ecall_U              ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(8),  "b11".U, "b01".U) )}
-    when(in.is_ecall_S              ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(9),  "b11".U, "b01".U) )}
-    when(in.is_ecall_M              ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(11), "b11".U, "b01".U) )}
-    when(in.is_instr_paging_fault   ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(12), "b11".U, "b01".U) )}
-    when(in.is_load_paging_fault    ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(13), "b11".U, "b01".U) )}
-    when(in.is_storeAMO_paging_fault) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~medeleg(15), "b11".U, "b01".U) )}
+    when(in.is_instr_misAlign       ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~in.csrfiles.medeleg(0),  "b11".U, "b01".U) )}
+    when(in.is_instr_access_fault   ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~in.csrfiles.medeleg(1),  "b11".U, "b01".U) )}
+    when(in.is_illeage              ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~in.csrfiles.medeleg(2),  "b11".U, "b01".U) )}
+    when(in.is_ebreak_exc           ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~in.csrfiles.medeleg(3),  "b11".U, "b01".U) )}
+    when(in.is_load_misAlign        ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~in.csrfiles.medeleg(4),  "b11".U, "b01".U) )}
+    when(in.is_load_accessFault     ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~in.csrfiles.medeleg(5),  "b11".U, "b01".U) )}
+    when(in.is_store_misAlign       ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~in.csrfiles.medeleg(6),  "b11".U, "b01".U) )}
+    when(in.is_store_accessFault    ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~in.csrfiles.medeleg(7),  "b11".U, "b01".U) )}
+    when(in.is_ecall_U              ) { priv_lvl := Mux(~in.csrfiles.medeleg(8), "b11".U, "b01".U) }
+    when(in.is_ecall_S              ) { priv_lvl := Mux(~in.csrfiles.medeleg(9), "b11".U, "b01".U) }
+    when(in.is_ecall_M              ) { priv_lvl :=  "b11".U }
+    when(in.is_instr_paging_fault   ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~in.csrfiles.medeleg(12), "b11".U, "b01".U) )}
+    when(in.is_load_pagingFault     ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~in.csrfiles.medeleg(13), "b11".U, "b01".U) )}
+    when(in.is_store_pagingFault    ) { priv_lvl := Mux( in.csrfiles.priv_lvl === "b11".U, "b11".U, Mux(~in.csrfiles.medeleg(15), "b11".U, "b01".U) )}
 
     return priv_lvl
   }
@@ -760,26 +761,26 @@ trait CsrFiles { this: BaseCommit =>
     mstatus.sbe := 0.U(1.W)
     mstatus.sxl := 2.U(2.W)
     mstatus.uxl := 2.U(2.W)
-    mstatus.xs   = 0.U(2.W)
-    mstatus.ube  = 0.U(1.W)
+    mstatus.xs  := 0.U(2.W)
+    mstatus.ube := 0.U(1.W)
       
-    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.mstatus, "h100".U, exe_port )
-    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.mstatus, "h300".U, exe_port )
+    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.mstatus.asUInt, "h100".U, in.csrExe )
+    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.mstatus.asUInt, "h300".U, in.csrExe )
 
     when( in.is_trap ) {
-      when( in.priv_lvl_dnxt === "b11".U ) {
-        mstatus.mpie := in.mstatus.mie
+      when( update_priv_lvl(in) === "b11".U ) {
+        mstatus.mpie := in.csrfiles.mstatus.mie
         mstatus.mie  := 0.U
-        mstatus.mpp  := in.priv_lvl
+        mstatus.mpp  := in.csrfiles.priv_lvl
       }
-      when( in.priv_lvl_dnxt === "b01".U ) {
-        mstatus.spp  := Mux( (in.priv_lvl === "b00".U), 0.U, 1.U )
-        mstatus.spie := in.csrfiles.sie
+      when( update_priv_lvl(in) === "b01".U ) {
+        mstatus.spp  := Mux( (in.csrfiles.priv_lvl === "b00".U), 0.U, 1.U )
+        mstatus.spie := in.csrfiles.mstatus.sie
         mstatus.sie  := 0.U
       }
     }
     .elsewhen( in.is_mRet ) {
-      mstatus.mie  := in.csrfiles.mpie
+      mstatus.mie  := in.csrfiles.mstatus.mpie
       mstatus.mpie := 1.U
       mstatus.mpp  := "b00".U
 
@@ -857,7 +858,7 @@ trait CsrFiles { this: BaseCommit =>
     */
   def update_medeleg( in: CMMState_Bundle ): UInt = {
     val medeleg = WireDefault( in.csrfiles.medeleg )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.medeleg, "h302".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.medeleg, "h302".U, in.csrExe )
     when(enable) { medeleg := dnxt }
     return medeleg
   } 
@@ -869,7 +870,7 @@ trait CsrFiles { this: BaseCommit =>
     */
   def update_mideleg( in: CMMState_Bundle ): UInt = {
     val mideleg = WireDefault( in.csrfiles.mideleg )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mideleg, "h303".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mideleg, "h303".U, in.csrExe )
     when(enable) { mideleg := dnxt }
     return mideleg
   }
@@ -887,23 +888,23 @@ trait CsrFiles { this: BaseCommit =>
   def update_mie( in: CMMState_Bundle ): MSIntBundle = {
     val mie = WireDefault( in.csrfiles.mie )
 
-    val (enable0, dnxt0) = Reg_Exe_Port( value, "h304".U, exe_port )
-    val (enable1, dnxt1) = Reg_Exe_Port( value, "h104".U, exe_port )
+    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.mie.asUInt, "h304".U, in.csrExe )
+    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.sie.asUInt, "h104".U, in.csrExe )
 
     when(enable0) {
-      mie.meie := dnxt0(11)
-      mie.seie := dnxt0(9)
-      mie.mtie := dnxt0(7)
-      mie.stie := dnxt0(5)
-      mie.msie := dnxt0(3)
-      mie.ssie := dnxt0(1)
+      mie.mei := dnxt0(11)
+      mie.sei := dnxt0(9)
+      mie.mti := dnxt0(7)
+      mie.sti := dnxt0(5)
+      mie.msi := dnxt0(3)
+      mie.ssi := dnxt0(1)
     }
     .elsewhen(enable1) {
-      mie.seie := dnxt1(9)
-      mie.stie := dnxt1(5)
-      mie.ssie := dnxt1(1)
+      mie.sei := dnxt1(9)
+      mie.sti := dnxt1(5)
+      mie.ssi := dnxt1(1)
     }      
-
+    return mie
   }
 
 
@@ -919,7 +920,7 @@ trait CsrFiles { this: BaseCommit =>
     val mtvec = WireDefault( in.csrfiles.mtvec )
 
     mtvec.mode := 0.U
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mtvec, "h305".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mtvec.asUInt, "h305".U, in.csrExe )
     when(enable) { mtvec.base := dnxt(63,2) }    
 
     return mtvec
@@ -940,8 +941,8 @@ trait CsrFiles { this: BaseCommit =>
   def update_mcounteren( in: CMMState_Bundle ): CounterenBundle = {
     val mcounteren = WireDefault( in.csrfiles.mcounteren )
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mcounteren, "h306".U, exe_port )
-    when(enable) { mcounteren.mhpm := dnxt }
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mcounteren.asUInt, "h306".U, in.csrExe )
+    when(enable) { mcounteren.hpm := dnxt }
     return mcounteren
   }
 
@@ -954,7 +955,7 @@ trait CsrFiles { this: BaseCommit =>
     */
   def update_mscratch( in: CMMState_Bundle ): UInt = {
     val mscratch = WireDefault( in.csrfiles.mscratch )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mscratch, "h340".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mscratch, "h340".U, in.csrExe )
     when(enable) { mscratch := dnxt }
     return mscratch
   }
@@ -967,7 +968,7 @@ trait CsrFiles { this: BaseCommit =>
     */
   def update_mepc( in: CMMState_Bundle ): UInt = {
     val mepc = WireDefault( in.csrfiles.mepc )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mepc, "h341".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mepc, "h341".U, in.csrExe )
 
     when( in.is_trap & update_priv_lvl(in) === "b11".U){ mepc := in.commit_pc }
     .elsewhen(enable) { mepc := dnxt }
@@ -983,17 +984,17 @@ trait CsrFiles { this: BaseCommit =>
     */
   def update_mcause( in: CMMState_Bundle ): CauseBundle = {
     val mcause = WireDefault( in.csrfiles.mcause )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mcause, "h342".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mcause.asUInt, "h342".U, in.csrExe )
 
-    when( in.is_m_interrupt & update_priv_lvl(in) === "b11".U ) {
+    when( in.csrfiles.is_m_interrupt & update_priv_lvl(in) === "b11".U ) {
       mcause.interrupt := 1.U
       mcause.exception_code := Mux1H( Seq(
         // is_ssi -> 1.U,
-        in.is_msi(i) -> 3.U,
+        in.csrfiles.is_msi -> 3.U,
         // is_sti -> 5.U,
-        in.is_mti(i) -> 7.U,
+        in.csrfiles.is_mti -> 7.U,
         // is_sei -> 9.U,
-        in.is_mei(i) -> 11.U
+        in.csrfiles.is_mei -> 11.U
       ))
     }
     .elsewhen( in.is_exception & update_priv_lvl(in) === "b11".U ) {
@@ -1001,18 +1002,18 @@ trait CsrFiles { this: BaseCommit =>
       mcause.exception_code := Mux1H( Seq(
         in.is_instr_misAlign        -> 0.U,
         in.is_instr_access_fault    -> 1.U,
-        in.is_instr_illeage         -> 2.U,
-        in.is_breakPoint            -> 3.U,
+        in.is_illeage               -> 2.U,
+        in.is_ebreak_exc            -> 3.U,
         in.is_load_misAlign         -> 4.U,
-        in.is_load_access_fault     -> 5.U,
-        in.is_storeAMO_misAlign     -> 6.U,
-        in.is_storeAMO_access_fault -> 7.U,
+        in.is_load_accessFault      -> 5.U,
+        in.is_store_misAlign        -> 6.U,
+        in.is_store_accessFault     -> 7.U,
         in.is_ecall_U               -> 8.U,
         in.is_ecall_S               -> 9.U,
         in.is_ecall_M               -> 11.U,
         in.is_instr_paging_fault    -> 12.U,
-        in.is_load_paging_fault     -> 13.U,
-        in.is_storeAMO_paging_fault -> 15.U,
+        in.is_load_pagingFault      -> 13.U,
+        in.is_store_pagingFault     -> 15.U,
       ))
     }
     .elsewhen(enable) {
@@ -1032,20 +1033,20 @@ trait CsrFiles { this: BaseCommit =>
   def update_mtval( in: CMMState_Bundle ): UInt = {
     val mtval = WireDefault( in.csrfiles.mtval )
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mtval, "h343".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mtval, "h343".U, in.csrExe )
 
     when( update_priv_lvl(in) === "b11".U ) {
       mtval := Mux1H( Seq(
         in.is_instr_access_fault    -> in.ill_ivaddr,
         in.is_instr_paging_fault    -> in.ill_ivaddr,
-        in.is_instr_illeage         -> 0.U,
-        in.is_breakPoint            -> 0.U,
+        in.is_illeage         -> 0.U,
+        in.is_ebreak_exc            -> 0.U,
         in.is_load_misAlign         -> in.ill_dvaddr,
-        in.is_load_access_fault     -> in.ill_dvaddr,
-        in.is_storeAMO_misAlign     -> in.ill_dvaddr,
-        in.is_storeAMO_access_fault -> in.ill_dvaddr,
-        in.is_load_paging_fault     -> in.ill_dvaddr,
-        in.is_storeAMO_paging_fault -> in.ill_dvaddr    
+        in.is_load_accessFault      -> in.ill_dvaddr,
+        in.is_store_misAlign        -> in.ill_dvaddr,
+        in.is_store_accessFault     -> in.ill_dvaddr,
+        in.is_load_pagingFault      -> in.ill_dvaddr,
+        in.is_store_pagingFault     -> in.ill_dvaddr    
       ))
     }
     .elsewhen(enable) { mtval := dnxt }
@@ -1069,12 +1070,12 @@ trait CsrFiles { this: BaseCommit =>
   def update_mip( in: CMMState_Bundle ): MSIntBundle = {
     val mip = WireDefault( in.csrfiles.mip )
     
-    mip.meip := clint_ex_m
-    mip.seip := clint_ex_s
-    mip.mtip := clint_tm_m
-    mip.stip := clint_tm_s
-    mip.msip := clint_sw_m
-    mip.ssip := clint_sw_s
+    mip.mei := in.exint.clint_ex_m
+    mip.sei := in.exint.clint_ex_s
+    mip.mti := in.exint.clint_tm_m
+    mip.sti := in.exint.clint_tm_s
+    mip.msi := in.exint.clint_sw_m
+    mip.ssi := in.exint.clint_sw_s
 
     return mip
   }
@@ -1083,7 +1084,7 @@ trait CsrFiles { this: BaseCommit =>
   def update_mtinst( in: CMMState_Bundle ): UInt = {
     val mtinst = WireDefault( in.csrfiles.mtinst )
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mtinst, "h34A".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mtinst, "h34A".U, in.csrExe )
     when(enable) { mtinst := dnxt }    
 
     return mtinst
@@ -1091,7 +1092,7 @@ trait CsrFiles { this: BaseCommit =>
 
   def update_mtval2( in: CMMState_Bundle ): UInt = {
     val mtval2 = WireDefault( in.csrfiles.mtval2 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mtval2, "h34B".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mtval2, "h34B".U, in.csrExe )
     when(enable) { mtval2 := dnxt }
     return mtval2
   }
@@ -1104,9 +1105,9 @@ trait CsrFiles { this: BaseCommit =>
     for ( i <- 0 until 16 ) yield {
       for ( j <- 0 until 8 ) yield {
         if ( i % 2 == 0 ) {
-          val (enable, dnxt) = Reg_Exe_Port( Cat(in.csrfiles.pmpcfg(i).map{_.asUInt}.revert), "h3A0".U + i.U, exe_port )
+          val (enable, dnxt) = Reg_Exe_Port( Cat(in.csrfiles.pmpcfg(i).map{_.asUInt}.reverse), "h3A0".U + i.U, in.csrExe )
           
-          when( enable & pmpcfg(i)(j).L ) {
+          when( enable & in.csrfiles.pmpcfg(i)(j).L.asBool ) {
               pmpcfg(i)(j).L := dnxt(8*j+7)
               pmpcfg(i)(j).A := dnxt(8*j+4,8*j+3)
               pmpcfg(i)(j).X := dnxt(8*j+2)
@@ -1146,7 +1147,7 @@ trait CsrFiles { this: BaseCommit =>
 
     for( i <- 0 until 64 ) yield {
 
-      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.pmpaddr(i), "h3B0".U + i.U, exe_port )
+      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.pmpaddr(i), "h3B0".U + i.U, in.csrExe )
       // val cfg_idx = i/8*2
       // val bit_idx = 8*(i%8) + 7
       val lock = in.csrfiles.pmpcfg(i/8*2)(i%8).L
@@ -1186,7 +1187,7 @@ trait CsrFiles { this: BaseCommit =>
   def update_mcycle( in: CMMState_Bundle ): UInt = {
     val mcycle = WireDefault(in.csrfiles.mcycle)
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mcycle, "hB00".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mcycle, "hB00".U, in.csrExe )
       when(enable) { mcycle := dnxt }
       .otherwise { mcycle := in.csrfiles.mcycle + 1.U }
     return mcycle
@@ -1201,7 +1202,7 @@ trait CsrFiles { this: BaseCommit =>
   def update_minstret( in: CMMState_Bundle ): UInt = {
     val minstret = WireDefault( in.csrfiles.minstret )
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.minstret, "hB02".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.minstret, "hB02".U, in.csrExe )
     when(enable) { minstret := dnxt }
     .otherwise { minstret := in.csrfiles.minstret + 1.U } //we don't need to know whether it's retired here
 
@@ -1218,7 +1219,7 @@ trait CsrFiles { this: BaseCommit =>
   def update_mhpmcounter( in: CMMState_Bundle ): Vec[UInt] = {
     val mhpmcounter = WireDefault( in.csrfiles.mhpmcounter )
     for ( i <- 0 until 32 ) yield {
-      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mhpmcounter(i), "hB00".U + i.U, exe_port )
+      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mhpmcounter(i), "hB00".U + i.U, in.csrExe )
       when(enable) { mhpmcounter(i) := dnxt }
     }    
 
@@ -1241,7 +1242,7 @@ trait CsrFiles { this: BaseCommit =>
     for ( i <- 0 until 32 ) yield {
       if ( i == 0 || i == 1 || i == 2 ) { mhpmevent(i) := 0.U }
       else {
-        val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mhpmevent(i), "hB20".U + i.U, exe_port )
+        val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mhpmevent(i), "hB20".U + i.U, in.csrExe )
         when(enable) { mhpmevent(i) := dnxt }
       }
     }
@@ -1332,7 +1333,7 @@ trait CsrFiles { this: BaseCommit =>
 
     stvec.mode := 0.U(2.W)
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.stvec, "h105".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.stvec.asUInt, "h105".U, in.csrExe )
     when(enable) { stvec.base := dnxt(63,2) }
 
     return stvec
@@ -1352,7 +1353,7 @@ trait CsrFiles { this: BaseCommit =>
   def update_scounteren( in: CMMState_Bundle ): CounterenBundle = {
     val scounteren = WireDefault( in.csrfiles.scounteren )
  
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.scounteren, "h306".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.scounteren.asUInt, "h306".U, in.csrExe )
       when(enable) { scounteren.hpm := dnxt }    
 
 
@@ -1368,7 +1369,7 @@ trait CsrFiles { this: BaseCommit =>
     */
   def update_sscratch( in: CMMState_Bundle ): UInt = {
     val sscratch = WireDefault( in.csrfiles.sscratch )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.sscratch, "h140".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.sscratch, "h140".U, in.csrExe )
     when(enable) { sscratch := dnxt }
     return sscratch
   }
@@ -1382,9 +1383,9 @@ trait CsrFiles { this: BaseCommit =>
     */
   def update_sepc( in: CMMState_Bundle ): UInt = {
     val sepc = WireDefault( in.csrfiles.sepc )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.sepc, "h141".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.sepc, "h141".U, in.csrExe )
 
-    when( in.is_trap & in.priv_lvl_dnxt === "b01".U ) { sepc := commit_pc }
+    when( in.is_trap & update_priv_lvl(in) === "b01".U ) { sepc := in.commit_pc }
     .elsewhen(enable) { sepc := dnxt }
     return sepc
   }
@@ -1395,38 +1396,38 @@ trait CsrFiles { this: BaseCommit =>
     * when a trap is taken into S-mode, scause is written with a code indicating the event that cause the trap
     * @return
     */
-  def update_scause( in: CMMState_Bundle ): UInt = {
+  def update_scause( in: CMMState_Bundle ): CauseBundle = {
     val scause = WireDefault( in.csrfiles.scause )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.scause, "h142".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.scause.asUInt, "h142".U, in.csrExe )
 
-    when( ( in.is_m_interrupt | in.is_s_interrupt ) & in.priv_lvl_dnxt(t) === "b01".U ) {
+    when( ( in.csrfiles.is_m_interrupt | in.csrfiles.is_s_interrupt ) & update_priv_lvl(in) === "b01".U ) {
       scause.interrupt := 1.U
       scause.exception_code := Mux1H( Seq(
-        in.is_ssi -> 1.U,
-        in.is_msi -> 3.U,
-        in.is_sti -> 5.U,
-        in.is_mti -> 7.U,
-        in.is_sei -> 9.U,
-        in.is_mei -> 11.U
+        in.csrfiles.is_ssi -> 1.U,
+        in.csrfiles.is_msi -> 3.U,
+        in.csrfiles.is_sti -> 5.U,
+        in.csrfiles.is_mti -> 7.U,
+        in.csrfiles.is_sei -> 9.U,
+        in.csrfiles.is_mei -> 11.U
       ))
     }
-    .elsewhen( in.is_exception & in.priv_lvl_dnxt === "b01".U ) {
+    .elsewhen( in.is_exception & update_priv_lvl(in) === "b01".U ) {
       scause.interrupt := 0.U
       scause.exception_code := Mux1H( Seq(
         in.is_instr_misAlign        -> 0.U,
         in.is_instr_access_fault    -> 1.U,
-        in.is_instr_illeage         -> 2.U,
-        in.is_breakPoint            -> 3.U,
+        in.is_illeage               -> 2.U,
+        in.is_ebreak_exc            -> 3.U,
         in.is_load_misAlign         -> 4.U,
-        in.is_load_access_fault     -> 5.U,
-        in.is_storeAMO_misAlign     -> 6.U,
-        in.is_storeAMO_access_fault -> 7.U,
+        in.is_load_accessFault     -> 5.U,
+        in.is_store_misAlign        -> 6.U,
+        in.is_store_accessFault     -> 7.U,
         in.is_ecall_U               -> 8.U,
         in.is_ecall_S               -> 9.U,
         in.is_ecall_M               -> 11.U,
         in.is_instr_paging_fault    -> 12.U,
-        in.is_load_paging_fault     -> 13.U,
-        in.is_storeAMO_paging_fault -> 15.U,
+        in.is_load_pagingFault     -> 13.U,
+        in.is_store_pagingFault    -> 15.U,
       ))
     }
     .elsewhen(enable) {
@@ -1445,20 +1446,20 @@ trait CsrFiles { this: BaseCommit =>
     */
   def update_stval( in: CMMState_Bundle ): UInt = {
     val stval = WireDefault( in.csrfiles.stval )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.stval, "h143".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.stval, "h143".U, in.csrExe )
 
     when( update_priv_lvl(in) === "b01".U ) {
       stval := Mux1H( Seq(
         in.is_instr_access_fault    -> in.ill_ivaddr,
         in.is_instr_paging_fault    -> in.ill_ivaddr,
-        in.is_instr_illeage         -> 0.U,
-        in.is_breakPoint            -> 0.U,
+        in.is_illeage         -> 0.U,
+        in.is_ebreak_exc            -> 0.U,
         in.is_load_misAlign         -> in.ill_dvaddr,
-        in.is_load_access_fault     -> in.ill_dvaddr,
-        in.is_storeAMO_misAlign     -> in.ill_dvaddr,
-        in.is_storeAMO_access_fault -> in.ill_dvaddr,
-        in.is_load_paging_fault     -> in.ill_dvaddr,
-        in.is_storeAMO_paging_fault -> in.ill_dvaddr       
+        in.is_load_accessFault     -> in.ill_dvaddr,
+        in.is_store_misAlign     -> in.ill_dvaddr,
+        in.is_store_accessFault -> in.ill_dvaddr,
+        in.is_load_pagingFault     -> in.ill_dvaddr,
+        in.is_store_pagingFault -> in.ill_dvaddr       
       ))
     }
     .elsewhen(enable) { stval := dnxt }
@@ -1505,7 +1506,7 @@ trait CsrFiles { this: BaseCommit =>
   def update_satp( in: CMMState_Bundle ): SatpBundle = {
     val satp = WireDefault( in.csrfiles.satp )
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.satp, "h180".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.satp.asUInt, "h180".U, in.csrExe )
     when(enable) {
       /** @note only sv39 supportted */
       satp.mode := dnxt(63,60) & "b1000".U
@@ -1513,7 +1514,7 @@ trait CsrFiles { this: BaseCommit =>
       satp.ppn  := dnxt(43,0)
     }
 
-    return stap
+    return satp
   }
 
 
@@ -1754,28 +1755,28 @@ trait CsrFiles { this: BaseCommit =>
   //Debug/Trace Register
   def update_tselect( in: CMMState_Bundle): UInt = {
     val tselect = WireDefault( in.csrfiles.tselect )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tselect, "h7A0".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tselect, "h7A0".U, in.csrExe )
     when(enable) { tselect := Mux( dnxt >= 0.U, ~dnxt, dnxt ) }
     return tselect
   }
 
   def update_tdata1( in: CMMState_Bundle): UInt = {
     val tdata1 = WireDefault( in.csrfiles.tdata1 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata1, "h7A1".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata1, "h7A1".U, in.csrExe )
     when(enable) { tdata1 := dnxt }
     return tdata1
   }
 
   def update_tdata2( in: CMMState_Bundle): UInt = {
     val tdata2 = WireDefault( in.csrfiles.tdata2 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata2, "h7A2".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata2, "h7A2".U, in.csrExe )
     when(enable) { tdata2 := dnxt }
     return tdata2
   }
 
   def update_tdata3( in: CMMState_Bundle ): UInt = {
     val tdata3 = WireDefault( in.csrfiles.tdata3 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata3, "h7A3".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata3, "h7A3".U, in.csrExe )
     when(enable) { tdata3 := dnxt }
     return tdata3
   }
@@ -1792,10 +1793,10 @@ trait CsrFiles { this: BaseCommit =>
     dcsr.mprven    := 0.U(1.W)
 
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dcsr, "h7B0".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dcsr.asUInt, "h7B0".U, in.csrExe )
     when(false.B) {}
-    .elsewhen( is_debug_interrupt ){
-      dcsr.prv := in.priv_lvl
+    .elsewhen( in.is_debug_interrupt ){
+      dcsr.prv := in.csrfiles.priv_lvl
     }
     .elsewhen(enable) {
       dcsr.step := dnxt(2)
@@ -1808,14 +1809,14 @@ trait CsrFiles { this: BaseCommit =>
   def update_dpc( in: CMMState_Bundle ): UInt = {
     val dpc  = WireDefault( in.csrfiles.dpc )
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dpc, "h7B1".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dpc, "h7B1".U, in.csrExe )
     when(enable) { dpc := dnxt }
-    .elsewhen( in.is_inDebugMode_dnxt === true.B ) {
+    .elsewhen( update_DMode(in) === true.B ) {
       dpc := Mux1H(Seq(
-        in.is_ebreak_dm -> in.commit_pc,
-        in.is_single_step    -> in.commit_pc,
-        in.is_trigger        -> 0.U,
-        in.is_halt_int       -> in.commit_pc,
+        in.is_ebreak_dm      -> in.commit_pc,
+        in.exint.is_single_step    -> in.commit_pc,
+        in.exint.is_trigger        -> 0.U,
+        in.exint.hartHaltReq       -> in.commit_pc,
       ))
     }
 
@@ -1824,33 +1825,33 @@ trait CsrFiles { this: BaseCommit =>
 
   def update_dscratch0( in: CMMState_Bundle ): UInt = {
     val dscratch0 = WireDefault( in.csrfiles.dscratch0 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch0, "h7B2".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch0, "h7B2".U, in.csrExe )
     when(enable) { dscratch0 := dnxt }
     return dscratch0
   }
 
   def update_dscratch1( in: CMMState_Bundle ): UInt = {
     val dscratch1 = WireDefault( in.csrfiles.dscratch1 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch1, "h7B3".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch1, "h7B3".U, in.csrExe )
     when(enable) { dscratch1 := dnxt }
     return dscratch1
   }
 
   def update_dscratch2( in: CMMState_Bundle ): UInt = {
     val dscratch2 = WireDefault( in.csrfiles.dscratch2 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch2, "h7B4".U, exe_port )
+    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch2, "h7B4".U, in.csrExe )
     when(enable) { dscratch2 := dnxt }
     return dscratch2
   }
 
   def update_DMode( in: CMMState_Bundle ): Bool = {
-    val DMode = WireDefault( in.csrFiles.DMode )
+    val DMode = WireDefault( in.csrfiles.DMode )
     when( in.is_debug_interrupt ) { DMode := true.B }
     .elsewhen( in.is_dRet ) { DMode := false.B }
     return DMode
   }
   
-  def update_csrfiles( in: CMMState_Bundle ): Bool = {
+  def update_csrfiles( in: CMMState_Bundle ): CSR_Bundle = {
     val csrfiles = Wire( new CSR_Bundle )
     csrfiles.priv_lvl      := update_priv_lvl(in)
     csrfiles.DMode         := update_DMode(in)
@@ -1864,7 +1865,7 @@ trait CsrFiles { this: BaseCommit =>
     csrfiles.sepc          := update_sepc(in)
     csrfiles.scause        := update_scause(in)
     csrfiles.stval         := update_stval(in)
-    csrfiles.sip           := update_sip(in)
+    // csrfiles.sip           := update_sip(in)
     csrfiles.satp          := update_satp(in)
     csrfiles.mvendorid     := update_mvendorid(in)
     csrfiles.marchid       := update_marchid(in)

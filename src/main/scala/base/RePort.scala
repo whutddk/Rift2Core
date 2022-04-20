@@ -84,23 +84,38 @@ class ReDirect[T<:Data]( dw: T, port: Int) extends Module{
 
   for ( i <- 0 until port ) yield {
     io.deq(i).valid := false.B 
-    io.deq(i).bits  := DontCare
+    io.deq(i).bits  := 0.U.asTypeOf(dw)
     io.enq(i).ready  := false.B
   }
 
-  for ( i <- 0 until port ) {
-    for ( j <- port-1 to i  ) {
-      when( io.mapper(j) ) {
-        io.deq(j) <> io.enq(i) //override
+  val sel = Wire( Vec(port, UInt(log2Ceil(port).W) ) )
+  for ( i <- 0 until port ) yield sel(i) := 0.U
+  // for ( i <- 0 until port ) {
+  //   for ( j <- port-1 to i  ) {
+  //     when( io.mapper(j) ) {
+  //       io.deq(j) <> io.enq(i) //override
+  //     }
+  //   }
+  // }
+    for ( i <- 0 until port ) {
+      for ( j <- port-1 to i  ) {
+        when( io.mapper(j) ) {
+          sel(j) := i.U //override
+        }       
       }
     }
-  }
+
+    for ( i <- 0 until port ) yield {
+      when( io.mapper(i) ) { io.deq(i) <> io.enq(sel(i)) }
+    }
+
 }
 
 object ReDirect{
-  def apply[T <: Data]( enq: Vec[ReadyValidIO[T]], mapper: Vec[Bool] ): Vec[DecoupledIO[T]] = {
+  def apply[T <: Data]( enq: Vec[DecoupledIO[T]], mapper: Vec[Bool] ): Vec[DecoupledIO[T]] = {
     require( enq.length == mapper.length )
     val mdl = Module(new ReDirect( chiselTypeOf(enq(0).bits), enq.length ))
+    mdl.io.mapper := mapper
     enq <> mdl.io.enq
     return mdl.io.deq
   }

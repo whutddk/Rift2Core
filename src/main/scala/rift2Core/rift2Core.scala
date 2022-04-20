@@ -24,7 +24,6 @@ import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.diff._
 import rift2Core.privilege._
-import axi._
 import debug._
 
 import chipsalliance.rocketchip.config._

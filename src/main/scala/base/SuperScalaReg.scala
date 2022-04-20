@@ -20,27 +20,27 @@ package base
 import chisel3._
 import chisel3.util._
 
-object SuperscalarReg {
-  def apply[T<:Data]( init: T, is_retired: Seq[Bool] ): (T, Seq[T]) = {
-    val len = is_reitred.length
-    val qout = RegInit(init)
-    val dnxt = Wire(Vec( len, new init.chiselCloneType ))
+// object SuperscalarReg {
+//   def apply[T<:Data]( init: T, is_retired: Seq[Bool] ): (T, Seq[T]) = {
+//     val len = is_retired.length
+//     val qout = RegInit(init)
+//     val dnxt = Wire(Vec( len, new chiselCloneType(init) ))
     
-    // WireDefault( VecInit( Seq.fill(len)(qout) ) )
-    ( 0 until len ).map{ t => { if ( t == 0 ) dnxt(t) := qout else dnxt(t) := dnxt(t-1) } }
-    qout := MuxCase(qout, Array( ( len-1 to 0 ).map{ i => is_retired(i) -> dnxt(i) } ) )
+//     // WireDefault( VecInit( Seq.fill(len)(qout) ) )
+//     ( 0 until len ).map{ t => { if ( t == 0 ) dnxt(t) := qout else dnxt(t) := dnxt(t-1) } }
+//     qout := MuxCase(qout,  ( len-1 to 0 ).map{ i => {is_retired(i) -> dnxt(i)} }  )
 
-    // def idx_fun( i: Int ) = {
-    //   if ( i >=0 && i < len ) dnxt(0)
-    //   else qout
-    // } 
+//     // def idx_fun( i: Int ) = {
+//     //   if ( i >=0 && i < len ) dnxt(0)
+//     //   else qout
+//     // } 
 
-    return ( qout, dnxt )
-  }
+//     return ( qout, dnxt )
+//   }
 
-}
+// }
 
-object PkgSSReg {
+// object PkgSSReg {
 
-}
+// }
 

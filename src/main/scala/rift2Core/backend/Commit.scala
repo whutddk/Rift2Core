@@ -26,15 +26,16 @@ import rift2Core.frontend._
 import rift2Core.L1Cache._
 import rift2Core.backend._
 import rift2Core.privilege._
-import rift2Core.privilege.csrFiles._
 import debug._
 import chisel3.experimental._
+import base._
 
 import rift2Core.diff._
 
 class ExInt_Bundle extends Bundle {
   val is_single_step = Bool()
   val is_trigger = Bool()
+  val hartHaltReq = Bool()
 
   val emu_reset = Bool()
 	val clint_sw_m = Bool()
@@ -85,6 +86,10 @@ class CMMState_Bundle extends Bundle{
     return is_load_misAlign
   }
 
+  def is_instr_misAlign: Bool = {
+    return false.B
+  }
+
   def is_store_misAlign: Bool = {
     val is_store_misAlign = lsu_cmm.is_misAlign & (rod.is_su | rod.is_amo) & ~is_wb
     return is_store_misAlign
@@ -93,6 +98,21 @@ class CMMState_Bundle extends Bundle{
   def is_ecall: Bool = {
     val is_ecall = rod.privil.ecall
     return is_ecall
+  }
+
+  def is_ecall_U: Bool = {
+    val is_ecall_U = is_ecall & csrfiles.priv_lvl === "b00".U
+    return is_ecall_U    
+  }
+
+  def is_ecall_S: Bool = {
+    val is_ecall_S = is_ecall & csrfiles.priv_lvl === "b01".U
+    return is_ecall_S    
+  }
+
+    def is_ecall_M: Bool = {
+    val is_ecall_M = is_ecall & csrfiles.priv_lvl === "b11".U
+    return is_ecall_M    
   }
 
   def is_ebreak_exc: Bool = {
@@ -111,17 +131,17 @@ class CMMState_Bundle extends Bundle{
   }
 
   def is_csrw_illegal: Bool = {
-    val is_csrw_illegal = ( csrExe.op_rc | csrExe.op_rs | csrExe.op_rw ) & ( csrfiles.csr_write_denied(csrFiles.DMode) | csrfiles.csr_read_prilvl(csrFiles.priv_lvl, csrFiles.DMode) )
+    val is_csrw_illegal = ( csrExe.op_rc | csrExe.op_rs | csrExe.op_rw ) & ( csrfiles.csr_write_denied(csrExe.addr) | csrfiles.csr_read_prilvl(csrExe.addr) )
     return is_csrw_illegal
   }
 
   def is_csrr_illegal: Bool = {
-    val is_csrr_illegal = csrfiles.csr_read_prilvl(csrFiles.priv_lvl, csrFiles.DMode)
+    val is_csrr_illegal = csrfiles.csr_read_prilvl(csrExe.addr)
     return is_csrr_illegal
   }
 
   def is_fcsrw_illegal: Bool = {
-    val is_fcsrw_illegal = ( fcsrExe.op_rc | fcsrExe.op_rs | fcsrExe.op_rw ) & (csrFiles.mstatus.fs === 0.U)
+    val is_fcsrw_illegal = ( fcsrExe.op_rc | fcsrExe.op_rs | fcsrExe.op_rw ) & (csrfiles.mstatus.fs === 0.U)
     return is_fcsrw_illegal
   }
 
@@ -133,30 +153,30 @@ class CMMState_Bundle extends Bundle{
       (is_csrw_illegal  & rod.is_csr &  is_wb) |
       (is_fcsrw_illegal & rod.is_fpu &  is_wb)
 
-    val is_ill_sfence = is_wb & rod.is_sfence_vma & ( (csrFiles.mstatus.tvm & csrFiles.priv_lvl === "b01".U) | csrFiles.priv_lvl === "b00".U)
-    val is_ill_wfi_v  = is_wb & rod.is_wfi        & (  csrFiles.mstatus.tw & csrFiles.priv_lvl < "b11".U )
+    val is_ill_sfence = is_wb & rod.is_sfence_vma & ( (csrfiles.mstatus.tvm & csrfiles.priv_lvl === "b01".U) | csrfiles.priv_lvl === "b00".U)
+    val is_ill_wfi  = is_wb & rod.is_wfi        & (  csrfiles.mstatus.tw & csrfiles.priv_lvl < "b11".U )
 
-    val is_ill_mRet_v = rod.privil.mret & csrFiles.priv_lvl =/= "b11".U
-    val is_ill_sRet_v = rod.privil.sret & ( csrFiles.priv_lvl === "b00".U | ( csrFiles.priv_lvl === "b01".U & csrFiles.mstatus.tsr) )
-    val is_ill_dRet_v = rod.privil.dret & ~csrFiles.DMode
-    val is_ill_fpus_v = (is_wb & (rod.is_fcmm | rod.is_fpu) & csrFiles.mstatus.fs === 0.U)
+    val is_ill_mRet = rod.privil.mret & csrfiles.priv_lvl =/= "b11".U
+    val is_ill_sRet = rod.privil.sret & ( csrfiles.priv_lvl === "b00".U | ( csrfiles.priv_lvl === "b01".U & csrfiles.mstatus.tsr) )
+    val is_ill_dRet = rod.privil.dret & ~csrfiles.DMode
+    val is_ill_fpus = (is_wb & (rod.is_fcmm | rod.is_fpu) & csrfiles.mstatus.fs === 0.U)
 
     val is_illeage = rod.is_illeage | is_csr_illegal | is_ill_sfence | is_ill_wfi | is_ill_mRet | is_ill_sRet | is_ill_dRet | is_ill_fpus
-    return is_illeage
+    return is_illeage.asBool
   }
      
   def is_mRet: Bool = {
-    val is_mRet = rod.privil.mret & csrFiles.priv_lvl === "b11".U
+    val is_mRet = rod.privil.mret & csrfiles.priv_lvl === "b11".U
     return is_mRet
   }
 
   def is_sRet: Bool = {
-    val is_sRet = rod.privil.sret & ( csrFiles.priv_lvl === "b11".U | ( csrFiles.priv_lvl === "b01".U & ~csrFiles.mstatus.tsr) )
+    val is_sRet = rod.privil.sret & ( csrfiles.priv_lvl === "b11".U | ( csrfiles.priv_lvl === "b01".U & ~csrfiles.mstatus.tsr.asBool) )
     return is_sRet
   }
 
   def is_dRet: Bool = {
-    val is_dRet = rod.privil.dret & csrFiles.DMode
+    val is_dRet = rod.privil.dret & csrfiles.DMode
     return is_dRet
   }
 
@@ -166,7 +186,7 @@ class CMMState_Bundle extends Bundle{
   }
 
   def is_sfence_vma: Bool = {
-    val is_sfence_vma = rod.is_sfence_vma & is_wb & ( (~csrFiles.mstatus.tvm & csrFiles.priv_lvl === "b01".U) | csrFiles.priv_lvl === "b11".U)
+    val is_sfence_vma = rod.is_sfence_vma & is_wb & ( (~csrfiles.mstatus.tvm.asBool & csrfiles.priv_lvl === "b01".U) | csrfiles.priv_lvl === "b11".U)
     return is_sfence_vma
   }
 
@@ -211,21 +231,21 @@ class CMMState_Bundle extends Bundle{
   def is_ebreak_breakpointn: Bool = {
     val is_ebreak_breakpointn = 
       Mux1H(Seq(
-        ( csrfiles.priv_lvl === "b11".U) -> csrfiles.dcsr(15),
-        ( csrfiles.priv_lvl === "b01".U) -> csrfiles.dcsr(13),
-        ( csrfiles.priv_lvl === "b00".U) -> csrfiles.dcsr(12),
+        ( csrfiles.priv_lvl === "b11".U) -> csrfiles.dcsr.ebreakm,
+        ( csrfiles.priv_lvl === "b01".U) -> csrfiles.dcsr.ebreaks,
+        ( csrfiles.priv_lvl === "b00".U) -> csrfiles.dcsr.ebreaku,
       ))
-    return is_ebreak_breakpointn
+    return is_ebreak_breakpointn.asBool
   }
 
   def is_step_int_block: Bool = {
     val is_step_int_block = ~csrfiles.dcsr.stepie & csrfiles.DMode
-    return is_step_int_block
+    return is_step_int_block.asBool
   }
 
   def is_step: Bool = {
-    val is_step = csrfiles.dcsr.step & DMode
-    return is_step
+    val is_step = csrfiles.dcsr.step & csrfiles.DMode
+    return is_step.asBool
   }
 
   def commit_pc: UInt = {
@@ -239,7 +259,7 @@ class CMMState_Bundle extends Bundle{
   }
 
   def is_debug_interrupt: Bool = {
-    val is_debug_interrupt = ~csrFiles.DMode & (
+    val is_debug_interrupt = ~csrfiles.DMode & (
       exint.is_single_step |
       exint.is_trigger |
       exint.hartHaltReq |
@@ -263,7 +283,7 @@ class CMMState_Bundle extends Bundle{
 
 
 
-abstract class BaseCommit extends RawModule
+abstract class BaseCommit extends Module
 
 
 
@@ -278,7 +298,7 @@ abstract class BaseCommit extends RawModule
   * @note new feature
   * 1. abort can only emmit at chn0 -> abort can emmit at any chn
   */
-class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
+class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
   val io = IO(new Bundle{
     val cm_op = Vec(cm, new Info_commit_op(64))
     val rod = Vec(cm, Flipped(new DecoupledIO( new Info_reorder_i ) ))
@@ -321,24 +341,26 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
   val commit_state_is_cancel  = for ( i <- 0 until cm ) yield commit_state(i) === 1.U
   val commit_state_is_idle    = for ( i <- 0 until cm ) yield commit_state(i) === 0.U
 
+  val cmm_state = Wire( Vec(cm, new CMMState_Bundle ) )
+  val csr_state = Wire( Vec(cm, new CSR_Bundle ) )
+
   val is_retired = ( 0 until cm ).map{ i => {commit_state_is_comfirm(i) | commit_state_is_abort(i)} }
 
   ( 1 until cm ).map{ i =>  assert( ~(is_retired(i) & ~is_retired(i-1)) ) }
 
 
   val csrfiles = Reg(new CSR_Bundle)
-  for( i <- 0 until cm ) yield { when( is_retired(i) { csrfiles := csr_state(i) }  ) }
+  for( i <- 0 until cm ) yield { when( is_retired(i)) { csrfiles := csr_state(i) }   }
   when( reset.asBool ) { resetToDefault(csrfiles) }
 
   val emptyExePort = {
-    val res = Wire(Decoupled( new Exe_Port ))
-    res.valid := false.B
-    res.bits  := 0.U.asTypeOf(new Exe_Port)
-    res.ready := false.B
+    val res = Wire(Vec(cm, Flipped(DecoupledIO( new Exe_Port ) )))
+    res := 0.U.asTypeOf(Vec(cm, Flipped(DecoupledIO( new Exe_Port ) )))
+    res(0) <> io.csr_cmm_op
     res
   }
-  val csrExe  = ReDirect( VecInit(Seq(io.csr_cmm_op) ++ Seq.fill(cm-1)(emptyExePort), VecInit( io.rod.map{_.bits.is_csr} ) ))
-  val fcsrExe = ReDirect( io.fcsr_cmm_op, VecInit( io.rod.map{_.bits.is_fcsr} ) )
+  val csrExe  = ReDirect( emptyExePort, VecInit( io.rod.map{_.bits.is_csr} ) )
+  val fcsrExe = ReDirect( io.fcsr_cmm_op, VecInit( io.rod.map{_.bits.is_fpu} ) )
 
   val is_single_step = RegNext(next = is_retired(0) & cmm_state(0).is_step, init = false.B)
   val is_trigger = false.B
@@ -351,11 +373,10 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
 
 
 
-  val cmm_state = Wire( cm, new CMMState_Bundle )
-  val csr_state = Wire( cm, new CSR_Bundle )
+
   ( 0 until cm ).map{ i => {
     cmm_state(i).rod      := io.rod(i).bits
-    if ( i == 0 ) { cmm_state(i).csrFiles := csrfiles } else { cmm_state(i).csrFiles := csr_state(i-1) }
+    if ( i == 0 ) { cmm_state(i).csrfiles := csrfiles } else { cmm_state(i).csrfiles := csr_state(i-1) }
     
     cmm_state(i).lsu_cmm := io.lsu_cmm
     cmm_state(i).csrExe  := csrExe(i).bits
@@ -365,43 +386,42 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
     cmm_state(i).ill_dvaddr               := io.lsu_cmm.trap_addr
     cmm_state(i).rtc_clock               := io.rtc_clock
 
-    exint.is_single_step := is_single_step
-    exint.is_trigger := false.B
-    exint.emu_reset  := emu_reset
-	  exint.clint_sw_m := false.B
-	  exint.clint_sw_s := false.B
-	  exint.clint_tm_m := false.B
-	  exint.clint_tm_s := false.B
-	  exint.clint_ex_m := false.B
-	  exint.clint_ex_s := false.B 
+    cmm_state(i).exint.is_single_step := is_single_step
+    cmm_state(i).exint.is_trigger := false.B
+    cmm_state(i).exint.emu_reset  := emu_reset
+    cmm_state(i).exint.hartHaltReq := io.dm.hartHaltReq
+	  cmm_state(i).exint.clint_sw_m := false.B
+	  cmm_state(i).exint.clint_sw_s := false.B
+	  cmm_state(i).exint.clint_tm_m := false.B
+	  cmm_state(i).exint.clint_tm_s := false.B
+	  cmm_state(i).exint.clint_ex_m := false.B
+	  cmm_state(i).exint.clint_ex_s := false.B 
 
     csr_state(i) := update_csrfiles(in = cmm_state(i))
 
 
   }}
 
-  val abort_chn = Wire(UInt(log2Ceil(cm).W)) abort_chn := DontCare
+  val abort_chn = Wire(UInt(log2Ceil(cm).W)); abort_chn := DontCare
   ( 1 until cm ).map{ i => assert( commit_state(i) <= commit_state(i-1) ) }
   
   for ( i <- 0 until cm ) yield {
     when( ~io.rod(i).valid ) {
-      commit_state := 0.U //IDLE
-    }
-    
-    .elsewhen( {if( i == 0 ) { false.B } else {commit_state_is_abort(i-1)}} ) {
-      commit_state === 1.U //abort override following as cancel
+      commit_state(i) := 0.U //IDLE
     }
     .otherwise {
       when(
           (io.rod(i).bits.is_branch & io.is_misPredict ) | //1) it is the 1st branch, 2) a branch in-front and mis-predict, this will cancel 
-          is_xRet | is_trap | is_fence_i | is_sfence_vma
+          cmm_state(i).is_xRet | cmm_state(i).is_trap | cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma
         ) {
-        commit_state := 2.U //abort
+        commit_state(i) := 2.U //abort
+        for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
         abort_chn := i.U
-      } .elsewhen( is_wb & ~is_step ) { //when writeback and no-step
-        commit_state := 3.U
+      } .elsewhen( cmm_state(i).is_wb & ~cmm_state(i).is_step ) { //when writeback and no-step
+        commit_state(i) := 3.U
+        for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
       } .otherwise {
-        commit_state := 0.U //idle
+        commit_state(i) := 0.U //idle
       }
     }    
   }
@@ -422,21 +442,21 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
 
 
   for ( i <- 0 until cm ) yield {
-    io.cm_op(i).phy := io.rod(i).rd0_phy
-    io.cm_op(i).raw := io.rod(i).rd0_raw
-    io.cm_op(i).toX := io.rod(i).is_xcmm
-    io.cm_op(i).toF := io.rod(i).is_fcmm 
+    io.cm_op(i).phy := io.rod(i).bits.rd0_phy
+    io.cm_op(i).raw := io.rod(i).bits.rd0_raw
+    io.cm_op(i).toX := io.rod(i).bits.is_xcmm
+    io.cm_op(i).toF := io.rod(i).bits.is_fcmm 
   }
 
   //bru commit ilp
   io.cmm_bru_ilp :=
     (io.rod(0).valid) & io.rod(0).bits.is_branch & (~io.cm_op(0).is_writeback)
-  printf("Warning, preformance enhance require: 1. branch pending only resolved in chn0 -> only one branch pending can be resolved, in any chn.")
+  println("Warning, preformance enhance require: 1. branch pending only resolved in chn0 -> only one branch pending can be resolved, in any chn.")
 
   io.cmm_lsu.is_amo_pending := {
     io.rod(0).valid & io.rod(0).bits.is_amo & ~io.cm_op(0).is_writeback //only pending amo in rod0 is send out
   }
-  printf("Warning, amo_pending can only emmit at chn0")
+  println("Warning, amo_pending can only emmit at chn0")
   
 
 
@@ -450,7 +470,7 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
 
 
   ( 0 until cm ).map{ i =>
-    io.rod(i).ready := is_reitred(i)
+    io.rod(i).ready := is_retired(i)
   }
 
 
@@ -480,8 +500,8 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
         io.cmm_pc.bits.addr := Mux1H(Seq(
             emu_reset                                   -> "h80000000".U,
             cmm_state(i).is_debug_interrupt             -> "h00000000".U,
-            (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec,
-            (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec
+            (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
+            (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
           )),
       } 
       when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
@@ -505,12 +525,13 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
   io.csr_data.valid := io.csr_addr.valid & ~csrfiles.csr_read_prilvl(io.csr_addr.bits)
   
   
-  io.csr_cmm_op.ready := ( 0 until cm ).map{ i =>
-    commit_state_is_comfirm(i) & io.rod(i).bits.is_csr
-  }.reduce(_|_)
+  ( 0 until cm ).map{ i =>
+    csrExe(i).ready := commit_state_is_comfirm(i) & io.rod(i).bits.is_csr
+    assert( ~(csrExe(i).ready & ~csrExe(i).valid) )
+  }
 
-  assert( ~(io.csr_cmm_op.ready & ~io.csr_cmm_op.valid) )
-  printf("Warning, csr can only execute one by one")
+  
+  println("Warning, csr can only execute one by one")
     // io.csr_cmm_op.valid & (
     //   (is_commit_comfirm(0) & io.rod_i(0).bits.is_csr) | 
     //   (is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)		
@@ -518,15 +539,15 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
 
 
   ( 0 until cm ).map{ i => {
-    io.fcsr_cmm_op(i).ready :=
-      commit_state_is_comfirm(i) & io.rod_i(i).bits.is_fpu
+    fcsrExe(i).ready :=
+      commit_state_is_comfirm(i) & io.rod(i).bits.is_fpu
 
-    assert( ~(io.fcsr_cmm_op(i).ready & ~io.fcsr_cmm_op(i).valid) )
+    assert( ~(fcsrExe(i).ready & ~fcsrExe(i).valid) )
   }}
-  printf("Warning, fcsr can only execute one by one")
+  println("Warning, fcsr can only execute one by one")
 
   /** @note fcsr-read will request after cmm_op_fifo clear, frm will never change until fcsr-write */
-  io.fcsr := csrfiles.fcsr 
+  io.fcsr := csrfiles.fcsr.asUInt
 
 
 
@@ -534,13 +555,13 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
 
 
 
-  io.cmm_mmu.satp := csrfiles.satp
-  for ( i <- 0 until 16 ) yield io.cmm_mmu.pmpcfg(i) := csrfiles.pmpcfg(i)
+  io.cmm_mmu.satp := csrfiles.satp.asUInt
+  for ( i <- 0 until 16 ) yield io.cmm_mmu.pmpcfg(i) := csrfiles.pmpcfg(i).asUInt
   for ( i <- 0 until 64 ) yield io.cmm_mmu.pmpaddr(i) := csrfiles.pmpaddr(i)
   io.cmm_mmu.priv_lvl_if   := csrfiles.priv_lvl
-  io.cmm_mmu.priv_lvl_ls   := Mux( csrfiles.mstatus.mprv, csrfiles.mstatus.mpp, csrfiles.priv_lvl )
-  io.cmm_mmu.mstatus    := csrfiles.mstatus
-  io.cmm_mmu.sstatus    := csrfiles.sstatus
+  io.cmm_mmu.priv_lvl_ls   := Mux( csrfiles.mstatus.mprv.asBool, csrfiles.mstatus.mpp, csrfiles.priv_lvl )
+  io.cmm_mmu.mstatus    := csrfiles.mstatus.asUInt
+  io.cmm_mmu.sstatus    := csrfiles.sstatus.asUInt
   io.cmm_mmu.sfence_vma := ( 0 until cm ).map{ i => 
     commit_state_is_abort(i) & cmm_state(i).is_sfence_vma 
   }.reduce(_|_)
@@ -581,7 +602,7 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
     csrfiles.sepc          := 0.U.asTypeOf(UInt(64.W))
     csrfiles.scause        := 0.U.asTypeOf(new CauseBundle)
     csrfiles.stval         := 0.U.asTypeOf(UInt(64.W))
-    csrfiles.sip           := 0.U.asTypeOf(new MSIntBundle)
+    // csrfiles.sip           := 0.U.asTypeOf(new MSIntBundle)
     csrfiles.satp          := 0.U.asTypeOf(new SatpBundle)
     csrfiles.mvendorid     := 0.U
     csrfiles.marchid       := 0.U
@@ -643,7 +664,7 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
     csrfiles.dcsr.step      := 0.U(1.W)
     csrfiles.dcsr.prv       := 3.U(2.W)
 
-    csrfiles.dpc           := 0.U.asTypeOf(new DcsrBundle)
+    csrfiles.dpc           := 0.U
     csrfiles.dscratch0     := 0.U
     csrfiles.dscratch1     := 0.U
     csrfiles.dscratch2     := 0.U
@@ -666,33 +687,33 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
 
 
 
-  io.diff_commit.pc(0) := io.rod_i(0).bits.pc
-  io.diff_commit.pc(1) := io.rod_i(1).bits.pc
-  io.diff_commit.comfirm(0) := is_commit_comfirm(0)
-  io.diff_commit.comfirm(1) := is_commit_comfirm(1)
+  io.diff_commit.pc(0) := io.rod(0).bits.pc
+  io.diff_commit.pc(1) := io.rod(1).bits.pc
+  io.diff_commit.comfirm(0) := commit_state_is_comfirm(0)
+  io.diff_commit.comfirm(1) := commit_state_is_comfirm(1)
   io.diff_commit.abort(0) := io.is_commit_abort(0)
   io.diff_commit.abort(1) := io.is_commit_abort(1)
-  io.diff_commit.priv_lvl := priv_lvl_qout
-  io.diff_commit.is_ecall_M := is_ecall_M
-  io.diff_commit.is_ecall_S := is_ecall_S
-  io.diff_commit.is_ecall_U := is_ecall_U
+  io.diff_commit.priv_lvl := csrfiles.priv_lvl
+  io.diff_commit.is_ecall_M := ( 0 until cm ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_M }}.reduce(_|_)
+  io.diff_commit.is_ecall_S := ( 0 until cm ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_S }}.reduce(_|_)
+  io.diff_commit.is_ecall_U := ( 0 until cm ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_U }}.reduce(_|_)
 
 
-	io.diff_csr.mstatus   := mstatus
-	io.diff_csr.mtvec     := mtvec
-	io.diff_csr.mscratch  := mscratch
-	io.diff_csr.mepc      := mepc
-	io.diff_csr.mcause    := mcause
-	io.diff_csr.mtval     := mtval
-  io.diff_csr.mvendorid := mvendorid
-  io.diff_csr.marchid   := marchid
-  io.diff_csr.mimpid    := mimpid
-  io.diff_csr.mhartid   := mhartid
-  io.diff_csr.misa      := misa
-  io.diff_csr.mie       := mie
-  io.diff_csr.mip       := mip
-  io.diff_csr.medeleg   := medeleg
-  io.diff_csr.mideleg   := mideleg
+	io.diff_csr.mstatus   := csrfiles.mstatus.asUInt
+	io.diff_csr.mtvec     := csrfiles.mtvec.asUInt
+	io.diff_csr.mscratch  := csrfiles.mscratch
+	io.diff_csr.mepc      := csrfiles.mepc
+	io.diff_csr.mcause    := csrfiles.mcause.asUInt
+	io.diff_csr.mtval     := csrfiles.mtval
+  io.diff_csr.mvendorid := csrfiles.mvendorid
+  io.diff_csr.marchid   := csrfiles.marchid
+  io.diff_csr.mimpid    := csrfiles.mimpid
+  io.diff_csr.mhartid   := csrfiles.mhartid
+  io.diff_csr.misa      := csrfiles.misa
+  io.diff_csr.mie       := csrfiles.mie.asUInt
+  io.diff_csr.mip       := csrfiles.mip.asUInt
+  io.diff_csr.medeleg   := csrfiles.medeleg
+  io.diff_csr.mideleg   := csrfiles.mideleg
   // io.diff_csr.mcounteren           = mcounteren
   // io.diff_csr.mcountinhibit        = mcountinhibit
   // io.diff_csr.tselect              = tselect
@@ -701,24 +722,24 @@ class Commit(cm: Int=2) extends CsrFiles with BaseCommit {
   // io.diff_csr.tdata3[MAX_TRIGGERS] = tdata3
   // io.diff_csr.mhpmevent[32]        = mhpmevent
   for ( i <- 0 until 4 ) yield {
-    io.diff_csr.pmpcfg(i) := pmpcfg(i)
+    io.diff_csr.pmpcfg(i) := csrfiles.pmpcfg(i).asUInt
   }
   for ( i <- 0 until 16 ) yield {
-	  io.diff_csr.pmpaddr(i)  := pmpaddr(i)  
+	  io.diff_csr.pmpaddr(i)  := csrfiles.pmpaddr(i)  
   }
 
-  io.diff_csr.stvec    := stvec
-  io.diff_csr.sscratch := sscratch
-  io.diff_csr.sepc     := sepc
-  io.diff_csr.scause   := scause
-  io.diff_csr.stval    := stval
-  io.diff_csr.satp     := satp
+  io.diff_csr.stvec    := csrfiles.stvec.asUInt
+  io.diff_csr.sscratch := csrfiles.sscratch
+  io.diff_csr.sepc     := csrfiles.sepc
+  io.diff_csr.scause   := csrfiles.scause.asUInt
+  io.diff_csr.stval    := csrfiles.stval.asUInt
+  io.diff_csr.satp     := csrfiles.satp.asUInt
   // io.diff_csr.scounteren := scounteren
   // io.diff_csr.dcsr       := dcsr
   // io.diff_csr.dpc        := dpc
   // io.diff_csr.dscratch   := dscratch
-  io.diff_csr.fflags  := fcsr(4,0)
-  io.diff_csr.frm     := fcsr(7,5)
+  io.diff_csr.fflags  := csrfiles.fcsr.fflags
+  io.diff_csr.frm     := csrfiles.fcsr.frm
 
 
 
