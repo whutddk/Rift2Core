@@ -70,10 +70,24 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
 
   val rd_buff = buff(rd_ptr)
 
-  val is_amo = {
-    val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending & ~io.flush & ~io.is_empty, false.B)
-    (is_amo_pre === false.B) & (io.cmm_lsu.is_amo_pending === true.B  & ~io.flush & ~io.is_empty)
+  val is_amo = RegInit(false.B)
+
+  {
+    val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending, false.B)
+    val is_amo_pos = io.cmm_lsu.is_amo_pending & ~is_amo_pre
+    when( io.flush ) {
+      is_amo := false.B
+    } .elsewhen( is_amo_pos ) {
+      is_amo := true.B
+    } .elsewhen(is_amo & ~io.is_empty) {
+      is_amo := false.B
+    }
   }
+
+  // val is_amo = {
+  //   val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending & ~io.flush, false.B)
+  //   (is_amo_pre === false.B) & (io.cmm_lsu.is_amo_pending & ~io.flush)
+  // }
 
   val is_st_commited = VecInit( io.cmm_lsu.is_store_commit(0), io.cmm_lsu.is_store_commit(1) )
   io.enq.ready := ~full
@@ -99,9 +113,11 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
     cm_ptr_reg := cm_ptr_reg + 2.U
     // assert( is_st_commited(0) )
     assert( ~is_amo )
-  } .elsewhen( is_st_commited(0) | is_amo | is_st_commited(1) ) {
+    assert( cm_ptr_reg =/= wr_ptr_reg & cm_ptr_reg =/= (wr_ptr_reg-1.U) )
+  } .elsewhen( is_st_commited(0) | (is_amo & ~io.is_empty) | is_st_commited(1) ) {
     cm_ptr_reg := cm_ptr_reg + 1.U
-    assert( ~((is_st_commited(0) | is_st_commited(1)) & is_amo), "Assert Failed, is_amo only launch at chn 0!\n" )
+    assert( ~((is_st_commited(0) | is_st_commited(1)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
+    assert( cm_ptr_reg =/= wr_ptr_reg )
   }
 
     io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)

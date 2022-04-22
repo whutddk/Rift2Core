@@ -24,7 +24,6 @@ import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.diff._
 import rift2Core.privilege._
-import axi._
 import debug._
 
 import chipsalliance.rocketchip.config._
@@ -212,19 +211,19 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   i_mmu.io.if_flush := if_stage.io.flush
   i_mmu.io.lsu_flush := exe_stage.io.flush
-  if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | bd_stage.io.bd_pc.valid | exe_stage.io.bru_pd_j.valid
+  if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | bd_stage.io.bd_pc.valid | exe_stage.io.bru_pd_j.valid
   // pd_stage.io.flush  := exe_stage.io.icache_fence_req
-  bd_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | exe_stage.io.bru_pd_j.valid 
+  bd_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | exe_stage.io.bru_pd_j.valid 
   // id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) 
-  dpt_stage.reset := cmm_stage.io.is_commit_abort(0) | reset.asBool
-  iss_stage.reset := cmm_stage.io.is_commit_abort(0) | reset.asBool
-  exe_stage.io.flush := cmm_stage.io.is_commit_abort(0)
+  dpt_stage.reset := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | reset.asBool
+  iss_stage.reset := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | reset.asBool
+  exe_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 
   cmm_stage.io.is_misPredict := bd_stage.io.is_misPredict_taken
 
 
   cmm_stage.io.cm_op <> iwb_stage.io.commit
-  cmm_stage.io.rod_i <> dpt_stage.io.rod_i
+  cmm_stage.io.rod <> dpt_stage.io.rod_i
   cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
   cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
   cmm_stage.io.cmm_bru_ilp <> exe_stage.io.cmm_bru_ilp

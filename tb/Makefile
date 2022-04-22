@@ -245,7 +245,7 @@ isa += rv64uf-v-recoding
 
 .DEFAULT_GOAL = unit
 
-.PHONY: unit clean
+.PHONY: unit clean torture
 
 
 
@@ -267,8 +267,6 @@ VSimTop:
 	rm -f ./build/*.a
 	verilator -Wno-fatal  \
 	--timescale "1 ns / 1 ps" \
-	-O3 \
-	--threads 30 \
 	-y ${R2}/generated/ \
 	-y ${R2}/tb/ \
 	-y ${R2}/tb/vtb/ \
@@ -292,6 +290,9 @@ unit: VSimTop
 # TESTFILE ?= rv64ui-p-add
 single: VSimTop
 	./build/VSimTop -w -d -l -f ./ci/$(TESTFILE)
+
+torture:
+	./build/VSimTop -w -d -l -f ./torture/output/test
 
 dromajo:
 	verilator -Wno-fatal  \
@@ -318,7 +319,7 @@ dhrystone500: VSimTop
 
 
 coremark: VSimTop
-	./build/VSimTop -f ./ci/coremark1_bare
+	./build/VSimTop -w -f ./ci/coremark1_bare
 
 wave:
 	gtkwave ./build/wave.vcd &

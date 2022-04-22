@@ -32,6 +32,10 @@
 
 
 char* img;
+VSimTop *top;
+#if VM_TRACE
+VerilatedVcdC* tfp;
+#endif
 vluint64_t main_time = 0;
 
 double sc_time_stamp () {
@@ -75,6 +79,19 @@ int prase_arg(int argc, char **argv) {
 	return 0;
 }
 
+static void sim_exit(){
+#if VM_TRACE
+	if ( flag_waveEnable ) { tfp->close(); }
+#endif
+
+	top->final();
+
+	if ( flag_diffEnable ) { dromajo_deinit(); }
+
+	delete top;
+}
+
+
 
 
 
@@ -104,10 +121,10 @@ int main(int argc, char **argv, char **env) {
 
 
 
-	VSimTop *top = new VSimTop();
+	top = new VSimTop();
 
 #if VM_TRACE
-	VerilatedVcdC* tfp = new VerilatedVcdC;;
+	tfp = new VerilatedVcdC;;
 	if (flag_waveEnable) {
 		Verilated::traceEverOn(true);
 		top->trace(tfp, 99); // Trace 99 levels of hierarchy
@@ -140,19 +157,21 @@ int main(int argc, char **argv, char **env) {
 				if ( flag_chk ) {
 					if ( -1 == diff_chk_reg(top) ) {
 						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-						break;
+						sim_exit();
+						return -1;
 					}
 					flag_chk = 0;
 				}
 			}
 
-			if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
+			if ( top->trace_comfirm_0 && (top->trace_comfirm_1 || top->trace_abort_1) ) {
 				// printf("real pc = %lx, real t0 = %lx\n", top->trace_pc_1, top->trace_abi_t0);
 
 				if ( flag_diffEnable ) {
 					if ( -1 == diff_chk_pc(top) ) {
 						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-						break;
+						sim_exit();
+						return -1;
 					}
 
 					dromajo_step();
@@ -166,25 +185,17 @@ int main(int argc, char **argv, char **env) {
 				if ( flag_diffEnable ) {
 					if ( -1 == diff_chk_pc(top) ) {
 						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-						break;
+						sim_exit();
+						return -1;
 					}
 
 					dromajo_step();
 					flag_chk = 1;					
 				}
 
-			} else {
-				;
-			}
+			} else { ; }
 
 		} 
-
-
-
-
-
-
-
 
 		top->eval();
 
@@ -198,40 +209,29 @@ int main(int argc, char **argv, char **env) {
 		if ( flag_limitEnable ) {
 			if ( main_time > 5000000 ){
 				std::cout << "Timeout!!!!!" << std::endl;	
-				break;
+				sim_exit();
+				return -1;
 			} 			
 		}
 
 		if ( top -> fail == 1 && main_time % 100 == 0 ) {
 			std::cout << "Fail!!!!!!" << std::endl;	
-			break;			
+			sim_exit();
+			return -1;
 		}
 		else if ( top -> success == 1 && main_time % 100 == 0 ) {
 			std::cout << "Pass!" << std::endl;	
-			break;			
+			sim_exit();
+			return 0;			
 		} 
 
 
 		main_time ++;
 	}
-#if VM_TRACE
-	if ( flag_waveEnable ) {
-		tfp->close();		
-	}
 
-#endif
-	top->final();
-
-	if ( flag_diffEnable ) {
-		dromajo_deinit();		
-	}
-
-
-	delete top;
 	
+	sim_exit();
 	return 0;
-
-
 
 
 }

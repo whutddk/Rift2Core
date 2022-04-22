@@ -54,7 +54,7 @@ class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm
     val mem_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65, dp)))
     val fpu_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65, dp)))
 
-    val commit = Vec(cmm_chn, Flipped(Decoupled(new Info_commit_op(dp))))
+    val commit = Vec(cmm_chn, Flipped((new Info_commit_op(dp))))
 
     val diffXReg = Output(Vec(32, UInt(64.W)))
     val diffFReg = Output(Vec(32, UInt(65.W)))
@@ -73,21 +73,25 @@ class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm
 
 
   for ( i <- 0 until cmm_chn ) yield {
-    iReg.io.commit(i).valid := false.B
-    iReg.io.commit(i).bits  := 0.U.asTypeOf(new Info_commit_op(dp))
-    fReg.io.commit(i).valid := false.B
-    fReg.io.commit(i).bits  := 0.U.asTypeOf(new Info_commit_op(dp))
-    io.commit(i).ready := false.B
+    iReg.io.commit(i).is_comfirm := false.B
+    iReg.io.commit(i).is_abort   := io.commit(i).is_abort
+    iReg.io.commit(i).raw        := 0.U
+    iReg.io.commit(i).phy        := 0.U
+    iReg.io.commit(i).toX        := false.B
+    iReg.io.commit(i).toF        := false.B
 
-    when( io.commit(i).bits.toX === true.B ) {iReg.io.commit(i) <> io.commit(i)}
-    .elsewhen( io.commit(i).bits.toF === true.B ) {fReg.io.commit(i) <> io.commit(i)}
+    fReg.io.commit(i).is_comfirm := false.B
+    fReg.io.commit(i).is_abort   := io.commit(i).is_abort
+    fReg.io.commit(i).raw        := 0.U
+    fReg.io.commit(i).phy        := 0.U
+    fReg.io.commit(i).toX        := false.B
+    fReg.io.commit(i).toF        := false.B
 
-    when( io.commit(i).bits.is_abort & io.commit(i).valid ) {
-      iReg.io.commit(i).valid := true.B
-      fReg.io.commit(i).valid := true.B
-      iReg.io.commit(i).bits.is_abort := true.B
-      fReg.io.commit(i).bits.is_abort := true.B
-    }
+    io.commit(i).is_writeback := false.B
+
+    when( io.commit(i).toX === true.B ) {iReg.io.commit(i) <> io.commit(i)}
+    .elsewhen( io.commit(i).toF === true.B ) {fReg.io.commit(i) <> io.commit(i)}
+
   }
 
 

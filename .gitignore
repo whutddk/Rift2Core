@@ -360,3 +360,6 @@ tb/null
 *.fir
 tb/obj_dir/
 *metals.sbt
+tb/torture
+
+tb/compile/env/
