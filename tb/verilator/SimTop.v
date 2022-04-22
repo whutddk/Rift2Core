@@ -133,6 +133,7 @@ module SimTop (
   output trace_comfirm_0,
   output trace_comfirm_1,
   output trace_abort_0,
+  output trace_abort_1,
   output [1:0] trace_priv,
 
 	output [63:0] trace_mstatus,
@@ -487,8 +488,18 @@ reg fail_reg = 1'b0;
 assign success = success_reg;
 assign fail = fail_reg;
 
+reg is_ecall_U_reg = 1'b0;
+reg is_ecall_M_reg = 1'b0;
+reg is_ecall_S_reg = 1'b0;
+
+always @(posedge CLK) begin
+  is_ecall_U_reg <= is_ecall_U;
+  is_ecall_M_reg <= is_ecall_M;
+  is_ecall_S_reg <= is_ecall_S;
+end
+
 always @(negedge CLK ) begin
-	if ( is_ecall_U | is_ecall_M | is_ecall_S ) begin
+	if ( is_ecall_U_reg | is_ecall_M_reg | is_ecall_S_reg ) begin
 		if ( gp == 64'd1 ) begin
 			// $display("PASS");
 			success_reg = 1'b1;
@@ -652,6 +663,7 @@ end
   assign trace_comfirm_0 = s_Rift2Chip.i_rift2Core.diff.io_commit_comfirm_0;
   assign trace_comfirm_1 = s_Rift2Chip.i_rift2Core.diff.io_commit_comfirm_1;
   assign trace_abort_0 = s_Rift2Chip.i_rift2Core.diff.io_commit_abort_0;
+  assign trace_abort_1 = s_Rift2Chip.i_rift2Core.diff.io_commit_abort_1;
 
   assign trace_priv = s_Rift2Chip.i_rift2Core.diff.io_commit_priv_lvl;
 

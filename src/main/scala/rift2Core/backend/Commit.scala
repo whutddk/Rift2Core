@@ -26,23 +26,278 @@ import rift2Core.frontend._
 import rift2Core.L1Cache._
 import rift2Core.backend._
 import rift2Core.privilege._
-import rift2Core.privilege.csrFiles._
 import debug._
+import chisel3.experimental._
+import base._
 
 import rift2Core.diff._
 
+class ExInt_Bundle extends Bundle {
+  val is_single_step = Bool()
+  val is_trigger = Bool()
+  val hartHaltReq = Bool()
+
+  val emu_reset = Bool()
+	val clint_sw_m = Bool()
+	val clint_sw_s = Bool()
+	val clint_tm_m = Bool()
+	val clint_tm_s = Bool()
+	val clint_ex_m = Bool()
+	val clint_ex_s = Bool()  
+}
+
+
+@chiselName
+class CMMState_Bundle extends Bundle{
+  val rod = new Info_reorder_i
+  val csrfiles = new CSR_Bundle
+  val lsu_cmm = new Info_lsu_cmm
+
+  val csrExe = new Exe_Port
+  val fcsrExe = new Exe_Port
+  val is_wb = Bool()
+  val ill_ivaddr = UInt(64.W)
+	val ill_dvaddr = UInt(64.W)
+  val is_csrr_illegal = Bool()
+  val rtc_clock = Bool()
+  val exint = new ExInt_Bundle
+
+  def is_load_accessFault: Bool = {
+    val is_load_accessFault = lsu_cmm.is_access_fault & rod.is_lu & ~is_wb
+    return is_load_accessFault
+  }
+
+  def is_store_accessFault: Bool = {
+    val is_store_accessFault = lsu_cmm.is_access_fault & ( rod.is_su | rod.is_amo ) & ~is_wb
+    return is_store_accessFault
+  }
+
+  def is_load_pagingFault: Bool = {
+    val is_load_pagingFault = lsu_cmm.is_paging_fault & rod.is_lu & ~is_wb
+    return is_load_pagingFault
+  }
+
+  def is_store_pagingFault: Bool = {
+    val is_store_pagingFault = lsu_cmm.is_paging_fault & ( rod.is_su | rod.is_amo ) & ~is_wb
+    return is_store_pagingFault
+  }
+
+  def is_load_misAlign: Bool = {
+    val is_load_misAlign = lsu_cmm.is_misAlign & rod.is_lu & ~is_wb
+    return is_load_misAlign
+  }
+
+  def is_instr_misAlign: Bool = {
+    return false.B
+  }
+
+  def is_store_misAlign: Bool = {
+    val is_store_misAlign = lsu_cmm.is_misAlign & (rod.is_su | rod.is_amo) & ~is_wb
+    return is_store_misAlign
+  }
+
+  def is_ecall: Bool = {
+    val is_ecall = rod.privil.ecall
+    return is_ecall
+  }
+
+  def is_ecall_U: Bool = {
+    val is_ecall_U = is_ecall & csrfiles.priv_lvl === "b00".U
+    return is_ecall_U    
+  }
+
+  def is_ecall_S: Bool = {
+    val is_ecall_S = is_ecall & csrfiles.priv_lvl === "b01".U
+    return is_ecall_S    
+  }
+
+    def is_ecall_M: Bool = {
+    val is_ecall_M = is_ecall & csrfiles.priv_lvl === "b11".U
+    return is_ecall_M    
+  }
+
+  def is_ebreak_exc: Bool = {
+    val is_ebreak_exc = rod.privil.ebreak & ~is_ebreak_breakpointn
+    return is_ebreak_exc
+  }
+
+  def is_instr_access_fault: Bool = {
+    val is_instr_access_fault = rod.privil.is_access_fault
+    return is_instr_access_fault
+  }
+
+  def is_instr_paging_fault: Bool = {
+    val is_instr_paging_fault = rod.privil.is_paging_fault
+    return is_instr_paging_fault
+  }
+
+  def is_csrw_illegal: Bool = {
+    val is_csrw_illegal = ( csrExe.op_rc | csrExe.op_rs | csrExe.op_rw ) & ( csrfiles.csr_write_denied(csrExe.addr) | csrfiles.csr_read_prilvl(csrExe.addr) )
+    return is_csrw_illegal
+  }
+
+  def is_fcsrw_illegal: Bool = {
+    val is_fcsrw_illegal = ( fcsrExe.op_rc | fcsrExe.op_rs | fcsrExe.op_rw ) & (csrfiles.mstatus.fs === 0.U)
+    return is_fcsrw_illegal
+  }
+
+      
+
+  def is_illeage: Bool = {
+    val is_csr_illegal = 
+      (is_csrr_illegal  & rod.is_csr & ~is_wb) |
+      (is_csrw_illegal  & rod.is_csr &  is_wb) |
+      (is_fcsrw_illegal & rod.is_fcsr &  is_wb)
+
+    val is_ill_sfence = is_wb & rod.is_sfence_vma & ( (csrfiles.mstatus.tvm & csrfiles.priv_lvl === "b01".U) | csrfiles.priv_lvl === "b00".U)
+    val is_ill_wfi  = is_wb & rod.is_wfi        & (  csrfiles.mstatus.tw & csrfiles.priv_lvl < "b11".U )
+
+    val is_ill_mRet = rod.privil.mret & csrfiles.priv_lvl =/= "b11".U
+    val is_ill_sRet = rod.privil.sret & ( csrfiles.priv_lvl === "b00".U | ( csrfiles.priv_lvl === "b01".U & csrfiles.mstatus.tsr) )
+    val is_ill_dRet = rod.privil.dret & ~csrfiles.DMode
+    val is_ill_fpus = (is_wb & (rod.is_fpu) & csrfiles.mstatus.fs === 0.U)
+
+    val is_illeage = rod.is_illeage | is_csr_illegal | is_ill_sfence | is_ill_wfi | is_ill_mRet | is_ill_sRet | is_ill_dRet | is_ill_fpus
+    return is_illeage.asBool
+  }
+     
+  def is_mRet: Bool = {
+    val is_mRet = rod.privil.mret & csrfiles.priv_lvl === "b11".U
+    return is_mRet
+  }
+
+  def is_sRet: Bool = {
+    val is_sRet = rod.privil.sret & ( csrfiles.priv_lvl === "b11".U | ( csrfiles.priv_lvl === "b01".U & ~csrfiles.mstatus.tsr.asBool) )
+    return is_sRet
+  }
+
+  def is_dRet: Bool = {
+    val is_dRet = rod.privil.dret & csrfiles.DMode
+    return is_dRet
+  }
+
+  def is_fence_i: Bool = {
+    val is_fence_i = rod.is_fence_i & is_wb
+    return is_fence_i
+  }
+
+  def is_sfence_vma: Bool = {
+    val is_sfence_vma = rod.is_sfence_vma & is_wb & ( (~csrfiles.mstatus.tvm.asBool & csrfiles.priv_lvl === "b01".U) | csrfiles.priv_lvl === "b11".U)
+    return is_sfence_vma
+  }
+
+
+  def is_exception: Bool = {
+    val is_exception = 
+      is_ecall                 |
+      is_ebreak_exc            |
+      is_instr_access_fault    |
+      is_instr_paging_fault    |
+      is_illeage               |
+      is_load_accessFault      |
+      is_store_accessFault     |
+      is_load_misAlign         |
+      is_store_misAlign        |
+      is_load_pagingFault      |
+      is_store_pagingFault
+    return is_exception
+  }
+
+  def is_interrupt: Bool = {
+    val is_interrupt = ((csrfiles.is_m_interrupt | csrfiles.is_s_interrupt) & ~is_step_int_block) | is_nomask_interrupt
+    return is_interrupt
+  }
+
+	def is_trap: Bool = {
+    val is_trap = is_interrupt | is_exception
+    return is_trap
+  } 
+
+  def is_xRet: Bool = {
+    val is_xRet = is_mRet | is_sRet | is_dRet
+    return is_xRet
+  }
+
+  def is_fpu_state_change: Bool = {
+    val is_fpu_state_change = ~is_trap & (rod.is_fpu)
+    return is_fpu_state_change
+  }
+
+
+  def is_ebreak_breakpointn: Bool = {
+    val is_ebreak_breakpointn = 
+      Mux1H(Seq(
+        ( csrfiles.priv_lvl === "b11".U) -> csrfiles.dcsr.ebreakm,
+        ( csrfiles.priv_lvl === "b01".U) -> csrfiles.dcsr.ebreaks,
+        ( csrfiles.priv_lvl === "b00".U) -> csrfiles.dcsr.ebreaku,
+      ))
+    return is_ebreak_breakpointn.asBool
+  }
+
+  def is_step_int_block: Bool = {
+    val is_step_int_block = ~csrfiles.dcsr.stepie & csrfiles.DMode
+    return is_step_int_block.asBool
+  }
+
+  def is_step: Bool = {
+    val is_step = csrfiles.dcsr.step & csrfiles.DMode
+    return is_step.asBool
+  }
+
+  def commit_pc: UInt = {
+    val commit_pc = rod.pc
+    return commit_pc
+  } 
+
+  def is_ebreak_dm: Bool = {
+    val is_ebreak_dm = rod.privil.ebreak & is_ebreak_breakpointn
+    return is_ebreak_dm
+  }
+
+  def is_debug_interrupt: Bool = {
+    val is_debug_interrupt = ~csrfiles.DMode & (
+      exint.is_single_step |
+      exint.is_trigger |
+      exint.hartHaltReq |
+      is_ebreak_dm      
+    )    
+    return is_debug_interrupt
+  }
+
+  def is_nomask_interrupt: Bool = {
+    val is_nomask_interrupt = is_debug_interrupt | exint.emu_reset
+    return is_nomask_interrupt
+  }
+
+
+  
+
+
+}
+
+
+
+
+
+abstract class BaseCommit extends Module
+
+
+
+
 /** commit
-  * 
-  * 
-  * 
+  * @note for every commit-chn, it can be:
+  * comfirm: commit at this tick
+  * abort: cancel and flush at this tick
+  * cancel: the perivious chn abort
+  * idle: empty line or waitting to check whether is comfirm or abort
+  *
+  * @note new feature
+  * 1. abort can only emmit at chn0 -> abort can emmit at any chn
   */
-class Commit extends Privilege with Superscalar {
+class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
   val io = IO(new Bundle{
-    val cm_op = Vec(2, Decoupled(new Info_commit_op(64)))
-    // val log = Input(Vec(64, UInt(2.W)))
-
-
-    val rod_i = Vec(2, Flipped(new DecoupledIO( new Info_reorder_i ) ))
+    val cm_op = Vec(cm, new Info_commit_op(64))
+    val rod = Vec(cm, Flipped(new DecoupledIO( new Info_reorder_i ) ))
 
     val cmm_lsu = Output(new Info_cmm_lsu)
     val lsu_cmm = Input( new Info_lsu_cmm )
@@ -54,7 +309,7 @@ class Commit extends Privilege with Superscalar {
     val csr_cmm_op = Flipped(DecoupledIO( new Exe_Port ) )
 
     val is_misPredict = Input(Bool())
-    val is_commit_abort = Vec(2, Output( Bool() ))
+    val is_commit_abort = Vec(cm, Output( Bool() ))
 
     val cmm_pc = new ValidIO(new Info_cmm_pc)
     val if_cmm = Input( new Info_if_cmm )
@@ -65,7 +320,7 @@ class Commit extends Privilege with Superscalar {
 
 
     val fcsr = Output(UInt(24.W))
-    val fcsr_cmm_op = Flipped(DecoupledIO( new Exe_Port ) )
+    val fcsr_cmm_op = Vec(cm, Flipped(DecoupledIO( new Exe_Port ) ))
 
     val dm = Flipped(new Info_DM_cmm)
 
@@ -76,315 +331,188 @@ class Commit extends Privilege with Superscalar {
   })
 
 
-  val rd0_raw = VecInit( io.rod_i(0).bits.rd0_raw, io.rod_i(1).bits.rd0_raw )
-  val rd0_phy = VecInit( io.rod_i(0).bits.rd0_phy, io.rod_i(1).bits.rd0_phy )
-  val is_xcmm = VecInit( io.rod_i.map{ x => x.bits.is_xcmm }: Seq[Bool] )
-  val is_fcmm = VecInit( io.rod_i.map{ x => x.bits.is_fcmm }: Seq[Bool] )
+  val commit_state = Wire( Vec( cm, UInt(2.W)) )
+  val commit_state_is_comfirm = for ( i <- 0 until cm ) yield commit_state(i) === 3.U
+  val commit_state_is_abort   = for ( i <- 0 until cm ) yield commit_state(i) === 2.U
+  val commit_state_is_cancel  = for ( i <- 0 until cm ) yield commit_state(i) === 1.U
+  val commit_state_is_idle    = for ( i <- 0 until cm ) yield commit_state(i) === 0.U
 
-  io.cm_op(0).bits.phy := rd0_phy(0)
-  io.cm_op(1).bits.phy := rd0_phy(1)
-  io.cm_op(0).bits.raw := rd0_raw(0)
-  io.cm_op(1).bits.raw := rd0_raw(1)
+  val cmm_state = Wire( Vec(cm, new CMMState_Bundle ) )
+  val csr_state = Wire( Vec(cm, new CSR_Bundle ) )
 
-  io.cm_op(0).bits.toX := is_xcmm(0)
-  io.cm_op(1).bits.toX := is_xcmm(1)
-  io.cm_op(0).bits.toF := is_fcmm(0)
-  io.cm_op(1).bits.toF := is_fcmm(1)
+  val is_retired = ( 0 until cm ).map{ i => {commit_state_is_comfirm(i) | commit_state_is_abort(i)} }
+
+  ( 1 until cm ).map{ i =>  assert( ~(is_retired(i) & ~is_retired(i-1)) ) }
+
+
+  val csrfiles = Reg(new CSR_Bundle)
+  for( i <- 0 until cm ) yield { when( is_retired(i)) { csrfiles := csr_state(i) }   }
+  when( reset.asBool ) { resetToDefault(csrfiles) }
+
+  val emptyExePort = {
+    val res = Wire(Vec(cm, Flipped(DecoupledIO( new Exe_Port ) )))
+    res := 0.U.asTypeOf(Vec(cm, Flipped(DecoupledIO( new Exe_Port ) )))
+    res(0) <> io.csr_cmm_op
+    res
+  }
+  val csrExe  = ReDirect( emptyExePort, VecInit( io.rod.map{_.bits.is_csr} ) )
+  val fcsrExe = ReDirect( io.fcsr_cmm_op, VecInit( io.rod.map{_.bits.is_fcsr} ) )
+
+  val is_single_step = RegNext(next = is_retired(0) & cmm_state(0).is_step, init = false.B)
+  val is_trigger = false.B
+
+  val emu_reset = RegInit( false.B )
+  when( io.dm.hartResetReq ) { emu_reset := true.B }
+  .elsewhen( emu_reset ) { emu_reset := false.B }
+  io.dm.hartIsInReset := emu_reset
+
+
+
+
+
+  ( 0 until cm ).map{ i => {
+    cmm_state(i).rod      := io.rod(i).bits
+    if ( i == 0 ) { cmm_state(i).csrfiles := csrfiles } else { cmm_state(i).csrfiles := csr_state(i-1) }
+    
+    cmm_state(i).lsu_cmm := io.lsu_cmm
+    cmm_state(i).csrExe  := csrExe(i).bits
+    cmm_state(i).fcsrExe := fcsrExe(i).bits
+    cmm_state(i).is_wb   := io.cm_op(i).is_writeback
+    cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
+    cmm_state(i).ill_dvaddr               := io.lsu_cmm.trap_addr
+    cmm_state(i).rtc_clock               := io.rtc_clock
+    cmm_state(i).is_csrr_illegal         := cmm_state(i).csrfiles.csr_read_prilvl(io.csr_addr.bits) & io.csr_addr.valid
+
+    cmm_state(i).exint.is_single_step := is_single_step
+    cmm_state(i).exint.is_trigger := false.B
+    cmm_state(i).exint.emu_reset  := emu_reset
+    cmm_state(i).exint.hartHaltReq := io.dm.hartHaltReq
+	  cmm_state(i).exint.clint_sw_m := false.B
+	  cmm_state(i).exint.clint_sw_s := false.B
+	  cmm_state(i).exint.clint_tm_m := false.B
+	  cmm_state(i).exint.clint_tm_s := false.B
+	  cmm_state(i).exint.clint_ex_m := false.B
+	  cmm_state(i).exint.clint_ex_s := false.B 
+
+    csr_state(i) := update_csrfiles(in = cmm_state(i))
+
+
+  }}
+
+  val abort_chn = Wire(UInt(log2Ceil(cm).W)); abort_chn := DontCare
+  ( 1 until cm ).map{ i => assert( commit_state(i) <= commit_state(i-1) ) }
   
-  val is_wb_v =
-    VecInit(
-      (io.cm_op(0).ready & (io.rod_i(0).valid)),
-      (io.cm_op(1).ready & (io.rod_i(1).valid))
-    )
+  for ( i <- 0 until cm ) yield {
+    when( (~io.rod(i).valid)  ) {
+      commit_state(i) := 0.U //IDLE
+    }
+    .otherwise {
+      when(
+          (io.rod(i).bits.is_branch & io.is_misPredict ) | //1) it is the 1st branch, 2) a branch in-front and mis-predict, this will cancel 
+          cmm_state(i).is_xRet | cmm_state(i).is_trap | cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma
+        ) {
+        commit_state(i) := 2.U //abort
+        for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
+        abort_chn := i.U
+      } .elsewhen( cmm_state(i).is_wb & ~cmm_state(i).is_step ) { //when writeback and no-step
+        when( (io.rod(i).bits.is_csr & ~csrExe(i).valid) || (io.rod(i).bits.is_fcsr & ~fcsrExe(i).valid) ) {
+          commit_state(i) := 0.U
+        } .otherwise {
+          commit_state(i) := 3.U
+        }
+        for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
+      } .otherwise {
+        commit_state(i) := 0.U //idle
+      }
+    }    
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  for ( i <- 0 until cm ) yield {
+    io.cm_op(i).phy := io.rod(i).bits.rd0_phy
+    io.cm_op(i).raw := io.rod(i).bits.rd0_raw
+    io.cm_op(i).toX := io.rod(i).bits.is_xcmm
+    io.cm_op(i).toF := io.rod(i).bits.is_fcmm 
+  }
 
   //bru commit ilp
-  io.cmm_bru_ilp := (io.rod_i(0).valid) & io.rod_i(0).bits.is_branch & (~io.cm_op(0).ready)
+  io.cmm_bru_ilp :=
+    (io.rod(0).valid) & io.rod(0).bits.is_branch & (~io.cm_op(0).is_writeback)
+  println("Warning, preformance enhance require: 1. branch pending only resolved in chn0 -> only one branch pending can be resolved, in any chn.")
 
-  val is_1st_solo = io.is_commit_abort(0) | io.rod_i(0).bits.is_csr | io.rod_i(0).bits.is_su | ~is_wb_v(0) | (io.rod_i(0).bits.rd0_raw === io.rod_i(1).bits.rd0_raw)
-  val is_2nd_solo = io.is_commit_abort(1) | io.rod_i(1).bits.is_csr | io.rod_i(1).bits.is_su
-
-    val is_load_accessFault_ack_v =
-      VecInit(
-        io.lsu_cmm.is_access_fault & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
-        io.lsu_cmm.is_access_fault & io.rod_i(1).bits.is_lu & ~is_wb_v(1) & ~is_1st_solo
-      )
-
-    val is_store_accessFault_ack_v =
-      VecInit(
-        io.lsu_cmm.is_access_fault & ( io.rod_i(0).bits.is_su | io.rod_i(0).bits.is_amo ) & ~is_wb_v(0),
-        io.lsu_cmm.is_access_fault & ( io.rod_i(1).bits.is_su | io.rod_i(1).bits.is_amo ) & ~is_wb_v(1) & ~is_1st_solo
-      )
-
-    val is_load_pagingFault_ack_v =
-      VecInit(
-        io.lsu_cmm.is_paging_fault & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
-        io.lsu_cmm.is_paging_fault & io.rod_i(1).bits.is_lu & ~is_wb_v(1) & ~is_1st_solo
-      )
-
-    val is_store_pagingFault_ack_v =
-      VecInit(
-        io.lsu_cmm.is_paging_fault & ( io.rod_i(0).bits.is_su | io.rod_i(0).bits.is_amo ) & ~is_wb_v(0),
-        io.lsu_cmm.is_paging_fault & ( io.rod_i(1).bits.is_su | io.rod_i(1).bits.is_amo ) & ~is_wb_v(1) & ~is_1st_solo
-      )
-
-      
-    val is_load_misAlign_ack_v =
-      VecInit(
-        io.lsu_cmm.is_misAlign & io.rod_i(0).bits.is_lu & ~is_wb_v(0),
-        io.lsu_cmm.is_misAlign & io.rod_i(1).bits.is_lu & ~is_wb_v(1) & ~is_1st_solo
-      )
-
-    val is_store_misAlign_ack_v =
-      VecInit(
-        io.lsu_cmm.is_misAlign & (io.rod_i(0).bits.is_su | io.rod_i(0).bits.is_amo) & ~is_wb_v(0),
-        io.lsu_cmm.is_misAlign & (io.rod_i(1).bits.is_su | io.rod_i(1).bits.is_amo) & ~is_wb_v(1) & ~is_1st_solo
-      )
+  io.cmm_lsu.is_amo_pending := {
+    io.rod(0).valid & io.rod(0).bits.is_amo & ~io.cm_op(0).is_writeback //only pending amo in rod0 is send out
+  }
+  println("Warning, amo_pending can only emmit at chn0")
+  
 
 
+    
 
 
-    val is_ecall_v  =
-      VecInit(
-        io.rod_i(0).bits.privil.ecall,
-        io.rod_i(1).bits.privil.ecall & ~is_1st_solo
-      )
-
-    val is_ebreak_v =
-      VecInit(
-        io.rod_i(0).bits.privil.ebreak,
-        io.rod_i(1).bits.privil.ebreak & ~is_1st_solo
-      )
- 
-    val is_instr_access_fault_v =
-      VecInit(
-        io.rod_i(0).bits.privil.is_access_fault,
-        io.rod_i(1).bits.privil.is_access_fault & ~is_1st_solo
-      )
-
-    val is_instr_paging_fault_v =
-      VecInit(
-        io.rod_i(0).bits.privil.is_paging_fault,
-        io.rod_i(1).bits.privil.is_paging_fault & ~is_1st_solo
-      )
-
-    val is_illeage_v = {
-      val is_csr_illegal = VecInit(
-        (is_csrr_illegal  & io.rod_i(0).valid & io.rod_i(0).bits.is_csr  & ~is_wb_v(0)) |
-        (is_csrw_illegal  & io.rod_i(0).valid & io.rod_i(0).bits.is_csr  &  is_wb_v(0))  |
-        (is_fcsrw_illegal & io.rod_i(0).valid & io.rod_i(0).bits.is_fpu &  is_wb_v(0)),
-        (is_csrr_illegal  & io.rod_i(1).valid & io.rod_i(1).bits.is_csr  & ~is_wb_v(1)) |
-        (is_csrw_illegal  & io.rod_i(1).valid & io.rod_i(1).bits.is_csr  &  is_wb_v(1)) |
-        (is_fcsrw_illegal & io.rod_i(1).valid & io.rod_i(1).bits.is_fpu &  is_wb_v(1))
-      )
-
-      val is_ill_sfence = VecInit(
-        is_wb_v(0) & io.rod_i(0).bits.is_sfence_vma & ( (mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b00".U),
-        is_wb_v(1) & io.rod_i(1).bits.is_sfence_vma & ( (mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b00".U)
-      )
-
-      val is_ill_wfi_v = VecInit(
-        is_wb_v(0) & io.rod_i(0).bits.is_wfi & (mstatus(21) & priv_lvl_qout < "b11".U),
-        is_wb_v(1) & io.rod_i(1).bits.is_wfi & (mstatus(21) & priv_lvl_qout < "b11".U)
-      )
-
-      val is_ill_mRet_v = VecInit(
-        io.rod_i(0).bits.privil.mret & priv_lvl_qout =/= "b11".U,
-        io.rod_i(1).bits.privil.mret & priv_lvl_qout =/= "b11".U
-      )
-
-      val is_ill_sRet_v = VecInit(
-        io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b01".U & mstatus(22)) ),
-        io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b00".U | ( priv_lvl_qout === "b01".U & mstatus(22)) )
-      )
-
-      val is_ill_dRet_v = VecInit(
-        io.rod_i(0).bits.privil.dret & ~is_inDebugMode,
-        io.rod_i(1).bits.privil.dret & ~is_inDebugMode
-      )      
-
-      val is_ill_fpus_v = ( 0 until 2 ).map{ i => 
-        (is_wb_v(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fpu) & mstatus(14,13) === 0.U)
-      }: Seq[Bool]
-      
+  ( 0 until cm ).map{ i =>
+    io.cm_op(i).is_comfirm := commit_state_is_comfirm(i)
+    io.cm_op(i).is_abort   := commit_state_is_abort(i)
+  }
 
 
+  ( 0 until cm ).map{ i =>
+    io.rod(i).ready := is_retired(i)
+  }
 
-      VecInit(
-        (io.rod_i(0).bits.is_illeage | is_csr_illegal(0) | is_ill_sfence(0) | is_ill_wfi_v(0) | is_ill_mRet_v(0) | is_ill_sRet_v(0) | is_ill_dRet_v(0) | is_ill_fpus_v(0) ),
-        (io.rod_i(1).bits.is_illeage | is_csr_illegal(1) | is_ill_sfence(1) | is_ill_wfi_v(1) | is_ill_mRet_v(1) | is_ill_sRet_v(1) | is_ill_dRet_v(1) | is_ill_fpus_v(1) ) & ~is_1st_solo
-      )
+
+  ( 0 until cm ).map{ i =>
+    io.cmm_lsu.is_store_commit(i) := io.rod(i).bits.is_su & commit_state_is_comfirm(i)
+  }
+
+
+  io.cmm_pc.valid := false.B
+  io.cmm_pc.bits.addr := 0.U
+  for ( i <- 0 until cm ) yield {
+    when( commit_state_is_abort(i) ) {
+      when( cmm_state(i).is_mRet ) {
+        io.cmm_pc.valid := true.B
+        io.cmm_pc.bits.addr := cmm_state(i).csrfiles.mepc
+      } 
+      when( cmm_state(i).is_sRet ) {
+        io.cmm_pc.valid := true.B
+        io.cmm_pc.bits.addr := cmm_state(i).csrfiles.sepc
+      } 
+      when( cmm_state(i).is_dRet ) {
+        io.cmm_pc.valid := true.B
+        io.cmm_pc.bits.addr := cmm_state(i).csrfiles.dpc
+      } 
+      when( cmm_state(i).is_trap ) {
+        io.cmm_pc.valid := true.B
+        io.cmm_pc.bits.addr := Mux1H(Seq(
+            emu_reset                                   -> "h80000000".U,
+            cmm_state(i).is_debug_interrupt             -> "h00000000".U,
+            (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
+            (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
+          )),
+      } 
+      when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
+        io.cmm_pc.valid := true.B
+        io.cmm_pc.bits.addr := (io.rod(i).bits.pc + 4.U)
+      }
     }
 
-    val is_mRet_v =
-      VecInit(
-        io.rod_i(0).bits.privil.mret & priv_lvl_qout === "b11".U,
-        io.rod_i(1).bits.privil.mret & priv_lvl_qout === "b11".U & ~is_1st_solo
-      )
-
-    val is_sRet_v =
-      VecInit(
-        io.rod_i(0).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b01".U & ~mstatus(22)) ),
-        io.rod_i(1).bits.privil.sret & ( priv_lvl_qout === "b11".U | ( priv_lvl_qout === "b01".U & ~mstatus(22)) ) & ~is_1st_solo
-      )
-
-    val is_dRet_v =
-      VecInit(
-        io.rod_i(0).bits.privil.dret & is_inDebugMode,
-        io.rod_i(1).bits.privil.dret & is_inDebugMode & ~is_1st_solo
-      )
-
-    val is_fence_i_v =
-      VecInit(
-        io.rod_i(0).bits.is_fence_i & is_wb_v(0),
-        io.rod_i(1).bits.is_fence_i & is_wb_v(1) & ~is_1st_solo
-      )
-
-    val is_sfence_vma_v =
-      VecInit(
-        io.rod_i(0).bits.is_sfence_vma & is_wb_v(0) & ( (~mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b11".U),
-        io.rod_i(1).bits.is_sfence_vma & is_wb_v(1) & ( (~mstatus(20) & priv_lvl_qout === "b01".U) | priv_lvl_qout === "b11".U) & ~is_1st_solo
-      )
-
-
-
-
-
-
-
-	val is_exception_v = 
-    VecInit( for (i <- 0 until 2) yield {
-      (
-        is_ecall_v(i)  |
-        is_ebreak_v(i)  |
-        is_instr_access_fault_v(i)  |
-        is_instr_paging_fault_v(i)  |
-        is_illeage_v(i) |
-        is_load_accessFault_ack_v(i)  |
-        is_store_accessFault_ack_v(i) |
-        is_load_misAlign_ack_v(i)  |
-        is_store_misAlign_ack_v(i) |
-        is_load_pagingFault_ack_v(i) |
-        is_store_pagingFault_ack_v(i)         
-      )
-
-    })
-
-	// val is_trap_v = Wire(Vec(2, Bool()))
-  // val is_xRet_v = Wire(Vec(2, Bool()))
-
-	val is_trap_v = VecInit( is_interrupt | is_exception_v(0), is_interrupt | is_exception_v(1) )
-  val is_xRet_v = VecInit( is_mRet_v(0) | is_sRet_v(0) | is_dRet_v(0), is_mRet_v(1) | is_sRet_v(1) | is_dRet_v(1) )
-
-
-
-  io.is_commit_abort(1) :=
-    (io.rod_i(1).valid) & ( ( (io.rod_i(1).bits.is_branch) & io.is_misPredict ) | is_xRet_v(1) | is_trap_v(1) | is_fence_i_v(1) | is_sfence_vma_v(1)  ) & ~is_1st_solo 
-  // assert( io.is_commit_abort(1) === false.B )
-
-
-  io.is_commit_abort(0) :=
-    (io.rod_i(0).valid) & ( ( (io.rod_i(0).bits.is_branch) & io.is_misPredict ) | is_xRet_v(0) | is_trap_v(0) | is_fence_i_v(0) | is_sfence_vma_v(0) )
-
-
-  //only one privilege can commit once
-  val is_commit_comfirm = VecInit(
-    is_wb_v(0) & ~io.is_commit_abort(0),
-    is_wb_v(1) & ~io.is_commit_abort(1) & ~is_1st_solo & ~is_step
-  )
-
-  // when( is_commit_comfirm(0) ) { printf("comfirm pc=%x\n", io.rod_i(0).bits.pc) }
-  // when( is_commit_comfirm(1) ) { printf("comfirm pc=%x\n", io.rod_i(1).bits.pc) }
-
-
-  io.cm_op(0).valid := is_commit_comfirm(0) | io.is_commit_abort(0)
-  io.cm_op(1).valid := is_commit_comfirm(1) | io.is_commit_abort(1)
-
-  io.cm_op(0).bits.is_abort := io.is_commit_abort(0)
-  io.cm_op(1).bits.is_abort := io.is_commit_abort(1)
-
-
-  io.rod_i(0).ready := is_commit_comfirm(0) | io.is_commit_abort(0)
-  io.rod_i(1).ready := is_commit_comfirm(1)
-
-  io.cmm_lsu.is_amo_pending := io.rod_i(0).valid & io.rod_i(0).bits.is_amo & ~is_commit_comfirm(0) //only pending amo in rod0 is send out
-  // io.cmm_lsu.is_lr_clear := io.is_commit_abort(1) | io.is_commit_abort(0)
-
-    //  |
-    // (io.rod_i(1).bits.is_amo & ~is_commit_comfirm(1) ~is_1st_solo )
-
-  io.cmm_lsu.is_store_commit(0) := io.rod_i(0).bits.is_su & is_commit_comfirm(0)
-  io.cmm_lsu.is_store_commit(1) := io.rod_i(1).bits.is_su & is_commit_comfirm(1)
-
-
-
-
-
-
-
-
-  io.cmm_pc.valid :=
-  (    
-    (io.rod_i(0).valid & is_mRet_v(0)) |
-    (io.rod_i(0).valid & is_sRet_v(0)) |
-    (io.rod_i(0).valid & is_dRet_v(0)) |
-    (io.rod_i(0).valid & is_trap_v(0)) |
-    (io.rod_i(0).valid & is_fence_i_v(0)) |
-    (io.rod_i(0).valid & is_sfence_vma_v(0))
-  ) 
-  // |
-  // (
-
-  //   (io.rod_i(1).valid & is_mRet_v(1)) |
-  //   (io.rod_i(1).valid & is_sRet_v(1)) |
-  //   (io.rod_i(1).valid & is_dRet_v(1)) |
-  //   (io.rod_i(1).valid & is_trap_v(1)) |
-  //   (io.rod_i(1).valid & is_fence_i_v(1)) |    
-  //   (io.rod_i(1).valid & is_sfence_vma_v(1))  
-
-  // )
-    
-  io.cmm_pc.bits.addr := Mux1H(Seq(
-    (io.rod_i(0).valid & is_mRet_v(0)) -> mepc,
-    (io.rod_i(0).valid & is_sRet_v(0)) -> sepc,
-    (io.rod_i(0).valid & is_dRet_v(0)) -> dpc,
-    (io.rod_i(0).valid & is_trap_v(0)) -> MuxCase(0.U, Array(
-      emu_reset -> "h80000000".U,
-      is_debug_interrupt -> "h00000000".U,
-      (priv_lvl_dnxt === "b11".U) -> mtvec,
-      (priv_lvl_dnxt === "b01".U) -> stvec)
-    ),
-    (io.rod_i(0).valid & is_fence_i_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
-    (io.rod_i(0).valid & is_sfence_vma_v(0)) -> (io.rod_i(0).bits.pc + 4.U),
-
-    // (io.rod_i(1).valid & is_mRet_v(1)) -> mepc,
-    // (io.rod_i(1).valid & is_sRet_v(1)) -> sepc,
-    // (io.rod_i(1).valid & is_dRet_v(1)) -> dpc,
-    // (io.rod_i(1).valid & is_trap_v(1)) -> mtvec,
-    // (io.rod_i(1).valid & is_fence_i_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
-    // (io.rod_i(1).valid & is_sfence_vma_v(1)) -> (io.rod_i(1).bits.pc + 4.U),
-  ))
-
-  assert(
-    PopCount(Seq(
-      (io.rod_i(0).valid & is_xRet_v(0)),
-      (io.rod_i(0).valid & is_trap_v(0)),
-      (io.rod_i(0).valid & is_fence_i_v(0)),
-      (io.rod_i(0).valid & is_sfence_vma_v(0)),
-      // (io.rod_i(1).valid & is_xRet_v(1)),
-      // (io.rod_i(1).valid & is_trap_v(1)),
-      // (io.rod_i(1).valid & is_fence_i_v(1)),    
-      // (io.rod_i(1).valid & is_sfence_vma_v(1)),    
-    )) <= 1.U
-  )
-
-  assert( ~(io.cmm_pc.valid & ~io.is_commit_abort(0) & ~io.is_commit_abort(1)) )
-
-
-    val is_retired_v = 
-      VecInit(
-        is_commit_comfirm(0) | io.is_commit_abort(0),
-        is_commit_comfirm(1),
-      )
+    assert( PopCount(Seq( cmm_state(i).is_xRet, cmm_state(i).is_trap, cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U )
+  }
 
 
 
@@ -394,144 +522,159 @@ class Commit extends Privilege with Superscalar {
 
 
 
+  io.csr_data.bits := csrfiles.csr_read_res(io.csr_addr.bits)
+  io.csr_data.valid := io.csr_addr.valid & ~csrfiles.csr_read_prilvl(io.csr_addr.bits)
+  
+  
+  ( 0 until cm ).map{ i =>
+    csrExe(i).ready := commit_state_is_comfirm(i) & io.rod(i).bits.is_csr
+    assert( ~(csrExe(i).ready & ~csrExe(i).valid) )
+  }
+
+  
+  println("Warning, csr can only execute one by one")
+    // io.csr_cmm_op.valid & (
+    //   (is_commit_comfirm(0) & io.rod_i(0).bits.is_csr) | 
+    //   (is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)		
+    // )
+
+
+  ( 0 until cm ).map{ i => {
+    fcsrExe(i).ready :=
+      commit_state_is_comfirm(i) & io.rod(i).bits.is_fcsr
+
+    assert( ~(fcsrExe(i).ready & ~fcsrExe(i).valid) )
+  }}
+  println("Warning, fcsr can only execute one by one")
+
+  /** @note fcsr-read will request after cmm_op_fifo clear, frm will never change until fcsr-write */
+  io.fcsr := csrfiles.fcsr.asUInt
 
 
 
-  is_csrw_illegal := 
-    io.csr_cmm_op.valid &
-    ( io.csr_cmm_op.bits.op_rc | io.csr_cmm_op.bits.op_rs | io.csr_cmm_op.bits.op_rw ) &
-    (
-      csr_write_denied(io.csr_cmm_op.bits.addr) | csr_read_prilvl(io.csr_cmm_op.bits.addr)
-    )
-
-  is_fcsrw_illegal := 
-    io.fcsr_cmm_op.valid & 
-    ( io.fcsr_cmm_op.bits.op_rc | io.fcsr_cmm_op.bits.op_rs | io.fcsr_cmm_op.bits.op_rw ) &
-    (
-      mstatus(14,13) === 0.U
-    )
-
-  is_csrr_illegal := 
-    io.csr_addr.valid & csr_read_prilvl(io.csr_addr.bits)
 
 
 
-  io.csr_data.bits := csr_read_res(io.csr_addr.bits)
-  io.csr_data.valid := io.csr_addr.valid & ~is_csrr_illegal
+
+  io.cmm_mmu.satp := csrfiles.satp.asUInt
+  for ( i <- 0 until 16 ) yield io.cmm_mmu.pmpcfg(i) := csrfiles.pmpcfg(i).asUInt
+  for ( i <- 0 until 64 ) yield io.cmm_mmu.pmpaddr(i) := csrfiles.pmpaddr(i)
+  io.cmm_mmu.priv_lvl_if   := csrfiles.priv_lvl
+  io.cmm_mmu.priv_lvl_ls   := Mux( csrfiles.mstatus.mprv.asBool, csrfiles.mstatus.mpp, csrfiles.priv_lvl )
+  io.cmm_mmu.mstatus    := csrfiles.mstatus.asUInt
+  io.cmm_mmu.sstatus    := csrfiles.sstatus.asUInt
+  io.cmm_mmu.sfence_vma := ( 0 until cm ).map{ i => 
+    commit_state_is_abort(i) & cmm_state(i).is_sfence_vma 
+  }.reduce(_|_)
+    // ( io.rod_i(0).valid & is_sfence_vma_v(0))  
+
+
+  io.ifence := ( 0 until cm ).map{ i => 
+    commit_state_is_abort(i) & cmm_state(i).is_fence_i
+  }.reduce(_|_)
+    // ( io.rod_i(0).valid & is_fence_i_v(0))
+
+
+  ( 0 until cm ).map{ i => {
+    io.is_commit_abort(i) := commit_state_is_abort(i)
+  }}
+  
+
+
+
+
+
+
 
 
   
-  io.csr_cmm_op.ready :=
-    io.csr_cmm_op.valid & (
-      (is_commit_comfirm(0) & io.rod_i(0).bits.is_csr) | 
-      (is_commit_comfirm(1) & io.rod_i(1).bits.is_csr)		
-    )
 
-  io.fcsr_cmm_op.ready :=
-    io.fcsr_cmm_op.valid & (
-      (is_commit_comfirm(0) & io.rod_i(0).bits.is_fpu) | 
-      (is_commit_comfirm(1) & io.rod_i(1).bits.is_fpu)		
-    )
+  def resetToDefault(csrfiles: CSR_Bundle) = {
 
+    csrfiles.priv_lvl      := "b11".U
+    csrfiles.DMode         := false.B
+    csrfiles.fcsr          := 0.U.asTypeOf(new FCSRBundle)
+    csrfiles.cycle         := 0.U
+    csrfiles.time          := 0.U
+    csrfiles.instret       := 0.U
+    csrfiles.stvec         := 0.U.asTypeOf(new TVecBundle)
+    csrfiles.scounteren    := 0.U.asTypeOf(new CounterenBundle)
+    csrfiles.sscratch      := 0.U.asTypeOf(UInt(64.W))
+    csrfiles.sepc          := 0.U.asTypeOf(UInt(64.W))
+    csrfiles.scause        := 0.U.asTypeOf(new CauseBundle)
+    csrfiles.stval         := 0.U.asTypeOf(UInt(64.W))
+    // csrfiles.sip           := 0.U.asTypeOf(new MSIntBundle)
+    csrfiles.satp          := 0.U.asTypeOf(new SatpBundle)
+    csrfiles.mvendorid     := 0.U
+    csrfiles.marchid       := 0.U
+    csrfiles.mimpid        := 0.U
+    csrfiles.mhartid       := 0.U
 
+    csrfiles.mstatus.mbe  := 0.U(1.W)
+    csrfiles.mstatus.sbe  := 0.U(1.W)
+    csrfiles.mstatus.sxl  := 2.U(2.W)
+    csrfiles.mstatus.uxl  := 2.U(2.W)
+    csrfiles.mstatus.tsr  := 0.U(1.W)
+    csrfiles.mstatus.tw   := 0.U(1.W)
+    csrfiles.mstatus.tvm  := 0.U(1.W)
+    csrfiles.mstatus.mxr  := 0.U(1.W)
+    csrfiles.mstatus.sum  := 0.U(1.W)
+    csrfiles.mstatus.mprv := 0.U(1.W)
+    csrfiles.mstatus.xs   := 0.U(2.W)
+    csrfiles.mstatus.fs   := 0.U(2.W)
+    csrfiles.mstatus.mpp  := "b11".U(2.W)
+    csrfiles.mstatus.spp  := 0.U(1.W)
+    csrfiles.mstatus.mpie := 0.U(1.W)
+    csrfiles.mstatus.ube  := 0.U(1.W)
+    csrfiles.mstatus.spie := 0.U(1.W)
+    csrfiles.mstatus.mie  := 0.U(1.W)
+    csrfiles.mstatus.sie  := 0.U(1.W)
+    csrfiles.mstatus.sd   := 0.U(1.W)
 
+    csrfiles.misa          := Cat(2.U(2.W), 0.U(36.W), "b00000101000001000100101101".U(26.W))
+    csrfiles.medeleg       := 0.U
+    csrfiles.mideleg       := 0.U
+    csrfiles.mie           := 0.U.asTypeOf(new MSIntBundle)
+    csrfiles.mtvec         := 0.U.asTypeOf(new TVecBundle)
+    csrfiles.mcounteren    := 0.U.asTypeOf(new CounterenBundle)
+    csrfiles.mscratch      := 0.U
+    csrfiles.mepc          := 0.U
+    csrfiles.mcause        := 0.U.asTypeOf(new CauseBundle)
+    csrfiles.mtval         := 0.U
+    csrfiles.mip           := 0.U.asTypeOf(new MSIntBundle)
+    csrfiles.mtinst        := 0.U
+    csrfiles.mtval2        := 0.U
+    csrfiles.mcycle        := 0.U
+    csrfiles.minstret      := 0.U
+    csrfiles.mcountinhibit := 0.U
+    csrfiles.tselect       := 0.U
+    csrfiles.tdata1        := 0.U
+    csrfiles.tdata2        := 0.U
+    csrfiles.tdata3        := 0.U
+              
+    csrfiles.dcsr.xdebugver := 4.U(4.W)
+    csrfiles.dcsr.ebreakm   := 0.U(1.W)
+    csrfiles.dcsr.ebreaks   := 0.U(1.W)
+    csrfiles.dcsr.ebreaku   := 0.U(1.W)
+    csrfiles.dcsr.stepie    := 0.U(1.W)
+    csrfiles.dcsr.stopcount := 0.U(1.W)
+    csrfiles.dcsr.stoptime  := 0.U(1.W)
+    csrfiles.dcsr.cause     := 0.U(3.W)
+    csrfiles.dcsr.mprven    := 0.U(1.W)
+    csrfiles.dcsr.nmip      := 0.U(1.W)
+    csrfiles.dcsr.step      := 0.U(1.W)
+    csrfiles.dcsr.prv       := 3.U(2.W)
 
-
-
-
-
-
-	rtc_clock               := io.rtc_clock	
-	exe_port                := Mux( io.csr_cmm_op.ready, io.csr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
-	exe_fport                := Mux( io.fcsr_cmm_op.ready, io.fcsr_cmm_op.bits, 0.U.asTypeOf(new Exe_Port))
-	is_trap                 := io.rod_i(0).valid & is_trap_v(0)
-	is_mRet                 := io.rod_i(0).valid & is_mRet_v(0)
-	is_sRet                 := io.rod_i(0).valid & is_sRet_v(0)
-	is_dRet                 := io.rod_i(0).valid & is_dRet_v(0)
-	commit_pc               := Mux(is_1st_solo, io.rod_i(0).bits.pc, io.rod_i(1).bits.pc)
-  // cmmnxt_pc               :=
-  //   Mux(is_1st_solo,
-  //   io.rod_i(0).bits.pc + Mux( io.rod_i(0).bits.is_rvc, 2.U, 4.U ),
-  //   io.rod_i(1).bits.pc + Mux( io.rod_i(1).bits.is_rvc, 2.U, 4.U ))
-
-	ill_instr               := 0.U
-  ill_ivaddr               := io.if_cmm.ill_vaddr
-	ill_dvaddr               := io.lsu_cmm.trap_addr
-	is_instr_access_fault    := io.rod_i(0).valid & is_instr_access_fault_v(0)
-	is_instr_paging_fault    := io.rod_i(0).valid & is_instr_paging_fault_v(0)
-	is_instr_illeage        := io.rod_i(0).valid & is_illeage_v(0)
-	is_breakPoint           := io.rod_i(0).valid & is_ebreak_v(0) & ~is_ebreak_breakpointn
-	is_load_misAlign        := io.rod_i(0).valid & is_load_misAlign_ack_v(0)
-	is_load_access_fault     := io.rod_i(0).valid & is_load_accessFault_ack_v(0)
-	is_storeAMO_misAlign    := io.rod_i(0).valid & is_store_misAlign_ack_v(0)
-	is_storeAMO_access_fault := io.rod_i(0).valid & is_store_accessFault_ack_v(0)
-	is_storeAMO_paging_fault := io.rod_i(0).valid & is_store_pagingFault_ack_v(0)
-	is_ecall_M                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b11".U
-	is_ecall_S                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b01".U
-	is_ecall_U                := io.rod_i(0).valid & is_ecall_v(0) & priv_lvl_qout === "b00".U
-	is_load_paging_fault       := io.rod_i(0).valid & is_load_pagingFault_ack_v(0)
-	retired_cnt             := Mux( is_retired_v(1), 2.U, Mux(is_retired_v(0), 1.U, 0.U) )
-	clint_sw_m              := false.B
-	clint_sw_s              := false.B
-	clint_tm_m              := false.B
-	clint_tm_s              := false.B
-	clint_ex_m              := false.B
-	clint_ex_s              := false.B
-
-
-
-  io.cmm_mmu.satp := satp
-  for ( i <- 0 until 16 ) yield io.cmm_mmu.pmpcfg(i) := pmpcfg(i)
-  for ( i <- 0 until 64 ) yield io.cmm_mmu.pmpaddr(i) := pmpaddr(i)
-  io.cmm_mmu.priv_lvl_if   := priv_lvl_if
-  io.cmm_mmu.priv_lvl_ls   := priv_lvl_ls
-  io.cmm_mmu.mstatus    := mstatus
-  io.cmm_mmu.sstatus    := sstatus
-  io.cmm_mmu.sfence_vma := 
-    ( io.rod_i(0).valid & is_sfence_vma_v(0))
-
-
-  io.ifence := 
-    ( io.rod_i(0).valid & is_fence_i_v(0))
-
-
-  is_fpu_state_change := ( 0 until 2 ).map{
-    i => is_commit_comfirm(i) & (io.rod_i(i).bits.is_fcmm | io.rod_i(i).bits.is_fpu)
-  }.reduce(_|_)
-    
-
-  io.fcsr := fcsr
-
-
-  is_single_step    := RegNext(next = is_commit_comfirm(0) & is_step, init = false.B)
-  is_trigger        := false.B
-  is_halt_int   := io.dm.hartHaltReq
-  is_ebreak_retired := io.rod_i(0).valid & is_ebreak_v(0) & is_ebreak_breakpointn
-
-
-  is_debug_interrupt :=
-    ~is_inDebugMode & (
-      is_single_step |
-      is_trigger |
-      is_halt_int |
-      is_ebreak_retired      
-    )
-
-
-
-  is_nomask_interrupt := is_debug_interrupt | emu_reset
-
-  io.dm.hartIsInReset := emu_reset
-  ResetReq := io.dm.hartResetReq
-
-  is_inDebugMode_en := 
-    (io.rod_i(0).valid & is_trap_v(0) & is_debug_interrupt) |
-    is_dRet
-
-  is_inDebugMode_dnxt := Mux1H(Seq(
-    ( io.rod_i(0).valid & is_trap_v(0) & is_debug_interrupt ) -> true.B,
-    is_dRet -> false.B,
-  ))
+    csrfiles.dpc           := 0.U
+    csrfiles.dscratch0     := 0.U
+    csrfiles.dscratch1     := 0.U
+    csrfiles.dscratch2     := 0.U
+    csrfiles.pmpcfg        := VecInit( Seq.fill(16)(VecInit( Seq.fill(8)(0.U.asTypeOf( new PmpcfgBundle) ))))
+    csrfiles.pmpaddr       := VecInit( Seq.fill(64)(0.U(64.W)) )
+    csrfiles.hpmcounter    := VecInit( Seq.fill(32)(0.U(64.W)) )
+    csrfiles.mhpmcounter   := VecInit( Seq.fill(32)(0.U(64.W)) )
+    csrfiles.mhpmevent     := VecInit( Seq.fill(32)(0.U(64.W)) )    
+  }
 
 
 
@@ -545,34 +688,33 @@ class Commit extends Privilege with Superscalar {
 
 
 
-
-  io.diff_commit.pc(0) := io.rod_i(0).bits.pc
-  io.diff_commit.pc(1) := io.rod_i(1).bits.pc
-  io.diff_commit.comfirm(0) := is_commit_comfirm(0)
-  io.diff_commit.comfirm(1) := is_commit_comfirm(1)
+  io.diff_commit.pc(0) := io.rod(0).bits.pc
+  io.diff_commit.pc(1) := io.rod(1).bits.pc
+  io.diff_commit.comfirm(0) := commit_state_is_comfirm(0)
+  io.diff_commit.comfirm(1) := commit_state_is_comfirm(1)
   io.diff_commit.abort(0) := io.is_commit_abort(0)
   io.diff_commit.abort(1) := io.is_commit_abort(1)
-  io.diff_commit.priv_lvl := priv_lvl_qout
-  io.diff_commit.is_ecall_M := is_ecall_M
-  io.diff_commit.is_ecall_S := is_ecall_S
-  io.diff_commit.is_ecall_U := is_ecall_U
+  io.diff_commit.priv_lvl := csrfiles.priv_lvl
+  io.diff_commit.is_ecall_M := ( 0 until cm ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_M }}.reduce(_|_)
+  io.diff_commit.is_ecall_S := ( 0 until cm ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_S }}.reduce(_|_)
+  io.diff_commit.is_ecall_U := ( 0 until cm ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_U }}.reduce(_|_)
 
 
-	io.diff_csr.mstatus   := mstatus
-	io.diff_csr.mtvec     := mtvec
-	io.diff_csr.mscratch  := mscratch
-	io.diff_csr.mepc      := mepc
-	io.diff_csr.mcause    := mcause
-	io.diff_csr.mtval     := mtval
-  io.diff_csr.mvendorid := mvendorid
-  io.diff_csr.marchid   := marchid
-  io.diff_csr.mimpid    := mimpid
-  io.diff_csr.mhartid   := mhartid
-  io.diff_csr.misa      := misa
-  io.diff_csr.mie       := mie
-  io.diff_csr.mip       := mip
-  io.diff_csr.medeleg   := medeleg
-  io.diff_csr.mideleg   := mideleg
+	io.diff_csr.mstatus   := csrfiles.mstatus.asUInt
+	io.diff_csr.mtvec     := csrfiles.mtvec.asUInt
+	io.diff_csr.mscratch  := csrfiles.mscratch
+	io.diff_csr.mepc      := csrfiles.mepc
+	io.diff_csr.mcause    := csrfiles.mcause.asUInt
+	io.diff_csr.mtval     := csrfiles.mtval
+  io.diff_csr.mvendorid := csrfiles.mvendorid
+  io.diff_csr.marchid   := csrfiles.marchid
+  io.diff_csr.mimpid    := csrfiles.mimpid
+  io.diff_csr.mhartid   := csrfiles.mhartid
+  io.diff_csr.misa      := csrfiles.misa
+  io.diff_csr.mie       := csrfiles.mie.asUInt
+  io.diff_csr.mip       := csrfiles.mip.asUInt
+  io.diff_csr.medeleg   := csrfiles.medeleg
+  io.diff_csr.mideleg   := csrfiles.mideleg
   // io.diff_csr.mcounteren           = mcounteren
   // io.diff_csr.mcountinhibit        = mcountinhibit
   // io.diff_csr.tselect              = tselect
@@ -581,26 +723,25 @@ class Commit extends Privilege with Superscalar {
   // io.diff_csr.tdata3[MAX_TRIGGERS] = tdata3
   // io.diff_csr.mhpmevent[32]        = mhpmevent
   for ( i <- 0 until 4 ) yield {
-    io.diff_csr.pmpcfg(i) := pmpcfg(i)
+    io.diff_csr.pmpcfg(i) := csrfiles.pmpcfg(i).asUInt
   }
   for ( i <- 0 until 16 ) yield {
-	  io.diff_csr.pmpaddr(i)  := pmpaddr(i)  
+	  io.diff_csr.pmpaddr(i)  := csrfiles.pmpaddr(i)  
   }
 
-  io.diff_csr.stvec    := stvec
-  io.diff_csr.sscratch := sscratch
-  io.diff_csr.sepc     := sepc
-  io.diff_csr.scause   := scause
-  io.diff_csr.stval    := stval
-  io.diff_csr.satp     := satp
+  io.diff_csr.stvec    := csrfiles.stvec.asUInt
+  io.diff_csr.sscratch := csrfiles.sscratch
+  io.diff_csr.sepc     := csrfiles.sepc
+  io.diff_csr.scause   := csrfiles.scause.asUInt
+  io.diff_csr.stval    := csrfiles.stval.asUInt
+  io.diff_csr.satp     := csrfiles.satp.asUInt
   // io.diff_csr.scounteren := scounteren
   // io.diff_csr.dcsr       := dcsr
   // io.diff_csr.dpc        := dpc
   // io.diff_csr.dscratch   := dscratch
-  io.diff_csr.fflags  := fcsr(4,0)
-  io.diff_csr.frm     := fcsr(7,5)
+  io.diff_csr.fflags  := csrfiles.fcsr.fflags
+  io.diff_csr.frm     := csrfiles.fcsr.frm
 
 
-  assert( ~(is_wb_v(0) & ~io.rod_i(0).valid) )
-  assert( ~(is_wb_v(1) & ~io.rod_i(1).valid) )
+
 }
