@@ -164,7 +164,7 @@ int main(int argc, char **argv, char **env) {
 				}
 			}
 
-			if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
+			if ( top->trace_comfirm_0 && (top->trace_comfirm_1 || top->trace_abort_1) ) {
 				// printf("real pc = %lx, real t0 = %lx\n", top->trace_pc_1, top->trace_abi_t0);
 
 				if ( flag_diffEnable ) {

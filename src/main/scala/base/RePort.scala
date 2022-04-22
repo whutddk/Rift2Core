@@ -88,8 +88,8 @@ class ReDirect[T<:Data]( dw: T, port: Int) extends Module{
     io.enq(i).ready  := false.B
   }
 
-  val sel = Wire( Vec(port, UInt(log2Ceil(port).W) ) )
-  for ( i <- 0 until port ) yield sel(i) := 0.U
+  val sel = Wire( Vec( port, Vec( port, UInt(log2Ceil(port).W) ) ))
+  for ( i <- 0 until port; j <- 0 until port ) yield sel(i)(j) := j.U
   // for ( i <- 0 until port ) {
   //   for ( j <- port-1 to i  ) {
   //     when( io.mapper(j) ) {
@@ -97,16 +97,14 @@ class ReDirect[T<:Data]( dw: T, port: Int) extends Module{
   //     }
   //   }
   // }
-    for ( i <- 0 until port ) {
-      for ( j <- port-1 to i  ) {
-        when( io.mapper(j) ) {
-          sel(j) := i.U //override
-        }       
-      }
+    for ( i <- 0 until port-1 ) yield {
+        when( ~io.mapper(i) ) {
+          for ( j <- i+1 until port ) { sel(i+1)(j) := sel(i)(j) - 1.U }
+        }
     }
 
-    for ( i <- 0 until port ) yield {
-      when( io.mapper(i) ) { io.deq(i) <> io.enq(sel(i)) }
+    for ( j <- 0 until port ) yield {
+      when( io.mapper(j) ) { io.deq(j) <> io.enq(sel(port-1)(j)) }
     }
 
 }

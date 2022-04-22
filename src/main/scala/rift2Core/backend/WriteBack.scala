@@ -74,14 +74,14 @@ class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm
 
   for ( i <- 0 until cmm_chn ) yield {
     iReg.io.commit(i).is_comfirm := false.B
-    iReg.io.commit(i).is_abort   := false.B
+    iReg.io.commit(i).is_abort   := io.commit(i).is_abort
     iReg.io.commit(i).raw        := 0.U
     iReg.io.commit(i).phy        := 0.U
     iReg.io.commit(i).toX        := false.B
     iReg.io.commit(i).toF        := false.B
 
     fReg.io.commit(i).is_comfirm := false.B
-    fReg.io.commit(i).is_abort   := false.B
+    fReg.io.commit(i).is_abort   := io.commit(i).is_abort
     fReg.io.commit(i).raw        := 0.U
     fReg.io.commit(i).phy        := 0.U
     fReg.io.commit(i).toX        := false.B

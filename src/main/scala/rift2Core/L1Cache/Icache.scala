@@ -288,6 +288,9 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   },"Assert Failed at ICache, an existed tag is in cache when wrote"
   )
 
+  
+  assert( ~((RegNext(io.mmu_if.bits.paddr) =/= io.mmu_if.bits.paddr) & icache_state_qout === 2.U & ~RegNext(io.flush)), "Assert Failed, req paddr cannot change without flush." )
+
 
 
 

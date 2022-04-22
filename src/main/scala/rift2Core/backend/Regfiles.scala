@@ -176,21 +176,23 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
       //ready 和abort可能互斥，需要优化接口
       io.commit(m).is_writeback := log(phy(m)) === "b11".U
 
-      //暂时CMM只支持chn0 进行abort
-      when(  io.commit(m).is_abort & m.U === 0.U) {
+      when( io.commit(m).is_abort ) {
         /** clear all log to 0, except that archit_ptr point to, may be override */
         for ( j <- 0 until dp-1 ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
-        for ( n <- 0 until m ) yield { assert( io.commit(n).is_comfirm) }
       }
       when( io.commit(m).is_comfirm ) {
         /** override the log(clear) */
         assert( io.commit(m).is_writeback )
-        for ( j <- 0 until dp-1 ) yield { when(j.U === idx_pre(m) ) {log_reg(j) := 0.U}  }
+        for ( j <- 0 until dp-1 ) yield {
+          when(j.U === idx_pre(m) ) {log_reg(j) := 0.U}
+        }
+        assert( log_reg(phy(m)) === "b11".U, "log_reg which going to commit to will be overrided to \"b11\" if there is an abort in-front." )
+        log_reg(phy(m)) := "b11".U
       }
 
 
-      when( io.commit(m).is_comfirm ) {
-        archit_ptr(raw(m)) := phy(m)
+      when( io.commit(i).is_comfirm ) {
+        archit_ptr(raw(i)) := phy(i)
       }
 
 
@@ -198,9 +200,8 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
         for ( j <- 0 until 32 ) yield {
           rename_ptr(j) := archit_ptr(j)
           for ( n <- 0 until m ) {
-            when( j.U === raw(n) ) {
+            when( j.U === raw(n) & io.commit(n).is_comfirm ) {
               rename_ptr(j) := phy(n) //override renme_ptr when the perivious chn comfirm
-              assert( io.commit(n).is_comfirm )
             } 
           }
 

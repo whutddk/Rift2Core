@@ -126,9 +126,9 @@ class PmpcfgBundle extends Bundle{
 }
 
 class SatpBundle extends Bundle{
-  val mode = UInt(1.W)
-  val asid = UInt(9.W)
-  val ppn = UInt(22.W)
+  val mode = UInt(4.W)
+  val asid = UInt(16.W)
+  val ppn = UInt(44.W)
 }
 
 class DcsrBundle extends Bundle{
@@ -1035,7 +1035,7 @@ trait CsrFiles { this: BaseCommit =>
 
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mtval, "h343".U, in.csrExe )
 
-    when( update_priv_lvl(in) === "b11".U ) {
+    when( in.is_trap & update_priv_lvl(in) === "b11".U ) {
       mtval := Mux1H( Seq(
         in.is_instr_access_fault    -> in.ill_ivaddr,
         in.is_instr_paging_fault    -> in.ill_ivaddr,
@@ -1107,7 +1107,7 @@ trait CsrFiles { this: BaseCommit =>
         if ( i % 2 == 0 ) {
           val (enable, dnxt) = Reg_Exe_Port( Cat(in.csrfiles.pmpcfg(i).map{_.asUInt}.reverse), "h3A0".U + i.U, in.csrExe )
           
-          when( enable & in.csrfiles.pmpcfg(i)(j).L.asBool ) {
+          when( enable & ~in.csrfiles.pmpcfg(i)(j).L.asBool ) {
               pmpcfg(i)(j).L := dnxt(8*j+7)
               pmpcfg(i)(j).A := dnxt(8*j+4,8*j+3)
               pmpcfg(i)(j).X := dnxt(8*j+2)
@@ -1151,7 +1151,7 @@ trait CsrFiles { this: BaseCommit =>
       // val cfg_idx = i/8*2
       // val bit_idx = 8*(i%8) + 7
       val lock = in.csrfiles.pmpcfg(i/8*2)(i%8).L
-      when(enable & lock =/= 1.U ) { pmpaddr(i) := dnxt }    
+      when(enable & lock =/= 1.U ) { pmpaddr(i) := dnxt(37,0) } // for dromajo diff-test, support sv39 only
     }
 
     return pmpaddr
@@ -1448,7 +1448,7 @@ trait CsrFiles { this: BaseCommit =>
     val stval = WireDefault( in.csrfiles.stval )
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.stval, "h143".U, in.csrExe )
 
-    when( update_priv_lvl(in) === "b01".U ) {
+    when( in.is_trap & update_priv_lvl(in) === "b01".U ) {
       stval := Mux1H( Seq(
         in.is_instr_access_fault    -> in.ill_ivaddr,
         in.is_instr_paging_fault    -> in.ill_ivaddr,
@@ -1509,7 +1509,7 @@ trait CsrFiles { this: BaseCommit =>
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.satp.asUInt, "h180".U, in.csrExe )
     when(enable) {
       /** @note only sv39 supportted */
-      satp.mode := dnxt(63,60) & "b1000".U
+      satp.mode := dnxt(63,60) & ("b1000".U)(4.W)
       satp.asid := dnxt(59,44)
       satp.ppn  := dnxt(43,0)
     }
@@ -1793,12 +1793,20 @@ trait CsrFiles { this: BaseCommit =>
     dcsr.mprven    := 0.U(1.W)
 
 
+
+
+
+
+
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dcsr.asUInt, "h7B0".U, in.csrExe )
     when(false.B) {}
     .elsewhen( in.is_debug_interrupt ){
       dcsr.prv := in.csrfiles.priv_lvl
     }
     .elsewhen(enable) {
+      dcsr.ebreakm   := dnxt(15)
+      dcsr.ebreaks   := dnxt(13)
+      dcsr.ebreaku   := dnxt(12)
       dcsr.step := dnxt(2)
       dcsr.prv  := dnxt(1,0)
     }

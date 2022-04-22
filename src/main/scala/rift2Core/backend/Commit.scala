@@ -58,6 +58,7 @@ class CMMState_Bundle extends Bundle{
   val is_wb = Bool()
   val ill_ivaddr = UInt(64.W)
 	val ill_dvaddr = UInt(64.W)
+  val is_csrr_illegal = Bool()
   val rtc_clock = Bool()
   val exint = new ExInt_Bundle
 
@@ -135,11 +136,6 @@ class CMMState_Bundle extends Bundle{
     return is_csrw_illegal
   }
 
-  def is_csrr_illegal: Bool = {
-    val is_csrr_illegal = csrfiles.csr_read_prilvl(csrExe.addr)
-    return is_csrr_illegal
-  }
-
   def is_fcsrw_illegal: Bool = {
     val is_fcsrw_illegal = ( fcsrExe.op_rc | fcsrExe.op_rs | fcsrExe.op_rw ) & (csrfiles.mstatus.fs === 0.U)
     return is_fcsrw_illegal
@@ -151,7 +147,7 @@ class CMMState_Bundle extends Bundle{
     val is_csr_illegal = 
       (is_csrr_illegal  & rod.is_csr & ~is_wb) |
       (is_csrw_illegal  & rod.is_csr &  is_wb) |
-      (is_fcsrw_illegal & rod.is_fpu &  is_wb)
+      (is_fcsrw_illegal & rod.is_fcsr &  is_wb)
 
     val is_ill_sfence = is_wb & rod.is_sfence_vma & ( (csrfiles.mstatus.tvm & csrfiles.priv_lvl === "b01".U) | csrfiles.priv_lvl === "b00".U)
     val is_ill_wfi  = is_wb & rod.is_wfi        & (  csrfiles.mstatus.tw & csrfiles.priv_lvl < "b11".U )
@@ -159,7 +155,7 @@ class CMMState_Bundle extends Bundle{
     val is_ill_mRet = rod.privil.mret & csrfiles.priv_lvl =/= "b11".U
     val is_ill_sRet = rod.privil.sret & ( csrfiles.priv_lvl === "b00".U | ( csrfiles.priv_lvl === "b01".U & csrfiles.mstatus.tsr) )
     val is_ill_dRet = rod.privil.dret & ~csrfiles.DMode
-    val is_ill_fpus = (is_wb & (rod.is_fcmm | rod.is_fpu) & csrfiles.mstatus.fs === 0.U)
+    val is_ill_fpus = (is_wb & (rod.is_fpu) & csrfiles.mstatus.fs === 0.U)
 
     val is_illeage = rod.is_illeage | is_csr_illegal | is_ill_sfence | is_ill_wfi | is_ill_mRet | is_ill_sRet | is_ill_dRet | is_ill_fpus
     return is_illeage.asBool
@@ -223,7 +219,7 @@ class CMMState_Bundle extends Bundle{
   }
 
   def is_fpu_state_change: Bool = {
-    val is_fpu_state_change = ~is_trap & (rod.is_fcmm | rod.is_fpu)
+    val is_fpu_state_change = ~is_trap & (rod.is_fpu)
     return is_fpu_state_change
   }
 
@@ -360,7 +356,7 @@ class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
     res
   }
   val csrExe  = ReDirect( emptyExePort, VecInit( io.rod.map{_.bits.is_csr} ) )
-  val fcsrExe = ReDirect( io.fcsr_cmm_op, VecInit( io.rod.map{_.bits.is_fpu} ) )
+  val fcsrExe = ReDirect( io.fcsr_cmm_op, VecInit( io.rod.map{_.bits.is_fcsr} ) )
 
   val is_single_step = RegNext(next = is_retired(0) & cmm_state(0).is_step, init = false.B)
   val is_trigger = false.B
@@ -385,6 +381,7 @@ class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
     cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
     cmm_state(i).ill_dvaddr               := io.lsu_cmm.trap_addr
     cmm_state(i).rtc_clock               := io.rtc_clock
+    cmm_state(i).is_csrr_illegal         := cmm_state(i).csrfiles.csr_read_prilvl(io.csr_addr.bits) & io.csr_addr.valid
 
     cmm_state(i).exint.is_single_step := is_single_step
     cmm_state(i).exint.is_trigger := false.B
@@ -406,7 +403,7 @@ class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
   ( 1 until cm ).map{ i => assert( commit_state(i) <= commit_state(i-1) ) }
   
   for ( i <- 0 until cm ) yield {
-    when( ~io.rod(i).valid ) {
+    when( (~io.rod(i).valid)  ) {
       commit_state(i) := 0.U //IDLE
     }
     .otherwise {
@@ -418,8 +415,12 @@ class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
         for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
         abort_chn := i.U
       } .elsewhen( cmm_state(i).is_wb & ~cmm_state(i).is_step ) { //when writeback and no-step
-        commit_state(i) := 3.U
-        for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
+        when( (io.rod(i).bits.is_csr & ~csrExe(i).valid) || (io.rod(i).bits.is_fcsr & ~fcsrExe(i).valid) ) {
+          commit_state(i) := 0.U
+        } .otherwise {
+          commit_state(i) := 3.U
+        }
+        for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
       } .otherwise {
         commit_state(i) := 0.U //idle
       }
@@ -540,7 +541,7 @@ class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
 
   ( 0 until cm ).map{ i => {
     fcsrExe(i).ready :=
-      commit_state_is_comfirm(i) & io.rod(i).bits.is_fpu
+      commit_state_is_comfirm(i) & io.rod(i).bits.is_fcsr
 
     assert( ~(fcsrExe(i).ready & ~fcsrExe(i).valid) )
   }}
@@ -652,9 +653,9 @@ class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
     csrfiles.tdata3        := 0.U
               
     csrfiles.dcsr.xdebugver := 4.U(4.W)
-    csrfiles.dcsr.ebreakm   := 1.U(1.W)
-    csrfiles.dcsr.ebreaks   := 1.U(1.W)
-    csrfiles.dcsr.ebreaku   := 1.U(1.W)
+    csrfiles.dcsr.ebreakm   := 0.U(1.W)
+    csrfiles.dcsr.ebreaks   := 0.U(1.W)
+    csrfiles.dcsr.ebreaku   := 0.U(1.W)
     csrfiles.dcsr.stepie    := 0.U(1.W)
     csrfiles.dcsr.stopcount := 0.U(1.W)
     csrfiles.dcsr.stoptime  := 0.U(1.W)
