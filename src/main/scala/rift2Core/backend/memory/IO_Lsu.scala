@@ -33,7 +33,7 @@ import freechips.rocketchip.tilelink._
 class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModule{
   def nm = 8
   val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
+    val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
     val deq = new DecoupledIO(new Info_cache_retn)
     val is_empty = Output(Bool())
 
@@ -42,7 +42,7 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
   })
 
   val is_busy = RegInit(false.B)
-  val pending = Reg(new Info_cache_s0s1)
+  val pending = Reg(new Lsu_iss_info)
   // val pending_wb = Reg(new WriteBack_info(dw=64,dp=64))
   // val pending_paddr = Reg(UInt(64.W))
   // val pending_fun = Reg(new Cache_op)
@@ -65,8 +65,8 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
             fromSource = idx.U,
             toAddress = io.enq.bits.paddr >> log2Ceil(64/8).U << log2Ceil(64/8).U,
             lgSize = log2Ceil(64/8).U,
-            data = io.enq.bits.wdata(0),
-            mask = io.enq.bits.wstrb
+            data = io.enq.bits.wdata_align64,
+            mask = io.enq.bits.wstrb_align64
           )._2
       } .otherwise{
         io.getPut.bits := DontCare
@@ -91,20 +91,20 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
 
   io.deq.valid    := io.access.valid
 
-  io.deq.bits.wb.rd0 := pending.rd.rd0
+  io.deq.bits.wb.rd0 := pending.param.rd0
   io.deq.bits.wb.res := 
   {
     val rdata = io.access.bits.data
     val paddr = pending.paddr
     val fun = pending.fun
-    val overlap_wdata = pending.wdata(0)
-    val overlap_wstrb = pending.wstrb
+    // val overlap_wdata = pending.wdata
+    // val overlap_wstrb = pending.wstrb
     
-    val res_pre_pre = {
-      val (new_data, new_strb) = overlap_wr( rdata, 0.U, overlap_wdata, overlap_wstrb)
-      new_data
-    }
-    val res_pre = get_loadRes( fun, paddr, res_pre_pre )
+    // val res_pre_pre = {
+    //   val (new_data, new_strb) = overlap_wr( rdata, 0.U, overlap_wdata, overlap_wstrb)
+    //   new_data
+    // }
+    val res_pre = get_loadRes( fun, paddr, rdata )
     res_pre
   }
 

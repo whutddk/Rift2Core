@@ -23,8 +23,8 @@ import chisel3.util._
 import base._
 
 
-class Cache_tag( dw: Int, aw: Int, bk: Int, cb: Int, cl: Int, nm: Int ) {
-  val addr_lsb = log2Ceil(dw*bk/8)
+class Cache_tag( dw: Int, aw: Int, cb: Int, cl: Int, nm: Int ) {
+  val addr_lsb = log2Ceil(dw/8)
   val line_w   = log2Ceil(cl)
   val tag_w   = aw - addr_lsb - line_w - log2Ceil(nm)
 

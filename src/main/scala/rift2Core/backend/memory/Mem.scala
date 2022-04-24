@@ -107,10 +107,9 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     * @return Info_cache_s0s1
     */
   val ls_arb = {
-    val mdl = Module(new Arbiter(new Info_cache_s0s1, 2))
+    val mdl = Module(new Arbiter(new Lsu_iss_info, 2))
     stQueue.io.overlap.paddr := opMux.io.ld_deq.bits.param.dat.op1
-    mdl.io.in(0).valid := opMux.io.ld_deq.valid
-    mdl.io.in(0).bits  := pkg_Info_cache_s0s1(opMux.io.ld_deq.bits, stQueue.io.overlap.wdata, stQueue.io.overlap.wstrb)
+    mdl.io.in(0) <> opMux.io.ld_deq
     mdl.io.in(1) <> stQueue.io.deq
     mdl
   }
@@ -132,7 +131,9 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     */ 
   val cacheMux = {
     val mdl = Module(new cacheMux)
-    mdl.io.enq <> regionMux.io.deq(0)
+    mdl.io.enq.bits := pkg_Info_cache_s0s1(regionMux.io.deq(0).bits, stQueue.io.overlap)
+    mdl.io.enq.valid := regionMux.io.deq(0).valid
+    regionMux.io.deq(0).ready := mdl.io.enq.ready
     mdl
   }
 

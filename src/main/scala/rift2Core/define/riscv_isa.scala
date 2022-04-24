@@ -654,6 +654,38 @@ class Lsu_iss_info extends Bundle {
       fun.is_word -> (param.dat.op1(1,0) =/= 0.U),
       fun.is_dubl -> (param.dat.op1(2,0) =/= 0.U)	
     ))
+
+  def paddr = param.dat.op1
+
+  def wdata_align64 = {
+      val res = Wire(UInt(64.W))
+      res := param.dat.op2 << ( paddr(2,0) << 3 )
+      res
+    }
+
+  def wstrb_align64 = {
+    val wstrb = Wire(UInt(8.W))
+    wstrb := Mux1H(Seq(
+        fun.is_byte -> "b00000001".U, fun.is_half -> "b00000011".U,
+        fun.is_word -> "b00001111".U, fun.is_dubl -> "b11111111".U
+      )) << paddr(2,0)
+    wstrb
+  }
+
+  def wdata_align256 = {
+      val res = Wire(UInt(256.W))
+      res := param.dat.op2 << ( paddr(4,0) << 3 )
+      res
+    }
+
+  def wstrb_align256 = {
+    val wstrb = Wire(UInt(64.W))
+    wstrb := Mux1H(Seq(
+        fun.is_byte -> "b00000001".U, fun.is_half -> "b00000011".U,
+        fun.is_word -> "b00001111".U, fun.is_dubl -> "b11111111".U
+      )) << paddr(4,0)
+    wstrb
+  }
 }
 
 
