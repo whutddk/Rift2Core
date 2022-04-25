@@ -215,8 +215,8 @@ object pkg_Info_cache_s0s1{
     val res = Wire(new Info_cache_s0s1)
 
     res.paddr := ori.paddr
-    res.wdata := Mux( ori.fun.is_lu, overlap.wdata << (overlap.paddr(4,0) << 2), ori.wdata_align256)
-    res.wstrb := Mux( ori.fun.is_lu, overlap.wstrb <<  overlap.paddr(4,0),       ori.wstrb_align256)
+    res.wdata := Mux( ori.fun.is_lu, overlap.wdata << (overlap.paddr(4,0) >> 3 << 6), ori.wdata_align256)
+    res.wstrb := Mux( ori.fun.is_lu, overlap.wstrb << (overlap.paddr(4,0) >> 3 << 3), ori.wstrb_align256)
 
 
     {
@@ -273,9 +273,7 @@ object get_loadRes{
 
     def reAlign(rdata: UInt, paddr: UInt) = {
       val res = Wire(UInt(64.W))
-      val shift = Wire(UInt(6.W))
-      shift := Cat( paddr(2,0), 0.U(3.W) )
-      res := rdata >> shift
+      res := rdata >> (paddr(2,0) << 3)
       res
     }
 

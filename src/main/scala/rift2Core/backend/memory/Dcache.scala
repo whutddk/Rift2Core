@@ -302,8 +302,14 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
 
     val high_sel  = io.wr_in.bits.paddr(2) === 1.U
-    val cmp_a_sel = Mux(high_sel, io.wr_in.bits.wdata(63,32), io.wr_in.bits.wdata(31,0))
-    val cmp_b_sel = Mux(high_sel, io.wr_in.bits.rdata(cb_sel)(63,32), io.wr_in.bits.rdata(cb_sel)(31,0))
+    val amo_reAlign_64_a = Wire(UInt(64.W))
+    val amo_reAlign_64_b = Wire(UInt(64.W))
+
+    amo_reAlign_64_a := io.wr_in.bits.wdata         >> (io.wr_in.bits.paddr(4,0) >> 3 << 6)
+    amo_reAlign_64_b := io.wr_in.bits.rdata(cb_sel) >> (io.wr_in.bits.paddr(4,0) >> 3 << 6)
+
+    val cmp_a_sel = Mux(high_sel, amo_reAlign_64_a(63,32), amo_reAlign_64_a(31,0))
+    val cmp_b_sel = Mux(high_sel, amo_reAlign_64_b(63,32), amo_reAlign_64_b(31,0))
      
     
     io.dat_info_w := 
@@ -311,22 +317,22 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
         fun.grant -> io.wr_in.bits.wdata,
         fun.is_su -> io.wr_in.bits.wdata,
         fun.is_sc -> io.wr_in.bits.wdata,
-        (fun.amoswap_w | fun.amoswap_d) -> io.wr_in.bits.wdata,
-        (fun.amoadd_w  | fun.amoadd_d ) -> (io.wr_in.bits.wdata + io.wr_in.bits.rdata(cb_sel)),
-        (fun.amoxor_w  | fun.amoxor_d ) -> (io.wr_in.bits.wdata ^ io.wr_in.bits.rdata(cb_sel)),
-        (fun.amoand_w  | fun.amoand_d ) -> (io.wr_in.bits.wdata & io.wr_in.bits.rdata(cb_sel)),
-        (fun.amoor_w   | fun.amoor_d  ) -> (io.wr_in.bits.wdata | io.wr_in.bits.rdata(cb_sel)),
+        (fun.amoswap_w | fun.amoswap_d) -> (  amo_reAlign_64_a                     << (io.wr_in.bits.paddr(4,0) >> 3 << 6) ),
+        (fun.amoadd_w  | fun.amoadd_d ) -> ( (amo_reAlign_64_a + amo_reAlign_64_b) << (io.wr_in.bits.paddr(4,0) >> 3 << 6) ),
+        (fun.amoxor_w  | fun.amoxor_d ) -> ( (amo_reAlign_64_a ^ amo_reAlign_64_b) << (io.wr_in.bits.paddr(4,0) >> 3 << 6) ),
+        (fun.amoand_w  | fun.amoand_d ) -> ( (amo_reAlign_64_a & amo_reAlign_64_b) << (io.wr_in.bits.paddr(4,0) >> 3 << 6) ),
+        (fun.amoor_w   | fun.amoor_d  ) -> ( (amo_reAlign_64_a | amo_reAlign_64_b) << (io.wr_in.bits.paddr(4,0) >> 3 << 6) ),
 
 
 
-        (fun.amomin_w ) -> Mux(cmp_a_sel.asSInt           < cmp_b_sel.asSInt,                   io.wr_in.bits.wdata,         io.wr_in.bits.rdata(cb_sel)),
-        (fun.amomin_d ) -> Mux(io.wr_in.bits.wdata.asSInt < io.wr_in.bits.rdata(cb_sel).asSInt, io.wr_in.bits.wdata,         io.wr_in.bits.rdata(cb_sel)),
-        (fun.amomax_w ) -> Mux(cmp_a_sel.asSInt           < cmp_b_sel.asSInt,                   io.wr_in.bits.rdata(cb_sel), io.wr_in.bits.wdata),
-        (fun.amomax_d ) -> Mux(io.wr_in.bits.wdata.asSInt < io.wr_in.bits.rdata(cb_sel).asSInt, io.wr_in.bits.rdata(cb_sel), io.wr_in.bits.wdata),
-        (fun.amominu_w) -> Mux(cmp_a_sel                  < cmp_b_sel,                          io.wr_in.bits.wdata,         io.wr_in.bits.rdata(cb_sel)),
-        (fun.amominu_d) -> Mux(io.wr_in.bits.wdata        < io.wr_in.bits.rdata(cb_sel),        io.wr_in.bits.wdata,         io.wr_in.bits.rdata(cb_sel)),
-        (fun.amomaxu_w) -> Mux(cmp_a_sel                  < cmp_b_sel,                          io.wr_in.bits.rdata(cb_sel), io.wr_in.bits.wdata),
-        (fun.amomaxu_d) -> Mux(io.wr_in.bits.wdata        < io.wr_in.bits.rdata(cb_sel),        io.wr_in.bits.rdata(cb_sel), io.wr_in.bits.wdata),
+        (fun.amomin_w ) -> Mux(cmp_a_sel.asSInt           < cmp_b_sel.asSInt,     amo_reAlign_64_a << (io.wr_in.bits.paddr(4,0) >> 3 << 6),         amo_reAlign_64_b << (io.wr_in.bits.paddr(4,0) >> 3 << 6)),
+        (fun.amomin_d ) -> Mux(amo_reAlign_64_a.asSInt < amo_reAlign_64_b.asSInt, amo_reAlign_64_a << (io.wr_in.bits.paddr(4,0) >> 3 << 6),         amo_reAlign_64_b << (io.wr_in.bits.paddr(4,0) >> 3 << 6)),
+        (fun.amomax_w ) -> Mux(cmp_a_sel.asSInt           < cmp_b_sel.asSInt,     amo_reAlign_64_b << (io.wr_in.bits.paddr(4,0) >> 3 << 6),         amo_reAlign_64_a << (io.wr_in.bits.paddr(4,0) >> 3 << 6)),
+        (fun.amomax_d ) -> Mux(amo_reAlign_64_a.asSInt < amo_reAlign_64_b.asSInt, amo_reAlign_64_b << (io.wr_in.bits.paddr(4,0) >> 3 << 6),         amo_reAlign_64_a << (io.wr_in.bits.paddr(4,0) >> 3 << 6)),
+        (fun.amominu_w) -> Mux(cmp_a_sel                  < cmp_b_sel,            amo_reAlign_64_a << (io.wr_in.bits.paddr(4,0) >> 3 << 6),         amo_reAlign_64_b << (io.wr_in.bits.paddr(4,0) >> 3 << 6)),
+        (fun.amominu_d) -> Mux(amo_reAlign_64_a        < amo_reAlign_64_b,        amo_reAlign_64_a << (io.wr_in.bits.paddr(4,0) >> 3 << 6),         amo_reAlign_64_b << (io.wr_in.bits.paddr(4,0) >> 3 << 6)),
+        (fun.amomaxu_w) -> Mux(cmp_a_sel                  < cmp_b_sel,            amo_reAlign_64_b << (io.wr_in.bits.paddr(4,0) >> 3 << 6),         amo_reAlign_64_a << (io.wr_in.bits.paddr(4,0) >> 3 << 6)),
+        (fun.amomaxu_d) -> Mux(amo_reAlign_64_a        < amo_reAlign_64_b,        amo_reAlign_64_b << (io.wr_in.bits.paddr(4,0) >> 3 << 6),         amo_reAlign_64_a << (io.wr_in.bits.paddr(4,0) >> 3 << 6)),
               
       ))
 
@@ -435,7 +441,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
   io.deq.valid := io.wr_in.valid & io.wr_in.bits.fun.is_access & is_hit
   io.deq.bits.wb.res := {
-    val rdata = io.wr_in.bits.rdata(cb_sel)
+    val rdata = io.wr_in.bits.rdata(cb_sel)  //align 256
     val paddr = io.wr_in.bits.paddr
     val fun = io.wr_in.bits.fun
     val overlap_wdata = io.wr_in.bits.wdata
@@ -445,12 +451,12 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
       val res = Wire( UInt(64.W) )
       val (new_data, new_strb) = overlap_wr( rdata, 0.U(32.W), overlap_wdata, overlap_wstrb)
       
-      val overlap_data = Mux( io.wr_in.bits.fun.is_lu, new_data, rdata)
+      val overlap_data = Mux( io.wr_in.bits.fun.is_lu, new_data, rdata) //align 256
 
-      res := overlap_data >> (paddr(4,0) >> 2 << 5)
+      res := overlap_data >> (paddr(4,0) >> 3 << 6) //align 64
       res
     }
-    val res_pre = get_loadRes( fun, paddr, res_pre_pre )
+    val res_pre = get_loadRes( fun, paddr, res_pre_pre ) //align 8
 
     val res = Mux(
       io.wr_in.bits.fun.is_sc,
