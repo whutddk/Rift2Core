@@ -512,13 +512,12 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
 }
 
-class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
+class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = new DecoupledIO(new Info_cache_retn)
     val is_empty = Output(Bool())
 
-    // val overlap = new Info_overlap
 
     val flush = Input(Bool())
 
@@ -534,9 +533,9 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
 
   val cache_dat = new Cache_dat( dw, aw, cb, cl, bk = bk )
   val cache_tag = new Cache_tag( dw, aw, cb, cl, bk = bk ) 
-  val missUnit = Module(new MissUnit(edge = edge, entry = 8, setting = 2))
-  val probeUnit = Module(new ProbeUnit(edge = edge))
-  val writeBackUnit = Module(new WriteBackUnit(edge = edge, setting = 2))
+  val missUnit = Module(new MissUnit(edge = edge, entry = 8, setting = 2, id = id))
+  val probeUnit = Module(new ProbeUnit(edge = edge, id = id))
+  val writeBackUnit = Module(new WriteBackUnit(edge = edge, setting = 2, id = id))
 
   val lsEntry = Module(new Queue(new Info_cache_s0s1, 16))
   val rd_stage = Module(new L1d_rd_stage())
@@ -570,9 +569,6 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   wr_stage.io.missUnit_req      <> missUnit.io.req
   wr_stage.io.wb_req <> writeBackUnit.io.wb_req
   wr_stage.io.pb_req <> writeBackUnit.io.pb_req
-  // wr_stage.io.overlap <> io.overlap
-  // wr_stage.io.overlap_wdata := io.overlap.wdata
-  // wr_stage.io.overlap_wstrb := io.overlap.wstrb
   wr_stage.io.flush := io.flush
 
   missUnit.io.miss_ban := writeBackUnit.io.miss_ban

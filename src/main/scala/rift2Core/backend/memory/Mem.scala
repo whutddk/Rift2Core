@@ -54,24 +54,18 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
     val lsu_mmu = DecoupledIO(new Info_mmu_req)
     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
 
-    val missUnit_dcache_acquire = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleA(edge(i).bundle))) 
-    val missUnit_dcache_grant = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleD(edge(i).bundle))))
-    val missUnit_dcache_grantAck  = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleE(edge(i).bundle)))
-    val probeUnit_dcache_probe = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleB(edge(i).bundle))))
-    val writeBackUnit_dcache_release =
-      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleC(edge(i).bundle)))
-    val writeBackUnit_dcache_grant   =
-      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleD(edge(i).bundle))))
+    val missUnit_dcache_acquire      = DecoupledIO(new TLBundleA(edge(0).bundle))
+    val missUnit_dcache_grant        = Flipped(DecoupledIO(new TLBundleD(edge(0).bundle)))
+    val missUnit_dcache_grantAck     = DecoupledIO(new TLBundleE(edge(0).bundle))
+    val probeUnit_dcache_probe       = Flipped(DecoupledIO(new TLBundleB(edge(0).bundle)))
+    val writeBackUnit_dcache_release = DecoupledIO(new TLBundleC(edge(0).bundle))
+    val writeBackUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge(0).bundle)))
 
-    val system_getPut = new DecoupledIO(new TLBundleA(edge(bk).bundle))
-    val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(bk).bundle)))
+    val system_getPut = new DecoupledIO(new TLBundleA(edge(1).bundle))
+    val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(1).bundle)))
 
-    val periph_getPut = new DecoupledIO(new TLBundleA(edge(bk+1).bundle))
-    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(bk+1).bundle)))
+    val periph_getPut = new DecoupledIO(new TLBundleA(edge(2).bundle))
+    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(2).bundle)))
 
 
     val flush = Input(Bool())
@@ -142,41 +136,15 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
     * @return Info_cache_retn
     */
   val cache = for ( i <- 0 until bk ) yield {
-    val mdl = Module(new Dcache(edge(i)))
+    val mdl = Module(new Dcache(edge(0), i))
     mdl.io.enq <> cacheMux.io.deq(i)
-    // mdl.io.overlap <> stQueue.io.overlap(i)
-
-    io.missUnit_dcache_acquire(i).valid := mdl.io.missUnit_dcache_acquire.valid
-    io.missUnit_dcache_acquire(i).bits := mdl.io.missUnit_dcache_acquire.bits
-    mdl.io.missUnit_dcache_acquire.ready := io.missUnit_dcache_acquire(i).ready
-
-    mdl.io.missUnit_dcache_grant.valid := io.missUnit_dcache_grant(i).valid
-    mdl.io.missUnit_dcache_grant.bits  := io.missUnit_dcache_grant(i).bits
-    io.missUnit_dcache_grant(i).ready := mdl.io.missUnit_dcache_grant.ready
-
-    io.missUnit_dcache_grantAck(i).valid := mdl.io.missUnit_dcache_grantAck.valid
-    io.missUnit_dcache_grantAck(i).bits := mdl.io.missUnit_dcache_grantAck.bits
-    mdl.io.missUnit_dcache_grantAck.ready := io.missUnit_dcache_grantAck(i).ready
-
-    mdl.io.probeUnit_dcache_probe.valid := io.probeUnit_dcache_probe(i).valid
-    mdl.io.probeUnit_dcache_probe.bits := io.probeUnit_dcache_probe(i).bits
-    io.probeUnit_dcache_probe(i).ready := mdl.io.probeUnit_dcache_probe.ready
-
-    io.writeBackUnit_dcache_release(i).valid := mdl.io.writeBackUnit_dcache_release.valid
-    io.writeBackUnit_dcache_release(i).bits := mdl.io.writeBackUnit_dcache_release.bits
-    mdl.io.writeBackUnit_dcache_release.ready := io.writeBackUnit_dcache_release(i).ready
-
-    mdl.io.writeBackUnit_dcache_grant.valid := io.writeBackUnit_dcache_grant(i).valid
-    mdl.io.writeBackUnit_dcache_grant.bits := io.writeBackUnit_dcache_grant(i).bits
-    io.writeBackUnit_dcache_grant(i).ready := mdl.io.writeBackUnit_dcache_grant.ready
-
     mdl.io.flush := io.flush
 
     mdl
   }
 
   val system = {
-    val mdl = Module(new IO_Lsu(edge(bk+1), idx = bk+1))
+    val mdl = Module(new IO_Lsu(edge(2), idx = 2))
     mdl.io.enq <> regionMux.io.deq(1)
     // mdl.io.overlap <> stQueue.io.overlap(nm+1)
 
@@ -191,7 +159,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
   }
 
   val periph = {
-    val mdl = Module(new IO_Lsu(edge(bk), idx = bk))
+    val mdl = Module(new IO_Lsu(edge(1), idx = 1))
     mdl.io.enq <> regionMux.io.deq(2)
     // mdl.io.overlap <> stQueue.io.overlap(nm)
 
@@ -359,16 +327,81 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
   def is_fence_i    = io.lsu_iss_exe.bits.fun.fence_i
   def is_sfence_vma = io.lsu_iss_exe.bits.fun.sfence_vma
   def is_fence_op = is_fence | is_fence_i | is_sfence_vma
-  // when( io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & ~is_fence_op & ~io.flush) {
-  //   is_fence      := io.lsu_iss_exe.bits.fun.fence
-  //   is_fence_i     := io.lsu_iss_exe.bits.fun.fence_i
-  //   is_sfence_vma := io.lsu_iss_exe.bits.fun.sfence_vma
-  // }
-  // .elsewhen( (is_empty &  is_fence_op) | io.flush ) {
-  //   is_fence      := false.B
-  //   is_fence_i    := false.B
-  //   is_sfence_vma := false.B
-  // }
+
+
+
+  io.missUnit_dcache_acquire.valid := false.B
+  io.missUnit_dcache_acquire.bits := 0.U.asTypeOf(new TLBundleA(edge(0).bundle))
+  io.missUnit_dcache_grant.ready := false.B
+  io.missUnit_dcache_grantAck.valid := false.B
+  io.missUnit_dcache_grantAck.bits := 0.U.asTypeOf(new TLBundleE(edge(0).bundle))
+  io.probeUnit_dcache_probe.ready := false.B
+  io.writeBackUnit_dcache_release.valid := false.B
+  io.writeBackUnit_dcache_release.bits := 0.U.asTypeOf(new TLBundleC(edge(0).bundle))
+  io.writeBackUnit_dcache_grant.ready := false.B
+
+  for ( i <- 0 until bk ) yield {
+    cache(i).io.missUnit_dcache_acquire.ready  := false.B
+    cache(i).io.missUnit_dcache_grant.valid    := false.B
+    cache(i).io.missUnit_dcache_grant.bits     := 0.U.asTypeOf(new TLBundleD(edge(0).bundle))
+    cache(i).io.missUnit_dcache_grantAck.ready := false.B
+    cache(i).io.probeUnit_dcache_probe.valid   := false.B
+    cache(i).io.probeUnit_dcache_probe.bits    := 0.U.asTypeOf(new TLBundleB(edge(0).bundle))
+    cache(i).io.writeBackUnit_dcache_release.ready := false.B
+    cache(i).io.writeBackUnit_dcache_grant.valid   := false.B
+    cache(i).io.writeBackUnit_dcache_grant.bits    := 0.U.asTypeOf(new TLBundleD(edge(0).bundle))
+  }
+
+
+  for ( i <- bk-1 to 0 by -1 ) yield {
+    when( cache(i).io.missUnit_dcache_acquire.valid ) {
+      io.missUnit_dcache_acquire <> cache(i).io.missUnit_dcache_acquire
+      // io.missUnit_dcache_acquire.valid := cache(i).io.missUnit_dcache_acquire.valid
+      // io.missUnit_dcache_acquire.bits := cache(i).io.missUnit_dcache_acquire.bits
+      // cache(i).io.missUnit_dcache_acquire.ready := io.missUnit_dcache_acquire.ready
+    }
+
+
+    when( io.missUnit_dcache_grant.bits.source === i.U ) {
+      cache(i).io.missUnit_dcache_grant <> io.missUnit_dcache_grant
+      // cache(i).io.missUnit_dcache_grant.valid := io.missUnit_dcache_grant.valid
+      // cache(i).io.missUnit_dcache_grant.bits  := io.missUnit_dcache_grant.bits
+      // io.missUnit_dcache_grant.ready := cache(i).io.missUnit_dcache_grant.ready      
+    }
+
+    when( cache(i).io.missUnit_dcache_grantAck.valid ) {
+      io.missUnit_dcache_grantAck <> cache(i).io.missUnit_dcache_grantAck
+      // io.missUnit_dcache_grantAck.valid := cache(i).io.missUnit_dcache_grantAck.valid
+      // io.missUnit_dcache_grantAck.bits := cache(i).io.missUnit_dcache_grantAck.bits
+      // cache(i).io.missUnit_dcache_grantAck.ready := io.missUnit_dcache_grantAck.ready      
+    }
+
+    when( io.probeUnit_dcache_probe.bits.address(addr_lsb+bk_w-1,addr_lsb) === i.U ) {
+      cache(i).io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe
+      // cache(i).io.probeUnit_dcache_probe.valid := io.probeUnit_dcache_probe.valid
+      // cache(i).io.probeUnit_dcache_probe.bits := io.probeUnit_dcache_probe.bits
+      // io.probeUnit_dcache_probe.ready := cache(i).io.probeUnit_dcache_probe.ready      
+    }
+
+
+    when( cache(i).io.writeBackUnit_dcache_release.valid ) {
+      io.writeBackUnit_dcache_release <> cache(i).io.writeBackUnit_dcache_release
+      // io.writeBackUnit_dcache_release.valid := cache(i).io.writeBackUnit_dcache_release.valid
+      // io.writeBackUnit_dcache_release.bits  := cache(i).io.writeBackUnit_dcache_release.bits
+      // cache(i).io.writeBackUnit_dcache_release.ready := io.writeBackUnit_dcache_release.ready      
+    }
+
+
+    when( io.writeBackUnit_dcache_grant.bits.source === i.U ) {
+      cache(i).io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
+      // cache(i).io.writeBackUnit_dcache_grant.valid := io.writeBackUnit_dcache_grant.valid
+      // cache(i).io.writeBackUnit_dcache_grant.bits := io.writeBackUnit_dcache_grant.bits
+      // io.writeBackUnit_dcache_grant.ready := cache(i).io.writeBackUnit_dcache_grant.ready      
+    }
+
+  }
+
+
 
 }
 

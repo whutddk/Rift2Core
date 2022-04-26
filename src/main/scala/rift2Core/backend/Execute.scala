@@ -65,23 +65,17 @@ class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extend
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
 
-    val missUnit_dcache_acquire = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleA(edge(i).bundle))) 
-    val missUnit_dcache_grant = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleD(edge(i).bundle))))
-    val missUnit_dcache_grantAck  = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleE(edge(i).bundle)))
-    val probeUnit_dcache_probe = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleB(edge(i).bundle))))
-    val writeBackUnit_dcache_release =
-      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleC(edge(i).bundle)))
-    val writeBackUnit_dcache_grant   =
-      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleD(edge(i).bundle))))
+    val missUnit_dcache_acquire = DecoupledIO(new TLBundleA(edge(0).bundle))
+    val missUnit_dcache_grant = Flipped(DecoupledIO(new TLBundleD(edge(0).bundle)))
+    val missUnit_dcache_grantAck  = DecoupledIO(new TLBundleE(edge(0).bundle))
+    val probeUnit_dcache_probe = Flipped(DecoupledIO(new TLBundleB(edge(0).bundle)))
+    val writeBackUnit_dcache_release = DecoupledIO(new TLBundleC(edge(0).bundle))
+    val writeBackUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge(0).bundle)))
 
-    val system_getPut = new DecoupledIO(new TLBundleA(edge(8).bundle))
-    val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(8).bundle)))
-    val periph_getPut = new DecoupledIO(new TLBundleA(edge(9).bundle))
-    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(9).bundle)))
+    val system_getPut = new DecoupledIO(new TLBundleA(edge(1).bundle))
+    val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(1).bundle)))
+    val periph_getPut = new DecoupledIO(new TLBundleA(edge(2).bundle))
+    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(2).bundle)))
 
     val flush = Input(Bool())
 
@@ -102,31 +96,31 @@ class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extend
 
     mdl.io.cmm_lsu <> io.cmm_lsu
     mdl.io.lsu_cmm <> io.lsu_cmm
-    for ( i <- 0 until 8 ) yield {
-      io.missUnit_dcache_acquire(i).valid := mdl.io.missUnit_dcache_acquire(i).valid
-      io.missUnit_dcache_acquire(i).bits := mdl.io.missUnit_dcache_acquire(i).bits
-      mdl.io.missUnit_dcache_acquire(i).ready := io.missUnit_dcache_acquire(i).ready
 
-      mdl.io.missUnit_dcache_grant(i).valid := io.missUnit_dcache_grant(i).valid
-      mdl.io.missUnit_dcache_grant(i).bits  := io.missUnit_dcache_grant(i).bits
-      io.missUnit_dcache_grant(i).ready := mdl.io.missUnit_dcache_grant(i).ready
+    io.missUnit_dcache_acquire.valid := mdl.io.missUnit_dcache_acquire.valid
+    io.missUnit_dcache_acquire.bits := mdl.io.missUnit_dcache_acquire.bits
+    mdl.io.missUnit_dcache_acquire.ready := io.missUnit_dcache_acquire.ready
 
-      io.missUnit_dcache_grantAck(i).valid := mdl.io.missUnit_dcache_grantAck(i).valid
-      io.missUnit_dcache_grantAck(i).bits := mdl.io.missUnit_dcache_grantAck(i).bits
-      mdl.io.missUnit_dcache_grantAck(i).ready := io.missUnit_dcache_grantAck(i).ready
+    mdl.io.missUnit_dcache_grant.valid := io.missUnit_dcache_grant.valid
+    mdl.io.missUnit_dcache_grant.bits  := io.missUnit_dcache_grant.bits
+    io.missUnit_dcache_grant.ready := mdl.io.missUnit_dcache_grant.ready
 
-      mdl.io.probeUnit_dcache_probe(i).valid := io.probeUnit_dcache_probe(i).valid
-      mdl.io.probeUnit_dcache_probe(i).bits := io.probeUnit_dcache_probe(i).bits
-      io.probeUnit_dcache_probe(i).ready := mdl.io.probeUnit_dcache_probe(i).ready
+    io.missUnit_dcache_grantAck.valid := mdl.io.missUnit_dcache_grantAck.valid
+    io.missUnit_dcache_grantAck.bits := mdl.io.missUnit_dcache_grantAck.bits
+    mdl.io.missUnit_dcache_grantAck.ready := io.missUnit_dcache_grantAck.ready
 
-      io.writeBackUnit_dcache_release(i).valid := mdl.io.writeBackUnit_dcache_release(i).valid
-      io.writeBackUnit_dcache_release(i).bits := mdl.io.writeBackUnit_dcache_release(i).bits
-      mdl.io.writeBackUnit_dcache_release(i).ready := io.writeBackUnit_dcache_release(i).ready
+    mdl.io.probeUnit_dcache_probe.valid := io.probeUnit_dcache_probe.valid
+    mdl.io.probeUnit_dcache_probe.bits := io.probeUnit_dcache_probe.bits
+    io.probeUnit_dcache_probe.ready := mdl.io.probeUnit_dcache_probe.ready
 
-      mdl.io.writeBackUnit_dcache_grant(i).valid := io.writeBackUnit_dcache_grant(i).valid
-      mdl.io.writeBackUnit_dcache_grant(i).bits := io.writeBackUnit_dcache_grant(i).bits
-      io.writeBackUnit_dcache_grant(i).ready := mdl.io.writeBackUnit_dcache_grant(i).ready
-    }
+    io.writeBackUnit_dcache_release.valid := mdl.io.writeBackUnit_dcache_release.valid
+    io.writeBackUnit_dcache_release.bits := mdl.io.writeBackUnit_dcache_release.bits
+    mdl.io.writeBackUnit_dcache_release.ready := io.writeBackUnit_dcache_release.ready
+
+    mdl.io.writeBackUnit_dcache_grant.valid := io.writeBackUnit_dcache_grant.valid
+    mdl.io.writeBackUnit_dcache_grant.bits := io.writeBackUnit_dcache_grant.bits
+    io.writeBackUnit_dcache_grant.ready := mdl.io.writeBackUnit_dcache_grant.ready
+
 
     io.system_getPut.valid := mdl.io.system_getPut.valid
     io.system_getPut.bits := mdl.io.system_getPut.bits
