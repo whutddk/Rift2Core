@@ -24,10 +24,11 @@ import chisel3.util._
 import base._
 
 
-class Cache_dat( dw: Int, aw: Int, cb: Int, cl: Int ) {
+class Cache_dat( dw: Int, aw: Int, cb: Int, cl: Int, bk: Int ) {
 
   val addr_lsb = log2Ceil(dw/8)
   val line_w   = log2Ceil(cl)
+  val bk_w     = log2Ceil(bk)
 
 
   val dat_addr_w = Wire(UInt(aw.W))
@@ -43,8 +44,8 @@ class Cache_dat( dw: Int, aw: Int, cb: Int, cl: Int ) {
 
 
 
-  val addr_sel_w = dat_addr_w(addr_lsb+line_w-1, addr_lsb)
-  val addr_sel_r = dat_addr_r(addr_lsb+line_w-1, addr_lsb)
+  val addr_sel_w = dat_addr_w(addr_lsb+bk_w+line_w-1, addr_lsb+bk_w)
+  val addr_sel_r = dat_addr_r(addr_lsb+bk_w+line_w-1, addr_lsb+bk_w)
 
 
 

@@ -36,7 +36,6 @@ import freechips.rocketchip.tilelink._
   */
 class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
   def dp_w = log2Ceil(dp)
-  def nm = 8
 
   val io = IO( new Bundle{
     val enq = Flipped(DecoupledIO(new Lsu_iss_info))

@@ -134,14 +134,14 @@ class regionMux(implicit p: Parameters) extends DcacheModule{
 class cacheMux(implicit p: Parameters) extends DcacheModule{
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
-    val deq = Vec(nm, new DecoupledIO(new Info_cache_s0s1))
+    val deq = Vec(bk, new DecoupledIO(new Info_cache_s0s1))
   })
 
-  val chn = io.enq.bits.paddr(12+nm_w-1,12)
+  val chn = io.enq.bits.paddr(addr_lsb+bk_w-1,addr_lsb)
 
   io.enq.ready := false.B
   
-  for ( i <- 0 until nm ) yield {
+  for ( i <- 0 until bk ) yield {
     when( i.U === chn ) {
       io.deq(i) <> io.enq
     } .otherwise {
@@ -215,8 +215,8 @@ object pkg_Info_cache_s0s1{
     val res = Wire(new Info_cache_s0s1)
 
     res.paddr := ori.paddr
-    res.wdata := Mux( ori.fun.is_lu, overlap.wdata << (overlap.paddr(4,0) >> 3 << 6), ori.wdata_align256)
-    res.wstrb := Mux( ori.fun.is_lu, overlap.wstrb << (overlap.paddr(4,0) >> 3 << 3), ori.wstrb_align256)
+    res.wdata := Mux( ori.fun.is_lu, reAlign_data( from = 64, to = 256, data = overlap.wdata, addr = overlap.paddr ), ori.wdata_align256)
+    res.wstrb := Mux( ori.fun.is_lu, reAlign_strb( from = 64, to = 256, strb = overlap.wstrb, addr = overlap.paddr ), ori.wstrb_align256)
 
 
     {
@@ -231,26 +231,6 @@ object pkg_Info_cache_s0s1{
   
   }
 }
-
-  /** package read operation */
-//   def apply( ori: Lsu_iss_info, overlap: Info_overlap)(implicit p: Parameters) = {
-
-//     val res = Wire(new Info_cache_s0s1)
-
-//     // res.paddr := ori.paddr
-//     // res.wdata := overlap.wdata << (overlap.paddr(4,0) << 2)
-//     // res.wstrb := overlap.wstrb << overlap.paddr(4,0)
-
-//     {
-//       // res.fun := 0.U.asTypeOf(new Cache_op)
-//       // res.fun.viewAsSupertype(new Lsu_isa) := ori.fun.viewAsSupertype(new Lsu_isa)
-//     }
-//     res.rd.rd0 := ori.param.rd0
-//     res.chk_idx := DontCare
-//     res
-  
-//   }
-// }
 
 object overlap_wr{
   def apply( ori: UInt, ori_wstrb: UInt, wdata: UInt, wstrb: UInt): (UInt, UInt) = {
@@ -271,11 +251,11 @@ object get_loadRes{
     require( rdata.getWidth == 64 )
     val res = Wire(UInt(64.W))
 
-    def reAlign(rdata: UInt, paddr: UInt) = {
-      val res = Wire(UInt(64.W))
-      res := rdata >> (paddr(2,0) << 3)
-      res
-    }
+    // def reAlign(rdata: UInt, paddr: UInt) = {
+    //   val res = Wire(UInt(64.W))
+    //   res := rdata >> (paddr(2,0) << 3)
+    //   res
+    // }
 
     def load_byte(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(56, Mux(is_usi, 0.U, rdata(7)) ),  rdata(7,0)  )
     def load_half(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(48, Mux(is_usi, 0.U, rdata(15)) ), rdata(15,0) )
@@ -283,7 +263,7 @@ object get_loadRes{
 
 
     
-    val align = reAlign(rdata, paddr)
+    val align = reAlign_data( from = 64, to = 8, rdata, paddr )
 
     res := Mux1H(Seq(
       fun.is_byte -> load_byte(fun.is_usi, align),
@@ -293,6 +273,46 @@ object get_loadRes{
     ))  
 
     res
+  }
+}
+
+object reAlign_data{
+  def apply( from: Int, to: Int, data: UInt, addr: UInt ): UInt = {
+    require( isPow2(from) )
+    require( isPow2(to) )
+    require( data.getWidth == from )
+    val from_lsb = log2Ceil(from/8)
+    val to_lsb   = log2Ceil(to/8)
+
+    val align_data = Wire(UInt( (to max 64).W ))
+    if ( from > to ) {
+      align_data := data >> ( addr( from_lsb-1, 0) >> to_lsb << to_lsb << 3 ) 
+    } else if ( from < to ) {
+      align_data := data << ( addr( to_lsb-1,0 ) >> from_lsb << from_lsb << 3 )
+    } else {
+      align_data := data
+    }
+    return align_data
+  }
+}
+
+object reAlign_strb{
+  def apply( from: Int, to: Int, strb: UInt, addr: UInt ): UInt = {
+    require( isPow2(from) )
+    require( isPow2(to) )
+    require( strb.getWidth == from/8 )
+    val from_lsb = log2Ceil(from/8)
+    val to_lsb   = log2Ceil(to/8)
+
+    val align_strb = Wire(UInt( (to/8 max 8).W ))
+    if ( from > to ) {
+      align_strb := strb >> ( addr( from_lsb-1, 0) >> to_lsb << to_lsb) 
+    } else if ( from < to ) {
+      align_strb := strb << ( addr( to_lsb-1, 0 ) >> from_lsb << from_lsb )
+    } else {
+      align_strb := strb
+    }
+    return align_strb
   }
 }
 

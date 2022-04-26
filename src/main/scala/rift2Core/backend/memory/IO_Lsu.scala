@@ -31,7 +31,6 @@ import freechips.rocketchip.tilelink._
 
 
 class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModule{
-  def nm = 8
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
     val deq = new DecoupledIO(new Info_cache_retn)

@@ -83,8 +83,8 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   val ibuf = Module(new MultiPortFifo( UInt(16.W), 4, 8, 4 ) )
 
-  val cache_dat = new Cache_dat( dw, aw, cb, cl )
-  val cache_tag = new Cache_tag( dw, aw, cb, cl, nm = 1 ) 
+  val cache_dat = new Cache_dat( dw, aw, cb, cl, bk = 1 )
+  val cache_tag = new Cache_tag( dw, aw, cb, cl, bk = 1 ) 
 
 
   val icache_state_dnxt = Wire(UInt(4.W))

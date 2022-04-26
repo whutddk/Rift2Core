@@ -104,8 +104,6 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
         ))
       )
 
-    // def bk_sel_dnxt = addr_dnxt(4,3)
-    // def bk_sel_qout = addr_qout(4,3)
     def cl_sel = addr_qout(11,5)
     def tag_sel = addr_qout(55,12)
 
@@ -147,8 +145,8 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   }
   val walk = new WALK
 
-  val cache_dat = new Cache_dat( 256, 56, 1, 128 )
-  val cache_tag = new Cache_tag( 256, 56, 1, 128, nm = 1 ){ require ( tag_w == 44 ) }
+  val cache_dat = new Cache_dat( 256, 56, 1, 128, bk = 1 )
+  val cache_tag = new Cache_tag( 256, 56, 1, 128, bk = 1 ){ require ( tag_w == 44 ) }
   val is_cache_valid = RegInit( VecInit( Seq.fill(128)(false.B) ) )
 
   val (_, _, is_trans_done, transCnt) = edge.count(io.ptw_access)

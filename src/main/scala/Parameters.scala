@@ -39,7 +39,7 @@ case class CacheSetting(
   ),
   dcacheParameters: L1CacheParameters = DcacheParameters(
     dw = 256,
-    bk = 1,
+    bk = 8,
     cb = 8,
     cl = 128
   ),

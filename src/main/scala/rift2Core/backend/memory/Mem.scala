@@ -42,8 +42,7 @@ trait Fence_op{
 }
 
 
-class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with Fence_op with HasFPUParameters{
-  def nm = 8
+class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule with Fence_op with HasFPUParameters{
   val io = IO(new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
     val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
@@ -68,11 +67,11 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     val writeBackUnit_dcache_grant   =
       MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleD(edge(i).bundle))))
 
-    val system_getPut = new DecoupledIO(new TLBundleA(edge(nm).bundle))
-    val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(nm).bundle)))
+    val system_getPut = new DecoupledIO(new TLBundleA(edge(bk).bundle))
+    val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(bk).bundle)))
 
-    val periph_getPut = new DecoupledIO(new TLBundleA(edge(nm+1).bundle))
-    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(nm+1).bundle)))
+    val periph_getPut = new DecoupledIO(new TLBundleA(edge(bk+1).bundle))
+    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(bk+1).bundle)))
 
 
     val flush = Input(Bool())
@@ -138,11 +137,11 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   }
 
 
-  /** there are nm cache bank 
+  /** 
     * @param in Info_cache_s0s1
     * @return Info_cache_retn
     */
-  val cache = for ( i <- 0 until nm ) yield {
+  val cache = for ( i <- 0 until bk ) yield {
     val mdl = Module(new Dcache(edge(i)))
     mdl.io.enq <> cacheMux.io.deq(i)
     // mdl.io.overlap <> stQueue.io.overlap(i)
@@ -177,7 +176,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   }
 
   val system = {
-    val mdl = Module(new IO_Lsu(edge(nm+1), idx = nm+1))
+    val mdl = Module(new IO_Lsu(edge(bk+1), idx = bk+1))
     mdl.io.enq <> regionMux.io.deq(1)
     // mdl.io.overlap <> stQueue.io.overlap(nm+1)
 
@@ -192,7 +191,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   }
 
   val periph = {
-    val mdl = Module(new IO_Lsu(edge(nm), idx = nm))
+    val mdl = Module(new IO_Lsu(edge(bk), idx = bk))
     mdl.io.enq <> regionMux.io.deq(2)
     // mdl.io.overlap <> stQueue.io.overlap(nm)
 
@@ -211,8 +210,8 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     * @return Info_cache_retn
     */
   val lu_wb_arb = {
-    val mdl = Module(new Arbiter(new Info_cache_retn, nm+2))
-    for ( i <- 0 until nm ) yield {
+    val mdl = Module(new Arbiter(new Info_cache_retn, bk+2))
+    for ( i <- 0 until bk ) yield {
       mdl.io.in(i).valid := cache(i).io.deq.valid & cache(i).io.deq.bits.is_load_amo
       mdl.io.in(i).bits := Mux( mdl.io.in(i).valid, cache(i).io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
       cache(i).io.deq.ready := mdl.io.in(i).ready | ~cache(i).io.deq.bits.is_load_amo
@@ -220,15 +219,15 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     }
 
 
-    mdl.io.in(nm).valid := system.io.deq.valid & system.io.deq.bits.is_load_amo
-    mdl.io.in(nm).bits := Mux( mdl.io.in(nm).valid, system.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
-    system.io.deq.ready := mdl.io.in(nm).ready | ~system.io.deq.bits.is_load_amo
-    when( system.io.deq.bits.is_load_amo ) { assert(system.io.deq.fire === mdl.io.in(nm).fire) }
+    mdl.io.in(bk).valid := system.io.deq.valid & system.io.deq.bits.is_load_amo
+    mdl.io.in(bk).bits := Mux( mdl.io.in(bk).valid, system.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
+    system.io.deq.ready := mdl.io.in(bk).ready | ~system.io.deq.bits.is_load_amo
+    when( system.io.deq.bits.is_load_amo ) { assert(system.io.deq.fire === mdl.io.in(bk).fire) }
 
-    mdl.io.in(nm+1).valid := periph.io.deq.valid & periph.io.deq.bits.is_load_amo
-    mdl.io.in(nm+1).bits := Mux( mdl.io.in(nm+1).valid, periph.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
-    periph.io.deq.ready := mdl.io.in(nm+1).ready | ~periph.io.deq.bits.is_load_amo
-    when( periph.io.deq.bits.is_load_amo ) { assert(periph.io.deq.fire === mdl.io.in(nm+1).fire) }
+    mdl.io.in(bk+1).valid := periph.io.deq.valid & periph.io.deq.bits.is_load_amo
+    mdl.io.in(bk+1).bits := Mux( mdl.io.in(bk+1).valid, periph.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
+    periph.io.deq.ready := mdl.io.in(bk+1).ready | ~periph.io.deq.bits.is_load_amo
+    when( periph.io.deq.bits.is_load_amo ) { assert(periph.io.deq.fire === mdl.io.in(bk+1).fire) }
 
 
     mdl
