@@ -41,7 +41,7 @@ class Info_ptw_rsp extends Bundle with Info_access_lvl{
 /** 
   * page table walker
   */ 
-class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
+class PTW(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val ptw_i = Flipped(DecoupledIO(new Info_mmu_req))
     val ptw_o = DecoupledIO(new Info_ptw_rsp)
@@ -104,8 +104,8 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
         ))
       )
 
-    def cl_sel = addr_qout(11,5)
-    def tag_sel = addr_qout(55,12)
+    val cl_sel = addr_qout(11,5)
+    val tag_sel = addr_qout(55,12)
 
     is_ptw_end := 
       pte.R === true.B & 
@@ -171,13 +171,9 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   for( i <- 0 until 1 ) yield {
     val rd_enable = 
-      // (fsm.state_qout === state.free & fsm.state_dnxt === state.lvl2) |
-      // (fsm.state_qout === state.lvl2 & fsm.state_dnxt === state.lvl1) |
       (fsm.state_qout === state.lvl1 & fsm.state_dnxt === state.lvl0)
 
     val wr_enable = 
-      // (fsm.state_qout === state.lvl2 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
-      // (fsm.state_qout === state.lvl1 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
       (fsm.state_qout === state.lvl0 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
 
     cache_tag.tag_en_w(i) := wr_enable
@@ -387,7 +383,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     ptw_access_ready := false.B
   }
 
-  io.ptw_get.bits := edge.Get(fromSource = 0.U, toAddress = walk.addr_qout & ("hFFFFFFFF".U << 5), lgSize = log2Ceil(256/8).U)._2
+  io.ptw_get.bits := edge.Get(fromSource = id.U, toAddress = walk.addr_qout & ("hFFFFFFFF".U << 5), lgSize = log2Ceil(256/8).U)._2
 
   when( io.ptw_access.fire & ~is_trans_done) {
     ptw_access_data_lo := io.ptw_access.bits.data

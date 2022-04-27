@@ -114,7 +114,7 @@ class Info_cmm_mmu extends Bundle {
   * including page-table-walker with physical-memory-protection
   *
   */
-class MMU(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
+class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val if_mmu = Flipped(DecoupledIO(new Info_mmu_req))
     val mmu_if = DecoupledIO(new Info_mmu_rsp)
@@ -128,17 +128,15 @@ class MMU(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     val cmm_mmu = Input( new Info_cmm_mmu )
 
 
-    val iptw_get    = new DecoupledIO(new TLBundleA(edge(0).bundle))
-    val iptw_access = Flipped(new DecoupledIO(new TLBundleD(edge(0).bundle)))
+    val ptw_get    = new DecoupledIO(new TLBundleA(edge.bundle))
+    val ptw_access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
 
-    val dptw_get    = new DecoupledIO(new TLBundleA(edge(1).bundle))
-    val dptw_access = Flipped(new DecoupledIO(new TLBundleD(edge(1).bundle)))
   })
 
   val itlb = Module( new TLB(32) )
   val dtlb = Module( new TLB(32) )
-  val iptw  = Module( new PTW(edge(0)) )
-  val dptw  = Module( new PTW(edge(1)) )
+  val iptw  = Module( new PTW(edge, id = 0) )
+  val dptw  = Module( new PTW(edge, id = 1) )
 
   val is_bypass_if = io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl_if === "b11".U
   val is_bypass_ls = io.cmm_mmu.satp(63,60) === 0.U | io.cmm_mmu.priv_lvl_ls === "b11".U
@@ -276,11 +274,29 @@ class MMU(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
 
 
 
-  io.iptw_get <> iptw.io.ptw_get
-  iptw.io.ptw_access <> io.iptw_access
+  io.ptw_get.valid := false.B
+  io.ptw_get.bits := 0.U.asTypeOf(new TLBundleA(edge.bundle))
+  iptw.io.ptw_get.ready := false.B
+  dptw.io.ptw_get.ready := false.B
 
-  io.dptw_get <> dptw.io.ptw_get
-  dptw.io.ptw_access <> io.dptw_access
+  iptw.io.ptw_access.valid := false.B
+  dptw.io.ptw_access.valid := false.B
+  iptw.io.ptw_access.bits := 0.U.asTypeOf(new TLBundleD(edge.bundle))
+  dptw.io.ptw_access.bits := 0.U.asTypeOf(new TLBundleD(edge.bundle))
+  io.ptw_access.ready := false.B
+
+
+  when( iptw.io.ptw_get.valid ) { 
+    io.ptw_get <> iptw.io.ptw_get
+  } .elsewhen( dptw.io.ptw_get.valid ) {
+    io.ptw_get <> dptw.io.ptw_get
+  }
+
+  when( io.ptw_access.bits.source === 0.U ) {
+    iptw.io.ptw_access <> io.ptw_access
+  } .elsewhen( io.ptw_access.bits.source === 1.U ) {
+    dptw.io.ptw_access <> io.ptw_access
+  }
 
   itlb.io.sfence_vma := io.cmm_mmu.sfence_vma
   dtlb.io.sfence_vma := io.cmm_mmu.sfence_vma

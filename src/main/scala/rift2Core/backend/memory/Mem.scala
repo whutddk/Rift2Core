@@ -353,7 +353,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
   }
 
 
-  for ( i <- bk-1 to 0 by -1 ) yield {
+  for ( i <- bk-1 to 0 by -1 ) {
     when( cache(i).io.missUnit_dcache_acquire.valid ) {
       io.missUnit_dcache_acquire <> cache(i).io.missUnit_dcache_acquire
       // io.missUnit_dcache_acquire.valid := cache(i).io.missUnit_dcache_acquire.valid
@@ -383,15 +383,6 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
       // io.probeUnit_dcache_probe.ready := cache(i).io.probeUnit_dcache_probe.ready      
     }
 
-
-    when( cache(i).io.writeBackUnit_dcache_release.valid ) {
-      io.writeBackUnit_dcache_release <> cache(i).io.writeBackUnit_dcache_release
-      // io.writeBackUnit_dcache_release.valid := cache(i).io.writeBackUnit_dcache_release.valid
-      // io.writeBackUnit_dcache_release.bits  := cache(i).io.writeBackUnit_dcache_release.bits
-      // cache(i).io.writeBackUnit_dcache_release.ready := io.writeBackUnit_dcache_release.ready      
-    }
-
-
     when( io.writeBackUnit_dcache_grant.bits.source === i.U ) {
       cache(i).io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
       // cache(i).io.writeBackUnit_dcache_grant.valid := io.writeBackUnit_dcache_grant.valid
@@ -400,6 +391,35 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
     }
 
   }
+
+  /** @note chn-C will carry multi-beat data from client to manager, which is a N to 1 transation, and may be grabbed
+    * @note however there will be one cycle latency for chn-c
+    */
+  val is_chnc_busy = RegInit(VecInit(Seq.fill(bk)(false.B)))
+  val is_release_done = for ( i <- 0 until bk ) yield { edge(0).count(cache(i).io.writeBackUnit_dcache_release)._3 }
+  for( i <- 0 until bk ) yield {
+    when( cache(i).io.writeBackUnit_dcache_release.fire ) { is_chnc_busy(i) := Mux( is_release_done(i), false.B, true.B )}
+  }
+
+  when( is_chnc_busy.forall((x:Bool) => (x === false.B)) ) {
+    for ( i <- bk-1 to 0 by -1 ) {
+      when( cache(i).io.writeBackUnit_dcache_release.valid ) { io.writeBackUnit_dcache_release <> cache(i).io.writeBackUnit_dcache_release }
+    }
+  } .otherwise {
+    for ( i <- 0 until bk ) {
+      when( is_chnc_busy(i) === true.B  ) { io.writeBackUnit_dcache_release <> cache(i).io.writeBackUnit_dcache_release }
+    }
+  }
+  assert( PopCount(is_chnc_busy) <= 1.U, "Assert Failed at dcache chn-c Mux, sel should be one-hot" )
+
+
+
+
+
+
+  // io.writeBackUnit_dcache_release.valid := cache(i).io.writeBackUnit_dcache_release.valid
+  // io.writeBackUnit_dcache_release.bits  := cache(i).io.writeBackUnit_dcache_release.bits
+  // cache(i).io.writeBackUnit_dcache_release.ready := io.writeBackUnit_dcache_release.ready      
 
 
 
