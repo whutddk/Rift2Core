@@ -193,8 +193,10 @@ module SimTop (
   output [31:0] trace_fflags,
   output [7:0] trace_frm,
 
-
-
+  output [63:0] trace_mcycle,
+  output [63:0] trace_minstret,
+  output [63:0] trace_scsPredict,
+  output [63:0] trace_misPredict,
 
 	input CLK,
 
@@ -433,10 +435,10 @@ axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram
 	.RSTn       (RSTn)
 );
 
-
+wire debugger_success;
 
 debuger i_debuger(
-
+  .success(debugger_success),
 	.DEBUGER_AWID   (io_sys_chn_aw_bits_id),
 	.DEBUGER_BID    (io_sys_chn_b_bits_id),
 	.DEBUGER_ARID   (io_sys_chn_ar_bits_id),
@@ -485,7 +487,7 @@ wire [63:0] gp  = s_Rift2Chip.i_rift2Core.diff.XReg_gp;
 reg success_reg = 1'b0;
 reg fail_reg = 1'b0;
 
-assign success = success_reg;
+assign success = success_reg | debugger_success;
 assign fail = fail_reg;
 
 reg is_ecall_U_reg = 1'b0;
@@ -726,8 +728,12 @@ end
 	// assign trace_dscratch   = s_Rift2Chip.i_rift2Core.diff.io_csr_dscratch;
 
 	assign trace_fflags    = s_Rift2Chip.i_rift2Core.diff.io_csr_fflags;
-	assign trace_frm     = s_Rift2Chip.i_rift2Core.diff.io_csr_frm;
+	assign trace_frm       = s_Rift2Chip.i_rift2Core.diff.io_csr_frm;
 
+  assign trace_mcycle     = s_Rift2Chip.i_rift2Core.diff.io_csr_mcycle;
+  assign trace_minstret   = s_Rift2Chip.i_rift2Core.diff.io_csr_minstret;
+  assign trace_scsPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_3;
+  assign trace_misPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_4;
 
 
 endmodule

@@ -46,11 +46,15 @@ double sc_time_stamp () {
 uint8_t flag_waveEnable = 0;
 uint8_t flag_diffEnable = 0;
 uint8_t flag_limitEnable = 0;
+uint8_t flag_perform = 0;
 
 int prase_arg(int argc, char **argv) {
 	int opt;
-	while( -1 != ( opt = getopt( argc, argv, "jldwf:" ) ) ) {
+	while( -1 != ( opt = getopt( argc, argv, "pjldwf:" ) ) ) {
 		switch(opt) {
+			case 'p':
+			flag_perform = 1;
+			break;
 			case 'l':
 			flag_limitEnable = 1;
 			break;
@@ -66,6 +70,7 @@ int prase_arg(int argc, char **argv) {
 				// std::cout << "load in image is " << img << std::endl;
 				break;
 			case '?':
+				std::cout << "-p to enable performmace logger" << std::endl;
 				std::cout << "-w to enable waveform" << std::endl;
 				std::cout << "-f FILENAME to testfile" << std::endl;
 				std::cout << "-j to enable jtag mode" << std::endl;
@@ -220,7 +225,14 @@ int main(int argc, char **argv, char **env) {
 			return -1;
 		}
 		else if ( top -> success == 1 && main_time % 100 == 0 ) {
-			std::cout << "Pass!" << std::endl;	
+			std::cout << "Pass!" << std::endl;
+			if ( flag_perform ) {
+				std::cout << "Simulation-Cycle(not equal to cpu-cycle) is:" << top ->trace_mcycle << std::endl;
+				std::cout << "Retired-instruction is:" << top -> trace_minstret << std::endl;
+				std::cout << "Branch-instruction is:" << top -> trace_scsPredict + top -> trace_misPredict << std::endl;
+				std::cout << top -> trace_scsPredict << " (" << (float)(top -> trace_scsPredict) / (top -> trace_scsPredict + top -> trace_misPredict) * 100. << "%) success" << std::endl;
+				std::cout << top -> trace_misPredict << " (" << (float)(top -> trace_misPredict) / (top -> trace_scsPredict + top -> trace_misPredict) * 100. << "%) failed"  << std::endl;
+			}
 			sim_exit();
 			return 0;			
 		} 

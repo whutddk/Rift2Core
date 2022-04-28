@@ -144,7 +144,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
   }
 
   val system = {
-    val mdl = Module(new IO_Lsu(edge(2), idx = 2))
+    val mdl = Module(new IO_Lsu(edge(2)))
     mdl.io.enq <> regionMux.io.deq(1)
     // mdl.io.overlap <> stQueue.io.overlap(nm+1)
 
@@ -159,7 +159,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
   }
 
   val periph = {
-    val mdl = Module(new IO_Lsu(edge(1), idx = 1))
+    val mdl = Module(new IO_Lsu(edge(1)))
     mdl.io.enq <> regionMux.io.deq(2)
     // mdl.io.overlap <> stQueue.io.overlap(nm)
 

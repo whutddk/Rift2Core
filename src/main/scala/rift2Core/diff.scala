@@ -82,6 +82,9 @@ class Info_csr_reg extends Bundle {
   val fflags = UInt(32.W)
   val frm = UInt(8.W)
 
+  val mcycle      = UInt(64.W)
+  val minstret    = UInt(64.W)
+  val mhpmcounter = Vec( 32, UInt(64.W))
 }
 
 class diff extends Module with HasFPUParameters{

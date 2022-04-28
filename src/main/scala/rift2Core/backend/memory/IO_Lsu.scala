@@ -30,7 +30,7 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
 
-class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModule{
+class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
     val deq = new DecoupledIO(new Info_cache_retn)
@@ -54,14 +54,14 @@ class IO_Lsu(edge: TLEdgeOut, idx: Int)(implicit p: Parameters) extends RiftModu
     when( io.enq.bits.fun.is_lu & ~io.enq.bits.fun.is_lr) {
         io.getPut.bits := 
           edge.Get(
-            fromSource = idx.U,
+            fromSource = 0.U,
             toAddress = io.enq.bits.paddr >> log2Ceil(64/8).U << log2Ceil(64/8).U,
             lgSize = log2Ceil(64/8).U
           )._2    
       } .elsewhen( io.enq.bits.fun.is_su & ~io.enq.bits.fun.is_sc ) {
         io.getPut.bits :=
           edge.Put(
-            fromSource = idx.U,
+            fromSource = 0.U,
             toAddress = io.enq.bits.paddr >> log2Ceil(64/8).U << log2Ceil(64/8).U,
             lgSize = log2Ceil(64/8).U,
             data = io.enq.bits.wdata_align64,

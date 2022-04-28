@@ -59,9 +59,10 @@ class CMMState_Bundle extends Bundle{
   val ill_ivaddr = UInt(64.W)
 	val ill_dvaddr = UInt(64.W)
   val is_csrr_illegal = Bool()
-  val rtc_clock = Bool()
+
   val exint = new ExInt_Bundle
 
+  val is_misPredict = Bool()
   def is_load_accessFault: Bool = {
     val is_load_accessFault = lsu_cmm.is_access_fault & rod.is_lu & ~is_wb
     return is_load_accessFault
@@ -279,7 +280,10 @@ class CMMState_Bundle extends Bundle{
 
 
 
-abstract class BaseCommit extends Module
+abstract class BaseCommit extends Module {
+
+
+}
 
 
 
@@ -346,6 +350,9 @@ class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
 
 
   val csrfiles = Reg(new CSR_Bundle)
+  csrfiles.mcycle := csrfiles.mcycle + 1.U //may be override
+  val rtc = ShiftRegisters( io.rtc_clock, 4, false.B, true.B ); when(rtc(3) ^ rtc(2)) { csrfiles.time := csrfiles.time + 1.U }
+  
   for( i <- 0 until cm ) yield { when( is_retired(i)) { csrfiles := csr_state(i) }   }
   when( reset.asBool ) { resetToDefault(csrfiles) }
 
@@ -380,7 +387,6 @@ class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
     cmm_state(i).is_wb   := io.cm_op(i).is_writeback
     cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
     cmm_state(i).ill_dvaddr               := io.lsu_cmm.trap_addr
-    cmm_state(i).rtc_clock               := io.rtc_clock
     cmm_state(i).is_csrr_illegal         := cmm_state(i).csrfiles.csr_read_prilvl(io.csr_addr.bits) & io.csr_addr.valid
 
     cmm_state(i).exint.is_single_step := is_single_step
@@ -393,6 +399,8 @@ class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
 	  cmm_state(i).exint.clint_tm_s := false.B
 	  cmm_state(i).exint.clint_ex_m := false.B
 	  cmm_state(i).exint.clint_ex_s := false.B 
+
+    cmm_state(i).is_misPredict := io.is_misPredict
 
     csr_state(i) := update_csrfiles(in = cmm_state(i))
 
@@ -742,6 +750,8 @@ class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
   io.diff_csr.fflags  := csrfiles.fcsr.fflags
   io.diff_csr.frm     := csrfiles.fcsr.frm
 
-
+  io.diff_csr.mcycle := csrfiles.mcycle
+  io.diff_csr.minstret := csrfiles.minstret
+  io.diff_csr.mhpmcounter := csrfiles.mhpmcounter
 
 }

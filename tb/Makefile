@@ -289,10 +289,10 @@ unit: VSimTop
 
 # TESTFILE ?= rv64ui-p-add
 single: VSimTop
-	./build/VSimTop -w -d -l -f ./ci/$(TESTFILE)
+	./build/VSimTop -w -d -l -p -f ./ci/$(TESTFILE)
 
 torture:
-	./build/VSimTop -w -d -l -f ./torture/output/test
+	./build/VSimTop -w -d -l -p -f ./torture/output/test
 
 dromajo:
 	verilator -Wno-fatal  \
@@ -312,14 +312,14 @@ dromajo:
 	-j 8
 
 dhrystone5: VSimTop
-	./build/VSimTop -w -f ./ci/dhrystone5.riscv
+	./build/VSimTop -w -p -f ./ci/dhrystone5.riscv
 
 dhrystone500: VSimTop
-	./build/VSimTop -f ./ci/dhrystone500.riscv
+	./build/VSimTop -p -f ./ci/dhrystone500.riscv
 
 
 coremark: VSimTop
-	./build/VSimTop -w -f ./ci/coremark1_bare
+	./build/VSimTop -w -p -f ./ci/coremark1_bare
 
 wave:
 	gtkwave ./build/wave.vcd &
