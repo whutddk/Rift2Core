@@ -1143,11 +1143,12 @@ trait CsrFiles { this: BaseCommit =>
     *
     * @return the number of clock cycles executed by the processor core
     */ 
-  def update_mcycle( in: CMMState_Bundle ): UInt = {
-    val mcycle = WireDefault(in.csrfiles.mcycle)
+  def update_mcycle(in: CMMState_Bundle): UInt = {
+    val mcycle = Wire(UInt(64.W))
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mcycle, "hB00".U, in.csrExe )
+    val (enable, dnxt) = Reg_Exe_Port( csrfiles.mcycle, "hB00".U, in.csrExe )
       when(enable) { mcycle := dnxt }
+      .otherwise{ mcycle := csrfiles.mcycle + 1.U }
     return mcycle
   }
 

@@ -281,7 +281,7 @@ class CMMState_Bundle extends Bundle{
 
 
 abstract class BaseCommit extends Module {
-
+  val csrfiles = Reg(new CSR_Bundle)
 
 }
 
@@ -349,7 +349,7 @@ class Commit(cm: Int=2) extends BaseCommit with CsrFiles {
   ( 1 until cm ).map{ i =>  assert( ~(is_retired(i) & ~is_retired(i-1)) ) }
 
 
-  val csrfiles = Reg(new CSR_Bundle)
+
   csrfiles.mcycle := csrfiles.mcycle + 1.U //may be override
   val rtc = ShiftRegisters( io.rtc_clock, 4, false.B, true.B ); when(rtc(3) ^ rtc(2)) { csrfiles.time := csrfiles.time + 1.U }
   
