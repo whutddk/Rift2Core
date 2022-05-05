@@ -29,12 +29,31 @@ class Info_BTB extends IFetchBundle {
   val is_branch = Vec(4, Bool())
   val is_RVC    = Vec(4, Bool())
 
+  def tagHash = 
 }
 
 
 class BTB extends IFetchModule {
+  def cl: Int = { var res = 1; for ( i <- 0 until btb_cl_w ) { res = res * 2 }; return res }
+
+  val io = IO(new Bundle{
+    val reqFromIF1  = Flipped(Decoupled())
+    val reqFromIF3  = Flipped(Decoupled())
+    val respToIF1 = Valid()
+    val respToIF3 = Valid()
+
+  })
+
+  val rd_cl_sel = io.reqFromIF1.bits.pchash
+  val wr_cl_sel = io.reqFromIF3.bits.pchash
+  val btb_table = Mem( cl, new Info_BTB )
+
+
+  btb_table.read(rd_cl_sel)
+
+    when( io.reqFromIF3.fire ) {
+      btb_table.write(wr_cl_sel, io.reqFromIF3.bits)
+  }
+
 
 }
-
-
-
