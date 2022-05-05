@@ -33,7 +33,7 @@ trait HasIcacheParameters extends HasL1CacheParameters {
   def cl = icacheParams.cl
   def aw = icacheParams.aw
 
-  def addr_lsb = log2Ceil(dw*bk/8)
+  def addr_lsb = log2Ceil(dw/8)
   def line_w   = log2Ceil(cl)
   def cb_w = log2Ceil(cb)
 
@@ -81,16 +81,14 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val icache_access_data_lo = RegInit( 0.U(128.W) )
   val kill_trans = RegInit(false.B)
 
-  val ibuf = Module(new MultiPortFifo( UInt(16.W), 4, 8, 4 ) )
+  val ibuf = Module(new MultiPortFifo( UInt(16.W), 6, 8, 4 ) )
 
-  val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
-  val cache_tag = new Cache_tag( dw, aw, bk, cb, cl, nm = 1 ) 
+  val cache_dat = new Cache_dat( dw, aw, cb, cl, bk = 1 )
+  val cache_tag = new Cache_tag( dw, aw, cb, cl, bk = 1 ) 
 
 
   val icache_state_dnxt = Wire(UInt(4.W))
   val icache_state_qout = RegNext( icache_state_dnxt, 0.U )
-
-  require( bk == 2 )
 
   when( io.flush & icache_state_qout =/= 0.U ) {
     kill_trans := true.B
@@ -132,7 +130,6 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
 
 
-  val bk_sel = io.mmu_if.bits.paddr(addr_lsb-1, addr_lsb-log2Ceil(bk))
   val cl_sel = io.mmu_if.bits.paddr(addr_lsb+line_w-1, addr_lsb)
   val tag_sel = io.mmu_if.bits.paddr(31,32-tag_w)
 
@@ -204,9 +201,9 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
       icache_state_qout === 0.U & icache_state_dnxt === 1.U
   }
 
-  for ( i <- 0 until cb; j <- 0 until bk ) yield {
-    cache_dat.dat_en_r(i)(j) := 
-      icache_state_qout === 0.U & icache_state_dnxt === 1.U & j.U === bk_sel
+  for ( i <- 0 until cb ) yield {
+    cache_dat.dat_en_r(i) := 
+      icache_state_qout === 0.U & icache_state_dnxt === 1.U
   }
 
   for ( i <- 0 until cb ) yield {
@@ -214,25 +211,24 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
       (icache_state_qout === 2.U & icache_state_dnxt === 0.U) & (cb_sel === i.U) & ~kill_trans & ~io.flush 
   }
 
-  for ( i <- 0 until cb; j <- 0 until bk ) yield {
-    cache_dat.dat_en_w(i)(j) :=
+  for ( i <- 0 until cb ) yield {
+    cache_dat.dat_en_w(i) :=
       (icache_state_qout === 2.U & icache_state_dnxt === 0.U) & (cb_sel === i.U) & ~kill_trans & ~io.flush
   }
 
-  for ( j <- 0 until bk ) yield {
-    cache_dat.dat_info_wstrb(j) := "hFFFFFFFF".U
-  }
 
-  cache_dat.dat_info_w(1) := io.icache_access.bits.data
-  cache_dat.dat_info_w(0) := icache_access_data_lo
+  cache_dat.dat_info_wstrb := Fill(dw/8, 1.U)
+
+
+  cache_dat.dat_info_w := Cat(io.icache_access.bits.data, icache_access_data_lo)
 
   val reAlign_instr = {
     val res = Wire(UInt(128.W))
     val shift = Wire(UInt(7.W))
     shift := Cat(io.mmu_if.bits.paddr(3,0), 0.U(3.W))
     val instr_raw = Mux1H( Seq(
-      (icache_state_qout === 1.U) -> cache_dat.dat_info_r(cb_sel)(bk_sel),
-      (icache_state_qout === 2.U) -> Mux( bk_sel === 0.U, icache_access_data_lo, io.icache_access.bits.data ),
+      (icache_state_qout === 1.U) -> Mux( io.mmu_if.bits.paddr(4), cache_dat.dat_info_r(cb_sel)(255,128), cache_dat.dat_info_r(cb_sel)(127,0)),
+      (icache_state_qout === 2.U) -> Mux( io.mmu_if.bits.paddr(4), io.icache_access.bits.data, icache_access_data_lo ),
     ))
     res := instr_raw >> shift
     res

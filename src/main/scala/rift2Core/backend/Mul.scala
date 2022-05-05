@@ -205,17 +205,6 @@ class Mul extends Module {
   ))
 
 
-
-
-  // val is_fun_end = 
-  //   Mux( io.mul_iss_exe.valid,
-  //     MuxCase( false.B, Array(
-  //       (~is_div === true.B) -> true.B,
-  //       ((div_by_zero | div_overflow) === true.B) -> true.B,
-  //       ( cnt === 65.U ) -> true.B
-  //     )),
-  //     false.B
-  //   )
   
   
 

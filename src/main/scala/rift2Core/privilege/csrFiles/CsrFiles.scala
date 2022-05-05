@@ -166,9 +166,8 @@ class CSR_Bundle extends Bundle {
   // val fflags   = UInt(64.W)
   // val frm      = UInt(64.W)
   val fcsr        = new FCSRBundle
-  val cycle       = UInt(64.W)
+  /** Hardware Performance Monitor -- time (read-only) @return a count of the number of ***rtc*** cycles executed by the ***processor core*** on which the hart is running from an arbitrary start time in the past*/
   val time        = UInt(64.W)
-  val instret     = UInt(64.W)
   // val sstatus     = UInt(64.W)
   // val sedeleg  = UInt(64.W)
   // val sideleg  = UInt(64.W)
@@ -239,7 +238,7 @@ class CSR_Bundle extends Bundle {
   val pmpaddr = Vec( 64, UInt(64.W))
 
 
-  val hpmcounter  = Vec( 32, UInt(64.W))
+
   val mhpmcounter = Vec( 32, UInt(64.W))
   val mhpmevent   = Vec( 32, UInt(64.W))
 
@@ -247,6 +246,9 @@ class CSR_Bundle extends Bundle {
   def sstatus = (mstatus.asUInt & Cat( "b1".U, 0.U(29.W), "b11".U, 0.U(12.W), "b11011110000101100010".U )).asTypeOf(new MStatusBundle)
   def sie = mie
   def sip = mip
+  def cycle = mcycle
+  def instret = minstret
+  def hpmcounter = mhpmcounter
 
   def is_ssi: Bool = { 
     val is_ssi = mip.ssi & mie.ssi & mstatus.sie & ~( priv_lvl === "b11".U & mideleg(1) )
@@ -284,31 +286,31 @@ class CSR_Bundle extends Bundle {
   def csr_read_prilvl(addr: UInt) = {
     val pmpcfg_arr = {
       val addr_chk = for ( i <- 0 until 16 ) yield { addr === ("h3A0".U + i.U) }
-      val reg_sel  = for ( i <- 0 until 16 ) yield { priv_lvl >= "b11".U }
+      val reg_sel  = for ( i <- 0 until 16 ) yield { priv_lvl === "b11".U }
       addr_chk zip reg_sel
     }
 
     val pmpaddr_arr = {
       val addr_chk = for ( i <- 0 until 64 ) yield { addr === ("h3B0".U + i.U) }
-      val reg_sel  = for ( i <- 0 until 64 ) yield { priv_lvl >= "b11".U }
+      val reg_sel  = for ( i <- 0 until 64 ) yield { priv_lvl === "b11".U }
       addr_chk zip reg_sel
     }
 
     val hpmcounter_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hC00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { true.B }
       addr_chk zip reg_sel
     }
 
     val mhpmcounter_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hB00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { priv_lvl === "b11".U | (priv_lvl === "b01".U & mcounteren.asUInt(i) ) }
       addr_chk zip reg_sel      
     }
 
     val mhpmevent_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("h320".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { priv_lvl === "b11".U }
       addr_chk zip reg_sel      
     }
 
@@ -361,32 +363,32 @@ class CSR_Bundle extends Bundle {
           ( addr === "h243".U ) -> false.B,
           ( addr === "h244".U ) -> false.B,
           ( addr === "h280".U ) -> false.B,
-          ( addr === "hF11".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "hF12".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "hF13".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "hF14".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h300".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h301".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h302".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h303".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h304".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h305".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h306".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h340".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h341".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h342".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h343".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h344".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h34A".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h34B".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "hF11".U ) -> (priv_lvl === "b11".U),
+          ( addr === "hF12".U ) -> (priv_lvl === "b11".U),
+          ( addr === "hF13".U ) -> (priv_lvl === "b11".U),
+          ( addr === "hF14".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h300".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h301".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h302".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h303".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h304".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h305".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h306".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h340".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h341".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h342".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h343".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h344".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h34A".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h34B".U ) -> (priv_lvl === "b11".U),
 
-          ( addr === "hB00".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "hB02".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h320".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h7A0".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h7A1".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h7A2".U ) -> (priv_lvl >= "b11".U),
-          ( addr === "h7A3".U ) -> (priv_lvl >= "b11".U),
+          ( addr === "hB00".U ) -> (priv_lvl === "b11".U | (priv_lvl === "b01".U & mcounteren.cy)),
+          ( addr === "hB02".U ) -> (priv_lvl === "b11".U | (priv_lvl === "b01".U & mcounteren.ir)),
+          ( addr === "h320".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h7A0".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h7A1".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h7A2".U ) -> (priv_lvl === "b11".U),
+          ( addr === "h7A3".U ) -> (priv_lvl === "b11".U),
           ( addr === "h7B0".U ) -> DMode,
           ( addr === "h7B1".U ) -> DMode,
           ( addr === "h7B2".U ) -> DMode,
@@ -413,19 +415,19 @@ class CSR_Bundle extends Bundle {
 
     val hpmcounter_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hC00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { true.B }
       addr_chk zip reg_sel
     }
 
     val mhpmcounter_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hB00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { true.B }
       addr_chk zip reg_sel      
     }
 
     val mhpmevent_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("h320".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { false.B }
+      val reg_sel  = for ( i <- 3 until 32 ) yield { true.B }
       addr_chk zip reg_sel      
     }
 
@@ -655,57 +657,14 @@ trait CsrFiles { this: BaseCommit =>
   }
 
 
-  //user conter timers
-  /**
-    * Hardware Performance Monitor -- cycle (read-only)
-    * @return a count of the number of clock cycles executed by the ***processor core*** on which the hart is running from an arbitrary start time in the past
-    *
-    */
-  def update_cycle( in: CMMState_Bundle): UInt = {
-    val cycle = WireDefault( in.csrfiles.cycle )
-
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.cycle, "hC00".U, in.csrExe )
-    when( enable ) { cycle := dnxt }
-    .otherwise { cycle := in.csrfiles.cycle + 1.U }
-
-    return cycle
-  }
 
 
 
-  /**
-    * Hardware Performance Monitor -- time (read-only)
-    * @return a count of the number of ***rtc*** cycles executed by the ***processor core*** on which the hart is running from an arbitrary start time in the past
-    *
-    */
-  def update_time( in: CMMState_Bundle ): UInt = {
-    val time = WireDefault( in.csrfiles.time )
-    val rtc = ShiftRegisters( in.rtc_clock, 4, false.B, true.B )
-    when(rtc(3) ^ rtc(2)) { time := in.csrfiles.time + 1.U }
-    return time
-  }
+
+ 
       
-  /**
-    * Hardware Performance Monitor -- instret (read-only)
-    * 
-    * @return the number of instructions the hart has retired
-    */
-  def update_instret( in: CMMState_Bundle ): UInt = {
-    val instret = in.csrfiles.instret + 1.U //we dont need to know if it's retired here, for that cancel, will not commit
-    return instret
-  }
-  
-  def update_hpmcounter( in: CMMState_Bundle ): Vec[UInt] = {
-    val hpmcounter = WireDefault( in.csrfiles.hpmcounter )
-    ( 0 until 32 ).map{ i => {
-      if ( i == 0 || i == 1 || i == 2 ) {}
-      else {
-        val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.hpmcounter(i), "hC00".U + i.U, in.csrExe )
-        when(enable) { hpmcounter(i) := dnxt }
-      }      
-    }}
-    return hpmcounter
-  }
+
+
 
 
 
@@ -1183,13 +1142,13 @@ trait CsrFiles { this: BaseCommit =>
     * Hardware Performance Monitor -- mcycle
     *
     * @return the number of clock cycles executed by the processor core
-    */
-  def update_mcycle( in: CMMState_Bundle ): UInt = {
-    val mcycle = WireDefault(in.csrfiles.mcycle)
+    */ 
+  def update_mcycle(in: CMMState_Bundle): UInt = {
+    val mcycle = Wire(UInt(64.W))
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mcycle, "hB00".U, in.csrExe )
+    val (enable, dnxt) = Reg_Exe_Port( csrfiles.mcycle, "hB00".U, in.csrExe )
       when(enable) { mcycle := dnxt }
-      .otherwise { mcycle := in.csrfiles.mcycle + 1.U }
+      .otherwise{ mcycle := csrfiles.mcycle + 1.U }
     return mcycle
   }
 
@@ -1221,6 +1180,20 @@ trait CsrFiles { this: BaseCommit =>
     for ( i <- 0 until 32 ) yield {
       val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mhpmcounter(i), "hB00".U + i.U, in.csrExe )
       when(enable) { mhpmcounter(i) := dnxt }
+
+      if ( i == 3 ) {
+        //branch success
+        when(in.rod.is_branch & ~in.is_misPredict) {
+          mhpmcounter(i) := in.csrfiles.mhpmcounter(i) + 1.U
+        }
+      }
+      if ( i == 4 ) {
+        //branch mispredict
+        when(in.rod.is_branch & in.is_misPredict) {
+          mhpmcounter(i) := in.csrfiles.mhpmcounter(i) + 1.U          
+        }
+
+      }
     }    
 
     return mhpmcounter
@@ -1864,9 +1837,6 @@ trait CsrFiles { this: BaseCommit =>
     csrfiles.priv_lvl      := update_priv_lvl(in)
     csrfiles.DMode         := update_DMode(in)
     csrfiles.fcsr          := update_fcsr(in)
-    csrfiles.cycle         := update_cycle(in)
-    csrfiles.time          := update_time(in)
-    csrfiles.instret       := update_instret(in)
     csrfiles.stvec         := update_stvec(in)
     csrfiles.scounteren    := update_scounteren(in)
     csrfiles.sscratch      := update_sscratch(in)
@@ -1907,10 +1877,10 @@ trait CsrFiles { this: BaseCommit =>
     csrfiles.dscratch2     := update_dscratch2 (in)
     csrfiles.pmpcfg        := update_pmpcfg(in)
     csrfiles.pmpaddr       := update_pmpaddr(in)
-    csrfiles.hpmcounter    := update_hpmcounter(in)
     csrfiles.mhpmcounter   := update_mhpmcounter(in)
     csrfiles.mhpmevent     := update_mhpmevent(in)
 
+    csrfiles.time := DontCare
     return csrfiles
   }
 }

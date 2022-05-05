@@ -37,7 +37,7 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
   val dcacheClientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "dcache",
-      sourceId = IdRange(0, 1),
+      sourceId = IdRange(0, 16),
       supportsProbe = TransferSizes(32)
     ))
   )
@@ -60,25 +60,21 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
     Seq(TLMasterParameters.v1(
       name = "icache",
       sourceId = IdRange(0, 1),
-      // supportsProbe = TransferSizes(32)
     ))
   )
 
   val mmuClientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "mmu",
-      sourceId = IdRange(0, 1),
-      // supportsGet = TransferSizes(32)
+      sourceId = IdRange(0, 2),
     ))
   )
 
   val icacheClientNode = TLClientNode(Seq(icacheClientParameters))
-  val dcacheClientNode = 
-    for ( i <- 0 until 8 ) yield { TLClientNode(Seq(dcacheClientParameters)) }
+  val dcacheClientNode = TLClientNode(Seq(dcacheClientParameters))
   val systemClientNode = TLClientNode(Seq(systemClientParameters))
   val periphClientNode = TLClientNode(Seq(periphClientParameters))
-  val    mmuClientNode =
-    for ( i <- 0 until 2 ) yield { TLClientNode(Seq(   mmuClientParameters)) }
+  val    mmuClientNode = TLClientNode(Seq(   mmuClientParameters))
 
   lazy val module = new Rift2CoreImp(this)
 }
@@ -90,13 +86,11 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   })
 
   val ( icache_bus, icache_edge ) = outer.icacheClientNode.out.head
-  val  dcache_bus  = for ( i <- 0 until 8 ) yield { outer.dcacheClientNode(i).out.head._1}
-  val  dcache_edge = for ( i <- 0 until 8 ) yield { outer.dcacheClientNode(i).out.head._2}
+  val ( dcache_bus, dcache_edge ) = outer.dcacheClientNode.out.head
   val ( system_bus, system_edge ) = outer.systemClientNode.out.head
   val ( periph_bus, periph_edge ) = outer.periphClientNode.out.head
-  // val (    mmu_bus,    mmu_edge ) = outer.mmuClientNode.out.head
-  val  mmu_bus  = for ( i <- 0 until 2 ) yield { outer.mmuClientNode(i).out.head._1}
-  val  mmu_edge = for ( i <- 0 until 2 ) yield { outer.mmuClientNode(i).out.head._2}
+  val (    mmu_bus,    mmu_edge ) = outer.mmuClientNode.out.head
+
 
 
 
@@ -125,7 +119,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
   val exe_stage = {
-    val mdl = Module(new Execute( ((for ( i <- 0 until 8 ) yield dcache_edge(i) ) ++ Seq( system_edge, periph_edge ) ) ) )
+    val mdl = Module(new Execute( (Seq( dcache_edge, system_edge, periph_edge ) ) ) )
     iss_stage.io.alu_iss_exe <> mdl.io.alu_iss_exe
     iss_stage.io.bru_iss_exe <> mdl.io.bru_iss_exe
     iss_stage.io.lsu_iss_exe <> mdl.io.lsu_iss_exe
@@ -169,7 +163,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val cmm_stage = Module(new Commit)
 
   val i_mmu = {
-    val mdl = Module(new MMU(edge = for ( i <- 0 until 2 ) yield mmu_edge(i) ))
+    val mdl = Module(new MMU(edge = mmu_edge ))
     mdl.io.if_mmu <> if_stage.io.if_mmu
     mdl.io.mmu_if <> if_stage.io.mmu_if
     mdl.io.lsu_mmu <> exe_stage.io.lsu_mmu
@@ -254,35 +248,35 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-  for ( i <- 0 until 8 ) yield {
-    exe_stage.io.missUnit_dcache_grant(i).bits  := dcache_bus(i).d.bits
-    exe_stage.io.missUnit_dcache_grant(i).valid := dcache_bus(i).d.valid & ( dcache_bus(i).d.bits.opcode === TLMessages.Grant | dcache_bus(i).d.bits.opcode === TLMessages.GrantData )
 
-    exe_stage.io.writeBackUnit_dcache_grant(i).bits  := dcache_bus(i).d.bits
-    exe_stage.io.writeBackUnit_dcache_grant(i).valid := dcache_bus(i).d.valid & ( dcache_bus(i).d.bits.opcode === TLMessages.ReleaseAck )
+  exe_stage.io.missUnit_dcache_grant.bits  := dcache_bus.d.bits
+  exe_stage.io.missUnit_dcache_grant.valid := dcache_bus.d.valid & ( dcache_bus.d.bits.opcode === TLMessages.Grant | dcache_bus.d.bits.opcode === TLMessages.GrantData )
 
-    dcache_bus(i).d.ready := 
-      Mux1H(Seq(
-        ( dcache_bus(i).d.bits.opcode === TLMessages.Grant || dcache_bus(i).d.bits.opcode === TLMessages.GrantData ) -> exe_stage.io.missUnit_dcache_grant(i).ready,
-        ( dcache_bus(i).d.bits.opcode === TLMessages.ReleaseAck )                                                    -> exe_stage.io.writeBackUnit_dcache_grant(i).ready
-      ))
+  exe_stage.io.writeBackUnit_dcache_grant.bits  := dcache_bus.d.bits
+  exe_stage.io.writeBackUnit_dcache_grant.valid := dcache_bus.d.valid & ( dcache_bus.d.bits.opcode === TLMessages.ReleaseAck )
 
-    dcache_bus(i).a.valid := exe_stage.io.missUnit_dcache_acquire(i).valid
-    dcache_bus(i).a.bits  := exe_stage.io.missUnit_dcache_acquire(i).bits
-    exe_stage.io.missUnit_dcache_acquire(i).ready := dcache_bus(i).a.ready
+  dcache_bus.d.ready := 
+    Mux1H(Seq(
+      ( dcache_bus.d.bits.opcode === TLMessages.Grant || dcache_bus.d.bits.opcode === TLMessages.GrantData ) -> exe_stage.io.missUnit_dcache_grant.ready,
+      ( dcache_bus.d.bits.opcode === TLMessages.ReleaseAck )                                                    -> exe_stage.io.writeBackUnit_dcache_grant.ready
+    ))
 
-    exe_stage.io.probeUnit_dcache_probe(i).valid := dcache_bus(i).b.valid
-    exe_stage.io.probeUnit_dcache_probe(i).bits  := dcache_bus(i).b.bits
-    dcache_bus(i).b.ready := exe_stage.io.probeUnit_dcache_probe(i).ready
-    
-    dcache_bus(i).c.valid := exe_stage.io.writeBackUnit_dcache_release(i).valid
-    dcache_bus(i).c.bits  := exe_stage.io.writeBackUnit_dcache_release(i).bits
-    exe_stage.io.writeBackUnit_dcache_release(i).ready := dcache_bus(i).c.ready
-    
-    dcache_bus(i).e.valid := exe_stage.io.missUnit_dcache_grantAck(i).valid
-    dcache_bus(i).e.bits  := exe_stage.io.missUnit_dcache_grantAck(i).bits
-    exe_stage.io.missUnit_dcache_grantAck(i).ready := dcache_bus(i).e.ready     
-  }
+  dcache_bus.a.valid := exe_stage.io.missUnit_dcache_acquire.valid
+  dcache_bus.a.bits  := exe_stage.io.missUnit_dcache_acquire.bits
+  exe_stage.io.missUnit_dcache_acquire.ready := dcache_bus.a.ready
+
+  exe_stage.io.probeUnit_dcache_probe.valid := dcache_bus.b.valid
+  exe_stage.io.probeUnit_dcache_probe.bits  := dcache_bus.b.bits
+  dcache_bus.b.ready := exe_stage.io.probeUnit_dcache_probe.ready
+  
+  dcache_bus.c.valid := exe_stage.io.writeBackUnit_dcache_release.valid
+  dcache_bus.c.bits  := exe_stage.io.writeBackUnit_dcache_release.bits
+  exe_stage.io.writeBackUnit_dcache_release.ready := dcache_bus.c.ready
+  
+  dcache_bus.e.valid := exe_stage.io.missUnit_dcache_grantAck.valid
+  dcache_bus.e.bits  := exe_stage.io.missUnit_dcache_grantAck.bits
+  exe_stage.io.missUnit_dcache_grantAck.ready := dcache_bus.e.ready     
+
 
   exe_stage.io.system_access.bits  := system_bus.d.bits
   exe_stage.io.system_access.valid := system_bus.d.valid
@@ -298,19 +292,14 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   periph_bus.a.bits  := exe_stage.io.periph_getPut.bits
   exe_stage.io.periph_getPut.ready := periph_bus.a.ready
 
-  mmu_bus(0).a.valid := i_mmu.io.iptw_get.valid
-  mmu_bus(0).a.bits := i_mmu.io.iptw_get.bits
-  i_mmu.io.iptw_get.ready := mmu_bus(0).a.ready
-  mmu_bus(0).d.ready := i_mmu.io.iptw_access.ready
-  i_mmu.io.iptw_access.bits  := mmu_bus(0).d.bits
-  i_mmu.io.iptw_access.valid := mmu_bus(0).d.valid
+  mmu_bus.a.valid := i_mmu.io.ptw_get.valid
+  mmu_bus.a.bits := i_mmu.io.ptw_get.bits
+  i_mmu.io.ptw_get.ready := mmu_bus.a.ready
+  mmu_bus.d.ready := i_mmu.io.ptw_access.ready
+  i_mmu.io.ptw_access.bits  := mmu_bus.d.bits
+  i_mmu.io.ptw_access.valid := mmu_bus.d.valid
 
-  mmu_bus(1).a.valid := i_mmu.io.dptw_get.valid
-  mmu_bus(1).a.bits := i_mmu.io.dptw_get.bits
-  i_mmu.io.dptw_get.ready := mmu_bus(1).a.ready
-  mmu_bus(1).d.ready := i_mmu.io.dptw_access.ready
-  i_mmu.io.dptw_access.bits := mmu_bus(1).d.bits
-  i_mmu.io.dptw_access.valid := mmu_bus(1).d.valid
+
 
 
   val diff = {

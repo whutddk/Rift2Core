@@ -22,6 +22,7 @@
 
 
 module debuger (
+	output success,
 
 	input [3:0] DEBUGER_AWID,
 	output [3:0] DEBUGER_BID,
@@ -120,6 +121,9 @@ module debuger (
 reg [63:0] cycle_cnt;
 reg timer_start;
 
+reg success_reg = 1'b0;
+assign success = success_reg;
+
 always @(posedge CLK or negedge RSTn) begin
 	if (~RSTn) begin
 		cycle_cnt <= 0;
@@ -173,7 +177,7 @@ always @(posedge CLK ) begin
 		$fwrite(file, "{\n  \"schemaVersion\": 1, \n  \"label\": \"dhrystone\", \n  \"message\": \"%f\", \n  \"color\": \"ff69b4\" \n}", 1000000.0/(cycle_cnt/500.0)/1757.0 );
 		$fclose(file);
 
-		$finish;
+		success_reg <= 1'b1;
 	end
 
 	if ( (DEBUGER_AWADDR == `COTRL_COREMARK) & DEBUGER_AWVALID & DEBUGER_AWREADY & DEBUGER_WVALID & DEBUGER_WREADY & (DEBUGER_WDATA == 64'd1)) begin
@@ -186,7 +190,7 @@ always @(posedge CLK ) begin
 		$fwrite(file, "{\n  \"schemaVersion\": 1, \n  \"label\": \"coremark\", \n  \"message\": \"%f\", \n  \"color\": \"ff69b4\" \n}", 1000000.0/(cycle_cnt/500.0)/1757.0 );
 		$fclose(file);
 
-		$finish;
+		success_reg <= 1'b1;
 	
 	end
 

@@ -42,14 +42,11 @@ class Bru extends Module {
   io.bru_exe_iwb <> bru_exe_iwb_fifo.io.deq
   bru_exe_iwb_fifo.reset := reset.asBool | io.flush
 
-  def iss_ack = io.bru_iss_exe.valid
-  def iwb_ack = bru_exe_iwb_fifo.io.enq.valid & bru_exe_iwb_fifo.io.enq.ready
 
-
-  def op1 = io.bru_iss_exe.bits.param.dat.op1
-  def op2 = io.bru_iss_exe.bits.param.dat.op2
+  val op1 = io.bru_iss_exe.bits.param.dat.op1
+  val op2 = io.bru_iss_exe.bits.param.dat.op2
   
-  def is_branchTaken = MuxCase(DontCare, Array(
+  val is_branchTaken = Mux1H(Seq(
     io.bru_iss_exe.bits.fun.beq  -> (op1 === op2),
     io.bru_iss_exe.bits.fun.bne  -> (op1 =/= op2),
     io.bru_iss_exe.bits.fun.blt  -> (op1.asSInt < op2.asSInt),
@@ -59,17 +56,17 @@ class Bru extends Module {
   ))
 
   // two back to back branch&jalr may be executed together, the 2nd one is executed by mistake, by its mispredict will not affert the perivous one
-  def is_clear_ilp = Mux(io.bru_iss_exe.bits.fun.is_branch, io.cmm_bru_ilp, true.B)
+  val is_clear_ilp = Mux(io.bru_iss_exe.bits.fun.is_branch, io.cmm_bru_ilp, true.B)
 
 
   io.bru_pd_b.bits  := is_branchTaken
-  io.bru_pd_b.valid := iwb_ack & io.bru_iss_exe.bits.fun.is_branch
+  io.bru_pd_b.valid := bru_exe_iwb_fifo.io.enq.fire & io.bru_iss_exe.bits.fun.is_branch
   io.bru_pd_j.bits  := (io.bru_iss_exe.bits.param.dat.op1 + io.bru_iss_exe.bits.param.imm) & ~("b1".U(64.W))
-  io.bru_pd_j.valid := iwb_ack & io.bru_iss_exe.bits.fun.jalr
+  io.bru_pd_j.valid := bru_exe_iwb_fifo.io.enq.fire & io.bru_iss_exe.bits.fun.jalr
 
 
 
-  io.bru_iss_exe.ready := iwb_ack
+  io.bru_iss_exe.ready := bru_exe_iwb_fifo.io.enq.fire
 
   bru_exe_iwb_fifo.io.enq.valid := is_clear_ilp & io.bru_iss_exe.valid
   bru_exe_iwb_fifo.io.enq.bits.res := io.bru_iss_exe.bits.param.pc + Mux( io.bru_iss_exe.bits.param.is_rvc, 2.U, 4.U)

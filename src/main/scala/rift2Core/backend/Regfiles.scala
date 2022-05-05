@@ -173,7 +173,6 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
     for ( i <- 0 until cmm_chn ) {
       def m = cmm_chn-1-i
 
-      //ready 和abort可能互斥，需要优化接口
       io.commit(m).is_writeback := log(phy(m)) === "b11".U
 
       when( io.commit(m).is_abort ) {
