@@ -28,9 +28,16 @@ import rift2Core.L1Cache._
 
 
 
-case object CacheParamsKey extends Field[CacheSetting]
+case object RiftParamsKey extends Field[RiftSetting]
 
-case class CacheSetting(
+case class RiftSetting(
+  ifetchParameters: IFParameters = IFParameters(
+    // GHR_length = 64,
+    // UBTB_entry = 16,
+    btb_tag_w = 8,
+    btb_cl_w  = 8,
+  ),
+
   icacheParameters: L1CacheParameters = IcacheParameters(
     dw = 256,
     bk = 1,
@@ -43,25 +50,17 @@ case class CacheSetting(
     cb = 8,
     cl = 128
   ),
-){
+){}
 
-}
-
-trait HasCacheParameters {
+trait HasRiftParameters {
   implicit val p: Parameters
 
-  val cacheSetting = p(CacheParamsKey)
+  val riftSetting = p(RiftParamsKey)
 
-  val icacheParams = cacheSetting.icacheParameters
-  val dcacheParams = cacheSetting.dcacheParameters
+  val ifParams     = riftSetting.ifetchParameters
+  val icacheParams = riftSetting.icacheParameters
+  val dcacheParams = riftSetting.dcacheParameters
 
 }
 
-trait HasBackEndParameters {
-  
-}
 
-
-
-
-trait HasRiftParameters extends HasCacheParameters with HasBackEndParameters

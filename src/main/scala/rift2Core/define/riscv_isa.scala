@@ -820,9 +820,7 @@ class Info_clint_csr extends Bundle {
 
 
 
-class Info_cmm_pc extends Bundle {
-  val addr = UInt(64.W)
-}
+
 
 
 
