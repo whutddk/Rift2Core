@@ -34,8 +34,12 @@ case class RiftSetting(
   ifetchParameters: IFParameters = IFParameters(
     // GHR_length = 64,
     // UBTB_entry = 16,
+    fetch_w   = 64,
     btb_tag_w = 8,
-    btb_cl_w  = 8,
+    btb_cb  = 4,
+    btb_cl  = 256,
+
+    bim_cl  = 4096,
   ),
 
   icacheParameters: L1CacheParameters = IcacheParameters(
@@ -50,7 +54,10 @@ case class RiftSetting(
     cb = 8,
     cl = 128
   ),
-){}
+){
+  
+  require( ifetchParameters.fetch_w/16 >= ifetchParameters.btb_cb_w )
+}
 
 trait HasRiftParameters {
   implicit val p: Parameters

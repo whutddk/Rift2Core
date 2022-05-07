@@ -20,29 +20,11 @@ import chisel3._
 import chisel3.util._
 
 
-case class IFParameters(
-  // GHR_length: Int,
-  UBTB_entry: Int,
-)
-
-trait HasIFParameters extends HasRiftParameters {
-  val ifParams: IFParameters
-
-  // def GHR_length = ifParams.GHR_length
-  def UBTB_entry = ifParams.UBTB_entry
-
-}
-
-abstract class IFetchModule(implicit val p: Parameters) extends Module with HasIFParameters { def io: Record }
-abstract class IFetchBundle(implicit val p: Parameters) extends Bundle with HasIFParameters
 
 
 
 
-class Info_IF1 extends IFetchBundle {
-  val addr = UInt(64.W)
-  val BHR  = UInt(64.W)
-}
+
 
 
 
