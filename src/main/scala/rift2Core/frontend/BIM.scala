@@ -40,9 +40,9 @@ class BIM extends IFetchModule {
   })
 
   /** BIM needs power reset to initialize the ram */
-  val pur_reset = RegInit(true.B)
-  val (reset_cl, reset_end) = Counter( range(0, bim_cl), pur_reset )
-  when( reset_end ) { pur_reset := false.B }
+  val por_reset = RegInit(true.B)
+  val (reset_cl, reset_end) = Counter( range(0, bim_cl), por_reset )
+  when( reset_end ) { por_reset := false.B }
 
 
   /** branch history table predict bits

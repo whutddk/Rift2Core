@@ -40,6 +40,8 @@ case class RiftSetting(
     btb_cl  = 256,
 
     bim_cl  = 4096,
+
+    tage_tag_w = 8,
   ),
 
   icacheParameters: L1CacheParameters = IcacheParameters(
