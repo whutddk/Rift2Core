@@ -20,52 +20,41 @@ import chisel3._
 import chisel3.util._
 
 
-
-
-
-
-
-
-
-
 /**
-  * instract fetch stage 1, generate pc and predict by a fully associative cache
+  * instract fetch stage 1, generate pc
   */
 abstract class IF1Base extends IFetchModule {
   val io = IO(new Bundle{
-    val redir_if2 = Flipped(Valid())
-    val redir_if3 = Flipped(Valid())
+    val redir_if4 = Flipped(Valid())
     val redir_cmm = Flipped(Valid())
 
 
     val pc_gen = Decoupled(new Info_IF1)
   })
 
-  val pc_reg = RegInit(0.U(64.W))
-
-
-}
-
-trait GHR { this: IF1Base =>
-
-  val GHR = RegInit(0.U(64.W))
-
+  val pc_dnxt = Wire(UInt(64.W))
+  val pc_qout = RegInit("h80000000".U(64.W))
 
 }
 
-// trait uBTB { this: IF1Base =>
-
-//   val uBTB_table = RegInit( VecInit( Seq.fill(UBTB_entry)( 0.U.asTypeOf(new Info_UBTB) )))
-//   val uBTB_valid = RegInit( VecInit( Seq.fill(UBTB_entry)( false.B                     )))
-
-//   def update_uBTB = {
-
-//     val cb_sel = 
-//   }
 
 
-// }
 
-class IF1 extends IF1Base with GHR with uBtB {
+class IF1 extends IF1Base {
+  val any_reset = RegInit(true.B)
+  when( io.pc_gen.fire ) { any_reset := false.B }
+
+
+  pc_dnxt := 
+    Mux( any_reset, "h80000000".U, 
+      Mux( io.redir_cmm.valid, io.redir_cmm.bits.pc,
+        Mux( io.redir_if4.valid, io.redir_if4.bits.pc,
+          (pc_qout + 16.U) >> 4 << 4 ) ) )
+
+  io.pc_gen.valid   := true.B
+  io.pc_gen.bits.pc := pc_dnxt
+  when( io.pc_gen.fire ) { pc_qout := pc_dnxt }
+
+
 
 }

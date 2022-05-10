@@ -34,12 +34,13 @@ case class RiftSetting(
   ifetchParameters: IFParameters = IFParameters(
     // GHR_length = 64,
     // UBTB_entry = 16,
-    fetch_w   = 64,
+    // fetch_w   = 64,
     btb_tag_w = 8,
     btb_cb  = 4,
     btb_cl  = 256,
 
-    bim_cl  = 4096,
+    bim_cl = 4096,
+    btb_cl = 4096,
 
     tage_tag_w = 8,
   ),

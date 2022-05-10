@@ -60,8 +60,8 @@ class Info_if_cmm extends Bundle {
 class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val io = IO(new Bundle {
 
-    val pc_if = Flipped(new DecoupledIO( UInt(64.W) ))
-    val if_iq = Vec(4, new DecoupledIO(UInt(16.W)) )
+    val if2_req  = Flipped(new DecoupledIO( UInt(64.W) ))
+    val if2_resp = Vec(4, new DecoupledIO(new IF2_Bundle) )
 
     val if_mmu = DecoupledIO(new Info_mmu_req)
     val mmu_if = Flipped(DecoupledIO(new Info_mmu_rsp))
@@ -81,7 +81,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val icache_access_data_lo = RegInit( 0.U(128.W) )
   val kill_trans = RegInit(false.B)
 
-  val ibuf = Module(new MultiPortFifo( UInt(16.W), 6, 8, 4 ) )
+  val ibuf = Module(new MultiPortFifo( new IF2_Bundle, aw=6, in=8, out=4 ) )
 
   val cache_dat = new Cache_dat( dw, aw, cb, cl, bk = 1 )
   val cache_tag = new Cache_tag( dw, aw, cb, cl, bk = 1 ) 
@@ -96,12 +96,12 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     kill_trans := false.B
   }
 
-  io.if_mmu.valid := io.pc_if.valid
-  io.if_mmu.bits.vaddr := io.pc_if.bits
+  io.if_mmu.valid := io.if2_req.valid
+  io.if_mmu.bits.vaddr := io.if2_req.bits
   io.if_mmu.bits.is_R := true.B
   io.if_mmu.bits.is_W := false.B
   io.if_mmu.bits.is_X := true.B
-  io.pc_if.ready := io.if_mmu.ready
+  io.if2_req.ready := io.if_mmu.ready
   
   
   val is_access_fault = io.mmu_if.valid & io.mmu_if.bits.is_access_fault
@@ -109,7 +109,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val fault_push = io.mmu_if.valid & io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(7).ready
   assert( ~(is_access_fault & is_paging_fault) )
 
-  io.if_cmm.ill_vaddr := io.pc_if.bits
+  io.if_cmm.ill_vaddr := io.if2_req.bits
   io.if_cmm.is_access_fault := is_access_fault
   io.if_cmm.is_paging_fault := is_paging_fault
 
@@ -125,7 +125,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   ibuf.io.flush := io.flush
 
   io.mmu_if.ready := ibuf.io.enq(0).fire & ~fault_push
-  io.if_iq <> ibuf.io.deq
+  io.if2_resp <> ibuf.io.deq
 
 
 
@@ -234,15 +234,21 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     res
   }
 
-  ibuf.io.enq(0).bits := reAlign_instr >> 0.U
+  // ibuf.io.enq(0).bits.instr := reAlign_instr >> 0.U
 
-  ibuf.io.enq(1).bits := reAlign_instr >> 16.U
-  ibuf.io.enq(2).bits := reAlign_instr >> 32.U
-  ibuf.io.enq(3).bits := reAlign_instr >> 48.U
-  ibuf.io.enq(4).bits := reAlign_instr >> 64.U
-  ibuf.io.enq(5).bits := reAlign_instr >> 80.U
-  ibuf.io.enq(6).bits := reAlign_instr >> 96.U
-  ibuf.io.enq(7).bits := reAlign_instr >> 112.U
+  // ibuf.io.enq(1).bits.instr := reAlign_instr >> 16.U
+  // ibuf.io.enq(2).bits.instr := reAlign_instr >> 32.U
+  // ibuf.io.enq(3).bits.instr := reAlign_instr >> 48.U
+  // ibuf.io.enq(4).bits.instr := reAlign_instr >> 64.U
+  // ibuf.io.enq(5).bits.instr := reAlign_instr >> 80.U
+  // ibuf.io.enq(6).bits.instr := reAlign_instr >> 96.U
+  // ibuf.io.enq(7).bits.instr := reAlign_instr >> 112.U
+
+  for( i <- 0 until 8 ) yield {
+    ibuf.io.enq(i).bits.instr := reAlign_instr >> (16*i)
+    ibuf.io.enq(i).bits.pc    := io.mmu_if.bits.paddr + (2*i)
+  }
+
 
   ibuf.io.enq(0).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 7.U )
   ibuf.io.enq(1).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 6.U )

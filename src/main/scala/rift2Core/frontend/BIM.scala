@@ -19,22 +19,12 @@ package rift2Core.frontend
 import chisel3._
 import chisel3.util._
 
-class Brslv_Bundle extends IFetchBundle {
-  val pc = UInt(64.W)
-  val ghr = UInt(64.W)
-  val old_info = new 
-  val is_misPredict = Bool()
-
-}
 
 class BIM extends IFetchModule {
   val io = IO(new Bundle{
-    val pc  = Input(UInt(64.W))
-    val ghr = Input(UInt(64.W))
-
-    val brslv = Flipped(Valid())
-
-    val prediction = Output(Bool())
+    val req  = Flipped(Decouple(new BIMReq_Bundle))
+    val resp = Decouple(new BIMResp_Bundle)
+    val update = 
 
     val flush = Input(Bool())
   })
@@ -76,6 +66,6 @@ class BIM extends IFetchModule {
     }
   }
 
-  io.prediction := bim_P.read(brpdr_cl)
+  io.prediction := RegEnable(bim_P.read(brpdr_cl), io.req.fire)
 }
 

@@ -26,82 +26,41 @@ import chisel3.util._
 
 
 class BTB extends IFetchModule {
-
+  def cl_w = log2Ceil(btb_cl)
   val io = IO(new Bundle{
-    val reqFromIF1  = Flipped(Decoupled(new Info_IF1))
-    val reqFromIF3  = Flipped(Decoupled())
+    val req  = Flipped(Decoupled(new BTBReq_Bundle))
+    val resp = Decoupled( new BTBResp_Bundle )
 
-    val resp = Valid( Vec( fetch_instr, new Info_BTB) )
+    val update = Valid(new BTBUpdate_Bundle)
+
+    val flush = Input(Bool())
   })
 
+  /** tage_table needs poweron reset to initialize the ram */
+  val por_reset = RegInit(true.B)
+  val (reset_cl, reset_end) = Counter( range(0, btb_cl), por_reset )
+  when( reset_end ) { por_reset := false.B }
+  io.req.ready := ~por_reset & io.resp.ready
 
 
-  val rd_cl_sel  = HashTo0( in1 = io.reqFromIF1.bits.addr >> 3 << 3, len = log2Ceil(btb_cl) )
-  val wr_cl_sel  = HashTo0( in1 = io.reqFromIF3.bits.addr >> 3 << 3, len = log2Ceil(btb_cl) )
-
-  val rd_tag_sel = for ( i <- 0 until fetch_instr ) yield {
-    HashTo1( in1 = (io.reqFromIF1.bits.addr >> 3 << 3) + (i*2).U, len = btb_tag_w ),
-  }
 
 
-  val wr_tag_sel = HashTo1( in1 = io.reqFromIF3.bits.addr, len = btb_tag_w )
+  val rd_cl_sel  = HashTo0( in1 = io.req.bits.pc, len = log2Ceil(btb_cl) )
+  val wr_cl_sel  = HashTo0( in1 = io.update.bits.pc, len = log2Ceil(btb_cl) )
 
-  val btb_valid = RegInit( VecInit( Seq.fill(btb_cl)( VecInit(Seq.fill(btb_cb)(false.B)) ) ) )
-  val btb_table = for( j <- 0 until btb_cb ) yield {
-    Mem( btb_cl, new Info_BTB )
-  }
 
-  val btb_info = for( j <- 0 until btb_cb ) yield {
-    btb_table(j).read(rd_cl_sel)
-  }
+  val btb_table = Mem( btb_cl, new BTBResp_Bundle )
 
-  val is_hit = for ( i <- 0 until fetch_instr ) yield {
-    for ( j <- 0 until btb_cb ) yield {
-      btb_info(j).tag === rd_tag_sel(i) & btb_valid(btb_cl)(j)
+  io.resp.valid := RegNext(io.req.fire, false.B)
+  io.resp.bits  := RegEnable(btb_table.read(rd_cl_sel), io.req.fire)
+
+
+  when( por_reset ) {
+    btb_table.write( reset_cl, "b80000000".U.asTypeOf(new BTBResp_Bundle) )
+  } .otherwise {
+    when( io.update.valid ) {
+      btb_table.write(wr_cl_sel, io.update.bits)
     }
-  }
-
-  /** hit should be one hot, or that is a hash collision*/
-  val is_hit_invalid = for ( i <- 0 until fetch_instr ) yield {
-    when(PopCount( is_hit(i) ) > 1.U ) {
-      printf("Warning, a hash collision happened!")
-      true.B
-    } .otherwise { false.B }
-  }
-
-
-  val hit_sel = for ( i <- 0 until fetch_instr ) yield {
-    OHToUInt(is_hit(i).asUInt)
-  }
-
-
-  when( io.reqFromIF1.fire ) {
-    ( 0 until fetch_instr ).map{ i => {
-      when( is_hit(i).reduce(_|_) & ~is_hit_invalid ) {
-        io.resp(i) := btb_info(hit_sel(i))
-      }
-      
-    }}
-    
-  }
-
-
-  when( io.reqFromIF3.fire ) {
-    val cb_allinUsed = btb_valid(wr_cl_sel).forall( (x:Bool) => (x === true.B))
-    val cb_empty_sel = btb_valid(wr_cl_sel).indexWhere( (x:Bool) => (x === false.B))
-    val ram_cb = LFSR16()
-
-    val rpl_cb = Mux( cb_allinUsed, ram_cb, cb_empty_sel )
-
-    btb_table(rpl_cb).write(wr_cl_sel, io.reqFromIF3.bits)
-    btb_valid(wr_cl_sel)(rpl_cb) := true.B
-
-  } .elsewhen( is_hit_invalid.reduce(_|_) ) {
-    for( j <- 0 until btb_cb ) yield {
-      btb_table(j).write(rd_cl_sel, 0.U.asTypeOf(new Info_BTB) )
-      btb_valid(wr_cl_sel)(j) := false.B
-    }
-    
   }
 
 

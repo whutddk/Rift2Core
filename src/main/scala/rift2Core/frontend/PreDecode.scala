@@ -42,64 +42,78 @@ class Info_preDecode extends Bundle {
   val imm = UInt(64.W)
 
   def is_pineline_cut = is_jal | is_jalr | is_branch | is_fencei | is_sfencevma
-}
 
-class Info_pd_bd extends Bundle {
+  def is_req_btb  = is_jalr & ~is_return
+  def is_req_ras  = is_return
+  def is_req_bim  = is_branch
+  def is_req_tage = is_branch
+  def is_lock_pipe = is_fencei | is_sfencevma
 
-  val info = new Info_preDecode
-  val instr = UInt(32.W)
-  val pc = UInt(64.W)
-}
-
-
-class PreDecode16() extends Module{
-  val io = IO(new Bundle {
-    val instr16 = Input( UInt(16.W) )
-
-    val info = Output(new Info_preDecode)
-  })
-
-  io.info.is_rvc := true.B
-
-  io.info.is_jal    := (io.instr16 === BitPat("b101???????????01"))
-  io.info.is_jalr   := (io.instr16 === BitPat("b100??????0000010") & io.instr16(11,7) =/= 0.U)
-  io.info.is_branch := (io.instr16 === BitPat("b11????????????01"))
-  io.info.is_call   := (io.instr16 === BitPat("b1001?????0000010") & io.instr16(11,7) =/= 0.U)
-  io.info.is_return := (io.instr16 === BitPat("b100000?010000010"))
-  io.info.is_fencei := false.B
-  io.info.is_sfencevma := false.B
-  io.info.imm       := MuxCase( 0.U, Array(
-              io.info.is_jal    -> Cat( Fill(52, io.instr16(12)), io.instr16(12), io.instr16(8), io.instr16(10,9), io.instr16(6), io.instr16(7), io.instr16(2), io.instr16(11), io.instr16(5,3), 0.U(1.W)),
-              io.info.is_jalr   -> 0.U,
-              io.info.is_branch -> Cat( Fill(55, io.instr16(12)), io.instr16(12), io.instr16(6,5), io.instr16(2), io.instr16(11,10), io.instr16(4,3), 0.U(1.W))
-            ))
+  
 
 }
 
+// class Info_pd_bd extends Bundle {
+//   val info = new Info_preDecode
+//   val instr = UInt(32.W)
+//   val pc = UInt(64.W)
+// }
 
 
-class PreDecode32() extends Module{
-  val io = IO(new Bundle {
-    val instr32 = Input( UInt(32.W) )
+object PreDecode16( instr16: UInt ): Info_preDecode = {
+  require( instr16.width == 16 )
+  // val io = IO(new Bundle {
+  //   val instr16 = Input( UInt(16.W) )
 
-    val info = Output(new Info_preDecode)
-  })
+  //   val info = Output(new Info_preDecode)
+  // })
+  val info16 = Wire( new Info_preDecode )
 
-  io.info.is_rvc := false.B
+  info16.is_rvc := true.B
 
-  io.info.is_jal    := (io.instr32(6,0) === "b1101111".U)
-  io.info.is_jalr   := (io.instr32(6,0) === "b1100111".U)
-  io.info.is_branch := (io.instr32(6,0) === "b1100011".U)
-  io.info.is_call   := ( io.info.is_jal | io.info.is_jalr ) & ( io.instr32(11,7) === BitPat("b00?01") ) //is 1 or 5
-  io.info.is_return := io.info.is_jalr & ( io.instr32(19,15) === BitPat("b00?01") ) & (io.instr32(19,15) =/= io.instr32(11,7))
-  io.info.is_fencei := ( io.instr32 === BitPat("b?????????????????001?????0001111") )
-  io.info.is_sfencevma := ( io.instr32 === BitPat("b0001001??????????000000001110011") )
-  io.info.imm       := MuxCase( 0.U, Array(
-              io.info.is_jal    -> Cat( Fill(44, io.instr32(31)), io.instr32(19,12), io.instr32(20), io.instr32(30,21), 0.U(1.W) ),
-              io.info.is_jalr   -> Cat( Fill(52, io.instr32(31)), io.instr32(31,20) ),
-              io.info.is_branch -> Cat( Fill(52, io.instr32(31)), io.instr32(7), io.instr32(30,25), io.instr32(11,8), 0.U(1.W) )
-            ))
+  info16.is_jal    := (instr16 === BitPat("b101???????????01"))
+  info16.is_jalr   := (instr16 === BitPat("b100??????0000010") & instr16(11,7) =/= 0.U)
+  info16.is_branch := (instr16 === BitPat("b11????????????01"))
+  info16.is_call   := (instr16 === BitPat("b1001?????0000010") & instr16(11,7) =/= 0.U)
+  info16.is_return := (instr16 === BitPat("b100000?010000010"))
+  info16.is_fencei := false.B
+  info16.is_sfencevma := false.B
+  info16.imm       :=
+    Mux1H( Seq(
+      info16.is_jal    -> Cat( Fill(52, instr16(12)), instr16(12), instr16(8), instr16(10,9), instr16(6), instr16(7), instr16(2), instr16(11), instr16(5,3), 0.U(1.W)),
+      info16.is_jalr   -> 0.U,
+      info16.is_branch -> Cat( Fill(55, instr16(12)), instr16(12), instr16(6,5), instr16(2), instr16(11,10), instr16(4,3), 0.U(1.W))
+    ))
+  return info16
+}
 
+
+
+object PreDecode32(instr32: UInt): Info_preDecode = {
+  require( instr32.width == 32 )
+  // val io = IO(new Bundle {
+  //   val instr32 = Input( UInt(32.W) )
+
+  //   val info = Output(new Info_preDecode)
+  // })
+  val info32 = Wire(new Info_preDecode)
+
+  info32.is_rvc := false.B
+
+  info32.is_jal    := (instr32(6,0) === "b1101111".U)
+  info32.is_jalr   := (instr32(6,0) === "b1100111".U)
+  info32.is_branch := (instr32(6,0) === "b1100011".U)
+  info32.is_call   := ( info32.is_jal | info32.is_jalr ) & ( instr32(11,7) === BitPat("b00?01") ) //is 1 or 5
+  info32.is_return := info32.is_jalr & ( instr32(19,15) === BitPat("b00?01") ) & (instr32(19,15) =/= instr32(11,7))
+  info32.is_fencei := ( instr32 === BitPat("b?????????????????001?????0001111") )
+  info32.is_sfencevma := ( instr32 === BitPat("b0001001??????????000000001110011") )
+  info32.imm       :=
+    Mux1H( Seq(
+      info32.is_jal    -> Cat( Fill(44, instr32(31)), instr32(19,12), instr32(20), instr32(30,21), 0.U(1.W) ),
+      info32.is_jalr   -> Cat( Fill(52, instr32(31)), instr32(31,20) ),
+      info32.is_branch -> Cat( Fill(52, instr32(31)), instr32(7), instr32(30,25), instr32(11,8), 0.U(1.W) )
+    ))
+  return info32
 }
 
 /**

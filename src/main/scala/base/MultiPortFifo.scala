@@ -86,8 +86,7 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 
       when( is_enq_ack(i) ) {buf_valid(fifo_ptr_w) := true.B}
       when( is_deq_ack(j) ) {buf_valid(fifo_ptr_r) := false.B}
-      // buf_valid(fifo_ptr_w) := Mux(is_enq_ack(i), true.B,  buf_valid(fifo_ptr_w))
-      // buf_valid(fifo_ptr_r) := Mux(is_deq_ack(j), false.B, buf_valid(fifo_ptr_r))
+
 
       buf(fifo_ptr_w) := Mux(is_enq_ack(i), io.enq(i).bits, buf(fifo_ptr_w))
     }
