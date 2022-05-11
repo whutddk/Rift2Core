@@ -210,9 +210,10 @@ class Branch_Target_Bundle extends Bundle {
 
 class Jump_Target_Bundle extends Bundle {
   val pc       = UInt(64.W)
-  val btbResp = new BIMResp_Bundle
+  val btbResp = new BTBResp_Bundle
   val rasResp = new RASPP_Bundle
-  val isBtb = Bool()
+
   val isRas = Bool()
 
+  def isBtb = ~isRas
 }

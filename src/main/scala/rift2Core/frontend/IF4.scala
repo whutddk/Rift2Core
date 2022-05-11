@@ -25,12 +25,15 @@ import chisel3.util._
 abstract class IF4Base extends IFetchModule {
   val io = IO(new Bundle{
     val if4_req = Vec(2, Flipped(Decoupled(new IF3_Bundle)))
-    val if4_resp = 
+    val if4_resp = Vec(2, Decoupled(new IF4_Bundle))
 
     val if4_update_ghist = Vec(2, Valid(new Ghist_reflash_Bundle))
     val if4_redir = Valid(new IF4_Redirect_Bundle)
 
     val jcmm_update = Flipped(Valid())
+
+    val bftq = Decoupled(new Branch_Target_Bundle)
+    val jftq = Decoupled(new Jump_Target_Bundle)
 
     val flush = Input(Bool())
   })
@@ -81,18 +84,17 @@ trait IF4_Predict{ this: IF4Base =>
   }
 
   val is_redirect = for( i <- 0 until 2 ) yield {
-    instr_fifo.io.enq(i).fire & (
-      (is_branch(i) & is_bTaken(i)) |
-      is_jal(i) |
-      is_jalr(i) |
-    )
+    (is_branch(i) & is_bTaken(i)) |
+    is_jal(i) |
+    is_jalr(i) |
+
   }
 
   val jalr_pc = for( i <- 0 until 2 ) yield {
     Mux( is_return(i) & ras.io.deq.valid, ras.io.deq.bits.target, btb_decode(i).target  )
   }
-  ras.io.deq.ready := is_return(i) & instr_fifo.io.enq(i).fire
-  ras.io.enq.valid := (is_call(0)  & instr_fifo.io.enq(0).fire) | (is_call(1) & instr_fifo.io.enq(1).fire)
+  ras.io.deq.ready := is_return(i) & io.if4_req(i).fire
+  ras.io.enq.valid := (is_call(0)  & io.if4_req(0).fire) | (is_call(1) & io.if4_req(1).fire)
   ras.io.enq.bits.target :=
     Mux( is_call(0), pc(0) + Mux(is_rvc(0), 2.U, 4.U), 
       Mux( is_call(1), pc(1) + Mux(is_rvc(1), 2.U, 4.U), 0.U ))
@@ -108,38 +110,55 @@ trait IF4_Predict{ this: IF4Base =>
 
   for( i <- 0 until 2 ) yield {
     io.if4_update_ghist(i).valid :=
-      instr_fifo.io.enq(i).fire & is_branch(i)
+      io.if4_req(i).fire & is_branch(i)
 
     io.if4_update_ghist(i).bits.is_taken := is_bTaken(i)
   }
 
-  io.if4_redir.valid := is_redirect.reduce(_|_)
+  io.if4_redir.valid := (io.if4_req(0).fire & is_redirect(0)) | (io.if4_req(1).fire & is_redirect(1))
   io.if4_redir.bits.pc := 
-    Mux( is_redirect(0), redirect_pc(0), 
-      Mux( is_redirect(1), redirect_pc(1), 0.U ) )
+    Mux( io.if4_req(0).fire & is_redirect(0), redirect_pc(0), 
+      Mux( io.if4_req(1).fire & is_redirect(1), redirect_pc(1), 0.U ) )
 
 
   // val bftq = Module(new MultiPortFifo( dw = new Branch_Target_Bundle, 4, 2, 1 ))
   // val jftq = Module(new MultiPortFifo( dw = new Jump_Target_Bundle,   4, 2, 1 ))
 
   for ( i <- 0 until 2 ) yield {
-    bftq.io.enq(i).bits.pc = UInt(64.W)
-    bftq.io.enq(i).bits.ghist = UInt(64.W)
-    bftq.io.enq(i).bits.bimResp  = new BIMResp_Bundle
-    bftq.io.enq(i).bits.tageResp = new TageResp_Bundle
-    bftq.io.enq(i).bits.revertTarget = UInt(64.W)
-    bftq.io.enq(i).bits.isPredictTaken = Bool()
+    bftq.io.enq(i).bits.pc             := pc(i)
+    bftq.io.enq(i).bits.ghist          := ghist(i)
+    bftq.io.enq(i).bits.bimResp        := bim_decode(i)
+    bftq.io.enq(i).bits.tageResp       := tage_decode(i)
+    bftq.io.enq(i).bits.revertTarget   := Mux( is_bTaken(i), (pc(i) + imm(i)), (pc(i) + Mux(is_rvc(i), 2.U, 4.U)) )
+    bftq.io.enq(i).bits.isPredictTaken := is_bTaken(i)
 
-    jftq.io.enq(i).pc       = UInt(64.W)
-    jftq.io.enq(i).btbResp = new BIMResp_Bundle
-    jftq.io.enq(i).rasResp = new RASPP_Bundle
-    jftq.io.enq(i).isBtb = Bool()
-    jftq.io.enq(i).isRas = Bool()    
+    jftq.io.enq(i).pc      := pc(i)
+    jftq.io.enq(i).btbResp := btb_decode(i)
+    jftq.io.enq(i).rasResp := ras.io.deq.bits.target
+    jftq.io.enq(i).isRas   := is_return(i) & ras.io.deq.valid
   }
-
-
 
 }
 
+
+class IF4 extends IF4Base with IF4_Decode with IF4_Predict {
+  io.if4_resp <> instr_fifo.io.deq
+  io.bftq <> bftq.io.deq(0)
+  io.jftq <> jftq.io.deq(0)
+
+  for ( i <- 0 until 2 ) yield {
+                    //report require
+                    bftq.io.enq(i).valid := io.if4_req(i).fire & is_branch(i)
+                    jftq.io.enq(i).valid := io.if4_req(i).fire & is_jalr(i)
+
+    instr_fifo.io.enq(i).valid := io.if4_req(i).fire
+
+                    
+  }
+
+  io.if4_req(0).ready := bftq.io.enq(0).ready & jftq.io.enq(0).ready & instr_fifo.io.enq(0).ready
+  io.if4_req(1).ready := bftq.io.enq(1).ready & jftq.io.enq(1).ready & instr_fifo.io.enq(1).ready & ~is_redirect(0)
+
+}
 
 
