@@ -22,18 +22,19 @@ import chisel3.util._
 
 class BIM extends IFetchModule {
   val io = IO(new Bundle{
-    val req  = Flipped(Decouple(new BIMReq_Bundle))
-    val resp = Decouple(new BIMResp_Bundle)
-    val update = 
+    val req      = Input(new BIMReq_Bundle)
+    val combResp = Output(new BIMResp_Bundle)
+    val update   = Flipped(Valid(new BIMUpdate_Bundle))
 
-    val flush = Input(Bool())
+    val is_Ready = Output(Bool())
+    val flush    = Input(Bool())
   })
 
   /** BIM needs power reset to initialize the ram */
   val por_reset = RegInit(true.B)
   val (reset_cl, reset_end) = Counter( range(0, bim_cl), por_reset )
   when( reset_end ) { por_reset := false.B }
-
+  io.is_Ready := ~por_reset
 
   /** branch history table predict bits
     * @note when successfully predict, keep this bit
@@ -48,24 +49,26 @@ class BIM extends IFetchModule {
   val bim_H = Mem( bim_cl, Bool() )
 
   /** branch resolve write cache line */
-  val brslv_cl = HashTo0( in = HashTwo0( in1 = io.brslv.bits.pc, in2 = io.brslv.bits.ghr ), len = bht_cl)
+  val wr_cl = HashTo0( in = io.update.bits.pc, len = bim_cl)
   /** branch predice read cache line */
-  val brpdr_cl = HashTo0( in = HashTwo0( in1 = io.pc, in2 = io.ghr ), len = bim_cl)
+  val rd_cl = HashTo0( in = io.req.pc,    len = bim_cl)
 
 
   // no overlap mis-predict will happened, for the following instr will be flushed
   when( pur_reset ) {
     bim_P.write( reset_cl, true.B )
     bim_H.write( reset_cl, false.B )
-  } .elsewhen( io.brslv.valid ) {
-    when( io.brslv.bits.is_misPredict ) {
-      when( io.brslv.old_info.bim_H === false.B ) { bim_P.write(brslv_cl, ~io.brslv.old_info.bim_P)
-      bim_H.write(brslv_cl, ~io.brslv.old_info.bim_H )
+  } .elsewhen( io.update.valid ) {
+    when( io.update.bits.is_misPredict ) {
+      when( io.update.bits.bim_h === false.B ) { bim_P.write(wr_cl, ~io.update.bits.bim_p)
+      bim_h.write(wr_cl, ~io.update.bits.bim_h )
     } .otherwise {
-      bim_H.write(brslv_cl, true.B)
+      bim_h.write(wr_cl, true.B)
     }
   }
 
-  io.prediction := RegEnable(bim_P.read(brpdr_cl), io.req.fire)
+  io.combResp.pc    := io.req.pc
+  io.combResp.bim_p := bim_P.read(brpdr_cl)
+  io.combResp.bim_h := bim_H.read(brpdr_cl)
 }
 

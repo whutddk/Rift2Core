@@ -25,23 +25,22 @@ import chisel3.util._
 
 
 
-class RAS[T<:Data]( dw: T, aw: Int ) extends Module {
+class RAS extends IFModule {
   val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(dw))
-    val deq  = new DecoupledIO(dw)
+    val enq = Flipped(Valid(new RASPP_Bundle))
+    val deq  = new DecoupledIO(new RASPP_Bundle)
 
+    // flush when RAS mis-predict
     val flush = Input(Bool())
 
   })
 
-  def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
+  def aw = log2Ceil(ras_dp)
 
-
-  // val buf = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
-  val buf = Mem( dp, dw )
+  // val buf = RegInit(VecInit(Seq.fill(ras_dp)(0.U.asTypeOf(dw))))
+  val buf = Mem( ras_dp, new RASPP_Bundle )
   val btm_ptr = RegInit(0.U((aw+1).W))
   val top_ptr = RegInit(0.U((aw+1).W))
-  val cmm_ptr = 
 
   val rd_idx = top_ptr(aw-1, 0) - 1.U
   val wr_idx = top_ptr(aw-1, 0)

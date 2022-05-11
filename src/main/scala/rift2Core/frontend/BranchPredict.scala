@@ -34,12 +34,7 @@ class Info_ib_id extends Bundle {
   val instr = UInt(32.W)
 }
 
-class Info_bd_dpt extends Bundle {
 
-  val info = new Info_instruction()
-
-
-}
 
 
 /*

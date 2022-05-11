@@ -28,11 +28,12 @@ import chisel3.util._
 class BTB extends IFetchModule {
   def cl_w = log2Ceil(btb_cl)
   val io = IO(new Bundle{
-    val req  = Flipped(Decoupled(new BTBReq_Bundle))
-    val resp = Decoupled( new BTBResp_Bundle )
+    val req  = Input(new BTBReq_Bundle)
+    val combResp = Output( new BTBResp_Bundle )
 
     val update = Valid(new BTBUpdate_Bundle)
 
+    val is_Ready = Output(Bool())
     val flush = Input(Bool())
   })
 
@@ -40,19 +41,18 @@ class BTB extends IFetchModule {
   val por_reset = RegInit(true.B)
   val (reset_cl, reset_end) = Counter( range(0, btb_cl), por_reset )
   when( reset_end ) { por_reset := false.B }
-  io.req.ready := ~por_reset & io.resp.ready
+  io.is_Ready := ~por_reset
 
 
 
-
-  val rd_cl_sel  = HashTo0( in1 = io.req.bits.pc, len = log2Ceil(btb_cl) )
+  val rd_cl_sel  = HashTo0( in1 = io.req.pc, len = log2Ceil(btb_cl) )
   val wr_cl_sel  = HashTo0( in1 = io.update.bits.pc, len = log2Ceil(btb_cl) )
 
 
   val btb_table = Mem( btb_cl, new BTBResp_Bundle )
 
-  io.resp.valid := RegNext(io.req.fire, false.B)
-  io.resp.bits  := RegEnable(btb_table.read(rd_cl_sel), io.req.fire)
+
+  io.combResp  := btb_table.read(rd_cl_sel)
 
 
   when( por_reset ) {

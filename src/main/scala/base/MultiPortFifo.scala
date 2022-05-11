@@ -100,7 +100,7 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 
   for ( i <- 0 until out ) yield {
     val fifo_ptr_r = (rd_ptr + i.U)(aw-1,0)
-    io.deq(i).bits := Mux(buf_valid(fifo_ptr_r), buf(fifo_ptr_r), DontCare)
+    io.deq(i).bits := Mux(buf_valid(fifo_ptr_r), buf(fifo_ptr_r), 0.U.asTypeOf(dw))
   }
 
 
