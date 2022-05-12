@@ -18,6 +18,7 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
+import chipsalliance.rocketchip.config.Parameters
 
 case class TageParams(
   //                                       nSets, histLen
@@ -31,17 +32,17 @@ case class TageParams(
 
 
 
-class TageTable(nRows: Int, histlen: Int) extends IFetchModule {
+class TageTable(nRows: Int, histlen: Int)(implicit p: Parameters) extends IFetchModule {
   require( isPow2(nRows) )
   require( isPow2(histlen) )
   val cl_w = log2Ceil( nRows )
 
   val io = IO( new Bundle{
-    val req = Input(new TageTableReq_Bundle))
+    val req = Input(new TageTableReq_Bundle)
     val combResp = Output( new TageTableResp_Bundle)
     val update = Flipped(Valid(new TageTableUpdate_Bundle))
 
-    val is_Ready = Output(Bool())
+    val isReady = Output(Bool())
     val flush = Input(Bool())
   })
 
@@ -49,7 +50,7 @@ class TageTable(nRows: Int, histlen: Int) extends IFetchModule {
   val por_reset = RegInit(true.B)
   val (reset_cl, reset_end) = Counter( range(0, nRows), por_reset )
   when( reset_end ) { por_reset := false.B }
-  io.is_Ready := ~por_reset
+  io.isReady := ~por_reset
 
   /** tage_table needs clear to reduce usage */
   val (clear_u_cnt, _) = Counter( range(0, nRows << 1 << 10), true.B )
@@ -98,13 +99,13 @@ class TageTable(nRows: Int, histlen: Int) extends IFetchModule {
 
 
 
-class Tage(param: TageParams = TageParams()) extends IFetchModule {
+class TAGE(param: TageParams = TageParams())(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
     val req = Input(new TageReq_Bundle)
     val combResp = Output( Vec(6, new TageTableResp_Bundle ) )
     val update = Flipped(Valid(new TageUpdate_Bundle))
 
-    val is_Ready = Output(Bool())
+    val isReady = Output(Bool())
     val flush = Input(Bool())
   })
 
@@ -119,7 +120,7 @@ class Tage(param: TageParams = TageParams()) extends IFetchModule {
     }
   }
 
-  io.is_Ready := tageTable.map{_.io.is_Ready}.reduce(_|_)
+  io.isReady := tageTable.map{_.io.is_Ready}.reduce(_|_)
 
 
 

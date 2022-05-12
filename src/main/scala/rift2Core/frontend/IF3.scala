@@ -19,11 +19,11 @@ package rift2Core.frontend
 import chisel3._
 import chisel3.util._
 import chisel3.experimental.dataview._
-
+import chipsalliance.rocketchip.config.Parameters
 /**
   * instract fetch stage 3, instr pre-decode, realign, predict-state 1
   */
-abstract class IF3Base extends IFetchModule {
+abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
     val if3_req = Vec(4, Flipped(new DecoupledIO(new IF2_Bundle) ))
     val if3_resp = Vec(2, Decoupled(new IF3_Bundle))
@@ -47,7 +47,7 @@ abstract class IF3Base extends IFetchModule {
   val bim = Module(new BIM)
   val tage = Module(new TAGE)
 
-  val predictor_ready = btb.io.req.ready & bim.io.req.ready & tage.io.req.ready
+  val predictor_ready = btb.io.isReady & bim.io.isReady & tage.io.isReady
 
   val if3_resp_fifo = Module(new MultiPortFifo( new IF3_Bundle, 4, 4, 2 ))
 
@@ -213,7 +213,7 @@ trait IF3_Update{ this: IF3Base =>
 
 }
 
-class IF3 extends IF3Base with IF3_PreDecode with IF3_PreDecode with IF3_Update
+class IF3()(implicit p: Parameters) extends IF3Base with IF3_PreDecode with IF3_PreDecode with IF3_Update
 
 
 

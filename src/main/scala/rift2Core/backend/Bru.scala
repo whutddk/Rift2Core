@@ -23,6 +23,7 @@ import chisel3._
 import chisel3.util._
 import chisel3.experimental.dataview._
 import rift2Core.define._
+import rift2Core.frontend._
 
 abstract class BruBase extends Module {
   val io = IO(new Bundle{
@@ -41,7 +42,7 @@ abstract class BruBase extends Module {
     val flush = Input(Bool())
   })
 
-  val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, true.B, false ) )
+  val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, true, false ) )
   val bctq = Module(new Queue( new Branch_CTarget_Bundle, 4 ) )
   val jctq = Module(new Queue( new Jump_CTarget_Bundle,   4 ) )
 

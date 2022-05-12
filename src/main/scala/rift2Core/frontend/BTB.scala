@@ -18,14 +18,14 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
+import base._
+import chisel3.experimental.dataview._
+import chipsalliance.rocketchip.config.Parameters
 
 
 
 
-
-
-
-class BTB extends IFetchModule {
+class BTB()(implicit p: Parameters) extends IFetchModule {
   def cl_w = log2Ceil(btb_cl)
   val io = IO(new Bundle{
     val req  = Input(new BTBReq_Bundle)
@@ -33,7 +33,7 @@ class BTB extends IFetchModule {
 
     val update = Valid(new BTBUpdate_Bundle)
 
-    val is_Ready = Output(Bool())
+    val isReady = Output(Bool())
     val flush = Input(Bool())
   })
 
@@ -41,12 +41,12 @@ class BTB extends IFetchModule {
   val por_reset = RegInit(true.B)
   val (reset_cl, reset_end) = Counter( range(0, btb_cl), por_reset )
   when( reset_end ) { por_reset := false.B }
-  io.is_Ready := ~por_reset
+  io.isReady := ~por_reset
 
 
 
-  val rd_cl_sel  = HashTo0( in1 = io.req.pc, len = log2Ceil(btb_cl) )
-  val wr_cl_sel  = HashTo0( in1 = io.update.bits.pc, len = log2Ceil(btb_cl) )
+  val rd_cl_sel  = HashTo0( in = io.req.pc, len = log2Ceil(btb_cl) )
+  val wr_cl_sel  = HashTo0( in = io.update.bits.pc, len = log2Ceil(btb_cl) )
 
 
   val btb_table = Mem( btb_cl, new BTBResp_Bundle )
@@ -59,7 +59,7 @@ class BTB extends IFetchModule {
     btb_table.write( reset_cl, "b80000000".U.asTypeOf(new BTBResp_Bundle) )
   } .otherwise {
     when( io.update.valid ) {
-      btb_table.write(wr_cl_sel, io.update.bits)
+      btb_table.write(wr_cl_sel, io.update.bits.viewAsSupertype( new BTBResp_Bundle ))
     }
   }
 

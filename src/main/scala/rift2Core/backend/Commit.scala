@@ -29,7 +29,8 @@ import rift2Core.privilege._
 import debug._
 import chisel3.experimental._
 import base._
-
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 import rift2Core.diff._
 
 class ExInt_Bundle extends Bundle {
@@ -279,7 +280,7 @@ class CMMState_Bundle extends Bundle{
 
 
 
-abstract class BaseCommit extends RiftModule {
+abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val cm_op = Vec(cm_chn, new Info_commit_op(64))
     val rod = Vec(cm_chn, Flipped(new DecoupledIO( new Info_reorder_i ) ))
@@ -317,10 +318,10 @@ abstract class BaseCommit extends RiftModule {
 
   val csrfiles = Reg(new CSR_Bundle)
   val commit_state = Wire( Vec( cm_chn, UInt(2.W)) )
-  val commit_state_is_comfirm = for ( i <- 0 until cm ) yield commit_state(i) === 3.U
-  val commit_state_is_abort   = for ( i <- 0 until cm ) yield commit_state(i) === 2.U
-  val commit_state_is_cancel  = for ( i <- 0 until cm ) yield commit_state(i) === 1.U
-  val commit_state_is_idle    = for ( i <- 0 until cm ) yield commit_state(i) === 0.U
+  val commit_state_is_comfirm = for ( i <- 0 until cm_chn ) yield commit_state(i) === 3.U
+  val commit_state_is_abort   = for ( i <- 0 until cm_chn ) yield commit_state(i) === 2.U
+  val commit_state_is_cancel  = for ( i <- 0 until cm_chn ) yield commit_state(i) === 1.U
+  val commit_state_is_idle    = for ( i <- 0 until cm_chn ) yield commit_state(i) === 0.U
 
 
   val cmm_state = Wire( Vec(cm_chn, new CMMState_Bundle ) )
@@ -355,6 +356,12 @@ abstract class BaseCommit extends RiftModule {
 
   val csrExe  = ReDirect( emptyExePort, VecInit( io.rod.map{_.bits.is_csr} ) )
   val fcsrExe = ReDirect( io.fcsr_cmm_op, VecInit( io.rod.map{_.bits.is_fcsr} ) )
+
+  val emu_reset = RegInit( false.B )
+  when( io.dm.hartResetReq ) { emu_reset := true.B }
+  .elsewhen( emu_reset ) { emu_reset := false.B }
+  io.dm.hartIsInReset := emu_reset
+
 }
 
 
@@ -397,42 +404,13 @@ trait CommitState { this: BaseCommit =>
   val is_single_step = RegNext(next = is_retired(0) & cmm_state(0).is_step, init = false.B)
   val is_trigger = false.B
 
-  val emu_reset = RegInit( false.B )
-  when( io.dm.hartResetReq ) { emu_reset := true.B }
-  .elsewhen( emu_reset ) { emu_reset := false.B }
-  io.dm.hartIsInReset := emu_reset
 
 
 
 
 
-  ( 0 until cm_chn ).map{ i => {
-    cmm_state(i).rod      := io.rod(i).bits
-    if ( i == 0 ) { cmm_state(i).csrfiles := csrfiles } else { cmm_state(i).csrfiles := csr_state(i-1) }
-    
-    cmm_state(i).lsu_cmm := io.lsu_cmm
-    cmm_state(i).csrExe  := csrExe(i).bits
-    cmm_state(i).fcsrExe := fcsrExe(i).bits
-    cmm_state(i).is_wb   := io.cm_op(i).is_writeback
-    cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
-    cmm_state(i).ill_dvaddr               := io.lsu_cmm.trap_addr
-    cmm_state(i).is_csrr_illegal         := cmm_state(i).csrfiles.csr_read_prilvl(io.csr_addr.bits) & io.csr_addr.valid
-
-    cmm_state(i).exint.is_single_step := is_single_step
-    cmm_state(i).exint.is_trigger := false.B
-    cmm_state(i).exint.emu_reset  := emu_reset
-    cmm_state(i).exint.hartHaltReq := io.dm.hartHaltReq
-	  cmm_state(i).exint.clint_sw_m := false.B
-	  cmm_state(i).exint.clint_sw_s := false.B
-	  cmm_state(i).exint.clint_tm_m := false.B
-	  cmm_state(i).exint.clint_tm_s := false.B
-	  cmm_state(i).exint.clint_ex_m := false.B
-	  cmm_state(i).exint.clint_ex_s := false.B 
-
-    csr_state(i) := update_csrfiles(in = cmm_state(i))
 
 
-  }}
 
   val abort_chn = Wire(UInt(log2Ceil(cm_chn).W)); abort_chn := DontCare
   ( 1 until cm_chn ).map{ i => assert( commit_state(i) <= commit_state(i-1) ) }
@@ -575,50 +553,7 @@ trait CommitRegFiles { this: BaseCommit =>
 }
 
 trait CommitIFRedirect { this: BaseCommit =>
-  io.cmmRedirect.valid := false.B
-  io.cmmRedirect.bits.pc := 0.U
 
-  for ( i <- 0 until cm_chn ) yield {
-    when( commit_state_is_abort(i) ) {
-      when(io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := bctq(i).bits.revertTarget
-      }
-      
-      when(io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := jctq(i).bits.finalTarget
-      }
-
-      when( cmm_state(i).is_mRet ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.mepc
-      } 
-      when( cmm_state(i).is_sRet ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.sepc
-      } 
-      when( cmm_state(i).is_dRet ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.dpc
-      } 
-      when( cmm_state(i).is_trap ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := Mux1H(Seq(
-            emu_reset                                   -> "h80000000".U,
-            cmm_state(i).is_debug_interrupt             -> "h00000000".U,
-            (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
-            (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
-          )),
-      } 
-      when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := (io.rod(i).bits.pc + 4.U)
-      }
-    }
-
-    assert( PopCount(Seq( cmm_state(i).is_xRet, cmm_state(i).is_trap, cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U )
-  }
 }
 
 
@@ -689,7 +624,48 @@ trait CommitDiff { this: BaseCommit =>
   * 2. branch/jalr can resolve at any chn but only one of every
   * 3. branch misPredict will redirect at cmm
   */
-class Commit extends BaseCommit with CsrFiles with CommitState with CommitRegFiles with CommitIFRedirect with CommitDiff{
+class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with CommitState with CommitRegFiles with CommitIFRedirect with CommitDiff{
+
+  ( 0 until cm_chn ).map{ i => {
+    cmm_state(i).rod      := io.rod(i).bits
+    if ( i == 0 ) { cmm_state(i).csrfiles := csrfiles } else { cmm_state(i).csrfiles := csr_state(i-1) }
+    
+    cmm_state(i).lsu_cmm := io.lsu_cmm
+    cmm_state(i).csrExe  := csrExe(i).bits
+    cmm_state(i).fcsrExe := fcsrExe(i).bits
+    cmm_state(i).is_wb   := io.cm_op(i).is_writeback
+    cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
+    cmm_state(i).ill_dvaddr               := io.lsu_cmm.trap_addr
+    cmm_state(i).is_csrr_illegal         := cmm_state(i).csrfiles.csr_read_prilvl(io.csr_addr.bits) & io.csr_addr.valid
+
+    cmm_state(i).exint.is_single_step := is_single_step
+    cmm_state(i).exint.is_trigger := false.B
+    cmm_state(i).exint.emu_reset  := emu_reset
+    cmm_state(i).exint.hartHaltReq := io.dm.hartHaltReq
+	  cmm_state(i).exint.clint_sw_m := false.B
+	  cmm_state(i).exint.clint_sw_s := false.B
+	  cmm_state(i).exint.clint_tm_m := false.B
+	  cmm_state(i).exint.clint_tm_s := false.B
+	  cmm_state(i).exint.clint_ex_m := false.B
+	  cmm_state(i).exint.clint_ex_s := false.B 
+
+    csr_state(i) := update_csrfiles(in = cmm_state(i))
+
+
+  }}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   ( 0 until cm_chn ).map{ i =>
     bctq(i).ready := is_retired(i) & io.rod(i).bits.is_branch
@@ -711,6 +687,70 @@ class Commit extends BaseCommit with CsrFiles with CommitState with CommitRegFil
   ( 0 until cm_chn ).map{ i =>
     io.cmm_lsu.is_store_commit(i) := io.rod(i).bits.is_su & commit_state_is_comfirm(i)
   }
+
+
+
+
+
+
+
+
+
+
+  io.cmmRedirect.valid := false.B
+  io.cmmRedirect.bits.pc := 0.U
+
+  for ( i <- 0 until cm_chn ) yield {
+    when( commit_state_is_abort(i) ) {
+      when(io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict ) {
+        io.cmmRedirect.valid := true.B
+        io.cmmRedirect.bits.pc := bctq(i).bits.revertTarget
+      }
+      
+      when(io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict ) {
+        io.cmmRedirect.valid := true.B
+        io.cmmRedirect.bits.pc := jctq(i).bits.finalTarget
+      }
+
+      when( cmm_state(i).is_mRet ) {
+        io.cmmRedirect.valid := true.B
+        io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.mepc
+      } 
+      when( cmm_state(i).is_sRet ) {
+        io.cmmRedirect.valid := true.B
+        io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.sepc
+      } 
+      when( cmm_state(i).is_dRet ) {
+        io.cmmRedirect.valid := true.B
+        io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.dpc
+      } 
+      when( cmm_state(i).is_trap ) {
+        io.cmmRedirect.valid := true.B
+        io.cmmRedirect.bits.pc := Mux1H(Seq(
+            emu_reset                                   -> "h80000000".U,
+            cmm_state(i).is_debug_interrupt             -> "h00000000".U,
+            (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
+            (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
+          )),
+      } 
+      when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
+        io.cmmRedirect.valid := true.B
+        io.cmmRedirect.bits.pc := (io.rod(i).bits.pc + 4.U)
+      }
+    }
+
+    assert( PopCount(Seq( cmm_state(i).is_xRet, cmm_state(i).is_trap, cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U )
+  }
+
+
+
+
+
+
+
+
+
+
 
 
 

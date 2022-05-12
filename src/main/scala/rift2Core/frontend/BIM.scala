@@ -18,15 +18,15 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
+import chipsalliance.rocketchip.config.Parameters
 
-
-class BIM extends IFetchModule {
+class BIM()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
     val req      = Input(new BIMReq_Bundle)
     val combResp = Output(new BIMResp_Bundle)
     val update   = Flipped(Valid(new BIMUpdate_Bundle))
 
-    val is_Ready = Output(Bool())
+    val isReady = Output(Bool())
     val flush    = Input(Bool())
   })
 
@@ -34,7 +34,7 @@ class BIM extends IFetchModule {
   val por_reset = RegInit(true.B)
   val (reset_cl, reset_end) = Counter( range(0, bim_cl), por_reset )
   when( reset_end ) { por_reset := false.B }
-  io.is_Ready := ~por_reset
+  io.isReady := ~por_reset
 
   /** branch history table predict bits
     * @note when successfully predict, keep this bit
@@ -60,7 +60,7 @@ class BIM extends IFetchModule {
     bim_H.write( reset_cl, false.B )
   } .elsewhen( io.update.valid ) {
     when( io.update.bits.is_misPredict ) {
-      when( io.update.bits.bim_h === false.B ) { bim_P.write(wr_cl, ~io.update.bits.bim_p)
+      when( io.update.bits.bim_h === false.B ) { bim_P.write(wr_cl, ~io.update.bits.bim_p) }
       bim_h.write(wr_cl, ~io.update.bits.bim_h )
     } .otherwise {
       bim_h.write(wr_cl, true.B)

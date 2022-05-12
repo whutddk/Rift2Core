@@ -18,11 +18,11 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
-
+import chipsalliance.rocketchip.config.Parameters
 /**
   * instract fetch stage 4, instr decode,  predict-state 2
   */
-abstract class IF4Base extends IFetchModule {
+abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
     val if4_req = Vec(2, Flipped(Decoupled(new IF3_Bundle)))
     val if4_resp = Vec(2, Decoupled(new IF4_Bundle))
@@ -147,7 +147,7 @@ trait IF4_Predict{ this: IF4Base =>
 }
 
 
-class IF4 extends IF4Base with IF4_Decode with IF4_Predict {
+class IF4()(implicit p: Parameters) extends IF4Base with IF4_Decode with IF4_Predict {
   io.if4_resp <> instr_fifo.io.deq
   io.bftq <> bftq.io.deq(0)
   io.jftq <> jftq.io.deq(0)

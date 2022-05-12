@@ -19,9 +19,9 @@ package base
 import chisel3._
 import chisel3.util._
 
-object HashHalf0(
+object HashHalf0{
   def apply( in: UInt ): UInt = {
-    val in_w = in.length
+    val in_w = in.getWidth
     require(in_w % 2 == 0)
 
     val out = Wire( UInt((in_w/2).W) )
@@ -30,12 +30,13 @@ object HashHalf0(
       out(i) := in(i) ^ in(i+1)
     }
     return out
-  }
-)
+  }  
+}
 
-object HashHalf1(
+
+object HashHalf1{
   def apply( in: UInt ): UInt = {
-    val in_w = in.length
+    val in_w = in.getWidth
     require(in_w % 2 == 0)
 
     val out = Wire( UInt((in_w/2).W) )
@@ -44,12 +45,13 @@ object HashHalf1(
       out(i) := in(i) ^ Reverse(in)(i)
     }
     return out
-  }
-)
+  }  
+}
 
-object HashHalf2(
+
+object HashHalf2{
   def apply( in: UInt ): UInt = {
-    val in_w = in.length
+    val in_w = in.getWidth
     require(in_w % 2 == 0)
 
     val out = Wire( UInt((in_w/2).W) )
@@ -58,47 +60,50 @@ object HashHalf2(
       out(i) := in(i) ^ in(in_w/2+i)
     }
     return out
-  }
-)
+  }  
+}
 
-object HashTwo0(
+
+object HashTwo0{
   def apply( in1: UInt, in2: UInt ): UInt = {
-    val in1_w = in1.length
-    val in2_w = in2.length
+    val in1_w = in1.getWidth
+    val in2_w = in2.getWidth
     
     require(in1_w == in2_w)
 
     val out = Wire( UInt(in1_w.W) )
 
-    for ( i <- 0 until in_w ) yield {
+    for ( i <- 0 until in1_w ) yield {
       out(i) := in1(i) ^ in2(i)
     }
     return out
-  }
-)
+  }  
+}
 
-object HashTwo1(
+
+object HashTwo1{
   def apply( in1: UInt, in2: UInt ): UInt = {
-    val in1_w = in1.length
-    val in2_w = in2.length
+    val in1_w = in1.getWidth
+    val in2_w = in2.getWidth
     
     require(in1_w == in2_w)
 
     val out = Wire( UInt(in1_w.W) )
 
-    for ( i <- 0 until in_w ) yield {
+    for ( i <- 0 until in1_w ) yield {
       out(i) := in1(i) ^ Reverse(in2)(i)
     }
     return out
-  }
-)
+  }  
+}
 
 
 
 
-object HashTo0(
+
+object HashTo0{
   def apply( in: UInt, len: Int ): UInt = {
-    val in_w = in.length
+    val in_w = in.getWidth
       
     require( in_w > len )
 
@@ -117,13 +122,14 @@ object HashTo0(
       return HashTo0( HashHalf0(in), len/2 )
     }
 
-  }
-)
+  }  
+}
 
 
-object HashTo1(
+
+object HashTo1{
   def apply( in: UInt, len: Int ): UInt = {
-    val in_w = in.length
+    val in_w = in.getWidth
       
     require( in_w > len )
 
@@ -142,5 +148,6 @@ object HashTo1(
       return HashTo1( HashHalf1(in), len/2 )
     }
 
-  }
-)
+  }  
+}
+

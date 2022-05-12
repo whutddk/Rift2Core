@@ -18,17 +18,17 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
-
+import chipsalliance.rocketchip.config.Parameters
 
 /**
   * instract fetch stage 1, generate pc
   */
-abstract class IF1Base extends IFetchModule {
+abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
 
 
-    val if4Redirect = Flipped(Valid(IF4_Redirect_Bundle))
-    val cmmRedirect = Flipped(Valid(Commit_Redirect_Bundle))
+    val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
+    val cmmRedirect = Flipped(Valid(new Commit_Redirect_Bundle))
 
 
     val pc_gen = Decoupled(new IF1_Bundle)
@@ -42,7 +42,7 @@ abstract class IF1Base extends IFetchModule {
 
 
 
-class IF1 extends IF1Base {
+class IF1()(implicit p: Parameters) extends IF1Base {
   val any_reset = RegInit(true.B)
   when( io.pc_gen.fire ) { any_reset := false.B }
 

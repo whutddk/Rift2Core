@@ -25,6 +25,7 @@ import freechips.rocketchip.tilelink._
 import chipsalliance.rocketchip.config.{Field, Parameters}
 
 import rift2Core.L1Cache._
+import rift2Core.frontend._
 
 
 
@@ -34,7 +35,7 @@ case object RiftParamsKey extends Field[RiftSetting]
 
 
 case class RiftSetting(
-  cm_chn: Int = 2
+  cm_chn: Int = 2,
   ifetchParameters: IFParameters = IFParameters(
     // GHR_length = 64,
     // UBTB_entry = 16,
@@ -42,13 +43,10 @@ case class RiftSetting(
 
     // btb_tag_w = 8,
     // btb_cb  = 4,
-    btb_cl = 4096,
-
-    bim_cl = 4096,
-    
-    ras_dp = 256,
-
-    tage_table = 6, 
+  btb_cl = 4096,
+  bim_cl = 4096,
+  ras_dp = 256,
+  tage_table = 6, 
 
 
 
@@ -69,7 +67,6 @@ case class RiftSetting(
   ),
 ){
   
-  require( ifetchParameters.fetch_w/16 >= ifetchParameters.btb_cb_w )
 }
 
 trait HasRiftParameters {

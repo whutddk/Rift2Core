@@ -18,18 +18,23 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
 case class IFParameters(
-  // GHR_length: Int,
-  // UBTB_entry: Int,
+  btb_cl: Int = 4096,
+  bim_cl: Int = 4096,
+  ras_dp: Int = 256,
+  tage_table: Int = 6, 
 )
 
 trait HasIFParameters extends HasRiftParameters {
   val ifParams: IFParameters
 
-  // def GHR_length = ifParams.GHR_length
-  // def UBTB_entry = ifParams.UBTB_entry
-  // val fetch_instr = ifParams.fetch_w/16
+  def btb_cl: Int = ifParams.btb_cl
+  def bim_cl: Int = ifParams.bim_cl
+  def ras_dp: Int = ifParams.ras_dp
+  def tage_table: Int = ifParams.tage_table
 }
 
 abstract class IFetchModule(implicit val p: Parameters) extends Module with HasIFParameters { def io: Record }
@@ -106,8 +111,8 @@ class BTBResp_Bundle extends IFetchBundle {
   val target = UInt(64.W)
 }
 
-class BTBUpdate_Bundle extends BTBReq_Bundle {
-  val new_target = UInt(64.W)
+class BTBUpdate_Bundle extends BTBResp_Bundle {
+  val pc = UInt(64.W)
 }
 
 class TageTableUpdate_Bundle extends IFetchBundle {
