@@ -28,20 +28,26 @@ abstract class IF4Base extends IFetchModule {
     val if4_resp = Vec(2, Decoupled(new IF4_Bundle))
 
     val if4_update_ghist = Vec(2, Valid(new Ghist_reflash_Bundle))
-    val if4_redir = Valid(new IF4_Redirect_Bundle)
+    val if4Redirect = Valid(new IF4_Redirect_Bundle)
 
-    val jcmm_update = Flipped(Valid())
+    val jcmm_update = Flipped(Valid(new Jump_FTarget_Bundle))
 
-    val bftq = Decoupled(new Branch_Target_Bundle)
-    val jftq = Decoupled(new Jump_Target_Bundle)
+    val bftq = Decoupled(new Branch_FTarget_Bundle)
+    val jftq = Decoupled(new Jump_FTarget_Bundle)
 
     val flush = Input(Bool())
   })
 
   val ras = Module(new RAS)
   val instr_fifo = Module(new MultiPortFifo( new IF4_Bundle, 4, 2, 2 ))
-  val bftq = Module(new MultiPortFifo( dw = new Branch_Target_Bundle, 4, 2, 1 ))
-  val jftq = Module(new MultiPortFifo( dw = new Jump_Target_Bundle,   4, 2, 1 ))
+  val bftq = Module(new MultiPortFifo( dw = new Branch_FTarget_Bundle, 4, 2, 1 ))
+  val jftq = Module(new MultiPortFifo( dw = new Jump_FTarget_Bundle,   4, 2, 1 ))
+
+
+  val bRePort = Module(new RePort( new Branch_FTarget_Bundle, port = 2) )
+  val jRePort = Module(new RePort( new Jump_FTarget_Bundle, port = 2) )
+
+
 
 
   val is_jal       = io.if4_req.map{_.bits.preDecode.is_jal}
@@ -77,7 +83,7 @@ trait IF4_Decode{ this: IF4Base =>
 trait IF4_Predict{ this: IF4Base =>
 
   val is_bTaken = for( i <- 0 until 2 ) yield {
-    Mux( tage_decode(i).is_alloc.exist( (x:Bool()) => (x === false.B)),
+    Mux( tage_decode(i).is_alloc.exist( (x:Bool) => (x === false.B)),
         tage_decode(i).is_predictTaken,
         bim_decode(i).bim_p
     )
@@ -115,28 +121,28 @@ trait IF4_Predict{ this: IF4Base =>
     io.if4_update_ghist(i).bits.is_taken := is_bTaken(i)
   }
 
-  io.if4_redir.valid := (io.if4_req(0).fire & is_redirect(0)) | (io.if4_req(1).fire & is_redirect(1))
-  io.if4_redir.bits.pc := 
+  io.if4Redirect.valid := (io.if4_req(0).fire & is_redirect(0)) | (io.if4_req(1).fire & is_redirect(1))
+  io.if4Redirect.bits.pc := 
     Mux( io.if4_req(0).fire & is_redirect(0), redirect_pc(0), 
       Mux( io.if4_req(1).fire & is_redirect(1), redirect_pc(1), 0.U ) )
 
 
-  // val bftq = Module(new MultiPortFifo( dw = new Branch_Target_Bundle, 4, 2, 1 ))
-  // val jftq = Module(new MultiPortFifo( dw = new Jump_Target_Bundle,   4, 2, 1 ))
-
   for ( i <- 0 until 2 ) yield {
-    bftq.io.enq(i).bits.pc             := pc(i)
-    bftq.io.enq(i).bits.ghist          := ghist(i)
-    bftq.io.enq(i).bits.bimResp        := bim_decode(i)
-    bftq.io.enq(i).bits.tageResp       := tage_decode(i)
-    bftq.io.enq(i).bits.revertTarget   := Mux( is_bTaken(i), (pc(i) + imm(i)), (pc(i) + Mux(is_rvc(i), 2.U, 4.U)) )
-    bftq.io.enq(i).bits.isPredictTaken := is_bTaken(i)
+    bRePort.io.enq(i).bits.pc             := pc(i)
+    bRePort.io.enq(i).bits.ghist          := ghist(i)
+    bRePort.io.enq(i).bits.bimResp        := bim_decode(i)
+    bRePort.io.enq(i).bits.tageResp       := tage_decode(i)
+    bRePort.io.enq(i).bits.revertTarget   := Mux( is_bTaken(i), (pc(i) + imm(i)), (pc(i) + Mux(is_rvc(i), 2.U, 4.U)) )
+    bRePort.io.enq(i).bits.isPredictTaken := is_bTaken(i)
 
-    jftq.io.enq(i).pc      := pc(i)
-    jftq.io.enq(i).btbResp := btb_decode(i)
-    jftq.io.enq(i).rasResp := ras.io.deq.bits.target
-    jftq.io.enq(i).isRas   := is_return(i) & ras.io.deq.valid
+    jRePort.io.enq(i).bits.pc      := pc(i)
+    jRePort.io.enq(i).bits.btbResp := btb_decode(i)
+    jRePort.io.enq(i).bits.rasResp := ras.io.deq.bits.target
+    jRePort.io.enq(i).bits.isRas   := is_return(i) & ras.io.deq.valid
   }
+
+  //only when ras make a wrong prediction will it flush, Warning: we don't care abort other pipeline flush this time
+  ras.io.flush := io.jcmm_update.valid & io.jcmm_update.isRas & io.jcmm_update.isMisPredict
 
 }
 
@@ -146,18 +152,21 @@ class IF4 extends IF4Base with IF4_Decode with IF4_Predict {
   io.bftq <> bftq.io.deq(0)
   io.jftq <> jftq.io.deq(0)
 
+  bftq.io.enq <> bRePort.io.deq
+  jftq.io.enq <> jRePort.io.deq
+
+
   for ( i <- 0 until 2 ) yield {
-                    //report require
-                    bftq.io.enq(i).valid := io.if4_req(i).fire & is_branch(i)
-                    jftq.io.enq(i).valid := io.if4_req(i).fire & is_jalr(i)
+
+    bRePort.io.enq(i).valid := io.if4_req(i).fire & is_branch(i)
+    jRePort.io.enq(i).valid := io.if4_req(i).fire & is_jalr(i)
 
     instr_fifo.io.enq(i).valid := io.if4_req(i).fire
-
-                    
+              
   }
 
-  io.if4_req(0).ready := bftq.io.enq(0).ready & jftq.io.enq(0).ready & instr_fifo.io.enq(0).ready
-  io.if4_req(1).ready := bftq.io.enq(1).ready & jftq.io.enq(1).ready & instr_fifo.io.enq(1).ready & ~is_redirect(0)
+  io.if4_req(0).ready := bRePort.io.enq(0).ready & bRePort.io.enq(0).ready & instr_fifo.io.enq(0).ready
+  io.if4_req(1).ready := jRePort.io.enq(1).ready & jRePort.io.enq(1).ready & instr_fifo.io.enq(1).ready & ~is_redirect(0)
 
 }
 

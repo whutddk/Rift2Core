@@ -241,6 +241,7 @@ class Dispatch(rn_chn: Int = 2, cmm_chn: Int = 2) extends Module {
       res.rd0_raw        := instr.param.raw.rd0
       res.rd0_phy        := rename.rd0
       res.is_branch      := instr.bru_isa.is_branch
+      res,is_jalr        := instr.bru_isa.jalr
       res.is_lu          := instr.lsu_isa.is_lu
       res.is_su          := instr.lsu_isa.is_su
       res.is_amo         := instr.lsu_isa.is_amo

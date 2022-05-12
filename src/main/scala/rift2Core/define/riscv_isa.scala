@@ -711,6 +711,7 @@ class Info_reorder_i extends Bundle {
   val rd0_phy = UInt(6.W)
 
   val is_branch = Bool()
+  val is_jalr = Bool()
   val is_lu = Bool()
   val is_su = Bool()
   val is_amo = Bool()
@@ -846,6 +847,8 @@ class Info_overlap extends Bundle{
 
 }
 
-
+class Commit_Redirect_Bundle extends Bundle{
+  val pc = UInt(64.W)
+}
 
 

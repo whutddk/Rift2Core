@@ -1183,18 +1183,29 @@ trait CsrFiles { this: BaseCommit =>
 
       if ( i == 3 ) {
         //branch success
-        when(in.rod.is_branch & ~in.is_misPredict) {
+        when(in.rod.is_branch & ~io.bctq.bits.isMisPredict) {
           mhpmcounter(i) := in.csrfiles.mhpmcounter(i) + 1.U
         }
       }
       if ( i == 4 ) {
         //branch mispredict
-        when(in.rod.is_branch & in.is_misPredict) {
+        when(in.rod.is_branch & io.bctq.bits.isMisPredict) {
           mhpmcounter(i) := in.csrfiles.mhpmcounter(i) + 1.U          
         }
-
       }
-    }    
+      if ( i == 5 ) {
+        //branch success
+        when(in.rod.is_jalr & ~io.jctq.bits.isMisPredict) {
+          mhpmcounter(i) := in.csrfiles.mhpmcounter(i) + 1.U
+        }
+      }
+      if ( i == 6 ) {
+        //branch mispredict
+        when(in.rod.is_jalr & io.jctq.bits.isMisPredict) {
+          mhpmcounter(i) := in.csrfiles.mhpmcounter(i) + 1.U          
+        }
+      }
+    }
 
     return mhpmcounter
   }

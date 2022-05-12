@@ -36,7 +36,7 @@ abstract class IFetchModule(implicit val p: Parameters) extends Module with HasI
 abstract class IFetchBundle(implicit val p: Parameters) extends Bundle with HasIFParameters
 
 class Ghist_reflash_Bundle extends IFetchBundle {
-  val is_taken = Bool()
+  val isTaken = Bool()
 }
 
 class IF4_Redirect_Bundle extends IFetchBundle {
@@ -171,13 +171,6 @@ class TageUpdate_Bundle extends TageResp_Bundle {
 
 
 
-// class 
-
-// class RASResp_Bundle extends IFetchBundle {
-//   val pc = UInt(64.W)
-// }
-
-
 
 class Predict_Bundle extends IFetchBundle {
   val btb = new BIMResp_Bundle
@@ -199,7 +192,7 @@ class IF3_Bundle extends Bundle {
 class IF4_Bundle extends Info_instruction
 
 
-class Branch_Target_Bundle extends Bundle {
+class Branch_FTarget_Bundle extends RiftBundle {
   val pc = UInt(64.W)
   val ghist = UInt(64.W)
   val bimResp  = new BIMResp_Bundle
@@ -208,7 +201,7 @@ class Branch_Target_Bundle extends Bundle {
   val isPredictTaken = Bool()
 }
 
-class Jump_Target_Bundle extends Bundle {
+class Jump_FTarget_Bundle extends RiftBundle {
   val pc       = UInt(64.W)
   val btbResp = new BTBResp_Bundle
   val rasResp = new RASPP_Bundle
@@ -217,3 +210,15 @@ class Jump_Target_Bundle extends Bundle {
 
   def isBtb = ~isRas
 }
+
+class Branch_CTarget_Bundle extends Branch_FTarget_Bundle {
+  val isFinalTaken = Bool()
+  def isMisPredict = isPredictTaken =/= isFinalTaken
+}
+
+class Jump_CTarget_Bundle extends Jump_FTarget_Bundle {
+  val finalTarget = UInt(64.W)
+  def isMisPredict = Mux(isRas, rasResp.target =/= finalTarget, btbResp.target =/= finalTarget )
+}
+
+

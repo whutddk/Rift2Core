@@ -30,7 +30,11 @@ import rift2Core.L1Cache._
 
 case object RiftParamsKey extends Field[RiftSetting]
 
+
+
+
 case class RiftSetting(
+  cm_chn: Int = 2
   ifetchParameters: IFParameters = IFParameters(
     // GHR_length = 64,
     // UBTB_entry = 16,
@@ -76,6 +80,8 @@ trait HasRiftParameters {
   val ifParams     = riftSetting.ifetchParameters
   val icacheParams = riftSetting.icacheParameters
   val dcacheParams = riftSetting.dcacheParameters
+
+  def cm_chn = riftSetting.cm_chn
 
 }
 

@@ -25,11 +25,13 @@ import chisel3.util._
   */
 abstract class IF1Base extends IFetchModule {
   val io = IO(new Bundle{
-    val redir_if4 = Flipped(Valid())
-    val redir_cmm = Flipped(Valid())
 
 
-    val pc_gen = Decoupled(new Info_IF1)
+    val if4Redirect = Flipped(Valid(IF4_Redirect_Bundle))
+    val cmmRedirect = Flipped(Valid(Commit_Redirect_Bundle))
+
+
+    val pc_gen = Decoupled(new IF1_Bundle)
   })
 
   val pc_dnxt = Wire(UInt(64.W))
@@ -47,8 +49,8 @@ class IF1 extends IF1Base {
 
   pc_dnxt := 
     Mux( any_reset, "h80000000".U, 
-      Mux( io.redir_cmm.valid, io.redir_cmm.bits.pc,
-        Mux( io.redir_if4.valid, io.redir_if4.bits.pc,
+      Mux( io.cmmRedirect.valid, io.cmmRedirect.bits.pc,
+        Mux( io.if4Redirect.valid, io.if4Redirect.bits.pc,
           (pc_qout + 16.U) >> 4 << 4 ) ) )
 
   io.pc_gen.valid   := true.B

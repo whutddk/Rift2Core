@@ -60,7 +60,7 @@ class Info_if_cmm extends Bundle {
 class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val io = IO(new Bundle {
 
-    val if2_req  = Flipped(new DecoupledIO( UInt(64.W) ))
+    val if2_req  = Flipped(new DecoupledIO( new IF1_Bundle ))
     val if2_resp = Vec(4, new DecoupledIO(new IF2_Bundle) )
 
     val if_mmu = DecoupledIO(new Info_mmu_req)
@@ -97,7 +97,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   }
 
   io.if_mmu.valid := io.if2_req.valid
-  io.if_mmu.bits.vaddr := io.if2_req.bits
+  io.if_mmu.bits.vaddr := io.if2_req.bits.pc
   io.if_mmu.bits.is_R := true.B
   io.if_mmu.bits.is_W := false.B
   io.if_mmu.bits.is_X := true.B
@@ -109,7 +109,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val fault_push = io.mmu_if.valid & io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(7).ready
   assert( ~(is_access_fault & is_paging_fault) )
 
-  io.if_cmm.ill_vaddr := io.if2_req.bits
+  io.if_cmm.ill_vaddr := io.if2_req.bits.pc
   io.if_cmm.is_access_fault := is_access_fault
   io.if_cmm.is_paging_fault := is_paging_fault
 

@@ -94,16 +94,32 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
+  val if1 = Module(new IF1)
+  val if2 = Module(new IF2)
+  val if3 = Module(new IF3)
+  val if4 = Module(new IF4)
 
-  val pc_stage = Module(new Pc_gen)
-  val if_stage = Module(new Ifetch(icache_edge))
-  val pd_stage = Module(new Predecode_ss)
-  val bd_stage = Module(new BP_ID_ss)
+
+  if1.io.if4Redirect := if4.io.if4Redirect
+
+  if1.io.pc_gen <> if2.io.if2_req
+  if2.io.if2_resp <> if3.io.if3_req
+  if3.io.if3_resp <> if4.io.if4_req
+
+
+  
+
+
+
+  
+
+  if3.io.if4_update_ghist := if4.io.if4_update_ghist
+  if3.io.if4Redirect := if4.io.if4Redirect
 
 
   val dpt_stage = {
     val mdl = Module(new Dispatch)
-    mdl.io.bd_dpt <> bd_stage.io.bd_dpt
+    mdl.io.bd_dpt <> if4.io.if4_resp
     mdl
   }
 
@@ -164,8 +180,8 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   val i_mmu = {
     val mdl = Module(new MMU(edge = mmu_edge ))
-    mdl.io.if_mmu <> if_stage.io.if_mmu
-    mdl.io.mmu_if <> if_stage.io.mmu_if
+    mdl.io.if_mmu <> if2.io.if_mmu
+    mdl.io.mmu_if <> if2.io.mmu_if
     mdl.io.lsu_mmu <> exe_stage.io.lsu_mmu
     mdl.io.mmu_lsu <> exe_stage.io.mmu_lsu
     mdl.io.cmm_mmu <> cmm_stage.io.cmm_mmu
@@ -177,43 +193,31 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-  pc_stage.io.bd_pc <> bd_stage.io.bd_pc
-  
 
-  pc_stage.io.pc_pd <> pd_stage.io.pc_pd	//valid when flush for new pc 
-
-  
-  pc_stage.io.pc_if <> if_stage.io.pc_if
-  if_stage.io.if_iq <> pd_stage.io.if_pd
-  pd_stage.io.if_cmm_shadow := if_stage.io.if_cmm
-  pd_stage.io.pd_bd <> bd_stage.io.pd_bd
-
-
-
-
-
-
-
-
+    if3.io.jcmm_update := exe_stage.io.jcmm_update
+    if3.io.bcmm_update := exe_stage.io.bcmm_update
+    if4.io.jcmm_update := exe_stage.io.jcmm_update
 
   
 
-  bd_stage.io.bru_pd_b <> exe_stage.io.bru_pd_b
-  pc_stage.io.bru_pd_j <> exe_stage.io.bru_pd_j
+
+    exe_stage.io.bftq <> if4.io.bftq
+    exe_stage.io.jftq <> if4.io.jftq
+
 
   
 
   i_mmu.io.if_flush := if_stage.io.flush
   i_mmu.io.lsu_flush := exe_stage.io.flush
-  if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | bd_stage.io.bd_pc.valid | exe_stage.io.bru_pd_j.valid
-  // pd_stage.io.flush  := exe_stage.io.icache_fence_req
-  bd_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | exe_stage.io.bru_pd_j.valid 
-  // id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) 
+
+  if2.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | if4.io.if4Redirect.valid
+  if3.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+  if4.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+
   dpt_stage.reset := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | reset.asBool
   iss_stage.reset := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | reset.asBool
   exe_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 
-  cmm_stage.io.is_misPredict := bd_stage.io.is_misPredict_taken
 
 
   cmm_stage.io.cm_op <> iwb_stage.io.commit
@@ -226,10 +230,11 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   cmm_stage.io.csr_cmm_op <> exe_stage.io.csr_cmm_op
   cmm_stage.io.fcsr <> exe_stage.io.fcsr
   cmm_stage.io.fcsr_cmm_op <> exe_stage.io.fcsr_cmm_op
-
-  cmm_stage.io.cmm_pc <> pc_stage.io.cmm_pc
-  cmm_stage.io.if_cmm := if_stage.io.if_cmm
-  if_stage.io.ifence := cmm_stage.io.ifence
+  cmm_stage.io.bctq <> exe_stage.io.bctq
+  cmm_stage.io.jctq <> exe_stage.io.jctq
+  cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect
+  cmm_stage.io.if_cmm := if2.io.if_cmm
+  if2.io.ifence := cmm_stage.io.ifence
 
 
   cmm_stage.io.rtc_clock := io.rtc_clock
@@ -237,13 +242,13 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-  if_stage.io.icache_access.bits := icache_bus.d.bits
-  if_stage.io.icache_access.valid := icache_bus.d.valid
-  icache_bus.d.ready := if_stage.io.icache_access.ready
+  if2.io.icache_access.bits := icache_bus.d.bits
+  if2.io.icache_access.valid := icache_bus.d.valid
+  icache_bus.d.ready := if2.io.icache_access.ready
 
-  icache_bus.a.valid := if_stage.io.icache_get.valid
-  icache_bus.a.bits := if_stage.io.icache_get.bits
-  if_stage.io.icache_get.ready := icache_bus.a.ready
+  icache_bus.a.valid := if2.io.icache_get.valid
+  icache_bus.a.bits := if2e.io.icache_get.bits
+  if2.io.icache_get.ready := icache_bus.a.ready
 
 
 
