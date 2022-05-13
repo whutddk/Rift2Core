@@ -35,7 +35,7 @@ abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
     val pc_gen = Decoupled(new IF1_Bundle)
   })
 
-  val pc_dnxt = Wire(UInt(64.W))
+  // val pc_dnxt = Wire(UInt(64.W))
   val pc_qout = RegInit("h80000000".U(64.W))
 
 }
@@ -44,20 +44,24 @@ abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
 
 
 class IF1()(implicit p: Parameters) extends IF1Base {
-  val any_reset = RegInit(true.B)
-  when( io.pc_gen.fire ) { any_reset := false.B }
+  val any_reset = false.B
+  // when( io.pc_gen.fire ) { any_reset := false.B }
 
 
-  pc_dnxt := 
-    Mux( any_reset, "h80000000".U, 
-      Mux( io.cmmRedirect.valid, io.cmmRedirect.bits.pc,
-        Mux( io.if4Redirect.valid, io.if4Redirect.bits.pc,
-          (pc_qout + 16.U) >> 4 << 4 ) ) )
+  // pc_dnxt := 
+  //   Mux( any_reset, "h80000000".U, 
+  //     Mux( io.cmmRedirect.valid, io.cmmRedirect.bits.pc,
+  //       Mux( io.if4Redirect.valid, io.if4Redirect.bits.pc,
+  //         (pc_qout + 16.U) >> 4 << 4 ) ) )
 
+  // io.pc_gen.valid   := true.B
+  // io.pc_gen.bits.pc := pc_dnxt
+  // when( io.pc_gen.fire ) { pc_qout := pc_dnxt }
+
+  when( any_reset ) { pc_qout := "h80000000".U }
+  .elsewhen( io.cmmRedirect.fire ) { pc_qout := io.cmmRedirect.bits.pc }
+  .elsewhen( io.if4Redirect.fire ) { pc_qout := io.if4Redirect.bits.pc }
+  .elsewhen( io.pc_gen.fire ) { pc_qout := (pc_qout + 16.U) >> 4 << 4 }
   io.pc_gen.valid   := true.B
-  io.pc_gen.bits.pc := pc_dnxt
-  when( io.pc_gen.fire ) { pc_qout := pc_dnxt }
-
-
-
+  io.pc_gen.bits.pc := pc_qout
 }

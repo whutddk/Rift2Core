@@ -668,13 +668,13 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
 
   ( 0 until cm_chn ).map{ i =>
     bctq(i).ready := is_retired(i) & io.rod(i).bits.is_branch
-    assert( bctq(i).fire === is_retired(i) & io.rod(i).bits.is_branch )
+    assert( bctq(i).fire === (is_retired(i) & io.rod(i).bits.is_branch) )
     assert( bctq(i).fire === io.bctq.fire )
   }
 
   ( 0 until cm_chn ).map{ i =>
     jctq(i).ready := is_retired(i) & io.rod(i).bits.is_jalr
-    assert( jctq(i).fire === is_retired(i) & io.rod(i).bits.is_jalr )
+    assert( jctq(i).fire === (is_retired(i) & io.rod(i).bits.is_jalr) )
     assert( jctq(i).fire === io.jctq.fire )
   }
 
