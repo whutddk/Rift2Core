@@ -23,9 +23,10 @@ import chisel3._
 import chisel3.util._
 import chisel3.experimental.dataview._
 import rift2Core.define._
-import rift2Core.frontend._
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
-abstract class BruBase extends Module {
+abstract class BruBase()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
     val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
@@ -85,7 +86,7 @@ trait PredictorUpdate { this: BruBase =>
 
 
 
-class Bru extends BruBase with BranchExe with JumpExe with PredictorUpdate {
+class Bru()(implicit p: Parameters) extends BruBase with BranchExe with JumpExe with PredictorUpdate {
 
   when( io.flush ) {
     misPredict_locker := false.B
@@ -104,8 +105,8 @@ class Bru extends BruBase with BranchExe with JumpExe with PredictorUpdate {
 
   io.bru_iss_exe.ready := bru_exe_iwb_fifo.io.enq.ready & bctq.io.enq.ready & jctq.io.enq.ready & ~misPredict_locker
 
-  io.bftq.ready := io.bru_iss_exe.fire
-  io.bftq.ready := io.bru_iss_exe.fire
+  io.bftq.ready := io.bru_iss_exe.fire & io.bru_iss_exe.bits.fun.is_branch
+  io.jftq.ready := io.bru_iss_exe.fire & io.bru_iss_exe.bits.fun.jalr
 
   bru_exe_iwb_fifo.io.enq.valid := io.bru_iss_exe.fire
   bctq.io.enq.valid := io.bru_iss_exe.fire & io.bru_iss_exe.bits.fun.is_branch

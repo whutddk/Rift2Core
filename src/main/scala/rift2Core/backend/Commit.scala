@@ -22,7 +22,6 @@ import chisel3._
 import chisel3.util._
 
 import rift2Core.define._
-import rift2Core.frontend._
 import rift2Core.L1Cache._
 import rift2Core.backend._
 import rift2Core.privilege._
@@ -331,21 +330,21 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
 
 
   val emptyExePort = {
-    val res = Vec(cm_chn, Flipped(DecoupledIO( new Exe_Port ) ))
+    val res = Wire(Vec(cm_chn, Flipped(DecoupledIO( new Exe_Port ) )))
     res := 0.U.asTypeOf(Vec(cm_chn, Flipped(DecoupledIO( new Exe_Port ) )))
     res(0) <> io.csr_cmm_op
     res
   }
 
   val emptyBCTQ = {
-    val res = Vec(cm_chn, Flipped(DecoupledIO( new Branch_CTarget_Bundle ) ))
+    val res = Wire(Vec(cm_chn, Flipped(DecoupledIO( new Branch_CTarget_Bundle ) )))
     res := 0.U.asTypeOf(Vec(cm_chn, Flipped(DecoupledIO( new Branch_CTarget_Bundle ) )))
     res(0) <> io.bctq
     res
   }
 
   val emptyJCTQ = {
-    val res = Vec(cm_chn, Flipped(DecoupledIO( new Jump_CTarget_Bundle ) ))
+    val res = Wire(Vec(cm_chn, Flipped(DecoupledIO( new Jump_CTarget_Bundle ) )))
     res := 0.U.asTypeOf(Vec(cm_chn, Flipped(DecoupledIO( new Jump_CTarget_Bundle ) )))
     res(0) <> io.jctq
     res
@@ -565,9 +564,9 @@ trait CommitDiff { this: BaseCommit =>
   io.diff_commit.abort(0) := io.is_commit_abort(0)
   io.diff_commit.abort(1) := io.is_commit_abort(1)
   io.diff_commit.priv_lvl := csrfiles.priv_lvl
-  io.diff_commit.is_ecall_M := ( 0 until cm ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_M }}.reduce(_|_)
-  io.diff_commit.is_ecall_S := ( 0 until cm ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_S }}.reduce(_|_)
-  io.diff_commit.is_ecall_U := ( 0 until cm ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_U }}.reduce(_|_)
+  io.diff_commit.is_ecall_M := ( 0 until cm_chn ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_M }}.reduce(_|_)
+  io.diff_commit.is_ecall_S := ( 0 until cm_chn ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_S }}.reduce(_|_)
+  io.diff_commit.is_ecall_U := ( 0 until cm_chn ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_U }}.reduce(_|_)
 
 
 	io.diff_csr.mstatus   := csrfiles.mstatus.asUInt
@@ -800,16 +799,16 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
   io.cmm_mmu.priv_lvl_ls   := Mux( csrfiles.mstatus.mprv.asBool, csrfiles.mstatus.mpp, csrfiles.priv_lvl )
   io.cmm_mmu.mstatus    := csrfiles.mstatus.asUInt
   io.cmm_mmu.sstatus    := csrfiles.sstatus.asUInt
-  io.cmm_mmu.sfence_vma := ( 0 until cm ).map{ i => 
+  io.cmm_mmu.sfence_vma := ( 0 until cm_chn ).map{ i => 
     commit_state_is_abort(i) & cmm_state(i).is_sfence_vma 
   }.reduce(_|_)
-    // ( io.rod_i(0).valid & is_sfence_vma_v(0))  
+
 
 
   io.ifence := ( 0 until cm_chn ).map{ i => 
     commit_state_is_abort(i) & cmm_state(i).is_fence_i
   }.reduce(_|_)
-    // ( io.rod_i(0).valid & is_fence_i_v(0))
+
 
 
   ( 0 until cm_chn ).map{ i => {

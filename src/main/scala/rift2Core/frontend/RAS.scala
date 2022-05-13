@@ -16,16 +16,17 @@
 */
 
 
-package base
+package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
+import rift2Core.define._
+import chipsalliance.rocketchip.config.Parameters
 
 
 
 
-
-class RAS extends IFModule {
+class RAS()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
     val enq = Flipped(Valid(new RASPP_Bundle))
     val deq  = new DecoupledIO(new RASPP_Bundle)
@@ -70,7 +71,7 @@ class RAS extends IFModule {
     }
   }
 
-  io.enq.ready := true.B
+  // io.enq.ready := true.B
   io.deq.valid  := ~is_empty
   io.deq.bits   := RegNext(buf.read(rd_idx))
 

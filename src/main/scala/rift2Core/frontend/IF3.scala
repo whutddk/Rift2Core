@@ -20,6 +20,9 @@ import chisel3._
 import chisel3.util._
 import chisel3.experimental.dataview._
 import chipsalliance.rocketchip.config.Parameters
+
+import rift2Core.define._
+import base._
 /**
   * instract fetch stage 3, instr pre-decode, realign, predict-state 1
   */
@@ -28,8 +31,8 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
     val if3_req = Vec(4, Flipped(new DecoupledIO(new IF2_Bundle) ))
     val if3_resp = Vec(2, Decoupled(new IF3_Bundle))
 
-    val jcmm_update = Flipped(Valid(new Jump_FTarget_Bundle))
-    val bcmm_update = Flipped(Valid(new Branch_FTarget_Bundle))
+    val jcmm_update = Flipped(Valid(new Jump_CTarget_Bundle))
+    val bcmm_update = Flipped(Valid(new Branch_CTarget_Bundle))
 
     val if4_update_ghist = Vec(2, Flipped(Valid(new Ghist_reflash_Bundle)))
     val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
@@ -40,8 +43,9 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val ghist_snap = RegInit( 0.U(64.W) )
   val ghist_active = RegInit( 0.U(64.W) )
 
-  val reAlign = Vec(4, DecoupledIO(new IF3_Bundle))
-  val combPDT = Vec(4, DecoupledIO(new IF3_Bundle))
+  val reAlign = Wire(Vec(4, DecoupledIO(new IF3_Bundle)))
+  val combPDT = Module(new RePort( new IF3_Bundle, 4))
+
 
   val btb = Module(new BTB)
   val bim = Module(new BIM)
@@ -52,7 +56,7 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val if3_resp_fifo = Module(new MultiPortFifo( new IF3_Bundle, 4, 4, 2 ))
 
   if3_resp_fifo.io.flush := io.if4Redirect.valid | io.flush
-  if3_resp_fifo.io.enq <> RePort( enq = combPDT )
+  if3_resp_fifo.io.enq <> combPDT.io.deq
   io.if3_resp <> if3_resp_fifo.io.deq
  
 }
@@ -65,22 +69,27 @@ trait IF3_PreDecode{ this: IF3Base =>
   val is_instr16 = io.if3_req.map{ _.bits.instr(1,0) =/= "b11".U }
   val is_instr32 = io.if3_req.map{ _.bits.instr(1,0) === "b11".U }
 
+  for ( i <- 0 until 4 ) {
+    reAlign(i).valid := false.B
+    reAlign(i).bits  := 0.U.asTypeOf(new IF3_Bundle)
+    io.if3_req(i).ready := false.B
+  }
   for( i <- 0 until 4 ) yield {
     if ( i == 0 ){
       when( is_instr32(i) ) { 
         reAlign(i).bits.pc    := io.if3_req(i).bits.pc
         reAlign(i).bits.instr := Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)
         reAlign(i).bits.preDecode  := PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr))
-        reAlign(i).bits.predict := 0.U.asTypeOf(new PreDict_Bundle) 
+        reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
-        reAlign(i).valid(i)   := io.if3_req(i).valid & io.if3_req(i+1).valid & predictor_ready
+        reAlign(i).valid      := io.if3_req(i).valid & io.if3_req(i+1).valid & predictor_ready
         io.if3_req(i).ready   := reAlign(i).ready & predictor_ready
         io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready
       } .otherwise {
         reAlign(i).bits.pc    := io.if3_req(i).bits.pc
         reAlign(i).bits.instr := io.if3_req(i).bits.instr
         reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
-        reAlign(i).bits.predict := 0.U.asTypeOf(new PreDict_Bundle) 
+        reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
         reAlign(i).valid      := io.if3_req(i).valid & predictor_ready
         io.if3_req(i).ready   := reAlign(i).ready & predictor_ready
@@ -91,7 +100,7 @@ trait IF3_PreDecode{ this: IF3Base =>
           reAlign(i).bits.pc    := io.if3_req(i).bits.pc
           reAlign(i).bits.instr := Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)
           reAlign(i).bits.preDecode  := PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr))
-          reAlign(i).bits.predict := 0.U.asTypeOf(new PreDict_Bundle) 
+          reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
           reAlign(i).valid      := io.if3_req(i).valid & io.if3_req(i+1).valid & predictor_ready
           io.if3_req(i).ready   := reAlign(i).ready & predictor_ready
@@ -100,7 +109,7 @@ trait IF3_PreDecode{ this: IF3Base =>
           reAlign(i).bits.pc    := io.if3_req(i).bits.pc
           reAlign(i).bits.instr := io.if3_req(i).bits.instr
           reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
-          reAlign(i).bits.predict := 0.U.asTypeOf(new PreDict_Bundle) 
+          reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
           reAlign(i).valid      := io.if3_req(i).valid & predictor_ready
           io.if3_req(i).ready   := reAlign(i).ready & predictor_ready
@@ -124,49 +133,54 @@ trait IF3_Predict{ this: IF3Base =>
   val is_req_tage  = reAlign.map{ _.bits.preDecode.is_req_tage}
   val is_lock_pipe = reAlign.map{ _.bits.preDecode.is_lock_pipe}
 
-  reAlign <> combPDT //waiting for overriding
+  reAlign <> combPDT.io.enq//waiting for overriding
+  
   for ( i <- 0 until 4 ) {
 
+    btb.io.req.pc := 0.U
     when( is_req_btb(i) ) {
-      when( ( 0 until i ).map{ j => is_req_btb(j) }.exist( (x: Bool) => (x === true.B) ) ) {
+      when( if ( i == 0 ) {false.B} else { ( 0 until i ).map{ j => is_req_btb(j) }.reduce(_|_) } ) {
         for ( k <- i until 4 ) {
-          combPDT(k).valid := false.B
+          combPDT.io.enq(k).valid := false.B
           reAlign(k).ready := false.B          
         }
       } .otherwise{
-        btb.io.pc := reAlign(i).bits.pc
-        combPDT(i).bits.predict.btb := btb.io.combResp
+        btb.io.req.pc := reAlign(i).bits.pc
+        combPDT.io.enq(i).bits.predict.btb := btb.io.combResp
       }
     }
 
+    bim.io.req.pc := 0.U
     when( is_req_bim(i) ) {
-      when( ( 0 until i ).map{ j => is_req_bim(j) }.exist( (x: Bool) => (x === true.B) ) ) {
+      when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_bim(j) }.reduce(_|_) }  ) {
         for ( k <- i until 4 ) {
-          combPDT(k).valid := false.B
+          combPDT.io.enq(k).valid := false.B
           reAlign(k).ready := false.B          
         }
       } .otherwise{
-        bim.io.pc := reAlign(i).bits.pc
-        combPDT(i).bits.preDict.bim := bim.io.combResp
+        bim.io.req.pc := reAlign(i).bits.pc
+        combPDT.io.enq(i).bits.predict.bim := bim.io.combResp
       }
     }
 
+    tage.io.req.pc    := 0.U
+    tage.io.req.ghist := 0.U
     when( is_req_tage(i) ) {
-      when( ( 0 until i ).map{ j => is_req_tage(j) }.exist( (x: Bool) => (x === true.B) ) ) {
+      when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_tage(j) }.reduce(_|_) } ) {
         for ( k <- i until 4 ) {
-          combPDT(k).valid := false.B
+          combPDT.io.enq(k).valid := false.B
           reAlign(k).ready := false.B          
         }
       } .otherwise{
-        tage.io.pc    := reAlign(i).bits.pc
-        tage.io.ghist := ghist_active
-        combPDT(i).bits.preDict.tage := tage.io.combResp
+        tage.io.req.pc    := reAlign(i).bits.pc
+        tage.io.req.ghist := ghist_active
+        combPDT.io.enq(i).bits.predict.tage := tage.io.combResp
       }
     }
 
     when( is_lock_pipe(i) ) {
       for ( k <- i+1 until 4 ) {
-        combPDT(k).valid := false.B
+        combPDT.io.enq(k).valid := false.B
         reAlign(k).ready := false.B          
       }
     }
@@ -179,22 +193,22 @@ trait IF3_Update{ this: IF3Base =>
 
   btb.io.update.valid           := io.jcmm_update.valid
   btb.io.update.bits.pc         := io.jcmm_update.bits.pc
-  btb.io.update.bits.new_target := io.jcmm_update.bits.finalTarget
+  btb.io.update.bits.target     := io.jcmm_update.bits.finalTarget
 
   bim.io.update.valid                := io.bcmm_update.valid
   bim.io.update.bits.viewAsSupertype( new BIMResp_Bundle ) := io.bcmm_update.bits.bimResp
   bim.io.update.bits.pc              := io.bcmm_update.bits.pc
-  bim.io.update.bits.is_finalTaken   := io.bcmm_update.bits.is_finalTaken
+  bim.io.update.bits.isFinalTaken    := io.bcmm_update.bits.isFinalTaken
 
   tage.io.update.valid              := io.bcmm_update.valid
   tage.io.update.bits.viewAsSupertype( new TageResp_Bundle ) := io.bcmm_update.bits.tageResp
   tage.io.update.bits.pc            := io.bcmm_update.bits.pc
   tage.io.update.bits.ghist         := io.bcmm_update.bits.ghist
-  tage.io.update.bits.is_finalTaken := io.bcmm_update.bits.isFinalTaken
+  tage.io.update.bits.isFinalTaken  := io.bcmm_update.bits.isFinalTaken
 
   when( io.flush ) {
     ghist_active := 0.U
-  } .elsewhen( (io.bcmm_update.valid & io.bcmm_update.isMisPredict) | io.jcmm_update.valid & io.jcmm_update.isMisPredict ) {
+  } .elsewhen( (io.bcmm_update.valid & io.bcmm_update.bits.isMisPredict) | io.jcmm_update.valid & io.jcmm_update.bits.isMisPredict ) {
     ghist_active := ghist_snap
   } .elsewhen( io.if4_update_ghist(0).valid & io.if4_update_ghist(1).valid ) {
     ghist_active := (ghist_active << 2) | Cat( io.if4_update_ghist(0).bits.isTaken, io.if4_update_ghist(1).bits.isTaken )
@@ -213,19 +227,19 @@ trait IF3_Update{ this: IF3Base =>
 
 }
 
-class IF3()(implicit p: Parameters) extends IF3Base with IF3_PreDecode with IF3_PreDecode with IF3_Update
+class IF3()(implicit p: Parameters) extends IF3Base with IF3_PreDecode with IF3_Predict with IF3_Update {
+  btb.io.flush  := false.B
+  bim.io.flush  := false.B
+  tage.io.flush := false.B
+}
 
 
 
 object PreDecode16{
-  def apply( instr16: UInt ): Info_preDecode = {
-    require( instr16.width == 16 )
-    // val io = IO(new Bundle {
-    //   val instr16 = Input( UInt(16.W) )
+  def apply( instr16: UInt )(implicit p: Parameters): PreDecode_Bundle = {
+    require( instr16.getWidth == 16 )
 
-    //   val info = Output(new Info_preDecode)
-    // })
-    val info16 = Wire( new Info_preDecode )
+    val info16 = Wire( new PreDecode_Bundle )
 
     info16.is_rvc := true.B
 
@@ -248,10 +262,10 @@ object PreDecode16{
 
 
 object PreDecode32{
-  def apply(instr32: UInt): Info_preDecode = {
-    require( instr32.width == 32 )
+  def apply(instr32: UInt)(implicit p: Parameters): PreDecode_Bundle = {
+    require( instr32.getWidth == 32 )
 
-    val info32 = Wire(new Info_preDecode)
+    val info32 = Wire(new PreDecode_Bundle)
 
     info32.is_rvc := false.B
 

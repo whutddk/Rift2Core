@@ -18,7 +18,10 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
+import rift2Core.define._
 import chipsalliance.rocketchip.config.Parameters
+import base._
+
 /**
   * instract fetch stage 4, instr decode,  predict-state 2
   */
@@ -30,7 +33,7 @@ abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
     val if4_update_ghist = Vec(2, Valid(new Ghist_reflash_Bundle))
     val if4Redirect = Valid(new IF4_Redirect_Bundle)
 
-    val jcmm_update = Flipped(Valid(new Jump_FTarget_Bundle))
+    val jcmm_update = Flipped(Valid(new Jump_CTarget_Bundle))
 
     val bftq = Decoupled(new Branch_FTarget_Bundle)
     val jftq = Decoupled(new Jump_FTarget_Bundle)
@@ -62,7 +65,7 @@ abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
   val ghist        = io.if4_req.map{_.bits.ghist}
   val imm          = io.if4_req.map{_.bits.preDecode.imm}
 
-  val tage_decode = io.if4_req.map{ Tage_Decode(_.bits.predict.tage) }
+  val tage_decode = io.if4_req.map{ x => Tage_Decode(x.bits.predict.tage) }
   val bim_decode  = io.if4_req.map{ _.bits.predict.bim }
   val btb_decode  = io.if4_req.map{ _.bits.predict.btb }
 
@@ -83,8 +86,8 @@ trait IF4_Decode{ this: IF4Base =>
 trait IF4_Predict{ this: IF4Base =>
 
   val is_bTaken = for( i <- 0 until 2 ) yield {
-    Mux( tage_decode(i).is_alloc.exist( (x:Bool) => (x === false.B)),
-        tage_decode(i).is_predictTaken,
+    Mux( ~tage_decode(i).isAlloc.reduce(_&_),
+        tage_decode(i).isPredictTaken,
         bim_decode(i).bim_p
     )
   }
@@ -92,14 +95,16 @@ trait IF4_Predict{ this: IF4Base =>
   val is_redirect = for( i <- 0 until 2 ) yield {
     (is_branch(i) & is_bTaken(i)) |
     is_jal(i) |
-    is_jalr(i) |
+    is_jalr(i)
 
   }
 
   val jalr_pc = for( i <- 0 until 2 ) yield {
     Mux( is_return(i) & ras.io.deq.valid, ras.io.deq.bits.target, btb_decode(i).target  )
   }
-  ras.io.deq.ready := is_return(i) & io.if4_req(i).fire
+  //ignore ras-pop-valid
+  ras.io.deq.ready := ( 0 until 2 ).map{ i => (is_return(i) & io.if4_req(i).fire)}.reduce(_|_)
+
   ras.io.enq.valid := (is_call(0)  & io.if4_req(0).fire) | (is_call(1) & io.if4_req(1).fire)
   ras.io.enq.bits.target :=
     Mux( is_call(0), pc(0) + Mux(is_rvc(0), 2.U, 4.U), 
@@ -109,7 +114,7 @@ trait IF4_Predict{ this: IF4Base =>
     Mux1H(Seq(
       (is_branch(i) & is_bTaken(i)) -> (pc(i) + imm(i)),
       is_jal(i)                     -> (pc(i) + imm(i)),
-      is_jalr(i)                    -> (jalr_pc),
+      is_jalr(i)                    -> (jalr_pc(i)),
     ))
 
   }
@@ -118,7 +123,7 @@ trait IF4_Predict{ this: IF4Base =>
     io.if4_update_ghist(i).valid :=
       io.if4_req(i).fire & is_branch(i)
 
-    io.if4_update_ghist(i).bits.is_taken := is_bTaken(i)
+    io.if4_update_ghist(i).bits.isTaken := is_bTaken(i)
   }
 
   io.if4Redirect.valid := (io.if4_req(0).fire & is_redirect(0)) | (io.if4_req(1).fire & is_redirect(1))
@@ -137,12 +142,12 @@ trait IF4_Predict{ this: IF4Base =>
 
     jRePort.io.enq(i).bits.pc      := pc(i)
     jRePort.io.enq(i).bits.btbResp := btb_decode(i)
-    jRePort.io.enq(i).bits.rasResp := ras.io.deq.bits.target
+    jRePort.io.enq(i).bits.rasResp := ras.io.deq.bits
     jRePort.io.enq(i).bits.isRas   := is_return(i) & ras.io.deq.valid
   }
 
   //only when ras make a wrong prediction will it flush, Warning: we don't care abort other pipeline flush this time
-  ras.io.flush := io.jcmm_update.valid & io.jcmm_update.isRas & io.jcmm_update.isMisPredict
+  ras.io.flush := io.jcmm_update.valid & io.jcmm_update.bits.isRas & io.jcmm_update.bits.isMisPredict
 
 }
 
@@ -167,6 +172,10 @@ class IF4()(implicit p: Parameters) extends IF4Base with IF4_Decode with IF4_Pre
 
   io.if4_req(0).ready := bRePort.io.enq(0).ready & bRePort.io.enq(0).ready & instr_fifo.io.enq(0).ready
   io.if4_req(1).ready := jRePort.io.enq(1).ready & jRePort.io.enq(1).ready & instr_fifo.io.enq(1).ready & ~is_redirect(0)
+
+  instr_fifo.io.flush := io.flush
+  bftq.io.flush := io.flush
+  jftq.io.flush := io.flush
 
 }
 

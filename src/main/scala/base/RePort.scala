@@ -68,7 +68,7 @@ class RePort[T<:Data]( dw: T, port: Int) extends Module{
 }
 
 object RePort{
-  def apply[T <: Data]( enq: Vec[ReadyValidIO[T]] ): Vec[DecoupledIO[T]] = {
+  def apply[T <: Data]( enq: Vec[DecoupledIO[T]] ): Vec[DecoupledIO[T]] = {
     val mdl = Module(new RePort( chiselTypeOf(enq(0).bits), enq.length ))
     enq <> mdl.io.enq
     return mdl.io.deq

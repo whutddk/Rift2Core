@@ -14,12 +14,14 @@
    limitations under the License.
 */
 
-package rift2Core.frontend
+package rift2Core.define
 
 import chisel3._
 import chisel3.util._
 import rift._
 import chipsalliance.rocketchip.config.Parameters
+
+
 
 case class IFParameters(
   btb_cl: Int = 4096,
@@ -37,36 +39,36 @@ trait HasIFParameters extends HasRiftParameters {
   def tage_table: Int = ifParams.tage_table
 }
 
-abstract class IFetchModule(implicit val p: Parameters) extends Module with HasIFParameters { def io: Record }
-abstract class IFetchBundle(implicit val p: Parameters) extends Bundle with HasIFParameters
+abstract class IFetchModule(implicit p: Parameters) extends RiftModule with HasIFParameters
+abstract class IFetchBundle(implicit p: Parameters) extends RiftBundle with HasIFParameters
 
-class Ghist_reflash_Bundle extends IFetchBundle {
+class Ghist_reflash_Bundle(implicit p: Parameters) extends IFetchBundle {
   val isTaken = Bool()
 }
 
-class IF4_Redirect_Bundle extends IFetchBundle {
+class IF4_Redirect_Bundle(implicit p: Parameters) extends IFetchBundle {
   val pc = UInt(64.W)
 }
 
-class RASPP_Bundle extends IFetchBundle {
+class RASPP_Bundle(implicit p: Parameters) extends IFetchBundle {
   val target = UInt(64.W)
 }
 
 
 
 
-class IF1_Bundle extends IFetchBundle {
+class IF1_Bundle(implicit p: Parameters) extends IFetchBundle {
   val pc = UInt(64.W)
   // val BHR  = UInt(64.W)
 }
 
-class IF2_Bundle extends IFetchBundle {
+class IF2_Bundle(implicit p: Parameters) extends IFetchBundle {
   val pc    = UInt(64.W)
   val instr = UInt(16.W)
   // val BHR  = UInt(64.W)
 }
 
-class PreDecode_Bundle extends Bundle {
+class PreDecode_Bundle(implicit p: Parameters) extends IFetchBundle {
   val is_jal = Bool()
   val is_jalr = Bool()
   val is_branch = Bool()
@@ -87,104 +89,104 @@ class PreDecode_Bundle extends Bundle {
 
 }
 
-class BIMReq_Bundle extends IFetchBundle {
+class BIMReq_Bundle(implicit p: Parameters) extends IFetchBundle {
   val pc = UInt(64.W)
 }
 
-class BIMResp_Bundle extends IFetchBundle {
+class BIMResp_Bundle(implicit p: Parameters) extends IFetchBundle {
   val bim_p = Bool()
   val bim_h = Bool()
 }
 
-class BIMUpdate_Bundle extends BIMResp_Bundle {
+class BIMUpdate_Bundle(implicit p: Parameters) extends BIMResp_Bundle {
   val pc = UInt(64.W)
-  val is_finalTaken   = Bool()
+  val isFinalTaken   = Bool()
 
-  def is_misPredict = is_finalTaken =/= bim_p
+  def isMisPredict = isFinalTaken =/= bim_p
 }
 
-class BTBReq_Bundle extends IFetchBundle {
+class BTBReq_Bundle(implicit p: Parameters) extends IFetchBundle {
   val pc = UInt(64.W)
 }
 
-class BTBResp_Bundle extends IFetchBundle {
+class BTBResp_Bundle(implicit p: Parameters) extends IFetchBundle {
   val target = UInt(64.W)
 }
 
-class BTBUpdate_Bundle extends BTBResp_Bundle {
+class BTBUpdate_Bundle(implicit p: Parameters) extends BTBResp_Bundle {
   val pc = UInt(64.W)
 }
 
-class TageTableUpdate_Bundle extends IFetchBundle {
+class TageTableUpdate_Bundle(implicit p: Parameters) extends IFetchBundle {
   val use   = UInt(2.W)
   val ctl   = UInt(3.W)
   val pc    = UInt(64.W)
   val ghist = UInt(64.W)
 }
 
-class TageTableReq_Bundle extends IFetchBundle {
+class TageTableReq_Bundle(implicit p: Parameters) extends IFetchBundle {
   val pc = UInt(64.W)
   val ghist = UInt(64.W)
 }
 
-class TageReq_Bundle extends TageTableReq_Bundle
+class TageReq_Bundle(implicit p: Parameters) extends TageTableReq_Bundle
 
 
-class TageTableResp_Bundle extends IFetchBundle {
-  val ctr = UInt(3.W)
+class TageTableResp_Bundle(implicit p: Parameters) extends IFetchBundle {
+  val ctl = UInt(3.W)
   val use = UInt(2.W)
   val is_hit = Bool()
 
-  def is_taken = (ctr(3) === 1.U).asBool
+  def isTaken = (ctl(2) === 1.U).asBool
 }
 
-class TageResp_Bundle extends IFetchBundle {
+class TageResp_Bundle(implicit p: Parameters) extends IFetchBundle {
 
-  val ftq_tage = Vec( 6, new TageTableResp_Bundle )
-  val is_provider = Vec( 6, Bool() )
-  val is_altpred  = Vec( 6, Bool() )
-  val is_predictTaken = Bool()
+  val ftqTage = Vec( 6, new TageTableResp_Bundle )
+  val isProvider = Vec( 6, Bool() )
+  val isAltpred  = Vec( 6, Bool() )
+  val isPredictTaken = Bool()
 
-  def provider_sel = OHToUInt( in = is_provider.asUInt, width = 6)
+  def providerSel = OHToUInt( in = isProvider.asUInt, width = 6)
 
-  def is_agree: Seq[Bool] = {
+  def isAgree: Seq[Bool] = {
     for ( i <- 0 until 6 ) yield {
-      is_altpred(i) & ftq_tage(i).is_taken === is_predictTaken
+      isAltpred(i) & ftqTage(i).isTaken === isPredictTaken
     }
   }
 
-  def is_disAgree: Seq[Bool] = {
+  def isDisAgree: Seq[Bool] = {
     for ( i <- 0 until 6 ) yield {
-      is_altpred(i) & ftq_tage(i).is_taken =/= is_predictTaken
+      isAltpred(i) & ftqTage(i).isTaken =/= isPredictTaken
     }
   }
 
-  def is_alloc: Seq[Bool] = {
+  def isAlloc: Seq[Bool] = {
     for ( i <- 0 until 6 ) yield {
-      ~is_altpred(i) & ~is_provider(i)
+      ~isAltpred(i) & ~isProvider(i)
     }
   }
 }
 
-class TageUpdate_Bundle extends TageResp_Bundle {
+class TageUpdate_Bundle(implicit p: Parameters) extends TageResp_Bundle {
   val pc = UInt(64.W)
   val ghist = UInt(64.W)
-  val is_finalTaken = Bool()
+  val isFinalTaken = Bool()
 
-  def is_misPredict = is_alloc.reduce(_|_) & (is_predictTaken =/= is_finalTaken)
+  def isMisPredict = isAlloc.reduce(_|_) & (isPredictTaken =/= isFinalTaken)
 }
 
 
 
 
-class Predict_Bundle extends IFetchBundle {
-  val btb = new BIMResp_Bundle
+class Predict_Bundle(implicit p: Parameters) extends IFetchBundle {
+  val btb = new BTBResp_Bundle
   val bim = new BIMResp_Bundle
   val tage = Vec( 6, new TageTableResp_Bundle )
 }
 
 
-class IF3_Bundle extends Bundle {
+class IF3_Bundle(implicit p: Parameters) extends Bundle {
   val preDecode = new PreDecode_Bundle
   val predict = new Predict_Bundle
   val instr = UInt(32.W)
@@ -194,10 +196,10 @@ class IF3_Bundle extends Bundle {
 
 
 
-class IF4_Bundle extends Info_instruction
+class IF4_Bundle(implicit p: Parameters) extends Info_instruction
 
 
-class Branch_FTarget_Bundle extends RiftBundle {
+class Branch_FTarget_Bundle(implicit p: Parameters) extends RiftBundle {
   val pc = UInt(64.W)
   val ghist = UInt(64.W)
   val bimResp  = new BIMResp_Bundle
@@ -206,7 +208,7 @@ class Branch_FTarget_Bundle extends RiftBundle {
   val isPredictTaken = Bool()
 }
 
-class Jump_FTarget_Bundle extends RiftBundle {
+class Jump_FTarget_Bundle(implicit p: Parameters) extends RiftBundle {
   val pc       = UInt(64.W)
   val btbResp = new BTBResp_Bundle
   val rasResp = new RASPP_Bundle
@@ -216,12 +218,12 @@ class Jump_FTarget_Bundle extends RiftBundle {
   def isBtb = ~isRas
 }
 
-class Branch_CTarget_Bundle extends Branch_FTarget_Bundle {
+class Branch_CTarget_Bundle(implicit p: Parameters) extends Branch_FTarget_Bundle {
   val isFinalTaken = Bool()
   def isMisPredict = isPredictTaken =/= isFinalTaken
 }
 
-class Jump_CTarget_Bundle extends Jump_FTarget_Bundle {
+class Jump_CTarget_Bundle(implicit p: Parameters) extends Jump_FTarget_Bundle {
   val finalTarget = UInt(64.W)
   def isMisPredict = Mux(isRas, rasResp.target =/= finalTarget, btbResp.target =/= finalTarget )
 }

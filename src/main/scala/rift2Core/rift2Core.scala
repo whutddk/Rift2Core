@@ -95,7 +95,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
   val if1 = Module(new IF1)
-  val if2 = Module(new IF2)
+  val if2 = Module(new IF2(icache_edge))
   val if3 = Module(new IF3)
   val if4 = Module(new IF4)
 
@@ -207,7 +207,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   
 
-  i_mmu.io.if_flush := if_stage.io.flush
+  i_mmu.io.if_flush := if2.io.flush
   i_mmu.io.lsu_flush := exe_stage.io.flush
 
   if2.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | if4.io.if4Redirect.valid
@@ -224,7 +224,6 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   cmm_stage.io.rod <> dpt_stage.io.rod_i
   cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
   cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
-  cmm_stage.io.cmm_bru_ilp <> exe_stage.io.cmm_bru_ilp
   cmm_stage.io.csr_addr <> exe_stage.io.csr_addr
   cmm_stage.io.csr_data <> exe_stage.io.csr_data
   cmm_stage.io.csr_cmm_op <> exe_stage.io.csr_cmm_op
@@ -247,7 +246,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   icache_bus.d.ready := if2.io.icache_access.ready
 
   icache_bus.a.valid := if2.io.icache_get.valid
-  icache_bus.a.bits := if2e.io.icache_get.bits
+  icache_bus.a.bits := if2.io.icache_get.bits
   if2.io.icache_get.ready := icache_bus.a.ready
 
 

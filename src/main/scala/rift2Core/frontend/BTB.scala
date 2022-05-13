@@ -19,6 +19,7 @@ package rift2Core.frontend
 import chisel3._
 import chisel3.util._
 import base._
+import rift2Core.define._
 import chisel3.experimental.dataview._
 import chipsalliance.rocketchip.config.Parameters
 
@@ -31,7 +32,7 @@ class BTB()(implicit p: Parameters) extends IFetchModule {
     val req  = Input(new BTBReq_Bundle)
     val combResp = Output( new BTBResp_Bundle )
 
-    val update = Valid(new BTBUpdate_Bundle)
+    val update = Flipped(Valid(new BTBUpdate_Bundle))
 
     val isReady = Output(Bool())
     val flush = Input(Bool())
@@ -39,7 +40,7 @@ class BTB()(implicit p: Parameters) extends IFetchModule {
 
   /** tage_table needs poweron reset to initialize the ram */
   val por_reset = RegInit(true.B)
-  val (reset_cl, reset_end) = Counter( range(0, btb_cl), por_reset )
+  val (reset_cl, reset_end) = Counter( Range(0, btb_cl), por_reset )
   when( reset_end ) { por_reset := false.B }
   io.isReady := ~por_reset
 
@@ -56,7 +57,7 @@ class BTB()(implicit p: Parameters) extends IFetchModule {
 
 
   when( por_reset ) {
-    btb_table.write( reset_cl, "b80000000".U.asTypeOf(new BTBResp_Bundle) )
+    btb_table.write( reset_cl, "h80000000".U.asTypeOf(new BTBResp_Bundle) )
   } .otherwise {
     when( io.update.valid ) {
       btb_table.write(wr_cl_sel, io.update.bits.viewAsSupertype( new BTBResp_Bundle ))

@@ -22,13 +22,12 @@ import chisel3.util._
 object HashHalf0{
   def apply( in: UInt ): UInt = {
     val in_w = in.getWidth
-    require(in_w % 2 == 0)
+    require(in_w % 2 == 0, "in_w is "+in_w )
 
     val out = Wire( UInt((in_w/2).W) )
 
-    for ( i <- 0 until in_w/2 ) yield {
-      out(i) := in(i) ^ in(i+1)
-    }
+    out := in(in_w/2-1,0) ^ in(in_w-1 , in_w/2)
+
     return out
   }  
 }
@@ -37,13 +36,12 @@ object HashHalf0{
 object HashHalf1{
   def apply( in: UInt ): UInt = {
     val in_w = in.getWidth
-    require(in_w % 2 == 0)
+    require(in_w % 2 == 0, "in_w is "+in_w )
 
     val out = Wire( UInt((in_w/2).W) )
 
-    for ( i <- 0 until in_w/2 ) yield {
-      out(i) := in(i) ^ Reverse(in)(i)
-    }
+    out := in(in_w/2-1, 0) ^ (Reverse(in))(in_w/2-1, 0)
+
     return out
   }  
 }
@@ -52,14 +50,15 @@ object HashHalf1{
 object HashHalf2{
   def apply( in: UInt ): UInt = {
     val in_w = in.getWidth
-    require(in_w % 2 == 0)
+    require(in_w % 2 == 0, "in_w is "+in_w )
 
-    val out = Wire( UInt((in_w/2).W) )
+    val out = Wire( Vec(in_w/2, Bool()) )
 
     for ( i <- 0 until in_w/2 ) yield {
-      out(i) := in(i) ^ in(in_w/2+i)
+      out(i) := in(2*i) ^ in(2*i+1)  
     }
-    return out
+
+    return out.asUInt
   }  
 }
 
@@ -69,13 +68,12 @@ object HashTwo0{
     val in1_w = in1.getWidth
     val in2_w = in2.getWidth
     
-    require(in1_w == in2_w)
+    require(in1_w == in2_w, "in1_w is "+in1_w+"in2_w is "+in2_w )
 
     val out = Wire( UInt(in1_w.W) )
 
-    for ( i <- 0 until in1_w ) yield {
-      out(i) := in1(i) ^ in2(i)
-    }
+    out := in1 ^ in2
+
     return out
   }  
 }
@@ -86,13 +84,13 @@ object HashTwo1{
     val in1_w = in1.getWidth
     val in2_w = in2.getWidth
     
-    require(in1_w == in2_w)
+    require(in1_w == in2_w, "in1_w is "+in1_w+"in2_w is "+in2_w)
 
     val out = Wire( UInt(in1_w.W) )
 
-    for ( i <- 0 until in1_w ) yield {
-      out(i) := in1(i) ^ Reverse(in2)(i)
-    }
+
+    out := in1 ^ Reverse(in2)
+
     return out
   }  
 }
@@ -107,21 +105,18 @@ object HashTo0{
       
     require( in_w > len )
 
-
-    if ( 2*len > in_w ) {
-      val in1 = ~in(len, 0)
+    val out = Wire( UInt(len.W) )
+    if ( 2*len >= in_w ) {
+      val in1 = ~in(len-1, 0)
       val in2 = in(in_w-1, in_w-1-len)
 
-      val out = Wire( UInt(len.W) )
 
-      for ( i <- 0 until len ) yield {
-        out(i) := in1(i) ^ in2(i)
-      }
-      return out      
+      out := in1 ^ in2
+ 
     } else {
-      return HashTo0( HashHalf0(in), len/2 )
+      out := HashTo0( HashHalf0(in), len )
     }
-
+    return out      
   }  
 }
 
@@ -133,20 +128,17 @@ object HashTo1{
       
     require( in_w > len )
 
-
-    if ( 2*len > in_w ) {
-      val in1 = ~in(len, 0)
+    val out = Wire( UInt(len.W) )
+    if ( 2*len >= in_w ) {
+      val in1 = ~in(len-1, 0)
       val in2 = Reverse(in(in_w-1, in_w-1-len))
 
-      val out = Wire( UInt(len.W) )
-
-      for ( i <- 0 until len ) yield {
-        out(i) := in1(i) ^ in2(i)
-      }
-      return out      
+      out := in1 ^ in2
+          
     } else {
-      return HashTo1( HashHalf1(in), len/2 )
+      out := HashTo1( HashHalf1(in), len )
     }
+    return out 
 
   }  
 }

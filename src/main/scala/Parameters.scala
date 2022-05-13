@@ -25,7 +25,7 @@ import freechips.rocketchip.tilelink._
 import chipsalliance.rocketchip.config.{Field, Parameters}
 
 import rift2Core.L1Cache._
-import rift2Core.frontend._
+import rift2Core.define._
 
 
 
@@ -35,6 +35,7 @@ case object RiftParamsKey extends Field[RiftSetting]
 
 
 case class RiftSetting(
+  rn_chn: Int = 2,
   cm_chn: Int = 2,
   ifetchParameters: IFParameters = IFParameters(
     // GHR_length = 64,
@@ -79,7 +80,7 @@ trait HasRiftParameters {
   val dcacheParams = riftSetting.dcacheParameters
 
   def cm_chn = riftSetting.cm_chn
-
+  def rn_chn = riftSetting.rn_chn
 }
 
 

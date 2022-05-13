@@ -33,7 +33,8 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
-class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extends RiftModule {
+
+class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
     val alu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
@@ -50,7 +51,7 @@ class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extend
     val fpu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
     val fpu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65,dp=64))
     val fcsr = Input(UInt(24.W))
-    val fcsr_cmm_op = Vec(cm, DecoupledIO( new Exe_Port ))
+    val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
 
     val bftq = Flipped(Decoupled(new Branch_FTarget_Bundle))
     val jftq = Flipped(Decoupled(new Jump_FTarget_Bundle))
@@ -151,7 +152,7 @@ class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extend
   val mul = Module(new Mul)
 
   val fpu = {
-    val mdl = Module(new FAlu(cm=cm))
+    val mdl = Module(new FAlu(cm=cm_chn))
 
     mdl.io.fpu_iss_exe <> io.fpu_iss_exe
     mdl.io.fpu_exe_iwb <> io.fpu_exe_iwb
@@ -175,11 +176,11 @@ class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extend
   bru.io.bru_exe_iwb <> io.bru_exe_iwb
   bru.io.flush <> io.flush
 
-  bru.io.bftq := io.bftq
-  bru.io.jftq := io.jftq
+  bru.io.bftq <> io.bftq
+  bru.io.jftq <> io.jftq
 
-  io.bctq := bru.io.bctq
-  io.jctq := bru.io.jctq
+  io.bctq <> bru.io.bctq
+  io.jctq <> bru.io.jctq
 
   io.bcmm_update := bru.io.bcmm_update
   io.jcmm_update := bru.io.jcmm_update

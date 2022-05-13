@@ -25,7 +25,6 @@ import chisel3.util._
 
 import rift2Core.define._
 import rift2Core.L1Cache._
-import rift2Core.frontend._
 
 
 import chipsalliance.rocketchip.config.Parameters
