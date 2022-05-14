@@ -46,6 +46,7 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val reAlign = Wire(Vec(4, DecoupledIO(new IF3_Bundle)))
   val combPDT = Module(new RePort( new IF3_Bundle, 4))
 
+  val pipeLineLock = RegInit(false.B)
 
   val btb = Module(new BTB)
   val bim = Module(new BIM)
@@ -83,16 +84,16 @@ trait IF3_PreDecode{ this: IF3Base =>
         reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
         reAlign(i).valid      := io.if3_req(i).valid & io.if3_req(i+1).valid & predictor_ready
-        io.if3_req(i).ready   := reAlign(i).ready & predictor_ready
-        io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready
+        io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
+        io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
       } .otherwise {
         reAlign(i).bits.pc    := io.if3_req(i).bits.pc
         reAlign(i).bits.instr := io.if3_req(i).bits.instr
         reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
         reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
-        reAlign(i).valid      := io.if3_req(i).valid & predictor_ready
-        io.if3_req(i).ready   := reAlign(i).ready & predictor_ready
+        reAlign(i).valid      := io.if3_req(i).valid & predictor_ready & ~pipeLineLock
+        io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
       }        
     } else {
       when( is_instr32( i-1 ) === false.B ) {
@@ -103,16 +104,16 @@ trait IF3_PreDecode{ this: IF3Base =>
           reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
           reAlign(i).valid      := io.if3_req(i).valid & io.if3_req(i+1).valid & predictor_ready
-          io.if3_req(i).ready   := reAlign(i).ready & predictor_ready
-          io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready
+          io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
+          io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
         }} .otherwise {
           reAlign(i).bits.pc    := io.if3_req(i).bits.pc
           reAlign(i).bits.instr := io.if3_req(i).bits.instr
           reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
           reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
-          reAlign(i).valid      := io.if3_req(i).valid & predictor_ready
-          io.if3_req(i).ready   := reAlign(i).ready & predictor_ready
+          reAlign(i).valid      := io.if3_req(i).valid & predictor_ready & ~pipeLineLock
+          io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
           
         }        
       }
@@ -181,7 +182,8 @@ trait IF3_Predict{ this: IF3Base =>
     when( is_lock_pipe(i) ) {
       for ( k <- i+1 until 4 ) {
         combPDT.io.enq(k).valid := false.B
-        reAlign(k).ready := false.B          
+        reAlign(k).ready := false.B
+        pipeLineLock := true.B
       }
     }
   }
@@ -206,25 +208,29 @@ trait IF3_Update{ this: IF3Base =>
   tage.io.update.bits.ghist         := io.bcmm_update.bits.ghist
   tage.io.update.bits.isFinalTaken  := io.bcmm_update.bits.isFinalTaken
 
-  when( io.flush ) {
+
+  when( io.flush & ~pipeLineLock ) {
     ghist_active := 0.U
-  } .elsewhen( (io.bcmm_update.valid & io.bcmm_update.bits.isMisPredict) | io.jcmm_update.valid & io.jcmm_update.bits.isMisPredict ) {
+  } .elsewhen( (io.bcmm_update.valid & io.bcmm_update.bits.isMisPredict) | (io.jcmm_update.valid & io.jcmm_update.bits.isMisPredict) | ( io.flush & pipeLineLock ) ) {
     ghist_active := ghist_snap
   } .elsewhen( io.if4_update_ghist(0).valid & io.if4_update_ghist(1).valid ) {
     ghist_active := (ghist_active << 2) | Cat( io.if4_update_ghist(0).bits.isTaken, io.if4_update_ghist(1).bits.isTaken )
   } .elsewhen ( io.if4_update_ghist(0).valid ) {
     ghist_active := (ghist_active << 1) | io.if4_update_ghist(0).bits.isTaken
+  } .elsewhen ( io.if4_update_ghist(1).valid ) {
+    ghist_active := (ghist_active << 1) | io.if4_update_ghist(1).bits.isTaken
   }
 
-  assert( ~(~io.if4_update_ghist(0).valid & io.if4_update_ghist(1).valid) )
 
-  when( io.flush ) {
+
+  //ifence & vmaFence can keep the history for pipeline is locking
+  when( io.flush & ~pipeLineLock ) {
     ghist_snap := 0.U
   } .elsewhen( io.bcmm_update.valid ) {
     ghist_snap := (ghist_snap << 1) | io.bcmm_update.bits.isFinalTaken
   }
 
-
+  when( io.flush ) { pipeLineLock := false.B }
 }
 
 class IF3()(implicit p: Parameters) extends IF3Base with IF3_PreDecode with IF3_Predict with IF3_Update {

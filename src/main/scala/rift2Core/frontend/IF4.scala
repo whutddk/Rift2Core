@@ -137,7 +137,7 @@ trait IF4_Predict{ this: IF4Base =>
     bRePort.io.enq(i).bits.ghist          := ghist(i)
     bRePort.io.enq(i).bits.bimResp        := bim_decode(i)
     bRePort.io.enq(i).bits.tageResp       := tage_decode(i)
-    bRePort.io.enq(i).bits.revertTarget   := Mux( is_bTaken(i), (pc(i) + imm(i)), (pc(i) + Mux(is_rvc(i), 2.U, 4.U)) )
+    bRePort.io.enq(i).bits.revertTarget   := Mux( is_bTaken(i), (pc(i) + Mux(is_rvc(i), 2.U, 4.U)), (pc(i) + imm(i)) )
     bRePort.io.enq(i).bits.isPredictTaken := is_bTaken(i)
 
     jRePort.io.enq(i).bits.pc      := pc(i)

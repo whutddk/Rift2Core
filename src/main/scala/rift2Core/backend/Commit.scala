@@ -420,8 +420,8 @@ trait CommitState { this: BaseCommit =>
     }
     .otherwise {
       when(
-          (io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict ) |
-          (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict ) |
+          (io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & cmm_state(i).is_wb) |
+          (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & cmm_state(i).is_wb) |
           cmm_state(i).is_xRet | cmm_state(i).is_trap | cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma
         ) {
         commit_state(i) := 2.U //abort
@@ -669,13 +669,13 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
   ( 0 until cm_chn ).map{ i =>
     bctq(i).ready := is_retired(i) & io.rod(i).bits.is_branch
     assert( bctq(i).fire === (is_retired(i) & io.rod(i).bits.is_branch) )
-    assert( bctq(i).fire === io.bctq.fire )
+    assert( bctq.map{_.fire}.reduce(_|_) === io.bctq.fire )
   }
 
   ( 0 until cm_chn ).map{ i =>
     jctq(i).ready := is_retired(i) & io.rod(i).bits.is_jalr
     assert( jctq(i).fire === (is_retired(i) & io.rod(i).bits.is_jalr) )
-    assert( jctq(i).fire === io.jctq.fire )
+    assert( jctq.map{_.fire}.reduce(_|_) === io.jctq.fire )
   }
 
   ( 0 until cm_chn ).map{ i =>
