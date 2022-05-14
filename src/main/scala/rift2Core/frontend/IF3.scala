@@ -56,7 +56,7 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
 
   val if3_resp_fifo = Module(new MultiPortFifo( new IF3_Bundle, 4, 4, 2 ))
 
-  if3_resp_fifo.io.flush := io.if4Redirect.valid | io.flush
+  if3_resp_fifo.io.flush := io.if4Redirect.fire | io.flush
   if3_resp_fifo.io.enq <> combPDT.io.deq
   io.if3_resp <> if3_resp_fifo.io.deq
  
@@ -83,16 +83,17 @@ trait IF3_PreDecode{ this: IF3Base =>
         reAlign(i).bits.preDecode  := PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr))
         reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
-        reAlign(i).valid      := io.if3_req(i).valid & io.if3_req(i+1).valid & predictor_ready
+        reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
         io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
         io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
+
       } .otherwise {
         reAlign(i).bits.pc    := io.if3_req(i).bits.pc
         reAlign(i).bits.instr := io.if3_req(i).bits.instr
         reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
         reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
-        reAlign(i).valid      := io.if3_req(i).valid & predictor_ready & ~pipeLineLock
+        reAlign(i).valid      := io.if3_req(i).fire & predictor_ready & ~pipeLineLock
         io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
       }        
     } else {
@@ -103,7 +104,7 @@ trait IF3_PreDecode{ this: IF3Base =>
           reAlign(i).bits.preDecode  := PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr))
           reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
-          reAlign(i).valid      := io.if3_req(i).valid & io.if3_req(i+1).valid & predictor_ready
+          reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
           io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
           io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
         }} .otherwise {
@@ -112,7 +113,7 @@ trait IF3_PreDecode{ this: IF3Base =>
           reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
           reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
-          reAlign(i).valid      := io.if3_req(i).valid & predictor_ready & ~pipeLineLock
+          reAlign(i).valid      := io.if3_req(i).fire & predictor_ready & ~pipeLineLock
           io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
           
         }        
@@ -230,7 +231,7 @@ trait IF3_Update{ this: IF3Base =>
     ghist_snap := (ghist_snap << 1) | io.bcmm_update.bits.isFinalTaken
   }
 
-  when( io.flush ) { pipeLineLock := false.B }
+  when( io.flush | io.if4Redirect.fire ) { pipeLineLock := false.B }
 }
 
 class IF3()(implicit p: Parameters) extends IF3Base with IF3_PreDecode with IF3_Predict with IF3_Update {

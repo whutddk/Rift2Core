@@ -241,7 +241,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   for( i <- 0 until 8 ) yield {
     ibuf.io.enq(i).bits.instr := reAlign_instr >> (16*i)
-    ibuf.io.enq(i).bits.pc    := io.mmu_if.bits.paddr + (2*i).U
+    ibuf.io.enq(i).bits.pc    := io.mmu_if.bits.vaddr + (2*i).U
   }
   //override chn0
   when( io.mmu_if.valid & io.mmu_if.bits.is_access_fault ) {
