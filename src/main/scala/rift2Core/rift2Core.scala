@@ -210,13 +210,13 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   i_mmu.io.if_flush := if2.io.flush
   i_mmu.io.lsu_flush := exe_stage.io.flush
 
-  if2.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | if4.io.if4Redirect.valid
-  if3.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
-  if4.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+  if2.io.flush := cmm_stage.io.cmmRedirect.fire | if4.io.if4Redirect.valid
+  if3.io.flush := cmm_stage.io.cmmRedirect.fire
+  if4.io.flush := cmm_stage.io.cmmRedirect.fire
 
-  dpt_stage.reset := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | reset.asBool
-  iss_stage.reset := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | reset.asBool
-  exe_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
+  dpt_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
+  iss_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
+  exe_stage.io.flush := cmm_stage.io.cmmRedirect.fire
 
 
 
@@ -232,7 +232,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   cmm_stage.io.bctq <> exe_stage.io.bctq
   cmm_stage.io.jctq <> exe_stage.io.jctq
   cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect
-  cmm_stage.io.if_cmm := if2.io.if_cmm
+  // cmm_stage.io.if_cmm := if2.io.if_cmm
   if2.io.ifence := cmm_stage.io.ifence
 
 

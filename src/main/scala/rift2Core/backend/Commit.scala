@@ -293,10 +293,9 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
 
     val bctq = Flipped(Decoupled(new Branch_CTarget_Bundle))
     val jctq = Flipped(Decoupled(new Jump_CTarget_Bundle))
-    val is_commit_abort = Vec(cm_chn, Output( Bool() ))
 
     val cmmRedirect = new ValidIO(new Commit_Redirect_Bundle)
-    val if_cmm = Input( new Info_if_cmm )
+    // val if_cmm = Input( new Info_if_cmm )
 
     val ifence = Output(Bool())
 
@@ -317,16 +316,16 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
 
   val csrfiles = Reg(new CSR_Bundle)
   val commit_state = Wire( Vec( cm_chn, UInt(2.W)) )
-  val commit_state_is_comfirm = for ( i <- 0 until cm_chn ) yield commit_state(i) === 3.U
-  val commit_state_is_abort   = for ( i <- 0 until cm_chn ) yield commit_state(i) === 2.U
-  val commit_state_is_cancel  = for ( i <- 0 until cm_chn ) yield commit_state(i) === 1.U
-  val commit_state_is_idle    = for ( i <- 0 until cm_chn ) yield commit_state(i) === 0.U
+  val commit_state_is_comfirm     = for ( i <- 0 until cm_chn ) yield commit_state(i) === 3.U
+  val commit_state_is_misPredict  = for ( i <- 0 until cm_chn ) yield commit_state(i) === 2.U
+  val commit_state_is_abort       = for ( i <- 0 until cm_chn ) yield commit_state(i) === 1.U
+  val commit_state_is_idle        = for ( i <- 0 until cm_chn ) yield commit_state(i) === 0.U
 
 
   val cmm_state = Wire( Vec(cm_chn, new CMMState_Bundle ) )
   val csr_state = Wire( Vec(cm_chn, new CSR_Bundle ) )
 
-  val is_retired = ( 0 until cm_chn ).map{ i => {commit_state_is_comfirm(i) | commit_state_is_abort(i)} }
+  val is_retired = ( 0 until cm_chn ).map{ i => {commit_state_is_comfirm(i) | commit_state_is_misPredict(i) |commit_state_is_abort(i)} }
 
 
   val emptyExePort = {
@@ -420,18 +419,21 @@ trait CommitState { this: BaseCommit =>
     }
     .otherwise {
       when(
-          (io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & cmm_state(i).is_wb) |
-          (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & cmm_state(i).is_wb) |
+          // (io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & cmm_state(i).is_wb) |
+          // (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & cmm_state(i).is_wb) |
           cmm_state(i).is_xRet | cmm_state(i).is_trap | cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma
         ) {
-        commit_state(i) := 2.U //abort
+        commit_state(i) := 1.U //abort
         for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
         abort_chn := i.U
-      } .elsewhen( cmm_state(i).is_wb & ~cmm_state(i).is_step ) { //when writeback and no-step
+      } .elsewhen( ((io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict) | (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict)) & cmm_state(i).is_wb & ~cmm_state(i).is_step) { //1st-step will cause an interrupt
+          commit_state(i) := 2.U //mis-predict
+          for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
+      } .elsewhen( cmm_state(i).is_wb & ~cmm_state(i).is_step ) { //when writeback and no-step, 1st-step will cause an interrupt
         when( (io.rod(i).bits.is_csr & ~csrExe(i).valid) || (io.rod(i).bits.is_fcsr & ~fcsrExe(i).valid) ) {
           commit_state(i) := 0.U
         } .otherwise {
-          commit_state(i) := 3.U
+          commit_state(i) := 3.U //confirm
         }
         for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
       } .otherwise {
@@ -545,8 +547,9 @@ trait CommitRegFiles { this: BaseCommit =>
   println("Warning, amo_pending can only emmit at chn0")
 
   ( 0 until cm_chn ).map{ i =>
-    io.cm_op(i).is_comfirm := commit_state_is_comfirm(i)
-    io.cm_op(i).is_abort   := commit_state_is_abort(i)
+    io.cm_op(i).is_comfirm      := commit_state_is_comfirm(i)
+    io.cm_op(i).is_MisPredict   := commit_state_is_misPredict(i)
+    io.cm_op(i).is_abort        := commit_state_is_abort(i)
   }
 
 }
@@ -559,10 +562,10 @@ trait CommitIFRedirect { this: BaseCommit =>
 trait CommitDiff { this: BaseCommit =>
   io.diff_commit.pc(0) := io.rod(0).bits.pc
   io.diff_commit.pc(1) := io.rod(1).bits.pc
-  io.diff_commit.comfirm(0) := commit_state_is_comfirm(0)
-  io.diff_commit.comfirm(1) := commit_state_is_comfirm(1)
-  io.diff_commit.abort(0) := io.is_commit_abort(0)
-  io.diff_commit.abort(1) := io.is_commit_abort(1)
+  io.diff_commit.comfirm(0) := commit_state_is_comfirm(0) | commit_state_is_misPredict(0)
+  io.diff_commit.comfirm(1) := commit_state_is_comfirm(1) | commit_state_is_misPredict(1)
+  io.diff_commit.abort(0) := commit_state_is_abort(0)
+  io.diff_commit.abort(1) := commit_state_is_abort(1)
   io.diff_commit.priv_lvl := csrfiles.priv_lvl
   io.diff_commit.is_ecall_M := ( 0 until cm_chn ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_M }}.reduce(_|_)
   io.diff_commit.is_ecall_S := ( 0 until cm_chn ).map{ i => { commit_state_is_abort(i) & cmm_state(i).is_ecall_S }}.reduce(_|_)
@@ -633,7 +636,7 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
     cmm_state(i).csrExe  := csrExe(i).bits
     cmm_state(i).fcsrExe := fcsrExe(i).bits
     cmm_state(i).is_wb   := io.cm_op(i).is_writeback
-    cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
+    cmm_state(i).ill_ivaddr               := io.rod(i).bits.pc
     cmm_state(i).ill_dvaddr               := io.lsu_cmm.trap_addr
     cmm_state(i).is_csrr_illegal         := cmm_state(i).csrfiles.csr_read_prilvl(io.csr_addr.bits) & io.csr_addr.valid
 
@@ -700,17 +703,18 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
   io.cmmRedirect.bits.pc := 0.U
 
   for ( i <- 0 until cm_chn ) yield {
-    when( commit_state_is_abort(i) ) {
-      when(io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := bctq(i).bits.revertTarget
-      }
-      
-      when(io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := jctq(i).bits.finalTarget
-      }
+    when(io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & is_retired(i) & ~cmm_state(i).is_step) {
+      io.cmmRedirect.valid := true.B
+      io.cmmRedirect.bits.pc := bctq(i).bits.revertTarget
+    }
+    
+    when(io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & is_retired(i) & ~cmm_state(i).is_step) {
+      io.cmmRedirect.valid := true.B
+      io.cmmRedirect.bits.pc := jctq(i).bits.finalTarget
+    }
 
+
+    when( commit_state_is_abort(i) ) {
       when( cmm_state(i).is_mRet ) {
         io.cmmRedirect.valid := true.B
         io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.mepc
@@ -811,9 +815,6 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
 
 
 
-  ( 0 until cm_chn ).map{ i => {
-    io.is_commit_abort(i) := commit_state_is_abort(i)
-  }}
   
 
 

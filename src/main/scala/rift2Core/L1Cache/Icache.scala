@@ -49,11 +49,11 @@ abstract class IcacheBundle(implicit p: Parameters) extends L1CacheBundle
   with HasIcacheParameters
 
 
-class Info_if_cmm extends Bundle {
-  val ill_vaddr = UInt(64.W)
-  val is_paging_fault = Bool()
-  val is_access_fault = Bool()
-}
+// class Info_if_cmm extends Bundle {
+//   val ill_vaddr = UInt(64.W)
+//   val is_paging_fault = Bool()
+//   val is_access_fault = Bool()
+// }
 
 
 
@@ -66,7 +66,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     val if_mmu = DecoupledIO(new Info_mmu_req)
     val mmu_if = Flipped(DecoupledIO(new Info_mmu_rsp))
 
-    val if_cmm = Output(new Info_if_cmm)
+    // val if_cmm = Output(new Info_if_cmm)
 
 
     val icache_get    = new DecoupledIO(new TLBundleA(edge.bundle))
@@ -106,12 +106,15 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   
   val is_access_fault = io.mmu_if.valid & io.mmu_if.bits.is_access_fault
   val is_paging_fault = io.mmu_if.valid & io.mmu_if.bits.is_paging_fault
-  val fault_push = io.mmu_if.valid & io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(7).ready
+  val fault_lock = RegInit( false.B )
+  when( io.flush ) { fault_lock := false.B }
+  .elsewhen( io.mmu_if.valid & io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(0).fire ) { fault_lock := true.B }
+  // val fault_push = io.mmu_if.valid & io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(7).ready
   assert( ~(is_access_fault & is_paging_fault) )
 
-  io.if_cmm.ill_vaddr := io.if2_req.bits.pc
-  io.if_cmm.is_access_fault := is_access_fault
-  io.if_cmm.is_paging_fault := is_paging_fault
+  // io.if_cmm.ill_vaddr := io.if2_req.bits.pc
+  // io.if_cmm.is_access_fault := is_access_fault
+  // io.if_cmm.is_paging_fault := is_paging_fault
 
 
 
@@ -124,7 +127,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   ibuf.io.flush := io.flush
 
-  io.mmu_if.ready := ibuf.io.enq(0).fire & ~fault_push
+  io.mmu_if.ready := ibuf.io.enq(0).fire & ~fault_lock
   io.if2_resp <> ibuf.io.deq
 
 
@@ -181,7 +184,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   icache_state_dnxt := 
     Mux1H(Seq(
       (icache_state_qout === 0.U) ->
-          Mux((io.mmu_if.valid & ~io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(7).ready ), 1.U, 0.U),
+          Mux((io.mmu_if.valid & ~io.mmu_if.bits.is_fault & ~io.flush & ibuf.io.enq(7).ready & ~fault_lock ), 1.U, 0.U),
       (icache_state_qout === 1.U) ->
         Mux( io.flush, 0.U,
           Mux( is_hit, 0.U,
@@ -234,23 +237,25 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     res
   }
 
-  // ibuf.io.enq(0).bits.instr := reAlign_instr >> 0.U
 
-  // ibuf.io.enq(1).bits.instr := reAlign_instr >> 16.U
-  // ibuf.io.enq(2).bits.instr := reAlign_instr >> 32.U
-  // ibuf.io.enq(3).bits.instr := reAlign_instr >> 48.U
-  // ibuf.io.enq(4).bits.instr := reAlign_instr >> 64.U
-  // ibuf.io.enq(5).bits.instr := reAlign_instr >> 80.U
-  // ibuf.io.enq(6).bits.instr := reAlign_instr >> 96.U
-  // ibuf.io.enq(7).bits.instr := reAlign_instr >> 112.U
 
   for( i <- 0 until 8 ) yield {
     ibuf.io.enq(i).bits.instr := reAlign_instr >> (16*i)
     ibuf.io.enq(i).bits.pc    := io.mmu_if.bits.paddr + (2*i).U
   }
+  //override chn0
+  when( io.mmu_if.valid & io.mmu_if.bits.is_access_fault ) {
+    ibuf.io.enq(0).bits.instr := "b1001110001000001".U
+    ibuf.io.enq(0).bits.pc    := io.if2_req.bits.pc  
+  } .elsewhen( io.mmu_if.valid & io.mmu_if.bits.is_paging_fault ) {
+    ibuf.io.enq(0).bits.instr := "b1001110001000101".U
+    ibuf.io.enq(0).bits.pc    := io.if2_req.bits.pc
+  }
 
 
-  ibuf.io.enq(0).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 7.U )
+  ibuf.io.enq(0).valid :=
+    (~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 7.U )) |
+    (~fault_lock & io.mmu_if.valid & io.mmu_if.bits.is_fault)
   ibuf.io.enq(1).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 6.U )
   ibuf.io.enq(2).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 5.U )
   ibuf.io.enq(3).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 4.U )

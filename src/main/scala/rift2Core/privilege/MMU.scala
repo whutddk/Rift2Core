@@ -146,7 +146,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val kill_iptw = RegInit(false.B)
   val kill_dptw = RegInit(false.B)
   
-  def cmm_flush = io.cmm_mmu.sit_mdf
+  val cmm_flush = io.cmm_mmu.sit_mdf
 
   when( io.if_flush | io.cmm_mmu.sit_mdf ) {
     kill_iptw := true.B
