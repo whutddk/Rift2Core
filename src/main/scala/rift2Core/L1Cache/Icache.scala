@@ -255,7 +255,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
 
   ibuf.io.enq(0).valid :=
     (~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 7.U )) |
-    (~fault_lock & io.mmu_if.valid & io.mmu_if.bits.is_fault)
+    (~kill_trans & io.mmu_if.valid & io.mmu_if.bits.is_fault & ~fault_lock)
   ibuf.io.enq(1).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 6.U )
   ibuf.io.enq(2).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 5.U )
   ibuf.io.enq(3).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 4.U )
@@ -296,7 +296,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   )
 
   
-  assert( ~((RegNext(io.mmu_if.bits.paddr) =/= io.mmu_if.bits.paddr) & icache_state_qout === 2.U & ~RegNext(io.flush)), "Assert Failed, req paddr cannot change without flush." )
+  assert( ~((RegNext(io.mmu_if.bits.paddr) =/= io.mmu_if.bits.paddr) & icache_state_qout === 2.U & ~RegNext(kill_trans) & ~RegNext(io.flush)), "Assert Failed, req paddr cannot change without flush." )
 
 
 
