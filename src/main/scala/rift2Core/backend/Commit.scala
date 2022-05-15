@@ -295,7 +295,7 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
     val jctq = Flipped(Decoupled(new Jump_CTarget_Bundle))
 
     val cmmRedirect = new ValidIO(new Commit_Redirect_Bundle)
-    val if_cmm = Input( new Info_if_cmm )
+    // val if_cmm = Input( new Info_if_cmm )
 
     val ifence = Output(Bool())
 
@@ -636,7 +636,7 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
     cmm_state(i).csrExe  := csrExe(i).bits
     cmm_state(i).fcsrExe := fcsrExe(i).bits
     cmm_state(i).is_wb   := io.cm_op(i).is_writeback
-    cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
+    cmm_state(i).ill_ivaddr               := io.rod(i).bits.pc
     cmm_state(i).ill_dvaddr               := io.lsu_cmm.trap_addr
     cmm_state(i).is_csrr_illegal         := cmm_state(i).csrfiles.csr_read_prilvl(io.csr_addr.bits) & io.csr_addr.valid
 
