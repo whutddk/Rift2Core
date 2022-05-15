@@ -29,12 +29,16 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
+// class AMO_Block_Req extends Bundle {
+//   val paddr = UInt(64.W)
+// }
 
+// class AMO_Block_Resp extends Bundle {
+//   val paddr = UInt(64.W)
+// }
 
-/**
-  * bound to every cache 
-  */
-class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
+abstract class Stq_Base()(implicit p: Parameters) extends RiftModule{
+  def dp = 16
   def dp_w = log2Ceil(dp)
 
   val io = IO( new Bundle{
@@ -44,14 +48,16 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
     val cmm_lsu = Input(new Info_cmm_lsu)
     val is_empty = Output(Bool())
 
-    val overlap =  Flipped(new Info_overlap)
+
+
+    val overlapReq  = Flipped(Valid(new Stq_req_Bundle))
+    val overlapResp = Valid(new Stq_resp_Bundle)
 
     val flush = Input(Bool())
 
     /** prefetch is not guarantee to be accepted by cache*/
     // val preFetch = ValidIO( UInt(64.W) )
   } )
-
 
   val buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Lsu_iss_info))))
   
@@ -70,6 +76,10 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
 
   val is_amo = RegInit(false.B)
 
+
+}
+
+trait Stq_Ptr { this: Stq_Base => 
   {
     val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending, false.B)
     val is_amo_pos = io.cmm_lsu.is_amo_pending & ~is_amo_pre
@@ -81,7 +91,6 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
       is_amo := false.B
     }
   }
-
 
 
   val is_st_commited = VecInit( io.cmm_lsu.is_store_commit(0), io.cmm_lsu.is_store_commit(1) )
@@ -101,8 +110,8 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
 
   when( io.deq.fire ) {
     rd_ptr_reg := rd_ptr_reg + 1.U
+    buff(rd_ptr) := 0.U.asTypeOf(new Lsu_iss_info)
   }
-
 
 
   when( is_st_commited(1) & is_st_commited(0) ) {
@@ -116,18 +125,21 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
   }
 
     io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
+}
 
-
+trait Stq_Overlap{ this: Stq_Base => 
     val overlap_buff = Wire(Vec(dp, (new Lsu_iss_info)))
-
-
+    io.overlapResp.valid := io.overlapReq.valid //may be overlapped
 
     when( rd_ptr_reg(dp_w) =/= wr_ptr_reg(dp_w) ) {
       assert( rd_ptr >= wr_ptr )
       for ( i <- 0 until dp ) yield {
         val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
-        when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).param.dat.op1(63,3) === io.overlap.paddr(63,3)) ) {
+        when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).param.dat.op1(63,3) === io.overlapReq.bits.paddr(63,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
+
+          when( buff(ro_ptr).fun.is_amo ) { io.overlapResp.valid := false.B }
+          // assert( ~(buff(ro_ptr).fun.is_amo & io.overlapResp.valid), "Assert Failed at Store-queue, overlapping an amo-instr, that is not allow!" )
         } .otherwise {
           overlap_buff(i) := 0.U.asTypeOf(new Lsu_iss_info)
         }
@@ -136,15 +148,16 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
       assert( rd_ptr <= wr_ptr )
       for ( i <- 0 until dp ) yield {
         val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
-        when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).param.dat.op1(63,3) === io.overlap.paddr(63,3)) ) {
+        when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).param.dat.op1(63,3) === io.overlapReq.bits.paddr(63,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
+
+          when( buff(ro_ptr).fun.is_amo ) { io.overlapResp.valid := false.B }
+          // assert( ~(buff(ro_ptr).fun.is_amo & io.overlapResp.valid), "Assert Failed at Store-queue, overlapping an amo-instr, that is not allow!" )
         } .otherwise {
           overlap_buff(i) := 0.U.asTypeOf(new Lsu_iss_info)
         }
       }
     }
-
-
 
     val temp_wdata = Wire(Vec(dp, UInt(64.W)))
     val temp_wstrb = Wire(Vec(dp, UInt(8.W)))
@@ -159,14 +172,34 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
         temp_wstrb(i) := wstrb
       }
     }
-    io.overlap.wdata := temp_wdata(dp-1)
-    io.overlap.wstrb := temp_wstrb(dp-1)
+    io.overlapResp.bits.wdata := temp_wdata(dp-1)
+    io.overlapResp.bits.wstrb := temp_wstrb(dp-1)
+}
+
+// trait Stq_AMOBlocker { this: Stq_Base => 
+//   io.overlapResp.valid := io.overlapReq.valid & ~(buff.map{ x => ((x.param.dat.op1(63,3) === io.overlapReq.bits.paddr(63,3)) & x.param.fun.is_amo) }.reduce(_|_))
+
+
+// }
+
+/**
+  * bound to every cache 
+  */
+class Store_queue()(implicit p: Parameters) extends Stq_Base with Stq_Ptr with Stq_Overlap {
+
+}
+
+
+
+
+
+
+
+
+
 
  
 
 
 
-
-
-}
 

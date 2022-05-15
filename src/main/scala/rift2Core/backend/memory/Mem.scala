@@ -101,8 +101,13 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
     */
   val ls_arb = {
     val mdl = Module(new Arbiter(new Lsu_iss_info, 2))
-    stQueue.io.overlap.paddr := opMux.io.ld_deq.bits.param.dat.op1
-    mdl.io.in(0) <> opMux.io.ld_deq
+    stQueue.io.overlapReq.bits.paddr := opMux.io.ld_deq.bits.param.dat.op1
+    stQueue.io.overlapReq.valid := opMux.io.ld_deq.valid
+
+    mdl.io.in(0).valid := opMux.io.ld_deq.valid & stQueue.io.overlapResp.valid
+    mdl.io.in(0).bits := opMux.io.ld_deq.bits
+    opMux.io.ld_deq.ready := mdl.io.in(0).ready & stQueue.io.overlapResp.valid
+    
     mdl.io.in(1) <> stQueue.io.deq
     mdl
   }
@@ -124,7 +129,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
     */ 
   val cacheMux = {
     val mdl = Module(new cacheMux)
-    mdl.io.enq.bits := pkg_Info_cache_s0s1(regionMux.io.deq(0).bits, stQueue.io.overlap)
+    mdl.io.enq.bits := pkg_Info_cache_s0s1(regionMux.io.deq(0).bits, stQueue.io.overlapReq.bits, stQueue.io.overlapResp.bits)
     mdl.io.enq.valid := regionMux.io.deq(0).valid
     regionMux.io.deq(0).ready := mdl.io.enq.ready
     mdl
@@ -146,7 +151,6 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
   val system = {
     val mdl = Module(new IO_Lsu(edge(2)))
     mdl.io.enq <> regionMux.io.deq(1)
-    // mdl.io.overlap <> stQueue.io.overlap(nm+1)
 
     io.system_getPut.valid := mdl.io.getPut.valid
     io.system_getPut.bits := mdl.io.getPut.bits
@@ -161,7 +165,6 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
   val periph = {
     val mdl = Module(new IO_Lsu(edge(1)))
     mdl.io.enq <> regionMux.io.deq(2)
-    // mdl.io.overlap <> stQueue.io.overlap(nm)
 
     io.periph_getPut.valid := mdl.io.getPut.valid
     io.periph_getPut.bits := mdl.io.getPut.bits
@@ -249,7 +252,6 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
 
   opMux.io.st_deq.ready := su_wb_fifo.io.enq.ready & stQueue.io.enq.ready
   opMux.io.am_deq.ready := stQueue.io.enq.ready
-  opMux.io.ld_deq.ready := ls_arb.io.in(0).ready
 
   /** indicate the mem unit is empty by all seq-element is empty*/
 

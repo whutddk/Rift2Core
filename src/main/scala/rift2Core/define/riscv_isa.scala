@@ -840,12 +840,21 @@ class Info_lsu_cmm extends Bundle {
   val trap_addr = UInt(64.W)
 }
 
-class Info_overlap extends Bundle{
-  val paddr = Output(UInt(64.W))
-  val wdata = Input(UInt(64.W))
-  val wstrb = Input(UInt(8.W))
-
+class Stq_req_Bundle extends Bundle {
+  val paddr = UInt(64.W)
 }
+
+class Stq_resp_Bundle extends Bundle {
+  val wdata = UInt(64.W)
+  val wstrb = UInt(8.W)
+}
+
+// class Info_overlap extends Bundle{
+//   val paddr = Output(UInt(64.W))
+//   val wdata = Input(UInt(64.W))
+//   val wstrb = Input(UInt(8.W))
+
+// }
 
 class Commit_Redirect_Bundle extends Bundle{
   val pc = UInt(64.W)

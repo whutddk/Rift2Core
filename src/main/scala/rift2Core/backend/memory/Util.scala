@@ -210,13 +210,13 @@ object pkg_Info_cache_s0s1{
   }
 
   /** package write and amo operation*/
-  def apply( ori: Lsu_iss_info, overlap: Info_overlap)(implicit p: Parameters) = {
+  def apply( ori: Lsu_iss_info, overlapReq: Stq_req_Bundle, overlapResp: Stq_resp_Bundle)(implicit p: Parameters) = {
 
     val res = Wire(new Info_cache_s0s1)
 
     res.paddr := ori.paddr
-    res.wdata := Mux( ori.fun.is_lu, reAlign_data( from = 64, to = 256, data = overlap.wdata, addr = overlap.paddr ), ori.wdata_align256)
-    res.wstrb := Mux( ori.fun.is_lu, reAlign_strb( from = 64, to = 256, strb = overlap.wstrb, addr = overlap.paddr ), ori.wstrb_align256)
+    res.wdata := Mux( ori.fun.is_lu, reAlign_data( from = 64, to = 256, data = overlapResp.wdata, addr = overlapReq.paddr ), ori.wdata_align256)
+    res.wstrb := Mux( ori.fun.is_lu, reAlign_strb( from = 64, to = 256, strb = overlapResp.wstrb, addr = overlapReq.paddr ), ori.wstrb_align256)
 
 
     {
