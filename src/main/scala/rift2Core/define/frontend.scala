@@ -65,8 +65,12 @@ class IF1_Bundle(implicit p: Parameters) extends IFetchBundle {
 class IF2_Bundle(implicit p: Parameters) extends IFetchBundle {
   val pc    = UInt(64.W)
   val instr = UInt(16.W)
+  // val isAccessFault = Bool()
+  // val isPagingFault = Bool()
   // val BHR  = UInt(64.W)
+  val isFault = Bool()
 }
+
 
 class PreDecode_Bundle(implicit p: Parameters) extends IFetchBundle {
   val is_jal = Bool()

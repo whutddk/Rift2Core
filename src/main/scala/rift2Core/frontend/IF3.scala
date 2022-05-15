@@ -78,9 +78,9 @@ trait IF3_PreDecode{ this: IF3Base =>
   for( i <- 0 until 4 ) yield {
     if ( i == 0 ){
       when( is_instr32(i) ) { 
-        reAlign(i).bits.pc    := io.if3_req(i).bits.pc
-        reAlign(i).bits.instr := Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)
-        reAlign(i).bits.preDecode  := PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr))
+        reAlign(i).bits.pc         := io.if3_req(i).bits.pc
+        reAlign(i).bits.instr      := Mux( io.if3_req(i+1).bits.isFault, io.if3_req(i+1).bits.instr,              Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr) )
+        reAlign(i).bits.preDecode  := Mux( io.if3_req(i+1).bits.isFault, PreDecode16(io.if3_req(i+1).bits.instr), PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)) )
         reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
         reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
@@ -89,10 +89,10 @@ trait IF3_PreDecode{ this: IF3Base =>
 
         assert(io.if3_req(i).fire === io.if3_req(i+1).fire)
       } .otherwise {
-        reAlign(i).bits.pc    := io.if3_req(i).bits.pc
-        reAlign(i).bits.instr := io.if3_req(i).bits.instr
+        reAlign(i).bits.pc         := io.if3_req(i).bits.pc
+        reAlign(i).bits.instr      := io.if3_req(i).bits.instr
         reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
-        reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
+        reAlign(i).bits.predict    := 0.U.asTypeOf(new Predict_Bundle) 
 
         reAlign(i).valid      := io.if3_req(i).fire & predictor_ready & ~pipeLineLock
         io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
@@ -100,10 +100,10 @@ trait IF3_PreDecode{ this: IF3Base =>
     } else {
       when( is_instr32( i-1 ) === false.B ) {
         when( is_instr32(i) ) { if ( i != 3 ) {
-          reAlign(i).bits.pc    := io.if3_req(i).bits.pc
-          reAlign(i).bits.instr := Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)
-          reAlign(i).bits.preDecode  := PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr))
-          reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
+          reAlign(i).bits.pc         := io.if3_req(i).bits.pc
+          reAlign(i).bits.instr      := Mux( io.if3_req(i+1).bits.isFault, io.if3_req(i+1).bits.instr,              Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr) )
+          reAlign(i).bits.preDecode  := Mux( io.if3_req(i+1).bits.isFault, PreDecode16(io.if3_req(i+1).bits.instr), PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)) )
+          reAlign(i).bits.predict    := 0.U.asTypeOf(new Predict_Bundle) 
 
           reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
           io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock & io.if3_req(i+1).valid
