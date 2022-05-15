@@ -84,9 +84,10 @@ trait IF3_PreDecode{ this: IF3Base =>
         reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
         reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
-        io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
+        io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock & io.if3_req(i+1).valid
         io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
 
+        assert(io.if3_req(i).fire === io.if3_req(i+1).fire)
       } .otherwise {
         reAlign(i).bits.pc    := io.if3_req(i).bits.pc
         reAlign(i).bits.instr := io.if3_req(i).bits.instr
@@ -105,8 +106,10 @@ trait IF3_PreDecode{ this: IF3Base =>
           reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
           reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
-          io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
+          io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock & io.if3_req(i+1).valid
           io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
+
+          assert(io.if3_req(i).fire === io.if3_req(i+1).fire)
         }} .otherwise {
           reAlign(i).bits.pc    := io.if3_req(i).bits.pc
           reAlign(i).bits.instr := io.if3_req(i).bits.instr
