@@ -228,10 +228,17 @@ int main(int argc, char **argv, char **env) {
 			std::cout << "Pass!" << std::endl;
 			if ( flag_perform ) {
 				std::cout << "Simulation-Cycle(not equal to cpu-cycle) is:" << top ->trace_mcycle << std::endl;
-				std::cout << "Retired-instruction is:" << top -> trace_minstret << std::endl;
-				std::cout << "Branch-instruction is:" << top -> trace_scsPredict + top -> trace_misPredict << std::endl;
-				std::cout << top -> trace_scsPredict << " (" << (float)(top -> trace_scsPredict) / (top -> trace_scsPredict + top -> trace_misPredict) * 100. << "%) success" << std::endl;
-				std::cout << top -> trace_misPredict << " (" << (float)(top -> trace_misPredict) / (top -> trace_scsPredict + top -> trace_misPredict) * 100. << "%) failed"  << std::endl;
+				std::cout << "Retired-instruction is: " << top -> trace_minstret << std::endl;
+
+				std::cout << "Branch:" << std::endl;				
+				std::cout << "Branch-instruction is: " << top -> trace_scsBPredict + top -> trace_misBPredict << std::endl;
+				std::cout << top -> trace_scsBPredict << " (" << (float)(top -> trace_scsBPredict) / (top -> trace_scsBPredict + top -> trace_misBPredict) * 100. << "%) success" << std::endl;
+				std::cout << top -> trace_misBPredict << " (" << (float)(top -> trace_misBPredict) / (top -> trace_scsBPredict + top -> trace_misBPredict) * 100. << "%) failed"  << std::endl;
+
+				std::cout << "Jalr:" << std::endl;
+				std::cout << "Jalr-instruction is: "   << top -> trace_scsJPredict + top -> trace_misJPredict << std::endl;
+				std::cout << top -> trace_scsJPredict << " (" << (float)(top -> trace_scsJPredict) / (top -> trace_scsJPredict + top -> trace_misJPredict) * 100. << "%) success" << std::endl;
+				std::cout << top -> trace_misJPredict << " (" << (float)(top -> trace_misJPredict) / (top -> trace_scsJPredict + top -> trace_misJPredict) * 100. << "%) failed"  << std::endl;
 			}
 			sim_exit();
 			return 0;			

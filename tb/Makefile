@@ -312,7 +312,7 @@ dromajo:
 	-j 8
 
 dhrystone5: VSimTop
-	./build/VSimTop -w -p -f ./ci/dhrystone5.riscv
+	./build/VSimTop -w -p -f  ./ci/dhrystone5.riscv
 
 dhrystone500: VSimTop
 	./build/VSimTop -p -f ./ci/dhrystone500.riscv

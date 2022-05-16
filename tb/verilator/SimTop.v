@@ -195,9 +195,10 @@ module SimTop (
 
   output [63:0] trace_mcycle,
   output [63:0] trace_minstret,
-  output [63:0] trace_scsPredict,
-  output [63:0] trace_misPredict,
-
+  output [63:0] trace_scsBPredict,
+  output [63:0] trace_misBPredict,
+  output [63:0] trace_scsJPredict,
+  output [63:0] trace_misJPredict,
 	input CLK,
 
 	input RSTn
@@ -732,8 +733,10 @@ end
 
   assign trace_mcycle     = s_Rift2Chip.i_rift2Core.diff.io_csr_mcycle;
   assign trace_minstret   = s_Rift2Chip.i_rift2Core.diff.io_csr_minstret;
-  assign trace_scsPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_3;
-  assign trace_misPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_4;
+  assign trace_scsBPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_3;
+  assign trace_misBPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_4;
+  assign trace_scsJPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_5;
+  assign trace_misJPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_6;
 
 
 endmodule

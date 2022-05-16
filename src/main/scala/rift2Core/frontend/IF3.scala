@@ -69,6 +69,16 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
 trait IF3_PreDecode{ this: IF3Base => 
   val is_instr16 = io.if3_req.map{ _.bits.instr(1,0) =/= "b11".U }
   val is_instr32 = io.if3_req.map{ _.bits.instr(1,0) === "b11".U }
+  val isPassThrough = Wire(Vec(4, Bool()))
+  isPassThrough(0) := false.B
+  for( i <- 1 until 4 ) yield { //may override (4-1)
+    when( is_instr32(i-1) & ~isPassThrough(i-1) ) { isPassThrough(i) := true.B }
+    .otherwise { isPassThrough(i) := false.B }
+  }
+  when( is_instr32(4-1) ) {
+    isPassThrough(4-1) := true.B
+  }
+
 
   for ( i <- 0 until 4 ) {
     reAlign(i).valid := false.B
@@ -76,29 +86,7 @@ trait IF3_PreDecode{ this: IF3Base =>
     io.if3_req(i).ready := false.B
   }
   for( i <- 0 until 4 ) yield {
-    if ( i == 0 ){
-      when( is_instr32(i) ) { 
-        reAlign(i).bits.pc         := io.if3_req(i).bits.pc
-        reAlign(i).bits.instr      := Mux( io.if3_req(i+1).bits.isFault, io.if3_req(i+1).bits.instr,              Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr) )
-        reAlign(i).bits.preDecode  := Mux( io.if3_req(i+1).bits.isFault, PreDecode16(io.if3_req(i+1).bits.instr), PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)) )
-        reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
-
-        reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
-        io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock & io.if3_req(i+1).valid
-        io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
-
-        assert(io.if3_req(i).fire === io.if3_req(i+1).fire)
-      } .otherwise {
-        reAlign(i).bits.pc         := io.if3_req(i).bits.pc
-        reAlign(i).bits.instr      := io.if3_req(i).bits.instr
-        reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
-        reAlign(i).bits.predict    := 0.U.asTypeOf(new Predict_Bundle) 
-
-        reAlign(i).valid      := io.if3_req(i).fire & predictor_ready & ~pipeLineLock
-        io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
-      }        
-    } else {
-      when( is_instr32( i-1 ) === false.B ) {
+      when( ~isPassThrough(i) ) {
         when( is_instr32(i) ) { if ( i != 3 ) {
           reAlign(i).bits.pc         := io.if3_req(i).bits.pc
           reAlign(i).bits.instr      := Mux( io.if3_req(i+1).bits.isFault, io.if3_req(i+1).bits.instr,              Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr) )
@@ -120,12 +108,8 @@ trait IF3_PreDecode{ this: IF3Base =>
           io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
           
         }        
-      }
-
     }
   }
-
-
 
 }
 
@@ -140,9 +124,14 @@ trait IF3_Predict{ this: IF3Base =>
 
   reAlign <> combPDT.io.enq//waiting for overriding
   
+
+  btb.io.req.pc := 0.U
+  bim.io.req.pc := 0.U
+  tage.io.req.pc    := 0.U
+  tage.io.req.ghist := 0.U
+  
   for ( i <- 0 until 4 ) {
 
-    btb.io.req.pc := 0.U
     when( is_req_btb(i) ) {
       when( if ( i == 0 ) {false.B} else { ( 0 until i ).map{ j => is_req_btb(j) }.reduce(_|_) } ) {
         for ( k <- i until 4 ) {
@@ -155,7 +144,7 @@ trait IF3_Predict{ this: IF3Base =>
       }
     }
 
-    bim.io.req.pc := 0.U
+    
     when( is_req_bim(i) ) {
       when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_bim(j) }.reduce(_|_) }  ) {
         for ( k <- i until 4 ) {
@@ -168,8 +157,7 @@ trait IF3_Predict{ this: IF3Base =>
       }
     }
 
-    tage.io.req.pc    := 0.U
-    tage.io.req.ghist := 0.U
+    
     when( is_req_tage(i) ) {
       when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_tage(j) }.reduce(_|_) } ) {
         for ( k <- i until 4 ) {

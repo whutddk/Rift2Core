@@ -50,7 +50,7 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
   val ooo_dpt_rePort =  Module(new RePort( new Dpt_info, port = rn_chn))
 
   val ooo_dpt_fifo = {
-    val mdl = Module(new ZipQueue( new Dpt_info, 4, in = rn_chn, out = 2 ))
+    val mdl = Module(new ZipQueue( new Dpt_info, 4, in = rn_chn, out = 2, zip = 3 ))
     mdl.io.enq <> ooo_dpt_rePort.io.deq
     mdl.io.deq <> io.ooo_dpt_iss
     mdl

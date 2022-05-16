@@ -426,11 +426,11 @@ trait CommitState { this: BaseCommit =>
         commit_state(i) := 1.U //abort
         for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
         abort_chn := i.U
-      } .elsewhen( ((io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict) | (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict)) & cmm_state(i).is_wb & ~cmm_state(i).is_step) { //1st-step will cause an interrupt
+      } .elsewhen( ((io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & bctq(i).valid ) | (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & jctq(i).valid)) & cmm_state(i).is_wb & ~cmm_state(i).is_step) { //1st-step will cause an interrupt
           commit_state(i) := 2.U //mis-predict
           for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
       } .elsewhen( cmm_state(i).is_wb & ~cmm_state(i).is_step ) { //when writeback and no-step, 1st-step will cause an interrupt
-        when( (io.rod(i).bits.is_csr & ~csrExe(i).valid) || (io.rod(i).bits.is_fcsr & ~fcsrExe(i).valid) ) {
+        when( (io.rod(i).bits.is_csr & ~csrExe(i).valid) || (io.rod(i).bits.is_fcsr & ~fcsrExe(i).valid) || (io.rod(i).bits.is_branch & ~bctq(i).valid) || (io.rod(i).bits.is_jalr & ~jctq(i).valid) ) {
           commit_state(i) := 0.U
         } .otherwise {
           commit_state(i) := 3.U //confirm

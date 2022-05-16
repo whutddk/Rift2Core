@@ -40,7 +40,7 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 
   
   
-  assert( (in < dp && out < dp) , "dp = "+dp+", in = "+in+", out = "+ out )
+  require( (in < dp && out < dp) , "dp = "+dp+", in = "+in+", out = "+ out )
 
   val buf = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
   val buf_valid = RegInit(VecInit(Seq.fill(dp)(false.B)))
@@ -105,12 +105,26 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int ) extends Module
 
 
 
-  for ( i <- 0 until in; j <- 0 until in ) yield 
+  for ( i <- 0 until in; j <- 0 until in )
     assert( !(io.enq(i).valid === true.B && io.enq(j).valid === false.B && i.U >= j.U), "Assert Fail! in port illegal")
 
-  for ( i <- 0 until out; j <- 0 until out ) yield 
+  for ( i <- 0 until out; j <- 0 until out )
     assert( !(io.deq(i).valid === true.B && io.deq(j).valid === false.B && i.U >= j.U), "Assert Fail! out port illegal")
 
+  for ( i <- 0 until in ) {
+    when( io.enq(i).fire ) {
+      for ( j <- 0 until i ) {
+        assert( io.enq(j).fire, "Assert Failed, illegal multi-port-fifo behavior" )
+      }
+    }
+  }
 
+  for ( i <- 0 until out ) {
+    when( io.deq(i).fire ) {
+      for ( j <- 0 until i ) {
+        assert( io.deq(j).fire, "Assert Failed, illegal multi-port-fifo behavior" )
+      }
+    }
+  }
 }
 

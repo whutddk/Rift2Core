@@ -86,10 +86,11 @@ trait IF4_Decode{ this: IF4Base =>
 trait IF4_Predict{ this: IF4Base =>
 
   val is_bTaken = for( i <- 0 until 2 ) yield {
-    Mux( ~tage_decode(i).isAlloc.reduce(_&_),
-        tage_decode(i).isPredictTaken,
-        bim_decode(i).bim_p
-    )
+    // Mux( ~tage_decode(i).isAlloc.reduce(_&_),
+    //     tage_decode(i).isPredictTaken,
+    //     bim_decode(i).bim_p
+    // )
+    bim_decode(i).bim_p
   }
 
   val is_redirect = for( i <- 0 until 2 ) yield {
@@ -148,7 +149,9 @@ trait IF4_Predict{ this: IF4Base =>
 
   //only when ras make a wrong prediction will it flush, Warning: we don't care abort other pipeline flush this time
   ras.io.flush := io.jcmm_update.valid & io.jcmm_update.bits.isRas & io.jcmm_update.bits.isMisPredict
-
+  
+  //ras flush immediately when pipeline flush
+  // ras.io.flush := io.flush
 }
 
 
