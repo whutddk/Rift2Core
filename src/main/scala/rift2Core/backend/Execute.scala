@@ -83,6 +83,8 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     val periph_getPut = new DecoupledIO(new TLBundleA(edge(2).bundle))
     val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(2).bundle)))
 
+    val preFetch = ValidIO( new PreFetch_Req_Bundle )
+
     val flush = Input(Bool())
 
 
@@ -142,7 +144,7 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     mdl.io.periph_access.bits := io.periph_access.bits
     io.periph_access.ready := mdl.io.periph_access.ready
 
-
+    io.preFetch := mdl.io.preFetch
 
     mdl.io.flush := io.flush
     mdl

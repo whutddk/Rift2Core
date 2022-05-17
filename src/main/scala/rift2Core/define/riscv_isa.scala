@@ -860,4 +860,8 @@ class Commit_Redirect_Bundle extends Bundle{
   val pc = UInt(64.W)
 }
 
+class PreFetch_Req_Bundle extends Bundle {
+  val paddr = UInt(64.W)
+}
+
 

@@ -56,7 +56,7 @@ abstract class Stq_Base()(implicit p: Parameters) extends RiftModule{
     val flush = Input(Bool())
 
     /** prefetch is not guarantee to be accepted by cache*/
-    // val preFetch = ValidIO( UInt(64.W) )
+    val preFetch = ValidIO( new PreFetch_Req_Bundle )
   } )
 
   val buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Lsu_iss_info))))
@@ -186,7 +186,8 @@ trait Stq_Overlap{ this: Stq_Base =>
   * bound to every cache 
   */
 class Store_queue()(implicit p: Parameters) extends Stq_Base with Stq_Ptr with Stq_Overlap {
-
+  io.preFetch.valid      := io.enq.fire
+  io.preFetch.bits.paddr := io.enq.bits.param.dat.op1
 }
 
 

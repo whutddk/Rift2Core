@@ -34,6 +34,13 @@ import freechips.rocketchip.tilelink._
 
 
 class Rift2Core()(implicit p: Parameters) extends LazyModule{
+  val prefetcherClientParameters = TLMasterPortParameters.v1(
+    Seq(TLMasterParameters.v1(
+      name = "prefetch",
+      sourceId = IdRange(0, 1),
+    ))
+  )
+
   val dcacheClientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "dcache",
@@ -75,6 +82,8 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
   val systemClientNode = TLClientNode(Seq(systemClientParameters))
   val periphClientNode = TLClientNode(Seq(periphClientParameters))
   val    mmuClientNode = TLClientNode(Seq(   mmuClientParameters))
+  val prefetchClinetNode = TLClientNode(Seq( prefetcherClientParameters))
+  
 
   lazy val module = new Rift2CoreImp(this)
 }
@@ -90,6 +99,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val ( system_bus, system_edge ) = outer.systemClientNode.out.head
   val ( periph_bus, periph_edge ) = outer.periphClientNode.out.head
   val (    mmu_bus,    mmu_edge ) = outer.mmuClientNode.out.head
+  val ( prefetch_bus, prefetch_edge) = outer.prefetchClinetNode.out.head
 
 
 
@@ -303,7 +313,16 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   i_mmu.io.ptw_access.bits  := mmu_bus.d.bits
   i_mmu.io.ptw_access.valid := mmu_bus.d.valid
 
+  val prefetcher = Module(new PreFetcher(prefetch_edge))
+  prefetcher.io.stqReq          := exe_stage.io.preFetch
+  prefetcher.io.icacheRefillReq := if2.io.preFetch
 
+  prefetch_bus.a.valid := prefetcher.io.intent.valid
+  prefetch_bus.a.bits := prefetcher.io.intent.bits
+  prefetcher.io.intent.ready := prefetch_bus.a.ready
+  prefetch_bus.d.ready := prefetcher.io.hintAck.ready
+  prefetcher.io.hintAck.bits  := prefetch_bus.d.bits
+  prefetcher.io.hintAck.valid := prefetch_bus.d.valid
 
 
   val diff = {

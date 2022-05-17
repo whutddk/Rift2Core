@@ -67,6 +67,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
     val periph_getPut = new DecoupledIO(new TLBundleA(edge(2).bundle))
     val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(2).bundle)))
 
+    val preFetch = ValidIO( new PreFetch_Req_Bundle )
 
     val flush = Input(Bool())
   })
@@ -90,6 +91,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule wit
         opMux.io.am_deq.fire -> opMux.io.am_deq.bits,
       ))
     mdl.io.cmm_lsu := io.cmm_lsu
+    io.preFetch := mdl.io.preFetch
     mdl.io.flush := io.flush
     mdl
   }

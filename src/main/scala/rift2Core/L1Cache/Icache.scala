@@ -75,6 +75,9 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     val flush = Input(Bool())
 
     val ifence = Input(Bool())
+
+    /** prefetch is not guarantee to be accepted by cache*/
+    val preFetch = ValidIO( new PreFetch_Req_Bundle )
   })
 
   val (_, _, is_trans_done, transCnt) = edge.count(io.icache_access)

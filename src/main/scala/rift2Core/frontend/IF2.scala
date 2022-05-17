@@ -35,6 +35,8 @@ import freechips.rocketchip.tilelink._
 
 class IF2(edge: TLEdgeOut)(implicit p: Parameters) extends Icache(edge = edge){
 
+  io.preFetch.valid := io.icache_get.fire
+  io.preFetch.bits.paddr := io.icache_get.bits.address + "b100000".U
 }
 
 

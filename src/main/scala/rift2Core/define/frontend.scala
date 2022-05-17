@@ -24,6 +24,8 @@ import chipsalliance.rocketchip.config.Parameters
 
 
 case class IFParameters(
+  uBTB_entry: Int = 16,
+  uBTB_tag_w: Int = 8,
   btb_cl: Int = 4096,
   bim_cl: Int = 4096,
   ras_dp: Int = 256,
@@ -33,6 +35,8 @@ case class IFParameters(
 trait HasIFParameters extends HasRiftParameters {
   val ifParams: IFParameters
 
+  def uBTB_entry: Int = ifParams.uBTB_entry
+  def uBTB_tag_w: Int = ifParams.uBTB_tag_w
   def btb_cl: Int = ifParams.btb_cl
   def bim_cl: Int = ifParams.bim_cl
   def ras_dp: Int = ifParams.ras_dp

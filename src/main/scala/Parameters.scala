@@ -44,6 +44,8 @@ case class RiftSetting(
 
     // btb_tag_w = 8,
     // btb_cb  = 4,
+  uBTB_entry = 16,
+  uBTB_tag_w = 8,
   btb_cl = 4096,
   bim_cl = 4096,
   ras_dp = 256,
