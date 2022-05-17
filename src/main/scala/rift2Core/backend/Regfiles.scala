@@ -236,8 +236,8 @@ class XRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
       io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
       io.dpt_lookup(i).rsp.rs3 := 63.U
       for ( j <- 0 until i ) {
-        when( (io.dpt_rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
-        when( (io.dpt_rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
       }
     }
   }
@@ -263,9 +263,9 @@ class FRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
       io.dpt_lookup(i).rsp.rs2 := rename_ptr(idx2)
       io.dpt_lookup(i).rsp.rs3 := rename_ptr(idx3) 
       for ( j <- 0 until i ) {
-        when( (io.dpt_rename(j).req.bits.rd0 === idx1) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
-        when( (io.dpt_rename(j).req.bits.rd0 === idx2) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
-        when( (io.dpt_rename(j).req.bits.rd0 === idx3) ) { io.dpt_lookup(i).rsp.rs3 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx1) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx2) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx3) ) { io.dpt_lookup(i).rsp.rs3 := molloc_idx(j) }
       }
     }
   }
