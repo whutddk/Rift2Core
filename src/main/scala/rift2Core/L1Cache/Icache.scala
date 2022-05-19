@@ -246,30 +246,37 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
     ibuf.io.enq(i).bits.instr := reAlign_instr >> (16*i)
     ibuf.io.enq(i).bits.pc    := io.mmu_if.bits.vaddr + (2*i).U
     ibuf.io.enq(i).bits.isFault := false.B
+    ibuf.io.enq(i).bits.isRedirect := io.if2_req.bits.isRedirect(i)
+    ibuf.io.enq(i).bits.target := Mux( io.if2_req.bits.isRedirect(i), io.if2_req.bits.target, 0.U )
   }
   //override chn0
   when( io.mmu_if.valid & io.mmu_if.bits.is_access_fault ) {
     ibuf.io.enq(0).bits.instr := "b1001110001000001".U
     ibuf.io.enq(0).bits.pc    := io.if2_req.bits.pc 
+    ibuf.io.enq(0).bits.isRedirect := false.B
+    ibuf.io.enq(0).bits.target := 0.U
     ibuf.io.enq(0).bits.isFault := true.B
 
   } .elsewhen( io.mmu_if.valid & io.mmu_if.bits.is_paging_fault ) {
     ibuf.io.enq(0).bits.instr := "b1001110001000101".U
     ibuf.io.enq(0).bits.pc    := io.if2_req.bits.pc
+    ibuf.io.enq(0).bits.isRedirect := false.B
+    ibuf.io.enq(0).bits.target := 0.U
     ibuf.io.enq(0).bits.isFault := true.B
   }
 
 
+
   ibuf.io.enq(0).valid :=
-    (~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 7.U )) |
+    (~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 7.U ) & io.if2_req.bits.isActive(0)) |
     (~kill_trans & io.mmu_if.valid & io.mmu_if.bits.is_fault & ~fault_lock)
-  ibuf.io.enq(1).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 6.U )
-  ibuf.io.enq(2).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 5.U )
-  ibuf.io.enq(3).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 4.U )
-  ibuf.io.enq(4).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 3.U )
-  ibuf.io.enq(5).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 2.U )
-  ibuf.io.enq(6).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 1.U )
-  ibuf.io.enq(7).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) === 0.U )
+  ibuf.io.enq(1).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 6.U )  & io.if2_req.bits.isActive(1)
+  ibuf.io.enq(2).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 5.U )  & io.if2_req.bits.isActive(2)
+  ibuf.io.enq(3).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 4.U )  & io.if2_req.bits.isActive(3)
+  ibuf.io.enq(4).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 3.U )  & io.if2_req.bits.isActive(4)
+  ibuf.io.enq(5).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 2.U )  & io.if2_req.bits.isActive(5)
+  ibuf.io.enq(6).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 1.U )  & io.if2_req.bits.isActive(6)
+  ibuf.io.enq(7).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) === 0.U ) & io.if2_req.bits.isActive(6)
 
   
   io.icache_get.valid := icache_state_qout === 1.U & ~is_hit & ~io.flush

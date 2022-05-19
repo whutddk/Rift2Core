@@ -61,7 +61,7 @@ class RASPP_Bundle(implicit p: Parameters) extends IFetchBundle {
 
 
 
-class IF1_Bundle(implicit p: Parameters) extends IFetchBundle {
+class IF1_Bundle(implicit p: Parameters) extends uBTBResp_Bundle {
   val pc = UInt(64.W)
   // val BHR  = UInt(64.W)
 }
@@ -73,6 +73,8 @@ class IF2_Bundle(implicit p: Parameters) extends IFetchBundle {
   // val isPagingFault = Bool()
   // val BHR  = UInt(64.W)
   val isFault = Bool()
+  val isRedirect = Bool()
+  val target = UInt(64.W)
 }
 
 
@@ -117,12 +119,24 @@ class BTBReq_Bundle(implicit p: Parameters) extends IFetchBundle {
   val pc = UInt(64.W)
 }
 
+
+
+class uBTBReq_Bundle(implicit p: Parameters) extends BTBReq_Bundle
+
 class BTBResp_Bundle(implicit p: Parameters) extends IFetchBundle {
   val target = UInt(64.W)
 }
 
+class uBTBResp_Bundle(implicit p: Parameters) extends BTBResp_Bundle {
+  val isRedirect = Vec( 8, Bool() )
+  val isActive   = Vec( 8, Bool() )
+}
+
 class BTBUpdate_Bundle(implicit p: Parameters) extends BTBResp_Bundle {
   val pc = UInt(64.W)
+}
+
+class uBTBUpdate_Bundle(implicit p: Parameters) extends BTBUpdate_Bundle {
 }
 
 class TageTableUpdate_Bundle(implicit p: Parameters) extends IFetchBundle {
@@ -200,6 +214,8 @@ class IF3_Bundle(implicit p: Parameters) extends Bundle {
   val instr = UInt(32.W)
   val pc = UInt(64.W)
   val ghist = UInt(64.W)
+  val isRedirect = Bool()
+  val target = UInt(64.W)
 }
 
 
@@ -212,6 +228,7 @@ class Branch_FTarget_Bundle(implicit p: Parameters) extends RiftBundle {
   val ghist = UInt(64.W)
   val bimResp  = new BIMResp_Bundle
   val tageResp = new TageResp_Bundle
+  val predicTarget = UInt(64.W)
   val revertTarget = UInt(64.W)
   val isPredictTaken = Bool()
 }
@@ -220,7 +237,6 @@ class Jump_FTarget_Bundle(implicit p: Parameters) extends RiftBundle {
   val pc       = UInt(64.W)
   val btbResp = new BTBResp_Bundle
   val rasResp = new RASPP_Bundle
-
   val isRas = Bool()
 
   def isBtb = ~isRas

@@ -69,7 +69,7 @@ case class RiftSetting(
     cl = 128
   ),
 ){
-  
+  require( log2Ceil( ifetchParameters.uBTB_entry ) <= ifetchParameters.uBTB_tag_w )
 }
 
 trait HasRiftParameters {

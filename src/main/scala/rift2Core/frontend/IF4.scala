@@ -84,6 +84,10 @@ trait IF4_Decode{ this: IF4Base =>
 }
 
 trait IF4_Predict{ this: IF4Base =>
+  val redirectPc = Wire(Vec(2, UInt(64.W)))
+  val isRedirect = Wire(Vec(2, Bool()))
+
+  val isIf4Redirect = Wire(Vec(2, Bool()))
 
   val is_bTaken = for( i <- 0 until 2 ) yield {
     // Mux( ~tage_decode(i).isAlloc.reduce(_&_),
@@ -93,11 +97,11 @@ trait IF4_Predict{ this: IF4Base =>
     bim_decode(i).bim_p
   }
 
-  val is_redirect = for( i <- 0 until 2 ) yield {
+  for( i <- 0 until 2 ) {
+    isRedirect(i) := 
     (is_branch(i) & is_bTaken(i)) |
     is_jal(i) |
     is_jalr(i)
-
   }
 
   val jalr_pc = for( i <- 0 until 2 ) yield {
@@ -111,7 +115,8 @@ trait IF4_Predict{ this: IF4Base =>
     Mux( is_call(0), pc(0) + Mux(is_rvc(0), 2.U, 4.U), 
       Mux( is_call(1), pc(1) + Mux(is_rvc(1), 2.U, 4.U), 0.U ))
 
-  val redirect_pc = for( i <- 0 until 2 ) yield {
+  for( i <- 0 until 2 ) yield {
+    redirectPc(i) := 
     Mux1H(Seq(
       (is_branch(i) & is_bTaken(i)) -> (pc(i) + imm(i)),
       is_jal(i)                     -> (pc(i) + imm(i)),
@@ -127,10 +132,17 @@ trait IF4_Predict{ this: IF4Base =>
     io.if4_update_ghist(i).bits.isTaken := is_bTaken(i)
   }
 
-  io.if4Redirect.valid := (io.if4_req(0).fire & is_redirect(0)) | (io.if4_req(1).fire & is_redirect(1))
+  for( i <- 0 until 2 ) yield {
+    isIf4Redirect(i) := 
+    (io.if4_req(i).fire & ( (isRedirect(i) === io.if4_req(i).bits.isRedirect) & (io.if4_req(i).bits.target =/= redirectPc(i)) ) ) |
+    (io.if4_req(i).fire & ( (isRedirect(i) =/= io.if4_req(i).bits.isRedirect) ) )
+  }
+
+  io.if4Redirect.valid := isIf4Redirect.reduce(_|_)
+    
   io.if4Redirect.bits.pc := 
-    Mux( io.if4_req(0).fire & is_redirect(0), redirect_pc(0), 
-      Mux( io.if4_req(1).fire & is_redirect(1), redirect_pc(1), 0.U ) )
+    Mux( isIf4Redirect(0), Mux( isRedirect(0), redirectPc(0), (pc(0) + Mux(is_rvc(0), 2.U, 4.U))),
+      Mux( isIf4Redirect(1), Mux( isRedirect(1), redirectPc(1), (pc(1) + Mux(is_rvc(1), 2.U, 4.U))), 0.U ) )
 
 
   for ( i <- 0 until 2 ) yield {
@@ -139,6 +151,7 @@ trait IF4_Predict{ this: IF4Base =>
     bRePort.io.enq(i).bits.bimResp        := bim_decode(i)
     bRePort.io.enq(i).bits.tageResp       := tage_decode(i)
     bRePort.io.enq(i).bits.revertTarget   := Mux( is_bTaken(i), (pc(i) + Mux(is_rvc(i), 2.U, 4.U)), (pc(i) + imm(i)) )
+    bRePort.io.enq(i).bits.predicTarget   := Mux(~is_bTaken(i), (pc(i) + Mux(is_rvc(i), 2.U, 4.U)), (pc(i) + imm(i)) )
     bRePort.io.enq(i).bits.isPredictTaken := is_bTaken(i)
 
     jRePort.io.enq(i).bits.pc      := pc(i)
@@ -174,7 +187,7 @@ class IF4()(implicit p: Parameters) extends IF4Base with IF4_Decode with IF4_Pre
   }
 
   io.if4_req(0).ready := bRePort.io.enq(0).ready & bRePort.io.enq(0).ready & instr_fifo.io.enq(0).ready
-  io.if4_req(1).ready := jRePort.io.enq(1).ready & jRePort.io.enq(1).ready & instr_fifo.io.enq(1).ready & ~is_redirect(0)
+  io.if4_req(1).ready := jRePort.io.enq(1).ready & jRePort.io.enq(1).ready & instr_fifo.io.enq(1).ready & ~isIf4Redirect(0)
 
   instr_fifo.io.flush := io.flush
   bftq.io.flush := io.flush

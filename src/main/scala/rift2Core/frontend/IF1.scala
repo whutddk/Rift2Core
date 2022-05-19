@@ -33,6 +33,9 @@ abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
 
 
     val pc_gen = Decoupled(new IF1_Bundle)
+
+    val jcmm_update = Flipped(Valid(new Jump_CTarget_Bundle))
+    val bcmm_update = Flipped(Valid(new Branch_CTarget_Bundle))
   })
 
   // val pc_dnxt = Wire(UInt(64.W))
@@ -40,28 +43,43 @@ abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
 
 }
 
+trait IF1Predict { this: IF1Base => 
+  val uBTB = Module(new uBTB)
+
+  uBTB.io.req.pc := pc_qout
+
+  io.pc_gen.bits.isRedirect := uBTB.io.resp.isRedirect
+  io.pc_gen.bits.isActive := uBTB.io.resp.isActive
+  io.pc_gen.bits.target := uBTB.io.resp.target
+
+  uBTB.io.update.valid := io.bcmm_update.fire | io.jcmm_update.fire
+
+  uBTB.io.update.bits.target :=
+    Mux( io.bcmm_update.fire, Mux( io.bcmm_update.bits.isMisPredict, io.bcmm_update.bits.revertTarget, io.bcmm_update.bits.predicTarget),
+      Mux( io.jcmm_update.fire, io.jcmm_update.bits.finalTarget, 0.U ) )
+
+  uBTB.io.update.bits.pc     :=
+    Mux( io.bcmm_update.fire, io.bcmm_update.bits.pc, 
+      Mux( io.jcmm_update.fire, io.jcmm_update.bits.pc, 0.U ) )
+
+}
 
 
+class IF1()(implicit p: Parameters) extends IF1Base with IF1Predict{
+  val any_reset = reset.asBool
 
-class IF1()(implicit p: Parameters) extends IF1Base {
-  val any_reset = false.B
-  // when( io.pc_gen.fire ) { any_reset := false.B }
-
-
-  // pc_dnxt := 
-  //   Mux( any_reset, "h80000000".U, 
-  //     Mux( io.cmmRedirect.valid, io.cmmRedirect.bits.pc,
-  //       Mux( io.if4Redirect.valid, io.if4Redirect.bits.pc,
-  //         (pc_qout + 16.U) >> 4 << 4 ) ) )
-
-  // io.pc_gen.valid   := true.B
-  // io.pc_gen.bits.pc := pc_dnxt
-  // when( io.pc_gen.fire ) { pc_qout := pc_dnxt }
 
   when( any_reset ) { pc_qout := "h80000000".U }
   .elsewhen( io.cmmRedirect.fire ) { pc_qout := io.cmmRedirect.bits.pc }
   .elsewhen( io.if4Redirect.fire ) { pc_qout := io.if4Redirect.bits.pc }
-  .elsewhen( io.pc_gen.fire ) { pc_qout := (pc_qout + 16.U) >> 4 << 4 }
+  .elsewhen( io.pc_gen.fire ) {
+    when( uBTB.io.resp.isRedirect.reduce(_|_) ){
+      pc_qout := uBTB.io.resp.target
+    } .otherwise {
+      pc_qout := (pc_qout + 16.U) >> 4 << 4        
+    }
+
+  }
   io.pc_gen.valid   := true.B
   io.pc_gen.bits.pc := pc_qout
 }

@@ -67,12 +67,13 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
 
 
 trait IF3_PreDecode{ this: IF3Base => 
-  val is_instr16 = io.if3_req.map{ _.bits.instr(1,0) =/= "b11".U }
+  val isRedirect = io.if3_req.map{ _.bits.isRedirect =/= "b11".U }
   val is_instr32 = io.if3_req.map{ _.bits.instr(1,0) === "b11".U }
   val isPassThrough = Wire(Vec(4, Bool()))
   isPassThrough(0) := false.B
+
   for( i <- 1 until 4 ) yield { //may override (4-1)
-    when( is_instr32(i-1) & ~isPassThrough(i-1) ) { isPassThrough(i) := true.B }
+    when( (is_instr32(i-1) & ~isPassThrough(i-1)) || isRedirect(i-1) ) { isPassThrough(i) := true.B }
     .otherwise { isPassThrough(i) := false.B }
   }
   when( is_instr32(4-1) ) {
@@ -89,26 +90,67 @@ trait IF3_PreDecode{ this: IF3Base =>
       when( ~isPassThrough(i) ) {
         when( is_instr32(i) ) { if ( i != 3 ) {
           reAlign(i).bits.pc         := io.if3_req(i).bits.pc
+          reAlign(i).bits.isRedirect := io.if3_req(i).bits.isRedirect | io.if3_req(i+1).bits.isRedirect
+          reAlign(i).bits.target     := io.if3_req(i).bits.target     | io.if3_req(i+1).bits.target
           reAlign(i).bits.instr      := Mux( io.if3_req(i+1).bits.isFault, io.if3_req(i+1).bits.instr,              Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr) )
           reAlign(i).bits.preDecode  := Mux( io.if3_req(i+1).bits.isFault, PreDecode16(io.if3_req(i+1).bits.instr), PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)) )
+
           reAlign(i).bits.predict    := 0.U.asTypeOf(new Predict_Bundle) 
 
-          reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
-          io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock & io.if3_req(i+1).valid
-          io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
+          when( ~reAlign(i).bits.isRedirect ) {
+            reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
+            io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock & io.if3_req(i+1).valid
+            io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
+          } .elsewhen(io.if3_req(i).bits.isRedirect) {
+            reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
+            io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock & io.if3_req(i+1).valid
+            io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
+          } .elsewhen(io.if3_req(i+1).bits.isRedirect) { //a mis-predict situation
+            if( i < 2 ) {
+              reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
+              io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock & io.if3_req(i+1).valid
+              io.if3_req(i+1).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
+              io.if3_req(i+2).ready := reAlign(i).ready & predictor_ready & ~pipeLineLock
+            } else if ( i == 2 ) {
+              reAlign(i).valid      := false.B
+              io.if3_req(i).ready   := false.B
+              io.if3_req(i+1).ready := false.B
+            }
+          }
 
           assert(io.if3_req(i).fire === io.if3_req(i+1).fire)
         }} .otherwise {
           reAlign(i).bits.pc    := io.if3_req(i).bits.pc
+          reAlign(i).bits.isRedirect := io.if3_req(i).bits.isRedirect
+          reAlign(i).bits.target := io.if3_req(i).bits.target
           reAlign(i).bits.instr := io.if3_req(i).bits.instr
           reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
           reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
-          reAlign(i).valid      := io.if3_req(i).fire & predictor_ready & ~pipeLineLock
-          io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
-          
-        }        
+          when( ~reAlign(i).bits.isRedirect ) {
+            reAlign(i).valid      := io.if3_req(i).fire & predictor_ready & ~pipeLineLock
+            io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
+          } .otherwise { //when isRVC && redirect, force next-entry popping out
+            if ( i == 3 ) {
+              reAlign(i).valid      := false.B
+              io.if3_req(i).ready   := false.B
+            } else {
+              reAlign(i).valid      := io.if3_req(i).fire & predictor_ready & ~pipeLineLock
+              io.if3_req(i).ready   := reAlign(i).ready & predictor_ready & ~pipeLineLock
+              io.if3_req(i+1).ready := io.if3_req(i).ready
+            }
+          }
+        }
     }
+
+
+    if ( i < 3 ) {
+      when(io.if3_req(i).fire & io.if3_req(i).bits.isRedirect ) { assert(io.if3_req(i+1).fire, "Assert Failed at IF3, Redirect will pop next-entry either by rv32 or force-pop!") }
+      when( io.if3_req(i).bits.isRedirect ) { assert( ~io.if3_req(i+1).bits.isRedirect, "Assert Failed at IF3, No succession isRedirect will appear" ) }
+    } else if ( i == 3 ) {
+      when( io.if3_req(i).fire ) { assert( ~io.if3_req(i).bits.isRedirect, "Assert Failed at IF3, never Redirect at last-entry!" ) }
+    }
+
   }
 
 }

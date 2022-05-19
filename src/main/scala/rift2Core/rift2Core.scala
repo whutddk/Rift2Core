@@ -203,7 +203,8 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-
+    if1.io.jcmm_update := exe_stage.io.jcmm_update
+    if1.io.bcmm_update := exe_stage.io.bcmm_update
     if3.io.jcmm_update := exe_stage.io.jcmm_update
     if3.io.bcmm_update := exe_stage.io.bcmm_update
     if4.io.jcmm_update := exe_stage.io.jcmm_update
