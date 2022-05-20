@@ -84,9 +84,10 @@ trait IF4_Decode{ this: IF4Base =>
 }
 
 trait IF4_Predict{ this: IF4Base =>
-  val redirectPc = Wire(Vec(2, UInt(64.W)))
+  val redirectTarget = Wire(Vec(2, UInt(64.W)))
   val isRedirect = Wire(Vec(2, Bool()))
 
+  val isDisAgreeWithIF1 = Wire(Vec(2, Bool()))
   val isIf4Redirect = Wire(Vec(2, Bool()))
 
   val is_bTaken = for( i <- 0 until 2 ) yield {
@@ -116,7 +117,7 @@ trait IF4_Predict{ this: IF4Base =>
       Mux( is_call(1), pc(1) + Mux(is_rvc(1), 2.U, 4.U), 0.U ))
 
   for( i <- 0 until 2 ) yield {
-    redirectPc(i) := 
+    redirectTarget(i) := 
     Mux1H(Seq(
       (is_branch(i) & is_bTaken(i)) -> (pc(i) + imm(i)),
       is_jal(i)                     -> (pc(i) + imm(i)),
@@ -133,17 +134,29 @@ trait IF4_Predict{ this: IF4Base =>
   }
 
   for( i <- 0 until 2 ) yield {
-    isIf4Redirect(i) := 
-    (io.if4_req(i).fire & ( (isRedirect(i) === io.if4_req(i).bits.isRedirect) & (io.if4_req(i).bits.target =/= redirectPc(i)) ) ) |
-    (io.if4_req(i).fire & ( (isRedirect(i) =/= io.if4_req(i).bits.isRedirect) ) )
+    isDisAgreeWithIF1(i) :=
+      ( isRedirect(i) =/= io.if4_req(i).bits.isRedirect) |
+      ((isRedirect(i) === io.if4_req(i).bits.isRedirect) & (io.if4_req(i).bits.target =/= redirectTarget(i)))
+  
+    isIf4Redirect(i) := io.if4_req(i).fire & isDisAgreeWithIF1(i)
+
+    when( ~isRedirect(i) ) { assert( redirectTarget(i) === 0.U ) }
+    when( ~io.if4_req(i).bits.isRedirect ) { assert( io.if4_req(i).bits.target === 0.U ) }
   }
 
   io.if4Redirect.valid := isIf4Redirect.reduce(_|_)
     
-  io.if4Redirect.bits.pc := 
-    Mux( isIf4Redirect(0), Mux( isRedirect(0), redirectPc(0), (pc(0) + Mux(is_rvc(0), 2.U, 4.U))),
-      Mux( isIf4Redirect(1), Mux( isRedirect(1), redirectPc(1), (pc(1) + Mux(is_rvc(1), 2.U, 4.U))), 0.U ) )
+  io.if4Redirect.bits.target := 
+    Mux( isIf4Redirect(0), Mux( isRedirect(0), redirectTarget(0), (pc(0) + Mux(is_rvc(0), 2.U, 4.U))),
+      Mux( isIf4Redirect(1), Mux( isRedirect(1), redirectTarget(1), (pc(1) + Mux(is_rvc(1), 2.U, 4.U))), 0.U ) )
 
+  io.if4Redirect.bits.pc :=
+    Mux( isIf4Redirect(0), pc(0),
+      Mux( isIf4Redirect(1), pc(1), 0.U ) )
+
+  io.if4Redirect.bits.isDisAgree :=
+    Mux( isIf4Redirect(0), isDisAgreeWithIF1(0) & io.if4_req(0).bits.isRedirect,
+      Mux( isIf4Redirect(1), isDisAgreeWithIF1(1) & io.if4_req(1).bits.isRedirect, 0.U ) )
 
   for ( i <- 0 until 2 ) yield {
     bRePort.io.enq(i).bits.pc             := pc(i)

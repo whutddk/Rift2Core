@@ -276,7 +276,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   ibuf.io.enq(4).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 3.U )  & io.if2_req.bits.isActive(4)
   ibuf.io.enq(5).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 2.U )  & io.if2_req.bits.isActive(5)
   ibuf.io.enq(6).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) <= 1.U )  & io.if2_req.bits.isActive(6)
-  ibuf.io.enq(7).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) === 0.U ) & io.if2_req.bits.isActive(6)
+  ibuf.io.enq(7).valid := ~kill_trans & io.mmu_if.valid & icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ibuf.io.enq(7).ready & ( io.mmu_if.bits.paddr(3,1) === 0.U ) & io.if2_req.bits.isActive(7)
 
   
   io.icache_get.valid := icache_state_qout === 1.U & ~is_hit & ~io.flush

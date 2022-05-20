@@ -62,6 +62,12 @@ trait IF1Predict { this: IF1Base =>
     Mux( io.bcmm_update.fire, io.bcmm_update.bits.pc, 
       Mux( io.jcmm_update.fire, io.jcmm_update.bits.pc, 0.U ) )
 
+  uBTB.io.update.bits.isTaken := 
+    ( io.jcmm_update.fire ) |
+    ( io.bcmm_update.fire & io.bcmm_update.bits.isFinalTaken )
+
+  uBTB.io.if4Redirect := io.if4Redirect
+
 }
 
 
@@ -71,7 +77,7 @@ class IF1()(implicit p: Parameters) extends IF1Base with IF1Predict{
 
   when( any_reset ) { pc_qout := "h80000000".U }
   .elsewhen( io.cmmRedirect.fire ) { pc_qout := io.cmmRedirect.bits.pc }
-  .elsewhen( io.if4Redirect.fire ) { pc_qout := io.if4Redirect.bits.pc }
+  .elsewhen( io.if4Redirect.fire ) { pc_qout := io.if4Redirect.bits.target }
   .elsewhen( io.pc_gen.fire ) {
     when( uBTB.io.resp.isRedirect.reduce(_|_) ){
       pc_qout := uBTB.io.resp.target

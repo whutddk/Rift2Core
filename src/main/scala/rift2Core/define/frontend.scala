@@ -51,7 +51,9 @@ class Ghist_reflash_Bundle(implicit p: Parameters) extends IFetchBundle {
 }
 
 class IF4_Redirect_Bundle(implicit p: Parameters) extends IFetchBundle {
-  val pc = UInt(64.W)
+  val target     = UInt(64.W)
+  val pc         = UInt(64.W)
+  val isDisAgree = Bool()
 }
 
 class RASPP_Bundle(implicit p: Parameters) extends IFetchBundle {
@@ -137,6 +139,7 @@ class BTBUpdate_Bundle(implicit p: Parameters) extends BTBResp_Bundle {
 }
 
 class uBTBUpdate_Bundle(implicit p: Parameters) extends BTBUpdate_Bundle {
+  val isTaken = Bool()
 }
 
 class TageTableUpdate_Bundle(implicit p: Parameters) extends IFetchBundle {

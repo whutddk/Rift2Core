@@ -32,11 +32,13 @@ abstract class uBTBBase()(implicit p: Parameters) extends IFetchModule {
     val resp = Output( new uBTBResp_Bundle )
 
     val update = Flipped(Valid(new uBTBUpdate_Bundle))
+    val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
   })
 
 
-  val buff  = RegInit(VecInit(Seq.fill(uBTB_entry)(0.U(64.W))))
-  val tag   = RegInit(VecInit( for( entry <- 0 until uBTB_entry ) yield { ~(entry.U)(uBTB_tag_w.W) } ) )
+  val buff    = RegInit(VecInit( Seq.fill(uBTB_entry)(0.U(64.W))))
+  val tag     = RegInit(VecInit( for( entry <- 0 until uBTB_entry ) yield { ~(entry.U)(uBTB_tag_w.W) } ) )
+  val isValid = RegInit(VecInit( Seq.fill(uBTB_entry)(false.B) ) )
 }
 
 trait uBTBLookup { this: uBTBBase =>
@@ -52,7 +54,7 @@ trait uBTBLookup { this: uBTBBase =>
   for( i <- 6 to 0 by -1 ) {
     when( (7.U - io.req.pc(3,1)) >= i.U ) {
       for ( entry <- 0 until uBTB_entry ) {
-        when( reqTag(i) === tag(entry) ) {
+        when( reqTag(i) === tag(entry) & isValid(entry) ) {
           io.resp.isRedirect(i) := true.B
           io.resp.target := buff(entry)
           for ( j <- i+1 until 8 ) { io.resp.isRedirect(j) := false.B }
@@ -90,23 +92,45 @@ trait uBTBLookup { this: uBTBBase =>
 
 }
 
-trait uBTBUpdate { this: uBTBBase =>
-  val chkTag = io.update.bits.pc(1+uBTB_tag_w-1,1)
-  val isHit = VecInit(tag.map{ x => (x === chkTag) })
-  when( io.update.fire ) { assert( PopCount(isHit) <= 1.U ) }
-  val hitSel = OHToUInt(isHit)
 
-  val entrySel = Mux( isHit.reduce(_|_), hitSel, LFSR( log2Ceil(uBTB_entry), true.B))
+
+trait uBTBFlush { this: uBTBBase => 
+  val flushTag = io.if4Redirect.bits.pc(1+uBTB_tag_w-1,1)
+  val isFlushHit = VecInit(( 0 until uBTB_entry ).map{ i => ((tag(i) === flushTag) & (isValid(i) === true.B)) })
+  val entryFlushSel = OHToUInt(isFlushHit)
+  when( io.if4Redirect.fire & io.if4Redirect.bits.isDisAgree ) {
+    assert( PopCount(isFlushHit) <= 1.U )
+    when( isFlushHit.reduce(_|_) ) {
+      buff(entryFlushSel)    := 0.U
+      tag(entryFlushSel)     := 0.U
+      isValid(entryFlushSel) := false.B        
+    }
+  }
+}
+
+trait uBTBUpdate { this: uBTBBase =>
+  val updateTag = io.update.bits.pc(1+uBTB_tag_w-1,1)
+  val isUpdateHit = VecInit(( 0 until uBTB_entry ).map{ i => ((tag(i) === updateTag) & (isValid(i) === true.B)) })
+  when( io.update.fire ) { assert( PopCount(isUpdateHit) <= 1.U ) }
+  val hitSel = OHToUInt(isUpdateHit)
+  val isFull = isValid.reduce(_&_)
+
+  val entryUpdateSel =
+    Mux( isUpdateHit.reduce(_|_), hitSel,
+      Mux( isFull, LFSR( log2Ceil(uBTB_entry), true.B), isValid.indexWhere((x:Bool) => (x === false.B)) ) )
 
   when( io.update.fire ) {
     when( io.update.bits.pc(3,1) =/= 7.U ) { //never predict at 7.U
-      buff(entrySel)  := io.update.bits.target
-      tag(entrySel)   := io.update.bits.pc(1+uBTB_tag_w-1,1)    
+      when( io.update.bits.isTaken ) {
+        buff(entryUpdateSel)  := io.update.bits.target
+        tag(entryUpdateSel)   := io.update.bits.pc(1+uBTB_tag_w-1,1)
+        isValid(entryUpdateSel) := true.B        
+      }
+
     }
-
   }
-
 }
 
-class uBTB()(implicit p: Parameters) extends uBTBBase with uBTBLookup with uBTBUpdate{
+
+class uBTB()(implicit p: Parameters) extends uBTBBase with uBTBLookup with uBTBFlush with uBTBUpdate {
 }
