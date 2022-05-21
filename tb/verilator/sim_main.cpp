@@ -30,7 +30,12 @@
 #include "verilated_vcd_c.h"
 #endif
 
+
 char* img;
+VSimTop *top;
+#if VM_TRACE
+VerilatedVcdC* tfp;
+#endif
 vluint64_t main_time = 0;
 
 double sc_time_stamp () {
@@ -41,11 +46,15 @@ double sc_time_stamp () {
 uint8_t flag_waveEnable = 0;
 uint8_t flag_diffEnable = 0;
 uint8_t flag_limitEnable = 0;
+uint8_t flag_perform = 0;
 
 int prase_arg(int argc, char **argv) {
 	int opt;
-	while( -1 != ( opt = getopt( argc, argv, "ldwf:" ) ) ) {
+	while( -1 != ( opt = getopt( argc, argv, "pjldwf:" ) ) ) {
 		switch(opt) {
+			case 'p':
+			flag_perform = 1;
+			break;
 			case 'l':
 			flag_limitEnable = 1;
 			break;
@@ -61,8 +70,10 @@ int prase_arg(int argc, char **argv) {
 				// std::cout << "load in image is " << img << std::endl;
 				break;
 			case '?':
+				std::cout << "-p to enable performmace logger" << std::endl;
 				std::cout << "-w to enable waveform" << std::endl;
 				std::cout << "-f FILENAME to testfile" << std::endl;
+				std::cout << "-j to enable jtag mode" << std::endl;
 				return -1;
 				break;
 			default:
@@ -73,8 +84,17 @@ int prase_arg(int argc, char **argv) {
 	return 0;
 }
 
+static void sim_exit(){
+#if VM_TRACE
+	if ( flag_waveEnable ) { tfp->close(); }
+#endif
 
+	top->final();
 
+	if ( flag_diffEnable ) { dromajo_deinit(); }
+
+	delete top;
+}
 
 
 
@@ -95,8 +115,6 @@ int main(int argc, char **argv, char **env) {
 		}		
 	}
 
-
-	
 	char * temp[2];
 	char cmd[64] = "+";
 	strcat(cmd, img);
@@ -104,12 +122,14 @@ int main(int argc, char **argv, char **env) {
 	temp[0] = "Verilated";
 	temp[1] = cmd;
 	char **argv_temp = temp;
-	Verilated::commandArgs(2, argv_temp);
+	Verilated::commandArgs(2, argv_temp);		
 
-	VSimTop *top = new VSimTop();
+
+
+	top = new VSimTop();
 
 #if VM_TRACE
-	VerilatedVcdC* tfp = new VerilatedVcdC;;
+	tfp = new VerilatedVcdC;;
 	if (flag_waveEnable) {
 		Verilated::traceEverOn(true);
 		top->trace(tfp, 99); // Trace 99 levels of hierarchy
@@ -142,19 +162,21 @@ int main(int argc, char **argv, char **env) {
 				if ( flag_chk ) {
 					if ( -1 == diff_chk_reg(top) ) {
 						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-						break;
+						sim_exit();
+						return -1;
 					}
 					flag_chk = 0;
 				}
 			}
 
-			if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
+			if ( top->trace_comfirm_0 && (top->trace_comfirm_1 || top->trace_abort_1) ) {
 				// printf("real pc = %lx, real t0 = %lx\n", top->trace_pc_1, top->trace_abi_t0);
 
 				if ( flag_diffEnable ) {
 					if ( -1 == diff_chk_pc(top) ) {
 						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-						break;
+						sim_exit();
+						return -1;
 					}
 
 					dromajo_step();
@@ -168,25 +190,17 @@ int main(int argc, char **argv, char **env) {
 				if ( flag_diffEnable ) {
 					if ( -1 == diff_chk_pc(top) ) {
 						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-						break;
+						sim_exit();
+						return -1;
 					}
 
 					dromajo_step();
 					flag_chk = 1;					
 				}
 
-			} else {
-				;
-			}
+			} else { ; }
 
 		} 
-
-
-
-
-
-
-
 
 		top->eval();
 
@@ -200,40 +214,43 @@ int main(int argc, char **argv, char **env) {
 		if ( flag_limitEnable ) {
 			if ( main_time > 5000000 ){
 				std::cout << "Timeout!!!!!" << std::endl;	
-				break;
+				sim_exit();
+				return -1;
 			} 			
 		}
 
 		if ( top -> fail == 1 && main_time % 100 == 0 ) {
 			std::cout << "Fail!!!!!!" << std::endl;	
-			break;			
+			sim_exit();
+			return -1;
 		}
 		else if ( top -> success == 1 && main_time % 100 == 0 ) {
-			std::cout << "Pass!" << std::endl;	
-			break;			
+			std::cout << "Pass!" << std::endl;
+			if ( flag_perform ) {
+				std::cout << "Simulation-Cycle(not equal to cpu-cycle) is:" << top ->trace_mcycle << std::endl;
+				std::cout << "Retired-instruction is: " << top -> trace_minstret << std::endl;
+
+				std::cout << "Branch:" << std::endl;				
+				std::cout << "Branch-instruction is: " << top -> trace_scsBPredict + top -> trace_misBPredict << std::endl;
+				std::cout << top -> trace_scsBPredict << " (" << (float)(top -> trace_scsBPredict) / (top -> trace_scsBPredict + top -> trace_misBPredict) * 100. << "%) success" << std::endl;
+				std::cout << top -> trace_misBPredict << " (" << (float)(top -> trace_misBPredict) / (top -> trace_scsBPredict + top -> trace_misBPredict) * 100. << "%) failed"  << std::endl;
+
+				std::cout << "Jalr:" << std::endl;
+				std::cout << "Jalr-instruction is: "   << top -> trace_scsJPredict + top -> trace_misJPredict << std::endl;
+				std::cout << top -> trace_scsJPredict << " (" << (float)(top -> trace_scsJPredict) / (top -> trace_scsJPredict + top -> trace_misJPredict) * 100. << "%) success" << std::endl;
+				std::cout << top -> trace_misJPredict << " (" << (float)(top -> trace_misJPredict) / (top -> trace_scsJPredict + top -> trace_misJPredict) * 100. << "%) failed"  << std::endl;
+			}
+			sim_exit();
+			return 0;			
 		} 
 
 
 		main_time ++;
 	}
-#if VM_TRACE
-	if ( flag_waveEnable ) {
-		tfp->close();		
-	}
 
-#endif
-	top->final();
-
-	if ( flag_diffEnable ) {
-		dromajo_deinit();		
-	}
-
-
-	delete top;
 	
+	sim_exit();
 	return 0;
-
-
 
 
 }

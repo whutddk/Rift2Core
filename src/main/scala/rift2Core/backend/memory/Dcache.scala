@@ -33,16 +33,16 @@ trait HasDcacheParameters extends HasL1CacheParameters {
   def cb = dcacheParams.cb
   def cl = dcacheParams.cl
   def aw = dcacheParams.aw
-  def nm = 8
 
-  def addr_lsb = log2Ceil(dw*bk/8)
+  def addr_lsb = log2Ceil(dw/8)
+  def bk_w = log2Ceil(bk)
   def line_w   = log2Ceil(cl)
   def cb_w = log2Ceil(cb)
-  def nm_w = log2Ceil(nm)
 
-  def tag_w    = aw - addr_lsb - line_w - nm_w
 
-  require( (addr_lsb + line_w) == 12 )
+  def tag_w    = aw - addr_lsb - line_w - bk_w
+
+  // require( (addr_lsb + line_w) == 12 )
   
 }
 
@@ -75,15 +75,14 @@ class Cache_op extends Lsu_isa {
 
 trait Info_cache_raw extends DcacheBundle {
   val paddr = UInt(64.W)
-  val wdata  = Vec(bk,UInt(64.W))
-  val wstrb  = UInt(8.W)
+  val wdata  = UInt(dw.W)
+  val wstrb  = UInt((dw/8).W)
 
   val fun    = new Cache_op
   val rd = new Register_dstntn(64)
 
   def tag_sel = paddr(31,32-tag_w)
-  def bk_sel  = paddr(addr_lsb-1, addr_lsb-log2Ceil(bk) )
-  def cl_sel  = paddr(addr_lsb+line_w-1, addr_lsb)
+  def cl_sel  = paddr(addr_lsb+bk_w + line_w-1, addr_lsb+bk_w)
 
 
   def wmask = Strb2Mask(wstrb)
@@ -92,7 +91,7 @@ trait Info_cache_raw extends DcacheBundle {
 
 
 trait Info_tag_dat extends DcacheBundle {
-  val rdata = Vec(cb, Vec(bk, UInt(64.W)))
+  val rdata = Vec(cb,  UInt(dw.W))
   val tag   = Vec(cb, UInt(tag_w.W))
 }
 
@@ -115,7 +114,6 @@ class Info_cache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc_
   def is_iwb = ~is_fwb
   def is_fwb = is_flw | is_fld
 
-  // val paddr = UInt(64.W)
 }
 
 
@@ -131,8 +129,8 @@ class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
     // val overlap_paddr = Output(UInt(64.W))
 
     val dat_addr_r = Output(UInt(aw.W))
-    val dat_en_r   = Output( Vec(cb, Vec(bk, Bool()) ))
-    val dat_info_r = Input( Vec(cb, Vec(bk, UInt(dw.W)) ))
+    val dat_en_r   = Output( Vec(cb,  Bool()) )
+    val dat_info_r = Input( Vec(cb, UInt(dw.W)) )
 
     val tag_addr_r = Output(UInt(aw.W))
     val tag_en_r   = Output( Vec(cb, Bool()) )	
@@ -140,7 +138,6 @@ class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
   })
 
 
-  val bk_sel = io.rd_in.bits.bk_sel
   val info_bypass_fifo = Module(new Queue(new Info_cache_s0s1, 1, true, false))
 
   // io.overlap_paddr := io.rd_in.bits.paddr
@@ -154,21 +151,21 @@ class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
 
 
 
-  for ( i <- 0 until cb; j <- 0 until bk ) yield {
-    io.dat_en_r(i)(j) := 
+  for ( i <- 0 until cb ) yield {
+    io.dat_en_r(i) := 
       info_bypass_fifo.io.enq.fire &
       io.rd_in.bits.fun.is_dat_r & (
         (io.rd_in.bits.fun.probe) |
         (io.rd_in.bits.fun.grant) |
-        (io.rd_in.bits.fun.is_access & j.U === bk_sel)
+        (io.rd_in.bits.fun.is_access )
       )
   }
 
 
   io.rd_out.valid := RegNext(io.rd_in.valid, false.B)
 
-  for( i <- 0 until cb; j <- 0 until bk ) yield { io.rd_out.bits.rdata(i)(j) := io.dat_info_r(i)(j) } 
-  for( i <- 0 until cb )                  yield { io.rd_out.bits.tag(i)      := io.tag_info_r(i) }
+  for( i <- 0 until cb ) yield { io.rd_out.bits.rdata(i) := io.dat_info_r(i) } 
+  for( i <- 0 until cb ) yield { io.rd_out.bits.tag(i)   := io.tag_info_r(i) }
 
   
 
@@ -196,9 +193,9 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val tag_en_w = Output( Vec(cb, Bool()) )
 
     val dat_addr_w = Output(UInt(aw.W))
-    val dat_en_w = Output( Vec(cb, Vec(bk, Bool()) ))
-    val dat_info_wstrb = Output( Vec(bk, UInt((dw/8).W)) )
-    val dat_info_w = Output( Vec(bk, UInt(dw.W)))
+    val dat_en_w = Output( Vec(cb, Bool()) )
+    val dat_info_wstrb = Output( UInt((dw/8).W))
+    val dat_info_w = Output( UInt(dw.W))
 
     val missUnit_req = new DecoupledIO(new Info_miss_req)
     val wb_req = DecoupledIO(new Info_writeBack_req)
@@ -210,7 +207,6 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     val flush = Input(Bool())
   })
 
-  val bk_sel = io.wr_in.bits.bk_sel
   val cl_sel = io.wr_in.bits.cl_sel
   val tag_sel = io.wr_in.bits.tag_sel
 
@@ -277,8 +273,8 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
   io.dat_addr_w := io.wr_in.bits.paddr
 
-  for ( i <- 0 until cb; j <- 0 until bk ) yield {
-    io.dat_en_w(i)(j) :=
+  for ( i <- 0 until cb ) yield {
+    io.dat_en_w(i) :=
       io.wr_in.fire &
       i.U === cb_sel &
       io.wr_in.bits.fun.is_dat_w & (
@@ -286,50 +282,56 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
           io.wr_in.bits.fun.grant
         ) |
         (
-          io.wr_in.bits.fun.is_access & j.U === bk_sel & is_hit &
+          io.wr_in.bits.fun.is_access & is_hit &
           Mux( io.wr_in.bits.fun.is_sc, ~is_sc_fail, true.B)
         )
       )
   }
 
-  for ( j <- 0 until bk ) yield {
-    io.dat_info_wstrb(j) :=
-      Mux1H(Seq(
-        (io.wr_in.bits.fun.grant) -> "hFF".U,
-        (io.wr_in.bits.fun.is_access) -> io.wr_in.bits.wstrb
-      ))    
-  }
 
-  for ( j <- 0 until bk ) yield {
+  io.dat_info_wstrb :=
+    Mux1H(Seq(
+      (io.wr_in.bits.fun.grant) -> Fill(dw/8, 1.U),
+      (io.wr_in.bits.fun.is_access) -> io.wr_in.bits.wstrb
+    ))    
+
+
+  {
     val fun = io.wr_in.bits.fun
 
 
     val high_sel  = io.wr_in.bits.paddr(2) === 1.U
-    val cmp_a_sel = Mux(high_sel, io.wr_in.bits.wdata(bk_sel)(63,32), io.wr_in.bits.wdata(bk_sel)(31,0))
-    val cmp_b_sel = Mux(high_sel, io.wr_in.bits.rdata(cb_sel)(bk_sel)(63,32), io.wr_in.bits.rdata(cb_sel)(bk_sel)(31,0))
+    val amo_reAlign_64_a = Wire(UInt(64.W))
+    val amo_reAlign_64_b = Wire(UInt(64.W))
+
+    amo_reAlign_64_a := reAlign_data( from = 256, to = 64, io.wr_in.bits.wdata, io.wr_in.bits.paddr )
+    amo_reAlign_64_b := reAlign_data( from = 256, to = 64, io.wr_in.bits.rdata(cb_sel), io.wr_in.bits.paddr )
+
+    val cmp_a_sel = Mux(high_sel, amo_reAlign_64_a(63,32), amo_reAlign_64_a(31,0))
+    val cmp_b_sel = Mux(high_sel, amo_reAlign_64_b(63,32), amo_reAlign_64_b(31,0))
      
     
-    io.dat_info_w(j) := 
+    io.dat_info_w := 
       Mux1H(Seq(
-        fun.grant -> io.wr_in.bits.wdata(j),
-        fun.is_su -> io.wr_in.bits.wdata(bk_sel),
-        fun.is_sc -> io.wr_in.bits.wdata(bk_sel),
-        (fun.amoswap_w | fun.amoswap_d) -> io.wr_in.bits.wdata(bk_sel),
-        (fun.amoadd_w  | fun.amoadd_d ) -> (io.wr_in.bits.wdata(bk_sel) + io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (fun.amoxor_w  | fun.amoxor_d ) -> (io.wr_in.bits.wdata(bk_sel) ^ io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (fun.amoand_w  | fun.amoand_d ) -> (io.wr_in.bits.wdata(bk_sel) & io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (fun.amoor_w   | fun.amoor_d  ) -> (io.wr_in.bits.wdata(bk_sel) | io.wr_in.bits.rdata(cb_sel)(bk_sel)),
+        fun.grant -> io.wr_in.bits.wdata,
+        fun.is_su -> io.wr_in.bits.wdata,
+        fun.is_sc -> io.wr_in.bits.wdata,
+        (fun.amoswap_w | fun.amoswap_d) -> reAlign_data( from = 64, to = 256,  amo_reAlign_64_a, io.wr_in.bits.paddr ),
+        (fun.amoadd_w                 ) -> reAlign_data( from = 64, to = 256, ( Mux(high_sel, amo_reAlign_64_a >> 32 << 32, amo_reAlign_64_a) + amo_reAlign_64_b), io.wr_in.bits.paddr ), //when sel msb-32, set one of op's lsb-32 to zore to prevent carry-in
+        (fun.amoadd_d                 ) -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a + amo_reAlign_64_b), io.wr_in.bits.paddr ),
+        (fun.amoxor_w  | fun.amoxor_d ) -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a ^ amo_reAlign_64_b), io.wr_in.bits.paddr ),
+        (fun.amoand_w  | fun.amoand_d ) -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a & amo_reAlign_64_b), io.wr_in.bits.paddr ),
+        (fun.amoor_w   | fun.amoor_d  ) -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a | amo_reAlign_64_b), io.wr_in.bits.paddr ),
 
 
-
-        (fun.amomin_w ) -> Mux(cmp_a_sel.asSInt                   < cmp_b_sel.asSInt,                           io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (fun.amomin_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (fun.amomax_w ) -> Mux(cmp_a_sel.asSInt                   < cmp_b_sel.asSInt,                           io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
-        (fun.amomax_d ) -> Mux(io.wr_in.bits.wdata(bk_sel).asSInt < io.wr_in.bits.rdata(cb_sel)(bk_sel).asSInt, io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
-        (fun.amominu_w) -> Mux(cmp_a_sel                          < cmp_b_sel,                                  io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (fun.amominu_d) -> Mux(io.wr_in.bits.wdata(bk_sel)        < io.wr_in.bits.rdata(cb_sel)(bk_sel),        io.wr_in.bits.wdata(bk_sel), io.wr_in.bits.rdata(cb_sel)(bk_sel)),
-        (fun.amomaxu_w) -> Mux(cmp_a_sel                          < cmp_b_sel,                                  io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
-        (fun.amomaxu_d) -> Mux(io.wr_in.bits.wdata(bk_sel)        < io.wr_in.bits.rdata(cb_sel)(bk_sel),        io.wr_in.bits.rdata(cb_sel)(bk_sel), io.wr_in.bits.wdata(bk_sel)),
+        (fun.amomin_w ) -> reAlign_data( from = 64, to = 256, Mux(cmp_a_sel.asSInt        < cmp_b_sel.asSInt,        amo_reAlign_64_a, amo_reAlign_64_b), io.wr_in.bits.paddr),
+        (fun.amomin_d ) -> reAlign_data( from = 64, to = 256, Mux(amo_reAlign_64_a.asSInt < amo_reAlign_64_b.asSInt, amo_reAlign_64_a, amo_reAlign_64_b), io.wr_in.bits.paddr),
+        (fun.amomax_w ) -> reAlign_data( from = 64, to = 256, Mux(cmp_a_sel.asSInt        < cmp_b_sel.asSInt,        amo_reAlign_64_b, amo_reAlign_64_a), io.wr_in.bits.paddr),
+        (fun.amomax_d ) -> reAlign_data( from = 64, to = 256, Mux(amo_reAlign_64_a.asSInt < amo_reAlign_64_b.asSInt, amo_reAlign_64_b, amo_reAlign_64_a), io.wr_in.bits.paddr),
+        (fun.amominu_w) -> reAlign_data( from = 64, to = 256, Mux(cmp_a_sel               < cmp_b_sel,               amo_reAlign_64_a, amo_reAlign_64_b), io.wr_in.bits.paddr),
+        (fun.amominu_d) -> reAlign_data( from = 64, to = 256, Mux(amo_reAlign_64_a        < amo_reAlign_64_b,        amo_reAlign_64_a, amo_reAlign_64_b), io.wr_in.bits.paddr),
+        (fun.amomaxu_w) -> reAlign_data( from = 64, to = 256, Mux(cmp_a_sel               < cmp_b_sel,               amo_reAlign_64_b, amo_reAlign_64_a), io.wr_in.bits.paddr),
+        (fun.amomaxu_d) -> reAlign_data( from = 64, to = 256, Mux(amo_reAlign_64_a        < amo_reAlign_64_b,        amo_reAlign_64_b, amo_reAlign_64_a), io.wr_in.bits.paddr),
               
       ))
 
@@ -391,10 +393,10 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     Mux( io.pb_req.valid, (io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)), 0.U )
 
   io.wb_req.bits.data := 
-    Mux( io.wb_req.valid, Cat( for( j <- 0 until bk ) yield { io.wr_in.bits.rdata(cb_sel)(bk-1-j) } ), 0.U )
+    Mux( io.wb_req.valid, io.wr_in.bits.rdata(cb_sel), 0.U )
 
   io.pb_req.bits.data :=
-    Mux( io.pb_req.valid, Cat( for( j <- 0 until bk ) yield { io.wr_in.bits.rdata(cb_sel)(bk-1-j) } ), 0.U )
+    Mux( io.pb_req.valid, io.wr_in.bits.rdata(cb_sel), 0.U )
 
   io.wb_req.bits.is_releaseData :=
     Mux( io.wb_req.valid, io.wr_in.bits.fun.grant & is_dirty(cl_sel)(cb_sel), 0.U )
@@ -425,7 +427,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
     Mux( io.reload.valid, io.wr_in.bits.wstrb, 0.U )
     
   io.reload.bits.wdata :=
-    Mux( io.reload.valid, io.wr_in.bits.wdata, VecInit(Seq.fill(bk)(0.U(64.W)) ) )
+    Mux( io.reload.valid, io.wr_in.bits.wdata, 0.U )
 
   io.reload.bits.fun :=
     Mux( io.reload.valid, io.wr_in.bits.fun, 0.U.asTypeOf(new Cache_op) )
@@ -438,19 +440,22 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
   io.deq.valid := io.wr_in.valid & io.wr_in.bits.fun.is_access & is_hit
   io.deq.bits.wb.res := {
-    val rdata = io.wr_in.bits.rdata(cb_sel)(bk_sel)
+    val rdata = io.wr_in.bits.rdata(cb_sel)  //align 256
     val paddr = io.wr_in.bits.paddr
     val fun = io.wr_in.bits.fun
-    val overlap_wdata = io.wr_in.bits.wdata(0)
+    val overlap_wdata = io.wr_in.bits.wdata
     val overlap_wstrb = io.wr_in.bits.wstrb
     
     val res_pre_pre = {
-
-      val (new_data, new_strb) = overlap_wr( rdata, 0.U, overlap_wdata, overlap_wstrb)
+      val res = Wire( UInt(64.W) )
+      val (new_data, new_strb) = overlap_wr( rdata, 0.U(32.W), overlap_wdata, overlap_wstrb)
       
-      Mux( io.wr_in.bits.fun.is_lu, new_data, rdata)
+      val overlap_data = Mux( io.wr_in.bits.fun.is_lu, new_data, rdata) //align 256
+
+      res := reAlign_data( from = 256, to = 64, overlap_data, paddr )
+      res
     }
-    val res_pre = get_loadRes( fun, paddr, res_pre_pre )
+    val res_pre = get_loadRes( fun, paddr, res_pre_pre ) //align 8
 
     val res = Mux(
       io.wr_in.bits.fun.is_sc,
@@ -507,13 +512,12 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
 
 }
 
-class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
+class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
     val deq = new DecoupledIO(new Info_cache_retn)
     val is_empty = Output(Bool())
 
-    // val overlap = new Info_overlap
 
     val flush = Input(Bool())
 
@@ -527,11 +531,11 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
     val writeBackUnit_dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
   })
 
-  val cache_dat = new Cache_dat( dw, aw, bk, cb, cl )
-  val cache_tag = new Cache_tag( dw, aw, bk, cb, cl, nm = 8 ) 
-  val missUnit = Module(new MissUnit(edge = edge, entry = 8, setting = 2))
-  val probeUnit = Module(new ProbeUnit(edge = edge))
-  val writeBackUnit = Module(new WriteBackUnit(edge = edge, setting = 2))
+  val cache_dat = new Cache_dat( dw, aw, cb, cl, bk = bk )
+  val cache_tag = new Cache_tag( dw, aw, cb, cl, bk = bk ) 
+  val missUnit = Module(new MissUnit(edge = edge, entry = 8, setting = 2, id = id))
+  val probeUnit = Module(new ProbeUnit(edge = edge, id = id))
+  val writeBackUnit = Module(new WriteBackUnit(edge = edge, setting = 2, id = id))
 
   val lsEntry = Module(new Queue(new Info_cache_s0s1, 16))
   val rd_stage = Module(new L1d_rd_stage())
@@ -565,9 +569,6 @@ class Dcache(edge: TLEdgeOut)(implicit p: Parameters) extends DcacheModule {
   wr_stage.io.missUnit_req      <> missUnit.io.req
   wr_stage.io.wb_req <> writeBackUnit.io.wb_req
   wr_stage.io.pb_req <> writeBackUnit.io.pb_req
-  // wr_stage.io.overlap <> io.overlap
-  // wr_stage.io.overlap_wdata := io.overlap.wdata
-  // wr_stage.io.overlap_wstrb := io.overlap.wstrb
   wr_stage.io.flush := io.flush
 
   missUnit.io.miss_ban := writeBackUnit.io.miss_ban

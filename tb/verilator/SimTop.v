@@ -133,6 +133,7 @@ module SimTop (
   output trace_comfirm_0,
   output trace_comfirm_1,
   output trace_abort_0,
+  output trace_abort_1,
   output [1:0] trace_priv,
 
 	output [63:0] trace_mstatus,
@@ -192,6 +193,12 @@ module SimTop (
   output [31:0] trace_fflags,
   output [7:0] trace_frm,
 
+  output [63:0] trace_mcycle,
+  output [63:0] trace_minstret,
+  output [63:0] trace_scsBPredict,
+  output [63:0] trace_misBPredict,
+  output [63:0] trace_scsJPredict,
+  output [63:0] trace_misJPredict,
 	input CLK,
 
 	input RSTn
@@ -199,6 +206,13 @@ module SimTop (
 );
 
 	reg rtc_clock;
+
+  wire         trstn = 1'b1;
+  wire         tck = 1'b0;
+  wire         tms = 1'b0;
+  wire         tdi = 1'b0;
+  wire         tdo;
+  wire         tdo_en;
 
 
 	wire         io_mem_chn_ar_ready;
@@ -279,6 +293,8 @@ wire [3:0] io_mem_chn_ar_bits_id;
 wire [3:0] io_mem_chn_r_bits_id;
 wire [3:0] io_mem_chn_aw_bits_id;
 wire [3:0] io_mem_chn_b_bits_id;
+
+
 
 Rift2Chip s_Rift2Chip(
 	.clock(CLK),
@@ -363,6 +379,13 @@ Rift2Chip s_Rift2Chip(
   .memory_0_r_bits_resp(io_mem_chn_r_bits_rsp),
   .memory_0_r_bits_last(io_mem_chn_r_bits_last),
 
+  .io_JtagIO_TRSTn(trstn),
+  .io_JtagIO_TCK(tck),
+  .io_JtagIO_TMS(tms),
+  .io_JtagIO_TDI(tdi),
+  .io_JtagIO_TDO(tdo),
+  .io_JtagIO_TDO_driven(tdo_en),
+  .io_ndreset(),
 
 	.io_rtc_clock            (rtc_clock)
 );
@@ -413,10 +436,10 @@ axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram
 	.RSTn       (RSTn)
 );
 
-
+wire debugger_success;
 
 debuger i_debuger(
-
+  .success(debugger_success),
 	.DEBUGER_AWID   (io_sys_chn_aw_bits_id),
 	.DEBUGER_BID    (io_sys_chn_b_bits_id),
 	.DEBUGER_ARID   (io_sys_chn_ar_bits_id),
@@ -465,11 +488,21 @@ wire [63:0] gp  = s_Rift2Chip.i_rift2Core.diff.XReg_gp;
 reg success_reg = 1'b0;
 reg fail_reg = 1'b0;
 
-assign success = success_reg;
+assign success = success_reg | debugger_success;
 assign fail = fail_reg;
 
+reg is_ecall_U_reg = 1'b0;
+reg is_ecall_M_reg = 1'b0;
+reg is_ecall_S_reg = 1'b0;
+
+always @(posedge CLK) begin
+  is_ecall_U_reg <= is_ecall_U;
+  is_ecall_M_reg <= is_ecall_M;
+  is_ecall_S_reg <= is_ecall_S;
+end
+
 always @(negedge CLK ) begin
-	if ( is_ecall_U | is_ecall_M | is_ecall_S ) begin
+	if ( is_ecall_U_reg | is_ecall_M_reg | is_ecall_S_reg ) begin
 		if ( gp == 64'd1 ) begin
 			// $display("PASS");
 			success_reg = 1'b1;
@@ -633,6 +666,7 @@ end
   assign trace_comfirm_0 = s_Rift2Chip.i_rift2Core.diff.io_commit_comfirm_0;
   assign trace_comfirm_1 = s_Rift2Chip.i_rift2Core.diff.io_commit_comfirm_1;
   assign trace_abort_0 = s_Rift2Chip.i_rift2Core.diff.io_commit_abort_0;
+  assign trace_abort_1 = s_Rift2Chip.i_rift2Core.diff.io_commit_abort_1;
 
   assign trace_priv = s_Rift2Chip.i_rift2Core.diff.io_commit_priv_lvl;
 
@@ -695,8 +729,14 @@ end
 	// assign trace_dscratch   = s_Rift2Chip.i_rift2Core.diff.io_csr_dscratch;
 
 	assign trace_fflags    = s_Rift2Chip.i_rift2Core.diff.io_csr_fflags;
-	assign trace_frm     = s_Rift2Chip.i_rift2Core.diff.io_csr_frm;
+	assign trace_frm       = s_Rift2Chip.i_rift2Core.diff.io_csr_frm;
 
+  assign trace_mcycle     = s_Rift2Chip.i_rift2Core.diff.io_csr_mcycle;
+  assign trace_minstret   = s_Rift2Chip.i_rift2Core.diff.io_csr_minstret;
+  assign trace_scsBPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_3;
+  assign trace_misBPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_4;
+  assign trace_scsJPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_5;
+  assign trace_misJPredict = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmcounter_6;
 
 
 endmodule

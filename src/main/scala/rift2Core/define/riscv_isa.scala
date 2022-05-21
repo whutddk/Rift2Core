@@ -654,6 +654,38 @@ class Lsu_iss_info extends Bundle {
       fun.is_word -> (param.dat.op1(1,0) =/= 0.U),
       fun.is_dubl -> (param.dat.op1(2,0) =/= 0.U)	
     ))
+
+  def paddr = param.dat.op1
+
+  def wdata_align64 = {
+      val res = Wire(UInt(64.W))
+      res := param.dat.op2 << ( paddr(2,0) << 3 )
+      res
+    }
+
+  def wstrb_align64 = {
+    val wstrb = Wire(UInt(8.W))
+    wstrb := Mux1H(Seq(
+        fun.is_byte -> "b00000001".U, fun.is_half -> "b00000011".U,
+        fun.is_word -> "b00001111".U, fun.is_dubl -> "b11111111".U
+      )) << paddr(2,0)
+    wstrb
+  }
+
+  def wdata_align256 = {
+      val res = Wire(UInt(256.W))
+      res := param.dat.op2 << ( paddr(4,0) << 3 )
+      res
+    }
+
+  def wstrb_align256 = {
+    val wstrb = Wire(UInt(64.W))
+    wstrb := Mux1H(Seq(
+        fun.is_byte -> "b00000001".U, fun.is_half -> "b00000011".U,
+        fun.is_word -> "b00001111".U, fun.is_dubl -> "b11111111".U
+      )) << paddr(4,0)
+    wstrb
+  }
 }
 
 
@@ -679,6 +711,7 @@ class Info_reorder_i extends Bundle {
   val rd0_phy = UInt(6.W)
 
   val is_branch = Bool()
+  val is_jalr = Bool()
   val is_lu = Bool()
   val is_su = Bool()
   val is_amo = Bool()
@@ -688,6 +721,8 @@ class Info_reorder_i extends Bundle {
   val is_wfi = Bool()
   val is_csr = Bool()
   val is_fpu = Bool()
+  val is_fcsr = Bool()
+  val is_rvc = Bool()
 
   val is_xcmm = Bool()
   val is_fcmm = Bool()
@@ -786,9 +821,7 @@ class Info_clint_csr extends Bundle {
 
 
 
-class Info_cmm_pc extends Bundle {
-  val addr = UInt(64.W)
-}
+
 
 
 
@@ -807,13 +840,28 @@ class Info_lsu_cmm extends Bundle {
   val trap_addr = UInt(64.W)
 }
 
-class Info_overlap extends Bundle{
-  val paddr = Output(UInt(64.W))
-  val wdata = Input(UInt(64.W))
-  val wstrb = Input(UInt(8.W))
-
+class Stq_req_Bundle extends Bundle {
+  val paddr = UInt(64.W)
 }
 
+class Stq_resp_Bundle extends Bundle {
+  val wdata = UInt(64.W)
+  val wstrb = UInt(8.W)
+}
 
+// class Info_overlap extends Bundle{
+//   val paddr = Output(UInt(64.W))
+//   val wdata = Input(UInt(64.W))
+//   val wstrb = Input(UInt(8.W))
+
+// }
+
+class Commit_Redirect_Bundle extends Bundle{
+  val pc = UInt(64.W)
+}
+
+class PreFetch_Req_Bundle extends Bundle {
+  val paddr = UInt(64.W)
+}
 
 

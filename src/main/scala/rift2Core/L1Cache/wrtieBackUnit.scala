@@ -22,7 +22,7 @@ class Info_writeBack_req extends Bundle {
 /**
   * a writeBack Unit accept data and paddr from l1cache and write it back to l2cache
   */
-class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
+class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int) extends Module {
   val io = IO(new Bundle {
     val wb_req = Flipped(new DecoupledIO(new Info_writeBack_req))
     val pb_req = Flipped(new DecoupledIO(new Info_writeBack_req))
@@ -101,14 +101,14 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
     }
 
     val info_probe = edge.ProbeAck(
-      fromSource = 0.U,
+      fromSource = id.U,
       toAddress = op_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       reportPermissions = permit,    
     )
 
     val info_probeData = edge.ProbeAck(
-      fromSource = 0.U,
+      fromSource = id.U,
       toAddress = op_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       reportPermissions = permit,
@@ -116,14 +116,14 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
     )
 
     val info_release = edge.Release(
-      fromSource = 0.U,
+      fromSource = id.U,
       toAddress = op_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = permit
     )._2
 
     val info_releaseData = edge.Release(
-      fromSource = 0.U,
+      fromSource = id.U,
       toAddress = op_fifo.io.deq.bits.addr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = permit,
@@ -146,7 +146,7 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int) extends Module {
     cache_grant_ready := false.B
     assert( wb_state_qout === 2.U )   
   }
-
+  assert( ~(io.cache_grant.fire & io.cache_grant.bits.source =/= id.U), "Assert Failed at writeBack-Unit, grant-id mis-match" )
   op_fifo.io.deq.ready := 
     wb_state_qout =/= 0.U & wb_state_dnxt === 0.U
 

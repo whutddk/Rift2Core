@@ -41,7 +41,7 @@ class Info_ptw_rsp extends Bundle with Info_access_lvl{
 /** 
   * page table walker
   */ 
-class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
+class PTW(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val ptw_i = Flipped(DecoupledIO(new Info_mmu_req))
     val ptw_o = DecoupledIO(new Info_ptw_rsp)
@@ -104,10 +104,8 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
         ))
       )
 
-    def bk_sel_dnxt = addr_dnxt(4,3)
-    def bk_sel_qout = addr_qout(4,3)
-    def cl_sel = addr_qout(11,5)
-    def tag_sel = addr_qout(55,12)
+    val cl_sel = addr_qout(11,5)
+    val tag_sel = addr_qout(55,12)
 
     is_ptw_end := 
       pte.R === true.B & 
@@ -147,8 +145,8 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   }
   val walk = new WALK
 
-  val cache_dat = new Cache_dat( 64, 56, 4, 1, 128 )
-  val cache_tag = new Cache_tag( 64, 56, 4, 1, 128, nm = 1 ){ require ( tag_w == 44 ) }
+  val cache_dat = new Cache_dat( 256, 56, 1, 128, bk = 1 )
+  val cache_tag = new Cache_tag( 256, 56, 1, 128, bk = 1 ){ require ( tag_w == 44 ) }
   val is_cache_valid = RegInit( VecInit( Seq.fill(128)(false.B) ) )
 
   val (_, _, is_trans_done, transCnt) = edge.count(io.ptw_access)
@@ -173,22 +171,18 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   for( i <- 0 until 1 ) yield {
     val rd_enable = 
-      // (fsm.state_qout === state.free & fsm.state_dnxt === state.lvl2) |
-      // (fsm.state_qout === state.lvl2 & fsm.state_dnxt === state.lvl1) |
       (fsm.state_qout === state.lvl1 & fsm.state_dnxt === state.lvl0)
 
     val wr_enable = 
-      // (fsm.state_qout === state.lvl2 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
-      // (fsm.state_qout === state.lvl1 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma) |
       (fsm.state_qout === state.lvl0 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
 
     cache_tag.tag_en_w(i) := wr_enable
     cache_tag.tag_en_r(i) := rd_enable
 
-    for ( j <- 0 until 4 ) yield {
-      cache_dat.dat_en_r(i)(j) := rd_enable & (j.U === walk.bk_sel_dnxt)
-      cache_dat.dat_en_w(i)(j) := wr_enable
-    }
+
+    cache_dat.dat_en_r(i) := rd_enable
+    cache_dat.dat_en_w(i) := wr_enable
+
 
     when( wr_enable ) {
       is_cache_valid(walk.cl_sel) := true.B
@@ -197,37 +191,47 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     }
   }
 
-  for ( j <- 0 until 4 ) yield {
-    cache_dat.dat_info_wstrb(j) := "hFF".U
-  }
 
-  cache_dat.dat_info_w(0) := ptw_access_data_lo(63,0)
-  cache_dat.dat_info_w(1) := ptw_access_data_lo(127,64)
-  cache_dat.dat_info_w(2) := io.ptw_access.bits.data(63,0)
-  cache_dat.dat_info_w(3) := io.ptw_access.bits.data(127,64)
+  cache_dat.dat_info_wstrb := Fill(256/8, 1.U)
+
+
+  cache_dat.dat_info_w := Cat( io.ptw_access.bits.data(127,64), io.ptw_access.bits.data(63,0), ptw_access_data_lo(127,64), ptw_access_data_lo(63,0))
 
   val is_hit = (walk.tag_sel === cache_tag.tag_info_r(0)) & is_cache_valid(walk.cl_sel) & fsm.state_qout === state.lvl0
 
 
   walk.pte.value := {
-    val data =
-      VecInit( 
-        ptw_access_data_lo(63,0),
-        ptw_access_data_lo(127,64),
-        io.ptw_access.bits.data(63,0),
-        io.ptw_access.bits.data(127,64)
-      )
+    val data = WireDefault(0.U(256.W))
+    val data_sel = Wire(UInt(64.W))
+
+    when( is_hit ) {
+      data := cache_dat.dat_info_r(0)
+    } .elsewhen( is_trans_done ) {
+      data := Cat( io.ptw_access.bits.data, ptw_access_data_lo )
+    }
+
+    data_sel := Mux1H(Seq(
+      (walk.addr_qout(4,3) === 0.U ) -> data(63,0),
+      (walk.addr_qout(4,3) === 1.U ) -> data(127,64),
+      (walk.addr_qout(4,3) === 2.U ) -> data(191,128),
+      (walk.addr_qout(4,3) === 3.U ) -> data(255,192),
+    ))
+    
+    
 
     assert( PopCount( Seq(is_hit, is_trans_done) ) <= 1.U )
 
     val value = RegInit(0.U(64.W))
 
-    when( is_hit ) { value := cache_dat.dat_info_r(0)(walk.bk_sel_qout) }
-    .elsewhen( is_trans_done ) { value := data(walk.bk_sel_qout) }
+    when( is_hit ) {
+      value := data_sel
+    } .elsewhen( is_trans_done ) {
+      value := data_sel
+    }
 
     MuxCase(value, Array(
-      is_hit        -> cache_dat.dat_info_r(0)(walk.bk_sel_qout),
-      is_trans_done -> data(walk.bk_sel_qout)
+      is_hit        -> data_sel,
+      is_trans_done -> data_sel
     ))
   }
 
@@ -379,7 +383,7 @@ class PTW(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     ptw_access_ready := false.B
   }
 
-  io.ptw_get.bits := edge.Get(fromSource = 0.U, toAddress = walk.addr_qout & ("hFFFFFFFF".U << 5), lgSize = log2Ceil(256/8).U)._2
+  io.ptw_get.bits := edge.Get(fromSource = id.U, toAddress = walk.addr_qout & ("hFFFFFFFF".U << 5), lgSize = log2Ceil(256/8).U)._2
 
   when( io.ptw_access.fire & ~is_trans_done) {
     ptw_access_data_lo := io.ptw_access.bits.data

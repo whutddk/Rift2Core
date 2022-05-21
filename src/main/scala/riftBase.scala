@@ -8,3 +8,5 @@ import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp, Trans
 
 
 abstract class RiftModule(implicit val p: Parameters) extends Module with HasRiftParameters { def io: Record }
+abstract class RiftBundle(implicit val p: Parameters) extends Bundle with HasRiftParameters
+

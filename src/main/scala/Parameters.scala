@@ -25,43 +25,64 @@ import freechips.rocketchip.tilelink._
 import chipsalliance.rocketchip.config.{Field, Parameters}
 
 import rift2Core.L1Cache._
+import rift2Core.define._
 
 
 
-case object CacheParamsKey extends Field[CacheSetting]
+case object RiftParamsKey extends Field[RiftSetting]
 
-case class CacheSetting(
+
+
+
+case class RiftSetting(
+  rn_chn: Int = 2,
+  cm_chn: Int = 2,
+  ifetchParameters: IFParameters = IFParameters(
+    // GHR_length = 64,
+    // UBTB_entry = 16,
+    // fetch_w   = 64,
+
+    // btb_tag_w = 8,
+    // btb_cb  = 4,
+  uBTB_entry = 16,
+  uBTB_tag_w = 16,
+  btb_cl = 4096,
+  bim_cl = 4096,
+  ras_dp = 256,
+  tage_table = 6, 
+
+
+
+    // tage_tag_w = 8,
+  ),
+
   icacheParameters: L1CacheParameters = IcacheParameters(
-    dw = 128,
-    bk = 2,
+    dw = 256,
+    bk = 1,
     cb = 4,
     cl = 128
   ),
   dcacheParameters: L1CacheParameters = DcacheParameters(
-    dw = 64,
-    bk = 4,
+    dw = 256,
+    bk = 8,
     cb = 8,
     cl = 128
   ),
 ){
-
+  require( log2Ceil( ifetchParameters.uBTB_entry ) <= ifetchParameters.uBTB_tag_w )
 }
 
-trait HasCacheParameters {
+trait HasRiftParameters {
   implicit val p: Parameters
 
-  val cacheSetting = p(CacheParamsKey)
+  val riftSetting = p(RiftParamsKey)
 
-  val icacheParams = cacheSetting.icacheParameters
-  val dcacheParams = cacheSetting.dcacheParameters
+  val ifParams     = riftSetting.ifetchParameters
+  val icacheParams = riftSetting.icacheParameters
+  val dcacheParams = riftSetting.dcacheParameters
 
+  def cm_chn = riftSetting.cm_chn
+  def rn_chn = riftSetting.rn_chn
 }
 
-trait HasBackEndParameters {
-  
-}
 
-
-
-
-trait HasRiftParameters extends HasCacheParameters with HasBackEndParameters

@@ -99,12 +99,12 @@ class OpMux extends Module {
 
 class regionMux(implicit p: Parameters) extends DcacheModule{
   val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
-    val deq = Vec(3, new DecoupledIO(new Info_cache_s0s1))
+    val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
+    val deq = Vec(3, new DecoupledIO(new Lsu_iss_info))
   })
 
-  val psel = io.enq.bits.paddr(31,28)
-  val sel = Mux( psel(3), 0.U, Mux( psel(2), 1.U, Mux( psel(1), 2.U, 3.U) ) )
+  val psel = io.enq.bits.param.dat.op1(31,28)
+  val sel = Mux( psel(3), 0.U, Mux( psel(2), 1.U, 2.U) )
 
 
   io.enq.ready := false.B
@@ -113,35 +113,35 @@ class regionMux(implicit p: Parameters) extends DcacheModule{
     io.deq(2) <> io.enq
   } .otherwise {
     io.deq(2).valid := false.B
-    io.deq(2).bits  := DontCare
+    io.deq(2).bits  := 0.U.asTypeOf(new Lsu_iss_info)
   }
 
   when( sel === 1.U ) {
     io.deq(1) <> io.enq
   } .otherwise {
     io.deq(1).valid := false.B
-    io.deq(1).bits  := DontCare
+    io.deq(1).bits  := 0.U.asTypeOf(new Lsu_iss_info)
   }
 
   when( sel === 0.U ) {
     io.deq(0) <> io.enq
   } .otherwise {
     io.deq(0).valid := false.B
-    io.deq(0).bits  := DontCare
+    io.deq(0).bits  := 0.U.asTypeOf(new Lsu_iss_info)
   }
 }
 
 class cacheMux(implicit p: Parameters) extends DcacheModule{
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
-    val deq = Vec(nm, new DecoupledIO(new Info_cache_s0s1))
+    val deq = Vec(bk, new DecoupledIO(new Info_cache_s0s1))
   })
 
-  val chn = io.enq.bits.paddr(12+nm_w-1,12)
+  val chn = io.enq.bits.paddr(addr_lsb+bk_w-1,addr_lsb)
 
   io.enq.ready := false.B
   
-  for ( i <- 0 until nm ) yield {
+  for ( i <- 0 until bk ) yield {
     when( i.U === chn ) {
       io.deq(i) <> io.enq
     } .otherwise {
@@ -157,91 +157,66 @@ class cacheMux(implicit p: Parameters) extends DcacheModule{
 
 object Strb2Mask{
   def apply(strb: UInt): UInt = {
-    val mask = Wire(UInt(64.W))
 
-    // for ( i <- 0 until 8 ) yield {
-    //   mask(8*i+7,8*i) := Fill(8, strb(i))
-    // } 
-    mask := Cat(
-      Fill(8, strb(7)), Fill(8, strb(6)),
-      Fill(8, strb(5)), Fill(8, strb(4)),
-      Fill(8, strb(3)), Fill(8, strb(2)),
-      Fill(8, strb(1)), Fill(8, strb(0))
-    )
-    mask
+    Cat(strb.asBools.map{ x => Fill(8, x) }.reverse)
+
+
+    // val mask = Wire(UInt(64.W))
+
+    // // for ( i <- 0 until 8 ) yield {
+    // //   mask(8*i+7,8*i) := Fill(8, strb(i))
+    // // } 
+    // mask := Cat(
+    //   Fill(8, strb(7)), Fill(8, strb(6)),
+    //   Fill(8, strb(5)), Fill(8, strb(4)),
+    //   Fill(8, strb(3)), Fill(8, strb(2)),
+    //   Fill(8, strb(1)), Fill(8, strb(0))
+    // )
+    // mask
   } 
 }
 
-object align_mem{
-  def apply(ori: Lsu_iss_info) = {
-    val wdata = {
-      val res = Wire(UInt(64.W))
-      val paddr = ori.param.dat.op1
-      val shift = Wire(UInt(6.W))
-      shift := Cat( paddr(2,0), 0.U(3.W) )
-      res   := ori.param.dat.op2 << shift  
-      res
-    }
-
-    val wstrb = {
-      val paddr = ori.param.dat.op1
-      val op = ori.fun
-
-      Mux1H(Seq(
-        op.is_byte -> "b00000001".U, op.is_half -> "b00000011".U,
-        op.is_word -> "b00001111".U, op.is_dubl -> "b11111111".U
-      )) << paddr(2,0)
-    }
-
-    val paddr = ori.param.dat.op1 // & ~(("b111".U)(64.W))
-
-    (paddr, wdata, wstrb)
-  }
-}
 
 object pkg_Info_cache_s0s1{
   def apply( ori: Info_miss_rsp )(implicit p: Parameters) = {
     val res = Wire(new Info_cache_s0s1)
 
     res.paddr := ori.paddr
-    res.wstrb := "hFF".U
-    res.wdata(0) := ori.wdata(63,0)
-    res.wdata(1) := ori.wdata(127,64)
-    res.wdata(2) := ori.wdata(191,128)
-    res.wdata(3) := ori.wdata(255,192)
+    res.wstrb := "hFFFFFFFF".U
+    res.wdata := ori.wdata
 
     {
       res.fun := 0.U.asTypeOf(new Cache_op)
       res.fun.grant := true.B      
     }
-    res.rd := DontCare
-    res.chk_idx := DontCare
+    res.rd := 0.U.asTypeOf(new Register_dstntn(64))
+    res.chk_idx := 0.U
     res
   }
   
   def apply( ori: Info_probe_req )(implicit p: Parameters) = {
     val res = Wire(new Info_cache_s0s1)
     res.paddr := ori.paddr
-    res.wstrb := DontCare
-    res.wdata := DontCare
+    res.wstrb := 0.U
+    res.wdata := 0.U
 
     {
       res.fun := 0.U.asTypeOf(new Cache_op)
       res.fun.probe := true.B      
     }
-    res.rd := DontCare
-    res.chk_idx := DontCare
+    res.rd := 0.U.asTypeOf(new Register_dstntn(64))
+    res.chk_idx := 0.U
     res
   }
 
-  def apply( ori: Lsu_iss_info )(implicit p: Parameters) = {
+  /** package write and amo operation*/
+  def apply( ori: Lsu_iss_info, overlapReq: Stq_req_Bundle, overlapResp: Stq_resp_Bundle)(implicit p: Parameters) = {
 
     val res = Wire(new Info_cache_s0s1)
 
-    val (paddr, wdata, wstrb ) = align_mem( ori )
-    res.paddr := paddr
-    res.wdata := VecInit( Seq.fill(4)(wdata) )
-    res.wstrb := wstrb
+    res.paddr := ori.paddr
+    res.wdata := Mux( ori.fun.is_lu, reAlign_data( from = 64, to = 256, data = overlapResp.wdata, addr = overlapReq.paddr ), ori.wdata_align256)
+    res.wstrb := Mux( ori.fun.is_lu, reAlign_strb( from = 64, to = 256, strb = overlapResp.wstrb, addr = overlapReq.paddr ), ori.wstrb_align256)
 
 
     {
@@ -251,26 +226,7 @@ object pkg_Info_cache_s0s1{
     }
     res.rd.rd0 := ori.param.rd0
 
-    res.chk_idx := DontCare
-    res
-  
-  }
-
-  def apply( ori: Lsu_iss_info, overlap_data: UInt, overlap_wstrb: UInt)(implicit p: Parameters) = {
-
-    val res = Wire(new Info_cache_s0s1)
-
-    val (paddr, wdata, wstrb ) = align_mem( ori )
-    res.paddr := paddr
-    res.wdata := VecInit( Seq.fill(4)(overlap_data) )
-    res.wstrb := overlap_wstrb
-
-    {
-      res.fun := 0.U.asTypeOf(new Cache_op)
-      res.fun.viewAsSupertype(new Lsu_isa) := ori.fun.viewAsSupertype(new Lsu_isa)
-    }
-    res.rd.rd0 := ori.param.rd0
-    res.chk_idx := DontCare
+    res.chk_idx := 0.U
     res
   
   }
@@ -278,6 +234,9 @@ object pkg_Info_cache_s0s1{
 
 object overlap_wr{
   def apply( ori: UInt, ori_wstrb: UInt, wdata: UInt, wstrb: UInt): (UInt, UInt) = {
+    require( ori.getWidth == wdata.getWidth )
+    require( ori_wstrb.getWidth == wstrb.getWidth )
+
     val wmask = Strb2Mask(wstrb)
 
     val new_data = (ori & ~wmask) | (wdata & wmask)
@@ -288,16 +247,15 @@ object overlap_wr{
 }
 
 object get_loadRes{
-  def apply( fun: Cache_op, paddr: UInt, rdata: UInt ) = {
-        val res = Wire(UInt(64.W))
+  def apply( fun: Lsu_isa, paddr: UInt, rdata: UInt ) = {
+    require( rdata.getWidth == 64 )
+    val res = Wire(UInt(64.W))
 
-    def reAlign(rdata: UInt, paddr: UInt) = {
-      val res = Wire(UInt(64.W))
-      val shift = Wire(UInt(6.W))
-      shift := Cat( paddr(2,0), 0.U(3.W) )
-      res := rdata >> shift
-      res
-    }
+    // def reAlign(rdata: UInt, paddr: UInt) = {
+    //   val res = Wire(UInt(64.W))
+    //   res := rdata >> (paddr(2,0) << 3)
+    //   res
+    // }
 
     def load_byte(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(56, Mux(is_usi, 0.U, rdata(7)) ),  rdata(7,0)  )
     def load_half(is_usi: Bool, rdata: UInt): UInt = Cat( Fill(48, Mux(is_usi, 0.U, rdata(15)) ), rdata(15,0) )
@@ -305,7 +263,7 @@ object get_loadRes{
 
 
     
-    val align = reAlign(rdata, paddr)
+    val align = reAlign_data( from = 64, to = 8, rdata, paddr )
 
     res := Mux1H(Seq(
       fun.is_byte -> load_byte(fun.is_usi, align),
@@ -315,6 +273,46 @@ object get_loadRes{
     ))  
 
     res
+  }
+}
+
+object reAlign_data{
+  def apply( from: Int, to: Int, data: UInt, addr: UInt ): UInt = {
+    require( isPow2(from) )
+    require( isPow2(to) )
+    require( data.getWidth == from )
+    val from_lsb = log2Ceil(from/8)
+    val to_lsb   = log2Ceil(to/8)
+
+    val align_data = Wire(UInt( (to max 64).W ))
+    if ( from > to ) {
+      align_data := data >> ( addr( from_lsb-1, 0) >> to_lsb << to_lsb << 3 ) 
+    } else if ( from < to ) {
+      align_data := data << ( addr( to_lsb-1,0 ) >> from_lsb << from_lsb << 3 )
+    } else {
+      align_data := data
+    }
+    return align_data
+  }
+}
+
+object reAlign_strb{
+  def apply( from: Int, to: Int, strb: UInt, addr: UInt ): UInt = {
+    require( isPow2(from) )
+    require( isPow2(to) )
+    require( strb.getWidth == from/8 )
+    val from_lsb = log2Ceil(from/8)
+    val to_lsb   = log2Ceil(to/8)
+
+    val align_strb = Wire(UInt( (to/8 max 8).W ))
+    if ( from > to ) {
+      align_strb := strb >> ( addr( from_lsb-1, 0) >> to_lsb << to_lsb) 
+    } else if ( from < to ) {
+      align_strb := strb << ( addr( to_lsb-1, 0 ) >> from_lsb << from_lsb )
+    } else {
+      align_strb := strb
+    }
+    return align_strb
   }
 }
 

@@ -44,12 +44,14 @@ class iss_readOp_info(dw: Int, dp: Int) extends Bundle{
 }
 
 class Info_commit_op(dp:Int) extends Bundle{
-  val raw = UInt(5.W)  
-  val phy = UInt((log2Ceil(dp)).W)
-
-  val is_abort = Bool()
-  val toX = Bool()
-  val toF = Bool()
+  val is_comfirm = Output(Bool())
+  val is_MisPredict = Output(Bool())
+  val is_abort   = Output(Bool())
+  val raw        = Output(UInt(5.W)  )
+  val phy        = Output(UInt((log2Ceil(dp)).W))
+  val toX        = Output(Bool())
+  val toF        = Output(Bool())
+  val is_writeback = Input(Bool())
 }
 
 class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends Module{
@@ -62,7 +64,7 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
     /** writeBack request from exeUnit */
     val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(dw,dp))))
     /** Commit request from commitUnit */
-    val commit = Vec(cmm_chn, Flipped(Decoupled(new Info_commit_op(dp))))
+    val commit = Vec(cmm_chn, Flipped(new Info_commit_op(dp)))
 
     val diffReg = Output(Vec(32, UInt(dw.W)))
   })
@@ -165,48 +167,53 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
   }
 
   {
-    val raw = io.commit.map{ x => x.bits.raw }
-    val phy = io.commit.map{ x => x.bits.phy }
-    val idx_pre = io.commit.map{ x => archit_ptr(x.bits.raw) }
+    val raw = io.commit.map{ x => x.raw }
+    val phy = io.commit.map{ x => x.phy }
+    val idx_pre = io.commit.map{ x => archit_ptr(x.raw) }
 
     for ( i <- 0 until cmm_chn ) {
       def m = cmm_chn-1-i
 
-      //ready 和abort可能互斥，需要优化接口
-      io.commit(m).ready := log(phy(m)) === "b11".U
+      io.commit(m).is_writeback := log(phy(m)) === "b11".U
 
-      //暂时CMM只支持chn0 进行abort
-      when( io.commit(m).valid & io.commit(m).bits.is_abort & m.U === 0.U) {
+      when( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
         /** clear all log to 0, except that archit_ptr point to, may be override */
         for ( j <- 0 until dp-1 ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
-        for ( n <- 0 until m ) yield { assert( io.commit(n).valid & ~io.commit(n).bits.is_abort) }
       }
-      when( io.commit(m).fire & ~io.commit(m).bits.is_abort ) {
+      when( io.commit(m).is_MisPredict | io.commit(m).is_comfirm ) {
         /** override the log(clear) */
-        for ( j <- 0 until dp-1 ) yield { when(j.U === idx_pre(m) ) {log_reg(j) := 0.U}  }
+        assert( io.commit(m).is_writeback )
+        for ( j <- 0 until dp-1 ) yield {
+          when(j.U === idx_pre(m) ) {log_reg(j) := 0.U} // the log, that used before commit, will be clear to 0
+        }
+        assert( log_reg(phy(m)) === "b11".U, "log_reg which going to commit to will be overrided to \"b11\" if there is an abort in-front." )
+        log_reg(phy(m)) := "b11".U //the log, that going to use after commit should keep to be "b11"
       }
 
 
-      when( io.commit(m).fire & ~io.commit(m).bits.is_abort) {
-        archit_ptr(raw(m)) := phy(m)
+      when( io.commit(i).is_MisPredict | io.commit(i).is_comfirm ) {
+        archit_ptr(raw(i)) := phy(i)
       }
 
-      //暂时CMM只支持chn0 进行abort
-      when (io.commit(m).valid & io.commit(m).bits.is_abort & m.U === 0.U) {
+
+      when ( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
         for ( j <- 0 until 32 ) yield {
           rename_ptr(j) := archit_ptr(j)
           for ( n <- 0 until m ) {
-            when( j.U === raw(n) ) { rename_ptr(j) := phy(n) }
+            when( j.U === raw(n) & io.commit(n).is_comfirm ) {
+              rename_ptr(j) := phy(n) //override renme_ptr when the perivious chn comfirm
+            } 
           }
-
+          when( j.U === raw(m) & io.commit(m).is_MisPredict ) { rename_ptr(j) := phy(m) } //override renme_ptr when the this chn is mispredict
         }
+
       }
     }
   }
 
 
   archit_ptr.map{
-    i => assert( log(i) === "b11".U, "Assert Failed, archit point to should be b11.U!\n")
+    i => assert( log(i) === "b11".U, "Assert Failed, archit point to should be b11.U! i = "+i+"\n")
   }
 
   for ( i <- 0 until 32 ) yield {
@@ -229,8 +236,8 @@ class XRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
       io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
       io.dpt_lookup(i).rsp.rs3 := 63.U
       for ( j <- 0 until i ) {
-        when( (io.dpt_rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
-        when( (io.dpt_rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
       }
     }
   }
@@ -256,9 +263,9 @@ class FRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
       io.dpt_lookup(i).rsp.rs2 := rename_ptr(idx2)
       io.dpt_lookup(i).rsp.rs3 := rename_ptr(idx3) 
       for ( j <- 0 until i ) {
-        when( (io.dpt_rename(j).req.bits.rd0 === idx1) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
-        when( (io.dpt_rename(j).req.bits.rd0 === idx2) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
-        when( (io.dpt_rename(j).req.bits.rd0 === idx3) ) { io.dpt_lookup(i).rsp.rs3 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx1) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx2) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx3) ) { io.dpt_lookup(i).rsp.rs3 := molloc_idx(j) }
       }
     }
   }

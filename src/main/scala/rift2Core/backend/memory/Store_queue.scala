@@ -29,33 +29,37 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
+// class AMO_Block_Req extends Bundle {
+//   val paddr = UInt(64.W)
+// }
 
+// class AMO_Block_Resp extends Bundle {
+//   val paddr = UInt(64.W)
+// }
 
-/**
-  * bound to every cache 
-  */
-class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
+abstract class Stq_Base()(implicit p: Parameters) extends RiftModule{
+  def dp = 16
   def dp_w = log2Ceil(dp)
-  def nm = 8
 
   val io = IO( new Bundle{
     val enq = Flipped(DecoupledIO(new Lsu_iss_info))
-    val deq = DecoupledIO(new Info_cache_s0s1)
+    val deq = DecoupledIO(new Lsu_iss_info)
 
-    // val is_st_commited = Input(Vec(2,Bool()))
     val cmm_lsu = Input(new Info_cmm_lsu)
     val is_empty = Output(Bool())
 
-    val overlap =  Flipped(new Info_overlap)
+
+
+    val overlapReq  = Flipped(Valid(new Stq_req_Bundle))
+    val overlapResp = Valid(new Stq_resp_Bundle)
 
     val flush = Input(Bool())
 
     /** prefetch is not guarantee to be accepted by cache*/
-    // val preFetch = ValidIO( UInt(64.W) )
+    val preFetch = ValidIO( new PreFetch_Req_Bundle )
   } )
 
-
-  val buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Info_cache_s0s1))))
+  val buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Lsu_iss_info))))
   
   val cm_ptr_reg = RegInit( 0.U((dp_w+1).W) )
   val wr_ptr_reg = RegInit( 0.U((dp_w+1).W) )
@@ -65,98 +69,138 @@ class Store_queue(dp: Int = 16)(implicit p: Parameters) extends RiftModule{
   val wr_ptr = wr_ptr_reg(dp_w-1,0)
   val rd_ptr = rd_ptr_reg(dp_w-1,0)
 
-  def full = (wr_ptr_reg(dp_w) =/= rd_ptr_reg(dp_w)) & (wr_ptr_reg(dp_w-1,0) === rd_ptr_reg(dp_w-1,0))
-  def emty = cm_ptr_reg === rd_ptr_reg
+  val full = (wr_ptr_reg(dp_w) =/= rd_ptr_reg(dp_w)) & (wr_ptr_reg(dp_w-1,0) === rd_ptr_reg(dp_w-1,0))
+  val emty = cm_ptr_reg === rd_ptr_reg
 
   val rd_buff = buff(rd_ptr)
 
-  val is_amo = {
-    val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending & ~io.flush & ~io.is_empty, false.B)
-    (is_amo_pre === false.B) & (io.cmm_lsu.is_amo_pending === true.B  & ~io.flush & ~io.is_empty)
+  val is_amo = RegInit(false.B)
+
+
+}
+
+trait Stq_Ptr { this: Stq_Base => 
+  {
+    val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending, false.B)
+    val is_amo_pos = io.cmm_lsu.is_amo_pending & ~is_amo_pre
+    when( io.flush ) {
+      is_amo := false.B
+    } .elsewhen( is_amo_pos ) {
+      is_amo := true.B
+    } .elsewhen(is_amo & ~io.is_empty) {
+      is_amo := false.B
+    }
   }
+
 
   val is_st_commited = VecInit( io.cmm_lsu.is_store_commit(0), io.cmm_lsu.is_store_commit(1) )
   io.enq.ready := ~full
   io.deq.valid := ~emty
 
-  io.deq.bits := Mux( io.deq.valid, rd_buff, DontCare )
+  io.deq.bits := Mux( io.deq.valid, rd_buff, 0.U.asTypeOf(new Lsu_iss_info) )
 
   when( io.flush ) {
-    wr_ptr_reg := cm_ptr_reg
-    // assert( ~is_st_commited(0) & ~is_st_commited(1) & ~is_amo )
+    when( is_st_commited(1) & is_st_commited(0) ) { wr_ptr_reg := cm_ptr_reg + 2.U }
+    .elsewhen( is_st_commited(0) | (is_amo & ~io.is_empty) | is_st_commited(1) ) { wr_ptr_reg := cm_ptr_reg + 1.U } //amo only resolved at chn0
+    .otherwise{ wr_ptr_reg := cm_ptr_reg }
   } .elsewhen( io.enq.fire ) {
-    buff(wr_ptr) := pkg_Info_cache_s0s1(io.enq.bits)
+    buff(wr_ptr) := io.enq.bits
     wr_ptr_reg := wr_ptr_reg + 1.U
   }
 
   when( io.deq.fire ) {
     rd_ptr_reg := rd_ptr_reg + 1.U
+    buff(rd_ptr) := 0.U.asTypeOf(new Lsu_iss_info)
   }
-
 
 
   when( is_st_commited(1) & is_st_commited(0) ) {
     cm_ptr_reg := cm_ptr_reg + 2.U
-    // assert( is_st_commited(0) )
     assert( ~is_amo )
-  } .elsewhen( is_st_commited(0) | is_amo | is_st_commited(1) ) {
+    assert( cm_ptr_reg =/= wr_ptr_reg & cm_ptr_reg =/= (wr_ptr_reg-1.U) )
+  } .elsewhen( is_st_commited(0) | (is_amo & ~io.is_empty) | is_st_commited(1) ) { //amo only resolved at chn0
     cm_ptr_reg := cm_ptr_reg + 1.U
-    assert( ~((is_st_commited(0) | is_st_commited(1)) & is_amo), "Assert Failed, is_amo only launch at chn 0!\n" )
+    assert( ~((is_st_commited(0) | is_st_commited(1)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
+    assert( cm_ptr_reg =/= wr_ptr_reg )
   }
 
     io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
+}
 
-  // for ( chn <- 0 until (nm+2) ) yield {
-    val overlap_buff = Wire(Vec(dp, (new Info_cache_s0s1)))
-    // val overlap_buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Info_cache_s0s1) )))
-
+trait Stq_Overlap{ this: Stq_Base => 
+    val overlap_buff = Wire(Vec(dp, (new Lsu_iss_info)))
+    io.overlapResp.valid := io.overlapReq.valid //may be overlapped
 
     when( rd_ptr_reg(dp_w) =/= wr_ptr_reg(dp_w) ) {
       assert( rd_ptr >= wr_ptr )
       for ( i <- 0 until dp ) yield {
         val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
-        when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).paddr(63,3) === io.overlap.paddr(63,3)) ) {
+        when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).param.dat.op1(63,3) === io.overlapReq.bits.paddr(63,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
+
+          when( buff(ro_ptr).fun.is_amo ) { io.overlapResp.valid := false.B }
+          // assert( ~(buff(ro_ptr).fun.is_amo & io.overlapResp.valid), "Assert Failed at Store-queue, overlapping an amo-instr, that is not allow!" )
         } .otherwise {
-          overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
+          overlap_buff(i) := 0.U.asTypeOf(new Lsu_iss_info)
         }
       }
     } .otherwise {
       assert( rd_ptr <= wr_ptr )
       for ( i <- 0 until dp ) yield {
         val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
-        when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).paddr(63,3) === io.overlap.paddr(63,3)) ) {
+        when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).param.dat.op1(63,3) === io.overlapReq.bits.paddr(63,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
+
+          when( buff(ro_ptr).fun.is_amo ) { io.overlapResp.valid := false.B }
+          // assert( ~(buff(ro_ptr).fun.is_amo & io.overlapResp.valid), "Assert Failed at Store-queue, overlapping an amo-instr, that is not allow!" )
         } .otherwise {
-          overlap_buff(i) := 0.U.asTypeOf(new Info_cache_s0s1)
+          overlap_buff(i) := 0.U.asTypeOf(new Lsu_iss_info)
         }
       }
     }
-
-
 
     val temp_wdata = Wire(Vec(dp, UInt(64.W)))
     val temp_wstrb = Wire(Vec(dp, UInt(8.W)))
     for ( i <- 0 until dp ) yield {
       if ( i == 0 ) {
-        val (wdata, wstrb) = overlap_wr( 0.U, 0.U, overlap_buff(0).wdata(0), overlap_buff(0).wstrb)
+        val (wdata, wstrb) = overlap_wr( 0.U(64.W), 0.U(8.W), overlap_buff(0).wdata_align64, overlap_buff(0).wstrb_align64 )
         temp_wdata(0) := wdata
         temp_wstrb(0) := wstrb
       } else {
-        val (wdata, wstrb) = overlap_wr( temp_wdata(i-1), temp_wstrb(i-1), overlap_buff(i).wdata(0), overlap_buff(i).wstrb)
+        val (wdata, wstrb) = overlap_wr( temp_wdata(i-1), temp_wstrb(i-1), overlap_buff(i).wdata_align64, overlap_buff(i).wstrb_align64 )
         temp_wdata(i) := wdata
         temp_wstrb(i) := wstrb
       }
     }
-    io.overlap.wdata := temp_wdata(dp-1)
-    io.overlap.wstrb := temp_wstrb(dp-1)
-  // }
+    io.overlapResp.bits.wdata := temp_wdata(dp-1)
+    io.overlapResp.bits.wstrb := temp_wstrb(dp-1)
+}
+
+// trait Stq_AMOBlocker { this: Stq_Base => 
+//   io.overlapResp.valid := io.overlapReq.valid & ~(buff.map{ x => ((x.param.dat.op1(63,3) === io.overlapReq.bits.paddr(63,3)) & x.param.fun.is_amo) }.reduce(_|_))
+
+
+// }
+
+/**
+  * bound to every cache 
+  */
+class Store_queue()(implicit p: Parameters) extends Stq_Base with Stq_Ptr with Stq_Overlap {
+  io.preFetch.valid      := io.enq.fire
+  io.preFetch.bits.paddr := io.enq.bits.param.dat.op1
+}
+
+
+
+
+
+
+
+
+
 
  
 
 
 
-
-
-}
 

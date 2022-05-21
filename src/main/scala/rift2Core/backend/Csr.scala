@@ -22,7 +22,7 @@ package rift2Core.backend
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
-import rift2Core.privilege.csrFiles._
+import rift2Core.privilege._
 
 
 
@@ -49,14 +49,14 @@ class Csr extends Module {
 
 
 
-  def rw = io.csr_iss_exe.bits.fun.rw
-  def rs = io.csr_iss_exe.bits.fun.rs
-  def rc = io.csr_iss_exe.bits.fun.rc
+  val rw = io.csr_iss_exe.bits.fun.rw
+  val rs = io.csr_iss_exe.bits.fun.rs
+  val rc = io.csr_iss_exe.bits.fun.rc
   
-  def dat = io.csr_iss_exe.bits.param.dat.op1
-  def addr = io.csr_iss_exe.bits.param.dat.op2
+  val dat = io.csr_iss_exe.bits.param.dat.op1
+  val addr = io.csr_iss_exe.bits.param.dat.op2
 
-  def dontWrite = (dat === 0.U) & ( rs | rc )
+  val dontWrite = (dat === 0.U) & ( rs | rc )
 
   csr_op_fifo.io.enq.bits.addr := addr
   csr_op_fifo.io.enq.bits.dat_i := dat

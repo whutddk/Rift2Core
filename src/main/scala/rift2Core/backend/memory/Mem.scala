@@ -42,8 +42,7 @@ trait Fence_op{
 }
 
 
-class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with Fence_op with HasFPUParameters{
-  def nm = 8
+class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule with Fence_op with HasFPUParameters{
   val io = IO(new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
     val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
@@ -55,25 +54,20 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     val lsu_mmu = DecoupledIO(new Info_mmu_req)
     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
 
-    val missUnit_dcache_acquire = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleA(edge(i).bundle))) 
-    val missUnit_dcache_grant = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleD(edge(i).bundle))))
-    val missUnit_dcache_grantAck  = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleE(edge(i).bundle)))
-    val probeUnit_dcache_probe = 
-      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleB(edge(i).bundle))))
-    val writeBackUnit_dcache_release =
-      MixedVec(  for ( i <- 0 until 8 ) yield  DecoupledIO(new TLBundleC(edge(i).bundle)))
-    val writeBackUnit_dcache_grant   =
-      MixedVec(  for ( i <- 0 until 8 ) yield  Flipped(DecoupledIO(new TLBundleD(edge(i).bundle))))
+    val missUnit_dcache_acquire      = DecoupledIO(new TLBundleA(edge(0).bundle))
+    val missUnit_dcache_grant        = Flipped(DecoupledIO(new TLBundleD(edge(0).bundle)))
+    val missUnit_dcache_grantAck     = DecoupledIO(new TLBundleE(edge(0).bundle))
+    val probeUnit_dcache_probe       = Flipped(DecoupledIO(new TLBundleB(edge(0).bundle)))
+    val writeBackUnit_dcache_release = DecoupledIO(new TLBundleC(edge(0).bundle))
+    val writeBackUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge(0).bundle)))
 
-    val system_getPut = new DecoupledIO(new TLBundleA(edge(nm).bundle))
-    val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(nm).bundle)))
+    val system_getPut = new DecoupledIO(new TLBundleA(edge(1).bundle))
+    val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(1).bundle)))
 
-    val periph_getPut = new DecoupledIO(new TLBundleA(edge(nm+1).bundle))
-    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(nm+1).bundle)))
+    val periph_getPut = new DecoupledIO(new TLBundleA(edge(2).bundle))
+    val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(2).bundle)))
 
+    val preFetch = ValidIO( new PreFetch_Req_Bundle )
 
     val flush = Input(Bool())
   })
@@ -97,6 +91,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
         opMux.io.am_deq.fire -> opMux.io.am_deq.bits,
       ))
     mdl.io.cmm_lsu := io.cmm_lsu
+    io.preFetch := mdl.io.preFetch
     mdl.io.flush := io.flush
     mdl
   }
@@ -107,10 +102,14 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     * @return Info_cache_s0s1
     */
   val ls_arb = {
-    val mdl = Module(new Arbiter(new Info_cache_s0s1, 2))
-    stQueue.io.overlap.paddr := opMux.io.ld_deq.bits.param.dat.op1
-    mdl.io.in(0).valid := opMux.io.ld_deq.valid
-    mdl.io.in(0).bits  := pkg_Info_cache_s0s1(opMux.io.ld_deq.bits, stQueue.io.overlap.wdata, stQueue.io.overlap.wstrb)
+    val mdl = Module(new Arbiter(new Lsu_iss_info, 2))
+    stQueue.io.overlapReq.bits.paddr := opMux.io.ld_deq.bits.param.dat.op1
+    stQueue.io.overlapReq.valid := opMux.io.ld_deq.valid
+
+    mdl.io.in(0).valid := opMux.io.ld_deq.valid & stQueue.io.overlapResp.valid
+    mdl.io.in(0).bits := opMux.io.ld_deq.bits
+    opMux.io.ld_deq.ready := mdl.io.in(0).ready & stQueue.io.overlapResp.valid
+    
     mdl.io.in(1) <> stQueue.io.deq
     mdl
   }
@@ -132,53 +131,28 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     */ 
   val cacheMux = {
     val mdl = Module(new cacheMux)
-    mdl.io.enq <> regionMux.io.deq(0)
+    mdl.io.enq.bits := pkg_Info_cache_s0s1(regionMux.io.deq(0).bits, stQueue.io.overlapReq.bits, stQueue.io.overlapResp.bits)
+    mdl.io.enq.valid := regionMux.io.deq(0).valid
+    regionMux.io.deq(0).ready := mdl.io.enq.ready
     mdl
   }
 
 
-  /** there are nm cache bank 
+  /** 
     * @param in Info_cache_s0s1
     * @return Info_cache_retn
     */
-  val cache = for ( i <- 0 until nm ) yield {
-    val mdl = Module(new Dcache(edge(i)))
+  val cache = for ( i <- 0 until bk ) yield {
+    val mdl = Module(new Dcache(edge(0), i))
     mdl.io.enq <> cacheMux.io.deq(i)
-    // mdl.io.overlap <> stQueue.io.overlap(i)
-
-    io.missUnit_dcache_acquire(i).valid := mdl.io.missUnit_dcache_acquire.valid
-    io.missUnit_dcache_acquire(i).bits := mdl.io.missUnit_dcache_acquire.bits
-    mdl.io.missUnit_dcache_acquire.ready := io.missUnit_dcache_acquire(i).ready
-
-    mdl.io.missUnit_dcache_grant.valid := io.missUnit_dcache_grant(i).valid
-    mdl.io.missUnit_dcache_grant.bits  := io.missUnit_dcache_grant(i).bits
-    io.missUnit_dcache_grant(i).ready := mdl.io.missUnit_dcache_grant.ready
-
-    io.missUnit_dcache_grantAck(i).valid := mdl.io.missUnit_dcache_grantAck.valid
-    io.missUnit_dcache_grantAck(i).bits := mdl.io.missUnit_dcache_grantAck.bits
-    mdl.io.missUnit_dcache_grantAck.ready := io.missUnit_dcache_grantAck(i).ready
-
-    mdl.io.probeUnit_dcache_probe.valid := io.probeUnit_dcache_probe(i).valid
-    mdl.io.probeUnit_dcache_probe.bits := io.probeUnit_dcache_probe(i).bits
-    io.probeUnit_dcache_probe(i).ready := mdl.io.probeUnit_dcache_probe.ready
-
-    io.writeBackUnit_dcache_release(i).valid := mdl.io.writeBackUnit_dcache_release.valid
-    io.writeBackUnit_dcache_release(i).bits := mdl.io.writeBackUnit_dcache_release.bits
-    mdl.io.writeBackUnit_dcache_release.ready := io.writeBackUnit_dcache_release(i).ready
-
-    mdl.io.writeBackUnit_dcache_grant.valid := io.writeBackUnit_dcache_grant(i).valid
-    mdl.io.writeBackUnit_dcache_grant.bits := io.writeBackUnit_dcache_grant(i).bits
-    io.writeBackUnit_dcache_grant(i).ready := mdl.io.writeBackUnit_dcache_grant.ready
-
     mdl.io.flush := io.flush
 
     mdl
   }
 
   val system = {
-    val mdl = Module(new IO_Lsu(edge(nm+1), idx = nm+1))
+    val mdl = Module(new IO_Lsu(edge(2)))
     mdl.io.enq <> regionMux.io.deq(1)
-    // mdl.io.overlap <> stQueue.io.overlap(nm+1)
 
     io.system_getPut.valid := mdl.io.getPut.valid
     io.system_getPut.bits := mdl.io.getPut.bits
@@ -191,9 +165,8 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   }
 
   val periph = {
-    val mdl = Module(new IO_Lsu(edge(nm), idx = nm))
+    val mdl = Module(new IO_Lsu(edge(1)))
     mdl.io.enq <> regionMux.io.deq(2)
-    // mdl.io.overlap <> stQueue.io.overlap(nm)
 
     io.periph_getPut.valid := mdl.io.getPut.valid
     io.periph_getPut.bits := mdl.io.getPut.bits
@@ -210,8 +183,8 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     * @return Info_cache_retn
     */
   val lu_wb_arb = {
-    val mdl = Module(new Arbiter(new Info_cache_retn, nm+2))
-    for ( i <- 0 until nm ) yield {
+    val mdl = Module(new Arbiter(new Info_cache_retn, bk+2))
+    for ( i <- 0 until bk ) yield {
       mdl.io.in(i).valid := cache(i).io.deq.valid & cache(i).io.deq.bits.is_load_amo
       mdl.io.in(i).bits := Mux( mdl.io.in(i).valid, cache(i).io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
       cache(i).io.deq.ready := mdl.io.in(i).ready | ~cache(i).io.deq.bits.is_load_amo
@@ -219,15 +192,15 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
     }
 
 
-    mdl.io.in(nm).valid := system.io.deq.valid & system.io.deq.bits.is_load_amo
-    mdl.io.in(nm).bits := Mux( mdl.io.in(nm).valid, system.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
-    system.io.deq.ready := mdl.io.in(nm).ready | ~system.io.deq.bits.is_load_amo
-    when( system.io.deq.bits.is_load_amo ) { assert(system.io.deq.fire === mdl.io.in(nm).fire) }
+    mdl.io.in(bk).valid := system.io.deq.valid & system.io.deq.bits.is_load_amo
+    mdl.io.in(bk).bits := Mux( mdl.io.in(bk).valid, system.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
+    system.io.deq.ready := mdl.io.in(bk).ready | ~system.io.deq.bits.is_load_amo
+    when( system.io.deq.bits.is_load_amo ) { assert(system.io.deq.fire === mdl.io.in(bk).fire) }
 
-    mdl.io.in(nm+1).valid := periph.io.deq.valid & periph.io.deq.bits.is_load_amo
-    mdl.io.in(nm+1).bits := Mux( mdl.io.in(nm+1).valid, periph.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
-    periph.io.deq.ready := mdl.io.in(nm+1).ready | ~periph.io.deq.bits.is_load_amo
-    when( periph.io.deq.bits.is_load_amo ) { assert(periph.io.deq.fire === mdl.io.in(nm+1).fire) }
+    mdl.io.in(bk+1).valid := periph.io.deq.valid & periph.io.deq.bits.is_load_amo
+    mdl.io.in(bk+1).bits := Mux( mdl.io.in(bk+1).valid, periph.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
+    periph.io.deq.ready := mdl.io.in(bk+1).ready | ~periph.io.deq.bits.is_load_amo
+    when( periph.io.deq.bits.is_load_amo ) { assert(periph.io.deq.fire === mdl.io.in(bk+1).fire) }
 
 
     mdl
@@ -281,7 +254,6 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
 
   opMux.io.st_deq.ready := su_wb_fifo.io.enq.ready & stQueue.io.enq.ready
   opMux.io.am_deq.ready := stQueue.io.enq.ready
-  opMux.io.ld_deq.ready := ls_arb.io.in(0).ready
 
   /** indicate the mem unit is empty by all seq-element is empty*/
 
@@ -359,16 +331,101 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule with 
   def is_fence_i    = io.lsu_iss_exe.bits.fun.fence_i
   def is_sfence_vma = io.lsu_iss_exe.bits.fun.sfence_vma
   def is_fence_op = is_fence | is_fence_i | is_sfence_vma
-  // when( io.lsu_iss_exe.valid & io.lsu_iss_exe.bits.fun.is_fence & ~is_fence_op & ~io.flush) {
-  //   is_fence      := io.lsu_iss_exe.bits.fun.fence
-  //   is_fence_i     := io.lsu_iss_exe.bits.fun.fence_i
-  //   is_sfence_vma := io.lsu_iss_exe.bits.fun.sfence_vma
-  // }
-  // .elsewhen( (is_empty &  is_fence_op) | io.flush ) {
-  //   is_fence      := false.B
-  //   is_fence_i    := false.B
-  //   is_sfence_vma := false.B
-  // }
+
+
+
+  io.missUnit_dcache_acquire.valid := false.B
+  io.missUnit_dcache_acquire.bits := 0.U.asTypeOf(new TLBundleA(edge(0).bundle))
+  io.missUnit_dcache_grant.ready := false.B
+  io.missUnit_dcache_grantAck.valid := false.B
+  io.missUnit_dcache_grantAck.bits := 0.U.asTypeOf(new TLBundleE(edge(0).bundle))
+  io.probeUnit_dcache_probe.ready := false.B
+  io.writeBackUnit_dcache_release.valid := false.B
+  io.writeBackUnit_dcache_release.bits := 0.U.asTypeOf(new TLBundleC(edge(0).bundle))
+  io.writeBackUnit_dcache_grant.ready := false.B
+
+  for ( i <- 0 until bk ) yield {
+    cache(i).io.missUnit_dcache_acquire.ready  := false.B
+    cache(i).io.missUnit_dcache_grant.valid    := false.B
+    cache(i).io.missUnit_dcache_grant.bits     := 0.U.asTypeOf(new TLBundleD(edge(0).bundle))
+    cache(i).io.missUnit_dcache_grantAck.ready := false.B
+    cache(i).io.probeUnit_dcache_probe.valid   := false.B
+    cache(i).io.probeUnit_dcache_probe.bits    := 0.U.asTypeOf(new TLBundleB(edge(0).bundle))
+    cache(i).io.writeBackUnit_dcache_release.ready := false.B
+    cache(i).io.writeBackUnit_dcache_grant.valid   := false.B
+    cache(i).io.writeBackUnit_dcache_grant.bits    := 0.U.asTypeOf(new TLBundleD(edge(0).bundle))
+  }
+
+
+  for ( i <- bk-1 to 0 by -1 ) {
+    when( cache(i).io.missUnit_dcache_acquire.valid ) {
+      io.missUnit_dcache_acquire <> cache(i).io.missUnit_dcache_acquire
+      // io.missUnit_dcache_acquire.valid := cache(i).io.missUnit_dcache_acquire.valid
+      // io.missUnit_dcache_acquire.bits := cache(i).io.missUnit_dcache_acquire.bits
+      // cache(i).io.missUnit_dcache_acquire.ready := io.missUnit_dcache_acquire.ready
+    }
+
+
+    when( io.missUnit_dcache_grant.bits.source === i.U ) {
+      cache(i).io.missUnit_dcache_grant <> io.missUnit_dcache_grant
+      // cache(i).io.missUnit_dcache_grant.valid := io.missUnit_dcache_grant.valid
+      // cache(i).io.missUnit_dcache_grant.bits  := io.missUnit_dcache_grant.bits
+      // io.missUnit_dcache_grant.ready := cache(i).io.missUnit_dcache_grant.ready      
+    }
+
+    when( cache(i).io.missUnit_dcache_grantAck.valid ) {
+      io.missUnit_dcache_grantAck <> cache(i).io.missUnit_dcache_grantAck
+      // io.missUnit_dcache_grantAck.valid := cache(i).io.missUnit_dcache_grantAck.valid
+      // io.missUnit_dcache_grantAck.bits := cache(i).io.missUnit_dcache_grantAck.bits
+      // cache(i).io.missUnit_dcache_grantAck.ready := io.missUnit_dcache_grantAck.ready      
+    }
+
+    when( io.probeUnit_dcache_probe.bits.address(addr_lsb+bk_w-1,addr_lsb) === i.U ) {
+      cache(i).io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe
+      // cache(i).io.probeUnit_dcache_probe.valid := io.probeUnit_dcache_probe.valid
+      // cache(i).io.probeUnit_dcache_probe.bits := io.probeUnit_dcache_probe.bits
+      // io.probeUnit_dcache_probe.ready := cache(i).io.probeUnit_dcache_probe.ready      
+    }
+
+    when( io.writeBackUnit_dcache_grant.bits.source === i.U ) {
+      cache(i).io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant
+      // cache(i).io.writeBackUnit_dcache_grant.valid := io.writeBackUnit_dcache_grant.valid
+      // cache(i).io.writeBackUnit_dcache_grant.bits := io.writeBackUnit_dcache_grant.bits
+      // io.writeBackUnit_dcache_grant.ready := cache(i).io.writeBackUnit_dcache_grant.ready      
+    }
+
+  }
+
+  /** @note chn-C will carry multi-beat data from client to manager, which is a N to 1 transation, and may be grabbed
+    * @note however there will be one cycle latency for chn-c
+    */
+  val is_chnc_busy = RegInit(VecInit(Seq.fill(bk)(false.B)))
+  val is_release_done = for ( i <- 0 until bk ) yield { edge(0).count(cache(i).io.writeBackUnit_dcache_release)._3 }
+  for( i <- 0 until bk ) yield {
+    when( cache(i).io.writeBackUnit_dcache_release.fire ) { is_chnc_busy(i) := Mux( is_release_done(i), false.B, true.B )}
+  }
+
+  when( is_chnc_busy.forall((x:Bool) => (x === false.B)) ) {
+    for ( i <- bk-1 to 0 by -1 ) {
+      when( cache(i).io.writeBackUnit_dcache_release.valid ) { io.writeBackUnit_dcache_release <> cache(i).io.writeBackUnit_dcache_release }
+    }
+  } .otherwise {
+    for ( i <- 0 until bk ) {
+      when( is_chnc_busy(i) === true.B  ) { io.writeBackUnit_dcache_release <> cache(i).io.writeBackUnit_dcache_release }
+    }
+  }
+  assert( PopCount(is_chnc_busy) <= 1.U, "Assert Failed at dcache chn-c Mux, sel should be one-hot" )
+
+
+
+
+
+
+  // io.writeBackUnit_dcache_release.valid := cache(i).io.writeBackUnit_dcache_release.valid
+  // io.writeBackUnit_dcache_release.bits  := cache(i).io.writeBackUnit_dcache_release.bits
+  // cache(i).io.writeBackUnit_dcache_release.ready := io.writeBackUnit_dcache_release.ready      
+
+
 
 }
 
