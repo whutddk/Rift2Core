@@ -63,6 +63,7 @@ class Info_mmu_req extends Bundle with Info_access_lvl{
 
 
 class Info_mmu_rsp extends Bundle {
+  val vaddr  = UInt(64.W)
   val paddr  = UInt(64.W)
   val is_paging_fault = Bool()
   val is_access_fault = Bool()
@@ -146,7 +147,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val kill_iptw = RegInit(false.B)
   val kill_dptw = RegInit(false.B)
   
-  def cmm_flush = io.cmm_mmu.sit_mdf
+  val cmm_flush = io.cmm_mmu.sit_mdf
 
   when( io.if_flush | io.cmm_mmu.sit_mdf ) {
     kill_iptw := true.B
@@ -196,9 +197,10 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   {
     val pte = Mux( itlb.io.is_hit, itlb.io.pte_o, iptw.io.ptw_o.bits.pte )
-    val vaddr = io.if_mmu.bits.vaddr
-    val ipaddr = Mux( is_bypass_if, vaddr, v2paddr( vaddr, pte ) )
-      
+    val ivaddr = io.if_mmu.bits.vaddr
+    val ipaddr = Mux( is_bypass_if, ivaddr, v2paddr( ivaddr, pte ) )
+
+    io.mmu_if.bits.vaddr := ivaddr      
     io.mmu_if.bits.paddr := ipaddr
 
     io.mmu_if.bits.is_access_fault :=
@@ -226,10 +228,11 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   {
     val pte = Mux( dtlb.io.is_hit, dtlb.io.pte_o, dptw.io.ptw_o.bits.pte )
-    val vaddr = io.lsu_mmu.bits.vaddr
+    val dvaddr = io.lsu_mmu.bits.vaddr
 
-    val dpaddr = Mux( is_bypass_ls, vaddr, v2paddr( vaddr, pte ) )
+    val dpaddr = Mux( is_bypass_ls, dvaddr, v2paddr( dvaddr, pte ) )
   
+    io.mmu_lsu.bits.vaddr := dvaddr
     io.mmu_lsu.bits.paddr := dpaddr
 
     io.mmu_lsu.bits.is_access_fault :=
@@ -268,8 +271,8 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   itlb.io.tlb_renew.bits := iptw.io.ptw_o.bits.pte
   dtlb.io.tlb_renew.bits := dptw.io.ptw_o.bits.pte
 
-  itlb.io.tlb_renew.valid := iptw.io.ptw_o.fire &  iptw.io.ptw_o.bits.is_X & ~iptw.io.ptw_o.bits.is_ptw_fail
-  dtlb.io.tlb_renew.valid := dptw.io.ptw_o.fire & ~dptw.io.ptw_o.bits.is_X & ~dptw.io.ptw_o.bits.is_ptw_fail
+  itlb.io.tlb_renew.valid := iptw.io.ptw_o.fire &  iptw.io.ptw_o.bits.is_X & ~iptw.io.ptw_o.bits.is_ptw_fail & ~kill_iptw
+  dtlb.io.tlb_renew.valid := dptw.io.ptw_o.fire & ~dptw.io.ptw_o.bits.is_X & ~dptw.io.ptw_o.bits.is_ptw_fail & ~kill_dptw
 
 
 

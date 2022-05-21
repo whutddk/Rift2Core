@@ -16,42 +16,43 @@
 */
 
 
-package base
+package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
+import rift2Core.define._
+import chipsalliance.rocketchip.config.Parameters
 
 
 
 
+class RAS()(implicit p: Parameters) extends IFetchModule {
+  val io = IO(new Bundle{
+    val enq = Flipped(Valid(new RASPP_Bundle))
+    val deq  = new DecoupledIO(new RASPP_Bundle)
 
-class Gen_ringStack[T<:Data]( dw: T, aw: Int ) extends Module {
-  lazy val io = IO(new Bundle{
-      val enq = Flipped(new DecoupledIO(dw))
-      val deq  = new DecoupledIO(dw)
-
-      val flush = Input(Bool())
+    // flush when RAS mis-predict
+    val flush = Input(Bool())
 
   })
 
-  def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
+  def aw = log2Ceil(ras_dp)
 
-
-  val buf = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
+  // val buf = RegInit(VecInit(Seq.fill(ras_dp)(0.U.asTypeOf(dw))))
+  val buf = Mem( ras_dp, new RASPP_Bundle )
   val btm_ptr = RegInit(0.U((aw+1).W))
   val top_ptr = RegInit(0.U((aw+1).W))
 
-  def rd_idx = top_ptr(aw-1, 0) - 1.U
-  def wr_idx = top_ptr(aw-1, 0)
+  val rd_idx = top_ptr(aw-1, 0) - 1.U
+  val wr_idx = top_ptr(aw-1, 0)
 
-  def is_empty = (btm_ptr === top_ptr)
-  def is_full  = ((btm_ptr(aw-1, 1) === top_ptr(aw-1, 1)) & (btm_ptr(aw) =/= top_ptr(aw)))
+  val is_empty = (btm_ptr === top_ptr)
+  val is_full  = ((btm_ptr(aw-1, 1) === top_ptr(aw-1, 1)) & (btm_ptr(aw) =/= top_ptr(aw)))
 
-  def is_enq_ack = io.enq.fire
-  def is_deq_ack = io.deq.fire
 
-  when( is_enq_ack ) {
-    buf(wr_idx) := io.enq.bits
+  when( io.enq.fire ) {
+    // buf(wr_idx) := io.enq.bits
+    buf.write(wr_idx, io.enq.bits)
   }
 
   when(io.flush) {
@@ -59,24 +60,24 @@ class Gen_ringStack[T<:Data]( dw: T, aw: Int ) extends Module {
     top_ptr := 0.U
   }
   .otherwise{
-    when( is_enq_ack ) {
+    when( io.enq.fire ) {
       when(is_full) {
         btm_ptr := btm_ptr + 1.U			
       }
       top_ptr := top_ptr + 1.U
     }
-    when( is_deq_ack ) {
+    when( io.deq.fire ) {
       top_ptr := top_ptr - 1.U
     }
   }
 
-  io.enq.ready := true.B
+  // io.enq.ready := true.B
   io.deq.valid  := ~is_empty
-  io.deq.bits   := buf(rd_idx)
+  io.deq.bits   := RegNext(buf.read(rd_idx))
 
 
 
-  assert ( ~(is_enq_ack & is_deq_ack), "Assert Fail at RSA, RSA will never pop and push at the same times" )
+  assert ( ~(io.enq.fire & io.deq.fire), "Assert Fail at RSA, RSA will never pop and push at the same times" )
 
 
 }

@@ -33,7 +33,8 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
-class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extends RiftModule {
+
+class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
     val alu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
@@ -50,11 +51,16 @@ class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extend
     val fpu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
     val fpu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65,dp=64))
     val fcsr = Input(UInt(24.W))
-    val fcsr_cmm_op = Vec(cm, DecoupledIO( new Exe_Port ))
+    val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
 
-    val cmm_bru_ilp = Input(Bool())
-    val bru_pd_b = new ValidIO( Bool() )
-    val bru_pd_j = new ValidIO( UInt(64.W) )
+    val bftq = Flipped(Decoupled(new Branch_FTarget_Bundle))
+    val jftq = Flipped(Decoupled(new Jump_FTarget_Bundle))
+
+    val bctq = Decoupled(new Branch_CTarget_Bundle)
+    val jctq = Decoupled(new Jump_CTarget_Bundle)
+
+    val bcmm_update = Valid(new Branch_CTarget_Bundle)
+    val jcmm_update = Valid(new Jump_CTarget_Bundle)
 
     val csr_addr = ValidIO(UInt(12.W))
     val csr_data = Flipped(ValidIO(UInt(64.W)))
@@ -76,6 +82,8 @@ class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extend
     val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(1).bundle)))
     val periph_getPut = new DecoupledIO(new TLBundleA(edge(2).bundle))
     val periph_access = Flipped(new DecoupledIO(new TLBundleD(edge(2).bundle)))
+
+    val preFetch = ValidIO( new PreFetch_Req_Bundle )
 
     val flush = Input(Bool())
 
@@ -136,7 +144,7 @@ class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extend
     mdl.io.periph_access.bits := io.periph_access.bits
     io.periph_access.ready := mdl.io.periph_access.ready
 
-
+    io.preFetch := mdl.io.preFetch
 
     mdl.io.flush := io.flush
     mdl
@@ -146,7 +154,7 @@ class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extend
   val mul = Module(new Mul)
 
   val fpu = {
-    val mdl = Module(new FAlu(cm=cm))
+    val mdl = Module(new FAlu(cm=cm_chn))
 
     mdl.io.fpu_iss_exe <> io.fpu_iss_exe
     mdl.io.fpu_exe_iwb <> io.fpu_exe_iwb
@@ -162,32 +170,22 @@ class Execute(edge: Seq[TLEdgeOut], cm: Int = 2 )(implicit p: Parameters) extend
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   alu.io.alu_iss_exe <> io.alu_iss_exe
   alu.io.alu_exe_iwb <> io.alu_exe_iwb
   alu.io.flush <> io.flush
 
   bru.io.bru_iss_exe <> io.bru_iss_exe
   bru.io.bru_exe_iwb <> io.bru_exe_iwb
-  bru.io.cmm_bru_ilp <> io.cmm_bru_ilp
-  bru.io.bru_pd_b <> io.bru_pd_b
-  bru.io.bru_pd_j <> io.bru_pd_j
   bru.io.flush <> io.flush
+
+  bru.io.bftq <> io.bftq
+  bru.io.jftq <> io.jftq
+
+  io.bctq <> bru.io.bctq
+  io.jctq <> bru.io.jctq
+
+  io.bcmm_update := bru.io.bcmm_update
+  io.jcmm_update := bru.io.jcmm_update
 
   csr.io.csr_iss_exe <> io.csr_iss_exe
   csr.io.csr_exe_iwb <> io.csr_exe_iwb

@@ -45,6 +45,7 @@ class iss_readOp_info(dw: Int, dp: Int) extends Bundle{
 
 class Info_commit_op(dp:Int) extends Bundle{
   val is_comfirm = Output(Bool())
+  val is_MisPredict = Output(Bool())
   val is_abort   = Output(Bool())
   val raw        = Output(UInt(5.W)  )
   val phy        = Output(UInt((log2Ceil(dp)).W))
@@ -175,27 +176,27 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
 
       io.commit(m).is_writeback := log(phy(m)) === "b11".U
 
-      when( io.commit(m).is_abort ) {
+      when( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
         /** clear all log to 0, except that archit_ptr point to, may be override */
         for ( j <- 0 until dp-1 ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
       }
-      when( io.commit(m).is_comfirm ) {
+      when( io.commit(m).is_MisPredict | io.commit(m).is_comfirm ) {
         /** override the log(clear) */
         assert( io.commit(m).is_writeback )
         for ( j <- 0 until dp-1 ) yield {
-          when(j.U === idx_pre(m) ) {log_reg(j) := 0.U}
+          when(j.U === idx_pre(m) ) {log_reg(j) := 0.U} // the log, that used before commit, will be clear to 0
         }
         assert( log_reg(phy(m)) === "b11".U, "log_reg which going to commit to will be overrided to \"b11\" if there is an abort in-front." )
-        log_reg(phy(m)) := "b11".U
+        log_reg(phy(m)) := "b11".U //the log, that going to use after commit should keep to be "b11"
       }
 
 
-      when( io.commit(i).is_comfirm ) {
+      when( io.commit(i).is_MisPredict | io.commit(i).is_comfirm ) {
         archit_ptr(raw(i)) := phy(i)
       }
 
 
-      when (io.commit(m).is_abort ) {
+      when ( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
         for ( j <- 0 until 32 ) yield {
           rename_ptr(j) := archit_ptr(j)
           for ( n <- 0 until m ) {
@@ -203,15 +204,16 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
               rename_ptr(j) := phy(n) //override renme_ptr when the perivious chn comfirm
             } 
           }
-
+          when( j.U === raw(m) & io.commit(m).is_MisPredict ) { rename_ptr(j) := phy(m) } //override renme_ptr when the this chn is mispredict
         }
+
       }
     }
   }
 
 
   archit_ptr.map{
-    i => assert( log(i) === "b11".U, "Assert Failed, archit point to should be b11.U!\n")
+    i => assert( log(i) === "b11".U, "Assert Failed, archit point to should be b11.U! i = "+i+"\n")
   }
 
   for ( i <- 0 until 32 ) yield {
@@ -234,8 +236,8 @@ class XRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
       io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
       io.dpt_lookup(i).rsp.rs3 := 63.U
       for ( j <- 0 until i ) {
-        when( (io.dpt_rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
-        when( (io.dpt_rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
       }
     }
   }
@@ -261,9 +263,9 @@ class FRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
       io.dpt_lookup(i).rsp.rs2 := rename_ptr(idx2)
       io.dpt_lookup(i).rsp.rs3 := rename_ptr(idx3) 
       for ( j <- 0 until i ) {
-        when( (io.dpt_rename(j).req.bits.rd0 === idx1) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
-        when( (io.dpt_rename(j).req.bits.rd0 === idx2) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
-        when( (io.dpt_rename(j).req.bits.rd0 === idx3) ) { io.dpt_lookup(i).rsp.rs3 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx1) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx2) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
+        when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx3) ) { io.dpt_lookup(i).rsp.rs3 := molloc_idx(j) }
       }
     }
   }

@@ -31,11 +31,11 @@ import rift2Core.privilege._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.config._
 import chisel3.stage._
-import rift2Core.L1Cache._
+
 
 
 class miniCfg extends Config((site, here, up) => {
-  case CacheParamsKey => CacheSetting()
+  case RiftParamsKey => RiftSetting()
 
   
 })

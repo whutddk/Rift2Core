@@ -21,57 +21,107 @@ package rift2Core.backend
 
 import chisel3._
 import chisel3.util._
+import chisel3.experimental.dataview._
 import rift2Core.define._
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
-
-
-class Bru extends Module {
+abstract class BruBase()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
     val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
 
-    val cmm_bru_ilp = Input(Bool())
+    val bftq = Flipped(Decoupled(new Branch_FTarget_Bundle))
+    val jftq = Flipped(Decoupled(new Jump_FTarget_Bundle))
 
-    val bru_pd_b = new ValidIO( Bool() )
-    val bru_pd_j = new ValidIO( UInt(64.W) )
+    val bctq = Decoupled(new Branch_CTarget_Bundle)
+    val jctq = Decoupled(new Jump_CTarget_Bundle)
+
+    val bcmm_update = Valid(new Branch_CTarget_Bundle)
+    val jcmm_update = Valid(new Jump_CTarget_Bundle)
 
     val flush = Input(Bool())
   })
 
-  val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, false, false ) ) // to block back-to back branch
-  io.bru_exe_iwb <> bru_exe_iwb_fifo.io.deq
-  bru_exe_iwb_fifo.reset := reset.asBool | io.flush
+  val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, true, false ) )
+  val bctq = Module(new Queue( new Branch_CTarget_Bundle, 4 ) )
+  val jctq = Module(new Queue( new Jump_CTarget_Bundle,   4 ) )
 
+  val misPredict_locker = RegInit(false.B)
 
   val op1 = io.bru_iss_exe.bits.param.dat.op1
   val op2 = io.bru_iss_exe.bits.param.dat.op2
-  
+  val imm = io.bru_iss_exe.bits.param.imm
+}
+
+trait BranchExe { this: BruBase => 
+
   val is_branchTaken = Mux1H(Seq(
     io.bru_iss_exe.bits.fun.beq  -> (op1 === op2),
     io.bru_iss_exe.bits.fun.bne  -> (op1 =/= op2),
-    io.bru_iss_exe.bits.fun.blt  -> (op1.asSInt < op2.asSInt),
+    io.bru_iss_exe.bits.fun.blt  -> (op1.asSInt <  op2.asSInt),
     io.bru_iss_exe.bits.fun.bge  -> (op1.asSInt >= op2.asSInt),
     io.bru_iss_exe.bits.fun.bltu -> (op1 <  op2),
     io.bru_iss_exe.bits.fun.bgeu -> (op1 >= op2),
   ))
 
-  // two back to back branch&jalr may be executed together, the 2nd one is executed by mistake, by its mispredict will not affert the perivous one
-  val is_clear_ilp = Mux(io.bru_iss_exe.bits.fun.is_branch, io.cmm_bru_ilp, true.B)
+  bctq.io.enq.bits.viewAsSupertype(new Branch_FTarget_Bundle) := io.bftq.bits
+  bctq.io.enq.bits.isFinalTaken := is_branchTaken
+
+}
+
+trait JumpExe { this: BruBase => 
+  jctq.io.enq.bits.viewAsSupertype(new Jump_FTarget_Bundle) := io.jftq.bits
+  jctq.io.enq.bits.finalTarget := (op1 + imm) >> 1 << 1
+}
+
+/** Update IF when the branch / jalr is commited */
+trait PredictorUpdate { this: BruBase => 
+
+  io.bcmm_update.bits  := Mux(io.bctq.fire, io.bctq.bits, 0.U.asTypeOf(new Branch_CTarget_Bundle))
+  io.bcmm_update.valid := io.bctq.fire
+  io.jcmm_update.bits  := Mux(io.jctq.fire, io.jctq.bits, 0.U.asTypeOf(new Jump_CTarget_Bundle))
+  io.jcmm_update.valid := io.jctq.fire
+}
 
 
-  io.bru_pd_b.bits  := is_branchTaken
-  io.bru_pd_b.valid := bru_exe_iwb_fifo.io.enq.fire & io.bru_iss_exe.bits.fun.is_branch
-  io.bru_pd_j.bits  := (io.bru_iss_exe.bits.param.dat.op1 + io.bru_iss_exe.bits.param.imm) & ~("b1".U(64.W))
-  io.bru_pd_j.valid := bru_exe_iwb_fifo.io.enq.fire & io.bru_iss_exe.bits.fun.jalr
+
+class Bru()(implicit p: Parameters) extends BruBase with BranchExe with JumpExe with PredictorUpdate {
+
+  when( io.flush ) {
+    misPredict_locker := false.B
+  } .elsewhen( (bctq.io.enq.fire & bctq.io.enq.bits.isMisPredict) | (jctq.io.enq.fire & jctq.io.enq.bits.isMisPredict) ) {
+    misPredict_locker := true.B
+  }
+
+  io.bru_exe_iwb <> bru_exe_iwb_fifo.io.deq
+  io.bctq <> bctq.io.deq
+  io.jctq <> jctq.io.deq
+
+  bru_exe_iwb_fifo.reset := reset.asBool | io.flush
+  bctq.reset := reset.asBool | io.flush
+  jctq.reset := reset.asBool | io.flush
 
 
+  io.bru_iss_exe.ready := bru_exe_iwb_fifo.io.enq.ready & bctq.io.enq.ready & jctq.io.enq.ready & ~misPredict_locker
 
-  io.bru_iss_exe.ready := bru_exe_iwb_fifo.io.enq.fire
+  io.bftq.ready := io.bru_iss_exe.fire & io.bru_iss_exe.bits.fun.is_branch
+  io.jftq.ready := io.bru_iss_exe.fire & io.bru_iss_exe.bits.fun.jalr
 
-  bru_exe_iwb_fifo.io.enq.valid := is_clear_ilp & io.bru_iss_exe.valid
+  bru_exe_iwb_fifo.io.enq.valid := io.bru_iss_exe.fire
+  bctq.io.enq.valid := io.bru_iss_exe.fire & io.bru_iss_exe.bits.fun.is_branch
+  jctq.io.enq.valid := io.bru_iss_exe.fire & io.bru_iss_exe.bits.fun.jalr
+
   bru_exe_iwb_fifo.io.enq.bits.res := io.bru_iss_exe.bits.param.pc + Mux( io.bru_iss_exe.bits.param.is_rvc, 2.U, 4.U)
   bru_exe_iwb_fifo.io.enq.bits.rd0 := io.bru_iss_exe.bits.param.rd0
 
 
-}
 
+  assert( jctq.io.enq.fire === (io.bru_iss_exe.fire & io.bru_iss_exe.bits.fun.jalr) )
+  assert( io.jftq.fire === jctq.io.enq.fire )
+  assert( bctq.io.enq.fire === (io.bru_iss_exe.fire & io.bru_iss_exe.bits.fun.is_branch)  )
+  assert( io.bftq.fire === bctq.io.enq.fire )
+  assert( io.bru_iss_exe.fire === bru_exe_iwb_fifo.io.enq.fire )
+
+
+}

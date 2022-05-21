@@ -711,6 +711,7 @@ class Info_reorder_i extends Bundle {
   val rd0_phy = UInt(6.W)
 
   val is_branch = Bool()
+  val is_jalr = Bool()
   val is_lu = Bool()
   val is_su = Bool()
   val is_amo = Bool()
@@ -820,9 +821,7 @@ class Info_clint_csr extends Bundle {
 
 
 
-class Info_cmm_pc extends Bundle {
-  val addr = UInt(64.W)
-}
+
 
 
 
@@ -841,13 +840,28 @@ class Info_lsu_cmm extends Bundle {
   val trap_addr = UInt(64.W)
 }
 
-class Info_overlap extends Bundle{
-  val paddr = Output(UInt(64.W))
-  val wdata = Input(UInt(64.W))
-  val wstrb = Input(UInt(8.W))
-
+class Stq_req_Bundle extends Bundle {
+  val paddr = UInt(64.W)
 }
 
+class Stq_resp_Bundle extends Bundle {
+  val wdata = UInt(64.W)
+  val wstrb = UInt(8.W)
+}
 
+// class Info_overlap extends Bundle{
+//   val paddr = Output(UInt(64.W))
+//   val wdata = Input(UInt(64.W))
+//   val wstrb = Input(UInt(8.W))
+
+// }
+
+class Commit_Redirect_Bundle extends Bundle{
+  val pc = UInt(64.W)
+}
+
+class PreFetch_Req_Bundle extends Bundle {
+  val paddr = UInt(64.W)
+}
 
 

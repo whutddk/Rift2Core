@@ -34,6 +34,13 @@ import freechips.rocketchip.tilelink._
 
 
 class Rift2Core()(implicit p: Parameters) extends LazyModule{
+  val prefetcherClientParameters = TLMasterPortParameters.v1(
+    Seq(TLMasterParameters.v1(
+      name = "prefetch",
+      sourceId = IdRange(0, 1),
+    ))
+  )
+
   val dcacheClientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "dcache",
@@ -75,6 +82,8 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
   val systemClientNode = TLClientNode(Seq(systemClientParameters))
   val periphClientNode = TLClientNode(Seq(periphClientParameters))
   val    mmuClientNode = TLClientNode(Seq(   mmuClientParameters))
+  val prefetchClinetNode = TLClientNode(Seq( prefetcherClientParameters))
+  
 
   lazy val module = new Rift2CoreImp(this)
 }
@@ -90,20 +99,37 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val ( system_bus, system_edge ) = outer.systemClientNode.out.head
   val ( periph_bus, periph_edge ) = outer.periphClientNode.out.head
   val (    mmu_bus,    mmu_edge ) = outer.mmuClientNode.out.head
+  val ( prefetch_bus, prefetch_edge) = outer.prefetchClinetNode.out.head
 
 
 
 
+  val if1 = Module(new IF1)
+  val if2 = Module(new IF2(icache_edge))
+  val if3 = Module(new IF3)
+  val if4 = Module(new IF4)
 
-  val pc_stage = Module(new Pc_gen)
-  val if_stage = Module(new Ifetch(icache_edge))
-  val pd_stage = Module(new Predecode_ss)
-  val bd_stage = Module(new BP_ID_ss)
+
+  if1.io.if4Redirect := if4.io.if4Redirect
+
+  if1.io.pc_gen <> if2.io.if2_req
+  if2.io.if2_resp <> if3.io.if3_req
+  if3.io.if3_resp <> if4.io.if4_req
+
+
+  
+
+
+
+  
+
+  if3.io.if4_update_ghist := if4.io.if4_update_ghist
+  if3.io.if4Redirect := if4.io.if4Redirect
 
 
   val dpt_stage = {
     val mdl = Module(new Dispatch)
-    mdl.io.bd_dpt <> bd_stage.io.bd_dpt
+    mdl.io.bd_dpt <> if4.io.if4_resp
     mdl
   }
 
@@ -164,8 +190,8 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
   val i_mmu = {
     val mdl = Module(new MMU(edge = mmu_edge ))
-    mdl.io.if_mmu <> if_stage.io.if_mmu
-    mdl.io.mmu_if <> if_stage.io.mmu_if
+    mdl.io.if_mmu <> if2.io.if_mmu
+    mdl.io.mmu_if <> if2.io.mmu_if
     mdl.io.lsu_mmu <> exe_stage.io.lsu_mmu
     mdl.io.mmu_lsu <> exe_stage.io.mmu_lsu
     mdl.io.cmm_mmu <> cmm_stage.io.cmm_mmu
@@ -177,59 +203,48 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-  pc_stage.io.bd_pc <> bd_stage.io.bd_pc
+    if1.io.jcmm_update := exe_stage.io.jcmm_update
+    if1.io.bcmm_update := exe_stage.io.bcmm_update
+    if3.io.jcmm_update := exe_stage.io.jcmm_update
+    if3.io.bcmm_update := exe_stage.io.bcmm_update
+    if4.io.jcmm_update := exe_stage.io.jcmm_update
+
   
 
-  pc_stage.io.pc_pd <> pd_stage.io.pc_pd	//valid when flush for new pc 
 
-  
-  pc_stage.io.pc_if <> if_stage.io.pc_if
-  if_stage.io.if_iq <> pd_stage.io.if_pd
-  pd_stage.io.if_cmm_shadow := if_stage.io.if_cmm
-  pd_stage.io.pd_bd <> bd_stage.io.pd_bd
-
-
-
-
-
-
-
+    exe_stage.io.bftq <> if4.io.bftq
+    exe_stage.io.jftq <> if4.io.jftq
 
 
   
 
-  bd_stage.io.bru_pd_b <> exe_stage.io.bru_pd_b
-  pc_stage.io.bru_pd_j <> exe_stage.io.bru_pd_j
-
-  
-
-  i_mmu.io.if_flush := if_stage.io.flush
+  i_mmu.io.if_flush := if2.io.flush
   i_mmu.io.lsu_flush := exe_stage.io.flush
-  if_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | bd_stage.io.bd_pc.valid | exe_stage.io.bru_pd_j.valid
-  // pd_stage.io.flush  := exe_stage.io.icache_fence_req
-  bd_stage.io.flush  := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | exe_stage.io.bru_pd_j.valid 
-  // id_stage.io.flush  := cmm_stage.io.is_commit_abort(0) 
-  dpt_stage.reset := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | reset.asBool
-  iss_stage.reset := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1) | reset.asBool
-  exe_stage.io.flush := cmm_stage.io.is_commit_abort(0) | cmm_stage.io.is_commit_abort(1)
 
-  cmm_stage.io.is_misPredict := bd_stage.io.is_misPredict_taken
+  if2.io.flush := cmm_stage.io.cmmRedirect.fire | if4.io.if4Redirect.valid
+  if3.io.flush := cmm_stage.io.cmmRedirect.fire
+  if4.io.flush := cmm_stage.io.cmmRedirect.fire
+
+  dpt_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
+  iss_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
+  exe_stage.io.flush := cmm_stage.io.cmmRedirect.fire
+
 
 
   cmm_stage.io.cm_op <> iwb_stage.io.commit
   cmm_stage.io.rod <> dpt_stage.io.rod_i
   cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
   cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
-  cmm_stage.io.cmm_bru_ilp <> exe_stage.io.cmm_bru_ilp
   cmm_stage.io.csr_addr <> exe_stage.io.csr_addr
   cmm_stage.io.csr_data <> exe_stage.io.csr_data
   cmm_stage.io.csr_cmm_op <> exe_stage.io.csr_cmm_op
   cmm_stage.io.fcsr <> exe_stage.io.fcsr
   cmm_stage.io.fcsr_cmm_op <> exe_stage.io.fcsr_cmm_op
-
-  cmm_stage.io.cmm_pc <> pc_stage.io.cmm_pc
-  cmm_stage.io.if_cmm := if_stage.io.if_cmm
-  if_stage.io.ifence := cmm_stage.io.ifence
+  cmm_stage.io.bctq <> exe_stage.io.bctq
+  cmm_stage.io.jctq <> exe_stage.io.jctq
+  cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect
+  cmm_stage.io.if_cmm := if2.io.if_cmm
+  if2.io.ifence := cmm_stage.io.ifence
 
 
   cmm_stage.io.rtc_clock := io.rtc_clock
@@ -237,13 +252,13 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
 
 
 
-  if_stage.io.icache_access.bits := icache_bus.d.bits
-  if_stage.io.icache_access.valid := icache_bus.d.valid
-  icache_bus.d.ready := if_stage.io.icache_access.ready
+  if2.io.icache_access.bits := icache_bus.d.bits
+  if2.io.icache_access.valid := icache_bus.d.valid
+  icache_bus.d.ready := if2.io.icache_access.ready
 
-  icache_bus.a.valid := if_stage.io.icache_get.valid
-  icache_bus.a.bits := if_stage.io.icache_get.bits
-  if_stage.io.icache_get.ready := icache_bus.a.ready
+  icache_bus.a.valid := if2.io.icache_get.valid
+  icache_bus.a.bits := if2.io.icache_get.bits
+  if2.io.icache_get.ready := icache_bus.a.ready
 
 
 
@@ -299,7 +314,16 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   i_mmu.io.ptw_access.bits  := mmu_bus.d.bits
   i_mmu.io.ptw_access.valid := mmu_bus.d.valid
 
+  val prefetcher = Module(new PreFetcher(prefetch_edge))
+  prefetcher.io.stqReq          := exe_stage.io.preFetch
+  prefetcher.io.icacheRefillReq := if2.io.preFetch
 
+  prefetch_bus.a.valid := prefetcher.io.intent.valid
+  prefetch_bus.a.bits := prefetcher.io.intent.bits
+  prefetcher.io.intent.ready := prefetch_bus.a.ready
+  prefetch_bus.d.ready := prefetcher.io.hintAck.ready
+  prefetcher.io.hintAck.bits  := prefetch_bus.d.bits
+  prefetcher.io.hintAck.valid := prefetch_bus.d.valid
 
 
   val diff = {

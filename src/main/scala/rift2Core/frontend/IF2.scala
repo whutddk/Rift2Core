@@ -25,23 +25,18 @@ import chisel3.util._
 
 import rift2Core.define._
 import rift2Core.L1Cache._
-import rift2Core.frontend._
 
 
 import chipsalliance.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
-// class Info_if_cmm extends Bundle {
-//   val is_access_fault = Bool()
-//   val is_paging_fault = Bool()
-//   val fault_vaddr = UInt(64.W)
-
-// }
 
 
-class Ifetch(edge: TLEdgeOut)(implicit p: Parameters) extends Icache(edge = edge){
+class IF2(edge: TLEdgeOut)(implicit p: Parameters) extends Icache(edge = edge){
 
+  io.preFetch.valid := io.icache_get.fire
+  io.preFetch.bits.paddr := io.icache_get.bits.address + "b100000".U
 }
 
 

@@ -39,7 +39,7 @@ trait L1CacheParameters {
 
 
 
-trait HasL1CacheParameters extends HasCacheParameters
+trait HasL1CacheParameters extends HasRiftParameters
 
 
 

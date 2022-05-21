@@ -36,6 +36,20 @@ class RePort[T<:Data]( dw: T, port: Int) extends Module{
     io.enq(i).ready  := false.B
   }
 
+  // val sel = Wire( Vec( port, UInt(log2Ceil(port).W)) )
+  // for ( i <- 0 until port ) { sel(i) := 0.U }
+
+  // for ( i <- 0 until port ) {
+  //     when( io.enq(i).valid ) {
+  //       if ( i == 0 ) { io.enq(i) <> io.deq(0) }
+  //       else {
+  //         val sel = PopCount( for ( j <- 0 until i ) yield {io.enq(j).valid} )
+  //         io.enq(i) <> io.deq(sel)
+  //       }
+  //     }      
+  //   } 
+
+
   val is_end = Wire( Vec( port, Bool()) )
   val sel = Wire( Vec( port, UInt(log2Ceil(port).W)) )
   val in_next = Wire( Vec( port, UInt(port.W) ) )
@@ -68,7 +82,7 @@ class RePort[T<:Data]( dw: T, port: Int) extends Module{
 }
 
 object RePort{
-  def apply[T <: Data]( enq: Vec[ReadyValidIO[T]] ): Vec[DecoupledIO[T]] = {
+  def apply[T <: Data]( enq: Vec[DecoupledIO[T]] ): Vec[DecoupledIO[T]] = {
     val mdl = Module(new RePort( chiselTypeOf(enq(0).bits), enq.length ))
     enq <> mdl.io.enq
     return mdl.io.deq
