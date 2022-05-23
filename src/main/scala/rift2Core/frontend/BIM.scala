@@ -25,8 +25,8 @@ import rift2Core.define._
 
 class BIM()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
-    val req      = Input(new BIMReq_Bundle)
-    val combResp = Output(new BIMResp_Bundle)
+    val req  = Flipped(Decoupled(new BIMReq_Bundle))
+    val resp = Decoupled(new BIMResp_Bundle)
     val update   = Flipped(Valid(new BIMUpdate_Bundle))
 
     val isReady = Output(Bool())
@@ -54,7 +54,7 @@ class BIM()(implicit p: Parameters) extends IFetchModule {
   /** branch resolve write cache line */
   val wr_cl = HashTo0( in = io.update.bits.pc, len = log2Ceil(bim_cl))
   /** branch predice read cache line */
-  val rd_cl = HashTo0( in = io.req.pc,    len = log2Ceil(bim_cl))
+  val rd_cl = HashTo0( in = io.req.bits.pc,    len = log2Ceil(bim_cl))
 
 
   // no overlap mis-predict will happened, for the following instr will be flushed
@@ -70,7 +70,9 @@ class BIM()(implicit p: Parameters) extends IFetchModule {
     }
   }
 
-  io.combResp.bim_p := bim_P.read(rd_cl)
-  io.combResp.bim_h := bim_H.read(rd_cl)
+  io.resp.bits.bim_p := RegNext(bim_P.read(rd_cl))
+  io.resp.bits.bim_h := RegNext(bim_H.read(rd_cl))
+  io.resp.valid      := RegNext(io.req.fire)
+  io.req.ready       := io.resp.ready
 }
 

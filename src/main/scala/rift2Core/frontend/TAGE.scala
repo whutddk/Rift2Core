@@ -41,7 +41,7 @@ class TageTable(nRows: Int, histlen: Int)(implicit p: Parameters) extends IFetch
 
   val io = IO( new Bundle{
     val req = Input(new TageTableReq_Bundle)
-    val combResp = Output( new TageTableResp_Bundle)
+    val resp = Output( new TageTableResp_Bundle)
     val update = Flipped(Valid(new TageTableUpdate_Bundle))
 
     val isReady = Output(Bool())
@@ -72,9 +72,9 @@ class TageTable(nRows: Int, histlen: Int)(implicit p: Parameters) extends IFetch
 
   // val req_tag = HashTo1( in = HashTwo1( in1 = io.req.pc, in2 = io.req.ghist & Fill(histlen, 1.U) ), len = tage_tag_w )
 
-  io.combResp.ctl    := tage_ctl.read(rd_cl)
-  io.combResp.use    := Cat( tage_uhi.read(rd_cl), tage_ulo.read(rd_cl) )
-  io.combResp.is_hit := true.B //tage_tag.read(req_cl) === req_tag
+  io.resp.ctl    := RegNext(tage_ctl.read(rd_cl))
+  io.resp.use    := RegNext(Cat( tage_uhi.read(rd_cl), tage_ulo.read(rd_cl) ))
+  io.resp.is_hit := RegNext(true.B) //RegNext(tage_tag.read(req_cl) === req_tag)
 
   when( por_reset ) {
     tage_uhi.write( reset_cl, 0.U )
@@ -103,8 +103,8 @@ class TageTable(nRows: Int, histlen: Int)(implicit p: Parameters) extends IFetch
 
 class TAGE(param: TageParams = TageParams())(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
-    val req = Input(new TageReq_Bundle)
-    val combResp = Output( Vec(6, new TageTableResp_Bundle ) )
+    val req = Flipped(Decoupled(new TageReq_Bundle))
+    val resp = Decoupled( Vec(6, new TageTableResp_Bundle ) )
     val update = Flipped(Valid(new TageUpdate_Bundle))
 
     val isReady = Output(Bool())
@@ -114,14 +114,16 @@ class TAGE(param: TageParams = TageParams())(implicit p: Parameters) extends IFe
   val tageTable = param.tableInfo.map{
     case ( nRows, len ) => {
       val mdl = Module(new TageTable(nRows = nRows, histlen = len))
-      mdl.io.req  := io.req
+      mdl.io.req  := io.req.bits
       mdl.io.flush := io.flush
       
       mdl
     }
   }
   
-  for ( i <- 0 until 6 ) yield { io.combResp(i) := tageTable(i).io.combResp }
+  for ( i <- 0 until 6 ) yield { io.resp.bits(i) := tageTable(i).io.resp }
+  io.resp.valid := RegNext(io.req.fire)
+  io.req.ready  := io.resp.ready
 
   io.isReady := tageTable.map{_.io.isReady}.reduce(_|_)
 

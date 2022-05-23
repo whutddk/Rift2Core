@@ -29,8 +29,8 @@ import chipsalliance.rocketchip.config.Parameters
 class BTB()(implicit p: Parameters) extends IFetchModule {
   def cl_w = log2Ceil(btb_cl)
   val io = IO(new Bundle{
-    val req  = Input(new BTBReq_Bundle)
-    val combResp = Output( new BTBResp_Bundle )
+    val req  = Flipped(Decoupled(new BTBReq_Bundle))
+    val resp = Decoupled( new BTBResp_Bundle )
 
     val update = Flipped(Valid(new BTBUpdate_Bundle))
 
@@ -46,15 +46,16 @@ class BTB()(implicit p: Parameters) extends IFetchModule {
 
 
 
-  val rd_cl_sel  = HashTo0( in = io.req.pc, len = log2Ceil(btb_cl) )
+  val rd_cl_sel  = HashTo0( in = io.req.bits.pc, len = log2Ceil(btb_cl) )
   val wr_cl_sel  = HashTo0( in = io.update.bits.pc, len = log2Ceil(btb_cl) )
 
 
   val btb_table = Mem( btb_cl, new BTBResp_Bundle )
 
 
-  io.combResp  := btb_table.read(rd_cl_sel)
-
+  io.resp.bits  := RegNext(btb_table.read(rd_cl_sel))
+  io.resp.valid := RegNext(io.req.fire)
+  io.req.ready  := io.resp.ready
 
   when( por_reset ) {
     btb_table.write( reset_cl, "h80000000".U.asTypeOf(new BTBResp_Bundle) )
