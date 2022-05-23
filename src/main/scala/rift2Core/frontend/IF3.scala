@@ -67,7 +67,7 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
 
 
 trait IF3_PreDecode{ this: IF3Base => 
-  val isRedirect = io.if3_req.map{ _.bits.isRedirect =/= "b11".U }
+  val isRedirect = io.if3_req.map{ _.bits.isRedirect }
   val is_instr32 = io.if3_req.map{ _.bits.instr(1,0) === "b11".U }
   val isPassThrough = Wire(Vec(4, Bool()))
   isPassThrough(0) := false.B
