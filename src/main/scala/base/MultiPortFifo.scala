@@ -108,34 +108,32 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int, flow: Boolean =
 
     val fifo = Module(new MultiPortFifo( dw, aw, in, out, flow = false ))
     val rePortIn = Module(new RePort( dw, port = in))
-    val reDirect = Module(new ReDirect( dw, port = in + out))
+    val zipPort = Module(new ZipPort( dw, port = in + out))
 
     rePortIn.io.enq <> io.enq
     rePortIn.io.deq <> fifo.io.enq
 
     for ( i <- 0 until out  ) {
-      reDirect.io.enq(i) <> fifo.io.deq(i)
+      zipPort.io.enq(i) <> fifo.io.deq(i)
     }
 
     for ( i <- out until out+in ) {
-      reDirect.io.enq(i).valid := io.enq(i-out).valid
-      reDirect.io.enq(i).bits  := io.enq(i-out).bits
+      zipPort.io.enq(i).valid := io.enq(i-out).valid
+      zipPort.io.enq(i).bits  := io.enq(i-out).bits
     }
 
 
     for ( i <- 0 until out ) {
-      reDirect.io.deq(i) <> io.deq(i)
-      reDirect.io.mapper(i) := true.B
+      zipPort.io.deq(i) <> io.deq(i)
     }
     for ( i <- out until out+in  ) {
-      reDirect.io.deq(i).ready := false.B
-      reDirect.io.mapper(i)    := false.B
+      zipPort.io.deq(i).ready := false.B
     }
 
     fifo.io.flush := io.flush
 
     for ( i <- 0 until in ) {
-      when( reDirect.io.enq(out+i).fire ) {
+      when( zipPort.io.enq(out+i).fire ) {
         rePortIn.io.enq(i).valid := false.B
         rePortIn.io.enq(i).bits  := 0.U.asTypeOf(dw)
       }
@@ -212,4 +210,5 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int, flow: Boolean =
 
 
 }
+
 

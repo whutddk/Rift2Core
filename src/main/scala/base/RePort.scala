@@ -133,3 +133,58 @@ object ReDirect{
   }
 }
 
+
+class ZipPort[T<:Data]( dw: T, port: Int) extends Module{
+  val io = IO( new Bundle{
+    val enq = Vec(port, Flipped(new DecoupledIO(dw)) )
+    val deq  = Vec(port, new DecoupledIO(dw) )
+    })
+
+  val outValid = Wire( Vec(port, Vec(port, Bool())))
+  val inReady  = Wire( Vec(port, Vec(port, Bool())))
+  val outBits  = Wire( Vec(port, Vec(port, dw)))
+
+  ( 0 until port ).map{ i =>
+    outBits(0)(i)  := io.enq(i).bits
+    outValid(0)(i) := io.enq(i).valid
+    io.enq(i).ready := inReady(0)(i)
+  }
+
+
+  for ( z <- 1 until port ) {
+    val (valid_res, bits_res, ready_res) = 
+      ZipPort( outValid(z-1), outBits(z-1), inReady(z) )
+
+    outBits(z)  := bits_res
+    outValid(z) := valid_res
+    inReady(z-1) := ready_res
+  }
+
+  ( 0 until port ).map{ i =>
+    io.deq(i).valid := outValid(port-1)(i)
+    io.deq(i).bits  := outBits(port-1)(i)
+    inReady(port-1)(i) := io.deq(i).ready
+  }
+
+  def ZipPort( inValid: Vec[Bool], inBits: Vec[T], outReady: Vec[Bool] ): (Vec[Bool], Vec[T], Vec[Bool]) = {
+
+    val outValid = WireDefault(inValid)
+    val outBits  = WireDefault(inBits)
+    val inReady = WireDefault(outReady)
+
+    for ( i <- 0 until port-1 ) {
+      when( inValid(i) === false.B & inValid(i+1) === true.B ) {
+        outValid(i)   := true.B
+        outValid(i+1) := false.B
+
+        outBits(i)    := inBits(i+1)
+        outBits(i+1)  := 0.U.asTypeOf(dw)
+
+        inReady(i)    := outReady(i+1)
+        inReady(i+1)  := false.B
+      }
+    }
+    return (outValid, outBits, inReady)
+  }
+
+}
