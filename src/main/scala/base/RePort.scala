@@ -32,7 +32,7 @@ class RePort[T<:Data]( dw: T, port: Int) extends Module{
 
   for ( i <- 0 until port ) yield {
     io.deq(i).valid := false.B 
-    io.deq(i).bits  := DontCare
+    io.deq(i).bits  := 0.U.asTypeOf(dw)
     io.enq(i).ready  := false.B
   }
 

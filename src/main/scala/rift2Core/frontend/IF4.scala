@@ -28,9 +28,9 @@ import base._
 abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
     val if4_req = Vec(2, Flipped(Decoupled(new IF3_Bundle)))
-    val btbResp  = Flipped(Decoupled(new BTBResp_Bundle))
-    val bimResp  = Flipped(Decoupled(new BIMResp_Bundle))
-    val tageResp = Flipped(Decoupled(Vec(6, new TageTableResp_Bundle )))
+    val btbResp  = Vec(2, Flipped(Decoupled(new BTBResp_Bundle)))
+    val bimResp  = Vec(2, Flipped(Decoupled(new BIMResp_Bundle)))
+    val tageResp = Vec(2, Flipped(Decoupled(Vec(6, new TageTableResp_Bundle ))))
 
     val if4_resp = Vec(2, Decoupled(new IF4_Bundle))
 
@@ -69,10 +69,19 @@ abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
   val ghist        = io.if4_req.map{_.bits.ghist}
   val imm          = io.if4_req.map{_.bits.preDecode.imm}
 
+  val is_req_btb   = io.if4_req.map{ _.bits.preDecode.is_req_btb}
+  val is_req_bim   = io.if4_req.map{ _.bits.preDecode.is_req_bim}
+  val is_req_tage  = io.if4_req.map{ _.bits.preDecode.is_req_tage}
 
-  val tage_decode = Tage_Decode(io.tageResp.bits)
-  val bim_decode  = io.bimResp.bits
-  val btb_decode  = io.btbResp.bits
+
+  val tageRedirect = ReDirect(io.tageResp, VecInit(is_req_tage) )
+  val bimRedirect  = ReDirect(io.bimResp,  VecInit(is_req_bim ) )
+  val btbRedirect  = ReDirect(io.btbResp,  VecInit(is_req_btb ) )
+
+
+  val tage_decode = tageRedirect.map{ x => Tage_Decode(x.bits)}
+  val bim_decode  = bimRedirect.map{ _.bits}
+  val btb_decode  = btbRedirect.map{ _.bits}
 
 }
 
@@ -95,23 +104,23 @@ trait IF4_Predict{ this: IF4Base =>
   val isDisAgreeWithIF1 = Wire(Vec(2, Bool()))
   val isIf4Redirect = Wire(Vec(2, Bool()))
 
-  val is_bTaken = 
-    // Mux( ~tage_decode.isAlloc.reduce(_&_),
-    //     tage_decode.isPredictTaken,
-    //     bim_decode.bim_p
+  val is_bTaken = for ( i <- 0 until 2 ) yield {
+    // Mux( ~tage_decode(i).isAlloc.reduce(_&_),
+    //     tage_decode(i).isPredictTaken,
+    //     bim_decode(i).bim_p
     // )
-    bim_decode.bim_p
-  
+    bim_decode(i).bim_p
+  }  
 
   for( i <- 0 until 2 ) {
     isRedirect(i) := 
-    (is_branch(i) & is_bTaken) |
+    (is_branch(i) & is_bTaken(i)) |
     is_jal(i) |
     is_jalr(i)
   }
 
   val jalr_pc = for( i <- 0 until 2 ) yield {
-    Mux( is_return(i) & ras.io.deq.valid, ras.io.deq.bits.target, btb_decode.target  )
+    Mux( is_return(i) & ras.io.deq.valid, ras.io.deq.bits.target, btb_decode(i).target  )
   }
   //ignore ras-pop-valid
   ras.io.deq.ready := ( 0 until 2 ).map{ i => (is_return(i) & io.if4_req(i).fire)}.reduce(_|_)
@@ -124,7 +133,7 @@ trait IF4_Predict{ this: IF4Base =>
   for( i <- 0 until 2 ) yield {
     redirectTarget(i) := 
     Mux1H(Seq(
-      (is_branch(i) & is_bTaken) -> (pc(i) + imm(i)),
+      (is_branch(i) & is_bTaken(i)) -> (pc(i) + imm(i)),
       is_jal(i)                     -> (pc(i) + imm(i)),
       is_jalr(i)                    -> (jalr_pc(i)),
     ))
@@ -135,7 +144,7 @@ trait IF4_Predict{ this: IF4Base =>
     io.if4_update_ghist(i).valid :=
       io.if4_req(i).fire & is_branch(i)
 
-    io.if4_update_ghist(i).bits.isTaken := is_bTaken
+    io.if4_update_ghist(i).bits.isTaken := is_bTaken(i)
   }
 
   for( i <- 0 until 2 ) yield {
@@ -166,14 +175,14 @@ trait IF4_Predict{ this: IF4Base =>
   for ( i <- 0 until 2 ) yield {
     bRePort.io.enq(i).bits.pc             := pc(i)
     bRePort.io.enq(i).bits.ghist          := ghist(i)
-    bRePort.io.enq(i).bits.bimResp        := bim_decode
-    bRePort.io.enq(i).bits.tageResp       := tage_decode
-    bRePort.io.enq(i).bits.revertTarget   := Mux( is_bTaken, (pc(i) + Mux(is_rvc(i), 2.U, 4.U)), (pc(i) + imm(i)) )
-    bRePort.io.enq(i).bits.predicTarget   := Mux(~is_bTaken, (pc(i) + Mux(is_rvc(i), 2.U, 4.U)), (pc(i) + imm(i)) )
-    bRePort.io.enq(i).bits.isPredictTaken := is_bTaken
+    bRePort.io.enq(i).bits.bimResp        := bim_decode(i)
+    bRePort.io.enq(i).bits.tageResp       := tage_decode(i)
+    bRePort.io.enq(i).bits.revertTarget   := Mux( is_bTaken(i), (pc(i) + Mux(is_rvc(i), 2.U, 4.U)), (pc(i) + imm(i)) )
+    bRePort.io.enq(i).bits.predicTarget   := Mux(~is_bTaken(i), (pc(i) + Mux(is_rvc(i), 2.U, 4.U)), (pc(i) + imm(i)) )
+    bRePort.io.enq(i).bits.isPredictTaken := is_bTaken(i)
 
     jRePort.io.enq(i).bits.pc      := pc(i)
-    jRePort.io.enq(i).bits.btbResp := btb_decode
+    jRePort.io.enq(i).bits.btbResp := btb_decode(i)
     jRePort.io.enq(i).bits.rasResp := ras.io.deq.bits
     jRePort.io.enq(i).bits.isRas   := is_return(i) & ras.io.deq.valid
   }
@@ -186,34 +195,28 @@ trait IF4_Predict{ this: IF4Base =>
 }
 
 trait IF4SRAM { this: IF4Base =>
-  val is_req_btb   = io.if4_req.map{ _.bits.preDecode.is_req_btb}
-  val is_req_bim   = io.if4_req.map{ _.bits.preDecode.is_req_bim}
-  val is_req_tage  = io.if4_req.map{ _.bits.preDecode.is_req_tage}
 
 
-  io.btbResp.ready  := false.B 
-  io.bimResp.ready  := false.B 
-  io.tageResp.ready := false.B 
 
-  val is_ram_block = 
-    (PopCount( is_req_btb ) > 1.U ) |
-    (PopCount( is_req_bim ) > 1.U ) |
-    (PopCount( is_req_tage ) > 1.U )
+  // io.btbResp.ready  := false.B 
+  // io.bimResp.ready  := false.B 
+  // io.tageResp.ready := false.B 
 
-  when( (0 until 2).map{ i => is_req_btb(i) & io.if4_req(i).fire }.reduce(_|_) ) {
-    assert(io.btbResp.valid)
-    io.btbResp.ready := true.B
+  // val is_ram_block = 
+  //   (PopCount( is_req_btb ) > 1.U ) |
+  //   (PopCount( is_req_bim ) > 1.U ) |
+  //   (PopCount( is_req_tage ) > 1.U )
+
+  for ( i <- 0 until 2 ) yield {
+    btbRedirect(i).ready := is_req_btb(i) & io.if4_req(i).fire
+    bimRedirect(i).ready := is_req_bim(i) & io.if4_req(i).fire
+    tageRedirect(i).ready := is_req_tage(i) & io.if4_req(i).fire
+
+    assert( ~(btbRedirect(i).ready  & ~btbRedirect(i).valid) )
+    assert( ~(bimRedirect(i).ready  & ~bimRedirect(i).valid) )
+    assert( ~(tageRedirect(i).ready & ~tageRedirect(i).valid))
   }
 
-  when( (0 until 2).map{ i => is_req_bim(i) & io.if4_req(i).fire}.reduce(_|_)) {
-    assert(io.bimResp.valid)
-    io.bimResp.ready := true.B
-  }
-
-  when( (0 until 2).map{ i => is_req_tage(i) & io.if4_req(i).fire}.reduce(_|_)) {
-    assert(io.tageResp.valid)
-    io.tageResp.ready := true.B
-  }
       
 }
 
@@ -242,7 +245,7 @@ class IF4()(implicit p: Parameters) extends IF4Base with IF4_Decode with IF4_Pre
   }
 
   io.if4_req(0).ready := bRePort.io.enq(0).ready & bRePort.io.enq(0).ready & instr_fifo.io.enq(0).ready
-  io.if4_req(1).ready := jRePort.io.enq(1).ready & jRePort.io.enq(1).ready & instr_fifo.io.enq(1).ready & ~isIf4Redirect(0) & ~is_ram_block
+  io.if4_req(1).ready := jRePort.io.enq(1).ready & jRePort.io.enq(1).ready & instr_fifo.io.enq(1).ready & ~isIf4Redirect(0)
 
   instr_fifo.io.flush := io.flush
   bftq.io.flush := io.flush

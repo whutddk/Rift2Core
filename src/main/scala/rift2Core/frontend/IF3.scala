@@ -31,9 +31,9 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
     val if3_req = Vec(4, Flipped(new DecoupledIO(new IF2_Bundle) ))
     val if3_resp = Vec(2, Decoupled(new IF3_Bundle))
 
-    val btbResp  = Decoupled(new BTBResp_Bundle)
-    val bimResp  = Decoupled(new BIMResp_Bundle)
-    val tageResp = Decoupled(Vec(6, new TageTableResp_Bundle ))
+    val btbResp  = Vec(2, Decoupled(new BTBResp_Bundle))
+    val bimResp  = Vec(2, Decoupled(new BIMResp_Bundle))
+    val tageResp = Vec(2, Decoupled(Vec(6, new TageTableResp_Bundle )))
 
     val jcmm_update = Flipped(Valid(new Jump_CTarget_Bundle))
     val bcmm_update = Flipped(Valid(new Branch_CTarget_Bundle))
@@ -56,9 +56,14 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val bim = Module(new BIM)
   val tage = Module(new TAGE)
 
-  val btbFifo =  Module(new Queue( new BTBResp_Bundle, entries = 16, flow = true))
-  val bimFifo =  Module(new Queue( new BIMResp_Bundle, entries = 16, flow = true))
-  val tageFifo = Module(new Queue( Vec(6, new TageTableResp_Bundle ), entries = 16, flow = true))
+  // val btbFifo =  Module(new Queue( new BTBResp_Bundle, entries = 16, flow = true))
+  // val bimFifo =  Module(new Queue( new BIMResp_Bundle, entries = 16, flow = true))
+  // val tageFifo = Module(new Queue( Vec(6, new TageTableResp_Bundle ), entries = 16, flow = true))
+
+  val btbFifo =  Module(new MultiPortFifo( new BTBResp_Bundle, aw = 4, in = 1, out = 2, flow = true ) )
+  val bimFifo =  Module(new MultiPortFifo( new BIMResp_Bundle, aw = 4, in = 1, out = 2, flow = true ) )
+  val tageFifo = Module(new MultiPortFifo( Vec(6, new TageTableResp_Bundle ), aw = 4, in = 1, out = 2, flow = true ) )
+
 
   val predictor_ready = btb.io.isReady & bim.io.isReady & tage.io.isReady
 
@@ -340,15 +345,15 @@ class IF3()(implicit p: Parameters) extends IF3Base with IF3_PreDecode with IF3_
   bim.io.flush  := false.B
   tage.io.flush := false.B
 
-  btbFifo.io.enq <> btb.io.resp
-  bimFifo.io.enq <> bim.io.resp
-  tageFifo.io.enq <> tage.io.resp
+  btbFifo.io.enq(0)  <> btb.io.resp
+  bimFifo.io.enq(0)  <> bim.io.resp
+  tageFifo.io.enq(0) <> tage.io.resp
 
   btbFifo.io.deq  <> io.btbResp
   bimFifo.io.deq  <> io.bimResp
   tageFifo.io.deq <> io.tageResp
 
-  btbFifo.reset  := reset.asBool | io.flush | io.if4Redirect.fire
-  bimFifo.reset  := reset.asBool | io.flush | io.if4Redirect.fire
-  tageFifo.reset := reset.asBool | io.flush | io.if4Redirect.fire
+  btbFifo.io.flush  := io.flush | io.if4Redirect.fire
+  bimFifo.io.flush  := io.flush | io.if4Redirect.fire
+  tageFifo.io.flush := io.flush | io.if4Redirect.fire
 }
