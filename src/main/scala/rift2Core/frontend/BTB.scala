@@ -50,20 +50,27 @@ class BTB()(implicit p: Parameters) extends IFetchModule {
   val wr_cl_sel  = HashTo0( in = io.update.bits.pc, len = log2Ceil(btb_cl) )
 
 
-  val btb_table = Mem( btb_cl, new BTBResp_Bundle )
+  val btb_table = SyncReadMem( btb_cl, new BTBResp_Bundle )
 
 
-  io.resp.bits  := RegNext(btb_table.read(rd_cl_sel))
+  io.resp.bits  := btb_table.read(rd_cl_sel)
   io.resp.valid := RegNext(io.req.fire)
   io.req.ready  := io.resp.ready
 
-  when( por_reset ) {
-    btb_table.write( reset_cl, "h80000000".U.asTypeOf(new BTBResp_Bundle) )
-  } .otherwise {
-    when( io.update.valid ) {
-      btb_table.write(wr_cl_sel, io.update.bits.viewAsSupertype( new BTBResp_Bundle ))
-    }
+  when( por_reset | io.update.fire ) {
+    btb_table.write(
+      Mux(por_reset, reset_cl, wr_cl_sel),
+      Mux(por_reset, "h80000000".U.asTypeOf(new BTBResp_Bundle), io.update.bits.viewAsSupertype( new BTBResp_Bundle ) )
+    )
   }
+
+  // when( por_reset ) {
+  //   btb_table.write( reset_cl, "h80000000".U.asTypeOf(new BTBResp_Bundle) )
+  // } .otherwise {
+  //   when( io.update.valid ) {
+  //     btb_table.write(wr_cl_sel, io.update.bits.viewAsSupertype( new BTBResp_Bundle ))
+  //   }
+  // }
 
 
 }

@@ -62,41 +62,40 @@ class TageTable(nRows: Int, histlen: Int)(implicit p: Parameters) extends IFetch
 
 
 
-  val tage_uhi = Mem(nRows, UInt(1.W))
-  val tage_ulo = Mem(nRows, UInt(1.W))
-  // val tage_tag = Mem(nRows, UInt(tage_tag_w.W))
-  val tage_ctl = Mem(nRows, UInt(3.W))
+  val tage_uhi = SyncReadMem(nRows, UInt(1.W))
+  val tage_ulo = SyncReadMem(nRows, UInt(1.W))
+  // val tage_tag = SyncReadMem(nRows, UInt(tage_tag_w.W))
+  val tage_ctl = SyncReadMem(nRows, UInt(3.W))
 
   val rd_cl  = HashTo0( in = HashTwo0( in1 = io.req.pc, in2 = io.req.ghist & Fill(histlen, 1.U) ), len = cl_w )
   val wr_cl  = HashTo0( in = HashTwo0( in1 = io.update.bits.pc, in2 = io.update.bits.ghist & Fill(histlen, 1.U) ), len = cl_w )
 
   // val req_tag = HashTo1( in = HashTwo1( in1 = io.req.pc, in2 = io.req.ghist & Fill(histlen, 1.U) ), len = tage_tag_w )
 
-  io.resp.ctl    := RegNext(tage_ctl.read(rd_cl))
-  io.resp.use    := RegNext(Cat( tage_uhi.read(rd_cl), tage_ulo.read(rd_cl) ))
-  io.resp.is_hit := RegNext(true.B) //RegNext(tage_tag.read(req_cl) === req_tag)
+  io.resp.ctl    := tage_ctl.read(rd_cl)
+  io.resp.use    := Cat( tage_uhi.read(rd_cl), tage_ulo.read(rd_cl) )
+  io.resp.is_hit := RegNext(true.B) //tage_tag.read(req_cl) === req_tag
 
-  when( por_reset ) {
-    tage_uhi.write( reset_cl, 0.U )
-    tage_ulo.write( reset_cl, 0.U )
-    // tage_tag.write( reset_cl, 0.U )
-    tage_ctl.write( reset_cl, 0.U )
-  } .elsewhen( io.update.valid ) {
-    
-    // val update_tag = HashTo1( in = HashTwo1( in1 = io.update.bits.pc, in2 = io.update.bits.ghist & Fill(histlen, 1.U) ), len = tage_tag_w )
-    tage_uhi.write( wr_cl, io.update.bits.use(1) )
-    tage_ulo.write( wr_cl, io.update.bits.use(0) )
-    // tage_tag.write( wr_cl, update_tag )
-    tage_ctl.write( wr_cl, io.update.bits.ctl )    
-  }
-  //tage-table may giveup clear this usage if collision with write
-  .elsewhen( is_clear_hi ) {
-    tage_uhi.write( clear_cl, 0.U )
-  } .elsewhen( is_clear_lo ) {
-    tage_ulo.write( clear_cl, 0.U )
+  when( por_reset | io.update.fire ) {
+    tage_ctl.write(
+      Mux(por_reset, reset_cl, wr_cl),
+      Mux(por_reset, 0.U, io.update.bits.ctl)
+    )
   }
 
-  
+  when( por_reset | io.update.fire | is_clear_hi) {
+    tage_uhi.write(
+      Mux(por_reset, reset_cl, Mux( io.update.fire, wr_cl, clear_cl)),
+      Mux(por_reset, 0.U,      Mux( io.update.fire, io.update.bits.use(1), 0.U))
+    )
+  }
+
+  when( por_reset | io.update.fire | is_clear_lo) {
+    tage_ulo.write(
+      Mux(por_reset, reset_cl, Mux( io.update.fire, wr_cl, clear_cl)),
+      Mux(por_reset, 0.U,      Mux( io.update.fire, io.update.bits.use(0), 0.U))
+    )
+  }  
 }
 
 
