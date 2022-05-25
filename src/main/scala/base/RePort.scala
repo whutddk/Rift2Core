@@ -180,8 +180,8 @@ class ZipPort[T<:Data]( dw: T, port: Int) extends Module{
         outBits(i)    := inBits(i+1)
         outBits(i+1)  := 0.U.asTypeOf(dw)
 
-        inReady(i)    := outReady(i+1)
-        inReady(i+1)  := false.B
+        inReady(i)    := false.B
+        inReady(i+1)  := outReady(i)
       }
     }
     return (outValid, outBits, inReady)

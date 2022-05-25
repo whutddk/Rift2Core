@@ -188,10 +188,10 @@ trait IF4_Predict{ this: IF4Base =>
   }
 
   //only when ras make a wrong prediction will it flush, Warning: we don't care abort other pipeline flush this time
-  ras.io.flush := io.jcmm_update.valid & io.jcmm_update.bits.isRas & io.jcmm_update.bits.isMisPredict
+  // ras.io.flush := io.jcmm_update.valid & io.jcmm_update.bits.isRas & io.jcmm_update.bits.isMisPredict
   
   //ras flush immediately when pipeline flush
-  // ras.io.flush := io.flush
+  ras.io.flush := io.flush
 }
 
 trait IF4SRAM { this: IF4Base =>

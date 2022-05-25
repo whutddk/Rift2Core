@@ -195,7 +195,7 @@ trait IF3_Predict{ this: IF3Base =>
           reAlign(k).ready := false.B          
         }
       } .otherwise{
-        btb.io.req.valid := reAlign(i).valid
+        btb.io.req.valid := reAlign(i).valid & ~(io.flush | io.if4Redirect.fire)
         btb.io.req.bits.pc := reAlign(i).bits.pc
         reAlign(i).ready := combPDT.io.enq(i).ready & btb.io.req.ready
       }
@@ -209,7 +209,7 @@ trait IF3_Predict{ this: IF3Base =>
           reAlign(k).ready := false.B          
         }
       } .otherwise{
-        bim.io.req.valid := reAlign(i).valid
+        bim.io.req.valid := reAlign(i).valid & ~(io.flush | io.if4Redirect.fire)
         bim.io.req.bits.pc := reAlign(i).bits.pc
         reAlign(i).ready := combPDT.io.enq(i).ready & bim.io.req.ready
       }
@@ -223,7 +223,7 @@ trait IF3_Predict{ this: IF3Base =>
           reAlign(k).ready := false.B          
         }
       } .otherwise{
-        tage.io.req.valid      := reAlign(i).valid
+        tage.io.req.valid      := reAlign(i).valid & ~(io.flush | io.if4Redirect.fire)
         tage.io.req.bits.pc    := reAlign(i).bits.pc
         tage.io.req.bits.ghist := ghist_active
         reAlign(i).ready       := combPDT.io.enq(i).ready & tage.io.req.ready
