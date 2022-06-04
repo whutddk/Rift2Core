@@ -190,10 +190,7 @@ trait IF3_Predict{ this: IF3Base =>
 
     when( is_req_btb(i) ) {
       when( if ( i == 0 ) {false.B} else { ( 0 until i ).map{ j => is_req_btb(j) }.reduce(_|_) } ) {
-        for ( k <- i until 4 ) {
-          reAlign(k).valid := false.B
-          reAlign(k).ready := false.B          
-        }
+
       } .otherwise{
         btb.io.req.valid := reAlign(i).valid & ~(io.flush | io.if4Redirect.fire)
         btb.io.req.bits.pc := reAlign(i).bits.pc
@@ -204,10 +201,7 @@ trait IF3_Predict{ this: IF3Base =>
     
     when( is_req_bim(i) ) {
       when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_bim(j) }.reduce(_|_) }  ) {
-        for ( k <- i until 4 ) {
-          reAlign(k).valid := false.B
-          reAlign(k).ready := false.B          
-        }
+
       } .otherwise{
         bim.io.req.valid := reAlign(i).valid & ~(io.flush | io.if4Redirect.fire)
         bim.io.req.bits.pc := reAlign(i).bits.pc
@@ -218,10 +212,7 @@ trait IF3_Predict{ this: IF3Base =>
     
     when( is_req_tage(i) ) {
       when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_tage(j) }.reduce(_|_) } ) {
-        for ( k <- i until 4 ) {
-          reAlign(k).valid := false.B
-          reAlign(k).ready := false.B          
-        }
+
       } .otherwise{
         tage.io.req.valid      := reAlign(i).valid & ~(io.flush | io.if4Redirect.fire)
         tage.io.req.bits.pc    := reAlign(i).bits.pc
@@ -230,6 +221,12 @@ trait IF3_Predict{ this: IF3Base =>
       }
     }
 
+
+
+
+
+
+
     when( is_lock_pipe(i) ) {
       for ( k <- i+1 until 4 ) {
         reAlign(k).valid := false.B
@@ -237,6 +234,36 @@ trait IF3_Predict{ this: IF3Base =>
         pipeLineLock := true.B
       }
     }
+
+    when( is_req_btb(i) ) {
+      when( if ( i == 0 ) {false.B} else { ( 0 until i ).map{ j => is_req_btb(j) }.reduce(_|_) } ) {
+        for ( k <- i until 4 ) {
+          reAlign(k).valid := false.B
+          reAlign(k).ready := false.B          
+        }
+      }
+    }
+
+    
+    when( is_req_bim(i) ) {
+      when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_bim(j) }.reduce(_|_) }  ) {
+        for ( k <- i until 4 ) {
+          reAlign(k).valid := false.B
+          reAlign(k).ready := false.B          
+        }
+      }
+    }
+
+    
+    when( is_req_tage(i) ) {
+      when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_tage(j) }.reduce(_|_) } ) {
+        for ( k <- i until 4 ) {
+          reAlign(k).valid := false.B
+          reAlign(k).ready := false.B          
+        }
+      }
+    }
+
   }
 
 
