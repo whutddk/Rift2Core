@@ -62,8 +62,8 @@ jobs:
 
           # mkdir /home/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/
           # mkdir /home/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/
-          mkdir /home/runner/work/Rift2Core/Verilog/
-          mkdir /home/runner/work/Rift2Core/ScalaDoc/
+          # mkdir /home/runner/work/Rift2Core/Verilog/
+          # mkdir /home/runner/work/Rift2Core/ScalaDoc/
 
           # cp generated /home/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/ -r
           # cp target\scala-2.12\api /home/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME -r
