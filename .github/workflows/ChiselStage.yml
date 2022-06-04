@@ -53,18 +53,22 @@ jobs:
       - name: Compile
         run: |
           git submodule update --init --recursive
-          sbt "test:runMain test.testMain --target-dir generated -e verilog"
+          sbt "test:runMain test.testMain --target-dir generated -E verilog"
           sbt doc
 
-          echo $GITHUB_REF_NAME
+          # echo $GITHUB_REF_NAME
           mkdir /home/runner/work/Rift2Core/Verilog/
           mkdir /home/runner/work/Rift2Core/ScalaDoc/
-          mkdir /home/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/
-          mkdir /home/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/
 
-          cp generated /home/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/ -r
-          cp target\scala-2.12\api /home/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME -r
+          # mkdir /home/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/
+          # mkdir /home/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/
+          mkdir /home/runner/work/Rift2Core/Verilog/
+          mkdir /home/runner/work/Rift2Core/ScalaDoc/
 
+          # cp generated /home/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/ -r
+          # cp target\scala-2.12\api /home/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME -r
+          cp generated /home/runner/work/Rift2Core/Verilog/ -r
+          cp target\scala-2.12\api /home/runner/work/Rift2Core/ScalaDoc/ -r
 
       # - name: Restore Data
       #   run: |
@@ -82,10 +86,17 @@ jobs:
           git checkout -- .
           git fetch --all
           git checkout gh-pages
-          rm /home/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME -rf
-          rm /home/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME -rf
-          cp /home/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/ /home/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME/ -r
-          cp /home/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/ /home/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/ -r
+
+          # rm /home/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME -rf
+          # rm /home/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME -rf
+          rm /home/runner/work/Rift2Core/Rift2Core/Verilog/ -rf
+          rm /home/runner/work/Rift2Core/Rift2Core/ScalaDoc/ -rf
+
+          # cp /home/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/ /home/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME/ -r
+          # cp /home/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/ /home/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/ -r
+          cp /home/runner/work/Rift2Core/Verilog/ /home/runner/work/Rift2Core/Rift2Core/Verilog/ -r
+          cp /home/runner/work/Rift2Core/ScalaDoc/ /home/runner/work/Rift2Core/Rift2Core/ScalaDoc/ -r
+
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add ./Verilog
