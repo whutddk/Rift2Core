@@ -1,7 +1,7 @@
 # Rift2Core
 
 ![License](https://img.shields.io/badge/license-Apache-blue.svg)
-[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
+![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
 
 
 --------------------------------------------
@@ -34,6 +34,7 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 ## Wiki
 
 [Wiki in Chinese](https://bitbucket.org/whutddk/rift2core/wiki/browse/)
+
 [Wiki in English(Comming Soon!)](https://bitbucket.org/whutddk/rift2core/wiki/browse/)
 
 ## Sponsorships
