@@ -12,6 +12,13 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 [RiftCore](https://github.com/whutddk/RiftCore) is the previous version of Rift2Core in Verilog.
 
 
+
+
+
+
+
+
+
 ----------------
 
 
@@ -24,7 +31,10 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 * Test a single ISA with waveform
 * Test all ISA without waveform
 
+## Wiki
 
+[Wiki in Chinese](https://bitbucket.org/whutddk/rift2core/wiki/browse/)
+[Wiki in English(Comming Soon!)](https://bitbucket.org/whutddk/rift2core/wiki/browse/)
 
 ## Sponsorships
 
@@ -34,3 +44,14 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 ![DOGE](https://img.shields.io/badge/DOGE-DJSv3BgtfPtjc3LzL5PaooAvs9xn8n4tbX-blue)
 ![XMR](https://img.shields.io/badge/XMR-4Agg4swWX39L3aCp12L2kob7AdzGZVJxG5jdWCxHioZS5MiWPFUF56z94QekEYCUhtdV6Y4QXzVgTUwgymTmiowDECvZ55A-yellow)
 
+
+---------------------------------------
+
+## Micro-Architecture
+
+### FrontEnd
+
+![FrontEnd](https://bitbucket.org/repo/o5MG4Eo/images/2424593958-rift%E5%89%8D%E7%AB%AF.png)
+
+### BackEnd
+![BackEnd](https://bitbucket.org/repo/o5MG4Eo/images/1540312579-rift%E5%90%8E%E7%AB%AF.png)
