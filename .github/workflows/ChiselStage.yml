@@ -87,7 +87,7 @@ jobs:
           cd /home/runner/work/Rift2Core/Rift2Core
           git checkout -- .
           git fetch --all
-          git checkout gh-pages
+          git checkout gh_pages
 
           # rm /home/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME -rf
           # rm /home/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME -rf
@@ -109,7 +109,7 @@ jobs:
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: gh-pages
+          branch: gh_pages
           force: false
 
 
