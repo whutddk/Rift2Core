@@ -32,6 +32,24 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 * Test a single ISA with waveform
 * Test all ISA without waveform
 
+## Rift To Go
+
+Download Pre-compile FIRRTL Here:
+
+[Master Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Rift2Chip.fir)
+[Develop Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Rift2Chip.fir)
+
+
+Download Pre-compile Verilog Here:
+
+[Master Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Rift2Chip.v)
+[Develop Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Rift2Chip.v)
+
+
+## API
+
+[API Here](https://whutddk.github.io/Rift2Core/ScalaDoc/api/index.html)
+
 ## Wiki
 
 [Wiki in Chinese](https://bitbucket.org/whutddk/rift2core/wiki/browse/)
