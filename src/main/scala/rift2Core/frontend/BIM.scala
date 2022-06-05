@@ -25,8 +25,8 @@ import rift2Core.define._
 
 class BIM()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
-    val req      = Input(new BIMReq_Bundle)
-    val combResp = Output(new BIMResp_Bundle)
+    val req  = Flipped(Decoupled(new BIMReq_Bundle))
+    val resp = Decoupled(new BIMResp_Bundle)
     val update   = Flipped(Valid(new BIMUpdate_Bundle))
 
     val isReady = Output(Bool())
@@ -43,34 +43,51 @@ class BIM()(implicit p: Parameters) extends IFetchModule {
     * @note when successfully predict, keep this bit
     * @note when mis-predict, revert or not this bit considering bim_H
     */
-  val bim_P = Mem( bim_cl, Bool() )
+  val bim_P = SyncReadMem( bim_cl, Bool() )
 
   /** branch history table histroy bits 
     * @note when successfully predict, set this bit to true.B
     * @note when mis-predict, revert this bit
     */
-  val bim_H = Mem( bim_cl, Bool() )
+  val bim_H = SyncReadMem( bim_cl, Bool() )
 
   /** branch resolve write cache line */
   val wr_cl = HashTo0( in = io.update.bits.pc, len = log2Ceil(bim_cl))
   /** branch predice read cache line */
-  val rd_cl = HashTo0( in = io.req.pc,    len = log2Ceil(bim_cl))
+  val rd_cl = HashTo0( in = io.req.bits.pc,    len = log2Ceil(bim_cl))
 
 
   // no overlap mis-predict will happened, for the following instr will be flushed
-  when( por_reset ) {
-    bim_P.write( reset_cl, true.B )
-    bim_H.write( reset_cl, false.B )
-  } .elsewhen( io.update.valid ) {
-    when( io.update.bits.isMisPredict ) {
-      when( io.update.bits.bim_h === false.B ) { bim_P.write(wr_cl, ~io.update.bits.bim_p) }
-      bim_H.write(wr_cl, ~io.update.bits.bim_h )
-    } .otherwise {
-      bim_H.write(wr_cl, true.B)
-    }
+  // when( por_reset ) {
+  //   bim_P.write( reset_cl, true.B )
+  //   bim_H.write( reset_cl, false.B )
+  // } .elsewhen( io.update.valid ) {
+  //   when( io.update.bits.isMisPredict ) {
+  //     when( io.update.bits.bim_h === false.B ) { bim_P.write(wr_cl, ~io.update.bits.bim_p) }
+  //     bim_H.write(wr_cl, ~io.update.bits.bim_h )
+  //   } .otherwise {
+  //     bim_H.write(wr_cl, true.B)
+  //   }
+  // }
+
+  when( por_reset | (io.update.fire & io.update.bits.isMisPredict & ~io.update.bits.bim_h) ) {
+    bim_P.write(
+      Mux( por_reset, reset_cl, wr_cl),
+      Mux( por_reset, true.B, ~io.update.bits.bim_p)
+    )
   }
 
-  io.combResp.bim_p := bim_P.read(rd_cl)
-  io.combResp.bim_h := bim_H.read(rd_cl)
+  when( por_reset | io.update.fire ) {
+    bim_H.write(
+      Mux( por_reset, reset_cl, wr_cl),
+      Mux( por_reset, false.B, Mux(io.update.bits.isMisPredict, ~io.update.bits.bim_h, true.B) )
+    )
+  }
+
+
+  io.resp.bits.bim_p := bim_P.read(rd_cl)
+  io.resp.bits.bim_h := bim_H.read(rd_cl)
+  io.resp.valid      := RegNext(io.req.fire)
+  io.req.ready       := io.resp.ready
 }
 

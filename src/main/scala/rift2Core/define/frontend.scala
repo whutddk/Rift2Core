@@ -204,16 +204,16 @@ class TageUpdate_Bundle(implicit p: Parameters) extends TageResp_Bundle {
 
 
 
-class Predict_Bundle(implicit p: Parameters) extends IFetchBundle {
-  val btb = new BTBResp_Bundle
-  val bim = new BIMResp_Bundle
-  val tage = Vec( 6, new TageTableResp_Bundle )
-}
+// class Predict_Bundle(implicit p: Parameters) extends IFetchBundle {
+//   val btb = new BTBResp_Bundle
+//   val bim = new BIMResp_Bundle
+//   val tage = Vec( 6, new TageTableResp_Bundle )
+// }
 
 
 class IF3_Bundle(implicit p: Parameters) extends Bundle {
   val preDecode = new PreDecode_Bundle
-  val predict = new Predict_Bundle
+  // val predict = new Predict_Bundle
   val instr = UInt(32.W)
   val pc = UInt(64.W)
   val ghist = UInt(64.W)

@@ -2,7 +2,7 @@
 
 set -e
 
-BASEDIR=$PWD
+BASEDIR=./
 CM_FOLDER=coremark
 
 cd $BASEDIR/$CM_FOLDER

@@ -1,6 +1,7 @@
 # Rift2Core
 
 ![License](https://img.shields.io/badge/license-Apache-blue.svg)
+
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
 
 
@@ -10,6 +11,13 @@
 Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC-V Core, which supports RV64GC and M, S, U mode.
 
 [RiftCore](https://github.com/whutddk/RiftCore) is the previous version of Rift2Core in Verilog.
+
+
+
+
+
+
+
 
 
 ----------------
@@ -24,7 +32,29 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 * Test a single ISA with waveform
 * Test all ISA without waveform
 
+## Rift To Go
 
+Download Pre-compile FIRRTL Here:
+
+[Master Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Rift2Chip.fir)
+[Develop Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Rift2Chip.fir)
+
+
+Download Pre-compile Verilog Here:
+
+[Master Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Rift2Chip.v)
+[Develop Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Rift2Chip.v)
+
+
+## API
+
+[API Here](https://whutddk.github.io/Rift2Core/ScalaDoc/api/index.html)
+
+## Wiki
+
+[Wiki in Chinese](https://bitbucket.org/whutddk/rift2core/wiki/browse/)
+
+[Wiki in English(Comming Soon!)](https://bitbucket.org/whutddk/rift2core/wiki/browse/)
 
 ## Sponsorships
 
@@ -34,3 +64,14 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 ![DOGE](https://img.shields.io/badge/DOGE-DJSv3BgtfPtjc3LzL5PaooAvs9xn8n4tbX-blue)
 ![XMR](https://img.shields.io/badge/XMR-4Agg4swWX39L3aCp12L2kob7AdzGZVJxG5jdWCxHioZS5MiWPFUF56z94QekEYCUhtdV6Y4QXzVgTUwgymTmiowDECvZ55A-yellow)
 
+
+---------------------------------------
+
+## Micro-Architecture
+
+### FrontEnd
+
+![FrontEnd](https://bitbucket.org/repo/o5MG4Eo/images/2424593958-rift%E5%89%8D%E7%AB%AF.png)
+
+### BackEnd
+![BackEnd](https://bitbucket.org/repo/o5MG4Eo/images/1540312579-rift%E5%90%8E%E7%AB%AF.png)

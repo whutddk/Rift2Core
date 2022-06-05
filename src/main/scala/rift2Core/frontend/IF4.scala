@@ -28,6 +28,10 @@ import base._
 abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
     val if4_req = Vec(2, Flipped(Decoupled(new IF3_Bundle)))
+    val btbResp  = Vec(2, Flipped(Decoupled(new BTBResp_Bundle)))
+    val bimResp  = Vec(2, Flipped(Decoupled(new BIMResp_Bundle)))
+    val tageResp = Vec(2, Flipped(Decoupled(Vec(6, new TageTableResp_Bundle ))))
+
     val if4_resp = Vec(2, Decoupled(new IF4_Bundle))
 
     val if4_update_ghist = Vec(2, Valid(new Ghist_reflash_Bundle))
@@ -65,9 +69,19 @@ abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
   val ghist        = io.if4_req.map{_.bits.ghist}
   val imm          = io.if4_req.map{_.bits.preDecode.imm}
 
-  val tage_decode = io.if4_req.map{ x => Tage_Decode(x.bits.predict.tage) }
-  val bim_decode  = io.if4_req.map{ _.bits.predict.bim }
-  val btb_decode  = io.if4_req.map{ _.bits.predict.btb }
+  val is_req_btb   = io.if4_req.map{ _.bits.preDecode.is_req_btb}
+  val is_req_bim   = io.if4_req.map{ _.bits.preDecode.is_req_bim}
+  val is_req_tage  = io.if4_req.map{ _.bits.preDecode.is_req_tage}
+
+
+  val tageRedirect = ReDirect(io.tageResp, VecInit(is_req_tage) )
+  val bimRedirect  = ReDirect(io.bimResp,  VecInit(is_req_bim ) )
+  val btbRedirect  = ReDirect(io.btbResp,  VecInit(is_req_btb ) )
+
+
+  val tage_decode = tageRedirect.map{ x => Tage_Decode(x.bits)}
+  val bim_decode  = bimRedirect.map{ _.bits}
+  val btb_decode  = btbRedirect.map{ _.bits}
 
 }
 
@@ -90,13 +104,13 @@ trait IF4_Predict{ this: IF4Base =>
   val isDisAgreeWithIF1 = Wire(Vec(2, Bool()))
   val isIf4Redirect = Wire(Vec(2, Bool()))
 
-  val is_bTaken = for( i <- 0 until 2 ) yield {
+  val is_bTaken = for ( i <- 0 until 2 ) yield {
     // Mux( ~tage_decode(i).isAlloc.reduce(_&_),
     //     tage_decode(i).isPredictTaken,
     //     bim_decode(i).bim_p
     // )
     bim_decode(i).bim_p
-  }
+  }  
 
   for( i <- 0 until 2 ) {
     isRedirect(i) := 
@@ -174,14 +188,45 @@ trait IF4_Predict{ this: IF4Base =>
   }
 
   //only when ras make a wrong prediction will it flush, Warning: we don't care abort other pipeline flush this time
-  ras.io.flush := io.jcmm_update.valid & io.jcmm_update.bits.isRas & io.jcmm_update.bits.isMisPredict
+  // ras.io.flush := io.jcmm_update.valid & io.jcmm_update.bits.isRas & io.jcmm_update.bits.isMisPredict
   
   //ras flush immediately when pipeline flush
-  // ras.io.flush := io.flush
+  ras.io.flush := io.flush
+}
+
+trait IF4SRAM { this: IF4Base =>
+
+
+
+  // io.btbResp.ready  := false.B 
+  // io.bimResp.ready  := false.B 
+  // io.tageResp.ready := false.B 
+
+  // val is_ram_block = 
+  //   (PopCount( is_req_btb ) > 1.U ) |
+  //   (PopCount( is_req_bim ) > 1.U ) |
+  //   (PopCount( is_req_tage ) > 1.U )
+
+  for ( i <- 0 until 2 ) yield {
+    btbRedirect(i).ready := is_req_btb(i) & io.if4_req(i).fire
+    bimRedirect(i).ready := is_req_bim(i) & io.if4_req(i).fire
+    tageRedirect(i).ready := is_req_tage(i) & io.if4_req(i).fire
+
+    assert( ~(btbRedirect(i).ready  & ~btbRedirect(i).valid) )
+    assert( ~(bimRedirect(i).ready  & ~bimRedirect(i).valid) )
+    assert( ~(tageRedirect(i).ready & ~tageRedirect(i).valid))
+  }
+
+      
 }
 
 
-class IF4()(implicit p: Parameters) extends IF4Base with IF4_Decode with IF4_Predict {
+class IF4()(implicit p: Parameters) extends IF4Base with IF4_Decode with IF4_Predict with IF4SRAM{
+
+
+
+
+
   io.if4_resp <> instr_fifo.io.deq
   io.bftq <> bftq.io.deq(0)
   io.jftq <> jftq.io.deq(0)

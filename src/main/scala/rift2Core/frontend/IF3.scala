@@ -31,6 +31,10 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
     val if3_req = Vec(4, Flipped(new DecoupledIO(new IF2_Bundle) ))
     val if3_resp = Vec(2, Decoupled(new IF3_Bundle))
 
+    val btbResp  = Vec(2, Decoupled(new BTBResp_Bundle))
+    val bimResp  = Vec(2, Decoupled(new BIMResp_Bundle))
+    val tageResp = Vec(2, Decoupled(Vec(6, new TageTableResp_Bundle )))
+
     val jcmm_update = Flipped(Valid(new Jump_CTarget_Bundle))
     val bcmm_update = Flipped(Valid(new Branch_CTarget_Bundle))
 
@@ -52,6 +56,15 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val bim = Module(new BIM)
   val tage = Module(new TAGE)
 
+  // val btbFifo =  Module(new Queue( new BTBResp_Bundle, entries = 16, flow = true))
+  // val bimFifo =  Module(new Queue( new BIMResp_Bundle, entries = 16, flow = true))
+  // val tageFifo = Module(new Queue( Vec(6, new TageTableResp_Bundle ), entries = 16, flow = true))
+
+  val btbFifo =  Module(new MultiPortFifo( new BTBResp_Bundle, aw = 4, in = 1, out = 2, flow = true ) )
+  val bimFifo =  Module(new MultiPortFifo( new BIMResp_Bundle, aw = 4, in = 1, out = 2, flow = true ) )
+  val tageFifo = Module(new MultiPortFifo( Vec(6, new TageTableResp_Bundle ), aw = 4, in = 1, out = 2, flow = true ) )
+
+
   val predictor_ready = btb.io.isReady & bim.io.isReady & tage.io.isReady
 
   val if3_resp_fifo = Module(new MultiPortFifo( new IF3_Bundle, 4, 4, 2 ))
@@ -67,7 +80,7 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
 
 
 trait IF3_PreDecode{ this: IF3Base => 
-  val isRedirect = io.if3_req.map{ _.bits.isRedirect =/= "b11".U }
+  val isRedirect = io.if3_req.map{ _.bits.isRedirect }
   val is_instr32 = io.if3_req.map{ _.bits.instr(1,0) === "b11".U }
   val isPassThrough = Wire(Vec(4, Bool()))
   isPassThrough(0) := false.B
@@ -94,8 +107,6 @@ trait IF3_PreDecode{ this: IF3Base =>
           reAlign(i).bits.target     := io.if3_req(i).bits.target     | io.if3_req(i+1).bits.target
           reAlign(i).bits.instr      := Mux( io.if3_req(i+1).bits.isFault, io.if3_req(i+1).bits.instr,              Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr) )
           reAlign(i).bits.preDecode  := Mux( io.if3_req(i+1).bits.isFault, PreDecode16(io.if3_req(i+1).bits.instr), PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)) )
-
-          reAlign(i).bits.predict    := 0.U.asTypeOf(new Predict_Bundle) 
 
           when( ~reAlign(i).bits.isRedirect ) {
             reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
@@ -125,7 +136,6 @@ trait IF3_PreDecode{ this: IF3Base =>
           reAlign(i).bits.target := io.if3_req(i).bits.target
           reAlign(i).bits.instr := io.if3_req(i).bits.instr
           reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
-          reAlign(i).bits.predict := 0.U.asTypeOf(new Predict_Bundle) 
 
           when( ~reAlign(i).bits.isRedirect ) {
             reAlign(i).valid      := io.if3_req(i).fire & predictor_ready & ~pipeLineLock
@@ -167,22 +177,70 @@ trait IF3_Predict{ this: IF3Base =>
   reAlign <> combPDT.io.enq//waiting for overriding
   
 
-  btb.io.req.pc := 0.U
-  bim.io.req.pc := 0.U
-  tage.io.req.pc    := 0.U
-  tage.io.req.ghist := 0.U
-  
-  for ( i <- 0 until 4 ) {
+  btb.io.req.bits.pc := 0.U
+  bim.io.req.bits.pc := 0.U
+  tage.io.req.bits.pc    := 0.U
+  tage.io.req.bits.ghist := 0.U
+
+  btb.io.req.valid := false.B
+  bim.io.req.valid := false.B
+  tage.io.req.valid := false.B
+
+  for ( i <- 3 to 0 by -1 ) {
+
+    when( is_req_btb(i) ) {
+      when( if ( i == 0 ) {false.B} else { ( 0 until i ).map{ j => is_req_btb(j) }.reduce(_|_) } ) {
+
+      } .otherwise{
+        btb.io.req.valid := reAlign(i).valid & ~(io.flush | io.if4Redirect.fire)
+        btb.io.req.bits.pc := reAlign(i).bits.pc
+        reAlign(i).ready := combPDT.io.enq(i).ready & btb.io.req.ready
+      }
+    }
+
+    
+    when( is_req_bim(i) ) {
+      when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_bim(j) }.reduce(_|_) }  ) {
+
+      } .otherwise{
+        bim.io.req.valid := reAlign(i).valid & ~(io.flush | io.if4Redirect.fire)
+        bim.io.req.bits.pc := reAlign(i).bits.pc
+        reAlign(i).ready := combPDT.io.enq(i).ready & bim.io.req.ready
+      }
+    }
+
+    
+    when( is_req_tage(i) ) {
+      when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_tage(j) }.reduce(_|_) } ) {
+
+      } .otherwise{
+        tage.io.req.valid      := reAlign(i).valid & ~(io.flush | io.if4Redirect.fire)
+        tage.io.req.bits.pc    := reAlign(i).bits.pc
+        tage.io.req.bits.ghist := ghist_active
+        reAlign(i).ready       := combPDT.io.enq(i).ready & tage.io.req.ready
+      }
+    }
+
+
+
+
+
+
+
+    when( is_lock_pipe(i) ) {
+      for ( k <- i+1 until 4 ) {
+        reAlign(k).valid := false.B
+        reAlign(k).ready := false.B
+        pipeLineLock := true.B
+      }
+    }
 
     when( is_req_btb(i) ) {
       when( if ( i == 0 ) {false.B} else { ( 0 until i ).map{ j => is_req_btb(j) }.reduce(_|_) } ) {
         for ( k <- i until 4 ) {
-          combPDT.io.enq(k).valid := false.B
+          reAlign(k).valid := false.B
           reAlign(k).ready := false.B          
         }
-      } .otherwise{
-        btb.io.req.pc := reAlign(i).bits.pc
-        combPDT.io.enq(i).bits.predict.btb := btb.io.combResp
       }
     }
 
@@ -190,12 +248,9 @@ trait IF3_Predict{ this: IF3Base =>
     when( is_req_bim(i) ) {
       when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_bim(j) }.reduce(_|_) }  ) {
         for ( k <- i until 4 ) {
-          combPDT.io.enq(k).valid := false.B
+          reAlign(k).valid := false.B
           reAlign(k).ready := false.B          
         }
-      } .otherwise{
-        bim.io.req.pc := reAlign(i).bits.pc
-        combPDT.io.enq(i).bits.predict.bim := bim.io.combResp
       }
     }
 
@@ -203,23 +258,12 @@ trait IF3_Predict{ this: IF3Base =>
     when( is_req_tage(i) ) {
       when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_tage(j) }.reduce(_|_) } ) {
         for ( k <- i until 4 ) {
-          combPDT.io.enq(k).valid := false.B
+          reAlign(k).valid := false.B
           reAlign(k).ready := false.B          
         }
-      } .otherwise{
-        tage.io.req.pc    := reAlign(i).bits.pc
-        tage.io.req.ghist := ghist_active
-        combPDT.io.enq(i).bits.predict.tage := tage.io.combResp
       }
     }
 
-    when( is_lock_pipe(i) ) {
-      for ( k <- i+1 until 4 ) {
-        combPDT.io.enq(k).valid := false.B
-        reAlign(k).ready := false.B
-        pipeLineLock := true.B
-      }
-    }
   }
 
 
@@ -267,11 +311,7 @@ trait IF3_Update{ this: IF3Base =>
   when( io.flush | io.if4Redirect.fire ) { pipeLineLock := false.B }
 }
 
-class IF3()(implicit p: Parameters) extends IF3Base with IF3_PreDecode with IF3_Predict with IF3_Update {
-  btb.io.flush  := false.B
-  bim.io.flush  := false.B
-  tage.io.flush := false.B
-}
+
 
 
 
@@ -326,3 +366,21 @@ object PreDecode32{
   }
 }
 
+
+class IF3()(implicit p: Parameters) extends IF3Base with IF3_PreDecode with IF3_Predict with IF3_Update {
+  btb.io.flush  := false.B
+  bim.io.flush  := false.B
+  tage.io.flush := false.B
+
+  btbFifo.io.enq(0)  <> btb.io.resp
+  bimFifo.io.enq(0)  <> bim.io.resp
+  tageFifo.io.enq(0) <> tage.io.resp
+
+  btbFifo.io.deq  <> io.btbResp
+  bimFifo.io.deq  <> io.bimResp
+  tageFifo.io.deq <> io.tageResp
+
+  btbFifo.io.flush  := io.flush | io.if4Redirect.fire
+  bimFifo.io.flush  := io.flush | io.if4Redirect.fire
+  tageFifo.io.flush := io.flush | io.if4Redirect.fire
+}

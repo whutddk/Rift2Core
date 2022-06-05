@@ -57,30 +57,10 @@ class Info_if_cmm extends Bundle {
 
 
 
-class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
-  val io = IO(new Bundle {
-
-    val if2_req  = Flipped(new DecoupledIO( new IF1_Bundle ))
-    val if2_resp = Vec(4, new DecoupledIO(new IF2_Bundle) )
-
-    val if_mmu = DecoupledIO(new Info_mmu_req)
-    val mmu_if = Flipped(DecoupledIO(new Info_mmu_rsp))
-
-    val if_cmm = Output(new Info_if_cmm)
+trait ICache { this: IF2Base =>
 
 
-    val icache_get    = new DecoupledIO(new TLBundleA(edge.bundle))
-    val icache_access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
-
-    val flush = Input(Bool())
-
-    val ifence = Input(Bool())
-
-    /** prefetch is not guarantee to be accepted by cache*/
-    val preFetch = ValidIO( new PreFetch_Req_Bundle )
-  })
-
-  val (_, _, is_trans_done, transCnt) = edge.count(io.icache_access)
+  val (_, _, is_trans_done, transCnt) = iEdge.count(io.icache_access)
   val icache_access_data_lo = RegInit( 0.U(128.W) )
   val kill_trans = RegInit(false.B)
 
@@ -281,7 +261,7 @@ class Icache(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   
   io.icache_get.valid := icache_state_qout === 1.U & ~is_hit & ~io.flush
   io.icache_get.bits :=
-    edge.Get(
+    iEdge.Get(
       fromSource = 0.U,
       toAddress = io.mmu_if.bits.paddr & ("hffffffff".U << addr_lsb.U),
       lgSize = log2Ceil(256/8).U

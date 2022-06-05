@@ -120,7 +120,9 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   
 
 
-
+  if3.io.btbResp  <> if4.io.btbResp
+  if3.io.bimResp  <> if4.io.bimResp
+  if3.io.tageResp <> if4.io.tageResp
   
 
   if3.io.if4_update_ghist := if4.io.if4_update_ghist
