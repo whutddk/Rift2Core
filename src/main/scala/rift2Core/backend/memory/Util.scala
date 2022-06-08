@@ -33,123 +33,123 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import chisel3.experimental.dataview._
 
-class addrTrans extends Module {
-  val io = IO(new Bundle{
-    val iss_exe = Input(new Lsu_iss_info)
-    val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
-    val block = Input(Bool())
+// class addrTrans extends Module {
+//   val io = IO(new Bundle{
+//     val iss_exe = Input(new Lsu_iss_info)
+//     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
+//     val block = Input(Bool())
 
-    val deq = new DecoupledIO(new Lsu_iss_info)
-  })
+//     val deq = new DecoupledIO(new Lsu_iss_info)
+//   })
 
-  /** the transation will be blocked if the request is illegal */
-  io.deq.valid := io.mmu_lsu.valid & ~io.mmu_lsu.bits.is_fault & ~io.iss_exe.is_misAlign & ~io.block
+//   /** the transation will be blocked if the request is illegal */
+//   io.deq.valid := io.mmu_lsu.valid & ~io.mmu_lsu.bits.is_fault & ~io.iss_exe.is_misAlign & ~io.block
   
-  {
-    io.deq.bits := io.iss_exe
-    io.deq.bits.param.dat.op1 := io.mmu_lsu.bits.paddr
-    io.mmu_lsu.ready := io.deq.ready & ~io.mmu_lsu.bits.is_fault & ~io.iss_exe.is_misAlign & ~io.block
-  }
+//   {
+//     io.deq.bits := io.iss_exe
+//     io.deq.bits.param.dat.op1 := io.mmu_lsu.bits.paddr
+//     io.mmu_lsu.ready := io.deq.ready & ~io.mmu_lsu.bits.is_fault & ~io.iss_exe.is_misAlign & ~io.block
+//   }
 
 
-}
+// }
 
-object addrTrans {
-  def apply( iss_exe: Lsu_iss_info, mmu_lsu: DecoupledIO[Info_mmu_rsp], block: Bool ): DecoupledIO[Lsu_iss_info] = {
-    val mdl = Module(new addrTrans)
-    mdl.io.iss_exe <> iss_exe
-    mdl.io.mmu_lsu <> mmu_lsu
-    mdl.io.block := block
+// object addrTrans {
+//   def apply( iss_exe: Lsu_iss_info, mmu_lsu: DecoupledIO[Info_mmu_rsp], block: Bool ): DecoupledIO[Lsu_iss_info] = {
+//     val mdl = Module(new addrTrans)
+//     mdl.io.iss_exe <> iss_exe
+//     mdl.io.mmu_lsu <> mmu_lsu
+//     mdl.io.block := block
 
-    return mdl.io.deq
-  }
-}
+//     return mdl.io.deq
+//   }
+// }
 
-class OpMux extends Module {
-  val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val st_deq = DecoupledIO(new Lsu_iss_info)
-    val ld_deq = DecoupledIO(new Lsu_iss_info)
-    val am_deq = DecoupledIO(new Lsu_iss_info) 
-  })
+// class OpMux extends Module {
+//   val io = IO(new Bundle{
+//     val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
+//     val st_deq = DecoupledIO(new Lsu_iss_info)
+//     val ld_deq = DecoupledIO(new Lsu_iss_info)
+//     val am_deq = DecoupledIO(new Lsu_iss_info) 
+//   })
 
-  io.enq.ready := false.B
-  when( io.enq.bits.fun.is_lu ) {
-    io.ld_deq <> io.enq
-  } .otherwise{
-    io.ld_deq.valid := false.B
-    io.ld_deq.bits  := 0.U.asTypeOf(new Lsu_iss_info)
-  }
+//   io.enq.ready := false.B
+//   when( io.enq.bits.fun.is_lu ) {
+//     io.ld_deq <> io.enq
+//   } .otherwise{
+//     io.ld_deq.valid := false.B
+//     io.ld_deq.bits  := 0.U.asTypeOf(new Lsu_iss_info)
+//   }
 
-  when( io.enq.bits.fun.is_su ) {
-    io.st_deq <> io.enq
-  } .otherwise{
-    io.st_deq.valid := false.B
-    io.st_deq.bits  := 0.U.asTypeOf(new Lsu_iss_info)
-  }
+//   when( io.enq.bits.fun.is_su ) {
+//     io.st_deq <> io.enq
+//   } .otherwise{
+//     io.st_deq.valid := false.B
+//     io.st_deq.bits  := 0.U.asTypeOf(new Lsu_iss_info)
+//   }
 
-  when( io.enq.bits.fun.is_amo ) {
-    io.am_deq <> io.enq
-  } .otherwise{
-    io.am_deq.valid := false.B
-    io.am_deq.bits  := 0.U.asTypeOf(new Lsu_iss_info)
-  }
+//   when( io.enq.bits.fun.is_amo ) {
+//     io.am_deq <> io.enq
+//   } .otherwise{
+//     io.am_deq.valid := false.B
+//     io.am_deq.bits  := 0.U.asTypeOf(new Lsu_iss_info)
+//   }
 
-}
+// }
 
-class regionMux(implicit p: Parameters) extends DcacheModule{
-  val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val deq = Vec(3, new DecoupledIO(new Lsu_iss_info))
-  })
+// class regionMux(implicit p: Parameters) extends DcacheModule{
+//   val io = IO(new Bundle{
+//     val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
+//     val deq = Vec(3, new DecoupledIO(new Lsu_iss_info))
+//   })
 
-  val psel = io.enq.bits.param.dat.op1(31,28)
-  val sel = Mux( psel(3), 0.U, Mux( psel(2), 1.U, 2.U) )
+//   val psel = io.enq.bits.param.dat.op1(31,28)
+//   val sel = Mux( psel(3), 0.U, Mux( psel(2), 1.U, 2.U) )
 
 
-  io.enq.ready := false.B
+//   io.enq.ready := false.B
 
-  when( sel === 2.U ) {
-    io.deq(2) <> io.enq
-  } .otherwise {
-    io.deq(2).valid := false.B
-    io.deq(2).bits  := 0.U.asTypeOf(new Lsu_iss_info)
-  }
+//   when( sel === 2.U ) {
+//     io.deq(2) <> io.enq
+//   } .otherwise {
+//     io.deq(2).valid := false.B
+//     io.deq(2).bits  := 0.U.asTypeOf(new Lsu_iss_info)
+//   }
 
-  when( sel === 1.U ) {
-    io.deq(1) <> io.enq
-  } .otherwise {
-    io.deq(1).valid := false.B
-    io.deq(1).bits  := 0.U.asTypeOf(new Lsu_iss_info)
-  }
+//   when( sel === 1.U ) {
+//     io.deq(1) <> io.enq
+//   } .otherwise {
+//     io.deq(1).valid := false.B
+//     io.deq(1).bits  := 0.U.asTypeOf(new Lsu_iss_info)
+//   }
 
-  when( sel === 0.U ) {
-    io.deq(0) <> io.enq
-  } .otherwise {
-    io.deq(0).valid := false.B
-    io.deq(0).bits  := 0.U.asTypeOf(new Lsu_iss_info)
-  }
-}
+//   when( sel === 0.U ) {
+//     io.deq(0) <> io.enq
+//   } .otherwise {
+//     io.deq(0).valid := false.B
+//     io.deq(0).bits  := 0.U.asTypeOf(new Lsu_iss_info)
+//   }
+// }
 
-class cacheMux(implicit p: Parameters) extends DcacheModule{
-  val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
-    val deq = Vec(bk, new DecoupledIO(new Info_cache_s0s1))
-  })
+// class cacheMux(implicit p: Parameters) extends DcacheModule{
+//   val io = IO(new Bundle{
+//     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
+//     val deq = Vec(bk, new DecoupledIO(new Info_cache_s0s1))
+//   })
 
-  val chn = io.enq.bits.paddr(addr_lsb+bk_w-1,addr_lsb)
+//   val chn = io.enq.bits.paddr(addr_lsb+bk_w-1,addr_lsb)
 
-  io.enq.ready := false.B
+//   io.enq.ready := false.B
   
-  for ( i <- 0 until bk ) yield {
-    when( i.U === chn ) {
-      io.deq(i) <> io.enq
-    } .otherwise {
-      io.deq(i).valid := false.B
-      io.deq(i).bits  := DontCare
-    }
-  }
-}
+//   for ( i <- 0 until bk ) yield {
+//     when( i.U === chn ) {
+//       io.deq(i) <> io.enq
+//     } .otherwise {
+//       io.deq(i).valid := false.B
+//       io.deq(i).bits  := DontCare
+//     }
+//   }
+// }
 
 
 

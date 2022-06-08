@@ -29,13 +29,6 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
-// class AMO_Block_Req extends Bundle {
-//   val paddr = UInt(64.W)
-// }
-
-// class AMO_Block_Resp extends Bundle {
-//   val paddr = UInt(64.W)
-// }
 
 abstract class Stq_Base()(implicit p: Parameters) extends RiftModule{
   def dp = 16
@@ -176,11 +169,6 @@ trait Stq_Overlap{ this: Stq_Base =>
     io.overlapResp.bits.wstrb := temp_wstrb(dp-1)
 }
 
-// trait Stq_AMOBlocker { this: Stq_Base => 
-//   io.overlapResp.valid := io.overlapReq.valid & ~(buff.map{ x => ((x.param.dat.op1(63,3) === io.overlapReq.bits.paddr(63,3)) & x.param.fun.is_amo) }.reduce(_|_))
-
-
-// }
 
 /**
   * bound to every cache 
