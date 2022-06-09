@@ -484,20 +484,28 @@ trait LSU_WriteBack { this: LsuBase =>
 
 
 
-trait LSU_ALL { this: LsuBase =>
+trait LSU_Fault { this: LsuBase =>
+  val isAccessFaultReg = RegInit(false.B)
+  val isPagingFault    = RegInit(false.B)
+  val isMisAlign = RegInit(false.B)
+  val trapAddrReg = Reg(UInt(64.W))
 
+  when( io.flush ) {
+    isAccessFaultReg := false.B
+    isPagingFault    := false.B
+    isMisAlign       := false.B    
+  } .elsewhen( io.mmu_lsu.valid & is_empty ) {
+    isAccessFaultReg := io.mmu_lsu.bits.is_access_fault
+    isPagingFault    := io.mmu_lsu.bits.is_paging_fault
+    isMisAlign       := io.lsu_iss_exe.bits.is_misAlign
+    trapAddrReg      :=  io.lsu_iss_exe.bits.param.dat.op1
+  }
 
+  io.lsu_cmm.is_access_fault := isAccessFaultReg
+  io.lsu_cmm.is_paging_fault := isPagingFault
+  io.lsu_cmm.is_misAlign     := isMisAlign
+  io.lsu_cmm.trap_addr       := trapAddrReg
 
-  io.lsu_cmm.is_access_fault :=
-    io.mmu_lsu.valid & io.mmu_lsu.bits.is_access_fault & is_empty
-
-  io.lsu_cmm.is_paging_fault :=
-    io.mmu_lsu.valid & io.mmu_lsu.bits.is_paging_fault & is_empty
-
-  io.lsu_cmm.is_misAlign :=
-    io.mmu_lsu.valid & io.lsu_iss_exe.bits.is_misAlign & is_empty
-
-  io.lsu_cmm.trap_addr := io.lsu_iss_exe.bits.param.dat.op1
 
 
 
@@ -525,7 +533,7 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends LsuBase(edge)
   with LSU_CacheMux
   with LSU_Mem
   with LSU_WriteBack
-  with LSU_ALL{
+  with LSU_Fault{
 
   is_empty := 
     stQueue.io.is_empty & 
