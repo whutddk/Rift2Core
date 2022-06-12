@@ -316,7 +316,7 @@ VSimTop:
 # 	isa = $(fpuisa)
 # endif
 
-unit:
+unit: VSimTop
 	$(foreach test, $(isa), ./build/VSimTop -l -f ./ci/$(test); )
 
 

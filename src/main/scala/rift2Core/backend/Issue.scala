@@ -194,25 +194,25 @@ class In_Order_Issue extends Module with HasFPUParameters{
 
 
   val bru_iss_fifo = {
-    val mdl = Module(new Queue( new Bru_iss_info, 4, pipe = true, false ))
+    val mdl = Module(new Queue( new Bru_iss_info, 4, pipe = false, false ))
     mdl.io.deq <> io.bru_iss_exe
     mdl 
   }
 
   val csr_iss_fifo = {
-    val mdl = Module(new Queue( new Csr_iss_info, 4, pipe = true, false ))
+    val mdl = Module(new Queue( new Csr_iss_info, 4, pipe = false, false ))
     mdl.io.deq <> io.csr_iss_exe
     mdl 
   }
 
   val lsu_iss_fifo = {
-    val mdl = Module(new Queue( new Lsu_iss_info, 4, pipe = true, false ))
+    val mdl = Module(new Queue( new Lsu_iss_info, 4, pipe = false, false ))
     mdl.io.deq <> io.lsu_iss_exe
     mdl 
   }
 
   val fpu_iss_fifo = {
-    val mdl = Module(new Queue( new Fpu_iss_info, 4, pipe = true, false ))
+    val mdl = Module(new Queue( new Fpu_iss_info, 4, pipe = false, false ))
     mdl.io.deq <> io.fpu_iss_exe
     mdl 
   }
