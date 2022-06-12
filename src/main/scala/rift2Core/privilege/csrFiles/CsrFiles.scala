@@ -794,7 +794,7 @@ trait CsrFiles { this: BaseCommit =>
   def update_misa( in: CMMState_Bundle ) = {
     val mxl = WireDefault(2.U(2.W))
     val extensions = {
-      if (true) { //fpu
+      if (hasFpu) { //fpu
         WireDefault("b00000101000001000100101101".U(26.W))  
       } else if (true) { //none fpu, has S-mode U-mode
         WireDefault("b00000101000001000100000101".U(26.W))

@@ -271,11 +271,45 @@ class FRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
   }
 
 
-
-
-
 }
 
 
+class FakeFRegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends Module{
+  val io = IO( new Bundle{
 
+    val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
+    val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info(dp)) )
+    val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dw, dp)) )
+    val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(dw,dp))))
+
+    val commit = Vec(cmm_chn, Flipped(new Info_commit_op(dp)))
+
+    val diffReg = Output(Vec(32, UInt(dw.W)))
+  })
+
+
+
+  for( i <- 0 until rn_chn ) {
+    io.dpt_lookup(i).rsp := 0.U.asTypeOf(new Register_source(dp))
+    io.dpt_rename(i).rsp := 0.U.asTypeOf(new Register_dstntn(dp))
+  }
+
+  for( i <- 0 until rop_chn ) {
+    io.iss_readOp(i).dat := 0.U.asTypeOf(new Operation_source(dw))
+    io.iss_readOp(i).reg.ready := false.B
+    assert( ~io.iss_readOp(i).reg.valid )
+  }
+
+  for( i <- 0 until wb_chn ) {
+    io.exe_writeBack(i).ready := true.B
+    assert( ~io.exe_writeBack(i).valid )
+  }
+
+  for( i <- 0 until cmm_chn ) {
+    io.commit(i).is_writeback := false.B
+  }
+
+  io.diffReg := 0.U.asTypeOf(Vec(32, UInt(dw.W)))
+
+}
 

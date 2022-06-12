@@ -154,7 +154,13 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   val mul = Module(new Mul)
 
   val fpu = {
-    val mdl = Module(new FAlu(cm=cm_chn))
+    val mdl = 
+      if( hasFpu ) {
+        Module(new FAlu())        
+      } else {
+        Module(new FakeFAlu()) 
+      }
+
 
     mdl.io.fpu_iss_exe <> io.fpu_iss_exe
     mdl.io.fpu_exe_iwb <> io.fpu_exe_iwb

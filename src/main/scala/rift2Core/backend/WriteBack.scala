@@ -28,7 +28,10 @@ import base._
 import rift2Core.define._
 import rift2Core.diff._
 
-class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm_chn: Int = 2) extends Module {
+import rift._
+import chipsalliance.rocketchip.config._
+
+class WriteBack( dp: Int=64, rop_chn: Int=6, wb_chn: Int=4)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val dpt_Xlookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
     val dpt_Flookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
@@ -54,25 +57,34 @@ class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm
     val mem_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65, dp)))
     val fpu_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65, dp)))
 
-    val commit = Vec(cmm_chn, Flipped((new Info_commit_op(dp))))
+    val commit = Vec(cm_chn, Flipped((new Info_commit_op(dp))))
 
     val diffXReg = Output(Vec(32, UInt(64.W)))
     val diffFReg = Output(Vec(32, UInt(65.W)))
   })
 
 
-  val iReg = Module(new XRegFiles(dw = 64, dp, rn_chn, rop_chn, wb_chn, cmm_chn))
-  val fReg = Module(new FRegFiles(dw = 65, dp, rn_chn, rop_chn=2, wb_chn=2, cmm_chn))
+  val iReg = Module(new XRegFiles(dw = 64, dp, rn_chn, rop_chn, wb_chn, cm_chn))
+  val fRegIO = 
+    if( hasFpu ) {
+      val mdl = Module(new FRegFiles(dw = 65, dp, rn_chn, rop_chn=2, wb_chn=2, cm_chn))
+      mdl.io
+    } else {
+      val mdl = Module(new FakeFRegFiles(dw = 65, dp, rn_chn, rop_chn=2, wb_chn=2, cm_chn) )
+      mdl.io
+    }
+
+
 
   for ( i <- 0 until rn_chn ) yield {
     iReg.io.dpt_rename(i) <> io.dpt_Xrename(i)
-    fReg.io.dpt_rename(i) <> io.dpt_Frename(i)
+    fRegIO.dpt_rename(i) <> io.dpt_Frename(i)
     iReg.io.dpt_lookup(i) <> io.dpt_Xlookup(i)
-    fReg.io.dpt_lookup(i) <> io.dpt_Flookup(i)
+    fRegIO.dpt_lookup(i) <> io.dpt_Flookup(i)
   }
 
 
-  for ( i <- 0 until cmm_chn ) yield {
+  for ( i <- 0 until cm_chn ) yield {
     iReg.io.commit(i).is_comfirm    := false.B
     iReg.io.commit(i).is_MisPredict := io.commit(i).is_MisPredict
     iReg.io.commit(i).is_abort      := io.commit(i).is_abort
@@ -81,25 +93,25 @@ class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm
     iReg.io.commit(i).toX           := false.B
     iReg.io.commit(i).toF           := false.B
 
-    fReg.io.commit(i).is_comfirm    := false.B
-    fReg.io.commit(i).is_MisPredict := false.B
-    fReg.io.commit(i).is_abort      := io.commit(i).is_abort | io.commit(i).is_MisPredict
-    fReg.io.commit(i).raw           := 0.U
-    fReg.io.commit(i).phy           := 0.U
-    fReg.io.commit(i).toX           := false.B
-    fReg.io.commit(i).toF           := false.B
+    fRegIO.commit(i).is_comfirm    := false.B
+    fRegIO.commit(i).is_MisPredict := false.B
+    fRegIO.commit(i).is_abort      := io.commit(i).is_abort | io.commit(i).is_MisPredict
+    fRegIO.commit(i).raw           := 0.U
+    fRegIO.commit(i).phy           := 0.U
+    fRegIO.commit(i).toX           := false.B
+    fRegIO.commit(i).toF           := false.B
 
     io.commit(i).is_writeback := false.B
 
     when( io.commit(i).toX === true.B ) {iReg.io.commit(i) <> io.commit(i)}
-    .elsewhen( io.commit(i).toF === true.B ) {fReg.io.commit(i) <> io.commit(i)}
+    .elsewhen( io.commit(i).toF === true.B ) {fRegIO.commit(i) <> io.commit(i)}
 
   }
 
 
 
   iReg.io.diffReg <> io.diffXReg
-  fReg.io.diffReg <> io.diffFReg
+  fRegIO.diffReg <> io.diffFReg
 
 
   iReg.io.iss_readOp(0) <> io.ooo_readOp(0)
@@ -109,8 +121,8 @@ class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm
   iReg.io.iss_readOp(4) <> io.lsu_readXOp
   iReg.io.iss_readOp(5) <> io.fpu_readXOp
 
-  fReg.io.iss_readOp(0) <> io.lsu_readFOp
-  fReg.io.iss_readOp(1) <> io.fpu_readFOp
+  fRegIO.iss_readOp(0) <> io.lsu_readFOp
+  fRegIO.iss_readOp(1) <> io.fpu_readFOp
 
 
   val iwriteBack_arb = {
@@ -126,8 +138,8 @@ class WriteBack( dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int=4, cmm
     mdl
   }
 
-  fReg.io.exe_writeBack(0) <> io.mem_fWriteBack
-  fReg.io.exe_writeBack(1) <> io.fpu_fWriteBack
+  fRegIO.exe_writeBack(0) <> io.mem_fWriteBack
+  fRegIO.exe_writeBack(1) <> io.fpu_fWriteBack
 
 
 

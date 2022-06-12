@@ -20,6 +20,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import chipsalliance.rocketchip.config.Parameters
+import rift._
 import base._
 
 /**
@@ -90,8 +91,8 @@ trait IF4_Decode{ this: IF4Base =>
   for ( i <- 0 until 2 ) yield {
     instr_fifo.io.enq(i).bits :=
       Mux( is_rvc(i),
-        Decode16(x = io.if4_req(i).bits.instr(15,0), pc = io.if4_req(i).bits.pc),
-        Decode32(x = io.if4_req(i).bits.instr,       pc = io.if4_req(i).bits.pc)
+        Decode16(x = io.if4_req(i).bits.instr(15,0), pc = io.if4_req(i).bits.pc, hasFpu),
+        Decode32(x = io.if4_req(i).bits.instr,       pc = io.if4_req(i).bits.pc, hasFpu)
       )
   }
 

@@ -22,6 +22,8 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import base._
+import rift._
+import chipsalliance.rocketchip.config._
 
 
 
@@ -375,7 +377,7 @@ class In_Order_Issue extends Module with HasFPUParameters{
 
 
 
-class Issue extends Module {
+class Issue(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val ooo_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Dpt_info)))
     val bru_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
@@ -427,5 +429,12 @@ class Issue extends Module {
     mdl.io.lsu_iss_exe <> io.lsu_iss_exe
     mdl.io.fpu_iss_exe <> io.fpu_iss_exe
     mdl
+  }
+
+  if( hasFpu ) {
+
+  } else {
+    assert( ~io.fpu_dpt_iss.valid )
+    assert( ~io.fpu_iss_exe.valid )
   }
 }

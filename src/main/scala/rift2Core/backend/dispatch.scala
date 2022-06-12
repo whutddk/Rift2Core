@@ -270,6 +270,11 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
   fpu_dpt_fifo.io.flush := false.B
   reOrder_fifo_i.io.flush := false.B
   
+  if ( hasFpu ) {
+  } else {
+    assert( io.bd_dpt.forall{ x:DecoupledIO[IF4_Bundle] => x.bits.fpu_isa.is_fpu === false.B} )
+    assert( io.bd_dpt.forall{ x:DecoupledIO[IF4_Bundle] => x.bits.is_fwb === false.B} )
+  }
 }
 
 

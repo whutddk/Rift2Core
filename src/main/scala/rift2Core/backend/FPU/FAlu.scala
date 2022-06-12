@@ -24,18 +24,21 @@ import rift2Core.define._
 import rift2Core.backend._
 import rift2Core.privilege._
 import chisel3.experimental.dataview._
+import rift._
+import chipsalliance.rocketchip.config._
+
 
 class Exc_Info extends Fpu_iss_info { val exc = UInt(5.W) }
 class Fres_Info extends Exc_Info { val toFloat = UInt(65.W) }
 class Xres_Info extends Exc_Info { val toInt = UInt(64.W) }
 
 
-class FAlu(latency: Int = 5, infly: Int = 8, cm: Int = 2) extends Module with HasFPUParameters{
+class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends RiftModule with HasFPUParameters{
   val io = IO(new Bundle{
     val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
     val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
     val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
-    val fcsr_cmm_op = Vec(cm, DecoupledIO( new Exe_Port ))
+    val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
     val fcsr = Input(UInt(24.W))
 
 
@@ -45,7 +48,7 @@ class FAlu(latency: Int = 5, infly: Int = 8, cm: Int = 2) extends Module with Ha
 
 
   val cnt = RegInit(0.U((log2Ceil(infly)).W))
-  require( cm == 2 )
+  require( cm_chn == 2 )
   when( io.flush ) {
     cnt := 0.U
   } .elsewhen( io.fpu_iss_exe.fire & io.fcsr_cmm_op(0).fire & io.fcsr_cmm_op(1).fire) {
@@ -154,7 +157,7 @@ class FAlu(latency: Int = 5, infly: Int = 8, cm: Int = 2) extends Module with Ha
     ))
 
   val fcsr_op_fifo = {
-    val mdl = Module( new MultiPortFifo( new Exe_Port, log2Ceil(infly), in = 1, out = cm ))
+    val mdl = Module( new MultiPortFifo( new Exe_Port, log2Ceil(infly), in = 1, out = cm_chn ))
 
     val rw = io.fpu_iss_exe.bits.fun.is_fun_frw
     val rs = 
@@ -248,3 +251,31 @@ class FAlu(latency: Int = 5, infly: Int = 8, cm: Int = 2) extends Module with Ha
 
 }
 
+
+class FakeFAlu(implicit p: Parameters) extends RiftModule with HasFPUParameters{
+  val io = IO(new Bundle{
+    val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
+    val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
+    val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
+    val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
+    val fcsr = Input(UInt(24.W))
+
+
+    val flush = Input(Bool())
+  })
+
+  io.fpu_iss_exe.ready := true.B
+
+  io.fpu_exe_iwb.valid := false.B
+  io.fpu_exe_iwb.bits  := 0.U.asTypeOf(new WriteBack_info(dw=65, dp=64))
+
+  io.fpu_exe_fwb.valid := false.B
+  io.fpu_exe_fwb.bits  := 0.U.asTypeOf(new WriteBack_info(dw=65, dp=64))
+
+  for ( i <- 0 until cm_chn ) {
+    io.fcsr_cmm_op(i).valid := false.B
+    io.fcsr_cmm_op(i).bits  := 0.U.asTypeOf(new Exe_Port)
+  }
+
+  assert( ~io.fpu_iss_exe.valid )
+}
