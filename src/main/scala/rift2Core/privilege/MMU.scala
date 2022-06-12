@@ -172,7 +172,9 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   dtlb.io.req.bits  := io.lsu_mmu.bits
   dtlb.io.asid_i  := io.cmm_mmu.satp(59,44)
   io.lsu_mmu.ready :=
-    io.mmu_lsu.fire & ~io.lsu_flush & ~kill_dptw & ~cmm_flush
+    io.mmu_lsu.ready & ~io.lsu_flush & ~kill_dptw & ~cmm_flush
+
+  assert( io.lsu_mmu.fire === io.mmu_lsu.fire )
 
 
 
@@ -247,13 +249,12 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
       )
 
     io.mmu_lsu.valid :=
-      ~kill_dptw & ~cmm_flush & (
+      ~io.lsu_flush & ~kill_dptw & ~cmm_flush & (
         (io.lsu_mmu.valid & is_bypass_ls) |
         (io.lsu_mmu.valid & dtlb.io.is_hit) |
         (io.lsu_mmu.valid & (~dptw.io.ptw_o.bits.is_X & dptw.io.ptw_o.valid))           
       )
      
-
 
 
 

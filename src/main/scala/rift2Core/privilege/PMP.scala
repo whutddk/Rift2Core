@@ -65,7 +65,6 @@ class PMP(entry: Int) extends RawModule {
     *
     * @return Bool false
     */
-
   def off_range: Bool = return false.B
 
   /**
@@ -76,7 +75,6 @@ class PMP(entry: Int) extends RawModule {
     * @param addr_c (56.W) the address needed to be check
     * @return Bool whether the addr_c is in the range
     */
- 
   def tor_range( addr_b: UInt, addr_t: UInt, addr_c: UInt): Bool = {
     return (addr_c < (addr_t << 2)) & (addr_c > (addr_b << 2))
   }
@@ -88,7 +86,6 @@ class PMP(entry: Int) extends RawModule {
     * @param addr_c (56.W) the address needed to be check
     * @return Bool whether the addr_c is in the range
     */
-
   def na4_range( addr_p: UInt, addr_c: UInt ): Bool = {
     val mask = "hffffffffffffffff".U << 2 
     return ((addr_c & mask) === ((addr_p << 2) & mask))
@@ -101,7 +98,6 @@ class PMP(entry: Int) extends RawModule {
     * @param addr_c (56.W) the address needed to be check
     * @return Bool whether the addr_c is in the range
     */
-
   def napot_range( addr_p: UInt, addr_c: UInt ): Bool = {
     val zero_pos = for( i <- 0 until 54 ) yield { addr_p(i) === 0.U }
     val cnt_idx  = for( i <- 0 until 54 ) yield { i.U + 3.U }
