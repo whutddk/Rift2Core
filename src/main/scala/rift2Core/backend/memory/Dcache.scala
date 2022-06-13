@@ -537,7 +537,7 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheMod
   val probeUnit = Module(new ProbeUnit(edge = edge, id = id))
   val writeBackUnit = Module(new WriteBackUnit(edge = edge, setting = 2, id = id))
 
-  val lsEntry = Module(new Queue(new Info_cache_s0s1, 16))
+  val lsEntry = Module(new Queue(new Info_cache_s0s1, 16, pipe = false, flow = true))
   val rd_stage = Module(new L1d_rd_stage())
   val wr_stage = Module(new L1d_wr_stage())
 
