@@ -292,11 +292,12 @@ class FakeFRegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn
   for( i <- 0 until rn_chn ) {
     io.dpt_lookup(i).rsp := 0.U.asTypeOf(new Register_source(dp))
     io.dpt_rename(i).rsp := 0.U.asTypeOf(new Register_dstntn(dp))
+    io.dpt_rename(i).req.ready := true.B
   }
 
   for( i <- 0 until rop_chn ) {
     io.iss_readOp(i).dat := 0.U.asTypeOf(new Operation_source(dw))
-    io.iss_readOp(i).reg.ready := false.B
+    io.iss_readOp(i).reg.ready := true.B
     assert( ~io.iss_readOp(i).reg.valid )
   }
 

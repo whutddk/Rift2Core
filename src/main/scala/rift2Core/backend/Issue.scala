@@ -172,7 +172,7 @@ class Out_of_Order_Issue() extends Module {
 }
 
 
-class In_Order_Issue extends Module with HasFPUParameters{
+class In_Order_Issue(implicit p: Parameters) extends RiftModule with HasFPUParameters{
     val io = IO(new Bundle{
       val bru_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
       val csr_dpt_iss = Flipped(new DecoupledIO(new Dpt_info))
@@ -254,43 +254,80 @@ class In_Order_Issue extends Module with HasFPUParameters{
   io.lsu_readXOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.lsu_isa.is_fst, 63.U, io.lsu_dpt_iss.bits.phy.rs2 )
   io.lsu_readXOp.reg.bits.rs3  := 63.U
 
-  io.lsu_readFOp.reg.valid := io.lsu_dpt_iss.valid
-  io.lsu_readFOp.reg.bits.rs1  := 63.U
-  io.lsu_readFOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.lsu_isa.is_fst, io.lsu_dpt_iss.bits.phy.rs2, 63.U )
-  io.lsu_readFOp.reg.bits.rs3  := 63.U
+  if( hasFpu ) {
+    io.lsu_readFOp.reg.valid := io.lsu_dpt_iss.valid
+    io.lsu_readFOp.reg.bits.rs1  := 63.U
+    io.lsu_readFOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.lsu_isa.is_fst, io.lsu_dpt_iss.bits.phy.rs2, 63.U )
+    io.lsu_readFOp.reg.bits.rs3  := 63.U    
+  } else {
+    io.lsu_readFOp.reg.valid     := false.B
+    io.lsu_readFOp.reg.bits.rs1  := 63.U
+    io.lsu_readFOp.reg.bits.rs2  := 63.U
+    io.lsu_readFOp.reg.bits.rs3  := 63.U
+  }
 
 
-  lsu_iss_fifo.io.enq.valid := io.lsu_readXOp.reg.fire & io.lsu_readFOp.reg.fire
-  lsu_iss_fifo.io.enq.bits := Mux( lsu_iss_fifo.io.enq.valid, Pkg_lsu_iss(io.lsu_readXOp, io.lsu_readFOp, io.lsu_dpt_iss.bits), 0.U.asTypeOf(new Lsu_iss_info) )
+
+  lsu_iss_fifo.io.enq.valid :=
+    io.lsu_readXOp.reg.fire &
+    ( if(hasFpu) {io.lsu_readFOp.reg.fire} else {true.B})
+
+  lsu_iss_fifo.io.enq.bits :=
+    Mux(
+      lsu_iss_fifo.io.enq.valid,
+      Pkg_lsu_iss(io.lsu_readXOp, io.lsu_readFOp, io.lsu_dpt_iss.bits),
+      0.U.asTypeOf(new Lsu_iss_info)
+    )
 
   io.lsu_dpt_iss.ready :=
-    io.lsu_readXOp.reg.ready & io.lsu_readFOp.reg.ready & lsu_iss_fifo.io.enq.ready
+    io.lsu_readXOp.reg.ready & io.lsu_readFOp.reg.ready &
+    lsu_iss_fifo.io.enq.ready
 
   when( io.lsu_dpt_iss.fire ) {
-    assert( io.lsu_readXOp.reg.fire & io.lsu_readFOp.reg.fire )
+    assert(
+      io.lsu_readXOp.reg.fire &
+      (if(hasFpu) {io.lsu_readFOp.reg.fire} else {true.B})
+    )
     assert( lsu_iss_fifo.io.enq.fire )
   }
 
+  if(hasFpu) {
+    io.fpu_readXOp.reg.valid     := io.fpu_dpt_iss.valid
+    io.fpu_readXOp.reg.bits.rs1  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, 63.U, io.fpu_dpt_iss.bits.phy.rs1 )
+    io.fpu_readXOp.reg.bits.rs2  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, 63.U, io.fpu_dpt_iss.bits.phy.rs2 )
+    io.fpu_readXOp.reg.bits.rs3  := 63.U
+    io.fpu_readFOp.reg.valid     := io.fpu_dpt_iss.valid
+    io.fpu_readFOp.reg.bits.rs1  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs1, 63.U )
+    io.fpu_readFOp.reg.bits.rs2  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs2, 63.U )
+    io.fpu_readFOp.reg.bits.rs3  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs3, 63.U )
 
-  io.fpu_readXOp.reg.valid := io.fpu_dpt_iss.valid
-  io.fpu_readXOp.reg.bits.rs1  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, 63.U, io.fpu_dpt_iss.bits.phy.rs1 )
-  io.fpu_readXOp.reg.bits.rs2  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, 63.U, io.fpu_dpt_iss.bits.phy.rs2 )
-  io.fpu_readXOp.reg.bits.rs3  := 63.U
-  io.fpu_readFOp.reg.valid := io.fpu_dpt_iss.valid
-  io.fpu_readFOp.reg.bits.rs1  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs1, 63.U )
-  io.fpu_readFOp.reg.bits.rs2  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs2, 63.U )
-  io.fpu_readFOp.reg.bits.rs3  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs3, 63.U )
+    fpu_iss_fifo.io.enq.valid := io.fpu_readXOp.reg.fire & io.fpu_readFOp.reg.fire
+    fpu_iss_fifo.io.enq.bits := Mux( fpu_iss_fifo.io.enq.valid, Pkg_fpu_iss(io.fpu_readXOp, io.fpu_readFOp, io.fpu_dpt_iss.bits), 0.U.asTypeOf(new Fpu_iss_info) )
 
-  fpu_iss_fifo.io.enq.valid := io.fpu_readXOp.reg.fire & io.fpu_readFOp.reg.fire
-  fpu_iss_fifo.io.enq.bits := Mux( fpu_iss_fifo.io.enq.valid, Pkg_fpu_iss(io.fpu_readXOp, io.fpu_readFOp, io.fpu_dpt_iss.bits), 0.U.asTypeOf(new Fpu_iss_info) )
+    io.fpu_dpt_iss.ready :=
+      io.fpu_readXOp.reg.ready & io.fpu_readFOp.reg.ready & fpu_iss_fifo.io.enq.ready
 
-  io.fpu_dpt_iss.ready :=
-    io.fpu_readXOp.reg.ready & io.fpu_readFOp.reg.ready & fpu_iss_fifo.io.enq.ready
+    when( io.fpu_dpt_iss.fire ) {
+      assert( io.fpu_readXOp.reg.fire & io.fpu_readFOp.reg.fire )
+      assert( fpu_iss_fifo.io.enq.fire )
+    }
+  } else {
+    io.fpu_readXOp.reg.valid := false.B
+    io.fpu_readXOp.reg.bits.rs1  := 63.U
+    io.fpu_readXOp.reg.bits.rs2  := 63.U
+    io.fpu_readXOp.reg.bits.rs3  := 63.U
+    io.fpu_readFOp.reg.valid := false.B
+    io.fpu_readFOp.reg.bits.rs1  := 63.U
+    io.fpu_readFOp.reg.bits.rs2  := 63.U
+    io.fpu_readFOp.reg.bits.rs3  := 63.U
 
-  when( io.fpu_dpt_iss.fire ) {
-    assert( io.fpu_readXOp.reg.fire & io.fpu_readFOp.reg.fire )
-    assert( fpu_iss_fifo.io.enq.fire )
+    fpu_iss_fifo.io.enq.valid := false.B
+    fpu_iss_fifo.io.enq.bits  := 0.U.asTypeOf(new Fpu_iss_info)
+
+    io.fpu_dpt_iss.ready := true.B
+
   }
+
 
   def Pkg_bru_iss(op: iss_readOp_info, dpt: Dpt_info): Bru_iss_info = {
     val res = Wire(new Bru_iss_info)

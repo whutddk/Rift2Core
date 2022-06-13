@@ -730,6 +730,13 @@ object Decode32 {
       info.fpu_isa.fcsr_rwi  := ( x === BitPat("b?????????????????101?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
       info.fpu_isa.fcsr_rsi  := ( x === BitPat("b?????????????????110?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U ) 
       info.fpu_isa.fcsr_rci  := ( x === BitPat("b?????????????????111?????1110011") ) & ( x(31,20) === 1.U | x(31,20) === 2.U | x(31,20) === 3.U )       
+    } else {
+      info.fpu_isa.fcsr_rw   := false.B
+      info.fpu_isa.fcsr_rs   := false.B
+      info.fpu_isa.fcsr_rc   := false.B
+      info.fpu_isa.fcsr_rwi  := false.B
+      info.fpu_isa.fcsr_rsi  := false.B
+      info.fpu_isa.fcsr_rci  := false.B
     }
 
 
@@ -862,7 +869,11 @@ object Decode32 {
       info.fpu_isa.fcvt_d_lu   := ( x === BitPat("b110100100011?????????????1010011") )
       info.fpu_isa.fmv_d_x     := ( x === BitPat("b111100100000?????000?????1010011") )      
     } else {
-      info.fpu_isa := 0.U.asTypeOf(new Fpu_isa)
+      info.lsu_isa.flw := false.B
+      info.lsu_isa.fsw := false.B
+      info.lsu_isa.fld := false.B
+      info.lsu_isa.fsd := false.B
+      info.fpu_isa     := 0.U.asTypeOf(new Fpu_isa)
     }
 
 

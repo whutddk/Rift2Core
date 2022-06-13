@@ -5,7 +5,7 @@ test:
 	sbt "test:runMain test.testModule --target-dir generated --show-registrations --full-stacktrace -e verilog"
 
 compile: clean
-	sbt "test:runMain test.testMain --target-dir generated --show-registrations --full-stacktrace -e verilog"
+	sbt "test:runMain test.testMain --target-dir generated --show-registrations --full-stacktrace -E verilog"
 
 
 # sim:

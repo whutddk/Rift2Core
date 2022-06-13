@@ -135,6 +135,12 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
       ))
 
 
+    for ( i <- 0 until rn_chn ) {
+      assert( PopCount( Seq(io.dpt_Frename(i).req.fire, io.dpt_Xrename(i).req.fire)) <= 1.U, "Assert Failed, rename should be one-hot" )      
+    }
+
+
+
     reOrder_fifo_i.io.enq(i).valid := io.bd_dpt(i).fire
     reOrder_fifo_i.io.enq(i).bits  := Mux( reOrder_fifo_i.io.enq(i).valid, Pkg_rod_i(io.bd_dpt(i).bits, reg_phy(i)), DontCare )
 
