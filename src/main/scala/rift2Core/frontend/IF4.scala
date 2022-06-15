@@ -245,8 +245,8 @@ class IF4()(implicit p: Parameters) extends IF4Base with IF4_Decode with IF4_Pre
               
   }
 
-  io.if4_req(0).ready := bRePort.io.enq(0).ready & bRePort.io.enq(0).ready & instr_fifo.io.enq(0).ready
-  io.if4_req(1).ready := jRePort.io.enq(1).ready & jRePort.io.enq(1).ready & instr_fifo.io.enq(1).ready & ~isIf4Redirect(0)
+  io.if4_req(0).ready := bRePort.io.enq(0).ready & jRePort.io.enq(0).ready & instr_fifo.io.enq(0).ready
+  io.if4_req(1).ready := bRePort.io.enq(1).ready & jRePort.io.enq(1).ready & instr_fifo.io.enq(1).ready & ~isIf4Redirect(0)
 
   instr_fifo.io.flush := io.flush
   bftq.io.flush := io.flush
