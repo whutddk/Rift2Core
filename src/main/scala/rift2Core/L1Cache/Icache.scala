@@ -14,13 +14,11 @@ import freechips.rocketchip.tilelink._
 
 import chisel3.util.random._
 
-
-
 case class IcacheParameters(
-  dw: Int,
-  bk: Int,
-  cb: Int,
-  cl: Int,
+  dw: Int = 256,
+  bk: Int = 1,
+  cb: Int = 4,
+  cl: Int = 128,
   aw: Int = 32
 ) extends L1CacheParameters
 

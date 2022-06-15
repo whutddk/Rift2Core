@@ -64,13 +64,14 @@ case class RiftSetting(
     cb = 4,
     cl = 128
   ),
-  dcacheParameters: L1CacheParameters = DcacheParameters(
+  dcacheParameters: DcacheParameters = DcacheParameters(
     dw = 256,
     bk = 8,
     cb = 8,
-    cl = 128
+    cl = 128,
   ),
 ){
+  require( icacheParameters.bk == 1 )
   require( log2Ceil( ifetchParameters.uBTB_entry ) <= ifetchParameters.uBTB_tag_w )
 }
 

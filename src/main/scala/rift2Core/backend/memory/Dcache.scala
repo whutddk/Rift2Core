@@ -18,15 +18,16 @@ import rift2Core.backend.memory._
 
 
 case class DcacheParameters(
-  dw: Int,
-  bk: Int,
-  cb: Int,
-  cl: Int,
-  aw: Int = 32
-) extends L1CacheParameters
+  dw: Int = 256,
+  bk: Int = 8,
+  cb: Int = 8,
+  cl: Int = 128,
+  aw: Int = 32,
+  sbEntry: Int = 16,
+)
 
-trait HasDcacheParameters extends HasL1CacheParameters {
-  val dcacheParams: L1CacheParameters
+trait HasDcacheParameters extends HasRiftParameters {
+  val dcacheParams: DcacheParameters
 
   def dw = dcacheParams.dw
   def bk = dcacheParams.bk
@@ -46,14 +47,10 @@ trait HasDcacheParameters extends HasL1CacheParameters {
   
 }
 
-abstract class DcacheModule(implicit p: Parameters) extends L1CacheModule
-  with HasDcacheParameters
+abstract class DcacheModule(implicit p: Parameters) extends RiftModule with HasDcacheParameters
 
-abstract class DcacheBundle(implicit p: Parameters) extends L1CacheBundle
-  with HasDcacheParameters
+abstract class DcacheBundle(implicit p: Parameters) extends RiftBundle with HasDcacheParameters
 
-abstract class DcacheObject(implicit p: Parameters) extends L1CacheObject
-  with HasDcacheParameters
 
 class Cache_op extends Lsu_isa {
 
