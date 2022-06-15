@@ -33,32 +33,15 @@ import freechips.rocketchip.tilelink._
 class Cache_buffer()(implicit p: Parameters) extends DcacheModule{
   val io = IO(new Bundle{
     val buf_enq = Flipped(DecoupledIO(new Info_cache_s0s1))
-    val enq_idx = Output(UInt(4.W))
+    val enq_idx = Output(UInt((log2Ceil(sbEntry)).W))
     val is_storeBuff_empty = Output(Bool())
     val buf_deq = Flipped(DecoupledIO(new Info_cache_retn))
     
   })
 
-  // printf("Cache_Buff depth is 16\n")
 
-
-  // val buf_enq_valid = Wire(Bool())
-  // val buf_enq_bits = Wire(new Info_cache_s0s1)
-  // val buf_enq_ready = Wire(Bool())
-  // buf_enq_valid := buf_enq.valid
-  // buf_enq_bits := buf_enq.bits
-  // buf_enq.ready := buf_enq_ready
-
-
-  // val buf_deq_valid = Wire(Bool())
-  // val buf_deq_bits = Wire((UInt(log2Ceil(16).W)))
-  // val buf_deq_ready = Wire(Bool())
-  // buf_deq.valid := buf_deq_valid
-  // buf_deq.bits  := buf_deq_bits
-  // buf_deq_ready := buf_deq.ready
-
-  val buff = RegInit(VecInit(Seq.fill(16)(0.U.asTypeOf(new Info_cache_s0s1))))
-  val valid = RegInit(VecInit(Seq.fill(16)(false.B)))
+  val buff = RegInit(VecInit(Seq.fill(sbEntry)(0.U.asTypeOf(new Info_cache_s0s1))))
+  val valid = RegInit(VecInit(Seq.fill(sbEntry)(false.B)))
 
 
 
@@ -86,7 +69,7 @@ class Cache_buffer()(implicit p: Parameters) extends DcacheModule{
 
 
 
-  for ( i <- 0 until 16 ) yield {
+  for ( i <- 0 until sbEntry ) yield {
     when( valid(i) === true.B ) {
       assert( buff.count( (x: Info_cache_s0s1) => (x.paddr === buff(i).paddr) ) === 1.U )
     }
