@@ -27,7 +27,7 @@ import chipsalliance.rocketchip.config._
 
 
 
-class Out_of_Order_Issue() extends Module {
+class Out_of_Order_Issue()(implicit p: Parameters) extends RiftModule {
 
   val io = IO(new Bundle{
     val ooo_dpt_iss = Vec(2, Flipped(new DecoupledIO(new Dpt_info)))
@@ -48,7 +48,7 @@ class Out_of_Order_Issue() extends Module {
   }
 
   val alu_iss_fifo = {
-    val mdl = Module(new MultiPortFifo( new Alu_iss_info, aw = 4, in = 2, out = 1 ))
+    val mdl = Module(new MultiPortFifo( new Alu_iss_info, aw = (if(!isMinArea) 4 else 2), in = 2, out = 1 ))
     mdl.io.enq <> alu_iss_rePort.io.deq
     mdl.io.deq(0) <> io.alu_iss_exe
     mdl.io.flush := false.B
@@ -63,7 +63,7 @@ class Out_of_Order_Issue() extends Module {
   }
 
   val mul_iss_fifo = {
-    val mdl = Module(new MultiPortFifo( new Mul_iss_info, aw = 4, in = 2, out = 1 ))
+    val mdl = Module(new MultiPortFifo( new Mul_iss_info, aw = (if(!isMinArea) 4 else 2), in = 2, out = 1 ))
     mdl.io.enq <> mul_iss_rePort.io.deq
     mdl.io.deq(0) <> io.mul_iss_exe
     mdl.io.flush := false.B
@@ -196,25 +196,25 @@ class In_Order_Issue(implicit p: Parameters) extends RiftModule with HasFPUParam
 
 
   val bru_iss_fifo = {
-    val mdl = Module(new Queue( new Bru_iss_info, 4, pipe = false, false ))
+    val mdl = Module(new Queue( new Bru_iss_info, (if(!isMinArea) 4 else 2), pipe = false, false ))
     mdl.io.deq <> io.bru_iss_exe
     mdl 
   }
 
   val csr_iss_fifo = {
-    val mdl = Module(new Queue( new Csr_iss_info, 4, pipe = false, false ))
+    val mdl = Module(new Queue( new Csr_iss_info, (if(!isMinArea) 4 else 2), pipe = false, false ))
     mdl.io.deq <> io.csr_iss_exe
     mdl 
   }
 
   val lsu_iss_fifo = {
-    val mdl = Module(new Queue( new Lsu_iss_info, 4, pipe = false, false ))
+    val mdl = Module(new Queue( new Lsu_iss_info, (if(!isMinArea) 4 else 2), pipe = false, false ))
     mdl.io.deq <> io.lsu_iss_exe
     mdl 
   }
 
   val fpu_iss_fifo = {
-    val mdl = Module(new Queue( new Fpu_iss_info, 4, pipe = false, false ))
+    val mdl = Module(new Queue( new Fpu_iss_info, (if(!isMinArea) 4 else 2), pipe = false, false ))
     mdl.io.deq <> io.fpu_iss_exe
     mdl 
   }

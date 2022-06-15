@@ -50,7 +50,7 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
   val ooo_dpt_rePort =  Module(new RePort( new Dpt_info, port = rn_chn))
 
   val ooo_dpt_fifo = {
-    val mdl = Module(new ZipQueue( new Dpt_info, 4, in = rn_chn, out = 2, zip = 3 ))
+    val mdl = Module(new ZipQueue( new Dpt_info, (if(!isMinArea) 4 else 3), in = rn_chn, out = 2, zip = (if(!isMinArea) 3 else 2) ))
     mdl.io.enq <> ooo_dpt_rePort.io.deq
     mdl.io.deq <> io.ooo_dpt_iss
     mdl
@@ -58,7 +58,7 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
 
   val bru_dpt_rePort = Module(new RePort( new Dpt_info, port = rn_chn))
   val bru_dpt_fifo = {
-    val mdl = Module(new MultiPortFifo( new Dpt_info, aw = 4, in = rn_chn, out = 1 ))
+    val mdl = Module(new MultiPortFifo( new Dpt_info, aw = (if(!isMinArea) 4 else 2), in = rn_chn, out = 1 ))
     mdl.io.enq <> bru_dpt_rePort.io.deq
     mdl.io.deq(0) <> io.bru_dpt_iss
     mdl
@@ -66,7 +66,7 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
 
   val csr_dpt_rePort = Module(new RePort( new Dpt_info, port = rn_chn))
   val csr_dpt_fifo = {
-    val mdl = Module(new MultiPortFifo( new Dpt_info, aw = 4, in = rn_chn, out = 1 ))
+    val mdl = Module(new MultiPortFifo( new Dpt_info, aw = (if(!isMinArea) 4 else 2), in = rn_chn, out = 1 ))
     mdl.io.enq <> csr_dpt_rePort.io.deq
     mdl.io.deq(0) <> io.csr_dpt_iss
     mdl
@@ -74,7 +74,7 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
 
   val lsu_dpt_rePort = Module(new RePort( new Dpt_info, port = rn_chn))
   val lsu_dpt_fifo = {
-    val mdl = Module(new MultiPortFifo( new Dpt_info, aw = 4, in = rn_chn, out = 1 ))
+    val mdl = Module(new MultiPortFifo( new Dpt_info, aw = (if(!isMinArea) 4 else 2), in = rn_chn, out = 1 ))
     mdl.io.enq <> lsu_dpt_rePort.io.deq
     mdl.io.deq(0) <> io.lsu_dpt_iss
     mdl
@@ -82,14 +82,14 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
 
   val fpu_dpt_rePort = Module(new RePort( new Dpt_info, port = rn_chn))
   val fpu_dpt_fifo = {
-    val mdl = Module(new MultiPortFifo( new Dpt_info, aw = 4, in = rn_chn, out = 1 ))
+    val mdl = Module(new MultiPortFifo( new Dpt_info, aw = (if(!isMinArea) 4 else 2), in = rn_chn, out = 1 ))
     mdl.io.enq <> fpu_dpt_rePort.io.deq
     mdl.io.deq(0) <> io.fpu_dpt_iss
     mdl
   }
 
   val reOrder_fifo_i = {
-    val mdl = Module(new MultiPortFifo(new Info_reorder_i, 4, rn_chn, cm_chn))
+    val mdl = Module(new MultiPortFifo(new Info_reorder_i, aw = (if(!isMinArea) 4 else 2), rn_chn, cm_chn))
     mdl.io.deq <> io.rod_i
     mdl
   }

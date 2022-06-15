@@ -47,9 +47,9 @@ abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
   })
 
   val ras = Module(new RAS)
-  val instr_fifo = Module(new MultiPortFifo( new IF4_Bundle, 4, 2, 2 ))
-  val bftq = Module(new MultiPortFifo( dw = new Branch_FTarget_Bundle, 4, 2, 1 ))
-  val jftq = Module(new MultiPortFifo( dw = new Jump_FTarget_Bundle,   4, 2, 1 ))
+  val instr_fifo = Module(new MultiPortFifo( new IF4_Bundle, (if(!isMinArea) 4 else 2), 2, 2 ))
+  val bftq = Module(new MultiPortFifo( dw = new Branch_FTarget_Bundle, (if(!isMinArea) 4 else 2), 2, 1 ))
+  val jftq = Module(new MultiPortFifo( dw = new Jump_FTarget_Bundle,   (if(!isMinArea) 4 else 2), 2, 1 ))
 
 
   val bRePort = Module(new RePort( new Branch_FTarget_Bundle, port = 2) )

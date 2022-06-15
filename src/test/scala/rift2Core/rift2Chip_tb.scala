@@ -36,7 +36,7 @@ import chisel3.stage._
 
 
 
-class commonCfg extends Config((site, here, up) => {
+class NormalCfg extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting()
 })
 
@@ -44,6 +44,9 @@ class Rift2GoCfg extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     hasFpu = false,
     hasPreFetch = false,
+
+
+
 
     ifetchParameters = IFParameters(
 
@@ -56,15 +59,18 @@ class Rift2GoCfg extends Config((site, here, up) => {
       cb = 2,
       sbEntry = 4,
     ),
+
+
+    isMinArea = true
+
   )
 })
 
 
 object testMain extends App {
 
-  // Driver.execute(args, () => new Rift2Chip )
 
-
+  // val cfg = new NormalCfg
   val cfg = new Rift2GoCfg
 
   (new chisel3.stage.ChiselStage).execute(args, Seq(

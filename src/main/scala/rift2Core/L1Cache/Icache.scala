@@ -62,7 +62,7 @@ trait ICache { this: IF2Base =>
   val icache_access_data_lo = RegInit( 0.U(128.W) )
   val kill_trans = RegInit(false.B)
 
-  val ibuf = Module(new MultiPortFifo( new IF2_Bundle, aw=6, in=8, out=4 ) )
+  val ibuf = Module(new MultiPortFifo( new IF2_Bundle, aw= (if (!isMinArea) 6 else 4), in=8, out=4 ) )
 
   val cache_dat = new Cache_dat( dw, aw, cb, cl, bk = 1 )
   val cache_tag = new Cache_tag( dw, aw, cb, cl, bk = 1 ) 

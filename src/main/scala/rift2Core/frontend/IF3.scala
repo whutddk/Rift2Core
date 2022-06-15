@@ -60,14 +60,14 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   // val bimFifo =  Module(new Queue( new BIMResp_Bundle, entries = 16, flow = true))
   // val tageFifo = Module(new Queue( Vec(6, new TageTableResp_Bundle ), entries = 16, flow = true))
 
-  val btbFifo =  Module(new MultiPortFifo( new BTBResp_Bundle, aw = 4, in = 1, out = 2, flow = true ) )
-  val bimFifo =  Module(new MultiPortFifo( new BIMResp_Bundle, aw = 4, in = 1, out = 2, flow = true ) )
-  val tageFifo = Module(new MultiPortFifo( Vec(6, new TageTableResp_Bundle ), aw = 4, in = 1, out = 2, flow = true ) )
+  val btbFifo =  Module(new MultiPortFifo( new BTBResp_Bundle, aw = (if(!isMinArea) 4 else 2), in = 1, out = 2, flow = true ) )
+  val bimFifo =  Module(new MultiPortFifo( new BIMResp_Bundle, aw = (if(!isMinArea) 4 else 2), in = 1, out = 2, flow = true ) )
+  val tageFifo = Module(new MultiPortFifo( Vec(6, new TageTableResp_Bundle ), aw = (if(!isMinArea) 4 else 2), in = 1, out = 2, flow = true ) )
 
 
   val predictor_ready = btb.io.isReady & bim.io.isReady & tage.io.isReady
 
-  val if3_resp_fifo = Module(new MultiPortFifo( new IF3_Bundle, 4, 4, 2 ))
+  val if3_resp_fifo = Module(new MultiPortFifo( new IF3_Bundle, (if(!isMinArea) 4 else 3), 4, 2 ))
 
   if3_resp_fifo.io.flush := io.if4Redirect.fire | io.flush
   if3_resp_fifo.io.enq <> combPDT.io.deq
