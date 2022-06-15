@@ -231,7 +231,6 @@ trait IF3_Predict{ this: IF3Base =>
       for ( k <- i+1 until 4 ) {
         reAlign(k).valid := false.B
         reAlign(k).ready := false.B
-        pipeLineLock := true.B
       }
     }
 
@@ -308,7 +307,9 @@ trait IF3_Update{ this: IF3Base =>
     ghist_snap := (ghist_snap << 1) | io.bcmm_update.bits.isFinalTaken
   }
 
+
   when( io.flush | io.if4Redirect.fire ) { pipeLineLock := false.B }
+  .elsewhen( (for ( i <- 0 until 4 ) yield { reAlign(i).bits.preDecode.is_lock_pipe & reAlign(i).fire}).reduce(_|_) ) { pipeLineLock := true.B }
 }
 
 
