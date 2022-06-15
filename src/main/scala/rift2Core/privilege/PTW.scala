@@ -36,12 +36,38 @@ class Info_ptw_rsp extends Bundle with Info_access_lvl{
 
 }
 
+object PTWState {
+  sealed abstract class State(val id: Int) {
+    def U: UInt = id.U(State.width.W)
+  }
+
+  object State {
+    import scala.language.implicitConversions
+
+    implicit def toInt(x: State) = x.id
+    implicit def toBigInt(x: State):BigInt = x.id
+
+    val all: Set[State] = Set(
+      Free,
+      Lvl2,
+      Lvl1,
+      Lvl0,
+    )
+    val width = log2Ceil(all.size)
+    def chiselType() = UInt(width.W)
+  }
+
+  case object Free extends State(0)
+  case object Lvl2 extends State(1)
+  case object Lvl1 extends State(2)
+  case object Lvl0 extends State(3)
+}
 
 
-/** 
-  * page table walker
-  */ 
-class PTW(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
+
+class PTWBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
+  val mEdge = edge
+  val mid   = id
   val io = IO(new Bundle{
     val ptw_i = Flipped(DecoupledIO(new Info_mmu_req))
     val ptw_o = DecoupledIO(new Info_ptw_rsp)
@@ -50,131 +76,161 @@ class PTW(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
 
     val sfence_vma = Input(Bool())
 
-    val ptw_get    = new DecoupledIO(new TLBundleA(edge.bundle))
-    val ptw_access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
-
+    val ptw_get    = new DecoupledIO(new TLBundleA(mEdge.bundle))
+    val ptw_access = Flipped(new DecoupledIO(new TLBundleD(mEdge.bundle)))
   })
 
-  object state {
-    val free = 0.U
-    val lvl2 = 1.U
-    val lvl1 = 2.U
-    val lvl0 = 3.U
-  }
+  val nextState = WireInit(PTWState.Free.U)
+  val currState = RegNext(next=nextState, init=PTWState.Free.U)
 
   val kill_trans = RegInit(false.B)
 
-  class FSM{
-    val state_dnxt = Wire(UInt(2.W))
-    val state_qout = RegNext( state_dnxt, state.free )
+  val (_, _, is_trans_done, transCnt) = mEdge.count(io.ptw_access)
+  val is_hit = Wire(Bool())
+
+  val addr_dnxt = Wire(UInt(56.W))
+  val addr_qout = RegNext(addr_dnxt, 0.U(56.W))
+
+  val is_ptw_end = Wire(Bool())
+  val is_ptw_fail = Wire(Bool())
+
+  val pte = Wire(new Info_pte_sv39)
+
+  val walkReq = RegEnable( io.ptw_i.bits, (currState === PTWState.Free.U & nextState =/= PTWState.Free.U) )
+  val walkRspBits = RegInit( 0.U.asTypeOf(new Info_ptw_rsp) )
+  val walkRspValid = RegInit(false.B)
+}
+
+trait PTWStateMachine{ this: PTWBase => 
+
+  switch( currState ) {
+    is( PTWState.Free.U ) {
+      nextState := Mux( io.ptw_i.fire, PTWState.Lvl2.U, PTWState.Free.U )
+    }
+    is( PTWState.Lvl2.U ) {
+      nextState :=
+        Mux(
+          (is_trans_done) | is_hit,
+          Mux( is_ptw_end | is_ptw_fail | kill_trans, PTWState.Free.U, PTWState.Lvl1.U ),
+          PTWState.Lvl2.U
+        )
+    }
+    is( PTWState.Lvl1.U ) {
+      nextState :=
+        Mux(
+          (is_trans_done) | is_hit,
+          Mux( is_ptw_end | is_ptw_fail | kill_trans, PTWState.Free.U, PTWState.Lvl0.U ),
+          PTWState.Lvl1.U
+        )
+    }
+    is( PTWState.Lvl0.U ) {
+      nextState :=
+        Mux(
+          (is_trans_done) | is_hit,
+          Mux( is_ptw_end | is_ptw_fail | kill_trans, PTWState.Free.U, PTWState.Free.U ),
+          PTWState.Lvl0.U
+        )
+    }
   }
-  val fsm = new FSM
-
-  class WALK{
-    val req = RegEnable( io.ptw_i.bits, (fsm.state_qout === 0.U & fsm.state_dnxt =/= 0.U) )
-    val rsp = RegInit( 0.U.asTypeOf(new Info_ptw_rsp) )
-    val rsp_valid = RegInit(false.B)
+}
 
 
-    val a     = Wire(UInt(44.W))
-    // val level = RegInit(0.U(2.W))
-    val is_ptw_end = Wire(Bool())
-    val is_ptw_fail = Wire(Bool())
-    val is_access_fault = RegInit(false.B)
+trait PTWWALK { this: PTWBase => 
 
+  val a     = Wire(UInt(44.W))
+ 
+  a :=
+    Mux1H(Seq(
+      ( nextState === PTWState.Lvl2.U ) -> io.cmm_mmu.satp(43,0),
+      ( nextState === PTWState.Lvl1.U ) -> Cat(pte.ppn(2), pte.ppn(1), pte.ppn(0)),
+      ( nextState === PTWState.Lvl0.U ) -> Cat(pte.ppn(2), pte.ppn(1), pte.ppn(0)),
+    ))
 
-    val pte = Wire(new Info_pte_sv39)
-
-    // val pte  = pte_value.asTypeOf(new Info_pte_sv39)
-    val addr_dnxt = Wire(UInt(56.W))
-    val addr_qout = RegNext(addr_dnxt, 0.U(56.W))
-    
-    a :=
-      Mux1H(Seq(
-        ( fsm.state_dnxt === state.lvl2 ) -> io.cmm_mmu.satp(43,0),
-        ( fsm.state_dnxt === state.lvl1 ) -> Cat(pte.ppn(2), pte.ppn(1), pte.ppn(0)),
-        ( fsm.state_dnxt === state.lvl0 ) -> Cat(pte.ppn(2), pte.ppn(1), pte.ppn(0)),
+  addr_dnxt :=
+    Cat(a, Mux1H(Seq(
+      (nextState === PTWState.Lvl2.U ) -> Cat(io.ptw_i.bits.vaddr(38,30), 0.U(3.W)),
+      (nextState === PTWState.Lvl1.U ) -> Cat(walkReq.vaddr(29,21), 0.U(3.W)),
+      (nextState === PTWState.Lvl0.U ) -> Cat(walkReq.vaddr(20,12), 0.U(3.W)),
       ))
-
-    addr_dnxt :=
-      Cat(a, Mux1H(Seq(
-        (fsm.state_dnxt === state.lvl2) -> Cat(io.ptw_i.bits.vaddr(38,30), 0.U(3.W)),
-        (fsm.state_dnxt === state.lvl1) -> Cat(req.vaddr(29,21), 0.U(3.W)),
-        (fsm.state_dnxt === state.lvl0) -> Cat(req.vaddr(20,12), 0.U(3.W)),
-        ))
-      )
-
-    val cl_sel = addr_qout(11,5)
-    val tag_sel = addr_qout(55,12)
-
-    is_ptw_end := 
-      pte.R === true.B & 
-      pte.X === true.B
+    )
 
 
-    is_ptw_fail :=
-      ( is_ptw_end & 
-        Mux1H(Seq(
-          (fsm.state_qout === state.free) -> false.B,
-          (fsm.state_qout === state.lvl2) -> (pte.ppn(0) =/= 0.U | pte.ppn(1) =/= 0.U),
-          (fsm.state_qout === state.lvl1) -> (pte.ppn(0) =/= 0.U),
-          (fsm.state_qout === state.lvl0) -> false.B,
-        ))
-      ) |
-      ( 
-        (pte.V === false.B) |
-        (pte.R === false.B & pte.W === true.B)
-      )
 
-            
-    pte.is_4K_page   := is_ptw_end & fsm.state_qout === state.lvl0
-    pte.is_mega_page := is_ptw_end & fsm.state_qout === state.lvl1       
-    pte.is_giga_page := is_ptw_end & fsm.state_qout === state.lvl2
+  is_ptw_end := 
+    pte.R === true.B & 
+    pte.X === true.B
 
 
-    when( fsm.state_qout === state.free & fsm.state_dnxt === state.lvl2 ) {
-      rsp.is_access_fault := false.B
-    }
-    .elsewhen( io.ptw_get.fire ) {
-      rsp.is_access_fault := 
-        rsp.is_access_fault |
-        PMP( io.cmm_mmu, io.ptw_get.bits.address, Cat(false.B, false.B, true.B))
-    }
+  is_ptw_fail :=
+    ( is_ptw_end & 
+      Mux1H(Seq(
+        (currState === PTWState.Free.U ) -> false.B,
+        (currState === PTWState.Lvl2.U ) -> (pte.ppn(0) =/= 0.U | pte.ppn(1) =/= 0.U),
+        (currState === PTWState.Lvl1.U ) -> (pte.ppn(0) =/= 0.U),
+        (currState === PTWState.Lvl0.U ) -> false.B,
+      ))
+    ) |
+    ( 
+      (pte.V === false.B) |
+      (pte.R === false.B & pte.W === true.B)
+    )
+
+          
+  pte.is_4K_page   := is_ptw_end & currState === PTWState.Lvl0.U
+  pte.is_mega_page := is_ptw_end & currState === PTWState.Lvl1.U      
+  pte.is_giga_page := is_ptw_end & currState === PTWState.Lvl2.U
 
 
+  when( currState === PTWState.Free.U & nextState === PTWState.Lvl2.U ) {
+    walkRspBits.is_access_fault := false.B
   }
-  val walk = new WALK
+  .elsewhen( io.ptw_get.fire ) {
+    walkRspBits.is_access_fault := 
+      walkRspBits.is_access_fault |
+      PMP( io.cmm_mmu, io.ptw_get.bits.address, Cat(false.B, false.B, true.B))
+  }
+
+  when( nextState === PTWState.Free.U & currState =/= PTWState.Free.U ) {
+    walkRspBits.is_ptw_fail := is_ptw_fail
+    walkRspBits.is_X := walkReq.is_X
+    walkRspBits.is_R := walkReq.is_R
+    walkRspBits.is_W := walkReq.is_W
+    walkRspBits.pte := pte
+
+    walkRspValid := true.B
+
+    assert( io.ptw_o.valid === false.B )
+  } .elsewhen( io.ptw_o.fire ) {
+    walkRspValid := false.B
+  }
+
+}
+
+trait PTWCache { this: PTWBase => 
+  val cl_sel = addr_qout(11,5)
+  val tag_sel = addr_qout(55,12)
 
   val cache_dat = new Cache_dat( 256, 56, 1, 128, bk = 1 )
   val cache_tag = new Cache_tag( 256, 56, 1, 128, bk = 1 ){ require ( tag_w == 44 ) }
   val is_cache_valid = RegInit( VecInit( Seq.fill(128)(false.B) ) )
 
-  val (_, _, is_trans_done, transCnt) = edge.count(io.ptw_access)
 
-  val ptw_get_valid = RegInit(false.B)
-  val ptw_access_ready = RegInit(false.B)
   val ptw_access_data_lo = RegInit( 0.U(128.W) )
 
-  when( io.cmm_mmu.sfence_vma & fsm.state_qout =/= state.free ) {
-    kill_trans := true.B
-  } .elsewhen( fsm.state_qout === state.free ) {
-    kill_trans := false.B
-  }
 
+  cache_dat.dat_addr_r := addr_dnxt
+  cache_tag.tag_addr_r := addr_dnxt
 
-  cache_dat.dat_addr_r := walk.addr_dnxt
-  cache_tag.tag_addr_r := walk.addr_dnxt
-
-  cache_dat.dat_addr_w := walk.addr_qout
-  cache_tag.tag_addr_w := walk.addr_qout
+  cache_dat.dat_addr_w := addr_qout
+  cache_tag.tag_addr_w := addr_qout
 
 
   for( i <- 0 until 1 ) yield {
     val rd_enable = 
-      (fsm.state_qout === state.lvl1 & fsm.state_dnxt === state.lvl0)
+      (currState === PTWState.Lvl1.U & nextState === PTWState.Lvl0.U)
 
     val wr_enable = 
-      (fsm.state_qout === state.lvl0 & is_trans_done & ~walk.is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
+      (currState === PTWState.Lvl0.U & is_trans_done & ~is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
 
     cache_tag.tag_en_w(i) := wr_enable
     cache_tag.tag_en_r(i) := rd_enable
@@ -185,7 +241,7 @@ class PTW(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
 
 
     when( wr_enable ) {
-      is_cache_valid(walk.cl_sel) := true.B
+      is_cache_valid(cl_sel) := true.B
     } .elsewhen( io.cmm_mmu.sfence_vma ) {
       for ( c <- 0 until 128 ) yield { is_cache_valid(c) := false.B }
     }
@@ -197,10 +253,10 @@ class PTW(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
 
   cache_dat.dat_info_w := Cat( io.ptw_access.bits.data(127,64), io.ptw_access.bits.data(63,0), ptw_access_data_lo(127,64), ptw_access_data_lo(63,0))
 
-  val is_hit = (walk.tag_sel === cache_tag.tag_info_r(0)) & is_cache_valid(walk.cl_sel) & fsm.state_qout === state.lvl0
+  is_hit := (tag_sel === cache_tag.tag_info_r(0)) & is_cache_valid(cl_sel) & currState === PTWState.Lvl0.U
 
 
-  walk.pte.value := {
+  pte.value := {
     val data = WireDefault(0.U(256.W))
     val data_sel = Wire(UInt(64.W))
 
@@ -211,14 +267,12 @@ class PTW(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
     }
 
     data_sel := Mux1H(Seq(
-      (walk.addr_qout(4,3) === 0.U ) -> data(63,0),
-      (walk.addr_qout(4,3) === 1.U ) -> data(127,64),
-      (walk.addr_qout(4,3) === 2.U ) -> data(191,128),
-      (walk.addr_qout(4,3) === 3.U ) -> data(255,192),
+      (addr_qout(4,3) === 0.U ) -> data(63,0),
+      (addr_qout(4,3) === 1.U ) -> data(127,64),
+      (addr_qout(4,3) === 2.U ) -> data(191,128),
+      (addr_qout(4,3) === 3.U ) -> data(255,192),
     ))
     
-    
-
     assert( PopCount( Seq(is_hit, is_trans_done) ) <= 1.U )
 
     val value = RegInit(0.U(64.W))
@@ -235,143 +289,26 @@ class PTW(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
     ))
   }
 
-
-
-
-
-
-
-//    SSSSSSSSSSSSSSS TTTTTTTTTTTTTTTTTTTTTTT         AAA         TTTTTTTTTTTTTTTTTTTTTTTEEEEEEEEEEEEEEEEEEEEEE
-//  SS:::::::::::::::ST:::::::::::::::::::::T        A:::A        T:::::::::::::::::::::TE::::::::::::::::::::E
-// S:::::SSSSSS::::::ST:::::::::::::::::::::T       A:::::A       T:::::::::::::::::::::TE::::::::::::::::::::E
-// S:::::S     SSSSSSST:::::TT:::::::TT:::::T      A:::::::A      T:::::TT:::::::TT:::::TEE::::::EEEEEEEEE::::E
-// S:::::S            TTTTTT  T:::::T  TTTTTT     A:::::::::A     TTTTTT  T:::::T  TTTTTT  E:::::E       EEEEEE
-// S:::::S                    T:::::T            A:::::A:::::A            T:::::T          E:::::E             
-//  S::::SSSS                 T:::::T           A:::::A A:::::A           T:::::T          E::::::EEEEEEEEEE   
-//   SS::::::SSSSS            T:::::T          A:::::A   A:::::A          T:::::T          E:::::::::::::::E   
-//     SSS::::::::SS          T:::::T         A:::::A     A:::::A         T:::::T          E:::::::::::::::E   
-//        SSSSSS::::S         T:::::T        A:::::AAAAAAAAA:::::A        T:::::T          E::::::EEEEEEEEEE   
-//             S:::::S        T:::::T       A:::::::::::::::::::::A       T:::::T          E:::::E             
-//             S:::::S        T:::::T      A:::::AAAAAAAAAAAAA:::::A      T:::::T          E:::::E       EEEEEE
-// SSSSSSS     S:::::S      TT:::::::TT   A:::::A             A:::::A   TT:::::::TT      EE::::::EEEEEEEE:::::E
-// S::::::SSSSSS:::::S      T:::::::::T  A:::::A               A:::::A  T:::::::::T      E::::::::::::::::::::E
-// S:::::::::::::::SS       T:::::::::T A:::::A                 A:::::A T:::::::::T      E::::::::::::::::::::E
-//  SSSSSSSSSSSSSSS         TTTTTTTTTTTAAAAAAA                   AAAAAAATTTTTTTTTTT      EEEEEEEEEEEEEEEEEEEEEE
-
-
-
-  val ptw_state_dnxt_in_free = Mux( io.ptw_i.fire, state.lvl2, state.free )
-  val ptw_state_dnxt_in_lvl2 = 
-    Mux(
-      (is_trans_done) | is_hit,
-      Mux( walk.is_ptw_end | walk.is_ptw_fail | kill_trans, state.free, state.lvl1 ),
-      state.lvl2
-    )
-  val ptw_state_dnxt_in_lvl1 = 
-    Mux(
-      (is_trans_done) | is_hit,
-      Mux( walk.is_ptw_end | walk.is_ptw_fail | kill_trans, state.free, state.lvl0 ),
-      state.lvl1
-    )
-  val ptw_state_dnxt_in_lvl0 = 
-    Mux(
-      (is_trans_done) | is_hit,
-      Mux( walk.is_ptw_end | walk.is_ptw_fail | kill_trans, state.free, state.free ),
-      state.lvl0
-    )
-
-
-  fsm.state_dnxt := Mux1H( Seq(
-    (fsm.state_qout === state.free) -> ptw_state_dnxt_in_free,
-    (fsm.state_qout === state.lvl2) -> ptw_state_dnxt_in_lvl2,
-    (fsm.state_qout === state.lvl1) -> ptw_state_dnxt_in_lvl1,
-    (fsm.state_qout === state.lvl0) -> ptw_state_dnxt_in_lvl0,
-  ))
-
-  assert( 
-    PopCount( Seq(
-      fsm.state_qout === state.free,
-      fsm.state_qout === state.lvl2,
-      fsm.state_qout === state.lvl1,
-      fsm.state_qout === state.lvl0,
-    )) === 1.U, "Assert Faild at ptw FSM!"
-  )
-
-
-  when( fsm.state_dnxt === state.free & fsm.state_qout =/= state.free ) {
-    walk.rsp.is_ptw_fail := walk.is_ptw_fail
-    walk.rsp.is_X := walk.req.is_X
-    walk.rsp.is_R := walk.req.is_R
-    walk.rsp.is_W := walk.req.is_W
-    walk.rsp.pte := walk.pte
-
-    walk.rsp_valid := true.B
-
-    assert( io.ptw_o.valid === false.B )
-  } .elsewhen( io.ptw_o.fire ) {
-    walk.rsp_valid := false.B
+  when( io.ptw_access.fire & ~is_trans_done) {
+    ptw_access_data_lo := io.ptw_access.bits.data
   }
-
-  io.ptw_o.bits := walk.rsp
-  io.ptw_o.valid := walk.rsp_valid & ~kill_trans
-
-  // io.ptw_o.bits.is_ptw_fail := walk.is_ptw_fail
-  // io.ptw_o.bits.is_access_fault := walk.is_access_fault
-  // io.ptw_o.bits.pte := walk.pte
-  // io.ptw_o.bits.is_R := walk.req.is_R
-  // io.ptw_o.bits.is_W := walk.req.is_W
-  // io.ptw_o.bits.is_X := walk.req.is_X
-
-  // io.ptw_o.valid := fsm.state_dnxt === state.free & fsm.state_qout =/= state.free
-
-  io.ptw_i.ready := fsm.state_qout === state.free & ~io.ptw_o.valid & ~io.cmm_mmu.sfence_vma & ~kill_trans
-
-  // assert( ~(io.ptw_o.valid & ~io.ptw_o.ready) ) //when ptw_valid, ptw_o must ready 
+}
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// TTTTTTTTTTTTTTTTTTTTTTT  iiii  lllllll                   LLLLLLLLLLL               iiii                   kkkkkkkk           
-// T:::::::::::::::::::::T i::::i l:::::l                   L:::::::::L              i::::i                  k::::::k           
-// T:::::::::::::::::::::T  iiii  l:::::l                   L:::::::::L               iiii                   k::::::k           
-// T:::::TT:::::::TT:::::T        l:::::l                   LL:::::::LL                                      k::::::k           
-// TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee    L:::::L               iiiiiiinnnn  nnnnnnnn     k:::::k    kkkkkkk
-//         T:::::T        i:::::i  l::::l   ee::::::::::::ee  L:::::L               i:::::in:::nn::::::::nn   k:::::k   k:::::k 
-//         T:::::T         i::::i  l::::l  e::::::eeeee:::::eeL:::::L                i::::in::::::::::::::nn  k:::::k  k:::::k  
-//         T:::::T         i::::i  l::::l e::::::e     e:::::eL:::::L                i::::inn:::::::::::::::n k:::::k k:::::k   
-//         T:::::T         i::::i  l::::l e:::::::eeeee::::::eL:::::L                i::::i  n:::::nnnn:::::n k::::::k:::::k    
-//         T:::::T         i::::i  l::::l e:::::::::::::::::e L:::::L                i::::i  n::::n    n::::n k:::::::::::k     
-//         T:::::T         i::::i  l::::l e::::::eeeeeeeeeee  L:::::L                i::::i  n::::n    n::::n k:::::::::::k     
-//         T:::::T         i::::i  l::::l e:::::::e           L:::::L         LLLLLL i::::i  n::::n    n::::n k::::::k:::::k    
-//       TT:::::::TT      i::::::il::::::le::::::::e        LL:::::::LLLLLLLLL:::::Li::::::i n::::n    n::::nk::::::k k:::::k   
-//       T:::::::::T      i::::::il::::::l e::::::::eeeeeeeeL::::::::::::::::::::::Li::::::i n::::n    n::::nk::::::k  k:::::k  
-//       T:::::::::T      i::::::il::::::l  ee:::::::::::::eL::::::::::::::::::::::Li::::::i n::::n    n::::nk::::::k   k:::::k 
-//       TTTTTTTTTTT      iiiiiiiillllllll    eeeeeeeeeeeeeeLLLLLLLLLLLLLLLLLLLLLLLLiiiiiiii nnnnnn    nnnnnnkkkkkkkk    kkkkkkk
-
-
+trait PTWBus { this: PTWBase => 
+  val ptw_get_valid = RegInit(false.B)
+  val ptw_access_ready = RegInit(false.B)
 
   io.ptw_get.valid := ptw_get_valid
   io.ptw_access.ready := ptw_access_ready
 
   val is_get_reqed = RegInit(false.B)
   when( io.ptw_get.fire ) { is_get_reqed := true.B }
-  .elsewhen( fsm.state_dnxt =/= fsm.state_qout ) { is_get_reqed := false.B }
+  .elsewhen( nextState =/= currState ) { is_get_reqed := false.B }
 
 
-  when( (fsm.state_qout === state.lvl2 | fsm.state_qout === state.lvl1 | fsm.state_qout === state.lvl0) & ~is_hit & ~io.ptw_get.valid & ~is_get_reqed ) {
+  when( (currState === PTWState.Lvl2.U | currState === PTWState.Lvl1.U | currState === PTWState.Lvl0.U) & ~is_hit & ~io.ptw_get.valid & ~is_get_reqed ) {
     ptw_get_valid := true.B
   } .elsewhen( io.ptw_get.fire ) {
     ptw_get_valid := false.B
@@ -383,14 +320,35 @@ class PTW(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
     ptw_access_ready := false.B
   }
 
-  io.ptw_get.bits := edge.Get(fromSource = id.U, toAddress = walk.addr_qout & ("hFFFFFFFF".U << 5), lgSize = log2Ceil(256/8).U)._2
+  io.ptw_get.bits := mEdge.Get(fromSource = mid.U, toAddress = addr_qout & ("hFFFFFFFF".U << 5), lgSize = log2Ceil(256/8).U)._2
 
-  when( io.ptw_access.fire & ~is_trans_done) {
-    ptw_access_data_lo := io.ptw_access.bits.data
 
+
+}
+
+
+/** 
+  * page table walker
+  */ 
+class PTW(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends PTWBase(edge, id) 
+  with PTWStateMachine
+  with PTWWALK
+  with PTWCache
+  with PTWBus{
+
+
+  when( io.cmm_mmu.sfence_vma & currState =/= PTWState.Free.U ) {
+    kill_trans := true.B
+  } .elsewhen( currState === PTWState.Free.U ) {
+    kill_trans := false.B
   }
 
 
+  io.ptw_o.bits  := walkRspBits
+  io.ptw_o.valid := walkRspValid & ~kill_trans
+
+
+  io.ptw_i.ready := currState === PTWState.Free.U & ~io.ptw_o.valid & ~io.cmm_mmu.sfence_vma & ~kill_trans
 
 
 }

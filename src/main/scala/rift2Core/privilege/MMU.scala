@@ -164,7 +164,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   itlb.io.req.bits  := io.if_mmu.bits
   itlb.io.asid_i  := io.cmm_mmu.satp(59,44)
   io.if_mmu.ready :=
-    io.mmu_if.fire & ~io.if_flush & ~kill_iptw & ~cmm_flush
+    io.mmu_if.fire & ~io.if_flush & ~kill_iptw
 
 
 
@@ -172,7 +172,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   dtlb.io.req.bits  := io.lsu_mmu.bits
   dtlb.io.asid_i  := io.cmm_mmu.satp(59,44)
   io.lsu_mmu.ready :=
-    io.mmu_lsu.fire & ~io.lsu_flush & ~kill_dptw & ~cmm_flush
+    io.mmu_lsu.fire & ~io.lsu_flush & ~kill_dptw
 
   assert( io.lsu_mmu.fire === io.mmu_lsu.fire )
 

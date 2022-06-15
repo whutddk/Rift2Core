@@ -35,7 +35,7 @@ case object RiftParamsKey extends Field[RiftSetting]
 
 
 case class RiftSetting(
-  hasFpu: Boolean = false,
+  hasFpu: Boolean = true,
   rn_chn: Int = 2,
   cm_chn: Int = 2,
   ifetchParameters: IFParameters = IFParameters(

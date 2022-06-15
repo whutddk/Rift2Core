@@ -34,13 +34,25 @@ import chisel3.stage._
 
 
 
-class miniCfg extends Config((site, here, up) => {
+class commonCfg extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting()
-
-  
 })
 
-
+class Rift2GoCfg extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+    hasFpu = false,
+    rn_chn = 2,
+    cm_chn = 2,
+    ifetchParameters = IFParameters(
+      uBTB_entry = 16,
+      uBTB_tag_w = 16,
+      btb_cl = 4096,
+      bim_cl = 4096,
+      ras_dp = 256,
+      tage_table = 6, 
+    )
+  )
+})
 
 
 object testMain extends App {
@@ -48,7 +60,7 @@ object testMain extends App {
   // Driver.execute(args, () => new Rift2Chip )
 
 
-  val cfg = new miniCfg
+  val cfg = new Rift2GoCfg
 
   (new chisel3.stage.ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => {
