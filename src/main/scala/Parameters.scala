@@ -69,6 +69,7 @@ case class RiftSetting(
     bk = 8,
     cb = 8,
     cl = 128,
+    sbEntry = 16,
   ),
 ){
   require( icacheParameters.bk == 1 )

@@ -289,12 +289,12 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   dptw.io.ptw_access.bits := 0.U.asTypeOf(new TLBundleD(edge.bundle))
   io.ptw_access.ready := false.B
 
+  val ptwGetArb  = Module(new Arbiter(new TLBundleA(edge.bundle), n = 2))
+  
+  ptwGetArb.io.in(0) <> iptw.io.ptw_get
+  ptwGetArb.io.in(1) <> dptw.io.ptw_get
+  io.ptw_get <> ptwGetArb.io.out
 
-  when( iptw.io.ptw_get.valid ) { 
-    io.ptw_get <> iptw.io.ptw_get
-  } .elsewhen( dptw.io.ptw_get.valid ) {
-    io.ptw_get <> dptw.io.ptw_get
-  }
 
   when( io.ptw_access.bits.source === 0.U ) {
     iptw.io.ptw_access <> io.ptw_access

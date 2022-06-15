@@ -275,20 +275,9 @@ trait LSU_RegionMux { this: LsuBase =>
 /** depending on the paddr, the cache request will be divided into 4 or 8 (nm) "bank" */
 trait LSU_CacheMux { this: LsuBase =>
   val CacheMuxBits = pkg_Info_cache_s0s1(regionDCacheIO.bits, stQueue.io.overlapReq.bits, stQueue.io.overlapResp.bits)
-
-  //   val cacheMux = {
-  //   val mdl = Module(new cacheMux)
-  //   mdl.io.enq.bits := 
-  //   mdl.io.enq.valid := regionDCacheIO.valid
-  //   regionDCacheIO.ready := mdl.io.enq.ready
-  //   mdl
-  // }
-
-  // class cacheMux(implicit p: Parameters) extends DcacheModule{
-  //   val io = IO(new Bundle{
-  //     val enq = Flipped(new DecoupledIO(new Info_cache_s0s1))
-  //     val deq = Vec(bk, new DecoupledIO(new Info_cache_s0s1))
-  //   })
+  val acquireArb  = Module(new Arbiter(new TLBundleA(dEdge(0).bundle), n = bk))
+  val grantAckArb = Module(new Arbiter(new TLBundleE(dEdge(0).bundle), n = bk))
+  val releaseArb  = Module(new Arbiter(new TLBundleC(dEdge(0).bundle), n = bk))
 
   val chn = CacheMuxBits.paddr(addr_lsb+bk_w-1,addr_lsb)
 
@@ -327,20 +316,16 @@ trait LSU_CacheMux { this: LsuBase =>
     cache(i).io.writeBackUnit_dcache_grant.bits    := 0.U.asTypeOf(new TLBundleD(dEdge(0).bundle))
   }
 
-
-  for ( i <- bk-1 to 0 by -1 ) {
-    when( cache(i).io.missUnit_dcache_acquire.valid ) {
-      io.missUnit_dcache_acquire <> cache(i).io.missUnit_dcache_acquire
-    }
-
+  io.missUnit_dcache_acquire  <>  acquireArb.io.out
+  io.missUnit_dcache_grantAck <> grantAckArb.io.out
+  for ( i <- 0 until bk ) {
+    acquireArb.io.in(i) <> cache(i).io.missUnit_dcache_acquire
 
     when( io.missUnit_dcache_grant.bits.source === i.U ) {
       cache(i).io.missUnit_dcache_grant <> io.missUnit_dcache_grant  
     }
 
-    when( cache(i).io.missUnit_dcache_grantAck.valid ) {
-      io.missUnit_dcache_grantAck <> cache(i).io.missUnit_dcache_grantAck   
-    }
+    grantAckArb.io.in(i) <> cache(i).io.missUnit_dcache_grantAck
 
     when( io.probeUnit_dcache_probe.bits.address(addr_lsb+bk_w-1,addr_lsb) === i.U ) {
       cache(i).io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe   
@@ -361,11 +346,14 @@ trait LSU_CacheMux { this: LsuBase =>
     when( cache(i).io.writeBackUnit_dcache_release.fire ) { is_chnc_busy(i) := Mux( is_release_done(i), false.B, true.B )}
   }
 
+  
+  for ( i <- 0 until bk ) {
+    releaseArb.io.in(i) <> cache(i).io.writeBackUnit_dcache_release
+  }
   when( is_chnc_busy.forall((x:Bool) => (x === false.B)) ) {
-    for ( i <- bk-1 to 0 by -1 ) {
-      when( cache(i).io.writeBackUnit_dcache_release.valid ) { io.writeBackUnit_dcache_release <> cache(i).io.writeBackUnit_dcache_release }
-    }
+    io.writeBackUnit_dcache_release <> releaseArb.io.out
   } .otherwise {
+    releaseArb.io.out.ready := false.B
     for ( i <- 0 until bk ) {
       when( is_chnc_busy(i) === true.B  ) { io.writeBackUnit_dcache_release <> cache(i).io.writeBackUnit_dcache_release }
     }
