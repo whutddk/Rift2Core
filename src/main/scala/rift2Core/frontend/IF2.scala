@@ -59,8 +59,14 @@ abstract class IF2Base(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheMo
 }
 
 trait IF2_PreFetch { this: IF2Base => 
-  io.preFetch.valid := io.icache_get.fire
-  io.preFetch.bits.paddr := io.icache_get.bits.address + "b100000".U
+  if (hasPreFetch) {
+    io.preFetch.valid := io.icache_get.fire
+    io.preFetch.bits.paddr := io.icache_get.bits.address + "b100000".U    
+  } else {
+    io.preFetch.valid := false.B
+    io.preFetch.bits.paddr := 0.U
+  }
+
 }
 
 class IF2(edge: TLEdgeOut)(implicit p: Parameters) extends IF2Base(edge) with ICache with IF2_PreFetch {

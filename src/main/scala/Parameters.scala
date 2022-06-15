@@ -36,6 +36,7 @@ case object RiftParamsKey extends Field[RiftSetting]
 
 case class RiftSetting(
   hasFpu: Boolean = true,
+  hasPreFetch: Boolean = true,
   rn_chn: Int = 2,
   cm_chn: Int = 2,
   ifetchParameters: IFParameters = IFParameters(
@@ -83,6 +84,7 @@ trait HasRiftParameters {
   val dcacheParams = riftSetting.dcacheParameters
 
   def hasFpu = riftSetting.hasFpu
+  def hasPreFetch = riftSetting.hasPreFetch
   def cm_chn = riftSetting.cm_chn
   def rn_chn = riftSetting.rn_chn
 }

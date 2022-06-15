@@ -21,8 +21,10 @@ import chisel3.util._
 import rift2Core.define._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
-class PreFetcher(edge: TLEdgeOut) extends Module{
+class PreFetcher(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
   val io = IO(new Bundle{
 
     val stqReq          = Flipped(Valid( new PreFetch_Req_Bundle))
@@ -56,15 +58,21 @@ class PreFetcher(edge: TLEdgeOut) extends Module{
 
   val (_, _, is_trans_done, _) = edge.count(io.intent)
 
+  if(hasPreFetch) {
+    io.intent.valid := arb.io.out.valid & ~isBusy
+    io.intent.bits :=
+      edge.Get(
+        fromSource = 0.U,
+        toAddress = arb.io.out.bits.paddr >> 5 << 5,
+        lgSize = log2Ceil(256/8).U
+      )._2   
+  } else {
+    io.intent.valid := false.B
+    io.intent.bits := 0.U.asTypeOf(new TLBundleA(edge.bundle))
+  }
 
-  io.intent.valid := arb.io.out.valid & ~isBusy
   
-  io.intent.bits :=
-    edge.Get(
-      fromSource = 0.U,
-      toAddress = arb.io.out.bits.paddr >> 5 << 5,
-      lgSize = log2Ceil(256/8).U
-    )._2
+
 
 
     // edge.Hint(

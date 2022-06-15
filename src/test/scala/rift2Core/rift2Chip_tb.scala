@@ -41,8 +41,8 @@ class commonCfg extends Config((site, here, up) => {
 class Rift2GoCfg extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     hasFpu = false,
-    rn_chn = 2,
-    cm_chn = 2,
+    hasPreFetch = false,
+
     ifetchParameters = IFParameters(
       uBTB_entry = 16,
       uBTB_tag_w = 16,

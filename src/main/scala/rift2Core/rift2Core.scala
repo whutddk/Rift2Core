@@ -316,6 +316,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   i_mmu.io.ptw_access.bits  := mmu_bus.d.bits
   i_mmu.io.ptw_access.valid := mmu_bus.d.valid
 
+
   val prefetcher = Module(new PreFetcher(prefetch_edge))
   prefetcher.io.stqReq          := exe_stage.io.preFetch
   prefetcher.io.icacheRefillReq := if2.io.preFetch
@@ -325,7 +326,9 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   prefetcher.io.intent.ready := prefetch_bus.a.ready
   prefetch_bus.d.ready := prefetcher.io.hintAck.ready
   prefetcher.io.hintAck.bits  := prefetch_bus.d.bits
-  prefetcher.io.hintAck.valid := prefetch_bus.d.valid
+  prefetcher.io.hintAck.valid := prefetch_bus.d.valid    
+
+
 
 
   val diff = {

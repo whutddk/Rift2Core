@@ -174,8 +174,14 @@ trait Stq_Overlap{ this: Stq_Base =>
   * bound to every cache 
   */
 class Store_queue()(implicit p: Parameters) extends Stq_Base with Stq_Ptr with Stq_Overlap {
-  io.preFetch.valid      := io.enq.fire
-  io.preFetch.bits.paddr := io.enq.bits.param.dat.op1
+  if(hasPreFetch) {
+    io.preFetch.valid      := io.enq.fire
+    io.preFetch.bits.paddr := io.enq.bits.param.dat.op1    
+  } else {
+    io.preFetch.valid      := false.B
+    io.preFetch.bits.paddr := 0.U
+  }
+
 }
 
 
