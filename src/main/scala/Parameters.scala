@@ -39,6 +39,10 @@ case class RiftSetting(
   hasPreFetch: Boolean = true,
   rn_chn: Int = 2,
   cm_chn: Int = 2,
+
+  vlen: Int = 39,
+  plen: Int = 33,
+
   ifetchParameters: IFParameters = IFParameters(
     // GHR_length = 64,
     // UBTB_entry = 16,
@@ -74,6 +78,8 @@ case class RiftSetting(
 ){
   require( icacheParameters.bk == 1 )
   require( log2Ceil( ifetchParameters.uBTB_entry ) <= ifetchParameters.uBTB_tag_w )
+  require( vlen == 39 )
+  require( plen >=32 && plen <= 56 )
 }
 
 trait HasRiftParameters {
@@ -89,6 +95,9 @@ trait HasRiftParameters {
   def hasPreFetch = riftSetting.hasPreFetch
   def cm_chn = riftSetting.cm_chn
   def rn_chn = riftSetting.rn_chn
+
+  def vlen = riftSetting.vlen
+  def plen = riftSetting.plen
 }
 
 
