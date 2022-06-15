@@ -181,7 +181,7 @@ class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
 }
 
 /** stage 2 will write the cache */
-class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
+class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle{
     val wr_in  = Flipped(new DecoupledIO(new Info_cache_s1s2))
     val reload = new DecoupledIO(new Info_cache_s0s1)
@@ -385,7 +385,7 @@ class L1d_wr_stage() (implicit p: Parameters) extends DcacheModule {
       io.wr_in.bits.fun.probe
 
   io.wb_req.bits.addr := 
-    Mux( io.wb_req.valid, Cat(io.wr_in.bits.tag(cb_sel), cl_sel, 0.U(addr_lsb.W)), 0.U )
+    Mux( io.wb_req.valid, Cat(io.wr_in.bits.tag(cb_sel), cl_sel, id.U(bk_w.W), 0.U(addr_lsb.W)), 0.U )
     
    io.pb_req.bits.addr :=
     Mux( io.pb_req.valid, (io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)), 0.U )
@@ -537,7 +537,7 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheMod
 
   val lsEntry = Module(new Queue(new Info_cache_s0s1, sbEntry, pipe = false, flow = true))
   val rd_stage = Module(new L1d_rd_stage())
-  val wr_stage = Module(new L1d_wr_stage())
+  val wr_stage = Module(new L1d_wr_stage(id))
 
   val cache_buffer = Module(new Cache_buffer)
 
