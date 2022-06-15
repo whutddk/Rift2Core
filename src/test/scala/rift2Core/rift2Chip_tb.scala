@@ -27,6 +27,8 @@ import rift2Core._
 // import rift2Core.backend._
 // import rift2Core.cache._
 import rift._
+import rift2Core.define.{IFParameters}
+import rift2Core.L1Cache.{IcacheParameters, DcacheParameters}
 import rift2Core.privilege._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.config._
@@ -44,13 +46,16 @@ class Rift2GoCfg extends Config((site, here, up) => {
     hasPreFetch = false,
 
     ifetchParameters = IFParameters(
-      uBTB_entry = 16,
-      uBTB_tag_w = 16,
-      btb_cl = 4096,
-      bim_cl = 4096,
-      ras_dp = 256,
-      tage_table = 6, 
-    )
+
+    ),
+    icacheParameters = IcacheParameters(
+      cb = 2,
+    ),
+    dcacheParameters = DcacheParameters(
+      bk = 2,
+      cb = 2,
+      sbEntry = 4,
+    ),
   )
 })
 

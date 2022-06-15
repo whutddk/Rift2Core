@@ -19,7 +19,7 @@ class Info_miss_rsp extends Bundle {
 
 
 /** The Queue of cache to request acquire and waiting for grant and ack grant */
-class MissUnit(edge: TLEdgeOut, entry: Int = 8, setting: Int, id: Int)(implicit p: Parameters) extends L1CacheModule {
+class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle{
     val req = Flipped(DecoupledIO(new Info_miss_req))
     val rsp = DecoupledIO(new Info_miss_rsp)
@@ -34,10 +34,10 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8, setting: Int, id: Int)(implicit 
   })
 
   /** a parallel buff of *paddr* miss request, when a duplicated request comes, it will be acked but dismiss */
-  val miss_queue = RegInit(VecInit( Seq.fill(entry)( 0.U.asTypeOf(new Info_miss_req) )))
+  val miss_queue = RegInit(VecInit( Seq.fill(sbEntry)( 0.U.asTypeOf(new Info_miss_req) )))
 
   /** a valid flag indicated whether a buff is in-used */
-  val miss_valid = RegInit(VecInit( Seq.fill(entry)( false.B )))
+  val miss_valid = RegInit(VecInit( Seq.fill(sbEntry)( false.B )))
 
   /** a grant will complete in 2 beat, and get 256-bits data */ 
   val miss_rsp = RegInit(VecInit( Seq.fill(2)(0.U(128.W))  ))
@@ -151,11 +151,15 @@ class MissUnit(edge: TLEdgeOut, entry: Int = 8, setting: Int, id: Int)(implicit 
   /** select an empty buff to load paddr, except when *buff full* or *can merge* */
   val load_sel = miss_valid.indexWhere( (x:Bool) => (x === false.B) )
 
-  io.req.ready := miss_valid.exists((x:Bool) => (x === false.B))
+  io.req.ready := true.B
+  when( io.req.valid ) {
+    assert( miss_valid.exists((x:Bool) => (x === false.B)), "Assert Failed at MissUnit, the Miss-Entry is equal to SB-Entry, which hints that missUnit never full!" )
+  }
+  
 
   /** findout if there is no buff is valid and has the same paddr, or merge it! */
   val is_merge = {
-    for ( i <- 0 until entry ) yield {
+    for ( i <- 0 until sbEntry ) yield {
       (miss_queue(i).paddr === io.req.bits.paddr) & miss_valid(i) === true.B
     }
   }.reduce(_|_)

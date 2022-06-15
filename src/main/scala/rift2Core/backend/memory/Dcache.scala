@@ -34,6 +34,7 @@ trait HasDcacheParameters extends HasRiftParameters {
   def cb = dcacheParams.cb
   def cl = dcacheParams.cl
   def aw = dcacheParams.aw
+  def sbEntry = dcacheParams.sbEntry
 
   def addr_lsb = log2Ceil(dw/8)
   def bk_w = log2Ceil(bk)
@@ -92,7 +93,7 @@ trait Info_tag_dat extends DcacheBundle {
   val tag   = Vec(cb, UInt(tag_w.W))
 }
 
-trait Info_sc_idx extends DcacheBundle { val chk_idx = UInt(4.W) }
+trait Info_sc_idx extends DcacheBundle { val chk_idx = UInt((log2Ceil(sbEntry)).W) }
 
 class Info_cache_rd(implicit p: Parameters) extends Info_tag_dat
 class Info_cache_s0s1(implicit p: Parameters) extends DcacheBundle with Info_cache_raw with Info_sc_idx
@@ -530,11 +531,11 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheMod
 
   val cache_dat = new Cache_dat( dw, aw, cb, cl, bk = bk )
   val cache_tag = new Cache_tag( dw, aw, cb, cl, bk = bk ) 
-  val missUnit = Module(new MissUnit(edge = edge, entry = 8, setting = 2, id = id))
+  val missUnit = Module(new MissUnit(edge = edge, setting = 2, id = id))
   val probeUnit = Module(new ProbeUnit(edge = edge, id = id))
   val writeBackUnit = Module(new WriteBackUnit(edge = edge, setting = 2, id = id))
 
-  val lsEntry = Module(new Queue(new Info_cache_s0s1, 16, pipe = false, flow = true))
+  val lsEntry = Module(new Queue(new Info_cache_s0s1, sbEntry, pipe = false, flow = true))
   val rd_stage = Module(new L1d_rd_stage())
   val wr_stage = Module(new L1d_wr_stage())
 
@@ -575,7 +576,7 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheMod
   val op_arb = Module(new Arbiter( new Info_cache_s0s1, 2))
   val rd_arb = Module(new Arbiter( new Info_cache_s0s1, 3))
 
-  val reload_fifo = Module( new Queue( new Info_cache_s0s1, 1, false, true) )
+  val reload_fifo = Module( new Queue( new Info_cache_s0s1, 1, false, false) )
 
   wr_stage.io.reload <> reload_fifo.io.enq
   reload_fifo.io.deq <> op_arb.io.in(0)
