@@ -24,7 +24,7 @@ class ProbeUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends L1Cach
   })
 
   /** a tiny fifo that buffer the probe request from l2cache */
-  val probe_fifo = Module(new Queue(UInt(plen.W), 4, true, false))
+  val probe_fifo = Module(new Queue(UInt(plen.W), 1, false, false))
 
 
 
@@ -39,6 +39,13 @@ class ProbeUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends L1Cach
   probe_fifo.io.deq.ready := io.req.ready
   io.req.bits.paddr := probe_fifo.io.deq.bits
 
+
+
+
+  when( ~probe_fifo.io.enq.ready ) {
+    assert( ~probe_fifo.io.enq.valid, "Once the Probe is issued, the slave should not issue further Probes on that block until it receives a ProbeAck. Spec-1.8.1 Page-69")
+  }
+  
 }
 
 

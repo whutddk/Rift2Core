@@ -22,7 +22,7 @@ class Info_miss_rsp(implicit p: Parameters) extends RiftBundle {
 /** The Queue of cache to request acquire and waiting for grant and ack grant */
 class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle{
-    val req = Flipped(DecoupledIO(new Info_miss_req))
+    val req = Flipped(Valid(new Info_miss_req))
     val rsp = DecoupledIO(new Info_miss_rsp)
 
     val cache_acquire = new DecoupledIO(new TLBundleA(edge.bundle))
@@ -152,10 +152,7 @@ class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) e
   /** select an empty buff to load paddr, except when *buff full* or *can merge* */
   val load_sel = miss_valid.indexWhere( (x:Bool) => (x === false.B) )
 
-  io.req.ready := true.B
-  when( io.req.valid ) {
-    assert( miss_valid.exists((x:Bool) => (x === false.B)), "Assert Failed at MissUnit, the Miss-Entry is equal to SB-Entry, which hints that missUnit never full!" )
-  }
+
   
 
   /** findout if there is no buff is valid and has the same paddr, or merge it! */
@@ -173,6 +170,15 @@ class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) e
     }
   }
 
+
+  // io.req.ready := true.B
+  when( io.req.valid ) {
+    assert( miss_valid.exists((x:Bool) => (x === false.B)), "Assert Failed at MissUnit, the Miss-Entry is equal to SB-Entry, which hints that missUnit never full!" )
+  }
+
+  when( io.rsp.valid ) {
+    assert( io.rsp.ready === true.B, "Assert Failed at MissUnit, As Highest-priority Arbiter Input, Dcache Pipeline should never stuck!" )
+  }
 }
 
 

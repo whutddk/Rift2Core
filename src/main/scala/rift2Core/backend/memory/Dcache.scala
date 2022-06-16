@@ -121,37 +121,30 @@ class Info_cache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc_
 /** the fisrt stage to read out the data */
 class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle {
-    val rd_in  = Flipped(DecoupledIO(new Info_cache_s0s1))
-    val rd_out = DecoupledIO(new Info_cache_s1s2)
-
-    // val overlap_paddr = Output(UInt(64.W))
+    val rd_in  = Flipped(Valid(new Info_cache_s0s1))
+    val rd_out = Valid(new Info_cache_s0s1)
 
     val dat_addr_r = Output(UInt(plen.W))
     val dat_en_r   = Output( Vec(cb,  Bool()) )
-    val dat_info_r = Input( Vec(cb, UInt(dw.W)) )
 
     val tag_addr_r = Output(UInt(plen.W))
     val tag_en_r   = Output( Vec(cb, Bool()) )	
-    val tag_info_r = Input( Vec(cb, UInt(tag_w.W)) )
+
   })
 
+  io.rd_out.valid := RegNext(io.rd_in.valid, false.B)
+  io.rd_out.bits  := RegNext(io.rd_in.bits)
 
-  val info_bypass_fifo = Module(new Queue(new Info_cache_s0s1, 1, true, false))
 
-  // io.overlap_paddr := io.rd_in.bits.paddr
   io.tag_addr_r := io.rd_in.bits.paddr
   io.dat_addr_r := io.rd_in.bits.paddr
 
   for ( i <- 0 until cb ) yield {
-    io.tag_en_r(i) :=
-      info_bypass_fifo.io.enq.fire & io.rd_in.bits.fun.is_tag_r
+    io.tag_en_r(i) := io.rd_in.bits.fun.is_tag_r
   }
-
-
 
   for ( i <- 0 until cb ) yield {
     io.dat_en_r(i) := 
-      info_bypass_fifo.io.enq.fire &
       io.rd_in.bits.fun.is_dat_r & (
         (io.rd_in.bits.fun.probe) |
         (io.rd_in.bits.fun.grant) |
@@ -159,33 +152,17 @@ class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
       )
   }
 
-
-  io.rd_out.valid := RegNext(io.rd_in.valid, false.B)
-
-  for( i <- 0 until cb ) yield { io.rd_out.bits.rdata(i) := io.dat_info_r(i) } 
-  for( i <- 0 until cb ) yield { io.rd_out.bits.tag(i)   := io.tag_info_r(i) }
-
-  
-
-  info_bypass_fifo.io.enq <> io.rd_in
-
-  io.rd_out.bits.paddr    := info_bypass_fifo.io.deq.bits.paddr
-  io.rd_out.bits.wstrb    := info_bypass_fifo.io.deq.bits.wstrb
-  io.rd_out.bits.wdata    := info_bypass_fifo.io.deq.bits.wdata
-  io.rd_out.bits.fun       := info_bypass_fifo.io.deq.bits.fun
-  io.rd_out.bits.rd       := info_bypass_fifo.io.deq.bits.rd
-  io.rd_out.bits.chk_idx  := info_bypass_fifo.io.deq.bits.chk_idx
-  io.rd_out.valid := info_bypass_fifo.io.deq.valid
-  info_bypass_fifo.io.deq.ready := io.rd_out.ready
-
 }
 
 /** stage 2 will write the cache */
 class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
   val io = IO(new Bundle{
-    val wr_in  = Flipped(new DecoupledIO(new Info_cache_s1s2))
-    val reload = new DecoupledIO(new Info_cache_s0s1)
-    val deq = DecoupledIO(new Info_cache_retn)
+    val wr_in  = Flipped(Valid(new Info_cache_s0s1))
+    val dat_info_r = Input( Vec(cb, UInt(dw.W)) )
+    val tag_info_r = Input( Vec(cb, UInt(tag_w.W)) )
+
+    val reload = Valid(new Info_cache_s0s1)
+    val deq = Valid(new Info_cache_retn)
 
     val tag_addr_w = Output(UInt(plen.W))
     val tag_en_w = Output( Vec(cb, Bool()) )
@@ -195,12 +172,10 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
     val dat_info_wstrb = Output( UInt((dw/8).W))
     val dat_info_w = Output( UInt(dw.W))
 
-    val missUnit_req = new DecoupledIO(new Info_miss_req)
-    val wb_req = DecoupledIO(new Info_writeBack_req)
-    val pb_req = DecoupledIO(new Info_writeBack_req)
+    val missUnit_req = Valid(new Info_miss_req)
+    val wb_req = Valid(new Info_writeBack_req)
+    val pb_req =Valid(new Info_writeBack_req)
 
-    // val overlap_wdata = Input(UInt(64.W))
-    // val overlap_wstrb = Input(UInt(8.W))
 
     val flush = Input(Bool())
   })
@@ -240,7 +215,7 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
   is_hit_oh := {
     val res = 
       for( i <- 0 until cb ) yield {
-        (io.wr_in.bits.tag(i) === tag_sel) & is_valid(cl_sel)(i)        
+        (io.tag_info_r(i) === tag_sel) & is_valid(cl_sel)(i)        
       }
     assert(PopCount(res) <= 1.U)
     VecInit(res)
@@ -303,7 +278,7 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
     val amo_reAlign_64_b = Wire(UInt(64.W))
 
     amo_reAlign_64_a := reAlign_data( from = 256, to = 64, io.wr_in.bits.wdata, io.wr_in.bits.paddr )
-    amo_reAlign_64_b := reAlign_data( from = 256, to = 64, io.wr_in.bits.rdata(cb_sel), io.wr_in.bits.paddr )
+    amo_reAlign_64_b := reAlign_data( from = 256, to = 64, io.dat_info_r(cb_sel), io.wr_in.bits.paddr )
 
     val cmp_a_sel = Mux(high_sel, amo_reAlign_64_a(63,32), amo_reAlign_64_a(31,0))
     val cmp_b_sel = Mux(high_sel, amo_reAlign_64_b(63,32), amo_reAlign_64_b(31,0))
@@ -358,24 +333,49 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
   }
 
 
-  io.wr_in.ready :=
-    Mux1H(Seq(
-      io.wr_in.bits.fun.is_access -> Mux( is_hit, io.deq.ready, io.reload.ready & io.missUnit_req.ready ),
-      io.wr_in.bits.fun.probe -> io.pb_req.fire,
-      io.wr_in.bits.fun.grant -> io.wb_req.ready,
-      io.wr_in.bits.fun.preft -> Mux( is_hit, true.B, io.missUnit_req.ready ),
-    ))
+  // io.wr_in.ready :=
+  //   Mux1H(Seq(
+  //     io.wr_in.bits.fun.is_access -> Mux( is_hit, io.deq.ready, io.reload.ready & io.missUnit_req.ready ),
+  //     io.wr_in.bits.fun.probe -> io.pb_req.fire,
+  //     io.wr_in.bits.fun.grant -> io.wb_req.ready,
+  //     io.wr_in.bits.fun.preft -> Mux( is_hit, true.B, io.missUnit_req.ready ),
+  //   ))
 
-  io.missUnit_req.valid := 
-    io.wr_in.valid &
-      Mux1H(Seq(
-        io.wr_in.bits.fun.is_access -> (~is_hit & io.missUnit_req.ready & io.reload.ready ),
-        io.wr_in.bits.fun.preft     -> (~is_hit & io.missUnit_req.ready ),
-      ))
 
-  io.missUnit_req.bits.paddr := 
-    Mux( io.missUnit_req.valid, io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U), 0.U )
+  val missUnitReqValid = RegInit(false.B)
+  val missUnitReqPaddr = Reg(UInt(plen.W))
 
+  io.missUnit_req.valid := missUnitReqValid
+  io.missUnit_req.bits.paddr := missUnitRedPaddr
+  
+  when( io.wr_in.valid & ( io.wr_in.bits.fun.is_access | io.wr_in.bits.fun.preft ) & ( ~is_hit ) ) {
+    missUnitReqValid := true.B
+    missUnitReqPaddr := io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)
+  } .otherwise {
+    missUnitReqValid := false.B
+    if(!isMinArea) {
+      missUnitReqPaddr := 0.U
+    }
+  }
+
+  val wbReqValid = RegInit(false.B)
+  val pbReqValid = RegInit(false.B)
+  val wbReqPaddr = Reg(UInt(plen.W))
+  val pbReqPaddr = Reg(UInt(plen.W))
+  val wbReqData  = Reg(UInt(256.W))
+  val pbReqData  = Reg(UInt(256.W))
+
+  io.wb_req.valid := wbReqValid
+  io.pb_req.valid := pbReqValid
+
+  io.wb_req.bits.paddr := wbReqPaddr
+  io.pb_req.bits.paddr := pbReqPaddr
+
+  io.wb_req.bits.data := wbReqData
+  io.pb_req.bits.data := pbReqData
+
+
+  
   io.wb_req.valid :=
     io.wr_in.valid &
       ( io.wr_in.bits.fun.grant & ~is_valid(cl_sel).contains(false.B) )
@@ -384,17 +384,20 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
     io.wr_in.valid & 
       io.wr_in.bits.fun.probe
 
-  io.wb_req.bits.addr := 
-    Mux( io.wb_req.valid, Cat(io.wr_in.bits.tag(cb_sel), cl_sel, id.U(bk_w.W), 0.U(addr_lsb.W)), 0.U )
+
+  io.wb_req.bits.paddr := 
+    Mux( io.wb_req.valid, Cat(io.tag_info_r(cb_sel), cl_sel, id.U(bk_w.W), 0.U(addr_lsb.W)), 0.U )
     
-   io.pb_req.bits.addr :=
+   io.pb_req.bits.paddr :=
     Mux( io.pb_req.valid, (io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)), 0.U )
 
+
+
   io.wb_req.bits.data := 
-    Mux( io.wb_req.valid, io.wr_in.bits.rdata(cb_sel), 0.U )
+    Mux( io.wb_req.valid, io.dat_info_r(cb_sel), 0.U )
 
   io.pb_req.bits.data :=
-    Mux( io.pb_req.valid, io.wr_in.bits.rdata(cb_sel), 0.U )
+    Mux( io.pb_req.valid, io.dat_info_r(cb_sel), 0.U )
 
   io.wb_req.bits.is_releaseData :=
     Mux( io.wb_req.valid, io.wr_in.bits.fun.grant & is_dirty(cl_sel)(cb_sel), 0.U )
@@ -415,8 +418,7 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
 
 
   io.reload.valid :=
-    io.wr_in.valid & io.wr_in.bits.fun.is_access & ~is_hit & io.missUnit_req.ready & io.reload.ready
-  assert( ~(io.reload.valid & ~io.reload.ready), "Assert Failed at wr_state 2, reload failed!" )
+    io.wr_in.valid & io.wr_in.bits.fun.is_access & ~is_hit
 
   io.reload.bits.paddr := 
     Mux( io.reload.valid, io.wr_in.bits.paddr, 0.U )
@@ -438,7 +440,7 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
 
   io.deq.valid := io.wr_in.valid & io.wr_in.bits.fun.is_access & is_hit
   io.deq.bits.wb.res := {
-    val rdata = io.wr_in.bits.rdata(cb_sel)  //align 256
+    val rdata = io.dat_info_r(cb_sel)  //align 256
     val paddr = io.wr_in.bits.paddr
     val fun = io.wr_in.bits.fun
     val overlap_wdata = io.wr_in.bits.wdata
@@ -539,6 +541,8 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheMod
   val rd_stage = Module(new L1d_rd_stage())
   val wr_stage = Module(new L1d_wr_stage(id))
 
+  val rtn_fifo = Module(new Queue(new Info_cache_retn, sbEntry, false, true)) // bypass Mode
+
   val cache_buffer = Module(new Cache_buffer)
 
   io.missUnit_dcache_acquire  <> missUnit.io.cache_acquire
@@ -552,11 +556,10 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheMod
 
   rd_stage.io.dat_addr_r <> cache_dat.dat_addr_r
   rd_stage.io.dat_en_r   <> cache_dat.dat_en_r
-  cache_dat.dat_info_r   <> rd_stage.io.dat_info_r
+  cache_dat.dat_info_r   <> wr_stage.io.dat_info_r
   rd_stage.io.tag_addr_r <> cache_tag.tag_addr_r
   rd_stage.io.tag_en_r   <> cache_tag.tag_en_r
-  // io.overlap.paddr  := rd_stage.io.overlap_paddr
-  cache_tag.tag_info_r   <> rd_stage.io.tag_info_r
+  cache_tag.tag_info_r   <> wr_stage.io.tag_info_r
 
   wr_stage.io.tag_addr_w        <> cache_tag.tag_addr_w
   wr_stage.io.tag_en_w          <> cache_tag.tag_en_w
@@ -576,11 +579,13 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheMod
   val op_arb = Module(new Arbiter( new Info_cache_s0s1, 2))
   val rd_arb = Module(new Arbiter( new Info_cache_s0s1, 3))
 
-  val reload_fifo = Module( new Queue( new Info_cache_s0s1, 1, false, false) )
+  val reload_fifo = Module( new Queue( new Info_cache_s0s1, 1, true, false) )
 
-  wr_stage.io.reload <> reload_fifo.io.enq
-  reload_fifo.io.deq <> op_arb.io.in(0)
+  reload_fifo.io.enq.valid := wr_stage.io.reload.valid
+  reload_fifo.io.enq.bits  := wr_stage.io.reload.bits
   
+
+  reload_fifo.io.deq <> op_arb.io.in(0)
 
   io.enq <> Decoupled1toN( VecInit( op_arb.io.in(1), cache_buffer.io.buf_enq ) )
   op_arb.io.in(1).bits.chk_idx := cache_buffer.io.enq_idx //override
@@ -596,15 +601,22 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheMod
   probeUnit.io.req.ready := rd_arb.io.in(1).ready
 
   lsEntry.io.deq <> rd_arb.io.in(2)
-  rd_arb.io.out <> rd_stage.io.rd_in
+  rd_stage.io.rd_in.valid := rd_arb.io.out.valid
+  rd_stage.io.rd_in.bits  := rd_arb.io.out.bits
+  rd_arb.io.out.ready     := true.B
 
   rd_stage.io.rd_out <> wr_stage.io.wr_in
 
-
-
-  wr_stage.io.deq <> Decoupled1toN( VecInit( io.deq, cache_buffer.io.buf_deq ) )
-
+  rtn_fifo.io.enq.valid := wr_stage.io.deq.valid
+  rtn_fifo.io.enq.bits  := wr_stage.io.deq.bits
+ 
+  rtn_fifo.io.deq <> Decoupled1toN( VecInit( io.deq, cache_buffer.io.buf_deq ) )
+  
   io.is_empty := cache_buffer.io.is_storeBuff_empty
+
+  when(reload_fifo.io.enq.valid) {assert(reload_fifo.io.enq.ready, "Assert Failed at Dcache, Pipeline stuck!")}
+  when(rtn_fifo.io.enq.valid) {assert(rtn_fifo.io.enq.ready, "Assert Failed at Dcache, Pipeline stuck!")}
+
 }
 
 
