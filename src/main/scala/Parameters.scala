@@ -45,7 +45,7 @@ case class RiftSetting(
 
 
   vlen: Int = 39,
-  plen: Int = 33,
+  plen: Int = 32,
 
   ifetchParameters: IFParameters = IFParameters(
     // GHR_length = 64,

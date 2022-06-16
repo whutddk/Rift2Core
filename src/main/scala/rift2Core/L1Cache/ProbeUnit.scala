@@ -6,10 +6,10 @@ import chisel3._
 import chisel3.util._
 import base._
 import freechips.rocketchip.tilelink._
+import rift._
 
-
-class Info_probe_req extends Bundle {
-  val paddr = UInt(64.W)
+class Info_probe_req(implicit p: Parameters) extends RiftBundle {
+  val paddr = UInt(plen.W)
 }
 
 
@@ -24,7 +24,7 @@ class ProbeUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends L1Cach
   })
 
   /** a tiny fifo that buffer the probe request from l2cache */
-  val probe_fifo = Module(new Queue(UInt(32.W), 4, true, false))
+  val probe_fifo = Module(new Queue(UInt(plen.W), 4, true, false))
 
 
 

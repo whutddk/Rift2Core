@@ -13,13 +13,15 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
 import chisel3.util.random._
+import rift._
+
 
 case class IcacheParameters(
   dw: Int = 256,
   bk: Int = 1,
   cb: Int = 4,
   cl: Int = 128,
-  aw: Int = 32
+
 ) extends L1CacheParameters
 
 trait HasIcacheParameters extends HasL1CacheParameters {
@@ -29,7 +31,7 @@ trait HasIcacheParameters extends HasL1CacheParameters {
   def bk = icacheParams.bk
   def cb = icacheParams.cb
   def cl = icacheParams.cl
-  def aw = icacheParams.aw
+
 
   def addr_lsb = log2Ceil(dw/8)
   def line_w   = log2Ceil(cl)
@@ -37,7 +39,7 @@ trait HasIcacheParameters extends HasL1CacheParameters {
 
   require( (addr_lsb + line_w) == 12 )
  
-  def tag_w    = aw - addr_lsb - line_w
+  def tag_w    = plen - addr_lsb - line_w
 }
 
 abstract class IcacheModule(implicit p: Parameters) extends L1CacheModule
@@ -47,10 +49,9 @@ abstract class IcacheBundle(implicit p: Parameters) extends L1CacheBundle
   with HasIcacheParameters
 
 
-class Info_if_cmm extends Bundle {
+
+class Info_if_cmm(implicit p: Parameters) extends RiftBundle {
   val ill_vaddr = UInt(64.W)
-  // val is_paging_fault = Bool()
-  // val is_access_fault = Bool()
 }
 
 
@@ -64,8 +65,8 @@ trait ICache { this: IF2Base =>
 
   val ibuf = Module(new MultiPortFifo( new IF2_Bundle, aw= (if (!isMinArea) 6 else 4), in=8, out=4 ) )
 
-  val cache_dat = new Cache_dat( dw, aw, cb, cl, bk = 1 )
-  val cache_tag = new Cache_tag( dw, aw, cb, cl, bk = 1 ) 
+  val cache_dat = new Cache_dat( dw, plen, cb, cl, bk = 1 )
+  val cache_tag = new Cache_tag( dw, plen, cb, cl, bk = 1 ) 
 
 
   val icache_state_dnxt = Wire(UInt(4.W))
@@ -115,7 +116,7 @@ trait ICache { this: IF2Base =>
 
 
   val cl_sel = io.mmu_if.bits.paddr(addr_lsb+line_w-1, addr_lsb)
-  val tag_sel = io.mmu_if.bits.paddr(31,32-tag_w)
+  val tag_sel = io.mmu_if.bits.paddr(plen-1,plen-tag_w)
 
 
 
@@ -261,7 +262,7 @@ trait ICache { this: IF2Base =>
   io.icache_get.bits :=
     iEdge.Get(
       fromSource = 0.U,
-      toAddress = io.mmu_if.bits.paddr & ("hffffffff".U << addr_lsb.U),
+      toAddress = io.mmu_if.bits.paddr(plen-1, 0) & ("hffffffff".U << addr_lsb.U),
       lgSize = log2Ceil(256/8).U
     )._2
   
@@ -277,7 +278,7 @@ trait ICache { this: IF2Base =>
   assert( {
     val chk_tag = {
       for ( i <- 0 until cb ) yield {
-        cache_tag.tag_ram(i).read(cl_sel) === io.mmu_if.bits.paddr(31,32-tag_w)
+        cache_tag.tag_ram(i).read(cl_sel) === io.mmu_if.bits.paddr(plen-1,plen-tag_w)
       }
     }
 

@@ -57,12 +57,13 @@ trait Info_access_lvl extends Bundle {
 }
 
 
-class Info_mmu_req extends Bundle with Info_access_lvl{
+class Info_mmu_req(implicit p: Parameters) extends RiftBundle with Info_access_lvl{
   val vaddr = UInt(64.W)
 }
 
 
-class Info_mmu_rsp extends Bundle {
+
+class Info_mmu_rsp(implicit p: Parameters) extends RiftBundle {
   val vaddr  = UInt(64.W)
   val paddr  = UInt(64.W)
   val is_paging_fault = Bool()

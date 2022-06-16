@@ -48,7 +48,7 @@ class ExInt_Bundle extends Bundle {
 
 
 @chiselName
-class CMMState_Bundle extends Bundle{
+class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   val rod = new Info_reorder_i
   val csrfiles = new CSR_Bundle
   val lsu_cmm = new Info_lsu_cmm

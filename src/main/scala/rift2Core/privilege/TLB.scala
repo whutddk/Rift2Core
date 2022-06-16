@@ -23,7 +23,8 @@ import chisel3.util._
 
 import chisel3.util.random._
 
-
+import rift._
+import chipsalliance.rocketchip.config._
 
 class Info_tlb_tag extends Bundle {
   val is_valid = Bool()
@@ -39,7 +40,7 @@ class Info_tlb_tag extends Bundle {
   * 
   * 
   */ 
-class TLB( entry: Int = 32 ) extends Module {
+class TLB( entry: Int = 32 )(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
 
     val req = Flipped(ValidIO( new Info_mmu_req ))

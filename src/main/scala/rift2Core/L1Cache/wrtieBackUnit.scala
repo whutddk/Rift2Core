@@ -6,10 +6,11 @@ import chisel3._
 import chisel3.util._
 import base._
 import freechips.rocketchip.tilelink._
+import rift._
 
 /** the operation infomation of writeback Unit */
-class Info_writeBack_req extends Bundle {
-  val addr = UInt(32.W)
+class Info_writeBack_req(implicit p: Parameters) extends RiftBundle {
+  val addr = UInt(plen.W)
   val data = UInt(256.W)
   val is_releaseData = Bool()
   val is_release = Bool()
@@ -22,7 +23,7 @@ class Info_writeBack_req extends Bundle {
 /**
   * a writeBack Unit accept data and paddr from l1cache and write it back to l2cache
   */
-class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int) extends Module {
+class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle {
     val wb_req = Flipped(new DecoupledIO(new Info_writeBack_req))
     val pb_req = Flipped(new DecoupledIO(new Info_writeBack_req))

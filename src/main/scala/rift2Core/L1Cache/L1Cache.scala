@@ -34,7 +34,7 @@ trait L1CacheParameters {
   def bk: Int
   def cb: Int
   def cl: Int
-  def aw: Int
+
 }
 
 

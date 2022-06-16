@@ -23,11 +23,12 @@ import chisel3.util._
 import rift2Core.define._
 import base._
 
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
 
 
-
-class Mul extends Module {
+class Mul(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle {
     val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
     val mul_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))

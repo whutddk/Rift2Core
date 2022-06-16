@@ -24,9 +24,10 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.privilege._
 
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
-
-class Csr extends Module {
+class Csr(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
     val csr_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))

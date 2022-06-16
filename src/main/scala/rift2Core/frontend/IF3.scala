@@ -56,10 +56,6 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val bim = Module(new BIM)
   val tage = Module(new TAGE)
 
-  // val btbFifo =  Module(new Queue( new BTBResp_Bundle, entries = 16, flow = true))
-  // val bimFifo =  Module(new Queue( new BIMResp_Bundle, entries = 16, flow = true))
-  // val tageFifo = Module(new Queue( Vec(6, new TageTableResp_Bundle ), entries = 16, flow = true))
-
   val btbFifo =  Module(new MultiPortFifo( new BTBResp_Bundle, aw = (if(!isMinArea) 4 else 2), in = 1, out = 2, flow = true ) )
   val bimFifo =  Module(new MultiPortFifo( new BIMResp_Bundle, aw = (if(!isMinArea) 4 else 2), in = 1, out = 2, flow = true ) )
   val tageFifo = Module(new MultiPortFifo( Vec(6, new TageTableResp_Bundle ), aw = (if(!isMinArea) 4 else 2), in = 1, out = 2, flow = true ) )

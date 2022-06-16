@@ -21,7 +21,8 @@ package rift2Core.define
 import chisel3._
 import chisel3.util._
 
-
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
 
 
@@ -520,31 +521,32 @@ class Fpu_isa extends Bundle {
 }
 
 
-class Register_source(dp:Int) extends Bundle {
+class Register_source(dp:Int)(implicit p: Parameters) extends RiftBundle {
   val rs1 = UInt((log2Ceil(dp)).W)
   val rs2 = UInt((log2Ceil(dp)).W)
   val rs3 = UInt((log2Ceil(dp)).W)
 }
 
-class Register_dstntn(dp:Int) extends Bundle {
+class Register_dstntn(dp:Int)(implicit p: Parameters) extends RiftBundle {
   val rd0 = UInt((log2Ceil(dp)).W)
 
 }
 
-class Operation_source(dw: Int) extends Bundle {
+class Operation_source(dw: Int)(implicit p: Parameters) extends RiftBundle {
   val op1 = UInt(dw.W)
   val op2 = UInt(dw.W)
   val op3 = UInt(dw.W)
 }
 
 
-class Reg_phy(dp:Int) extends Register_source(dp) {
+class Reg_phy(dp:Int)(implicit p: Parameters) extends Register_source(dp) {
   val rd0 = UInt((log2Ceil(dp)).W)
 }
-class Reg_raw extends Reg_phy(dp = 32)
+
+class Reg_raw(implicit p: Parameters) extends Reg_phy(dp = 32)
 
 
-class Instruction_set extends Bundle{
+class Instruction_set(implicit p: Parameters) extends RiftBundle{
   val alu_isa = new Alu_isa
   val bru_isa = new Bru_isa
   val lsu_isa = new Lsu_isa
@@ -567,7 +569,7 @@ class Instruction_set extends Bundle{
 
 
 
-class Instruction_param extends Bundle {
+class Instruction_param(implicit p: Parameters) extends RiftBundle {
   val is_rvc = Bool()
   val pc = UInt(64.W)
   
@@ -577,19 +579,19 @@ class Instruction_param extends Bundle {
 
 }
 
-class Info_instruction extends Instruction_set {
+class Info_instruction(implicit p: Parameters) extends Instruction_set {
   val param = new Instruction_param
 
 }
 
 
-class Dpt_info extends Info_instruction {
+class Dpt_info(implicit p: Parameters) extends Info_instruction {
   val phy = new Reg_phy(dp = 64)
 }
 
 
 
-class Alu_function extends Bundle {
+class Alu_function(implicit p: Parameters) extends RiftBundle {
 
   val add = Bool()
   val slt = Bool()
@@ -601,7 +603,7 @@ class Alu_function extends Bundle {
   val sra = Bool()
 }
 
-class Alu_param extends Register_dstntn(64) {
+class Alu_param(implicit p: Parameters) extends Register_dstntn(64) {
   val is_32w = Bool()
   val is_usi = Bool()
 
@@ -610,7 +612,7 @@ class Alu_param extends Register_dstntn(64) {
   // override def cloneType = ( new Alu_param ).asInstanceOf[this.type]
 }
 
-class Alu_iss_info extends Bundle {
+class Alu_iss_info(implicit p: Parameters) extends RiftBundle {
   val fun = new Alu_function
   val param = new Alu_param
 }
@@ -619,7 +621,7 @@ class Alu_iss_info extends Bundle {
 
 
 
-class Bru_param extends Register_dstntn(64) {
+class Bru_param(implicit p: Parameters) extends Register_dstntn(64) {
   val is_rvc = Bool()
   val pc = UInt(64.W)
   val imm = UInt(64.W)
@@ -629,7 +631,7 @@ class Bru_param extends Register_dstntn(64) {
   // override def cloneType = ( new Bru_param ).asInstanceOf[this.type]
 }
 
-class Bru_iss_info extends Bundle {
+class Bru_iss_info(implicit p: Parameters) extends RiftBundle {
   val fun = new Bru_isa
   val param = new Bru_param
 }
@@ -638,13 +640,13 @@ class Bru_iss_info extends Bundle {
 
 
 
-class Lsu_param extends Register_dstntn(64) {
+class Lsu_param(implicit p: Parameters) extends Register_dstntn(64) {
   val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Lsu_param ).asInstanceOf[this.type]
 }
 
-class Lsu_iss_info extends Bundle {
+class Lsu_iss_info(implicit p: Parameters) extends RiftBundle {
   val fun = new Lsu_isa
   val param = new Lsu_param
 
@@ -695,7 +697,7 @@ class Lsu_iss_info extends Bundle {
 
 
 
-class Fpu_dpt_info extends Bundle {
+class Fpu_dpt_info(implicit p: Parameters) extends RiftBundle {
   val isa = new Fpu_isa
   val param = new Instruction_param
   val phy = new Reg_phy(dp = 64)
@@ -705,7 +707,7 @@ class Fpu_dpt_info extends Bundle {
 
 
 
-class Info_reorder_i extends Bundle {
+class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val pc = UInt(64.W)
   val rd0_raw = UInt(5.W)
   val rd0_phy = UInt(6.W)
@@ -732,72 +734,50 @@ class Info_reorder_i extends Bundle {
 
 }
 
-// class Info_reorder_f extends Bundle {
-//   val pc = UInt(64.W)
-//   val rd0_phy = UInt(6.W)
-
-//   val is_lu = Bool()
-//   val is_su = Bool()
-// }
 
 
 
 
-
-
-class Privil_dpt_info extends Bundle {
-
-}
-
-
-
-
-
-
-
-
-
-class Csr_function extends Bundle {
+class Csr_function(implicit p: Parameters) extends RiftBundle {
   val rw  = Bool()
   val rs  = Bool()
   val rc  = Bool()
 }
 
-class Csr_param extends Register_dstntn(64) {
+class Csr_param(implicit p: Parameters) extends Register_dstntn(64) {
   val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Csr_param ).asInstanceOf[this.type]
 }
 
-class Csr_iss_info extends Bundle {
+class Csr_iss_info(implicit p: Parameters) extends RiftBundle {
   val fun = new Csr_function
   val param = new Csr_param
 }
 
-class Mul_param extends Register_dstntn(64) {
+class Mul_param(implicit p: Parameters) extends Register_dstntn(64) {
   val dat = new Operation_source(dw=64)
 
 // override def cloneType = ( new Mul_param ).asInstanceOf[this.type]
 }
 
-class Mul_iss_info extends Bundle {
+class Mul_iss_info(implicit p: Parameters) extends RiftBundle {
   val fun = new Mul_isa
   val param = new Mul_param
 }
 
 
 
-case class WriteBack_info(dw:Int, dp:Int) extends Register_dstntn(dp) {
+case class WriteBack_info(dw:Int, dp:Int)(implicit p: Parameters) extends Register_dstntn(dp) {
   val res = UInt(dw.W)
 
-  // override def cloneType = ( new WriteBack_info(dp:Int) ).asInstanceOf[this.type]
 }
 
 
 
 
 
-class Info_cmm_csr extends Bundle {
+class Info_cmm_csr(implicit p: Parameters) extends RiftBundle {
   val is_trap = Bool()
   val is_xRet = Bool()
   val privil_mstatus = UInt(64.W)
@@ -806,7 +786,7 @@ class Info_cmm_csr extends Bundle {
   val privil_mtval = UInt(64.W)
 }
 
-class Info_clint_csr extends Bundle {
+class Info_clint_csr(implicit p: Parameters) extends RiftBundle {
   val is_externInterrupt = Bool()
   val is_rtimerInterrupt = Bool()
   val is_softwvInterrupt = Bool()
@@ -827,40 +807,34 @@ class Info_clint_csr extends Bundle {
 
 
 
-class Info_cmm_lsu extends Bundle {
-  // val is_lr_clear = Bool()
+class Info_cmm_lsu(implicit p: Parameters) extends RiftBundle {
   val is_amo_pending = Bool()
   val is_store_commit = Vec(2, Bool())
 }
 
-class Info_lsu_cmm extends Bundle {
+class Info_lsu_cmm(implicit p: Parameters) extends RiftBundle {
   val is_access_fault = Bool()
   val is_paging_fault = Bool()
   val is_misAlign = Bool()
   val trap_addr = UInt(64.W)
 }
 
-class Stq_req_Bundle extends Bundle {
+class Stq_req_Bundle(implicit p: Parameters) extends RiftBundle {
   val paddr = UInt(64.W)
 }
 
-class Stq_resp_Bundle extends Bundle {
+class Stq_resp_Bundle(implicit p: Parameters) extends RiftBundle {
   val wdata = UInt(64.W)
   val wstrb = UInt(8.W)
 }
 
-// class Info_overlap extends Bundle{
-//   val paddr = Output(UInt(64.W))
-//   val wdata = Input(UInt(64.W))
-//   val wstrb = Input(UInt(8.W))
 
-// }
 
-class Commit_Redirect_Bundle extends Bundle{
+class Commit_Redirect_Bundle(implicit p: Parameters) extends RiftBundle{
   val pc = UInt(64.W)
 }
 
-class PreFetch_Req_Bundle extends Bundle {
+class PreFetch_Req_Bundle(implicit p: Parameters) extends RiftBundle {
   val paddr = UInt(64.W)
 }
 

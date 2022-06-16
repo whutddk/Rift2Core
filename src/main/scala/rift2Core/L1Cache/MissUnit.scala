@@ -7,13 +7,14 @@ import chisel3.util._
 import base._
 import freechips.rocketchip.tilelink._
 
+import rift._
 
-class Info_miss_req extends Bundle {
-  val paddr = UInt(32.W)
+class Info_miss_req(implicit p: Parameters) extends RiftBundle {
+  val paddr = UInt(plen.W)
 }
 
-class Info_miss_rsp extends Bundle {
-  val paddr = UInt(64.W)
+class Info_miss_rsp(implicit p: Parameters) extends RiftBundle {
+  val paddr = UInt(plen.W)
   val wdata = UInt(256.W)
 }
 

@@ -57,7 +57,7 @@ class IF4_Redirect_Bundle(implicit p: Parameters) extends IFetchBundle {
 }
 
 class RASPP_Bundle(implicit p: Parameters) extends IFetchBundle {
-  val target = UInt(64.W)
+  val target = UInt(vlen.W)
 }
 
 
@@ -76,7 +76,7 @@ class IF2_Bundle(implicit p: Parameters) extends IFetchBundle {
   // val BHR  = UInt(64.W)
   val isFault = Bool()
   val isRedirect = Bool()
-  val target = UInt(64.W)
+  val target = UInt(vlen.W)
 }
 
 
@@ -102,7 +102,7 @@ class PreDecode_Bundle(implicit p: Parameters) extends IFetchBundle {
 }
 
 class BIMReq_Bundle(implicit p: Parameters) extends IFetchBundle {
-  val pc = UInt(64.W)
+  val pc = UInt(vlen.W)
 }
 
 class BIMResp_Bundle(implicit p: Parameters) extends IFetchBundle {
@@ -111,14 +111,14 @@ class BIMResp_Bundle(implicit p: Parameters) extends IFetchBundle {
 }
 
 class BIMUpdate_Bundle(implicit p: Parameters) extends BIMResp_Bundle {
-  val pc = UInt(64.W)
+  val pc = UInt(vlen.W)
   val isFinalTaken   = Bool()
 
   def isMisPredict = isFinalTaken =/= bim_p
 }
 
 class BTBReq_Bundle(implicit p: Parameters) extends IFetchBundle {
-  val pc = UInt(64.W)
+  val pc = UInt(vlen.W)
 }
 
 
@@ -126,7 +126,7 @@ class BTBReq_Bundle(implicit p: Parameters) extends IFetchBundle {
 class uBTBReq_Bundle(implicit p: Parameters) extends BTBReq_Bundle
 
 class BTBResp_Bundle(implicit p: Parameters) extends IFetchBundle {
-  val target = UInt(64.W)
+  val target = UInt(vlen.W)
 }
 
 class uBTBResp_Bundle(implicit p: Parameters) extends BTBResp_Bundle {
@@ -135,7 +135,7 @@ class uBTBResp_Bundle(implicit p: Parameters) extends BTBResp_Bundle {
 }
 
 class BTBUpdate_Bundle(implicit p: Parameters) extends BTBResp_Bundle {
-  val pc = UInt(64.W)
+  val pc = UInt(vlen.W)
 }
 
 class uBTBUpdate_Bundle(implicit p: Parameters) extends BTBUpdate_Bundle {
@@ -145,12 +145,12 @@ class uBTBUpdate_Bundle(implicit p: Parameters) extends BTBUpdate_Bundle {
 class TageTableUpdate_Bundle(implicit p: Parameters) extends IFetchBundle {
   val use   = UInt(2.W)
   val ctl   = UInt(3.W)
-  val pc    = UInt(64.W)
+  val pc    = UInt(vlen.W)
   val ghist = UInt(64.W)
 }
 
 class TageTableReq_Bundle(implicit p: Parameters) extends IFetchBundle {
-  val pc = UInt(64.W)
+  val pc = UInt(vlen.W)
   val ghist = UInt(64.W)
 }
 
@@ -194,7 +194,7 @@ class TageResp_Bundle(implicit p: Parameters) extends IFetchBundle {
 }
 
 class TageUpdate_Bundle(implicit p: Parameters) extends TageResp_Bundle {
-  val pc = UInt(64.W)
+  val pc = UInt(vlen.W)
   val ghist = UInt(64.W)
   val isFinalTaken = Bool()
 
@@ -211,14 +211,14 @@ class TageUpdate_Bundle(implicit p: Parameters) extends TageResp_Bundle {
 // }
 
 
-class IF3_Bundle(implicit p: Parameters) extends Bundle {
+class IF3_Bundle(implicit p: Parameters) extends RiftBundle {
   val preDecode = new PreDecode_Bundle
   // val predict = new Predict_Bundle
   val instr = UInt(32.W)
   val pc = UInt(64.W)
   val ghist = UInt(64.W)
   val isRedirect = Bool()
-  val target = UInt(64.W)
+  val target = UInt(vlen.W)
 }
 
 
@@ -227,7 +227,7 @@ class IF4_Bundle(implicit p: Parameters) extends Info_instruction
 
 
 class Branch_FTarget_Bundle(implicit p: Parameters) extends RiftBundle {
-  val pc = UInt(64.W)
+  val pc = UInt(vlen.W)
   val ghist = UInt(64.W)
   val bimResp  = new BIMResp_Bundle
   val tageResp = new TageResp_Bundle
@@ -237,7 +237,7 @@ class Branch_FTarget_Bundle(implicit p: Parameters) extends RiftBundle {
 }
 
 class Jump_FTarget_Bundle(implicit p: Parameters) extends RiftBundle {
-  val pc       = UInt(64.W)
+  val pc       = UInt(vlen.W)
   val btbResp = new BTBResp_Bundle
   val rasResp = new RASPP_Bundle
   val isRas = Bool()

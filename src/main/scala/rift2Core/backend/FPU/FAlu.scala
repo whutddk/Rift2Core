@@ -28,9 +28,9 @@ import rift._
 import chipsalliance.rocketchip.config._
 
 
-class Exc_Info extends Fpu_iss_info { val exc = UInt(5.W) }
-class Fres_Info extends Exc_Info { val toFloat = UInt(65.W) }
-class Xres_Info extends Exc_Info { val toInt = UInt(64.W) }
+class Exc_Info(implicit p: Parameters) extends Fpu_iss_info { val exc = UInt(5.W) }
+class Fres_Info(implicit p: Parameters) extends Exc_Info { val toFloat = UInt(65.W) }
+class Xres_Info(implicit p: Parameters) extends Exc_Info { val toInt = UInt(64.W) }
 
 
 class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends RiftModule with HasFPUParameters{

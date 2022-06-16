@@ -22,8 +22,8 @@ case class DcacheParameters(
   bk: Int = 8,
   cb: Int = 8,
   cl: Int = 128,
-  aw: Int = 32,
   sbEntry: Int = 16,
+  stEntry: Int = 16,
 )
 
 trait HasDcacheParameters extends HasRiftParameters {
@@ -33,8 +33,8 @@ trait HasDcacheParameters extends HasRiftParameters {
   def bk = dcacheParams.bk
   def cb = dcacheParams.cb
   def cl = dcacheParams.cl
-  def aw = dcacheParams.aw
   def sbEntry = dcacheParams.sbEntry
+  def stEntry = dcacheParams.stEntry
 
   def addr_lsb = log2Ceil(dw/8)
   def bk_w = log2Ceil(bk)
@@ -42,7 +42,7 @@ trait HasDcacheParameters extends HasRiftParameters {
   def cb_w = log2Ceil(cb)
 
 
-  def tag_w    = aw - addr_lsb - line_w - bk_w
+  def tag_w    = plen - addr_lsb - line_w - bk_w
 
   // require( (addr_lsb + line_w) == 12 )
   
@@ -79,7 +79,7 @@ trait Info_cache_raw extends DcacheBundle {
   val fun    = new Cache_op
   val rd = new Register_dstntn(64)
 
-  def tag_sel = paddr(31,32-tag_w)
+  def tag_sel = paddr(plen-1,plen-tag_w)
   def cl_sel  = paddr(addr_lsb+bk_w + line_w-1, addr_lsb+bk_w)
 
 
@@ -100,7 +100,7 @@ class Info_cache_s0s1(implicit p: Parameters) extends DcacheBundle with Info_cac
 class Info_cache_s1s2(implicit p: Parameters) extends DcacheBundle with Info_cache_raw with Info_sc_idx with Info_tag_dat
 
 
-class Info_cache_sb extends Lsu_iss_info
+class Info_cache_sb(implicit p: Parameters) extends Lsu_iss_info
 
 class Info_cache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc_idx {
   val wb = new WriteBack_info(dw=64,dp=64)
@@ -126,11 +126,11 @@ class L1d_rd_stage()(implicit p: Parameters) extends DcacheModule {
 
     // val overlap_paddr = Output(UInt(64.W))
 
-    val dat_addr_r = Output(UInt(aw.W))
+    val dat_addr_r = Output(UInt(plen.W))
     val dat_en_r   = Output( Vec(cb,  Bool()) )
     val dat_info_r = Input( Vec(cb, UInt(dw.W)) )
 
-    val tag_addr_r = Output(UInt(aw.W))
+    val tag_addr_r = Output(UInt(plen.W))
     val tag_en_r   = Output( Vec(cb, Bool()) )	
     val tag_info_r = Input( Vec(cb, UInt(tag_w.W)) )
   })
@@ -187,10 +187,10 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
     val reload = new DecoupledIO(new Info_cache_s0s1)
     val deq = DecoupledIO(new Info_cache_retn)
 
-    val tag_addr_w = Output(UInt(aw.W))
+    val tag_addr_w = Output(UInt(plen.W))
     val tag_en_w = Output( Vec(cb, Bool()) )
 
-    val dat_addr_w = Output(UInt(aw.W))
+    val dat_addr_w = Output(UInt(plen.W))
     val dat_en_w = Output( Vec(cb, Bool()) )
     val dat_info_wstrb = Output( UInt((dw/8).W))
     val dat_info_w = Output( UInt(dw.W))
@@ -491,12 +491,12 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
     is_pending_lr := false.B
   }
   .elsewhen( io.wr_in.fire & io.wr_in.bits.fun.probe ) {
-    when( tag_sel === lr_addr(31,32-tag_w) ) {
+    when( tag_sel === lr_addr(plen-1,plen-tag_w) ) {
       is_pending_lr := false.B
     }
   }
   .elsewhen( io.deq.fire & (io.wr_in.bits.fun.is_su | (io.wr_in.bits.fun.is_amo & ~io.wr_in.bits.fun.is_lrsc)) ) {
-    when( tag_sel === lr_addr(31,32-tag_w) ) {
+    when( tag_sel === lr_addr(plen-1,plen-tag_w) ) {
       is_pending_lr := false.B
     }   
   }
@@ -529,8 +529,8 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheMod
     val writeBackUnit_dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
   })
 
-  val cache_dat = new Cache_dat( dw, aw, cb, cl, bk = bk )
-  val cache_tag = new Cache_tag( dw, aw, cb, cl, bk = bk ) 
+  val cache_dat = new Cache_dat( dw, plen, cb, cl, bk = bk )
+  val cache_tag = new Cache_tag( dw, plen, cb, cl, bk = bk ) 
   val missUnit = Module(new MissUnit(edge = edge, setting = 2, id = id))
   val probeUnit = Module(new ProbeUnit(edge = edge, id = id))
   val writeBackUnit = Module(new WriteBackUnit(edge = edge, setting = 2, id = id))

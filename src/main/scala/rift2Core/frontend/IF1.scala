@@ -38,7 +38,6 @@ abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
     val bcmm_update = Flipped(Valid(new Branch_CTarget_Bundle))
   })
 
-  // val pc_dnxt = Wire(UInt(64.W))
   val pc_qout = RegInit("h80000000".U(64.W))
 
 }

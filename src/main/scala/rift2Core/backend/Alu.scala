@@ -23,10 +23,11 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
 
-
-class Alu extends Module {
+class Alu(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
     val alu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))

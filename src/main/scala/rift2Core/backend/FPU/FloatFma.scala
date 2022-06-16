@@ -21,6 +21,10 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 import chisel3.experimental.dataview._
+
+import rift._
+import chipsalliance.rocketchip.config._
+
       // res.fun.viewAsSupertype(new Lsu_isa) := ori.fun.viewAsSupertype(new Lsu_isa)
 
 // class MulAddRecFNPipe(expWidth: Int, sigWidth: Int) extends Module
@@ -122,7 +126,7 @@ import chisel3.experimental.dataview._
 //   io.exceptionFlags := roundRawFNToRecFN.io.exceptionFlags
 // }
 
-class FPUFMAPipe(latency: Int, val t: FType) extends Module with HasFPUParameters {
+class FPUFMAPipe(latency: Int, val t: FType)(implicit p: Parameters) extends RiftModule with HasFPUParameters {
   val io = IO(new Bundle {
     val in = Flipped(ValidIO(new Fpu_iss_info))
     val frm = Input(UInt(3.W))

@@ -22,8 +22,10 @@ import rift2Core.define._
 
 import rift2Core.diff._
 
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
-class dpt_lookup_info(dp: Int) extends Bundle{
+class dpt_lookup_info(dp: Int)(implicit p: Parameters) extends RiftBundle{
   val rsp = Input(new Register_source(dp))
   val req = Output(new Register_source(32))
 }
@@ -33,12 +35,12 @@ class dpt_lookup_info(dp: Int) extends Bundle{
   * the raw-rs needs lookup the phy-rs num ( 1x, 2x, 3x raw-rs -> phy-rs ),
   * the rd should rename and malloc 1 new phy, 
   */
-class dpt_rename_info(dp: Int) extends Bundle{
+class dpt_rename_info(dp: Int)(implicit p: Parameters) extends RiftBundle{
   val rsp = Input(new Register_dstntn(dp))
   val req = Decoupled(new Register_dstntn(32))
 }
 
-class iss_readOp_info(dw: Int, dp: Int) extends Bundle{
+class iss_readOp_info(dw: Int, dp: Int)(implicit p: Parameters) extends RiftBundle{
   val reg = Decoupled(new Register_source(dp))
   val dat = Input(new Operation_source(dw))
 }
@@ -54,7 +56,7 @@ class Info_commit_op(dp:Int) extends Bundle{
   val is_writeback = Input(Bool())
 }
 
-class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends Module{
+class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2)(implicit p: Parameters) extends RiftModule{
   val io = IO( new Bundle{
 
     val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
@@ -221,7 +223,7 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
   }
 }
 
-class XRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends RegFiles(dw, dp, rn_chn, rop_chn, wb_chn, cmm_chn ) {
+class XRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2)(implicit p: Parameters) extends RegFiles(dw, dp, rn_chn, rop_chn, wb_chn, cmm_chn ) {
 
   for ( i <- 0 until rn_chn ) {
     val idx1 = io.dpt_lookup(i).req.rs1
@@ -246,7 +248,7 @@ class XRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
 
 }
 
-class FRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends RegFiles(dw, dp, rn_chn, rop_chn, wb_chn, cmm_chn ) {
+class FRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2)(implicit p: Parameters) extends RegFiles(dw, dp, rn_chn, rop_chn, wb_chn, cmm_chn ) {
 
 
   for ( i <- 0 until rn_chn ) {
@@ -274,7 +276,7 @@ class FRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
 }
 
 
-class FakeFRegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2) extends Module{
+class FakeFRegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2)(implicit p: Parameters) extends RiftModule{
   val io = IO( new Bundle{
 
     val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )

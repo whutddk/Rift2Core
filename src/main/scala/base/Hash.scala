@@ -22,9 +22,12 @@ import chisel3.util._
 object HashHalf0{
   def apply( in: UInt ): UInt = {
     val in_w = in.getWidth
-    require(in_w % 2 == 0, "in_w is "+in_w )
+    // require(in_w % 2 == 0, "in_w is "+in_w )
 
-    val out = Wire( UInt((in_w/2).W) )
+
+    val out = 
+      if(in_w % 2 == 0) {Wire( UInt((in_w/2).W) )}
+      else {Wire( UInt(((in_w/2) + 1).W) )}
 
     out := in(in_w/2-1,0) ^ in(in_w-1 , in_w/2)
 
@@ -36,9 +39,11 @@ object HashHalf0{
 object HashHalf1{
   def apply( in: UInt ): UInt = {
     val in_w = in.getWidth
-    require(in_w % 2 == 0, "in_w is "+in_w )
+    // require(in_w % 2 == 0, "in_w is "+in_w )
 
-    val out = Wire( UInt((in_w/2).W) )
+    val out = 
+      if(in_w % 2 == 0) {Wire( UInt((in_w/2).W) )}
+      else {Wire( UInt(((in_w/2) + 1).W) )}
 
     out := in(in_w/2-1, 0) ^ (Reverse(in))(in_w/2-1, 0)
 
@@ -50,9 +55,11 @@ object HashHalf1{
 object HashHalf2{
   def apply( in: UInt ): UInt = {
     val in_w = in.getWidth
-    require(in_w % 2 == 0, "in_w is "+in_w )
+    // require(in_w % 2 == 0, "in_w is "+in_w )
 
-    val out = Wire( Vec(in_w/2, Bool()) )
+    val out = 
+      if(in_w % 2 == 0) {Wire( UInt((in_w/2).W) )}
+      else {Wire( UInt(((in_w/2) + 1).W) )}
 
     for ( i <- 0 until in_w/2 ) yield {
       out(i) := in(2*i) ^ in(2*i+1)  
@@ -68,9 +75,9 @@ object HashTwo0{
     val in1_w = in1.getWidth
     val in2_w = in2.getWidth
     
-    require(in1_w == in2_w, "in1_w is "+in1_w+"in2_w is "+in2_w )
+    // require(in1_w == in2_w, "in1_w is "+in1_w+"in2_w is "+in2_w )
 
-    val out = Wire( UInt(in1_w.W) )
+    val out = Wire( UInt((in1_w max in2_w).W) )
 
     out := in1 ^ in2
 
@@ -84,9 +91,9 @@ object HashTwo1{
     val in1_w = in1.getWidth
     val in2_w = in2.getWidth
     
-    require(in1_w == in2_w, "in1_w is "+in1_w+"in2_w is "+in2_w)
+    // require(in1_w == in2_w, "in1_w is "+in1_w+"in2_w is "+in2_w)
 
-    val out = Wire( UInt(in1_w.W) )
+    val out = Wire( UInt((in1_w max in2_w).W) )
 
 
     out := in1 ^ Reverse(in2)

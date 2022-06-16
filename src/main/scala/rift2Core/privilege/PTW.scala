@@ -88,8 +88,8 @@ class PTWBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModu
   val (_, _, is_trans_done, transCnt) = mEdge.count(io.ptw_access)
   val is_hit = Wire(Bool())
 
-  val addr_dnxt = Wire(UInt(56.W))
-  val addr_qout = RegNext(addr_dnxt, 0.U(56.W))
+  val addr_dnxt = Wire(UInt(plen.W))
+  val addr_qout = RegNext(addr_dnxt, 0.U(plen.W))
 
   val is_ptw_end = Wire(Bool())
   val is_ptw_fail = Wire(Bool())
@@ -208,10 +208,10 @@ trait PTWWALK { this: PTWBase =>
 
 trait PTWCache { this: PTWBase => 
   val cl_sel = addr_qout(11,5)
-  val tag_sel = addr_qout(55,12)
+  val tag_sel = addr_qout(plen-1,12)
 
-  val cache_dat = new Cache_dat( 256, 56, 1, 128, bk = 1 )
-  val cache_tag = new Cache_tag( 256, 56, 1, 128, bk = 1 ){ require ( tag_w == 44 ) }
+  val cache_dat = new Cache_dat( 256, plen, 1, 128, bk = 1 )
+  val cache_tag = new Cache_tag( 256, plen, 1, 128, bk = 1 ){  }
   val is_cache_valid = RegInit( VecInit( Seq.fill(128)(false.B) ) )
 
 

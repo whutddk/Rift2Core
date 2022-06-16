@@ -121,7 +121,7 @@ trait IF4_Predict{ this: IF4Base =>
   }
 
   val jalr_pc = for( i <- 0 until 2 ) yield {
-    Mux( is_return(i) & ras.io.deq.valid, ras.io.deq.bits.target, btb_decode(i).target  )
+    extVaddr( Mux( is_return(i) & ras.io.deq.valid, ras.io.deq.bits.target, btb_decode(i).target), vlen )
   }
   //ignore ras-pop-valid
   ras.io.deq.ready := ( 0 until 2 ).map{ i => (is_return(i) & io.if4_req(i).fire)}.reduce(_|_)
