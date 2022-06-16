@@ -77,6 +77,7 @@ case class RiftSetting(
     bk = 8,
     cb = 8,
     cl = 128,
+    stEntry = 16,
     sbEntry = 16,
   ),
 ){

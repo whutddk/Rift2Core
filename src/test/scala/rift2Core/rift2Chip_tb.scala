@@ -49,7 +49,12 @@ class Rift2GoCfg extends Config((site, here, up) => {
 
 
     ifetchParameters = IFParameters(
-
+      uBTB_entry = 4,
+      // uBTB_tag_w = 16,
+      // btb_cl = 4096,
+      // bim_cl = 4096,
+      // ras_dp = 256,
+      // tage_table = 6, 
     ),
     icacheParameters = IcacheParameters(
       cb = 2,
@@ -58,6 +63,7 @@ class Rift2GoCfg extends Config((site, here, up) => {
       bk = 2,
       cb = 2,
       sbEntry = 4,
+      stEntry = 4,
     ),
 
 

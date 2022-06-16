@@ -23,16 +23,15 @@ import rift2Core.define._
 import rift2Core.backend._
 import rift2Core.L1Cache._
 import rift2Core.privilege._
-import rift._
+
 import base._
 import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
+abstract class Stq_Base()(implicit p: Parameters) extends DcacheModule{
 
-abstract class Stq_Base()(implicit p: Parameters) extends RiftModule{
-  def dp = 16
-  def dp_w = log2Ceil(dp)
+  def st_w = log2Ceil(stEntry)
 
   val io = IO( new Bundle{
     val enq = Flipped(DecoupledIO(new Lsu_iss_info))
@@ -52,17 +51,17 @@ abstract class Stq_Base()(implicit p: Parameters) extends RiftModule{
     val preFetch = ValidIO( new PreFetch_Req_Bundle )
   } )
 
-  val buff = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(new Lsu_iss_info))))
+  val buff = RegInit(VecInit(Seq.fill(stEntry)(0.U.asTypeOf(new Lsu_iss_info))))
   
-  val cm_ptr_reg = RegInit( 0.U((dp_w+1).W) )
-  val wr_ptr_reg = RegInit( 0.U((dp_w+1).W) )
-  val rd_ptr_reg = RegInit( 0.U((dp_w+1).W) )
+  val cm_ptr_reg = RegInit( 0.U((st_w+1).W) )
+  val wr_ptr_reg = RegInit( 0.U((st_w+1).W) )
+  val rd_ptr_reg = RegInit( 0.U((st_w+1).W) )
 
-  val cm_ptr = cm_ptr_reg(dp_w-1,0)
-  val wr_ptr = wr_ptr_reg(dp_w-1,0)
-  val rd_ptr = rd_ptr_reg(dp_w-1,0)
+  val cm_ptr = cm_ptr_reg(st_w-1,0)
+  val wr_ptr = wr_ptr_reg(st_w-1,0)
+  val rd_ptr = rd_ptr_reg(st_w-1,0)
 
-  val full = (wr_ptr_reg(dp_w) =/= rd_ptr_reg(dp_w)) & (wr_ptr_reg(dp_w-1,0) === rd_ptr_reg(dp_w-1,0))
+  val full = (wr_ptr_reg(st_w) =/= rd_ptr_reg(st_w)) & (wr_ptr_reg(st_w-1,0) === rd_ptr_reg(st_w-1,0))
   val emty = cm_ptr_reg === rd_ptr_reg
 
   val rd_buff = buff(rd_ptr)
@@ -121,13 +120,13 @@ trait Stq_Ptr { this: Stq_Base =>
 }
 
 trait Stq_Overlap{ this: Stq_Base => 
-    val overlap_buff = Wire(Vec(dp, (new Lsu_iss_info)))
+    val overlap_buff = Wire(Vec(stEntry, (new Lsu_iss_info)))
     io.overlapResp.valid := io.overlapReq.valid //may be overlapped
 
-    when( rd_ptr_reg(dp_w) =/= wr_ptr_reg(dp_w) ) {
+    when( rd_ptr_reg(st_w) =/= wr_ptr_reg(st_w) ) {
       assert( rd_ptr >= wr_ptr )
-      for ( i <- 0 until dp ) yield {
-        val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
+      for ( i <- 0 until stEntry ) yield {
+        val ro_ptr = (rd_ptr_reg + i.U)(st_w-1,0)
         when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).param.dat.op1(63,3) === io.overlapReq.bits.paddr(63,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
 
@@ -139,8 +138,8 @@ trait Stq_Overlap{ this: Stq_Base =>
       }
     } .otherwise {
       assert( rd_ptr <= wr_ptr )
-      for ( i <- 0 until dp ) yield {
-        val ro_ptr = (rd_ptr_reg + i.U)(dp_w-1,0)
+      for ( i <- 0 until stEntry ) yield {
+        val ro_ptr = (rd_ptr_reg + i.U)(st_w-1,0)
         when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).param.dat.op1(63,3) === io.overlapReq.bits.paddr(63,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
 
@@ -152,9 +151,9 @@ trait Stq_Overlap{ this: Stq_Base =>
       }
     }
 
-    val temp_wdata = Wire(Vec(dp, UInt(64.W)))
-    val temp_wstrb = Wire(Vec(dp, UInt(8.W)))
-    for ( i <- 0 until dp ) yield {
+    val temp_wdata = Wire(Vec(stEntry, UInt(64.W)))
+    val temp_wstrb = Wire(Vec(stEntry, UInt(8.W)))
+    for ( i <- 0 until stEntry ) yield {
       if ( i == 0 ) {
         val (wdata, wstrb) = overlap_wr( 0.U(64.W), 0.U(8.W), overlap_buff(0).wdata_align64, overlap_buff(0).wstrb_align64 )
         temp_wdata(0) := wdata
@@ -165,8 +164,8 @@ trait Stq_Overlap{ this: Stq_Base =>
         temp_wstrb(i) := wstrb
       }
     }
-    io.overlapResp.bits.wdata := temp_wdata(dp-1)
-    io.overlapResp.bits.wstrb := temp_wstrb(dp-1)
+    io.overlapResp.bits.wdata := temp_wdata(stEntry-1)
+    io.overlapResp.bits.wstrb := temp_wstrb(stEntry-1)
 }
 
 
