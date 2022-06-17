@@ -37,7 +37,9 @@ case object RiftParamsKey extends Field[RiftSetting]
 case class RiftSetting(
   hasFpu: Boolean = true,
   hasPreFetch: Boolean = true,
+
   isMinArea: Boolean = false,
+  isLowPower: Boolean = true,
 
 
   rn_chn: Int = 2,
@@ -106,6 +108,7 @@ trait HasRiftParameters {
 
 
   def isMinArea = riftSetting.isMinArea
+  def isLowPower = riftSetting.isLowPower
 }
 
 

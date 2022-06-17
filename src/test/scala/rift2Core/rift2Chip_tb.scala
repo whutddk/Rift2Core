@@ -67,7 +67,8 @@ class Rift2GoCfg extends Config((site, here, up) => {
     ),
 
 
-    isMinArea = true
+    isMinArea = true,
+    isLowPower = false,
 
   )
 })

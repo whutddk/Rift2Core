@@ -217,7 +217,8 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
       for( i <- 0 until cb ) yield {
         (io.tag_info_r(i) === tag_sel) & is_valid(cl_sel)(i)        
       }
-    assert(PopCount(res) <= 1.U)
+
+    when( io.wr_in.valid ) {assert(PopCount(res) <= 1.U)}    
     VecInit(res)
   }
 
@@ -346,14 +347,14 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
   val missUnitReqPaddr = Reg(UInt(plen.W))
 
   io.missUnit_req.valid := missUnitReqValid
-  io.missUnit_req.bits.paddr := missUnitRedPaddr
+  io.missUnit_req.bits.paddr := missUnitReqPaddr
   
   when( io.wr_in.valid & ( io.wr_in.bits.fun.is_access | io.wr_in.bits.fun.preft ) & ( ~is_hit ) ) {
     missUnitReqValid := true.B
     missUnitReqPaddr := io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)
   } .otherwise {
     missUnitReqValid := false.B
-    if(!isMinArea) {
+    if(isLowPower) {
       missUnitReqPaddr := 0.U
     }
   }
@@ -364,6 +365,8 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
   val pbReqPaddr = Reg(UInt(plen.W))
   val wbReqData  = Reg(UInt(256.W))
   val pbReqData  = Reg(UInt(256.W))
+  val wbReqisData = Reg(Bool())
+  val pbReqisData = Reg(Bool())
 
   io.wb_req.valid := wbReqValid
   io.pb_req.valid := pbReqValid
@@ -374,108 +377,108 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
   io.wb_req.bits.data := wbReqData
   io.pb_req.bits.data := pbReqData
 
-
-  
-  io.wb_req.valid :=
-    io.wr_in.valid &
-      ( io.wr_in.bits.fun.grant & ~is_valid(cl_sel).contains(false.B) )
-
-  io.pb_req.valid :=
-    io.wr_in.valid & 
-      io.wr_in.bits.fun.probe
-
-
-  io.wb_req.bits.paddr := 
-    Mux( io.wb_req.valid, Cat(io.tag_info_r(cb_sel), cl_sel, id.U(bk_w.W), 0.U(addr_lsb.W)), 0.U )
-    
-   io.pb_req.bits.paddr :=
-    Mux( io.pb_req.valid, (io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)), 0.U )
-
-
-
-  io.wb_req.bits.data := 
-    Mux( io.wb_req.valid, io.dat_info_r(cb_sel), 0.U )
-
-  io.pb_req.bits.data :=
-    Mux( io.pb_req.valid, io.dat_info_r(cb_sel), 0.U )
-
-  io.wb_req.bits.is_releaseData :=
-    Mux( io.wb_req.valid, io.wr_in.bits.fun.grant & is_dirty(cl_sel)(cb_sel), 0.U )
-
-  io.wb_req.bits.is_release :=
-    Mux( io.wb_req.valid, io.wr_in.bits.fun.grant & ~is_dirty(cl_sel)(cb_sel), 0.U )
-
-  io.wb_req.bits.is_probeData := false.B
-  io.wb_req.bits.is_probe := false.B
+  io.wb_req.bits.is_releaseData :=  wbReqisData
+  io.wb_req.bits.is_release     := ~wbReqisData
+  io.wb_req.bits.is_probeData   := false.B
+  io.wb_req.bits.is_probe       := false.B
 
   io.pb_req.bits.is_releaseData := false.B
-  io.pb_req.bits.is_release := false.B
-  io.pb_req.bits.is_probeData :=
-    Mux( io.pb_req.valid, io.wr_in.bits.fun.probe & is_dirty(cl_sel)(cb_sel), 0.U )
+  io.pb_req.bits.is_release     := false.B
+  io.pb_req.bits.is_probeData   :=  pbReqisData
+  io.pb_req.bits.is_probe       := ~pbReqisData
 
-  io.pb_req.bits.is_probe :=
-    Mux( io.pb_req.valid, io.wr_in.bits.fun.probe & ~is_dirty(cl_sel)(cb_sel), 0.U )
+  when( io.wr_in.valid & ( io.wr_in.bits.fun.grant & ~is_valid(cl_sel).contains(false.B) ) ) {
+    wbReqValid  := true.B
+    wbReqPaddr  := Cat(io.tag_info_r(cb_sel), cl_sel, id.U(bk_w.W), 0.U(addr_lsb.W))
+    wbReqData   := io.dat_info_r(cb_sel)
+    wbReqisData := is_dirty(cl_sel)(cb_sel)
+  } .otherwise {
+    wbReqValid  := false.B
 
-
-  io.reload.valid :=
-    io.wr_in.valid & io.wr_in.bits.fun.is_access & ~is_hit
-
-  io.reload.bits.paddr := 
-    Mux( io.reload.valid, io.wr_in.bits.paddr, 0.U )
-    
-  io.reload.bits.wstrb :=
-    Mux( io.reload.valid, io.wr_in.bits.wstrb, 0.U )
-    
-  io.reload.bits.wdata :=
-    Mux( io.reload.valid, io.wr_in.bits.wdata, 0.U )
-
-  io.reload.bits.fun :=
-    Mux( io.reload.valid, io.wr_in.bits.fun, 0.U.asTypeOf(new Cache_op) )
-
-  io.reload.bits.rd :=
-    Mux( io.reload.valid, io.wr_in.bits.rd, 0.U.asTypeOf(new Register_dstntn(64)) )
-
-  io.reload.bits.chk_idx :=
-    Mux( io.reload.valid, io.wr_in.bits.chk_idx, 0.U )
-
-  io.deq.valid := io.wr_in.valid & io.wr_in.bits.fun.is_access & is_hit
-  io.deq.bits.wb.res := {
-    val rdata = io.dat_info_r(cb_sel)  //align 256
-    val paddr = io.wr_in.bits.paddr
-    val fun = io.wr_in.bits.fun
-    val overlap_wdata = io.wr_in.bits.wdata
-    val overlap_wstrb = io.wr_in.bits.wstrb
-    
-    val res_pre_pre = {
-      val res = Wire( UInt(64.W) )
-      val (new_data, new_strb) = overlap_wr( rdata, 0.U(32.W), overlap_wdata, overlap_wstrb)
-      
-      val overlap_data = Mux( io.wr_in.bits.fun.is_lu, new_data, rdata) //align 256
-
-      res := reAlign_data( from = 256, to = 64, overlap_data, paddr )
-      res
+    if( isLowPower ) {
+      wbReqPaddr  := 0.U
+      wbReqData   := 0.U
+      wbReqisData := false.B
     }
-    val res_pre = get_loadRes( fun, paddr, res_pre_pre ) //align 8
-
-    val res = Mux(
-      io.wr_in.bits.fun.is_sc,
-      Mux( is_sc_fail, 1.U, 0.U ),
-      res_pre
-    )
-    Mux( io.deq.valid, res, 0.U )
   }
 
-  io.deq.bits.wb.rd0 := 
-    Mux( io.deq.valid, io.wr_in.bits.rd.rd0, 0.U )  
+  when(io.wr_in.valid & io.wr_in.bits.fun.probe) {
+    pbReqValid  := true.B
+    pbReqPaddr  := io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)
+    pbReqData   := io.dat_info_r(cb_sel)
+    pbReqisData := is_dirty(cl_sel)(cb_sel)
+  } .otherwise {
+    pbReqValid  := false.B
 
-  io.deq.bits.chk_idx :=
-    Mux( io.deq.valid, io.wr_in.bits.chk_idx, 0.U )
-    
-  io.deq.bits.is_load_amo :=
-    Mux( io.deq.valid, io.wr_in.bits.fun.is_wb, false.B )
-    
-  io.deq.bits.is_flw := Mux( io.deq.valid, io.wr_in.bits.fun.flw, false.B )
-  io.deq.bits.is_fld := Mux( io.deq.valid, io.wr_in.bits.fun.fld, false.B )
+    if( isLowPower ) {
+      pbReqPaddr  := 0.U
+      pbReqData   := 0.U
+      pbReqisData := false.B
+    }
+  
+  }
+
+
+  val reloadValid = RegInit(false.B)
+  val reloadBits  = Reg(new Info_cache_s0s1)
+
+  when( io.wr_in.valid & io.wr_in.bits.fun.is_access & ~is_hit ) {
+    reloadValid := true.B
+    reloadBits  := io.wr_in.bits
+  } .otherwise {
+    reloadValid := false.B
+
+    if( isLowPower ) { reloadBits  := 0.U.asTypeOf(new Info_cache_s0s1) }
+  }
+
+  io.reload.valid := reloadValid
+  io.reload.bits  := reloadBits
+
+  val deqValid = RegInit(false.B)
+  val deqBits  = Reg(new Info_cache_retn) 
+
+  io.deq.valid := deqValid
+  io.deq.bits  := deqBits
+
+  when( io.wr_in.valid & io.wr_in.bits.fun.is_access & is_hit ) {
+    deqValid := true.B
+    deqBits.wb.res := {
+      val rdata = io.dat_info_r(cb_sel)  //align 256
+      val paddr = io.wr_in.bits.paddr
+      val fun = io.wr_in.bits.fun
+      val overlap_wdata = io.wr_in.bits.wdata
+      val overlap_wstrb = io.wr_in.bits.wstrb
+      
+      val res_pre_pre = {
+        val res = Wire( UInt(64.W) )
+        val (new_data, new_strb) = overlap_wr( rdata, 0.U(32.W), overlap_wdata, overlap_wstrb)
+        val overlap_data = Mux( fun.is_lu, new_data, rdata) //align 256
+        res := reAlign_data( from = 256, to = 64, overlap_data, paddr )
+        res
+      }
+      val res_pre = get_loadRes( fun, paddr, res_pre_pre ) //align 8
+
+      val res = Mux(
+        io.wr_in.bits.fun.is_sc,
+        Mux( is_sc_fail, 1.U, 0.U ),
+        res_pre
+      )
+      res
+    }
+
+    deqBits.wb.rd0      := io.wr_in.bits.rd.rd0 
+    deqBits.chk_idx     := io.wr_in.bits.chk_idx
+    deqBits.is_load_amo := io.wr_in.bits.fun.is_wb
+    deqBits.is_flw      := io.wr_in.bits.fun.flw
+    deqBits.is_fld      := io.wr_in.bits.fun.fld
+  } .otherwise {
+    deqValid := false.B
+    if( isLowPower ) {
+      deqBits := 0.U.asTypeOf(new Info_cache_retn)
+    }
+  }
+
+
 
 
 
@@ -502,10 +505,6 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
       is_pending_lr := false.B
     }   
   }
-
-
-
-
 
 
 
