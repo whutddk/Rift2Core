@@ -3,8 +3,10 @@
 // See README.md for license details.
 
 ThisBuild / scalaVersion     := "2.12.9"
-ThisBuild / version          := "2.1.0"
-ThisBuild / organization     := "WUT"
+ThisBuild / version          := "2.3.1"//-SNAPSHOT
+ThisBuild / organization     := "io.github.whutddk"
+
+
 
 lazy val rocketchip = (project in file("./rocket-chip"))
   .settings(
@@ -116,4 +118,34 @@ lazy val root = (project in file("."))
     addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.5.3" cross CrossVersion.full),
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
   )
+
+
+name := "Rift2Core"
+homepage := Some(url("https://github.com/whutddk/Rift2Core"))
+licenses :=
+  Seq(
+    "Apache 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0"), 
+    "Anti-996 1.0" -> url("https://github.com/996icu/996.ICU/blob/master/LICENSE")
+  )
+
+publishMavenStyle := true
+publishArtifact in Test := false
+pomIncludeRepository := { _ => false }
+publishTo := {
+  val nexus = "https://s01.oss.sonatype.org/"
+  if (isSnapshot.value) Some("snapshots" at nexus + "content/repositories/snapshots")
+  else Some("releases" at nexus + "service/local/staging/deploy/maven2")
+}
+sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
+sonatypeCredentialHost := "s01.oss.sonatype.org"
+scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/whutddk/Rift2Core"),
+    "scm:git:git@github.com:whutddk/Rift2Core.git"
+  )
+)
+
+developers := List(
+  Developer("Ruige", "Ruige Lee", "295054118@whut.edu.cn", url("http://whutddk.github.io"))
+)
 
