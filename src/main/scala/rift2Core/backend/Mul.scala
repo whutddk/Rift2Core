@@ -28,7 +28,7 @@ import chipsalliance.rocketchip.config.Parameters
 
 
 
-class Mul(implicit p: Parameters) extends RiftModule {
+class MulBase(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle {
     val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
     val mul_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
@@ -42,6 +42,14 @@ class Mul(implicit p: Parameters) extends RiftModule {
   val op1 = info.param.dat.op1
   val op2 = info.param.dat.op2
 
+}
+
+
+
+
+
+
+class Mul(implicit p: Parameters) extends MulBase  {
 
   val mul_op1_sign =
     Mux(
@@ -71,7 +79,9 @@ class Mul(implicit p: Parameters) extends RiftModule {
       Cat(mul_op2_sign, op2)
     )
 
-  val mul_res_128w = mul_op1.asSInt * mul_op2.asSInt
+  // val mul_res_128w = mul_op1.asSInt * mul_op2.asSInt
+
+  val mul_res_128w = addRows(booth4Enc( a = mul_op1, b = mul_op2 ))
 
 
 
@@ -223,5 +233,124 @@ class Mul(implicit p: Parameters) extends RiftModule {
     Mux( io.mul_iss_exe.fire, info.param.rd0, pending_info.param.rd0)
 
 
-}
 
+  def booth4Enc( a: UInt, b: UInt ): Vec[UInt] = {
+    require( a.getWidth == b.getWidth )
+    val len = a.getWidth
+    require( a.getWidth == 65 )
+
+
+    val rows = Wire(Vec((len+1)/2, UInt((2*len).W)))
+
+    for( i <- 0 until (len+1)/2 ) {
+      val booth4 = if ( i == 0 ) { Cat( a(1), a(0), 0.U(1.W) ) } else if(2*i+1 == len) { Cat( a(2*i), a(2*i), a(2*i-1)) } else { a(2*i+1, 2*i-1) } 
+      
+      rows(i) := Mux1H(Seq(
+        ( booth4 === "b000".U ) -> 0.U,
+        ( booth4 === "b001".U ) -> sextXTo( b, 2*len),
+        ( booth4 === "b010".U ) -> sextXTo( b, 2*len),
+        ( booth4 === "b011".U ) -> sextXTo(  b << 1, 2*len),
+        ( booth4 === "b100".U ) -> sextXTo(-(b << 1), 2*len),
+        ( booth4 === "b101".U ) -> sextXTo(-b, 2*len),
+        ( booth4 === "b110".U ) -> sextXTo(-b, 2*len),
+        ( booth4 === "b111".U ) -> 0.U,
+      )) << (2*i)
+    }
+    return rows
+  }
+
+  def csa_3_2( a: UInt, b: UInt, c: UInt ): ( UInt, UInt ) = {
+    val len = a.getWidth max b.getWidth max c.getWidth
+
+    val in   = Wire(Vec( 3, UInt(len.W) ))
+    val cout = Wire(Vec(len, UInt(1.W)))
+    val sum  = Wire(Vec(len, UInt(1.W)))
+    in(0) := a; in(1) := b; in(2) := c
+
+    for ( i <- 0 until len ) {
+      sum(i)  := in(0)(i) ^ in(1)(i) ^ in(2)(i)
+      cout(i) := (in(0)(i) & in(1)(i)) | ((in(0)(i) ^ in(1)(i)) & in(2)(i))
+    }
+    return (Cat(cout.reverse) << 1, Cat(sum.reverse))
+  }
+
+  def addRows(rows33: Vec[UInt]): UInt = {
+    require(rows33.length == 33)
+
+    val rows22 = Wire( Vec(22, UInt(130.W)) )
+    val rows15 = Wire( Vec(15, UInt(130.W)) )
+    val rows10 = Wire( Vec(10, UInt(130.W)) )
+    val rows7  = Wire( Vec( 7, UInt(130.W)) )
+    val rows5  = Wire( Vec( 5, UInt(130.W)) )
+    val rows4  = Wire( Vec( 4, UInt(130.W)) )
+    val rows3  = Wire( Vec( 3, UInt(130.W)) )
+    val rows2  = Wire( Vec( 2, UInt(130.W)) )
+
+    dontTouch(rows22)
+    dontTouch(rows15)
+    dontTouch(rows10)
+    dontTouch(rows7)
+    dontTouch(rows5)
+    dontTouch(rows4)
+    dontTouch(rows3)
+    dontTouch(rows2)
+
+    for ( i <- 0 until 11 ) {
+      val (cout, sum) = csa_3_2( rows33(3*i), rows33(3*i+1), rows33(3*i+2) )
+      rows22(2*i)   := cout
+      rows22(2*i+1) := sum
+    }
+
+    for( i <- 0 until 7 ) {
+      val (cout, sum) = csa_3_2( rows22(1+(3*i)), rows22(1+(3*i)+1), rows22(1+(3*i)+2) )
+      rows15(2*i)   := cout
+      rows15(2*i+1) := sum      
+    }
+    rows15(14) := rows22(0)
+
+    for( i <- 0 until 5 ) {
+      val (cout, sum) = csa_3_2( rows15(3*i), rows15(3*i+1), rows15(3*i+2) )
+      rows10(2*i)   := cout
+      rows10(2*i+1) := sum      
+    }
+
+    for( i <- 0 until 3 ) {
+      val (cout, sum) = csa_3_2( rows10(1+(3*i)), rows10(1+(3*i)+1), rows10(1+(3*i)+2) )
+      rows7(2*i)   := cout
+      rows7(2*i+1) := sum      
+    }
+    rows7(6) := rows10(0)    
+
+    for( i <- 0 until 2 ) {
+      val (cout, sum) = csa_3_2( rows7(1+(3*i)), rows7(1+(3*i)+1), rows7(1+(3*i)+2) )
+      rows5(2*i)   := cout
+      rows5(2*i+1) := sum      
+    }
+    rows5(4) := rows7(0)
+
+
+    for( i <- 0 until 1 ) {
+      val (cout, sum) = csa_3_2( rows5(2+(3*i)), rows5(2+(3*i)+1), rows5(2+(3*i)+2) )
+      rows4(2*i)   := cout
+      rows4(2*i+1) := sum      
+    }
+    rows4(2) := rows5(0)
+    rows4(3) := rows5(1)
+
+    for( i <- 0 until 1 ) {
+      val (cout, sum) = csa_3_2( rows4(1+(3*i)), rows4(1+(3*i)+1), rows4(1+(3*i)+2) )
+      rows3(2*i)   := cout
+      rows3(2*i+1) := sum      
+    }
+    rows3(2) := rows4(0)
+
+    for( i <- 0 until 1 ) {
+      val (cout, sum) = csa_3_2( rows3(3*i), rows3(3*i+1), rows3(3*i+2) )
+      rows2(2*i)   := cout
+      rows2(2*i+1) := sum      
+    }
+
+    return rows2(0) + rows2(1)
+  }
+
+}
