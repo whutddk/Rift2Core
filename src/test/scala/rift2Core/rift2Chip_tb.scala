@@ -45,8 +45,10 @@ class Rift2GoCfg extends Config((site, here, up) => {
     hasFpu = false,
     hasPreFetch = false,
 
+    wbChn = 2,
 
-
+    l1BeatBits = 64,
+    memBeatBits = 64,
 
     ifetchParameters = IFParameters(
       uBTB_entry = 4,
@@ -77,8 +79,8 @@ class Rift2GoCfg extends Config((site, here, up) => {
 object testMain extends App {
 
 
-  val cfg = new NormalCfg
-  // val cfg = new Rift2GoCfg
+  // val cfg = new NormalCfg
+  val cfg = new Rift2GoCfg
 
   (new chisel3.stage.ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => {

@@ -215,7 +215,7 @@ trait PTWCache { this: PTWBase =>
   val is_cache_valid = RegInit( VecInit( Seq.fill(128)(false.B) ) )
 
 
-  val ptw_access_data_lo = RegInit( 0.U(128.W) )
+  val ptw_access_data_lo = Reg( Vec((256/l1BeatBits-1), UInt(l1BeatBits.W) ))
 
 
   cache_dat.dat_addr_r := addr_dnxt
@@ -250,8 +250,8 @@ trait PTWCache { this: PTWBase =>
 
   cache_dat.dat_info_wstrb := Fill(256/8, 1.U)
 
-
-  cache_dat.dat_info_w := Cat( io.ptw_access.bits.data(127,64), io.ptw_access.bits.data(63,0), ptw_access_data_lo(127,64), ptw_access_data_lo(63,0))
+  val ptw_access_data = Cat( Seq(io.ptw_access.bits.data) ++ ptw_access_data_lo.reverse )
+  cache_dat.dat_info_w := ptw_access_data
 
   is_hit := (tag_sel === cache_tag.tag_info_r(0)) & is_cache_valid(cl_sel) & currState === PTWState.Lvl0.U
 
@@ -263,7 +263,7 @@ trait PTWCache { this: PTWBase =>
     when( is_hit ) {
       data := cache_dat.dat_info_r(0)
     } .elsewhen( is_trans_done ) {
-      data := Cat( io.ptw_access.bits.data, ptw_access_data_lo )
+      data := ptw_access_data
     }
 
     data_sel := Mux1H(Seq(
@@ -290,7 +290,7 @@ trait PTWCache { this: PTWBase =>
   }
 
   when( io.ptw_access.fire & ~is_trans_done) {
-    ptw_access_data_lo := io.ptw_access.bits.data
+    ptw_access_data_lo(transCnt) := io.ptw_access.bits.data
   }
 }
 

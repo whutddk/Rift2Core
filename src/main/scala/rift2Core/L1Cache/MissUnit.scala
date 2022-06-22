@@ -20,7 +20,7 @@ class Info_miss_rsp(implicit p: Parameters) extends RiftBundle {
 
 
 /** The Queue of cache to request acquire and waiting for grant and ack grant */
-class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) extends DcacheModule {
+class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val req = Flipped(Valid(new Info_miss_req))
     val rsp = DecoupledIO(new Info_miss_rsp)
@@ -35,13 +35,13 @@ class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) e
   })
 
   /** a parallel buff of *paddr* miss request, when a duplicated request comes, it will be acked but dismiss */
-  val miss_queue = RegInit(VecInit( Seq.fill(sbEntry)( 0.U.asTypeOf(new Info_miss_req) )))
+  val miss_queue = RegInit(VecInit( Seq.fill(dcacheParams.sbEntry)( 0.U.asTypeOf(new Info_miss_req) )))
 
   /** a valid flag indicated whether a buff is in-used */
-  val miss_valid = RegInit(VecInit( Seq.fill(sbEntry)( false.B )))
+  val miss_valid = RegInit(VecInit( Seq.fill(dcacheParams.sbEntry)( false.B )))
 
   /** a grant will complete in 2 beat, and get 256-bits data */ 
-  val miss_rsp = RegInit(VecInit( Seq.fill(2)(0.U(128.W))  ))
+  val miss_rsp = RegInit(VecInit( Seq.fill(256/l1BeatBits)(0.U(l1BeatBits.W))  ))
 
   val mshr_state_dnxt = Wire(UInt(3.W))
   val mshr_state_qout = RegNext(mshr_state_dnxt, 0.U)
@@ -120,8 +120,7 @@ class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) e
 
   cache_grant_ready := (mshr_state_qout === 2.U)
   when( io.cache_grant.fire ) {
-    when(~is_trans_done) { miss_rsp(0) := io.cache_grant.bits.data }
-    .otherwise { miss_rsp(1) := io.cache_grant.bits.data }
+     miss_rsp(transCnt) := io.cache_grant.bits.data
     assert( mshr_state_qout === 2.U )
   }
 
@@ -138,7 +137,7 @@ class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) e
   }
 
   io.rsp.bits.paddr := miss_queue(acquire_sel).paddr
-  io.rsp.bits.wdata := Cat( miss_rsp(1), miss_rsp(0))
+  io.rsp.bits.wdata := Cat( miss_rsp.reverse)
 
 
   io.release_ban := mshr_state_dnxt === 2.U | mshr_state_qout === 2.U
@@ -157,7 +156,7 @@ class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) e
 
   /** findout if there is no buff is valid and has the same paddr, or merge it! */
   val is_merge = {
-    for ( i <- 0 until sbEntry ) yield {
+    for ( i <- 0 until dcacheParams.sbEntry ) yield {
       (miss_queue(i).paddr === io.req.bits.paddr) & miss_valid(i) === true.B
     }
   }.reduce(_|_)

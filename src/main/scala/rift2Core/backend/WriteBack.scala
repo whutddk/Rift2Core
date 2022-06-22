@@ -31,7 +31,7 @@ import rift2Core.diff._
 import rift._
 import chipsalliance.rocketchip.config._
 
-class WriteBack( dp: Int=64, rop_chn: Int=6, wb_chn: Int=4)(implicit p: Parameters) extends RiftModule {
+class WriteBack( dp: Int=64, rop_chn: Int=6 )(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val dpt_Xlookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
     val dpt_Flookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
@@ -64,7 +64,7 @@ class WriteBack( dp: Int=64, rop_chn: Int=6, wb_chn: Int=4)(implicit p: Paramete
   })
 
 
-  val iReg = Module(new XRegFiles(dw = 64, dp, rn_chn, rop_chn, wb_chn, cm_chn))
+  val iReg = Module(new XRegFiles(dw = 64, dp, rn_chn, rop_chn, wbChn, cm_chn))
   val fRegIO = 
     if( hasFpu ) {
       val mdl = Module(new FRegFiles(dw = 65, dp, rn_chn, rop_chn=2, wb_chn=2, cm_chn))
@@ -126,7 +126,7 @@ class WriteBack( dp: Int=64, rop_chn: Int=6, wb_chn: Int=4)(implicit p: Paramete
 
 
   val iwriteBack_arb = {
-    val mdl = Module(new XArbiter(new WriteBack_info(dw=64,dp), in = 6, out = wb_chn))
+    val mdl = Module(new XArbiter(new WriteBack_info(dw=64,dp), in = 6, out = wbChn))
     mdl.io.enq(0) <> io.alu_iWriteBack
     mdl.io.enq(1) <> io.bru_iWriteBack
     mdl.io.enq(2) <> io.csr_iWriteBack

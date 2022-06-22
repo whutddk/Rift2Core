@@ -44,7 +44,10 @@ case class RiftSetting(
 
   rn_chn: Int = 2,
   cm_chn: Int = 2,
+  wbChn: Int = 4,
 
+  l1BeatBits: Int = 128,
+  memBeatBits: Int = 128,
 
   vlen: Int = 39,
   plen: Int = 32,
@@ -87,6 +90,7 @@ case class RiftSetting(
   require( log2Ceil( ifetchParameters.uBTB_entry ) <= ifetchParameters.uBTB_tag_w )
   require( vlen == 39 )
   require( plen >=32 && plen <= 56 )
+  require( memBeatBits <= l1BeatBits )
 }
 
 trait HasRiftParameters {
@@ -100,8 +104,13 @@ trait HasRiftParameters {
 
   def hasFpu = riftSetting.hasFpu
   def hasPreFetch = riftSetting.hasPreFetch
+  
   def cm_chn = riftSetting.cm_chn
   def rn_chn = riftSetting.rn_chn
+  def wbChn = riftSetting.wbChn
+
+  def l1BeatBits = riftSetting.l1BeatBits
+  def memBeatBits = riftSetting.memBeatBits
 
   def vlen = riftSetting.vlen
   def plen = riftSetting.plen

@@ -60,7 +60,7 @@ trait ICache { this: IF2Base =>
 
 
   val (_, _, is_trans_done, transCnt) = iEdge.count(io.icache_access)
-  val icache_access_data_lo = RegInit( 0.U(128.W) )
+  val icache_access_data_lo = Reg( Vec((256/l1BeatBits-1), UInt(l1BeatBits.W) ))
   val kill_trans = RegInit(false.B)
 
   val ibuf = Module(new MultiPortFifo( new IF2_Bundle, aw= (if (!isMinArea) 6 else 4), in=8, out=4 ) )
@@ -204,8 +204,8 @@ trait ICache { this: IF2Base =>
 
   cache_dat.dat_info_wstrb := Fill(dw/8, 1.U)
 
-
-  cache_dat.dat_info_w := Cat(io.icache_access.bits.data, icache_access_data_lo)
+  val icache_access_data = Cat( Seq (io.icache_access.bits.data) ++ icache_access_data_lo.reverse)
+  cache_dat.dat_info_w := icache_access_data
 
   val reAlign_instr = {
     val res = Wire(UInt(128.W))
@@ -213,7 +213,7 @@ trait ICache { this: IF2Base =>
     shift := Cat(io.mmu_if.bits.paddr(3,0), 0.U(3.W))
     val instr_raw = Mux1H( Seq(
       (icache_state_qout === 1.U) -> Mux( io.mmu_if.bits.paddr(4), cache_dat.dat_info_r(cb_sel)(255,128), cache_dat.dat_info_r(cb_sel)(127,0)),
-      (icache_state_qout === 2.U) -> Mux( io.mmu_if.bits.paddr(4), io.icache_access.bits.data, icache_access_data_lo ),
+      (icache_state_qout === 2.U) -> Mux( io.mmu_if.bits.paddr(4), icache_access_data(255,128), icache_access_data(127,0) ),
     ))
     res := instr_raw >> shift
     res
@@ -269,7 +269,7 @@ trait ICache { this: IF2Base =>
   io.icache_access.ready := true.B
 
   when( io.icache_access.fire & ~is_trans_done) {
-    icache_access_data_lo := io.icache_access.bits.data
+    icache_access_data_lo(transCnt) := io.icache_access.bits.data
   }
 
 

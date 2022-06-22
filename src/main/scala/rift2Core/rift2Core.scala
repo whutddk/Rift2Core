@@ -20,6 +20,7 @@ package rift2Core
 
 import chisel3._
 import chisel3.util._
+import rift._
 import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.diff._
@@ -33,7 +34,7 @@ import freechips.rocketchip.tilelink._
 
 
 
-class Rift2Core()(implicit p: Parameters) extends LazyModule{
+class Rift2Core()(implicit p: Parameters) extends LazyModule with HasRiftParameters{
   val prefetcherClientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "prefetch",
@@ -44,7 +45,7 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
   val dcacheClientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "dcache",
-      sourceId = IdRange(0, 16),
+      sourceId = IdRange(0, dcacheParams.bk),
       supportsProbe = TransferSizes(32)
     ))
   )

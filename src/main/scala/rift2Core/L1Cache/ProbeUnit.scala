@@ -17,7 +17,7 @@ class Info_probe_req(implicit p: Parameters) extends RiftBundle {
 /**
   * ProbeUnit will accept probe request from l2cache and forward it to l1cache to resp data
   */
-class ProbeUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends L1CacheModule {
+class ProbeUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle {
     val cache_probe = Flipped(new DecoupledIO(new TLBundleB(edge.bundle)))
     val req = new DecoupledIO(new Info_probe_req)

@@ -14,4 +14,19 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
+package base
 
+import chisel3._
+import chisel3.util._
+
+object PolicyMux{
+  def apply[T <: Data]( in: Iterable[(Bool, T)], isMinArea: Boolean, isLowLatency: Boolean ): T = {
+    require( (!isMinArea && isLowLatency) || (isMinArea && !isLowLatency) )
+    assert(PopCount( in.map(_._1) ) <= 1.U )
+    if( isMinArea ) {
+      PriorityMux(in.toSeq )
+    } else {
+      Mux1H(in)
+    }
+  }
+}

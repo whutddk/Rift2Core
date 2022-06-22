@@ -86,10 +86,10 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
       (wb_state_qout === 2.U) -> Mux( io.cache_grant.fire, 0.U, 2.U )
     ))
 
-  /** a 2 step counter to select data */
-  val beatCnt = RegInit(false.B)
-  when( wb_state_qout === 0.U & wb_state_dnxt === 1.U ) { beatCnt := false.B }
-  .elsewhen( io.cache_release.fire ) { beatCnt := ~beatCnt }
+  /** a n step counter to select data */
+  val beatCnt = RegInit( 0.U((log2Ceil(256/l1BeatBits)).W) )
+  when( wb_state_qout === 0.U & wb_state_dnxt === 1.U ) { beatCnt := 0.U }
+  .elsewhen( io.cache_release.fire ) { beatCnt := beatCnt + 1.U }
     
   when( wb_state_qout === 1.U ) {
     when( io.cache_release.fire ) { cache_release_valid := false.B }
@@ -120,7 +120,7 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
       toAddress = op_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       reportPermissions = permit,
-      data = Mux(beatCnt, op_fifo.io.deq.bits.data(255,128), op_fifo.io.deq.bits.data(127,0))
+      data = op_fifo.io.deq.bits.data >> (beatCnt << log2Ceil(l1BeatBits))
     )
 
     val info_release = edge.Release(
@@ -135,7 +135,7 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
       toAddress = op_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = permit,
-      data = Mux(beatCnt, op_fifo.io.deq.bits.data(255,128), op_fifo.io.deq.bits.data(127,0))
+      data = op_fifo.io.deq.bits.data >> (beatCnt << log2Ceil(l1BeatBits))
     )._2
 
 
