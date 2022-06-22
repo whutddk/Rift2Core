@@ -151,7 +151,7 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
 
   }
   val csr = Module(new Csr)
-  val mul = Module(new Mul)
+  val mulDiv = Module(new MulDiv)
 
   val fpu = {
     val mdl = 
@@ -200,9 +200,9 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   csr.io.csr_cmm_op <> io.csr_cmm_op
   csr.io.flush <> io.flush
 
-  mul.io.mul_iss_exe <> io.mul_iss_exe
-  mul.io.mul_exe_iwb <> io.mul_exe_iwb
-  mul.reset := reset.asBool | io.flush
+  mulDiv.io.mul_iss_exe <> io.mul_iss_exe
+  mulDiv.io.mul_exe_iwb <> io.mul_exe_iwb
+  mulDiv.io.flush := io.flush
 
 
 

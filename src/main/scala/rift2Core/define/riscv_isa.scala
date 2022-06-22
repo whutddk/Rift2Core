@@ -196,7 +196,11 @@ class Mul_isa extends Bundle {
   val remw    = Bool()
   val remuw   = Bool()
 
-  def is_mul = mul | mulh | mulhsu | mulhu | div | divu | rem | remu | mulw | divw | divuw | remw | remuw
+
+  def isMul = mul | mulh | mulhsu | mulhu | mulw
+  def isDiv = div | divu | divw | divuw | rem | remu | remw | remuw
+
+  def is_mulDiv = isMul | isDiv
 
 
 
@@ -558,12 +562,12 @@ class Instruction_set(implicit p: Parameters) extends RiftBundle{
   def is_fwb =
     lsu_isa.is_fwb | fpu_isa.is_fwb
 
-  def is_ooo_dpt = alu_isa.is_alu | mul_isa.is_mul
+  def is_ooo_dpt = alu_isa.is_alu | mul_isa.is_mulDiv
   def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr | lsu_isa.is_lsu
   def is_privil_dpt = privil_isa.is_privil
   def is_fpu_dpt = fpu_isa.is_fpu
   def is_iwb = ~is_fwb
-  def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mul | privil_isa.is_privil | fpu_isa.is_fpu) 
+  def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mulDiv | privil_isa.is_privil | fpu_isa.is_fpu) 
 
 }
 

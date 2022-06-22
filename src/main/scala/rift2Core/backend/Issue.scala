@@ -76,7 +76,7 @@ class Out_of_Order_Issue()(implicit p: Parameters) extends RiftModule {
     io.ooo_readOp(i).reg.bits  := io.ooo_dpt_iss(i).bits.phy
 
     alu_iss_rePort.io.enq(i).valid := io.ooo_readOp(i).reg.fire & io.ooo_dpt_iss(i).bits.alu_isa.is_alu
-    mul_iss_rePort.io.enq(i).valid := io.ooo_readOp(i).reg.fire & io.ooo_dpt_iss(i).bits.mul_isa.is_mul
+    mul_iss_rePort.io.enq(i).valid := io.ooo_readOp(i).reg.fire & io.ooo_dpt_iss(i).bits.mul_isa.is_mulDiv
 
     alu_iss_rePort.io.enq(i).bits := Mux( alu_iss_rePort.io.enq(i).valid, Pkg_alu_iss(io.ooo_readOp(i), io.ooo_dpt_iss(i).bits), 0.U.asTypeOf(new Alu_iss_info) )
     mul_iss_rePort.io.enq(i).bits := Mux( mul_iss_rePort.io.enq(i).valid, Pkg_mul_iss(io.ooo_readOp(i), io.ooo_dpt_iss(i).bits), 0.U.asTypeOf(new Mul_iss_info) )
@@ -85,7 +85,7 @@ class Out_of_Order_Issue()(implicit p: Parameters) extends RiftModule {
       io.ooo_readOp(i).reg.ready & 
       Mux1H(Seq(
         io.ooo_dpt_iss(i).bits.alu_isa.is_alu -> alu_iss_rePort.io.enq(i).ready,
-        io.ooo_dpt_iss(i).bits.mul_isa.is_mul -> mul_iss_rePort.io.enq(i).ready,
+        io.ooo_dpt_iss(i).bits.mul_isa.is_mulDiv -> mul_iss_rePort.io.enq(i).ready,
       ))
 
 
