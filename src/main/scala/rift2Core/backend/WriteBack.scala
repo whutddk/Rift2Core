@@ -31,7 +31,7 @@ import rift2Core.diff._
 import rift._
 import chipsalliance.rocketchip.config._
 
-class WriteBack( dp: Int=64, rop_chn: Int=6 )(implicit p: Parameters) extends RiftModule {
+class WriteBack( dp: Int=64 )(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val dpt_Xlookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
     val dpt_Flookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
@@ -39,13 +39,12 @@ class WriteBack( dp: Int=64, rop_chn: Int=6 )(implicit p: Parameters) extends Ri
     val dpt_Frename = Vec( rn_chn, Flipped(new dpt_rename_info(dp)) )
 
 
-    val ooo_readOp  = Vec(2, Flipped( new iss_readOp_info(dw = 64,dp)))
-    val bru_readOp  = Flipped( new iss_readOp_info(dw = 64,dp))
-    val csr_readOp  = Flipped( new iss_readOp_info(dw = 64,dp))
-    val lsu_readXOp  = Flipped( new iss_readOp_info(dw = 64,dp))
-    val lsu_readFOp  = Flipped( new iss_readOp_info(dw = 65,dp))
-    val fpu_readXOp  = Flipped( new iss_readOp_info(dw = 64,dp))
-    val fpu_readFOp  = Flipped( new iss_readOp_info(dw = 65,dp))
+    val ooo_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 64,dp)) )
+    val ito_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 64,dp)) )
+
+
+    val frg_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 65,dp)) )
+
 
     val alu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
     val bru_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
@@ -64,13 +63,13 @@ class WriteBack( dp: Int=64, rop_chn: Int=6 )(implicit p: Parameters) extends Ri
   })
 
 
-  val iReg = Module(new XRegFiles(dw = 64, dp, rn_chn, rop_chn, wbChn, cm_chn))
+  val iReg = Module(new XRegFiles(dw = 64, dp, rn_chn, opChn, wbChn, cm_chn))
   val fRegIO = 
     if( hasFpu ) {
-      val mdl = Module(new FRegFiles(dw = 65, dp, rn_chn, rop_chn=2, wb_chn=2, cm_chn))
+      val mdl = Module(new FRegFiles(dw = 65, dp, rn_chn, opChn/2, wb_chn=2, cm_chn))
       mdl.io
     } else {
-      val mdl = Module(new FakeFRegFiles(dw = 65, dp, rn_chn, rop_chn=2, wb_chn=2, cm_chn) )
+      val mdl = Module(new FakeFRegFiles(dw = 65, dp, rn_chn, opChn/2, wb_chn=2, cm_chn) )
       mdl.io
     }
 
@@ -114,15 +113,15 @@ class WriteBack( dp: Int=64, rop_chn: Int=6 )(implicit p: Parameters) extends Ri
   fRegIO.diffReg <> io.diffFReg
 
 
-  iReg.io.iss_readOp(0) <> io.ooo_readOp(0)
-  iReg.io.iss_readOp(1) <> io.ooo_readOp(1)
-  iReg.io.iss_readOp(2) <> io.bru_readOp
-  iReg.io.iss_readOp(3) <> io.csr_readOp
-  iReg.io.iss_readOp(4) <> io.lsu_readXOp
-  iReg.io.iss_readOp(5) <> io.fpu_readXOp
+  for ( i <- 0 until opChn/2 ) {
+    iReg.io.iss_readOp(2*i)   <> io.ooo_readOp(i)
+    iReg.io.iss_readOp(2*i+1) <> io.ito_readOp(i)
 
-  fRegIO.iss_readOp(0) <> io.lsu_readFOp
-  fRegIO.iss_readOp(1) <> io.fpu_readFOp
+    fRegIO.iss_readOp(i) <> io.frg_readOp(i)
+  }
+
+
+
 
 
   val iwriteBack_arb = {

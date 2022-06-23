@@ -44,6 +44,7 @@ case class RiftSetting(
 
   rn_chn: Int = 2,
   cm_chn: Int = 2,
+  opChn: Int = 6,
   wbChn: Int = 4,
 
   l1BeatBits: Int = 128,
@@ -91,6 +92,7 @@ case class RiftSetting(
   require( vlen == 39 )
   require( plen >=32 && plen <= 56 )
   require( memBeatBits <= l1BeatBits )
+  require( opChn % 2 == 0 )
 }
 
 trait HasRiftParameters {
@@ -107,6 +109,7 @@ trait HasRiftParameters {
   
   def cm_chn = riftSetting.cm_chn
   def rn_chn = riftSetting.rn_chn
+  def opChn = riftSetting.opChn
   def wbChn = riftSetting.wbChn
 
   def l1BeatBits = riftSetting.l1BeatBits

@@ -139,10 +139,8 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val iss_stage = {
     val mdl = Module(new Issue)
     mdl.io.ooo_dpt_iss <> dpt_stage.io.ooo_dpt_iss
-    mdl.io.bru_dpt_iss <> dpt_stage.io.bru_dpt_iss
-    mdl.io.csr_dpt_iss <> dpt_stage.io.csr_dpt_iss
-    mdl.io.lsu_dpt_iss <> dpt_stage.io.lsu_dpt_iss
-    mdl.io.fpu_dpt_iss <> dpt_stage.io.fpu_dpt_iss
+    mdl.io.ito_dpt_iss <> dpt_stage.io.ito_dpt_iss
+
     mdl
   }
 
@@ -167,12 +165,9 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
     mdl.io.dpt_Frename <> dpt_stage.io.dpt_Frename
 
     mdl.io.ooo_readOp <> iss_stage.io.ooo_readOp
-    mdl.io.bru_readOp <> iss_stage.io.bru_readOp
-    mdl.io.csr_readOp <> iss_stage.io.csr_readOp
-    mdl.io.lsu_readXOp <> iss_stage.io.lsu_readXOp
-    mdl.io.lsu_readFOp <> iss_stage.io.lsu_readFOp
-    mdl.io.fpu_readXOp <> iss_stage.io.fpu_readXOp
-    mdl.io.fpu_readFOp <> iss_stage.io.fpu_readFOp
+    mdl.io.ito_readOp <> iss_stage.io.ito_readOp
+    mdl.io.frg_readOp <> iss_stage.io.frg_readOp
+
 
     mdl.io.alu_iWriteBack <> exe_stage.io.alu_exe_iwb
     mdl.io.bru_iWriteBack <> exe_stage.io.bru_exe_iwb
@@ -229,7 +224,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   if4.io.flush := cmm_stage.io.cmmRedirect.fire
 
   dpt_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
-  iss_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
+  iss_stage.io.flush := cmm_stage.io.cmmRedirect.fire
   exe_stage.io.flush := cmm_stage.io.cmmRedirect.fire
 
 

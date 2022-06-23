@@ -45,6 +45,7 @@ class Rift2GoCfg extends Config((site, here, up) => {
     hasFpu = false,
     hasPreFetch = false,
 
+    opChn = 4,
     wbChn = 2,
 
     l1BeatBits = 64,

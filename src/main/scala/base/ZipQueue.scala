@@ -61,7 +61,7 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int, zip: Int ) extends M
   }
 
   for ( i <- 0 until in ) {
-    io.enq(i).ready := (PopCount( isAvailable ) >= i.U )
+    io.enq(i).ready := (PopCount( isAvailable ) > i.U )
     if ( i == 0 ) {enqIdx(i) := isAvailable.indexWhere( (x:Bool) => (x === true.B) )}
     else { enqIdx(i) := enqIdx(i-1) + 1.U }
   }

@@ -151,8 +151,8 @@ trait IF3_PreDecode{ this: IF3Base =>
 
 
     if ( i < 3 ) {
-      when(io.if3_req(i).fire & io.if3_req(i).bits.isRedirect ) { assert(io.if3_req(i+1).fire, "Assert Failed at IF3, Redirect will pop next-entry either by rv32 or force-pop!") }
-      when( io.if3_req(i).bits.isRedirect ) { assert( ~io.if3_req(i+1).bits.isRedirect, "Assert Failed at IF3, No succession isRedirect will appear" ) }
+      when( io.if3_req(i).fire  & io.if3_req(i).bits.isRedirect ) { assert(io.if3_req(i+1).fire, "Assert Failed at IF3, Redirect will pop next-entry either by rv32 or force-pop!") }
+      when( io.if3_req(i).valid & io.if3_req(i).bits.isRedirect ) { assert( ~(io.if3_req(i+1).valid & io.if3_req(i+1).bits.isRedirect), "Assert Failed at IF3, No succession isRedirect will appear" ) }
     } else if ( i == 3 ) {
       when( io.if3_req(i).fire ) { assert( ~io.if3_req(i).bits.isRedirect, "Assert Failed at IF3, never Redirect at last-entry!" ) }
     }

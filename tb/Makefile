@@ -247,7 +247,7 @@ fpuisa += rv64uf-p-recoding
 fpuisa += rv64uf-v-recoding
 
 isa ?= $(aluisa) $(bruisa) $(lsuisa) $(mulisa) $(privisa) $(fpuisa)
-# isa ?= $(lsuisa) 
+# isa ?= $(fpuisa) 
 
 .DEFAULT_GOAL = unit
 
@@ -284,7 +284,7 @@ VSimTop:
 	./verilator/sim_main.cpp  \
 	./verilator/diff.cpp \
 	-Mdir build \
-	-j 128
+	-j 32
 # 	rm ./obj_dir/*.d ./obj_dir/*.o ./obj_dir/*.cpp
 
 

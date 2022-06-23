@@ -563,12 +563,20 @@ class Instruction_set(implicit p: Parameters) extends RiftBundle{
     lsu_isa.is_fwb | fpu_isa.is_fwb
 
   def is_ooo_dpt = alu_isa.is_alu | mul_isa.is_mulDiv
-  def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr | lsu_isa.is_lsu
+  def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr | lsu_isa.is_lsu | fpu_isa.is_fpu
   def is_privil_dpt = privil_isa.is_privil
   def is_fpu_dpt = fpu_isa.is_fpu
   def is_iwb = ~is_fwb
   def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mulDiv | privil_isa.is_privil | fpu_isa.is_fpu) 
 
+  def dptRegion = MuxCase( 0.U, Array(
+    alu_isa.is_alu    -> 1.U,
+    mul_isa.is_mulDiv -> 2.U,
+    bru_isa.is_bru    -> 3.U,
+    csr_isa.is_csr    -> 4.U,
+    lsu_isa.is_lsu    -> 5.U,
+    fpu_isa.is_fpu    -> 6.U,
+  ))
 }
 
 
