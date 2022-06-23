@@ -21,7 +21,7 @@ package rift2Core.privilege
 import chisel3._
 import chisel3.util._
 import rift2Core.L1Cache._
-
+import chisel3.experimental.dataview._
 
 import rift._
 
@@ -30,7 +30,7 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
 class Info_ptw_rsp extends Bundle with Info_access_lvl{
-  val pte = new Info_pte_sv39
+  val renew = new TLB_Renew_Bundle
   val is_ptw_fail = Bool()
   val is_access_fault = Bool()
 
@@ -96,7 +96,8 @@ class PTWBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModu
 
   val pte = Wire(new Info_pte_sv39)
 
-  val walkReq = RegEnable( io.ptw_i.bits, (currState === PTWState.Free.U & nextState =/= PTWState.Free.U) )
+  val walkReq = RegEnable( io.ptw_i.bits,          (currState === PTWState.Free.U & nextState =/= PTWState.Free.U) )
+  val asidReq = RegEnable( io.cmm_mmu.satp(59,44), (currState === PTWState.Free.U & nextState =/= PTWState.Free.U) )
   val walkRspBits = RegInit( 0.U.asTypeOf(new Info_ptw_rsp) )
   val walkRspValid = RegInit(false.B)
 }
@@ -195,7 +196,11 @@ trait PTWWALK { this: PTWBase =>
     walkRspBits.is_X := walkReq.is_X
     walkRspBits.is_R := walkReq.is_R
     walkRspBits.is_W := walkReq.is_W
-    walkRspBits.pte := pte
+    walkRspBits.renew.viewAsSupertype(new Info_pte_sv39) := pte
+    walkRspBits.renew.vpn(0) := walkReq.vaddr(20,12)
+    walkRspBits.renew.vpn(1) := walkReq.vaddr(29,21)
+    walkRspBits.renew.vpn(2) := walkReq.vaddr(38,30)
+    walkRspBits.renew.asid   := asidReq
 
     walkRspValid := true.B
 

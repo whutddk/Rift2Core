@@ -246,8 +246,8 @@ fpuisa += rv64uf-v-move
 fpuisa += rv64uf-p-recoding
 fpuisa += rv64uf-v-recoding
 
-# isa ?= $(aluisa) $(bruisa) $(lsuisa) $(mulisa) $(privisa) $(fpuisa)
-isa ?= $(lsuisa) 
+isa ?= $(aluisa) $(bruisa) $(lsuisa) $(mulisa) $(privisa) $(fpuisa)
+# isa ?= $(lsuisa) 
 
 .DEFAULT_GOAL = unit
 

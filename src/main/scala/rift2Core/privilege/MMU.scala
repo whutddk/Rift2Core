@@ -21,6 +21,7 @@ import chisel3._
 import chisel3.util._
 
 import chisel3.util.random._
+import chisel3.experimental.dataview._
 
 import rift._
 
@@ -47,6 +48,10 @@ class Info_pte_sv39 extends Bundle {
   val is_mega_page = Bool()
 }
 
+class TLB_Renew_Bundle extends Info_pte_sv39 {
+  val asid = UInt( 16.W )
+  val vpn = Vec( 3, UInt(9.W) )
+}
 
 
 
@@ -86,18 +91,6 @@ class Info_cmm_mmu extends Bundle {
   val sstatus = UInt(64.W)
 
   val sfence_vma = Bool()
-
-  def sit_mdf =
-    (ShiftRegister(satp,1) =/= satp) |
-    pmpcfg.map{x => ShiftRegister(x,1) =/= x}.reduce(_|_) |
-    pmpaddr.map{x => ShiftRegister(x,1) =/= x}.reduce(_|_) |
-    // (ShiftRegister(pmpcfg,1) =/= pmpcfg ) |
-    // (ShiftRegister(pmpaddr,1) =/= pmpaddr) |
-    (ShiftRegister(priv_lvl_if,1) =/= priv_lvl_if) |
-    (ShiftRegister(priv_lvl_ls,1) =/= priv_lvl_ls) |
-    (ShiftRegister(mstatus,1) =/= mstatus) |
-    (ShiftRegister(sstatus,1) =/= sstatus) 
-
 
 }
 
@@ -148,14 +141,13 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
   val kill_iptw = RegInit(false.B)
   val kill_dptw = RegInit(false.B)
   
-  val cmm_flush = io.cmm_mmu.sit_mdf
 
-  when( io.if_flush | io.cmm_mmu.sit_mdf ) {
+  when( io.if_flush ) {
     kill_iptw := true.B
   } .elsewhen ( iptw.io.ptw_i.ready ) {
     kill_iptw := false.B
   }
-  when( io.lsu_flush | io.cmm_mmu.sit_mdf ) {
+  when( io.lsu_flush ) {
     kill_dptw := true.B
   } .elsewhen ( dptw.io.ptw_i.ready ) {
     kill_dptw := false.B
@@ -185,10 +177,10 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
 
 
-  iptw.io.ptw_i.valid := io.if_mmu.valid & ~itlb.io.is_hit & ~is_bypass_if & ~kill_iptw & ~cmm_flush
+  iptw.io.ptw_i.valid := io.if_mmu.valid & ~itlb.io.is_hit & ~is_bypass_if & ~kill_iptw
   iptw.io.ptw_i.bits  := io.if_mmu.bits
 
-  dptw.io.ptw_i.valid := io.lsu_mmu.valid & ~dtlb.io.is_hit & ~is_bypass_ls & ~kill_dptw & ~cmm_flush
+  dptw.io.ptw_i.valid := io.lsu_mmu.valid & ~dtlb.io.is_hit & ~is_bypass_ls & ~kill_dptw
   dptw.io.ptw_i.bits  := io.lsu_mmu.bits
 
 
@@ -199,7 +191,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
 
   {
-    val pte = Mux( itlb.io.is_hit, itlb.io.pte_o, iptw.io.ptw_o.bits.pte )
+    val pte = Mux( itlb.io.is_hit, itlb.io.pte_o, iptw.io.ptw_o.bits.renew.viewAsSupertype(new Info_pte_sv39) )
     val ivaddr = io.if_mmu.bits.vaddr
     val ipaddr = Mux( is_bypass_if, ivaddr, v2paddr( ivaddr, pte ) )
 
@@ -219,18 +211,18 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
       )
 
     io.mmu_if.valid :=
-      ~kill_iptw & ~cmm_flush & (
+      ~kill_iptw & (
         (io.if_mmu.valid & is_bypass_if) |
         (io.if_mmu.valid & itlb.io.is_hit) |
         (io.if_mmu.valid & (iptw.io.ptw_o.bits.is_X & iptw.io.ptw_o.valid))         
       )
 
-    assert( ~((iptw.io.ptw_o.bits.is_X & iptw.io.ptw_o.valid) & itlb.io.is_hit & ~kill_iptw & ~cmm_flush)  )
+    assert( ~((iptw.io.ptw_o.bits.is_X & iptw.io.ptw_o.valid) & itlb.io.is_hit & ~kill_iptw )  )
   }
 
 
   {
-    val pte = Mux( dtlb.io.is_hit, dtlb.io.pte_o, dptw.io.ptw_o.bits.pte )
+    val pte = Mux( dtlb.io.is_hit, dtlb.io.pte_o, dptw.io.ptw_o.bits.renew.viewAsSupertype(new Info_pte_sv39) )
     val dvaddr = io.lsu_mmu.bits.vaddr
 
     val dpaddr = Mux( is_bypass_ls, dvaddr, v2paddr( dvaddr, pte ) )
@@ -250,7 +242,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
       )
 
     io.mmu_lsu.valid :=
-      ~io.lsu_flush & ~kill_dptw & ~cmm_flush & (
+      ~io.lsu_flush & ~kill_dptw & (
         (io.lsu_mmu.valid & is_bypass_ls) |
         (io.lsu_mmu.valid & dtlb.io.is_hit) |
         (io.lsu_mmu.valid & (~dptw.io.ptw_o.bits.is_X & dptw.io.ptw_o.valid))           
@@ -264,14 +256,14 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     assert( ~((~dptw.io.ptw_o.bits.is_X & dptw.io.ptw_o.valid) & dtlb.io.is_hit & ~kill_dptw)  )
   }
 
-  iptw.io.ptw_o.ready := io.mmu_if.ready  | kill_iptw | cmm_flush | io.if_flush
+  iptw.io.ptw_o.ready := io.mmu_if.ready  | kill_iptw | io.if_flush
 
 
-  dptw.io.ptw_o.ready := io.mmu_lsu.ready | kill_dptw | cmm_flush | io.lsu_flush
+  dptw.io.ptw_o.ready := io.mmu_lsu.ready | kill_dptw | io.lsu_flush
 
 
-  itlb.io.tlb_renew.bits := iptw.io.ptw_o.bits.pte
-  dtlb.io.tlb_renew.bits := dptw.io.ptw_o.bits.pte
+  itlb.io.tlb_renew.bits := iptw.io.ptw_o.bits.renew
+  dtlb.io.tlb_renew.bits := dptw.io.ptw_o.bits.renew
 
   itlb.io.tlb_renew.valid := iptw.io.ptw_o.fire &  iptw.io.ptw_o.bits.is_X & ~iptw.io.ptw_o.bits.is_ptw_fail & ~kill_iptw
   dtlb.io.tlb_renew.valid := dptw.io.ptw_o.fire & ~dptw.io.ptw_o.bits.is_X & ~dptw.io.ptw_o.bits.is_ptw_fail & ~kill_dptw

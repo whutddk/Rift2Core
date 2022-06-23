@@ -22,6 +22,7 @@ import chisel3._
 import chisel3.util._
 
 import chisel3.util.random._
+import chisel3.experimental.dataview._
 
 import rift._
 import chipsalliance.rocketchip.config._
@@ -49,7 +50,7 @@ class TLB( entry: Int = 32 )(implicit p: Parameters) extends RiftModule {
 
     val asid_i = Input(UInt(16.W))
 
-    val tlb_renew = Flipped(ValidIO(new Info_pte_sv39))
+    val tlb_renew = Flipped(ValidIO(new TLB_Renew_Bundle))
 
     val sfence_vma = Input(Bool())
   })
@@ -65,11 +66,9 @@ class TLB( entry: Int = 32 )(implicit p: Parameters) extends RiftModule {
   }
   .elsewhen(io.tlb_renew.valid) {
     tag(tlb_update_idx).is_valid := true.B
-    tag(tlb_update_idx).asid := io.asid_i
-    tag(tlb_update_idx).vpn(0) := io.req.bits.vaddr(20,12)
-    tag(tlb_update_idx).vpn(1) := io.req.bits.vaddr(29,21)
-    tag(tlb_update_idx).vpn(2) := io.req.bits.vaddr(38,30)
-    pte(tlb_update_idx) := io.tlb_renew.bits
+    tag(tlb_update_idx).asid   := io.tlb_renew.bits.asid
+    tag(tlb_update_idx).vpn    := io.tlb_renew.bits.vpn
+    pte(tlb_update_idx)        := io.tlb_renew.bits.viewAsSupertype(new Info_pte_sv39)
   }
 
 
