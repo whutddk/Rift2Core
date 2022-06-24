@@ -51,6 +51,8 @@ class Rift2GoCfg extends Config((site, here, up) => {
     l1BeatBits = 64,
     memBeatBits = 64,
 
+    tlbEntry = 2,
+
     ifetchParameters = IFParameters(
       uBTB_entry = 4,
       // uBTB_tag_w = 16,

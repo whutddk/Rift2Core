@@ -128,8 +128,8 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
   })
 
-  val itlb = Module( new TLB(32) )
-  val dtlb = Module( new TLB(32) )
+  val itlb = Module( new TLB )
+  val dtlb = Module( new TLB )
   val iptw  = Module( new PTW(edge, id = 0) )
   val dptw  = Module( new PTW(edge, id = 1) )
 

@@ -53,6 +53,7 @@ case class RiftSetting(
   vlen: Int = 39,
   plen: Int = 32,
 
+  tlbEntry: Int = 16, 
   ifetchParameters: IFParameters = IFParameters(
     // GHR_length = 64,
     // UBTB_entry = 16,
@@ -118,6 +119,7 @@ trait HasRiftParameters {
   def vlen = riftSetting.vlen
   def plen = riftSetting.plen
 
+  def tlbEntry = riftSetting.tlbEntry
 
   def isMinArea = riftSetting.isMinArea
   def isLowPower = riftSetting.isLowPower

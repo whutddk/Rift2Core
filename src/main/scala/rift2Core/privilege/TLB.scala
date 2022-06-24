@@ -41,7 +41,7 @@ class Info_tlb_tag extends Bundle {
   * 
   * 
   */ 
-class TLB( entry: Int = 32 )(implicit p: Parameters) extends RiftModule {
+class TLB()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
 
     val req = Flipped(ValidIO( new Info_mmu_req ))
@@ -56,13 +56,13 @@ class TLB( entry: Int = 32 )(implicit p: Parameters) extends RiftModule {
   })
 
   /** The tag including *is_valid*, *asid*, and *vpn[8:0]* X 3 */
-  val tag = RegInit( VecInit( Seq.fill(entry)(0.U.asTypeOf( new Info_tlb_tag  ))))
+  val tag = RegInit( VecInit( Seq.fill(tlbEntry)(0.U.asTypeOf( new Info_tlb_tag  ))))
 
   /** The PTE info of page */
-  val pte = RegInit( VecInit( Seq.fill(entry)(0.U.asTypeOf( new Info_pte_sv39 ))))
+  val pte = RegInit( VecInit( Seq.fill(tlbEntry)(0.U.asTypeOf( new Info_pte_sv39 ))))
 
   when( io.sfence_vma ) {
-    for( i <- 0 until entry ) yield tag(i) := 0.U.asTypeOf( new Info_tlb_tag )
+    for( i <- 0 until tlbEntry ) yield tag(i) := 0.U.asTypeOf( new Info_tlb_tag )
   }
   .elsewhen(io.tlb_renew.valid) {
     tag(tlb_update_idx).is_valid := true.B
@@ -84,7 +84,7 @@ class TLB( entry: Int = 32 )(implicit p: Parameters) extends RiftModule {
   def tlb_update_idx: UInt = {
     val is_runout = tag.forall( (x:Info_tlb_tag) => (x.is_valid === true.B) )
 
-    val random_idx = LFSR( log2Ceil(entry) )
+    val random_idx = LFSR( log2Ceil(tlbEntry) max 2 )
     val empty_idx  = tag.indexWhere( (x:Info_tlb_tag) => (x.is_valid === false.B) )
 
     return Mux( is_runout, random_idx, empty_idx )
@@ -98,7 +98,7 @@ class TLB( entry: Int = 32 )(implicit p: Parameters) extends RiftModule {
    * @note lvl0_hit 
    */
   val tlb_hit = VecInit(
-    for ( i <- 0 until entry ) yield {
+    for ( i <- 0 until tlbEntry ) yield {
       val lvl2 = tag(i).is_valid & io.asid_i === tag(i).asid & io.req.bits.vaddr(38,30) === tag(i).vpn(2)
       val lvl1 = io.req.bits.vaddr(29,21) === tag(i).vpn(1)
       val lvl0 = io.req.bits.vaddr(20,12) === tag(i).vpn(0)
