@@ -155,7 +155,7 @@ trait IssueOoo{ this: IssueBase =>
 
     res.param.dat.op1 :=
       Mux1H(Seq(
-        dpt.alu_isa.lui    -> 0.U,  dpt.alu_isa.auipc  -> dpt.param.pc,
+        dpt.alu_isa.lui    -> 0.U,  dpt.alu_isa.auipc  -> extVaddr(dpt.param.pc, vlen),
         dpt.alu_isa.addi   -> src1, dpt.alu_isa.addiw  -> src1,
         dpt.alu_isa.slti   -> src1, dpt.alu_isa.sltiu  -> src1,
         dpt.alu_isa.xori   -> src1, dpt.alu_isa.ori    -> src1,
@@ -438,7 +438,7 @@ trait IssueIto{ this: IssueBase =>
     val res = Wire(new Bru_iss_info)
     res.fun  := dpt.bru_isa
     res.param.is_rvc   := dpt.param.is_rvc
-    res.param.pc   := dpt.param.pc
+    res.param.pc    := extVaddr(dpt.param.pc, vlen)
     res.param.imm   := dpt.param.imm
     res.param.dat   := op.dat
     res.param.rd0    := dpt.phy.rd0

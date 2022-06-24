@@ -51,8 +51,8 @@ class Ghist_reflash_Bundle(implicit p: Parameters) extends IFetchBundle {
 }
 
 class IF4_Redirect_Bundle(implicit p: Parameters) extends IFetchBundle {
-  val target     = UInt(64.W)
-  val pc         = UInt(64.W)
+  val target     = UInt(vlen.W)
+  val pc         = UInt(vlen.W)
   val isDisAgree = Bool()
 }
 
@@ -69,7 +69,7 @@ class IF1_Bundle(implicit p: Parameters) extends uBTBResp_Bundle {
 }
 
 class IF2_Bundle(implicit p: Parameters) extends IFetchBundle {
-  val pc    = UInt(64.W)
+  val pc    = UInt(vlen.W)
   val instr = UInt(16.W)
   // val isAccessFault = Bool()
   // val isPagingFault = Bool()
@@ -215,7 +215,7 @@ class IF3_Bundle(implicit p: Parameters) extends RiftBundle {
   val preDecode = new PreDecode_Bundle
   // val predict = new Predict_Bundle
   val instr = UInt(32.W)
-  val pc = UInt(64.W)
+  val pc = UInt(vlen.W)
   val ghist = UInt(64.W)
   val isRedirect = Bool()
   val target = UInt(vlen.W)
@@ -231,8 +231,6 @@ class Branch_FTarget_Bundle(implicit p: Parameters) extends RiftBundle {
   val ghist = UInt(64.W)
   val bimResp  = new BIMResp_Bundle
   val tageResp = new TageResp_Bundle
-  val predicTarget = UInt(64.W)
-  val revertTarget = UInt(64.W)
   val isPredictTaken = Bool()
 }
 
@@ -247,6 +245,7 @@ class Jump_FTarget_Bundle(implicit p: Parameters) extends RiftBundle {
 
 class Branch_CTarget_Bundle(implicit p: Parameters) extends Branch_FTarget_Bundle {
   val isFinalTaken = Bool()
+  val finalTarget = UInt(64.W)
   def isMisPredict = isPredictTaken =/= isFinalTaken
 }
 

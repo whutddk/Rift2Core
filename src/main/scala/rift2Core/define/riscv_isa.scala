@@ -583,7 +583,7 @@ class Instruction_set(implicit p: Parameters) extends RiftBundle{
 
 class Instruction_param(implicit p: Parameters) extends RiftBundle {
   val is_rvc = Bool()
-  val pc = UInt(64.W)
+  val pc = UInt(vlen.W)
   
   val imm = UInt(64.W)
   val rm = UInt(3.W)
@@ -720,7 +720,7 @@ class Fpu_dpt_info(implicit p: Parameters) extends RiftBundle {
 
 
 class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
-  val pc = UInt(64.W)
+  val pc = UInt(vlen.W)
   val rd0_raw = UInt(5.W)
   val rd0_phy = UInt(6.W)
 
@@ -832,7 +832,7 @@ class Info_lsu_cmm(implicit p: Parameters) extends RiftBundle {
 }
 
 class Stq_req_Bundle(implicit p: Parameters) extends RiftBundle {
-  val paddr = UInt(64.W)
+  val paddr = UInt(plen.W)
 }
 
 class Stq_resp_Bundle(implicit p: Parameters) extends RiftBundle {
@@ -847,7 +847,7 @@ class Commit_Redirect_Bundle(implicit p: Parameters) extends RiftBundle{
 }
 
 class PreFetch_Req_Bundle(implicit p: Parameters) extends RiftBundle {
-  val paddr = UInt(64.W)
+  val paddr = UInt(plen.W)
 }
 
 

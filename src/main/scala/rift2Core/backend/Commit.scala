@@ -245,7 +245,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   }
 
   def commit_pc: UInt = {
-    val commit_pc = rod.pc
+    val commit_pc = extVaddr(rod.pc, vlen)
     return commit_pc
   } 
 
@@ -560,8 +560,8 @@ trait CommitIFRedirect { this: BaseCommit =>
 
 
 trait CommitDiff { this: BaseCommit =>
-  io.diff_commit.pc(0) := io.rod(0).bits.pc
-  io.diff_commit.pc(1) := io.rod(1).bits.pc
+  io.diff_commit.pc(0) := extVaddr(io.rod(0).bits.pc, vlen)
+  io.diff_commit.pc(1) := extVaddr(io.rod(1).bits.pc, vlen)
   io.diff_commit.comfirm(0) := commit_state_is_comfirm(0) | commit_state_is_misPredict(0)
   io.diff_commit.comfirm(1) := commit_state_is_comfirm(1) | commit_state_is_misPredict(1)
   io.diff_commit.abort(0) := commit_state_is_abort(0)
@@ -705,7 +705,7 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
   for ( i <- 0 until cm_chn ) yield {
     when(io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & is_retired(i) & ~cmm_state(i).is_step) {
       io.cmmRedirect.valid := true.B
-      io.cmmRedirect.bits.pc := bctq(i).bits.revertTarget
+      io.cmmRedirect.bits.pc := bctq(i).bits.finalTarget
     }
     
     when(io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & is_retired(i) & ~cmm_state(i).is_step) {
@@ -738,7 +738,7 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
       } 
       when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
         io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := (io.rod(i).bits.pc + 4.U)
+        io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
       }
     }
 

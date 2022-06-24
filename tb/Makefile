@@ -352,7 +352,7 @@ dhrystone500: VSimTop
 
 
 coremark: VSimTop
-	./build/VSimTop -w -p -f ./ci/coremark1_bare
+	./build/VSimTop -p -f ./ci/coremark1_bare
 
 wave:
 	gtkwave ./build/wave.vcd &

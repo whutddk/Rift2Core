@@ -127,7 +127,7 @@ trait Stq_Overlap{ this: Stq_Base =>
       assert( rd_ptr >= wr_ptr )
       for ( i <- 0 until stEntry ) yield {
         val ro_ptr = (rd_ptr_reg + i.U)(st_w-1,0)
-        when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).param.dat.op1(63,3) === io.overlapReq.bits.paddr(63,3)) ) {
+        when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).param.dat.op1(plen-1,3) === io.overlapReq.bits.paddr(plen-1,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
 
           when( buff(ro_ptr).fun.is_amo ) { io.overlapResp.valid := false.B }
@@ -140,7 +140,7 @@ trait Stq_Overlap{ this: Stq_Base =>
       assert( rd_ptr <= wr_ptr )
       for ( i <- 0 until stEntry ) yield {
         val ro_ptr = (rd_ptr_reg + i.U)(st_w-1,0)
-        when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).param.dat.op1(63,3) === io.overlapReq.bits.paddr(63,3)) ) {
+        when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).param.dat.op1(plen-1,3) === io.overlapReq.bits.paddr(plen-1,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
 
           when( buff(ro_ptr).fun.is_amo ) { io.overlapResp.valid := false.B }

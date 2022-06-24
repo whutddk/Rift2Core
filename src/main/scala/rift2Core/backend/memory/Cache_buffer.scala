@@ -46,7 +46,7 @@ class Cache_buffer()(implicit p: Parameters) extends DcacheModule{
 
 
 
-  val is_hazard = VecInit(buff.map( x => (x.paddr(63,3) === io.buf_enq.bits.paddr(63,3)) )).reduce(_|_)
+  val is_hazard = VecInit(buff.map( x => (x.paddr(plen-1,3) === io.buf_enq.bits.paddr(plen-1,3)) )).reduce(_|_)
   val idx = valid.indexWhere( (x:Bool) => (x === false.B) )
   io.enq_idx := idx
 

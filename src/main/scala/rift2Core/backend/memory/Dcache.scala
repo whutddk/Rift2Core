@@ -72,7 +72,7 @@ class Cache_op extends Lsu_isa {
 
 
 trait Info_cache_raw extends DcacheBundle {
-  val paddr = UInt(64.W)
+  val paddr = UInt(plen.W)
   val wdata  = UInt(dw.W)
   val wstrb  = UInt((dw/8).W)
 
@@ -176,7 +176,7 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
     val wb_req = Valid(new Info_writeBack_req)
     val pb_req =Valid(new Info_writeBack_req)
 
-
+    val isCacheEmpty = Input(Bool())
     val flush = Input(Bool())
   })
 
@@ -198,12 +198,12 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
   /** flag that indicated that if a cache block is dirty */
   val is_dirty = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
 
-  val flush_reg_0 = RegNext(io.flush, false.B)
-  val flush_reg_1 = RegNext(flush_reg_0, false.B)
-  val flush_reg_2 = RegNext(flush_reg_1, false.B)
+
+  val killTrans = RegInit(false.B)
+
   val is_pending_lr = RegInit(false.B)
   val is_lr_64_32n = RegInit(false.B)
-  val lr_addr = RegInit(0.U(64.W))
+  val lr_addr = Reg(UInt(plen.W))
 
   val is_sc_fail = 
     ~is_pending_lr | 
@@ -351,7 +351,7 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
   
   when( io.wr_in.valid & ( io.wr_in.bits.fun.is_access | io.wr_in.bits.fun.preft ) & ( ~is_hit ) ) {
     missUnitReqValid := true.B
-    missUnitReqPaddr := io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)
+    missUnitReqPaddr := io.wr_in.bits.paddr >> addr_lsb.U << addr_lsb.U 
   } .otherwise {
     missUnitReqValid := false.B
     if(isLowPower) {
@@ -404,7 +404,7 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
 
   when(io.wr_in.valid & io.wr_in.bits.fun.probe) {
     pbReqValid  := true.B
-    pbReqPaddr  := io.wr_in.bits.paddr & ("hffffffff".U << addr_lsb.U)
+    pbReqPaddr  := io.wr_in.bits.paddr >> addr_lsb.U << addr_lsb.U 
     pbReqData   := io.dat_info_r(cb_sel)
     pbReqisData := is_dirty(cl_sel)(cb_sel)
   } .otherwise {
@@ -482,31 +482,32 @@ class L1d_wr_stage(id: Int) (implicit p: Parameters) extends DcacheModule {
 
 
 
-  when( io.flush | flush_reg_0 | flush_reg_1 | flush_reg_2 ) {
+  when( io.flush | killTrans ) {
     is_pending_lr := false.B
-  }
-  .elsewhen( io.deq.fire & io.wr_in.bits.fun.is_lr ) {
-    is_pending_lr := true.B
-    is_lr_64_32n := io.wr_in.bits.fun.is_dubl
-    lr_addr := io.wr_in.bits.paddr
-
-    assert( io.wr_in.bits.fun.is_dubl | io.wr_in.bits.fun.is_word )
-  }
-  .elsewhen( io.deq.fire & io.wr_in.bits.fun.is_sc ) {
-    is_pending_lr := false.B
-  }
-  .elsewhen( io.wr_in.fire & io.wr_in.bits.fun.probe ) {
+  } .elsewhen( io.wr_in.fire & io.wr_in.bits.fun.is_access & is_hit ) {// going to deq fire (validIO)
+    when( io.wr_in.bits.fun.is_lr ) {
+      is_pending_lr := true.B
+      is_lr_64_32n := io.wr_in.bits.fun.is_dubl
+      lr_addr := io.wr_in.bits.paddr
+      assert( io.wr_in.bits.fun.is_dubl | io.wr_in.bits.fun.is_word )
+    } .elsewhen( io.wr_in.bits.fun.is_sc ) {
+      is_pending_lr := false.B
+    } .elsewhen( (io.wr_in.bits.fun.is_su | (io.wr_in.bits.fun.is_amo & ~io.wr_in.bits.fun.is_lrsc)) ) {
+      when( tag_sel === lr_addr(plen-1,plen-tag_w) ) {
+        is_pending_lr := false.B
+      }   
+    }
+  } .elsewhen( io.wr_in.fire & io.wr_in.bits.fun.probe ) {
     when( tag_sel === lr_addr(plen-1,plen-tag_w) ) {
       is_pending_lr := false.B
     }
   }
-  .elsewhen( io.deq.fire & (io.wr_in.bits.fun.is_su | (io.wr_in.bits.fun.is_amo & ~io.wr_in.bits.fun.is_lrsc)) ) {
-    when( tag_sel === lr_addr(plen-1,plen-tag_w) ) {
-      is_pending_lr := false.B
-    }   
+
+  when( io.flush ) {
+    killTrans := true.B
+  } .elsewhen ( io.isCacheEmpty) {
+    killTrans := false.B
   }
-
-
 
 
 }
@@ -612,6 +613,7 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheMod
   rtn_fifo.io.deq <> Decoupled1toN( VecInit( io.deq, cache_buffer.io.buf_deq ) )
   
   io.is_empty := cache_buffer.io.is_storeBuff_empty
+  wr_stage.io.isCacheEmpty := cache_buffer.io.is_storeBuff_empty
 
   when(reload_fifo.io.enq.valid) {assert(reload_fifo.io.enq.ready, "Assert Failed at Dcache, Pipeline stuck!")}
   when(rtn_fifo.io.enq.valid) {assert(rtn_fifo.io.enq.ready, "Assert Failed at Dcache, Pipeline stuck!")}
