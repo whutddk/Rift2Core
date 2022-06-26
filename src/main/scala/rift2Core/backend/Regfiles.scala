@@ -25,8 +25,8 @@ import rift2Core.diff._
 import rift._
 import chipsalliance.rocketchip.config.Parameters
 
-class dpt_lookup_info(dp: Int)(implicit p: Parameters) extends RiftBundle{
-  val rsp = Input(new Register_source(dp))
+class dpt_lookup_info()(implicit p: Parameters) extends RiftBundle{
+  val rsp = Input(new Register_source(regNum))
   val req = Output(new Register_source(32))
 }
 
@@ -35,86 +35,86 @@ class dpt_lookup_info(dp: Int)(implicit p: Parameters) extends RiftBundle{
   * the raw-rs needs lookup the phy-rs num ( 1x, 2x, 3x raw-rs -> phy-rs ),
   * the rd should rename and malloc 1 new phy, 
   */
-class dpt_rename_info(dp: Int)(implicit p: Parameters) extends RiftBundle{
-  val rsp = Input(new Register_dstntn(dp))
+class dpt_rename_info()(implicit p: Parameters) extends RiftBundle{
+  val rsp = Input(new Register_dstntn(regNum))
   val req = Decoupled(new Register_dstntn(32))
 }
 
-class iss_readOp_info(dw: Int, dp: Int)(implicit p: Parameters) extends RiftBundle{
-  val reg = Decoupled(new Register_source(dp))
+class iss_readOp_info(dw: Int)(implicit p: Parameters) extends RiftBundle{
+  val reg = Decoupled(new Register_source(regNum))
   val dat = Input(new Operation_source(dw))
 }
 
-class Info_commit_op(dp:Int) extends Bundle{
+class Info_commit_op(implicit p: Parameters) extends RiftBundle{
   val is_comfirm = Output(Bool())
   val is_MisPredict = Output(Bool())
   val is_abort   = Output(Bool())
   val raw        = Output(UInt(5.W)  )
-  val phy        = Output(UInt((log2Ceil(dp)).W))
+  val phy        = Output(UInt((log2Ceil(regNum)).W))
   val toX        = Output(Bool())
   val toF        = Output(Bool())
   val is_writeback = Input(Bool())
 }
 
-class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int, cmm_chn: Int = 2)(implicit p: Parameters) extends RiftModule{
+class RegFiles(dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(implicit p: Parameters) extends RiftModule{
   val io = IO( new Bundle{
 
-    val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
-    val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info(dp)) )
+    val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info) )
+    val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info) )
     /** read operators based on idx, must success */
-    val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dw, dp)) )
+    val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dw)) )
     /** writeBack request from exeUnit */
-    val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(dw,dp))))
+    val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(dw))))
     /** Commit request from commitUnit */
-    val commit = Vec(cmm_chn, Flipped(new Info_commit_op(dp)))
+    val commit = Vec(cmm_chn, Flipped(new Info_commit_op))
 
     val diffReg = Output(Vec(32, UInt(dw.W)))
   })
 
   /**
-    * dp-1 (63) files exist in this version,'
-    * @note the file(dp) is assert to be Zero
+    * there are regNum-1 files,
+    * @note the file(regNum) is assert to be Zero
     */
-  val files_reg = RegInit( VecInit( Seq.fill(dp-1)(0.U(dw.W)) ))
+  val files_reg = RegInit( VecInit( Seq.fill(regNum-1)(0.U(dw.W)) ))
   val files = {
-    val res = Wire( Vec(dp, UInt(dw.W)) )
-    for ( i <- 0 until dp-1 ) yield { res(i) := files_reg(i) }
-    res(dp-1) := 0.U
+    val res = Wire( Vec(regNum, UInt(dw.W)) )
+    for ( i <- 0 until regNum-1 ) yield { res(i) := files_reg(i) }
+    res(regNum-1) := 0.U
     res
   }
   
 
   /**
-    * dp-1 (63) log exist in this version,
-    * @note the log(dp) is assert to be "b11".U
+    * there are regNum-1 log,
+    * @note the log(regNum) is assert to be "b11".U
     */ 
   val log_reg = 
-    RegInit( VecInit( Seq.fill(32)("b11".U(2.W) ) ++ Seq.fill(dp-32-1)(0.U(2.W) )))
+    RegInit( VecInit( Seq.fill(32)("b11".U(2.W) ) ++ Seq.fill(regNum-32-1)(0.U(2.W) )))
 
   val log = {
-    val res = Wire( Vec(dp, UInt(2.W)) )
-    for ( i <- 0 until dp-1 ) yield { res(i) := log_reg(i) }
-    res(dp-1) := "b11".U
+    val res = Wire( Vec(regNum, UInt(2.W)) )
+    for ( i <- 0 until regNum-1 ) yield { res(i) := log_reg(i) }
+    res(regNum-1) := "b11".U
     res
   }
 
   /**
     * index that 32 renamed register-sources point to
     */
-  val rename_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U(log2Ceil(dp).W)} ) )
+  val rename_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U(log2Ceil(regNum).W)} ) )
 
   /**
     * index that 32 commited register-sources point to
     */  
-  val archit_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U(log2Ceil(dp).W)} ) )
+  val archit_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U(log2Ceil(regNum).W)} ) )
 
   /**
     * finding out the first Free-phy-register
     */ 
-  val molloc_idx = Wire(Vec(rn_chn, UInt((log2Ceil(dp)).W)))
+  val molloc_idx = Wire(Vec(rn_chn, UInt((log2Ceil(regNum)).W)))
   for ( i <- 0 until rn_chn ) {
     molloc_idx(i) := 0.U
-    for ( j <- dp-1 to 0 by -1 ) {
+    for ( j <- (regNum-1) to 0 by -1 ) {
       if ( i == 0 ) { when( log(j) === 0.U ) { molloc_idx(i) := j.U }  }
       else { when( log(j) === 0.U && j.U > molloc_idx(i-1) ) { molloc_idx(i) := j.U } }
     }
@@ -143,18 +143,18 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
     val idx3 = io.iss_readOp(i).reg.bits.rs3
 
     when( io.iss_readOp(i).reg.fire ) {
-      io.iss_readOp(i).dat.op1 := Mux(idx1 === 63.U, 0.U, files(idx1))
-      io.iss_readOp(i).dat.op2 := Mux(idx2 === 63.U, 0.U, files(idx2))
-      io.iss_readOp(i).dat.op3 := Mux(idx3 === 63.U, 0.U, files(idx3))
+      io.iss_readOp(i).dat.op1 := Mux(idx1 === (regNum-1).U, 0.U, files(idx1))
+      io.iss_readOp(i).dat.op2 := Mux(idx2 === (regNum-1).U, 0.U, files(idx2))
+      io.iss_readOp(i).dat.op3 := Mux(idx3 === (regNum-1).U, 0.U, files(idx3))
     } .otherwise {
       io.iss_readOp(i).dat.op1 := 0.U
       io.iss_readOp(i).dat.op2 := 0.U
       io.iss_readOp(i).dat.op3 := 0.U
     }
     io.iss_readOp(i).reg.ready :=
-      (log(idx1) === "b11".U | idx1 === 63.U ) &
-      (log(idx2) === "b11".U | idx2 === 63.U ) &
-      (log(idx3) === "b11".U | idx3 === 63.U ) 
+      (log(idx1) === "b11".U | idx1 === (regNum-1).U ) &
+      (log(idx2) === "b11".U | idx2 === (regNum-1).U ) &
+      (log(idx3) === "b11".U | idx3 === (regNum-1).U ) 
 
   }
 
@@ -180,12 +180,12 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
 
       when( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
         /** clear all log to 0, except that archit_ptr point to, may be override */
-        for ( j <- 0 until dp-1 ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
+        for ( j <- 0 until (regNum-1) ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
       }
       when( io.commit(m).is_MisPredict | io.commit(m).is_comfirm ) {
         /** override the log(clear) */
         assert( io.commit(m).is_writeback )
-        for ( j <- 0 until dp-1 ) yield {
+        for ( j <- 0 until (regNum-1) ) yield {
           when(j.U === idx_pre(m) ) {log_reg(j) := 0.U} // the log, that used before commit, will be clear to 0
         }
         assert( log_reg(phy(m)) === "b11".U, "log_reg which going to commit to will be overrided to \"b11\" if there is an abort in-front." )
@@ -223,20 +223,20 @@ class RegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int
   }
 }
 
-class XRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2)(implicit p: Parameters) extends RegFiles(dw, dp, rn_chn, rop_chn, wb_chn, cmm_chn ) {
+class XRegFiles (dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(implicit p: Parameters) extends RegFiles(dw,  rn_chn, rop_chn, wb_chn, cmm_chn ) {
 
   for ( i <- 0 until rn_chn ) {
     val idx1 = io.dpt_lookup(i).req.rs1
     val idx2 = io.dpt_lookup(i).req.rs2
 
     if ( i == 0) {
-      io.dpt_lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )
-      io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
-      io.dpt_lookup(i).rsp.rs3 := 63.U
+      io.dpt_lookup(i).rsp.rs1 := Mux( idx1 === 0.U, (regNum-1).U, rename_ptr(idx1) )
+      io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, (regNum-1).U, rename_ptr(idx2) )
+      io.dpt_lookup(i).rsp.rs3 := (regNum-1).U
     } else {
-      io.dpt_lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 63.U, rename_ptr(idx1) )
-      io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 63.U, rename_ptr(idx2) )
-      io.dpt_lookup(i).rsp.rs3 := 63.U
+      io.dpt_lookup(i).rsp.rs1 := Mux( idx1 === 0.U, (regNum-1).U, rename_ptr(idx1) )
+      io.dpt_lookup(i).rsp.rs2 := Mux( idx2 === 0.U, (regNum-1).U, rename_ptr(idx2) )
+      io.dpt_lookup(i).rsp.rs3 := (regNum-1).U
       for ( j <- 0 until i ) {
         when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs1 := molloc_idx(j) }
         when( io.dpt_rename(j).req.valid && (io.dpt_rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.dpt_lookup(i).rsp.rs2 := molloc_idx(j) }
@@ -248,7 +248,7 @@ class XRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
 
 }
 
-class FRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2)(implicit p: Parameters) extends RegFiles(dw, dp, rn_chn, rop_chn, wb_chn, cmm_chn ) {
+class FRegFiles (dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(implicit p: Parameters) extends RegFiles(dw, rn_chn, rop_chn, wb_chn, cmm_chn ) {
 
 
   for ( i <- 0 until rn_chn ) {
@@ -276,15 +276,15 @@ class FRegFiles (dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
 }
 
 
-class FakeFRegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2)(implicit p: Parameters) extends RiftModule{
+class FakeFRegFiles(dw: Int, dp: Int, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2)(implicit p: Parameters) extends RiftModule{
   val io = IO( new Bundle{
 
-    val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
-    val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info(dp)) )
-    val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dw, dp)) )
-    val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(dw,dp))))
+    val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info) )
+    val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info) )
+    val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dw)) )
+    val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(dw))))
 
-    val commit = Vec(cmm_chn, Flipped(new Info_commit_op(dp)))
+    val commit = Vec(cmm_chn, Flipped(new Info_commit_op))
 
     val diffReg = Output(Vec(32, UInt(dw.W)))
   })
@@ -292,8 +292,8 @@ class FakeFRegFiles(dw: Int, dp: Int=64, rn_chn: Int = 2, rop_chn: Int=6, wb_chn
 
 
   for( i <- 0 until rn_chn ) {
-    io.dpt_lookup(i).rsp := 0.U.asTypeOf(new Register_source(dp))
-    io.dpt_rename(i).rsp := 0.U.asTypeOf(new Register_dstntn(dp))
+    io.dpt_lookup(i).rsp := 0.U.asTypeOf(new Register_source(regNum))
+    io.dpt_rename(i).rsp := 0.U.asTypeOf(new Register_dstntn(regNum))
     io.dpt_rename(i).req.ready := true.B
   }
 

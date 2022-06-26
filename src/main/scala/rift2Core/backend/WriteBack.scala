@@ -31,45 +31,45 @@ import rift2Core.diff._
 import rift._
 import chipsalliance.rocketchip.config._
 
-class WriteBack( dp: Int=64 )(implicit p: Parameters) extends RiftModule {
+class WriteBack(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
-    val dpt_Xlookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
-    val dpt_Flookup = Vec( rn_chn, Flipped(new dpt_lookup_info(dp)) )
-    val dpt_Xrename = Vec( rn_chn, Flipped(new dpt_rename_info(dp)) )
-    val dpt_Frename = Vec( rn_chn, Flipped(new dpt_rename_info(dp)) )
+    val dpt_Xlookup = Vec( rn_chn, Flipped(new dpt_lookup_info) )
+    val dpt_Flookup = Vec( rn_chn, Flipped(new dpt_lookup_info) )
+    val dpt_Xrename = Vec( rn_chn, Flipped(new dpt_rename_info) )
+    val dpt_Frename = Vec( rn_chn, Flipped(new dpt_rename_info) )
 
 
-    val ooo_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 64,dp)) )
-    val ito_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 64,dp)) )
+    val ooo_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 64)) )
+    val ito_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 64)) )
 
 
-    val frg_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 65,dp)) )
+    val frg_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 65)) )
 
 
-    val alu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
-    val bru_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
-    val csr_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
-    val mem_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
-    val mul_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
-    val fpu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64,dp)))
+    val alu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64)))
+    val bru_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64)))
+    val csr_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64)))
+    val mem_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64)))
+    val mul_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64)))
+    val fpu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64)))
 
-    val mem_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65, dp)))
-    val fpu_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65, dp)))
+    val mem_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65)))
+    val fpu_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65)))
 
-    val commit = Vec(cm_chn, Flipped((new Info_commit_op(dp))))
+    val commit = Vec(cm_chn, Flipped((new Info_commit_op)))
 
     val diffXReg = Output(Vec(32, UInt(64.W)))
     val diffFReg = Output(Vec(32, UInt(65.W)))
   })
 
 
-  val iReg = Module(new XRegFiles(dw = 64, dp, rn_chn, opChn, wbChn, cm_chn))
+  val iReg = Module(new XRegFiles(dw = 64, rn_chn, opChn, wbChn, cm_chn))
   val fRegIO = 
     if( hasFpu ) {
-      val mdl = Module(new FRegFiles(dw = 65, dp, rn_chn, opChn/2, wb_chn=2, cm_chn))
+      val mdl = Module(new FRegFiles(dw = 65, rn_chn, opChn/2, wb_chn=2, cm_chn))
       mdl.io
     } else {
-      val mdl = Module(new FakeFRegFiles(dw = 65, dp, rn_chn, opChn/2, wb_chn=2, cm_chn) )
+      val mdl = Module(new FakeFRegFiles(dw = 65, rn_chn, opChn/2, wb_chn=2, cm_chn) )
       mdl.io
     }
 
@@ -125,7 +125,7 @@ class WriteBack( dp: Int=64 )(implicit p: Parameters) extends RiftModule {
 
 
   val iwriteBack_arb = {
-    val mdl = Module(new XArbiter(new WriteBack_info(dw=64,dp), in = 6, out = wbChn))
+    val mdl = Module(new XArbiter(new WriteBack_info(dw=64), in = 6, out = wbChn))
     mdl.io.enq(0) <> io.alu_iWriteBack
     mdl.io.enq(1) <> io.bru_iWriteBack
     mdl.io.enq(2) <> io.csr_iWriteBack

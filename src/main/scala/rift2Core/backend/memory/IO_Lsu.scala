@@ -42,9 +42,6 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
 
   val is_busy = RegInit(false.B)
   val pending = Reg(new Lsu_iss_info)
-  // val pending_wb = Reg(new WriteBack_info(dw=64,dp=64))
-  // val pending_paddr = Reg(UInt(64.W))
-  // val pending_fun = Reg(new Cache_op)
 
   io.is_empty := ~is_busy
 

@@ -29,7 +29,7 @@ import chipsalliance.rocketchip.config.Parameters
 abstract class BruBase()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
-    val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
+    val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
 
     val bftq = Flipped(Decoupled(new Branch_FTarget_Bundle))
     val jftq = Flipped(Decoupled(new Jump_FTarget_Bundle))
@@ -43,7 +43,7 @@ abstract class BruBase()(implicit p: Parameters) extends RiftModule {
     val flush = Input(Bool())
   })
 
-  val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, true, false ) )
+  val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, true, false ) )
   val bctq = Module(new Queue( new Branch_CTarget_Bundle, (if(!isMinArea) 4 else 2) ) )
   val jctq = Module(new Queue( new Jump_CTarget_Bundle,   (if(!isMinArea) 4 else 2) ) )
 

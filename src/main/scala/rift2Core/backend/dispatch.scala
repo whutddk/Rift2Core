@@ -30,19 +30,14 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
     val bd_dpt = Vec(rn_chn, Flipped(new DecoupledIO(new IF4_Bundle())))
 
     // val dpt_rename = Vec( rn_chn, new dpt_rename_info(64))
-    val dpt_Xlookup = Vec( rn_chn, new dpt_lookup_info(64) )
-    val dpt_Flookup = Vec( rn_chn, new dpt_lookup_info(64) )
-    val dpt_Xrename = Vec( rn_chn, new dpt_rename_info(64) )
-    val dpt_Frename = Vec( rn_chn, new dpt_rename_info(64) )
+    val dpt_Xlookup = Vec( rn_chn, new dpt_lookup_info )
+    val dpt_Flookup = Vec( rn_chn, new dpt_lookup_info )
+    val dpt_Xrename = Vec( rn_chn, new dpt_rename_info )
+    val dpt_Frename = Vec( rn_chn, new dpt_rename_info )
 
 
     val ooo_dpt_iss = Vec(opChn/2, new DecoupledIO(new Dpt_info))
     val ito_dpt_iss = Vec(opChn/2, new DecoupledIO(new Dpt_info))
-
-    // val bru_dpt_iss = new DecoupledIO(new Dpt_info)
-    // val csr_dpt_iss = new DecoupledIO(new Dpt_info)
-    // val lsu_dpt_iss = new DecoupledIO(new Dpt_info)
-    // val fpu_dpt_iss = new DecoupledIO(new Dpt_info)
 
     val rod_i = Vec(cm_chn,new DecoupledIO(new Info_reorder_i))
  
@@ -66,37 +61,7 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
     mdl
   }
 
-  // val bru_dpt_rePort = Module(new RePort( new Dpt_info, port = rn_chn))
-  // val bru_dpt_fifo = {
-  //   val mdl = Module(new MultiPortFifo( new Dpt_info, aw = (if(!isMinArea) 4 else 2), in = rn_chn, out = 1 ))
-  //   mdl.io.enq <> bru_dpt_rePort.io.deq
-  //   mdl.io.deq(0) <> io.bru_dpt_iss
-  //   mdl
-  // }
 
-  // val csr_dpt_rePort = Module(new RePort( new Dpt_info, port = rn_chn))
-  // val csr_dpt_fifo = {
-  //   val mdl = Module(new MultiPortFifo( new Dpt_info, aw = (if(!isMinArea) 4 else 2), in = rn_chn, out = 1 ))
-  //   mdl.io.enq <> csr_dpt_rePort.io.deq
-  //   mdl.io.deq(0) <> io.csr_dpt_iss
-  //   mdl
-  // }
-
-  // val lsu_dpt_rePort = Module(new RePort( new Dpt_info, port = rn_chn))
-  // val lsu_dpt_fifo = {
-  //   val mdl = Module(new MultiPortFifo( new Dpt_info, aw = (if(!isMinArea) 4 else 2), in = rn_chn, out = 1 ))
-  //   mdl.io.enq <> lsu_dpt_rePort.io.deq
-  //   mdl.io.deq(0) <> io.lsu_dpt_iss
-  //   mdl
-  // }
-
-  // val fpu_dpt_rePort = Module(new RePort( new Dpt_info, port = rn_chn))
-  // val fpu_dpt_fifo = {
-  //   val mdl = Module(new MultiPortFifo( new Dpt_info, aw = (if(!isMinArea) 4 else 2), in = rn_chn, out = 1 ))
-  //   mdl.io.enq <> fpu_dpt_rePort.io.deq
-  //   mdl.io.deq(0) <> io.fpu_dpt_iss
-  //   mdl
-  // }
 
   val reOrder_fifo_i = {
     val mdl = Module(new MultiPortFifo(new Info_reorder_i, aw = (if(!isMinArea) 4 else 2), rn_chn, cm_chn))
@@ -104,22 +69,14 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
     mdl
   }
 
-  val reg_phy = Wire(Vec(rn_chn, new Reg_phy(64)) )
+  val reg_phy = Wire(Vec(rn_chn, new Reg_phy ) )
 
   for ( i <- 0 until rn_chn ) yield {
     ooo_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_ooo_dpt
     ito_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_ito_dpt
-    // bru_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.bru_isa.is_bru
-    // csr_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.csr_isa.is_csr
-    // lsu_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.lsu_isa.is_lsu
-    // fpu_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.fpu_isa.is_fpu
 
     ooo_dpt_rePort.io.enq(i).bits := Mux( ooo_dpt_rePort.io.enq(i).valid, Pkg_ooo_dpt(io.bd_dpt(i).bits, reg_phy(i)), 0.U.asTypeOf(new Dpt_info) )
     ito_dpt_rePort.io.enq(i).bits := Mux( ito_dpt_rePort.io.enq(i).valid, Pkg_ito_dpt(io.bd_dpt(i).bits, reg_phy(i)), 0.U.asTypeOf(new Dpt_info) )
-    // bru_dpt_rePort.io.enq(i).bits := Mux( bru_dpt_rePort.io.enq(i).valid, Pkg_bru_dpt(io.bd_dpt(i).bits, reg_phy(i)), 0.U.asTypeOf(new Dpt_info) )
-    // csr_dpt_rePort.io.enq(i).bits := Mux( csr_dpt_rePort.io.enq(i).valid, Pkg_csr_dpt(io.bd_dpt(i).bits, reg_phy(i)), 0.U.asTypeOf(new Dpt_info) )
-    // lsu_dpt_rePort.io.enq(i).bits := Mux( lsu_dpt_rePort.io.enq(i).valid, Pkg_lsu_dpt(io.bd_dpt(i).bits, reg_phy(i)), 0.U.asTypeOf(new Dpt_info) )
-    // fpu_dpt_rePort.io.enq(i).bits := Mux( fpu_dpt_rePort.io.enq(i).valid, Pkg_fpu_dpt(io.bd_dpt(i).bits, reg_phy(i)), 0.U.asTypeOf(new Dpt_info) )
 
     io.dpt_Xrename(i).req.valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_iwb
     io.dpt_Xrename(i).req.bits.rd0 := Mux( io.dpt_Xrename(i).req.valid, io.bd_dpt(i).bits.param.raw.rd0, 0.U )
@@ -160,10 +117,6 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
       for ( j <- 0 to i by 1 ) yield {
         ooo_dpt_rePort.io.enq(j).ready & io.dpt_Xrename(j).req.ready & io.dpt_Frename(j).req.ready & reOrder_fifo_i.io.enq(i).ready &
         ito_dpt_rePort.io.enq(j).ready
-        // bru_dpt_rePort.io.enq(j).ready &
-        // csr_dpt_rePort.io.enq(j).ready &
-        // lsu_dpt_rePort.io.enq(j).ready &
-        // fpu_dpt_rePort.io.enq(j).ready
       }      
     ).reduce(_&_)
 
@@ -201,82 +154,13 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
     res.phy        := rename
 
     when( instr.fpu_isa.is_fpu ) {
-      when(~instr.fpu_isa.hasTwoRs) { res.phy.rs2 := 63.U }
-      when(~instr.fpu_isa.hasThreeRs) { res.phy.rs3 := 63.U }      
+      when(~instr.fpu_isa.hasTwoRs) { res.phy.rs2 := (regNum-1).U }
+      when(~instr.fpu_isa.hasThreeRs) { res.phy.rs3 := (regNum-1).U }      
     }
 
 
     return res
   }
-
-
-
-  // def Pkg_bru_dpt( instr:Info_instruction, rename: Reg_phy): Dpt_info = {
-  //   val res = Wire(new Dpt_info)
-
-  //   res.alu_isa    := 0.U.asTypeOf( new Alu_isa )
-  //   res.bru_isa    := instr.bru_isa
-  //   res.lsu_isa    := 0.U.asTypeOf( new Lsu_isa )
-  //   res.csr_isa    := 0.U.asTypeOf( new Csr_isa )
-  //   res.mul_isa    := 0.U.asTypeOf( new Mul_isa )
-  //   res.privil_isa := 0.U.asTypeOf( new Privil_isa )
-  //   res.fpu_isa    := 0.U.asTypeOf( new Fpu_isa )
-  //   res.param      := instr.param
-  //   res.phy        := rename
-  //   return res
-  // }
-
-  // def Pkg_csr_dpt( instr:Info_instruction, rename: Reg_phy): Dpt_info = {
-  //   val res = Wire(new Dpt_info)
-
-  //   res.alu_isa    := 0.U.asTypeOf( new Alu_isa )
-  //   res.bru_isa    := 0.U.asTypeOf( new Bru_isa )
-  //   res.lsu_isa    := 0.U.asTypeOf( new Lsu_isa )
-  //   res.csr_isa    := instr.csr_isa
-  //   res.mul_isa    := 0.U.asTypeOf( new Mul_isa )
-  //   res.privil_isa := 0.U.asTypeOf( new Privil_isa )
-  //   res.fpu_isa    := 0.U.asTypeOf( new Fpu_isa )
-  //   res.param      := instr.param
-  //   res.phy        := rename
-  //   return res
-  // }
-
-  // def Pkg_lsu_dpt( instr:Info_instruction, rename: Reg_phy): Dpt_info = {
-  //   val res = Wire(new Dpt_info)
-
-  //   res.alu_isa    := 0.U.asTypeOf( new Alu_isa )
-  //   res.bru_isa    := 0.U.asTypeOf( new Bru_isa )
-  //   res.lsu_isa    := instr.lsu_isa
-  //   res.csr_isa    := 0.U.asTypeOf( new Csr_isa )
-  //   res.mul_isa    := 0.U.asTypeOf( new Mul_isa )
-  //   res.privil_isa := 0.U.asTypeOf( new Privil_isa )
-  //   res.fpu_isa    := 0.U.asTypeOf( new Fpu_isa )
-  //   res.param      := instr.param
-  //   res.phy        := rename
-  //   return res
-  // }
-
-  // def Pkg_fpu_dpt( instr:Info_instruction, rename: Reg_phy): Dpt_info = {
-  //   val res = Wire(new Dpt_info)
-
-  //   res.alu_isa    := 0.U.asTypeOf( new Alu_isa )
-  //   res.bru_isa    := 0.U.asTypeOf( new Bru_isa )
-  //   res.lsu_isa    := 0.U.asTypeOf( new Lsu_isa )
-  //   res.csr_isa    := 0.U.asTypeOf( new Csr_isa )
-  //   res.mul_isa    := 0.U.asTypeOf( new Mul_isa )
-  //   res.privil_isa := 0.U.asTypeOf( new Privil_isa )
-  //   res.fpu_isa    := instr.fpu_isa
-  //   res.param      := instr.param
-
-
-  //   res.phy        := rename
-
-  //   when(~instr.fpu_isa.hasTwoRs) { res.phy.rs2 := 63.U }
-  //   when(~instr.fpu_isa.hasThreeRs) { res.phy.rs3 := 63.U }
-
-  //   return res
-  // }
-
 
 
 
@@ -309,11 +193,6 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
   }
 
 
-
-  // bru_dpt_fifo.io.flush := false.B
-  // csr_dpt_fifo.io.flush := false.B
-  // lsu_dpt_fifo.io.flush := false.B
-  // fpu_dpt_fifo.io.flush := false.B
   reOrder_fifo_i.io.flush := false.B
   
   if ( hasFpu ) {

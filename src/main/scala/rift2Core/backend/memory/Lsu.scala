@@ -34,8 +34,8 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
 
   val io = IO(new Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
-    val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65, dp=64))
+    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
+    val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
 
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
@@ -99,22 +99,22 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     * @param in Info_cache_retn
     * @return WriteBack_info 
     */
-  val lu_wb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, false, true ) )
+  val lu_wb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, false, true ) )
 
-  val flu_wb_fifo = Module( new Queue( new WriteBack_info(dw=65,dp=64), 1, false, true ) )
+  val flu_wb_fifo = Module( new Queue( new WriteBack_info(dw=65), 1, false, true ) )
 
   /** store operations will write-back dircetly from opMux, flow !!!!!
     * @param in Lsu_iss_info
     * @return WriteBack_info
     */
-  val su_wb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, false, true ) )
-  val fe_wb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, false, true ) )
+  val su_wb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, false, true ) )
+  val fe_wb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, false, true ) )
 
   /** merge lu-writeback and su-writeback
     * @param in WriteBack_info
     * @return WriteBack_info
     */
-  val rtn_arb = Module(new Arbiter( new WriteBack_info(dw=64,dp=64), 3))
+  val rtn_arb = Module(new Arbiter( new WriteBack_info(dw=64), 3))
 
   /** indicate the mem unit is empty by all seq-element is empty*/
   val is_empty = Wire(Bool())

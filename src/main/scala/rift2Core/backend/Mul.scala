@@ -31,11 +31,11 @@ import chipsalliance.rocketchip.config.Parameters
 abstract class MulDivBase(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle {
     val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
-    val mul_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
+    val mul_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
     val flush = Input(Bool())
   })
 
-  val mul_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, true, false ) )
+  val mul_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, true, false ) )
   mul_exe_iwb_fifo.reset := reset.asBool | io.flush
   io.mul_exe_iwb <> mul_exe_iwb_fifo.io.deq
 
@@ -279,7 +279,7 @@ class MulDiv(implicit p: Parameters) extends MulDivBase with Mul with Div {
     Mux( io.mul_iss_exe.bits.fun.isMul, pipeStage05Rows.io.enq.ready, dividor.io.enq.ready )
 
 
-  val iwbArb = Module(new Arbiter(new WriteBack_info(dw=64,dp=64), 2))
+  val iwbArb = Module(new Arbiter(new WriteBack_info(dw=64), 2))
 
 
   pipeStage02Rows.io.deq.ready := iwbArb.io.in(0).ready
@@ -335,7 +335,7 @@ object csa_3_2 {
 class Dividor(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(new Mul_iss_info))
-    val deq = Decoupled(new WriteBack_info(dw=64,dp=64))
+    val deq = Decoupled(new WriteBack_info(dw=64))
     val flush = Input(Bool())
   })
 

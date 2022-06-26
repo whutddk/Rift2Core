@@ -103,7 +103,7 @@ class Info_cache_s1s2(implicit p: Parameters) extends DcacheBundle with Info_cac
 class Info_cache_sb(implicit p: Parameters) extends Lsu_iss_info
 
 class Info_cache_retn(implicit p: Parameters) extends DcacheBundle with Info_sc_idx {
-  val wb = new WriteBack_info(dw=64,dp=64)
+  val wb = new WriteBack_info(dw=64)
   val is_load_amo = Bool()
 
   val is_flw = Bool()

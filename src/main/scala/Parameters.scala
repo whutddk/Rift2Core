@@ -47,6 +47,8 @@ case class RiftSetting(
   opChn: Int = 6,
   wbChn: Int = 4,
 
+  regNum: Int = 64,
+
   l1BeatBits: Int = 128,
   memBeatBits: Int = 128,
 
@@ -112,6 +114,8 @@ trait HasRiftParameters {
   def rn_chn = riftSetting.rn_chn
   def opChn = riftSetting.opChn
   def wbChn = riftSetting.wbChn
+
+  def regNum = riftSetting.regNum
 
   def l1BeatBits = riftSetting.l1BeatBits
   def memBeatBits = riftSetting.memBeatBits

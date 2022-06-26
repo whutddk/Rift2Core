@@ -36,8 +36,8 @@ class Xres_Info(implicit p: Parameters) extends Exc_Info { val toInt = UInt(64.W
 class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends RiftModule with HasFPUParameters{
   val io = IO(new Bundle{
     val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
-    val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
-    val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
+    val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65))
+    val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65))
     val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
     val fcsr = Input(UInt(24.W))
 
@@ -75,13 +75,13 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
 
 
   val fpu_exe_iwb_fifo = {
-    val mdl = Module( new Queue( new WriteBack_info(dw=65, dp=64), infly ) )
+    val mdl = Module( new Queue( new WriteBack_info(dw=65), infly ) )
     mdl.io.deq <> io.fpu_exe_iwb
     mdl.reset := io.flush | reset.asBool
     mdl
   }
   val fpu_exe_fwb_fifo = {
-    val mdl = Module( new Queue( new WriteBack_info(dw=65, dp=64), infly ) )
+    val mdl = Module( new Queue( new WriteBack_info(dw=65), infly ) )
     mdl.io.deq <> io.fpu_exe_fwb
     mdl.reset := io.flush | reset.asBool
     mdl
@@ -255,8 +255,8 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
 class FakeFAlu(implicit p: Parameters) extends RiftModule with HasFPUParameters{
   val io = IO(new Bundle{
     val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
-    val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
-    val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65, dp=64))
+    val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65))
+    val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65))
     val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
     val fcsr = Input(UInt(24.W))
 
@@ -267,10 +267,10 @@ class FakeFAlu(implicit p: Parameters) extends RiftModule with HasFPUParameters{
   io.fpu_iss_exe.ready := true.B
 
   io.fpu_exe_iwb.valid := false.B
-  io.fpu_exe_iwb.bits  := 0.U.asTypeOf(new WriteBack_info(dw=65, dp=64))
+  io.fpu_exe_iwb.bits  := 0.U.asTypeOf(new WriteBack_info(dw=65))
 
   io.fpu_exe_fwb.valid := false.B
-  io.fpu_exe_fwb.bits  := 0.U.asTypeOf(new WriteBack_info(dw=65, dp=64))
+  io.fpu_exe_fwb.bits  := 0.U.asTypeOf(new WriteBack_info(dw=65))
 
   for ( i <- 0 until cm_chn ) {
     io.fcsr_cmm_op(i).valid := false.B
