@@ -5,8 +5,15 @@ test:
 	sbt "test:runMain test.testModule --target-dir generated --show-registrations --full-stacktrace -e verilog"
 
 compile: clean
-	sbt "test:runMain test.testMain --target-dir generated --show-registrations --full-stacktrace -E verilog"
-
+	sbt "test:runMain test.testMain \
+	--target-dir generated \
+	--show-registrations \
+	--full-stacktrace \
+	-E verilog"
+	
+# --inline \
+# --gen-mem-verilog \
+# --list-clocks \
 
 # sim:
 # 	verilator --cc  -I./generated -I./tb  --exe  -o rift2tb -Mdir ./tb/build rift2core_tb.cpp Rift2Chip.v

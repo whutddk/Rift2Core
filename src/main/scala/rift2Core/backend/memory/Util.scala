@@ -73,7 +73,7 @@ object pkg_Info_cache_s0s1{
       res.fun := 0.U.asTypeOf(new Cache_op)
       res.fun.grant := true.B      
     }
-    res.rd := 0.U.asTypeOf(new Register_dstntn(64))
+    res.rd := 0.U.asTypeOf(new RD_PHY)
     res.chk_idx := 0.U
     res
   }
@@ -88,7 +88,7 @@ object pkg_Info_cache_s0s1{
       res.fun := 0.U.asTypeOf(new Cache_op)
       res.fun.probe := true.B      
     }
-    res.rd := 0.U.asTypeOf(new Register_dstntn(64))
+    res.rd := 0.U.asTypeOf(new RD_PHY)
     res.chk_idx := 0.U
     res
   }

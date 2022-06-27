@@ -31,7 +31,7 @@ abstract class IssueBase()(implicit p: Parameters) extends RiftModule with HasFP
     val ooo_dpt_iss = Vec(opChn/2, Flipped(new DecoupledIO(new Dpt_info)))
     val alu_iss_exe = new DecoupledIO(new Alu_iss_info)
     val mul_iss_exe = new DecoupledIO(new Mul_iss_info)
-    val ooo_readOp  = Vec(opChn/2,  new iss_readOp_info(dw=64,dp=64))
+    val ooo_readOp  = Vec(opChn/2,  new iss_readOp_info(dw=64))
 
     val ito_dpt_iss = Vec(opChn/2, Flipped(new DecoupledIO(new Dpt_info)))
     val bru_iss_exe = new DecoupledIO(new Bru_iss_info)
@@ -39,9 +39,9 @@ abstract class IssueBase()(implicit p: Parameters) extends RiftModule with HasFP
     val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
     val fpu_iss_exe = new DecoupledIO(new Fpu_iss_info)
 
-    val ito_readOp  = Vec(opChn/2,  new iss_readOp_info(dw=64,dp=64))
+    val ito_readOp  = Vec(opChn/2,  new iss_readOp_info(dw=64))
 
-    val frg_readOp  = Vec(opChn/2,  new iss_readOp_info(dw=65,dp=64))
+    val frg_readOp  = Vec(opChn/2,  new iss_readOp_info(dw=65))
 
 
     val flush = Input(Bool())
@@ -231,41 +231,37 @@ trait IssueIto{ this: IssueBase =>
     io.ito_readOp(i).reg.bits  := io.ito_dpt_iss(i).bits.phy
 
     io.frg_readOp(i).reg.valid := false.B
-    io.frg_readOp(i).reg.bits.rs1  := 63.U
-    io.frg_readOp(i).reg.bits.rs2  := 63.U
-    io.frg_readOp(i).reg.bits.rs3  := 63.U
-    io.frg_readOp(i).reg.valid     := false.B
-    io.frg_readOp(i).reg.bits.rs1  := 63.U
-    io.frg_readOp(i).reg.bits.rs2  := 63.U
-    io.frg_readOp(i).reg.bits.rs3  := 63.U
+    io.frg_readOp(i).reg.bits.rs1  := (regNum-1).U
+    io.frg_readOp(i).reg.bits.rs2  := (regNum-1).U
+    io.frg_readOp(i).reg.bits.rs3  := (regNum-1).U
   }
 
 
   for ( i <- opChn/2-1 to 0 by -1 ) yield {
     when( io.ito_dpt_iss(i).bits.lsu_isa.is_lsu ) {//override
       io.ito_readOp(i).reg.bits.rs1  := io.ito_dpt_iss(i).bits.phy.rs1
-      io.ito_readOp(i).reg.bits.rs2  := Mux( io.ito_dpt_iss(i).bits.lsu_isa.is_fst, 63.U, io.ito_dpt_iss(i).bits.phy.rs2 )
-      io.ito_readOp(i).reg.bits.rs3  := 63.U
+      io.ito_readOp(i).reg.bits.rs2  := Mux( io.ito_dpt_iss(i).bits.lsu_isa.is_fst, (regNum-1).U, io.ito_dpt_iss(i).bits.phy.rs2 )
+      io.ito_readOp(i).reg.bits.rs3  := (regNum-1).U
       if( hasFpu ) { //the first chn will be mux in
         io.frg_readOp(i).reg.valid     := io.ito_dpt_iss(i).valid
-        io.frg_readOp(i).reg.bits.rs1  := 63.U
-        io.frg_readOp(i).reg.bits.rs2  := Mux( io.ito_dpt_iss(i).bits.lsu_isa.is_fst, io.ito_dpt_iss(i).bits.phy.rs2, 63.U )
-        io.frg_readOp(i).reg.bits.rs3  := 63.U
+        io.frg_readOp(i).reg.bits.rs1  := (regNum-1).U
+        io.frg_readOp(i).reg.bits.rs2  := Mux( io.ito_dpt_iss(i).bits.lsu_isa.is_fst, io.ito_dpt_iss(i).bits.phy.rs2, (regNum-1).U )
+        io.frg_readOp(i).reg.bits.rs3  := (regNum-1).U
       }
     }
 
     if( hasFpu ) {
       when( io.ito_dpt_iss(i).bits.fpu_isa.is_fpu ) {//override
       
-        io.ito_readOp(i).reg.bits.rs1  := Mux( io.ito_dpt_iss(i).bits.fpu_isa.is_fop, 63.U, io.ito_dpt_iss(i).bits.phy.rs1 )
-        io.ito_readOp(i).reg.bits.rs2  := Mux( io.ito_dpt_iss(i).bits.fpu_isa.is_fop, 63.U, io.ito_dpt_iss(i).bits.phy.rs2 )
-        io.ito_readOp(i).reg.bits.rs3  := 63.U
+        io.ito_readOp(i).reg.bits.rs1  := Mux( io.ito_dpt_iss(i).bits.fpu_isa.is_fop, (regNum-1).U, io.ito_dpt_iss(i).bits.phy.rs1 )
+        io.ito_readOp(i).reg.bits.rs2  := Mux( io.ito_dpt_iss(i).bits.fpu_isa.is_fop, (regNum-1).U, io.ito_dpt_iss(i).bits.phy.rs2 )
+        io.ito_readOp(i).reg.bits.rs3  := (regNum-1).U
 
         //the first chn will be mux in
         io.frg_readOp(i).reg.valid     := io.ito_dpt_iss(i).valid
-        io.frg_readOp(i).reg.bits.rs1  := Mux( io.ito_dpt_iss(i).bits.fpu_isa.is_fop, io.ito_dpt_iss(i).bits.phy.rs1, 63.U )
-        io.frg_readOp(i).reg.bits.rs2  := Mux( io.ito_dpt_iss(i).bits.fpu_isa.is_fop, io.ito_dpt_iss(i).bits.phy.rs2, 63.U )
-        io.frg_readOp(i).reg.bits.rs3  := Mux( io.ito_dpt_iss(i).bits.fpu_isa.is_fop, io.ito_dpt_iss(i).bits.phy.rs3, 63.U )
+        io.frg_readOp(i).reg.bits.rs1  := Mux( io.ito_dpt_iss(i).bits.fpu_isa.is_fop, io.ito_dpt_iss(i).bits.phy.rs1, (regNum-1).U )
+        io.frg_readOp(i).reg.bits.rs2  := Mux( io.ito_dpt_iss(i).bits.fpu_isa.is_fop, io.ito_dpt_iss(i).bits.phy.rs2, (regNum-1).U )
+        io.frg_readOp(i).reg.bits.rs3  := Mux( io.ito_dpt_iss(i).bits.fpu_isa.is_fop, io.ito_dpt_iss(i).bits.phy.rs3, (regNum-1).U )
       }
     }
   }
@@ -319,120 +315,6 @@ trait IssueIto{ this: IssueBase =>
       }
     }
   }
-
-
-
-
-
-  // io.bru_readOp.reg.valid := io.bru_dpt_iss.valid
-  // io.bru_readOp.reg.bits  := io.bru_dpt_iss.bits.phy
-
-  // bru_iss_fifo.io.enq.valid := io.bru_readOp.reg.fire
-  // bru_iss_fifo.io.enq.bits := Mux( bru_iss_fifo.io.enq.valid, Pkg_bru_iss(io.bru_readOp, io.bru_dpt_iss.bits), 0.U.asTypeOf(new Bru_iss_info) )
-
-  // io.bru_dpt_iss.ready := io.bru_readOp.reg.ready & bru_iss_fifo.io.enq.ready
-
-  // when( io.bru_dpt_iss.fire ) {
-  //   assert( io.bru_readOp.reg.fire )
-  //   assert( bru_iss_fifo.io.enq.fire )
-  // }
-
-
-
-
-  // io.csr_readOp.reg.valid := io.csr_dpt_iss.valid
-  // io.csr_readOp.reg.bits  := io.csr_dpt_iss.bits.phy
-
-  // csr_iss_fifo.io.enq.valid := io.csr_readOp.reg.fire
-  // csr_iss_fifo.io.enq.bits := Mux( csr_iss_fifo.io.enq.valid, Pkg_csr_iss(io.csr_readOp, io.csr_dpt_iss.bits), 0.U.asTypeOf(new Csr_iss_info) )
-
-  // io.csr_dpt_iss.ready := io.csr_readOp.reg.ready & csr_iss_fifo.io.enq.ready
-
-  // when( io.csr_dpt_iss.fire ) {
-  //   assert( io.csr_readOp.reg.fire )
-  //   assert( csr_iss_fifo.io.enq.fire )
-  // }
-
-
-  // io.lsu_readXOp.reg.valid := io.lsu_dpt_iss.valid
-  // io.lsu_readXOp.reg.bits.rs1  := io.lsu_dpt_iss.bits.phy.rs1
-  // io.lsu_readXOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.lsu_isa.is_fst, 63.U, io.lsu_dpt_iss.bits.phy.rs2 )
-  // io.lsu_readXOp.reg.bits.rs3  := 63.U
-
-  // if( hasFpu ) {
-  //   io.lsu_readFOp.reg.valid := io.lsu_dpt_iss.valid
-  //   io.lsu_readFOp.reg.bits.rs1  := 63.U
-  //   io.lsu_readFOp.reg.bits.rs2  := Mux( io.lsu_dpt_iss.bits.lsu_isa.is_fst, io.lsu_dpt_iss.bits.phy.rs2, 63.U )
-  //   io.lsu_readFOp.reg.bits.rs3  := 63.U    
-  // } else {
-  //   io.lsu_readFOp.reg.valid     := false.B
-  //   io.lsu_readFOp.reg.bits.rs1  := 63.U
-  //   io.lsu_readFOp.reg.bits.rs2  := 63.U
-  //   io.lsu_readFOp.reg.bits.rs3  := 63.U
-  // }
-
-
-
-  // lsu_iss_fifo.io.enq.valid :=
-  //   io.lsu_readXOp.reg.fire &
-  //   ( if(hasFpu) {io.lsu_readFOp.reg.fire} else {true.B})
-
-  // lsu_iss_fifo.io.enq.bits :=
-  //   Mux(
-  //     lsu_iss_fifo.io.enq.valid,
-  //     Pkg_lsu_iss(io.lsu_readXOp, io.lsu_readFOp, io.lsu_dpt_iss.bits),
-  //     0.U.asTypeOf(new Lsu_iss_info)
-  //   )
-
-  // io.lsu_dpt_iss.ready :=
-  //   io.lsu_readXOp.reg.ready & io.lsu_readFOp.reg.ready &
-  //   lsu_iss_fifo.io.enq.ready
-
-  // when( io.lsu_dpt_iss.fire ) {
-  //   assert(
-  //     io.lsu_readXOp.reg.fire &
-  //     (if(hasFpu) {io.lsu_readFOp.reg.fire} else {true.B})
-  //   )
-  //   assert( lsu_iss_fifo.io.enq.fire )
-  // }
-
-  // if(hasFpu) {
-    // io.fpu_readXOp.reg.valid     := io.fpu_dpt_iss.valid
-    // io.fpu_readXOp.reg.bits.rs1  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, 63.U, io.fpu_dpt_iss.bits.phy.rs1 )
-    // io.fpu_readXOp.reg.bits.rs2  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, 63.U, io.fpu_dpt_iss.bits.phy.rs2 )
-    // io.fpu_readXOp.reg.bits.rs3  := 63.U
-    // io.fpu_readFOp.reg.valid     := io.fpu_dpt_iss.valid
-    // io.fpu_readFOp.reg.bits.rs1  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs1, 63.U )
-    // io.fpu_readFOp.reg.bits.rs2  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs2, 63.U )
-    // io.fpu_readFOp.reg.bits.rs3  := Mux( io.fpu_dpt_iss.bits.fpu_isa.is_fop, io.fpu_dpt_iss.bits.phy.rs3, 63.U )
-
-    // fpu_iss_fifo.io.enq.valid := io.fpu_readXOp.reg.fire & io.fpu_readFOp.reg.fire
-    // fpu_iss_fifo.io.enq.bits := Mux( fpu_iss_fifo.io.enq.valid, Pkg_fpu_iss(io.fpu_readXOp, io.fpu_readFOp, io.fpu_dpt_iss.bits), 0.U.asTypeOf(new Fpu_iss_info) )
-
-    // io.fpu_dpt_iss.ready :=
-    //   io.fpu_readXOp.reg.ready & io.fpu_readFOp.reg.ready & fpu_iss_fifo.io.enq.ready
-
-    // when( io.fpu_dpt_iss.fire ) {
-    //   assert( io.fpu_readXOp.reg.fire & io.fpu_readFOp.reg.fire )
-    //   assert( fpu_iss_fifo.io.enq.fire )
-    // }
-  // } else {
-    // io.fpu_readXOp.reg.valid := false.B
-    // io.fpu_readXOp.reg.bits.rs1  := 63.U
-    // io.fpu_readXOp.reg.bits.rs2  := 63.U
-    // io.fpu_readXOp.reg.bits.rs3  := 63.U
-    // io.fpu_readFOp.reg.valid := false.B
-    // io.fpu_readFOp.reg.bits.rs1  := 63.U
-    // io.fpu_readFOp.reg.bits.rs2  := 63.U
-    // io.fpu_readFOp.reg.bits.rs3  := 63.U
-
-    // fpu_iss_fifo.io.enq.valid := false.B
-    // fpu_iss_fifo.io.enq.bits  := 0.U.asTypeOf(new Fpu_iss_info)
-
-    // io.fpu_dpt_iss.ready := true.B
-
-  // }
-
 
   def Pkg_bru_iss(op: iss_readOp_info, dpt: Dpt_info): Bru_iss_info = {
     val res = Wire(new Bru_iss_info)

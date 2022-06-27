@@ -281,7 +281,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
 
 abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
-    val cm_op = Vec(cm_chn, new Info_commit_op(64))
+    val cm_op = Vec(cm_chn, new Info_commit_op)
     val rod = Vec(cm_chn, Flipped(new DecoupledIO( new Info_reorder_i ) ))
 
     val cmm_lsu = Output(new Info_cmm_lsu)

@@ -77,7 +77,7 @@ trait Info_cache_raw extends DcacheBundle {
   val wstrb  = UInt((dw/8).W)
 
   val fun    = new Cache_op
-  val rd = new Register_dstntn(64)
+  val rd = new RD_PHY
 
   def tag_sel = paddr(plen-1,plen-tag_w)
   def cl_sel  = paddr(addr_lsb+bk_w + line_w-1, addr_lsb+bk_w)

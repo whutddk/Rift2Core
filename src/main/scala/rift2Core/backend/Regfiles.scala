@@ -26,8 +26,8 @@ import rift._
 import chipsalliance.rocketchip.config.Parameters
 
 class dpt_lookup_info()(implicit p: Parameters) extends RiftBundle{
-  val rsp = Input(new Register_source(regNum))
-  val req = Output(new Register_source(32))
+  val rsp = Input(new RS_PHY)
+  val req = Output(new RS_RAW)
 }
 
 /**
@@ -36,12 +36,12 @@ class dpt_lookup_info()(implicit p: Parameters) extends RiftBundle{
   * the rd should rename and malloc 1 new phy, 
   */
 class dpt_rename_info()(implicit p: Parameters) extends RiftBundle{
-  val rsp = Input(new Register_dstntn(regNum))
-  val req = Decoupled(new Register_dstntn(32))
+  val rsp = Input(new RD_PHY)
+  val req = Decoupled(new RD_RAW)
 }
 
 class iss_readOp_info(dw: Int)(implicit p: Parameters) extends RiftBundle{
-  val reg = Decoupled(new Register_source(regNum))
+  val reg = Decoupled(new RS_PHY)
   val dat = Input(new Operation_source(dw))
 }
 
@@ -276,7 +276,7 @@ class FRegFiles (dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(
 }
 
 
-class FakeFRegFiles(dw: Int, dp: Int, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2)(implicit p: Parameters) extends RiftModule{
+class FakeFRegFiles(dw: Int, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2)(implicit p: Parameters) extends RiftModule{
   val io = IO( new Bundle{
 
     val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info) )
@@ -292,8 +292,8 @@ class FakeFRegFiles(dw: Int, dp: Int, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: I
 
 
   for( i <- 0 until rn_chn ) {
-    io.dpt_lookup(i).rsp := 0.U.asTypeOf(new Register_source(regNum))
-    io.dpt_rename(i).rsp := 0.U.asTypeOf(new Register_dstntn(regNum))
+    io.dpt_lookup(i).rsp := 0.U.asTypeOf(new RS_PHY)
+    io.dpt_rename(i).rsp := 0.U.asTypeOf(new RD_PHY)
     io.dpt_rename(i).req.ready := true.B
   }
 

@@ -31,10 +31,10 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
+import chisel3.util.experimental.{FlattenInstance}
 
 
-
-class Rift2Core()(implicit p: Parameters) extends LazyModule with HasRiftParameters{
+class Rift2Core()(implicit p: Parameters) extends LazyModule with HasRiftParameters {
   val prefetcherClientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "prefetch",
@@ -89,7 +89,7 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule with HasRiftParamet
   lazy val module = new Rift2CoreImp(this)
 }
  
-class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
+class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer){ // with FlattenInstance
   val io = IO(new Bundle{
     val dm      = Flipped(new Info_DM_cmm)
     val rtc_clock = Input(Bool())

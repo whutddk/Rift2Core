@@ -272,7 +272,7 @@ class Fpu_float2int_iss_info extends Bundle {
   val rd0_phy = UInt(6.W)
 }
 
-class Fpu_param(implicit p: Parameters) extends Register_dstntn(64){
+class Fpu_param(implicit p: Parameters) extends RD_PHY{
   val dat = new Operation_source(dw=65)
   val rm = UInt(3.W)
 

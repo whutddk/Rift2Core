@@ -47,7 +47,7 @@ case class RiftSetting(
   opChn: Int = 6,
   wbChn: Int = 4,
 
-  regNum: Int = 64,
+  regNum: Int = 48,
 
   l1BeatBits: Int = 128,
   memBeatBits: Int = 128,

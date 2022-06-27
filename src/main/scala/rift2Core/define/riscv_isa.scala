@@ -525,15 +525,34 @@ class Fpu_isa extends Bundle {
 }
 
 
-class Register_source(dp:Int)(implicit p: Parameters) extends RiftBundle {
-  val rs1 = UInt((log2Ceil(dp)).W)
-  val rs2 = UInt((log2Ceil(dp)).W)
-  val rs3 = UInt((log2Ceil(dp)).W)
+// class Register_source(dp:Int)(implicit p: Parameters) extends RiftBundle {
+//   val rs1 = UInt((log2Ceil(dp)).W)
+//   val rs2 = UInt((log2Ceil(dp)).W)
+//   val rs3 = UInt((log2Ceil(dp)).W)
+// }
+
+// class Register_dstntn()(implicit p: Parameters) extends RiftBundle {
+//   val rd0 = UInt((log2Ceil(regNum)).W)
+// }
+
+class RS_RAW(implicit p: Parameters) extends RiftBundle {
+  val rs1 = UInt((log2Ceil(32)).W)
+  val rs2 = UInt((log2Ceil(32)).W)
+  val rs3 = UInt((log2Ceil(32)).W)
 }
 
-class Register_dstntn(dp:Int)(implicit p: Parameters) extends RiftBundle {
-  val rd0 = UInt((log2Ceil(dp)).W)
+class RS_PHY(implicit p: Parameters) extends RiftBundle {
+  val rs1 = UInt((log2Ceil(regNum)).W)
+  val rs2 = UInt((log2Ceil(regNum)).W)
+  val rs3 = UInt((log2Ceil(regNum)).W)
+}
 
+class RD_RAW(implicit p: Parameters) extends RiftBundle {
+  val rd0 = UInt((log2Ceil(32)).W)
+}
+
+class RD_PHY(implicit p: Parameters) extends RiftBundle {
+  val rd0 = UInt((log2Ceil(regNum)).W)
 }
 
 class Operation_source(dw: Int)(implicit p: Parameters) extends RiftBundle {
@@ -542,14 +561,21 @@ class Operation_source(dw: Int)(implicit p: Parameters) extends RiftBundle {
   val op3 = UInt(dw.W)
 }
 
+class Reg_RAW(implicit p: Parameters) extends RiftBundle {
+  val rs1 = UInt((log2Ceil(32)).W)
+  val rs2 = UInt((log2Ceil(32)).W)
+  val rs3 = UInt((log2Ceil(32)).W)
+  val rd0 = UInt((log2Ceil(32)).W)
+}
 
-class Reg_phy(implicit p: Parameters) extends Register_source(regNum) {
+class Reg_PHY(implicit p: Parameters) extends RiftBundle {
+  val rs1 = UInt((log2Ceil(regNum)).W)
+  val rs2 = UInt((log2Ceil(regNum)).W)
+  val rs3 = UInt((log2Ceil(regNum)).W)
   val rd0 = UInt((log2Ceil(regNum)).W)
 }
 
-class Reg_raw(implicit p: Parameters) extends Register_source(32) {
-  val rd0 = UInt((log2Ceil(32)).W)
-}
+
 
 class Instruction_set(implicit p: Parameters) extends RiftBundle{
   val alu_isa = new Alu_isa
@@ -588,7 +614,7 @@ class Instruction_param(implicit p: Parameters) extends RiftBundle {
   
   val imm = UInt(64.W)
   val rm = UInt(3.W)
-  val raw = new Reg_raw
+  val raw = new Reg_RAW
 
 }
 
@@ -599,7 +625,7 @@ class Info_instruction(implicit p: Parameters) extends Instruction_set {
 
 
 class Dpt_info(implicit p: Parameters) extends Info_instruction {
-  val phy = new Reg_phy
+  val phy = new Reg_PHY
 }
 
 
@@ -616,7 +642,7 @@ class Alu_function(implicit p: Parameters) extends RiftBundle {
   val sra = Bool()
 }
 
-class Alu_param(implicit p: Parameters) extends Register_dstntn(regNum) {
+class Alu_param(implicit p: Parameters) extends RD_PHY {
   val is_32w = Bool()
   val is_usi = Bool()
 
@@ -634,7 +660,7 @@ class Alu_iss_info(implicit p: Parameters) extends RiftBundle {
 
 
 
-class Bru_param(implicit p: Parameters) extends Register_dstntn(regNum) {
+class Bru_param(implicit p: Parameters) extends RD_PHY {
   val is_rvc = Bool()
   val pc = UInt(64.W)
   val imm = UInt(64.W)
@@ -653,7 +679,7 @@ class Bru_iss_info(implicit p: Parameters) extends RiftBundle {
 
 
 
-class Lsu_param(implicit p: Parameters) extends Register_dstntn(regNum) {
+class Lsu_param(implicit p: Parameters) extends RD_PHY {
   val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Lsu_param ).asInstanceOf[this.type]
@@ -713,7 +739,7 @@ class Lsu_iss_info(implicit p: Parameters) extends RiftBundle {
 class Fpu_dpt_info(implicit p: Parameters) extends RiftBundle {
   val isa = new Fpu_isa
   val param = new Instruction_param
-  val phy = new Reg_phy
+  val phy = new Reg_PHY
 }
 
 
@@ -757,7 +783,7 @@ class Csr_function(implicit p: Parameters) extends RiftBundle {
   val rc  = Bool()
 }
 
-class Csr_param(implicit p: Parameters) extends Register_dstntn(regNum) {
+class Csr_param(implicit p: Parameters) extends RD_PHY {
   val dat = new Operation_source(dw=64)
 
   // override def cloneType = ( new Csr_param ).asInstanceOf[this.type]
@@ -768,7 +794,7 @@ class Csr_iss_info(implicit p: Parameters) extends RiftBundle {
   val param = new Csr_param
 }
 
-class Mul_param(implicit p: Parameters) extends Register_dstntn(regNum) {
+class Mul_param(implicit p: Parameters) extends RD_PHY {
   val dat = new Operation_source(dw=64)
 
 // override def cloneType = ( new Mul_param ).asInstanceOf[this.type]
@@ -781,7 +807,7 @@ class Mul_iss_info(implicit p: Parameters) extends RiftBundle {
 
 
 
-case class WriteBack_info(dw:Int)(implicit p: Parameters) extends Register_dstntn(regNum) {
+case class WriteBack_info(dw:Int)(implicit p: Parameters) extends RD_PHY {
   val res = UInt(dw.W)
 
 }

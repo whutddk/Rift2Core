@@ -69,7 +69,7 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
     mdl
   }
 
-  val reg_phy = Wire(Vec(rn_chn, new Reg_phy ) )
+  val reg_phy = Wire(Vec(rn_chn, new Reg_PHY ) )
 
   for ( i <- 0 until rn_chn ) yield {
     ooo_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_ooo_dpt
@@ -96,7 +96,7 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
     
     reg_phy(i).rs1 := Mux(io.bd_dpt(i).bits.fpu_isa.is_fop, io.dpt_Flookup(i).rsp.rs1, io.dpt_Xlookup(i).rsp.rs1)
     reg_phy(i).rs2 := Mux(io.bd_dpt(i).bits.fpu_isa.is_fop | io.bd_dpt(i).bits.lsu_isa.is_fst, io.dpt_Flookup(i).rsp.rs2, io.dpt_Xlookup(i).rsp.rs2)
-    reg_phy(i).rs3 := Mux(io.bd_dpt(i).bits.fpu_isa.is_fop, io.dpt_Flookup(i).rsp.rs3, 63.U)
+    reg_phy(i).rs3 := Mux(io.bd_dpt(i).bits.fpu_isa.is_fop, io.dpt_Flookup(i).rsp.rs3, (regNum-1).U)
     reg_phy(i).rd0 := 
       Mux1H(Seq(
         io.dpt_Frename(i).req.fire -> io.dpt_Frename(i).rsp.rd0,
@@ -125,7 +125,7 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
   }
 
 
-  def Pkg_ooo_dpt( instr: Info_instruction, rename: Reg_phy): Dpt_info = {
+  def Pkg_ooo_dpt( instr: Info_instruction, rename: Reg_PHY): Dpt_info = {
     val res = Wire(new Dpt_info)
 
     res.alu_isa    := instr.alu_isa
@@ -140,7 +140,7 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
     return res
   }
 
-  def Pkg_ito_dpt( instr:Info_instruction, rename: Reg_phy): Dpt_info = {
+  def Pkg_ito_dpt( instr:Info_instruction, rename: Reg_PHY): Dpt_info = {
     val res = Wire(new Dpt_info)
 
     res.alu_isa    := 0.U.asTypeOf( new Alu_isa )
@@ -164,7 +164,7 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
 
 
 
-  def Pkg_rod_i(instr:Info_instruction, rename: Reg_phy): Info_reorder_i = {
+  def Pkg_rod_i(instr:Info_instruction, rename: Reg_PHY): Info_reorder_i = {
     val res = Wire(new Info_reorder_i)
 
       res.pc             := instr.param.pc
