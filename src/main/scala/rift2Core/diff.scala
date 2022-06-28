@@ -25,7 +25,8 @@ import rift2Core.define._
 import rift2Core.frontend._
 import rift2Core.backend._
 
-
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
 
 class Info_cmm_diff extends Bundle {
@@ -38,7 +39,7 @@ class Info_cmm_diff extends Bundle {
   val is_ecall_U = Bool()
 }
 
-class Info_csr_reg extends Bundle {
+class Info_csr_reg(implicit p: Parameters) extends RiftBundle {
 	val mstatus = UInt(64.W)
 	val mtvec = UInt(64.W)
 	val mscratch = UInt(64.W)
@@ -63,8 +64,8 @@ class Info_csr_reg extends Bundle {
   // val tdata3[MAX_TRIGGERS] = UInt(64.W)
   // val mhpmevent[32] = UInt(64.W)
 
-  val pmpcfg = Vec(4, UInt(64.W))
-	val pmpaddr = Vec(16, UInt(64.W))
+  val pmpcfg = Vec(pmpNum, UInt(64.W))
+	val pmpaddr = Vec(8*pmpNum, UInt(64.W))
 
 
   val stvec = UInt(64.W)
@@ -87,7 +88,7 @@ class Info_csr_reg extends Bundle {
   val mhpmcounter = Vec( 32, UInt(64.W))
 }
 
-class diff extends Module with HasFPUParameters{
+class diff(implicit p: Parameters) extends RiftModule with HasFPUParameters{
   val io = IO(new Bundle{
     val diffXReg = Input(Vec(32, UInt(64.W)))
     val diffFReg = Input(Vec(32, UInt(65.W)))

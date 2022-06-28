@@ -48,7 +48,7 @@ class Rift2GoCfg extends Config((site, here, up) => {
     opChn = 4,
     wbChn = 2,
 
-    regNum = 48,
+    regNum = 40,
 
     l1BeatBits = 64,
     memBeatBits = 64,

@@ -78,11 +78,11 @@ class Info_mmu_rsp(implicit p: Parameters) extends RiftBundle {
 }
 
 
-class Info_cmm_mmu extends Bundle {
+class Info_cmm_mmu(implicit p: Parameters) extends RiftBundle {
   val satp = UInt(64.W)
 
-	val pmpcfg = Vec(16, UInt(64.W))
-  val pmpaddr = Vec(64, UInt(64.W))
+	val pmpcfg = Vec(pmpNum, UInt(64.W))
+  val pmpaddr = Vec(8*pmpNum, UInt(64.W))
 
   val priv_lvl_if = UInt(2.W)
   val priv_lvl_ls = UInt(2.W)

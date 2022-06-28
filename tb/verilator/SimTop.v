@@ -159,9 +159,9 @@ module SimTop (
   // output [63:0] trace_tdata3,
   // output [63:0] trace_mhpmevent,
   output [63:0] trace_pmpcfg_0,
-  output [63:0] trace_pmpcfg_1,
-  output [63:0] trace_pmpcfg_2,
-  output [63:0] trace_pmpcfg_3,
+  // output [63:0] trace_pmpcfg_1,
+  // output [63:0] trace_pmpcfg_2,
+  // output [63:0] trace_pmpcfg_3,
 
 	output [63:0] trace_pmpaddr_0,
 	output [63:0] trace_pmpaddr_1,
@@ -171,14 +171,14 @@ module SimTop (
 	output [63:0] trace_pmpaddr_5,
 	output [63:0] trace_pmpaddr_6,
 	output [63:0] trace_pmpaddr_7,
-	output [63:0] trace_pmpaddr_8,
-	output [63:0] trace_pmpaddr_9,
-	output [63:0] trace_pmpaddr_10,
-	output [63:0] trace_pmpaddr_11,
-	output [63:0] trace_pmpaddr_12,
-	output [63:0] trace_pmpaddr_13,
-	output [63:0] trace_pmpaddr_14,
-	output [63:0] trace_pmpaddr_15,
+	// output [63:0] trace_pmpaddr_8,
+	// output [63:0] trace_pmpaddr_9,
+	// output [63:0] trace_pmpaddr_10,
+	// output [63:0] trace_pmpaddr_11,
+	// output [63:0] trace_pmpaddr_12,
+	// output [63:0] trace_pmpaddr_13,
+	// output [63:0] trace_pmpaddr_14,
+	// output [63:0] trace_pmpaddr_15,
 
   output [63:0] trace_stvec,
   output [63:0] trace_sscratch,
@@ -696,9 +696,9 @@ end
 // assign trace_mhpmevent     = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmevent;
 
 	assign trace_pmpcfg_0 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_0;
-	assign trace_pmpcfg_1 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_1;
-	assign trace_pmpcfg_2 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_2;
-	assign trace_pmpcfg_3 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_3;
+	// assign trace_pmpcfg_1 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_1;
+	// assign trace_pmpcfg_2 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_2;
+	// assign trace_pmpcfg_3 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_3;
 
 	assign trace_pmpaddr_0  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_0;
 	assign trace_pmpaddr_1  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_1;
@@ -708,14 +708,14 @@ end
 	assign trace_pmpaddr_5  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_5;
 	assign trace_pmpaddr_6  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_6;
 	assign trace_pmpaddr_7  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_7;
-	assign trace_pmpaddr_8  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_8;
-	assign trace_pmpaddr_9  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_9;
-	assign trace_pmpaddr_10 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_10;
-	assign trace_pmpaddr_11 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_11;
-	assign trace_pmpaddr_12 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_12;
-	assign trace_pmpaddr_13 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_13;
-	assign trace_pmpaddr_14 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_14;
-	assign trace_pmpaddr_15 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_15;
+	// assign trace_pmpaddr_8  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_8;
+	// assign trace_pmpaddr_9  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_9;
+	// assign trace_pmpaddr_10 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_10;
+	// assign trace_pmpaddr_11 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_11;
+	// assign trace_pmpaddr_12 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_12;
+	// assign trace_pmpaddr_13 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_13;
+	// assign trace_pmpaddr_14 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_14;
+	// assign trace_pmpaddr_15 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_15;
 
 	assign trace_stvec    = s_Rift2Chip.i_rift2Core.diff.io_csr_stvec;
 	assign trace_sscratch = s_Rift2Chip.i_rift2Core.diff.io_csr_sscratch;

@@ -522,8 +522,8 @@ trait CommitState { this: BaseCommit =>
     csrfiles.dscratch0     := 0.U
     csrfiles.dscratch1     := 0.U
     csrfiles.dscratch2     := 0.U
-    csrfiles.pmpcfg        := VecInit( Seq.fill(16)(VecInit( Seq.fill(8)(0.U.asTypeOf( new PmpcfgBundle) ))))
-    csrfiles.pmpaddr       := VecInit( Seq.fill(64)(0.U(64.W)) )
+    csrfiles.pmpcfg        := VecInit( Seq.fill(pmpNum)(VecInit( Seq.fill(8)(0.U.asTypeOf( new PmpcfgBundle) ))))
+    csrfiles.pmpaddr       := VecInit( Seq.fill(8*pmpNum)(0.U(64.W)) )
     csrfiles.hpmcounter    := VecInit( Seq.fill(32)(0.U(64.W)) )
     csrfiles.mhpmcounter   := VecInit( Seq.fill(32)(0.U(64.W)) )
     csrfiles.mhpmevent     := VecInit( Seq.fill(32)(0.U(64.W)) )    
@@ -594,10 +594,10 @@ trait CommitDiff { this: BaseCommit =>
   // io.diff_csr.tdata2[MAX_TRIGGERS] = tdata2
   // io.diff_csr.tdata3[MAX_TRIGGERS] = tdata3
   // io.diff_csr.mhpmevent[32]        = mhpmevent
-  for ( i <- 0 until 4 ) yield {
+  for ( i <- 0 until pmpNum ) yield {
     io.diff_csr.pmpcfg(i) := csrfiles.pmpcfg(i).asUInt
   }
-  for ( i <- 0 until 16 ) yield {
+  for ( i <- 0 until 8*pmpNum ) yield {
 	  io.diff_csr.pmpaddr(i)  := csrfiles.pmpaddr(i)  
   }
 
@@ -797,8 +797,8 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
 
 
   io.cmm_mmu.satp := csrfiles.satp.asUInt
-  for ( i <- 0 until 16 ) yield io.cmm_mmu.pmpcfg(i) := csrfiles.pmpcfg(i).asUInt
-  for ( i <- 0 until 64 ) yield io.cmm_mmu.pmpaddr(i) := csrfiles.pmpaddr(i)
+  for ( i <- 0 until pmpNum )   yield io.cmm_mmu.pmpcfg(i) := csrfiles.pmpcfg(i).asUInt
+  for ( i <- 0 until 8*pmpNum ) yield io.cmm_mmu.pmpaddr(i) := csrfiles.pmpaddr(i)
   io.cmm_mmu.priv_lvl_if   := csrfiles.priv_lvl
   io.cmm_mmu.priv_lvl_ls   := Mux( csrfiles.mstatus.mprv.asBool, csrfiles.mstatus.mpp, csrfiles.priv_lvl )
   io.cmm_mmu.mstatus    := csrfiles.mstatus.asUInt

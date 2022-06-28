@@ -171,7 +171,7 @@ int main(int argc, char **argv, char **env) {
 
 			if ( top->trace_comfirm_0 && (top->trace_comfirm_1 || top->trace_abort_1) ) {
 				// printf("real pc = %lx, real t0 = %lx\n", top->trace_pc_1, top->trace_abi_t0);
-
+				printf("    Commit2: \n");
 				if ( flag_diffEnable ) {
 					if ( -1 == diff_chk_pc(top) ) {
 						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
@@ -187,6 +187,7 @@ int main(int argc, char **argv, char **env) {
 
 			} else if ( top->trace_comfirm_0 || top->trace_abort_0 ) {
 				// printf("real pc = %lx, real t0 = %lx\n", top->trace_pc_0, top->trace_abi_t0);
+				printf("    Commit1: \n");
 				if ( flag_diffEnable ) {
 					if ( -1 == diff_chk_pc(top) ) {
 						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
