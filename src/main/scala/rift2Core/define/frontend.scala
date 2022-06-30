@@ -204,11 +204,6 @@ class TageUpdate_Bundle(implicit p: Parameters) extends TageResp_Bundle {
 
 
 
-// class Predict_Bundle(implicit p: Parameters) extends IFetchBundle {
-//   val btb = new BTBResp_Bundle
-//   val bim = new BIMResp_Bundle
-//   val tage = Vec( 6, new TageTableResp_Bundle )
-// }
 
 
 class IF3_Bundle(implicit p: Parameters) extends RiftBundle {

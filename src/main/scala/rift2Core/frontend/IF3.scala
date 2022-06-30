@@ -44,7 +44,7 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
     val flush = Input(Bool())
   })
 
-  val ghist_snap = RegInit( 0.U(64.W) )
+  val ghist_snap   = RegInit( 0.U(64.W) )
   val ghist_active = RegInit( 0.U(64.W) )
 
   val reAlign = Wire(Vec(4, DecoupledIO(new IF3_Bundle)))
@@ -61,7 +61,7 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val tageFifo = Module(new MultiPortFifo( Vec(6, new TageTableResp_Bundle ), aw = (if(!isMinArea) 4 else 2), in = 1, out = 2, flow = true ) )
 
 
-  val predictor_ready = btb.io.isReady & bim.io.isReady & tage.io.isReady
+  val predictor_ready = btb.io.isReady & bim.io.isReady & (if (!isMinArea) { tage.io.isReady } else {true.B})
 
   val if3_resp_fifo = Module(new MultiPortFifo( new IF3_Bundle, (if(!isMinArea) 4 else 3), 4, 2 ))
 
@@ -167,7 +167,7 @@ trait IF3_Predict{ this: IF3Base =>
 
   val is_req_btb   = reAlign.map{ _.bits.preDecode.is_req_btb}
   val is_req_bim   = reAlign.map{ _.bits.preDecode.is_req_bim}
-  val is_req_tage  = reAlign.map{ _.bits.preDecode.is_req_tage}
+  val is_req_tage  = if (!isMinArea) {reAlign.map{ _.bits.preDecode.is_req_tage}} else { reAlign.map{ _ => false.B } }
   val is_lock_pipe = reAlign.map{ _.bits.preDecode.is_lock_pipe}
 
   reAlign <> combPDT.io.enq//waiting for overriding
@@ -175,12 +175,15 @@ trait IF3_Predict{ this: IF3Base =>
 
   btb.io.req.bits.pc := 0.U
   bim.io.req.bits.pc := 0.U
-  tage.io.req.bits.pc    := 0.U
-  tage.io.req.bits.ghist := 0.U
 
   btb.io.req.valid := false.B
   bim.io.req.valid := false.B
+
+
+  tage.io.req.bits.pc    := 0.U
+  tage.io.req.bits.ghist := 0.U
   tage.io.req.valid := false.B
+
 
   for ( i <- 3 to 0 by -1 ) {
 
@@ -205,11 +208,10 @@ trait IF3_Predict{ this: IF3Base =>
       }
     }
 
-    
-    when( is_req_tage(i) ) {
-      when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_tage(j) }.reduce(_|_) } ) {
 
-      } .otherwise{
+    when( is_req_tage(i) ) {
+      when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_tage(j) }.reduce(_|_) } ) { }
+      .otherwise{
         tage.io.req.valid      := reAlign(i).valid & ~(io.flush | io.if4Redirect.fire)
         tage.io.req.bits.pc    := reAlign(i).bits.pc
         tage.io.req.bits.ghist := ghist_active
@@ -249,7 +251,7 @@ trait IF3_Predict{ this: IF3Base =>
       }
     }
 
-    
+
     when( is_req_tage(i) ) {
       when( if ( i == 0 ) { false.B } else { ( 0 until i ).map{ j => is_req_tage(j) }.reduce(_|_) } ) {
         for ( k <- i until 4 ) {
@@ -275,34 +277,40 @@ trait IF3_Update{ this: IF3Base =>
   bim.io.update.bits.pc              := io.bcmm_update.bits.pc
   bim.io.update.bits.isFinalTaken    := io.bcmm_update.bits.isFinalTaken
 
-  tage.io.update.valid              := io.bcmm_update.valid
-  tage.io.update.bits.viewAsSupertype( new TageResp_Bundle ) := io.bcmm_update.bits.tageResp
-  tage.io.update.bits.pc            := io.bcmm_update.bits.pc
-  tage.io.update.bits.ghist         := io.bcmm_update.bits.ghist
-  tage.io.update.bits.isFinalTaken  := io.bcmm_update.bits.isFinalTaken
+  if (!isMinArea) {
+    tage.io.update.valid              := io.bcmm_update.valid
+    tage.io.update.bits.viewAsSupertype( new TageResp_Bundle ) := io.bcmm_update.bits.tageResp
+    tage.io.update.bits.pc            := io.bcmm_update.bits.pc
+    tage.io.update.bits.ghist         := io.bcmm_update.bits.ghist
+    tage.io.update.bits.isFinalTaken  := io.bcmm_update.bits.isFinalTaken
+  } else {
+    tage.io.update.valid              := false.B
+    tage.io.update.bits               := 0.U.asTypeOf(new TageUpdate_Bundle)
+  }
 
+  if (!isMinArea) { 
+    when( io.flush & ~pipeLineLock ) {
+      ghist_active := 0.U
+    } .elsewhen( (io.bcmm_update.valid & io.bcmm_update.bits.isMisPredict) | (io.jcmm_update.valid & io.jcmm_update.bits.isMisPredict) | ( io.flush & pipeLineLock ) ) {
+      ghist_active := ghist_snap
+    } .elsewhen( io.if4_update_ghist(0).valid & io.if4_update_ghist(1).valid ) {
+      ghist_active := (ghist_active << 2) | Cat( io.if4_update_ghist(0).bits.isTaken, io.if4_update_ghist(1).bits.isTaken )
+    } .elsewhen ( io.if4_update_ghist(0).valid ) {
+      ghist_active := (ghist_active << 1) | io.if4_update_ghist(0).bits.isTaken
+    } .elsewhen ( io.if4_update_ghist(1).valid ) {
+      ghist_active := (ghist_active << 1) | io.if4_update_ghist(1).bits.isTaken
+    }
 
-  when( io.flush & ~pipeLineLock ) {
+    //ifence & vmaFence can keep the history for pipeline is locking
+    when( io.flush & ~pipeLineLock ) {
+      ghist_snap := 0.U
+    } .elsewhen( io.bcmm_update.valid ) {
+      ghist_snap := (ghist_snap << 1) | io.bcmm_update.bits.isFinalTaken
+    }
+  } else {
     ghist_active := 0.U
-  } .elsewhen( (io.bcmm_update.valid & io.bcmm_update.bits.isMisPredict) | (io.jcmm_update.valid & io.jcmm_update.bits.isMisPredict) | ( io.flush & pipeLineLock ) ) {
-    ghist_active := ghist_snap
-  } .elsewhen( io.if4_update_ghist(0).valid & io.if4_update_ghist(1).valid ) {
-    ghist_active := (ghist_active << 2) | Cat( io.if4_update_ghist(0).bits.isTaken, io.if4_update_ghist(1).bits.isTaken )
-  } .elsewhen ( io.if4_update_ghist(0).valid ) {
-    ghist_active := (ghist_active << 1) | io.if4_update_ghist(0).bits.isTaken
-  } .elsewhen ( io.if4_update_ghist(1).valid ) {
-    ghist_active := (ghist_active << 1) | io.if4_update_ghist(1).bits.isTaken
-  }
-
-
-
-  //ifence & vmaFence can keep the history for pipeline is locking
-  when( io.flush & ~pipeLineLock ) {
     ghist_snap := 0.U
-  } .elsewhen( io.bcmm_update.valid ) {
-    ghist_snap := (ghist_snap << 1) | io.bcmm_update.bits.isFinalTaken
   }
-
 
   when( io.flush | io.if4Redirect.fire ) { pipeLineLock := false.B }
   .elsewhen( (for ( i <- 0 until 4 ) yield { reAlign(i).bits.preDecode.is_lock_pipe & reAlign(i).fire}).reduce(_|_) ) { pipeLineLock := true.B }

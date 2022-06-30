@@ -67,12 +67,12 @@ abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
   val is_fencei    = io.if4_req.map{_.bits.preDecode.is_fencei}
   val is_sfencevma = io.if4_req.map{_.bits.preDecode.is_sfencevma}
   val pc           = io.if4_req.map{_.bits.pc}
-  val ghist        = io.if4_req.map{_.bits.ghist}
+  val ghist        = if (!isMinArea) { io.if4_req.map{_.bits.ghist} } else { io.if4_req.map{_ => 0.U(64.W)} }
   val imm          = io.if4_req.map{_.bits.preDecode.imm}
 
   val is_req_btb   = io.if4_req.map{ _.bits.preDecode.is_req_btb}
   val is_req_bim   = io.if4_req.map{ _.bits.preDecode.is_req_bim}
-  val is_req_tage  = io.if4_req.map{ _.bits.preDecode.is_req_tage}
+  val is_req_tage  = if (!isMinArea) { io.if4_req.map{ _.bits.preDecode.is_req_tage} } else {io.if4_req.map{ _ => false.B}}
 
 
   val tageRedirect = ReDirect(io.tageResp, VecInit(is_req_tage) )
@@ -106,11 +106,16 @@ trait IF4_Predict{ this: IF4Base =>
   val isIf4Redirect = Wire(Vec(2, Bool()))
 
   val is_bTaken = for ( i <- 0 until 2 ) yield {
+    if (!isMinArea) {
     // Mux( ~tage_decode(i).isAlloc.reduce(_&_),
     //     tage_decode(i).isPredictTaken,
     //     bim_decode(i).bim_p
     // )
-    bim_decode(i).bim_p
+      bim_decode(i).bim_p   
+    } else {
+      bim_decode(i).bim_p      
+    }
+
   }  
 
   for( i <- 0 until 2 ) {
@@ -141,11 +146,17 @@ trait IF4_Predict{ this: IF4Base =>
 
   }
 
-  for( i <- 0 until 2 ) yield {
-    io.if4_update_ghist(i).valid :=
-      io.if4_req(i).fire & is_branch(i)
 
-    io.if4_update_ghist(i).bits.isTaken := is_bTaken(i)
+  for( i <- 0 until 2 ) yield {
+    if (!isMinArea) { 
+      io.if4_update_ghist(i).valid :=
+        io.if4_req(i).fire & is_branch(i)
+      io.if4_update_ghist(i).bits.isTaken := is_bTaken(i)
+    } else {
+      io.if4_update_ghist(i).valid := false.B
+      io.if4_update_ghist(i).bits.isTaken := DontCare
+    }
+
   }
 
   for( i <- 0 until 2 ) yield {
@@ -175,11 +186,9 @@ trait IF4_Predict{ this: IF4Base =>
 
   for ( i <- 0 until 2 ) yield {
     bRePort.io.enq(i).bits.pc             := pc(i)
-    bRePort.io.enq(i).bits.ghist          := ghist(i)
+    if (!isMinArea) { bRePort.io.enq(i).bits.ghist := ghist(i) } else { bRePort.io.enq(i).bits.ghist := DontCare }
     bRePort.io.enq(i).bits.bimResp        := bim_decode(i)
-    bRePort.io.enq(i).bits.tageResp       := tage_decode(i)
-    // bRePort.io.enq(i).bits.revertTarget   := Mux( is_bTaken(i), (pc(i) + Mux(is_rvc(i), 2.U, 4.U)), (pc(i) + imm(i)) )
-    // bRePort.io.enq(i).bits.predicTarget   := Mux(~is_bTaken(i), (pc(i) + Mux(is_rvc(i), 2.U, 4.U)), (pc(i) + imm(i)) )
+    if (!isMinArea) { bRePort.io.enq(i).bits.tageResp := tage_decode(i) } else { bRePort.io.enq(i).bits.tageResp := DontCare }
     bRePort.io.enq(i).bits.isPredictTaken := is_bTaken(i)
 
     jRePort.io.enq(i).bits.pc      := pc(i)
@@ -199,23 +208,14 @@ trait IF4SRAM { this: IF4Base =>
 
 
 
-  // io.btbResp.ready  := false.B 
-  // io.bimResp.ready  := false.B 
-  // io.tageResp.ready := false.B 
-
-  // val is_ram_block = 
-  //   (PopCount( is_req_btb ) > 1.U ) |
-  //   (PopCount( is_req_bim ) > 1.U ) |
-  //   (PopCount( is_req_tage ) > 1.U )
-
   for ( i <- 0 until 2 ) yield {
     btbRedirect(i).ready := is_req_btb(i) & io.if4_req(i).fire
     bimRedirect(i).ready := is_req_bim(i) & io.if4_req(i).fire
-    tageRedirect(i).ready := is_req_tage(i) & io.if4_req(i).fire
+    if (!isMinArea) { tageRedirect(i).ready := is_req_tage(i) & io.if4_req(i).fire } else { tageRedirect(i).ready := true.B }
 
     assert( ~(btbRedirect(i).ready  & ~btbRedirect(i).valid) )
     assert( ~(bimRedirect(i).ready  & ~bimRedirect(i).valid) )
-    assert( ~(tageRedirect(i).ready & ~tageRedirect(i).valid))
+    if (!isMinArea) { assert( ~(tageRedirect(i).ready & ~tageRedirect(i).valid)) }
   }
 
       
