@@ -52,14 +52,14 @@ class Cache_dat( dw: Int, aw: Int, cb: Int, cl: Int, bk: Int ) {
 
   val dat_ram = {
     for ( i <- 0 until cb ) yield { 
-      val mdl = Mem( cl, Vec( dw/8, UInt(8.W) ) )
+      val mdl = SyncReadMem( cl, Vec( dw/8, UInt(8.W) ) )
       mdl
     }
   }
 
   for ( i <- 0 until cb ) yield {
     val data_i = VecInit(for ( k <- 0 until dw/8 ) yield dat_info_w(8*k+7, 8*k))
-    val data_o = Cat( for ( k <- 0 until dw/8 ) yield { dat_ram(i).read(addr_sel_r)(dw/8-1-k) } )
+    val data_o = Cat( for ( k <- 0 until dw/8 ) yield { dat_ram(i).read(addr_sel_r, dat_en_r(i))(dw/8-1-k) } )
 
     when( dat_en_w(i) ) {
       dat_ram(i).write(addr_sel_w, data_i, dat_info_wstrb.asBools)
@@ -67,17 +67,15 @@ class Cache_dat( dw: Int, aw: Int, cb: Int, cl: Int, bk: Int ) {
 
     dat_info_r(i) := {
       val mask = dat_info_wstrb.asBools
-      val ext_mask = Cat( for ( k <- 0 until dw/8 ) yield Fill(8, mask(dw/8-1-k)) )
 
-      RegEnable(
-        Mux(
-          addr_sel_r === addr_sel_w & dat_en_w(i) & dat_en_r(i),
-          (dat_info_w & ext_mask) | (data_o & ~ext_mask),
-          data_o
-        ),
-        0.U(dw.W),
-        dat_en_r(i)
-      )    
+      val wdata    = RegNext( dat_info_w )
+      val ext_mask = RegNext(Cat( for ( k <- 0 until dw/8 ) yield Fill(8, mask(dw/8-1-k)) ))
+
+      val isBypass = RegNext(addr_sel_r === addr_sel_w & dat_en_w(i) & dat_en_r(i), false.B)
+      val isEnable = RegNext(dat_en_r(i), false.B)
+
+      Mux( isEnable, Mux(isBypass, (wdata & ext_mask) | (data_o & ~ext_mask), data_o), 0.U )
+
     }    
   }
 

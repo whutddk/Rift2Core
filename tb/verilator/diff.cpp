@@ -108,13 +108,20 @@ int dromajo_init() {
 	
 	temp[1] = "--reset_vector";
 	temp[2] = "0x80000000";
-	temp[3] = img;
-	temp[4] = "--mmio_range";
-	temp[5] = "0x20000000:0x3fffffff";
+	
+	temp[3] = "--mmio_range";
+	temp[4] = "0x20000000:0x3fffffff";
+	// temp[3] = "--memory_addr";
+	// temp[4] = "0x20000000";	
+	// temp[5] = "--memory_size";
+	// temp[6] = "2048";
+
+
+	temp[5] = img;
 
 	char **argv_temp = temp;
 
-	machine = virt_machine_main(4,  argv_temp );
+	machine = virt_machine_main(6,  argv_temp );
 	cpu = machine->cpu_state[0];
 	if ( machine == NULL ) {
 		std::cout << "DROMAJO Init Failed!!!" << std::endl;;

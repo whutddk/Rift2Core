@@ -46,7 +46,7 @@ class Cache_tag( dw: Int, aw: Int, cb: Int, cl: Int, bk: Int ) {
 
 
   val tag_ram = {
-    for ( i <- 0 until cb ) yield { val ram = Mem( cl, UInt(tag_w.W) ); ram }
+    for ( i <- 0 until cb ) yield { val ram = SyncReadMem( cl, UInt(tag_w.W) ); ram }
   }
 
   for ( i <- 0 until cb ) yield {
@@ -54,15 +54,14 @@ class Cache_tag( dw: Int, aw: Int, cb: Int, cl: Int, bk: Int ) {
       tag_ram(i).write(addr_sel_w, tag_info_w)
     }
 
+    val isBypass = RegNext(addr_sel_r === addr_sel_w & tag_en_w(i) & tag_en_r(i), false.B)
+    val isEnable = RegNext(tag_en_r(i), false.B)
+    val tag_o = tag_ram(i).read(addr_sel_r, tag_en_r(i))
+
 
     tag_info_r(i) := 
-      RegEnable(
-        Mux( addr_sel_r === addr_sel_w & tag_en_w(i) & tag_en_r(i), tag_info_w, tag_ram(i).read(addr_sel_r)),
-        0.U(tag_w.W),
-        tag_en_r(i)
-      )
-
-    }
+      Mux( isEnable, Mux( isBypass, RegNext(tag_info_w), tag_o ), 0.U )
+  }
 
   
 
