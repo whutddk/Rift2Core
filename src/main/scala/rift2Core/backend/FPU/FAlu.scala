@@ -131,7 +131,8 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
     val mdl = Module(new FPUFMAPipe(latency, FType.S))
     mdl.io.in.valid := io.fpu_iss_exe.valid & io.fpu_iss_exe.bits.fun.FtypeTagIn === 0.U & ~infly_full & ~pending_csr & ~divSqrt.io.pending
     mdl.io.in.bits := io.fpu_iss_exe.bits
-    mdl.io.frm := io.fcsr(7,5)    
+    mdl.io.frm := io.fcsr(7,5)
+    mdl.reset := io.flush | reset.asBool
     mdl
   }
 
@@ -140,7 +141,8 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
     val mdl = Module(new FPUFMAPipe(latency, FType.D))
     mdl.io.in.valid := io.fpu_iss_exe.valid & io.fpu_iss_exe.bits.fun.FtypeTagIn === 1.U & ~infly_full & ~pending_csr & ~divSqrt.io.pending
     mdl.io.in.bits := io.fpu_iss_exe.bits
-    mdl.io.frm := io.fcsr(7,5)   
+    mdl.io.frm := io.fcsr(7,5)
+    mdl.reset := io.flush | reset.asBool
     mdl
   }
 

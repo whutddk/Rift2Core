@@ -284,7 +284,7 @@ VSimTop:
 	./verilator/sim_main.cpp  \
 	./verilator/diff.cpp \
 	-Mdir build \
-	-j 32
+	-j 128
 # 	rm ./obj_dir/*.d ./obj_dir/*.o ./obj_dir/*.cpp
 
 
@@ -352,7 +352,7 @@ dhrystone500: VSimTop
 
 
 coremark: VSimTop
-	./build/VSimTop -p -f ./ci/coremark1_bare
+	./build/VSimTop -w -d -p -f ./ci/coremark1_bare
 
 wave:
 	gtkwave ./build/wave.vcd &

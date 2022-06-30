@@ -103,13 +103,14 @@ void dromajo_step() {
 
 
 int dromajo_init() {
-	char * temp[4];
+	char * temp[6];
 	temp[0] = "dromajo_init";
 	
 	temp[1] = "--reset_vector";
 	temp[2] = "0x80000000";
 	temp[3] = img;
-
+	temp[4] = "--mmio_range";
+	temp[5] = "0x20000000:0x3fffffff";
 
 	char **argv_temp = temp;
 
