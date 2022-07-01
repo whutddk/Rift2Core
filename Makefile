@@ -9,10 +9,11 @@ compile: clean
 	--target-dir generated \
 	--show-registrations \
 	--full-stacktrace \
+	--gen-mem-verilog \
 	-e verilog"
-	
+
 # --inline \
-# --gen-mem-verilog \
+
 # --list-clocks \
 
 # sim:

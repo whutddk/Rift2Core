@@ -28,7 +28,7 @@ import rift2Core._
 // import rift2Core.cache._
 import rift._
 import rift2Core.define.{IFParameters}
-import rift2Core.L1Cache.{IcacheParameters, DcacheParameters}
+// import rift2Core.L1Cache.{IcacheParameters, DcacheParameters}
 import rift2Core.privilege._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.config._
@@ -84,8 +84,8 @@ class Rift2GoCfg extends Config((site, here, up) => {
 object testMain extends App {
 
 
-  val cfg = new NormalCfg
-  // val cfg = new Rift2GoCfg
+  // val cfg = new NormalCfg
+  val cfg = new Rift2GoCfg
 
   (new chisel3.stage.ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => {

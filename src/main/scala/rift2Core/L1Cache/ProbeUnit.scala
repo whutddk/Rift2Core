@@ -1,4 +1,4 @@
-package rift2Core.L1Cache
+package rift2Core.backend
 
 
 import chipsalliance.rocketchip.config.Parameters

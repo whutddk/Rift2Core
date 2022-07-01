@@ -1,11 +1,13 @@
-package rift2Core.L1Cache
+package rift2Core.frontend
 
 
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import rift2Core.privilege._
-import rift2Core.frontend._
+
+import rift2Core.L1Cache._
+
 
 import base._
 import chipsalliance.rocketchip.config.Parameters
@@ -16,37 +18,6 @@ import chisel3.util.random._
 import rift._
 
 
-case class IcacheParameters(
-  dw: Int = 256,
-  bk: Int = 1,
-  cb: Int = 4,
-  cl: Int = 128,
-
-) extends L1CacheParameters
-
-trait HasIcacheParameters extends HasL1CacheParameters {
-  val icacheParams: L1CacheParameters
-
-  def dw = icacheParams.dw
-  def bk = icacheParams.bk
-  def cb = icacheParams.cb
-  def cl = icacheParams.cl
-
-
-  def addr_lsb = log2Ceil(dw/8)
-  def line_w   = log2Ceil(cl)
-  def cb_w = log2Ceil(cb)
-
-  require( (addr_lsb + line_w) == 12 )
- 
-  def tag_w    = plen - addr_lsb - line_w
-}
-
-abstract class IcacheModule(implicit p: Parameters) extends L1CacheModule
-  with HasIcacheParameters
-
-abstract class IcacheBundle(implicit p: Parameters) extends L1CacheBundle
-  with HasIcacheParameters
 
 
 

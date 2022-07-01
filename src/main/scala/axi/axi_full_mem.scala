@@ -33,7 +33,7 @@ class AXI_full_mem(dw: Int, aw: Int) extends Module {
 
   val mem_slv_r = Module(new AXI_slv_r(32, dw))
   val mem_slv_w = Module(new AXI_slv_w(32, dw))
-  val ram =  Module(new Sram(dw, aw))
+  val ram =  Module(new DPSram(dw, aw))
 
 
   io.mem_chn_ar <> mem_slv_r.io.ar
@@ -65,7 +65,7 @@ class AXI_full_mem(dw: Int, aw: Int) extends Module {
 }
 
 class AXI_sim_mem (dw: Int, aw: Int) extends AXI_full_mem(dw, aw) {
-  override val ram = Module(new Sram(dw, aw))
+  override val ram = Module(new DPSram(dw, aw))
 
   io.mem_chn_ar <> mem_slv_r.io.ar
   io.mem_chn_r  <> mem_slv_r.io.r

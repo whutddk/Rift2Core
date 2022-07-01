@@ -17,62 +17,22 @@
    limitations under the License.
 */
 
-package rift2Core.backend.memory
+// package rift2Core.backend.memory
 
-import chisel3._
-import chisel3.util._
-import rift2Core.define._
-import rift2Core.backend._
-import rift2Core.L1Cache._
-import rift._
-import base._
-import chipsalliance.rocketchip.config._
-import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.tilelink._
+// import chisel3._
+// import chisel3.util._
+// import rift2Core.define._
+// import rift2Core.backend._
+// import rift2Core.L1Cache._
+// import rift._
+// import base._
+// import chipsalliance.rocketchip.config._
+// import freechips.rocketchip.diplomacy._
+// import freechips.rocketchip.tilelink._
 
-class Cache_buffer()(implicit p: Parameters) extends DcacheModule{
-  val io = IO(new Bundle{
-    val buf_enq = Flipped(DecoupledIO(new Info_cache_s0s1))
-    val enq_idx = Output(UInt((log2Ceil(sbEntry)).W))
-    val is_storeBuff_empty = Output(Bool())
-    val buf_deq = Flipped(DecoupledIO(new Info_cache_retn))
-    
-  })
-
-
-  val buff = RegInit(VecInit(Seq.fill(sbEntry)(0.U.asTypeOf(new Info_cache_s0s1))))
-  val valid = RegInit(VecInit(Seq.fill(sbEntry)(false.B)))
+// class Cache_buffer()(implicit p: Parameters) extends DcacheModule{
 
 
 
-
-  val is_hazard = VecInit(buff.map( x => (x.paddr(plen-1,3) === io.buf_enq.bits.paddr(plen-1,3)) )).reduce(_|_)
-  val idx = valid.indexWhere( (x:Bool) => (x === false.B) )
-  io.enq_idx := idx
-
-  io.buf_enq.ready := 
-    valid.exists( (x:Bool) => (x === false.B) ) &
-    ~is_hazard
-
-  when( io.buf_enq.fire ) {
-    buff(idx)  := io.buf_enq.bits
-    valid(idx) := true.B
-  }
-
-  when( io.buf_deq.fire ) {
-    buff(io.buf_deq.bits.chk_idx)  := 0.U.asTypeOf( new Info_cache_s0s1 )
-    valid(io.buf_deq.bits.chk_idx) := false.B
-  }
-
-  io.is_storeBuff_empty := valid.forall((x:Bool) => (x === false.B))
-  io.buf_deq.ready := ~io.is_storeBuff_empty
-
-
-
-  for ( i <- 0 until sbEntry ) yield {
-    when( valid(i) === true.B ) {
-      assert( buff.count( (x: Info_cache_s0s1) => (x.paddr === buff(i).paddr) ) === 1.U )
-    }
-  }
-}
+// }
 

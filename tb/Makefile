@@ -246,8 +246,8 @@ fpuisa += rv64uf-v-move
 fpuisa += rv64uf-p-recoding
 fpuisa += rv64uf-v-recoding
 
-isa ?= $(aluisa) $(bruisa) $(lsuisa) $(mulisa) $(privisa) $(fpuisa)
-# isa ?= $(fpuisa) 
+# isa ?= $(aluisa) $(bruisa) $(lsuisa) $(mulisa) $(privisa) $(fpuisa)
+isa ?= $(lsuisa) 
 
 .DEFAULT_GOAL = unit
 
@@ -325,7 +325,7 @@ single: VSimTop
 	./build/VSimTop -w -d -l -p -f ./ci/$(TESTFILE)
 
 torture:
-	./build/VSimTop -w -d -l -p -f ./torture/output/test
+	./build/VSimTop -d -l -p -f ./torture/output/test
 
 dromajo:
 	verilator -Wno-fatal  \
@@ -352,7 +352,7 @@ dhrystone500: VSimTop
 
 
 coremark: VSimTop
-	./build/VSimTop -w -d -p -f ./ci/coremark1_bare
+	./build/VSimTop -p -f ./ci/coremark1_bare
 
 wave:
 	gtkwave ./build/wave.vcd &

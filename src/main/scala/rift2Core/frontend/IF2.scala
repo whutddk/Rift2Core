@@ -31,6 +31,8 @@ import chipsalliance.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
+import rift._
+
 abstract class IF2Base(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val iEdge = edge
 

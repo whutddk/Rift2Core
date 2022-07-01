@@ -27,6 +27,83 @@ import chipsalliance.rocketchip.config.{Field, Parameters}
 import rift2Core.L1Cache._
 import rift2Core.define._
 
+abstract class RiftModule(implicit val p: Parameters) extends Module with HasRiftParameters { def io: Record }
+abstract class RiftBundle(implicit val p: Parameters) extends Bundle with HasRiftParameters
+
+
+trait HasIcacheParameters extends HasRiftParameters {
+  val icacheParams: IcacheParameters
+
+  def dw = icacheParams.dw
+  def bk = icacheParams.bk
+  def cb = icacheParams.cb
+  def cl = icacheParams.cl
+
+
+  def addr_lsb = log2Ceil(dw/8)
+  def line_w   = log2Ceil(cl)
+  def cb_w = log2Ceil(cb)
+
+  require( (addr_lsb + line_w) == 12 )
+ 
+  def tag_w    = plen - addr_lsb - line_w
+}
+
+
+
+
+
+case class IcacheParameters(
+  dw: Int = 256,
+  bk: Int = 1,
+  cb: Int = 4,
+  cl: Int = 128,
+
+)
+
+
+
+abstract class IcacheModule(implicit val p: Parameters) extends Module with HasIcacheParameters { def io: Record }
+abstract class IcacheBundle(implicit val p: Parameters) extends Bundle with HasIcacheParameters
+
+
+
+
+case class DcacheParameters(
+  dw: Int = 256,
+  bk: Int = 8,
+  cb: Int = 8,
+  cl: Int = 128,
+  sbEntry: Int = 16,
+  stEntry: Int = 16,
+)
+
+trait HasDcacheParameters extends HasRiftParameters {
+  val dcacheParams: DcacheParameters
+
+  def dw = dcacheParams.dw
+  def bk = dcacheParams.bk
+  def cb = dcacheParams.cb
+  def cl = dcacheParams.cl
+  def sbEntry = dcacheParams.sbEntry
+  def stEntry = dcacheParams.stEntry
+
+  def addr_lsb = log2Ceil(dw/8)
+  def bk_w = log2Ceil(bk)
+  def line_w   = log2Ceil(cl)
+  def cb_w = log2Ceil(cb)
+
+
+  def tag_w    = plen - addr_lsb - line_w - bk_w
+
+  // require( (addr_lsb + line_w) == 12 )
+  
+}
+
+abstract class DcacheModule(implicit val p: Parameters) extends Module with HasDcacheParameters { def io: Record }
+abstract class DcacheBundle(implicit val p: Parameters) extends Bundle with HasDcacheParameters
+
+
 
 
 case object RiftParamsKey extends Field[RiftSetting]
@@ -76,7 +153,7 @@ case class RiftSetting(
     // tage_tag_w = 8,
   ),
 
-  icacheParameters: L1CacheParameters = IcacheParameters(
+  icacheParameters: IcacheParameters = IcacheParameters(
     dw = 256,
     bk = 1,
     cb = 4,

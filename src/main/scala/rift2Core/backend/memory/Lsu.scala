@@ -16,12 +16,11 @@
    limitations under the License.
 */
 
-package rift2Core.backend.memory
+package rift2Core.backend
 
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
-import rift2Core.backend._
 import rift._
 import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._

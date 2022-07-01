@@ -45,9 +45,43 @@ import chisel3.util.experimental.loadMemoryFromFileInline
 
 // }
 
+class SPSRAM(dw: Int, dp: Int) extends Module {
+  val io = IO(new Bundle{
+
+    val addr = Input(UInt((log2Ceil(dp)).W))
+
+    val data_w = Input(UInt(dw.W))
+    val data_wstrb = Input(UInt(((dw+7)/8).W))
+
+    val data_r = Output(UInt(dw.W))
+    val en_r   = Input(Bool())
+    val en_w   = Input(Bool())
+  })
+
+  def byte_cnt = (dw+7)/8
+  val mem = SyncReadMem( dp, Vec( (dw+7)/8, UInt(8.W) ) )
+
+  val data_i = Wire( Vec( byte_cnt, UInt(8.W) ) )
+  val mask   = Wire( Vec( byte_cnt, Bool() ) )
+
+  for ( i <- 0 until byte_cnt-1 ) yield  data_i(i) := io.data_w(8*i+7, 8*i) 
+  data_i(byte_cnt-1) := io.data_w(dw-1, 8*(byte_cnt-1))
+
+  for ( i <- 0 until byte_cnt ) yield  mask(i) := io.data_wstrb(i).asBool
+
+  io.data_r := DontCare
+  when( io.en_w ) {
+    mem.write( io.addr, data_i, mask )
+  } .elsewhen( io.en_r ){
+    io.data_r := mem.read(io.addr)
+  }
+}
 
 
-class Sram(dw: Int, aw: Int) extends Module {
+
+
+
+class DPSram(dw: Int, aw: Int) extends Module {
   val io = IO(new Bundle{
     val data_w = Input(UInt(dw.W))
     val addr_w = Input(UInt(aw.W))
