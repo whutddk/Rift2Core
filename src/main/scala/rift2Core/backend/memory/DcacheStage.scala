@@ -60,9 +60,11 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
 
   val tagEnW = Wire( Vec(cb, Bool()) )
   val datEnW = Wire( Vec(cb, Bool()) )
+  // val tagEnR = Wire( Vec(cb, Bool()) )
+  // val datEnR = Wire( Vec(cb, Bool()) )
 
-  val datRAM = for ( i <- 0 until cb ) yield { SyncReadMem( cl, Vec( dw/8, UInt(8.W) ) ) }
-  val tagRAM = for ( i <- 0 until cb ) yield { SyncReadMem( cl, UInt(tag_w.W) ) }
+  val datRAM = for ( i <- 0 until cb ) yield { Module(new DDatRAM) }
+  val tagRAM = for ( i <- 0 until cb ) yield { Module(new DTagRAM) }
 
   val addrSelW = Wire(UInt(line_w.W))
   val addrSelR = Wire(UInt(line_w.W))
@@ -96,6 +98,7 @@ trait DcacheStageSRAM{ this: DcacheStageBase =>
   addrSelW := pipeStage1Bits.clSel
   tagInfoW := pipeStage1Bits.tagSel
 
+
   for ( i <- 0 until cb ) yield {
     datEnW(i) :=
       (i.U === cbSel) & pipeStage1Valid &
@@ -114,19 +117,34 @@ trait DcacheStageSRAM{ this: DcacheStageBase =>
     )).asBools
 
   for( i <- 0 until cb ) {
-    tagInfoR(i) := DontCare
-    datInfoR(i) := DontCare
-    when( tagEnW(i) ) {
-      tagRAM(i).write( addrSelW, tagInfoW )
-    } .otherwise {
-      tagInfoR(i) := tagRAM(i)(addrSelR)
-    }
 
-    when( datEnW(i) ) {
-      datRAM(i).write( addrSelW, datInfoW, datInfoWM )
-    } .otherwise {
-      datInfoR(i) := datRAM(i)(addrSelR)
-    }
+    // tagInfoR(i) := tagRAM(i)(addrSelR)
+
+    tagRAM(i).io.addr  := Mux(tagEnW(i), addrSelW, addrSelR)
+    tagRAM(i).io.dataw := tagInfoW
+    tagInfoR(i) := tagRAM(i).io.datar
+    tagRAM(i).io.enw   := tagEnW(i)
+    tagRAM(i).io.enr   := io.enq.fire
+
+
+    // when( tagEnW(i)  ) {
+    //   tagRAM(i).write( addrSelW, tagInfoW )
+    // } .otherwise {
+
+    // }
+
+
+    datRAM(i).io.enr    := io.enq.fire
+    datRAM(i).io.addr   := Mux(datEnW(i), addrSelW, addrSelR)
+    datRAM(i).io.dataw  := datInfoW
+    datRAM(i).io.datawm := datInfoWM
+    datInfoR(i) := datRAM(i).io.datar
+    datRAM(i).io.enw    := datEnW(i)
+
+    // when()
+    // when( datEnW(i) ) {
+    //   datRAM(i).write( addrSelW, datInfoW, datInfoWM )
+    // }
   }
 
 }
@@ -394,13 +412,13 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
 
 
 class DcacheStage(idx: Int)(implicit p: Parameters) extends DcacheStageBase((idx))
-with DcacheStageSRAM
-with DcacheStageLRSC 
-with DcacheStageWData
-with DcacheStageBlock
-with DcacheStageRTN {
+  with DcacheStageSRAM
+  with DcacheStageLRSC 
+  with DcacheStageWData
+  with DcacheStageBlock
+  with DcacheStageRTN {
 
-  when( isBusy & (io.deq.fire | io.reload.fire) ) {
+  when( isBusy & (datEnW.reduce(_|_) | tagEnW.reduce(_|_)) ) {
     isBusy := false.B
   } .elsewhen( io.enq.fire & io.enq.bits.fun.is_dat_w | io.enq.bits.fun.is_tag_w ) {
     assert( ~isBusy )
