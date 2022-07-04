@@ -16,17 +16,21 @@
    limitations under the License.
 */
 
-package rift2Core.backend
+package rift2Core.backend.lsu
 
 import chisel3._
 import chisel3.util._
+
 import rift2Core.define._
 import rift._
-import chipsalliance.rocketchip.config._
-import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.tilelink._
-import rift2Core.L1Cache._
+
 import rift2Core.privilege._
+import rift2Core.backend._
+
+import chipsalliance.rocketchip.config.Parameters
+import freechips.rocketchip.tilelink._
+
+
 
 abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule with HasFPUParameters {
   val dEdge = edge
@@ -81,21 +85,21 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
   val regionSystemIO = Wire(DecoupledIO(new Lsu_iss_info) )
   val regionPeriphIO = Wire(DecoupledIO(new Lsu_iss_info) )
 
-  val cacheBankIO = Wire( Vec( bk, DecoupledIO(new Info_cache_s0s1) ) )
+  val cacheBankIO = Wire( Vec( bk, DecoupledIO(new Dcache_Enq_Bundle) ) )
 
   val system = Module(new IO_Lsu(dEdge(2)))
   val periph = Module(new IO_Lsu(dEdge(1)))
   val cache = for ( i <- 0 until bk ) yield { val mdl = Module(new Dcache(dEdge(0), i)); mdl }
 
   /** the load-and-amo operation write-back info from cache or bus
-    * @param enq Vec[Info_cache_retn]
-    * @return Info_cache_retn
+    * @param enq Vec[Dcache_Deq_Bundle]
+    * @return Dcache_Deq_Bundle
     */
-  val lu_wb_arb = Module(new Arbiter(new Info_cache_retn, bk+2))
+  val lu_wb_arb = Module(new Arbiter(new Dcache_Deq_Bundle, bk+2))
 
   /** the load-and-amo write-back fifo, flow !!!!!
     * @note when trans_kill, the load result will be abort here to prevent write-back
-    * @param in Info_cache_retn
+    * @param in Dcache_Deq_Bundle
     * @return WriteBack_info 
     */
   val lu_wb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, false, true ) )
@@ -196,24 +200,6 @@ trait LSU_StQueue { this: LsuBase =>
 /** Merge the request from 1) opMux (load is bypassing the stQueue) 2) store and amo form stQueue */
 trait LSU_LsArb { this: LsuBase =>
 
-
-  // /** the raw req that will be merged
-  //   * @param in Info_cache_s0s1
-  //   * @return Info_cache_s0s1
-  //   */
-  // val ls_arb = {
-  //   val mdl = Module(new Arbiter(new Lsu_iss_info, 2))
-  //   stQueue.io.overlapReq.bits.paddr := opMux.io.ld_deq.bits.param.dat.op1
-  //   stQueue.io.overlapReq.valid := opMux.io.ld_deq.valid
-
-  //   mdl.io.in(0).valid := opMux.io.ld_deq.valid & stQueue.io.overlapResp.valid
-  //   mdl.io.in(0).bits := opMux.io.ld_deq.bits
-  //   opMux.io.ld_deq.ready := mdl.io.in(0).ready & stQueue.io.overlapResp.valid
-    
-  //   mdl.io.in(1) <> stQueue.io.deq
-  //   mdl
-  // }
-
   stQueue.io.overlapReq.bits.paddr := opLdIO.bits.param.dat.op1
   stQueue.io.overlapReq.valid := opLdIO.valid
 
@@ -227,16 +213,7 @@ trait LSU_LsArb { this: LsuBase =>
 
 /** Mux request to three different region, cache, system, periph depending on paddr */
 trait LSU_RegionMux { this: LsuBase =>
-  // /** according to the paddr, the request will be sent to cache, system-bus, periph-bus
-  //   * @param in Info_cache_s0s1
-  //   * @return Info_cache_s0s1
-  //   */ 
 
-  // val regionMux = {
-  //   val mdl = Module(new regionMux)
-  //   mdl.io.enq <> ls_arb.io.out
-  //   mdl
-  // }
   val psel = ls_arb.io.out.bits.param.dat.op1(31,28)
   val sel = Mux( psel(3), 0.U, Mux( psel(2), 1.U, 2.U) )
 
@@ -273,7 +250,7 @@ trait LSU_RegionMux { this: LsuBase =>
 
 /** depending on the paddr, the cache request will be divided into 4 or 8 (nm) "bank" */
 trait LSU_CacheMux { this: LsuBase =>
-  val CacheMuxBits = pkg_Info_cache_s0s1(regionDCacheIO.bits, stQueue.io.overlapReq.bits, stQueue.io.overlapResp.bits)
+  val CacheMuxBits = pkg_Dcache_Enq_Bundle(regionDCacheIO.bits, stQueue.io.overlapReq.bits, stQueue.io.overlapResp.bits)
   val acquireArb  = Module(new Arbiter(new TLBundleA(dEdge(0).bundle), n = bk))
   val grantAckArb = Module(new Arbiter(new TLBundleE(dEdge(0).bundle), n = bk))
   val releaseArb  = Module(new Arbiter(new TLBundleC(dEdge(0).bundle), n = bk))
@@ -289,7 +266,7 @@ trait LSU_CacheMux { this: LsuBase =>
       regionDCacheIO.ready := cacheBankIO(i).ready
     } .otherwise {
       cacheBankIO(i).valid := false.B
-      cacheBankIO(i).bits  := 0.U.asTypeOf(new Info_cache_s0s1)
+      cacheBankIO(i).bits  := 0.U.asTypeOf(new Dcache_Enq_Bundle)
     }
   }
 
@@ -407,18 +384,18 @@ trait LSU_WriteBack { this: LsuBase =>
 
   for ( i <- 0 until bk ) yield {
     lu_wb_arb.io.in(i).valid := cache(i).io.deq.valid & cache(i).io.deq.bits.is_load_amo
-    lu_wb_arb.io.in(i).bits := Mux( lu_wb_arb.io.in(i).valid, cache(i).io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
+    lu_wb_arb.io.in(i).bits := Mux( lu_wb_arb.io.in(i).valid, cache(i).io.deq.bits, 0.U.asTypeOf(new Dcache_Deq_Bundle) )
     cache(i).io.deq.ready := lu_wb_arb.io.in(i).ready | ~cache(i).io.deq.bits.is_load_amo
     when( cache(i).io.deq.bits.is_load_amo ) { assert(cache(i).io.deq.fire === lu_wb_arb.io.in(i).fire) }
   }
 
   lu_wb_arb.io.in(bk).valid := system.io.deq.valid & system.io.deq.bits.is_load_amo
-  lu_wb_arb.io.in(bk).bits := Mux( lu_wb_arb.io.in(bk).valid, system.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
+  lu_wb_arb.io.in(bk).bits := Mux( lu_wb_arb.io.in(bk).valid, system.io.deq.bits, 0.U.asTypeOf(new Dcache_Deq_Bundle) )
   system.io.deq.ready := lu_wb_arb.io.in(bk).ready | ~system.io.deq.bits.is_load_amo
   when( system.io.deq.bits.is_load_amo ) { assert(system.io.deq.fire === lu_wb_arb.io.in(bk).fire) }
 
   lu_wb_arb.io.in(bk+1).valid := periph.io.deq.valid & periph.io.deq.bits.is_load_amo
-  lu_wb_arb.io.in(bk+1).bits := Mux( lu_wb_arb.io.in(bk+1).valid, periph.io.deq.bits, 0.U.asTypeOf(new Info_cache_retn) )
+  lu_wb_arb.io.in(bk+1).bits := Mux( lu_wb_arb.io.in(bk+1).valid, periph.io.deq.bits, 0.U.asTypeOf(new Dcache_Deq_Bundle) )
   periph.io.deq.ready := lu_wb_arb.io.in(bk+1).ready | ~periph.io.deq.bits.is_load_amo
   when( periph.io.deq.bits.is_load_amo ) { assert(periph.io.deq.fire === lu_wb_arb.io.in(bk+1).fire) }
 

@@ -24,6 +24,7 @@ import rift2Core.L1Cache._
 import chisel3.experimental.dataview._
 
 import rift._
+import base._
 
 import chipsalliance.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy._
@@ -213,52 +214,52 @@ trait PTWWALK { this: PTWBase =>
 
 trait PTWCache { this: PTWBase => 
   val cl_sel = addr_qout(11,5)
-  val tag_sel = addr_qout(plen-1,12)
+  val tag_sel = addr_qout(plen-1,12) 
 
-  val cache_dat = new Cache_dat( 256, plen, 1, 128, bk = 1 )
-  val cache_tag = new Cache_tag( 256, plen, 1, 128, bk = 1 ){  }
+  // val cache_dat = new Cache_dat( 256, plen, 1, 128, bk = 1 )
+  // val cache_tag = new Cache_tag( 256, plen, 1, 128, bk = 1 ){  }
+
+  val datRAM = Module(new DatRAM(256, 128))
+  val tagRAM = Module(new TagRAM(plen-12, 128))
+
+
   val is_cache_valid = RegInit( VecInit( Seq.fill(128)(false.B) ) )
 
 
   val ptw_access_data_lo = Reg( Vec((256/l1BeatBits-1), UInt(l1BeatBits.W) ))
 
 
-  cache_dat.dat_addr_r := addr_dnxt
-  cache_tag.tag_addr_r := addr_dnxt
-
-  cache_dat.dat_addr_w := addr_qout
-  cache_tag.tag_addr_w := addr_qout
 
 
-  for( i <- 0 until 1 ) yield {
-    val rd_enable = 
-      (currState === PTWState.Lvl1.U & nextState === PTWState.Lvl0.U)
 
-    val wr_enable = 
-      (currState === PTWState.Lvl0.U & is_trans_done & ~is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
+  datRAM.io.addr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11,5), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,5) ) )
+  tagRAM.io.addr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11,5), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,5) ) )
 
-    cache_tag.tag_en_w(i) := wr_enable
-    cache_tag.tag_en_r(i) := rd_enable
+  // cache_dat.dat_addr_w := addr_qout
+  // cache_tag.tag_addr_w := addr_qout
 
 
-    cache_dat.dat_en_r(i) := rd_enable
-    cache_dat.dat_en_w(i) := wr_enable
+    tagRAM.io.enr := (currState === PTWState.Lvl1.U)
+    datRAM.io.enr := (currState === PTWState.Lvl1.U)
 
+    tagRAM.io.enw := (currState === PTWState.Lvl0.U & is_trans_done & ~is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
+    datRAM.io.enw := (currState === PTWState.Lvl0.U & is_trans_done & ~is_ptw_fail & ~kill_trans & ~io.cmm_mmu.sfence_vma)
 
-    when( wr_enable ) {
+    when( tagRAM.io.enw ) {
       is_cache_valid(cl_sel) := true.B
     } .elsewhen( io.cmm_mmu.sfence_vma ) {
       for ( c <- 0 until 128 ) yield { is_cache_valid(c) := false.B }
     }
-  }
 
 
-  cache_dat.dat_info_wstrb := Fill(256/8, 1.U)
+  datRAM.io.datawm := VecInit(Seq.fill(256/8)(true.B))
 
   val ptw_access_data = Cat( Seq(io.ptw_access.bits.data) ++ ptw_access_data_lo.reverse )
-  cache_dat.dat_info_w := ptw_access_data
+  datRAM.io.dataw := VecInit( for( t <- 0 until 256/8 ) yield ptw_access_data(8*t+7, 8*t) )
 
-  is_hit := (tag_sel === cache_tag.tag_info_r(0)) & is_cache_valid(cl_sel) & currState === PTWState.Lvl0.U
+  tagRAM.io.dataw := tag_sel
+
+  is_hit := (tag_sel === tagRAM.io.datar) & is_cache_valid(cl_sel) & currState === PTWState.Lvl0.U
 
 
   pte.value := {
@@ -266,7 +267,7 @@ trait PTWCache { this: PTWBase =>
     val data_sel = Wire(UInt(64.W))
 
     when( is_hit ) {
-      data := cache_dat.dat_info_r(0)
+      data := Cat(datRAM.io.datar.reverse)
     } .elsewhen( is_trans_done ) {
       data := ptw_access_data
     }

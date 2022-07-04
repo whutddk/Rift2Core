@@ -45,6 +45,7 @@ trait HasIcacheParameters extends HasRiftParameters {
   def cb_w = log2Ceil(cb)
 
   require( (addr_lsb + line_w) == 12 )
+  require( bk == 1 )
  
   def tag_w    = plen - addr_lsb - line_w
 }
@@ -176,6 +177,7 @@ case class RiftSetting(
   require( opChn % 2 == 0 )
   require( regNum > 32 )
   require( pmpNum > 0 && pmpNum <= 8 )
+  require( icacheParameters.dw == dcacheParameters.dw )
 }
 
 trait HasRiftParameters {

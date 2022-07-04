@@ -26,6 +26,7 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 import rift2Core.backend.fpu._
+import rift2Core.backend.lsu._
 import rift2Core.privilege._
 import rift._
 import chipsalliance.rocketchip.config._

@@ -9,9 +9,9 @@ compile: clean
 	--target-dir generated \
 	--show-registrations \
 	--full-stacktrace \
-	--gen-mem-verilog \
 	-e verilog"
-
+	
+#--gen-mem-verilog \
 # --inline \
 
 # --list-clocks \

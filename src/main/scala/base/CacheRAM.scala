@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package rift2Core.backend
+package base
 
 import chipsalliance.rocketchip.config.Parameters
 import chisel3._
@@ -22,13 +22,13 @@ import chisel3.util._
 import rift2Core.define._
 
 import rift._
-import base._
 
 import chisel3.util.random._
 import rift2Core.define._
 
 
-class DDatRAM(implicit p: Parameters) extends DcacheModule {
+class DatRAM(dw: Int, cl: Int) extends Module {
+  def line_w   = log2Ceil(cl)
   val io = IO(new Bundle{
     val addr  = Input(UInt(line_w.W))
 
@@ -40,18 +40,19 @@ class DDatRAM(implicit p: Parameters) extends DcacheModule {
     val enr   = Input(Bool())
   })
 
-  val dDatMem = SyncReadMem( cl, Vec( dw/8, UInt(8.W) ) )
+  val datMem = SyncReadMem( cl, Vec( dw/8, UInt(8.W) ) )
 
   io.datar := DontCare
-  when( io.enw ) {
-    dDatMem.write( io.addr, io.dataw, io.datawm )
-  } .elsewhen( io.enr ) {
-    io.datar := dDatMem.read( io.addr )
+  when( io.enr ) {
+    io.datar := datMem.read( io.addr )
+  } .elsewhen( io.enw & ~io.enr ) {
+    datMem.write( io.addr, io.dataw, io.datawm )
   }
 
 }
 
-class DTagRAM(implicit p: Parameters) extends DcacheModule {
+class TagRAM(tag_w: Int,  cl: Int) extends Module {
+  def line_w   = log2Ceil(cl)
   val io = IO(new Bundle{
     val addr  = Input(UInt(line_w.W))
 
@@ -61,23 +62,27 @@ class DTagRAM(implicit p: Parameters) extends DcacheModule {
     val enr   = Input(Bool())
   })
 
-  val dTagMem = SyncReadMem( cl, UInt(tag_w.W) )
+  val tagMem = SyncReadMem( cl, UInt(tag_w.W) )
 
 
   // io.datar := DontCare
   // when( io.enw ) {
-  //   dTagMem.write( io.addr, io.dataw )
+  //   tagMem.write( io.addr, io.dataw )
   // } .otherwise {
-  //   io.datar := dTagMem.read( io.addr )
+  //   io.datar := tagMem.read( io.addr )
   // }
 
 
   io.datar := DontCare
   when( io.enr ) {
-    io.datar := dTagMem.read( io.addr )
+    io.datar := tagMem.read( io.addr )
   } .elsewhen( io.enw & ~io.enr ) {
-    dTagMem.write( io.addr, io.dataw )
+    tagMem.write( io.addr, io.dataw )
   }
+
+
+
+
 }
 
 

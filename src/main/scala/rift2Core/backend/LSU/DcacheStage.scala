@@ -14,18 +14,20 @@
    limitations under the License.
 */
 
-package rift2Core.backend
+package rift2Core.backend.lsu
 
-import chipsalliance.rocketchip.config.Parameters
 import chisel3._
 import chisel3.util._
+import chisel3.util.random._
+
 import rift2Core.define._
 
 import rift._
 import base._
 
-import chisel3.util.random._
-import rift2Core.define._
+import chipsalliance.rocketchip.config.Parameters
+
+
 
 
 
@@ -33,9 +35,9 @@ import rift2Core.define._
 class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
   val id = idx
   val io = IO(new Bundle {
-    val enq = Flipped(Decoupled(new Info_cache_s0s1))
-    val reload = Valid(new Info_cache_s0s1)
-    val deq = Valid(new Info_cache_retn)
+    val enq = Flipped(Decoupled(new Dcache_Enq_Bundle))
+    val reload = Valid(new Dcache_Enq_Bundle)
+    val deq = Valid(new Dcache_Deq_Bundle)
 
     val missUnit_req = Valid(new Info_miss_req)
     val wb_req = Valid(new Info_writeBack_req)
@@ -63,8 +65,8 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
   // val tagEnR = Wire( Vec(cb, Bool()) )
   // val datEnR = Wire( Vec(cb, Bool()) )
 
-  val datRAM = for ( i <- 0 until cb ) yield { Module(new DDatRAM) }
-  val tagRAM = for ( i <- 0 until cb ) yield { Module(new DTagRAM) }
+  val datRAM = for ( i <- 0 until cb ) yield { Module(new DatRAM(dw, cl)) }
+  val tagRAM = for ( i <- 0 until cb ) yield { Module(new TagRAM(tag_w, cl)) }
 
   val addrSelW = Wire(UInt(line_w.W))
   val addrSelR = Wire(UInt(line_w.W))
@@ -72,7 +74,7 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
 
   val isBusy = RegInit(false.B)
   io.enq.ready := ~isBusy
-  val pipeStage1Valid = RegNext(io.enq.valid, false.B)
+  val pipeStage1Valid = RegNext(io.enq.fire, false.B)
   val pipeStage1Bits  = RegNext(io.enq.bits)
 
    /** one hot code indicated which blcok is hit */
@@ -350,7 +352,7 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
 
 
   val reloadValid = RegInit(false.B)
-  val reloadBits  = Reg(new Info_cache_s0s1)
+  val reloadBits  = Reg(new Dcache_Enq_Bundle)
 
   when( pipeStage1Valid & pipeStage1Bits.fun.is_access & ~isHit ) {
     reloadValid := true.B
@@ -358,14 +360,14 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
   } .otherwise {
     reloadValid := false.B
 
-    if( isLowPower ) { reloadBits  := 0.U.asTypeOf(new Info_cache_s0s1) }
+    if( isLowPower ) { reloadBits  := 0.U.asTypeOf(new Dcache_Enq_Bundle) }
   }
 
   io.reload.valid := reloadValid
   io.reload.bits  := reloadBits
 
   val deqValid = RegInit(false.B)
-  val deqBits  = Reg(new Info_cache_retn) 
+  val deqBits  = Reg(new Dcache_Deq_Bundle) 
 
   io.deq.valid := deqValid
   io.deq.bits  := deqBits
@@ -397,14 +399,14 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
     }
 
     deqBits.wb.rd0      := pipeStage1Bits.rd.rd0 
-    deqBits.chk_idx     := pipeStage1Bits.chk_idx
+    deqBits.chkIdx     := pipeStage1Bits.chkIdx
     deqBits.is_load_amo := pipeStage1Bits.fun.is_wb
     deqBits.is_flw      := pipeStage1Bits.fun.flw
     deqBits.is_fld      := pipeStage1Bits.fun.fld
   } .otherwise {
     deqValid := false.B
     if( isLowPower ) {
-      deqBits := 0.U.asTypeOf(new Info_cache_retn)
+      deqBits := 0.U.asTypeOf(new Dcache_Deq_Bundle)
     }
   }
 
@@ -418,9 +420,9 @@ class DcacheStage(idx: Int)(implicit p: Parameters) extends DcacheStageBase((idx
   with DcacheStageBlock
   with DcacheStageRTN {
 
-  when( isBusy & (datEnW.reduce(_|_) | tagEnW.reduce(_|_)) ) {
+  when( isBusy /*& ( datEnW.reduce(_|_) | tagEnW.reduce(_|_) | io.reload.fire )*/ ) {
     isBusy := false.B
-  } .elsewhen( io.enq.fire & io.enq.bits.fun.is_dat_w | io.enq.bits.fun.is_tag_w ) {
+  } .elsewhen( io.enq.fire & (io.enq.bits.fun.is_dat_w | io.enq.bits.fun.is_tag_w) ) {
     assert( ~isBusy )
     isBusy := true.B
   } 

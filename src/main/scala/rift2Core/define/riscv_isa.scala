@@ -878,3 +878,7 @@ class PreFetch_Req_Bundle(implicit p: Parameters) extends RiftBundle {
 }
 
 
+class Info_if_cmm(implicit p: Parameters) extends RiftBundle {
+  val ill_vaddr = UInt(64.W)
+}
+
