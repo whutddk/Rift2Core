@@ -485,32 +485,42 @@ wire is_ecall_M = s_Rift2Chip.i_rift2Core.diff.io_commit_is_ecall_M;
 wire is_ecall_S = s_Rift2Chip.i_rift2Core.diff.io_commit_is_ecall_S;
 wire [63:0] gp  = s_Rift2Chip.i_rift2Core.diff.XReg_gp;
 
-reg success_reg = 1'b0;
-reg fail_reg = 1'b0;
+reg success_reg;
+reg fail_reg;
 
 assign success = success_reg | debugger_success;
 assign fail = fail_reg;
 
-reg is_ecall_U_reg = 1'b0;
-reg is_ecall_M_reg = 1'b0;
-reg is_ecall_S_reg = 1'b0;
+reg is_ecall_U_reg;
+reg is_ecall_M_reg;
+reg is_ecall_S_reg;
 
-always @(posedge CLK) begin
-  is_ecall_U_reg <= is_ecall_U;
-  is_ecall_M_reg <= is_ecall_M;
-  is_ecall_S_reg <= is_ecall_S;
+always @(posedge CLK or negedge RSTn) begin 
+  if ( !RSTn ) begin
+    is_ecall_U_reg <= 1'b0;
+    is_ecall_M_reg <= 1'b0;
+    is_ecall_S_reg <= 1'b0;
+  end else begin
+    is_ecall_U_reg <= is_ecall_U;
+    is_ecall_M_reg <= is_ecall_M;
+    is_ecall_S_reg <= is_ecall_S;
+  end
 end
 
-always @(negedge CLK ) begin
-	if ( is_ecall_U_reg | is_ecall_M_reg | is_ecall_S_reg ) begin
+always @(negedge CLK or negedge RSTn) begin
+  if ( !RSTn ) begin
+    success_reg <= 1'b0;
+    fail_reg <= 1'b0;
+  end
+	else if ( is_ecall_U_reg | is_ecall_M_reg | is_ecall_S_reg ) begin
 		if ( gp == 64'd1 ) begin
 			// $display("PASS");
-			success_reg = 1'b1;
+			success_reg <= 1'b1;
 			// $finish;
 		end
 		else begin
 			// $display("Fail");
-			fail_reg = 1'b1;
+			fail_reg <= 1'b1;
 			// $stop;
 		end
 	end

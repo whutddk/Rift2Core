@@ -44,7 +44,7 @@ class Info_writeBack_req(implicit p: Parameters) extends RiftBundle {
 class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle {
     val wb_req = Flipped(new ValidIO(new Info_writeBack_req))
-    val pb_req = Flipped(new ValidIO(new Info_writeBack_req))
+
     val cache_release = new DecoupledIO(new TLBundleC(edge.bundle))
     val cache_grant   = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
 
@@ -58,20 +58,12 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
 
 
   /** a tiny fifo that temporarily store the writeback info from l1cache */
-  val wb_fifo = Module(new Queue(new Info_writeBack_req, 1, false, true))
-  val pb_fifo = Module(new Queue(new Info_writeBack_req, 1, false, true))
-  val fun_arb = Module(new Arbiter(new Info_writeBack_req, 2))
-  val op_fifo = Module(new Queue(new Info_writeBack_req, 1, false, true))
+  val wb_fifo = Module(new Queue(new Info_writeBack_req, 2, false, true))
 
   wb_fifo.io.enq.valid := io.wb_req.valid
   wb_fifo.io.enq.bits  := io.wb_req.bits
 
-  pb_fifo.io.enq.valid := io.pb_req.valid
-  pb_fifo.io.enq.bits  := io.pb_req.bits
 
-  fun_arb.io.in(0) <> pb_fifo.io.deq
-  fun_arb.io.in(1) <> wb_fifo.io.deq
-  op_fifo.io.enq <> fun_arb.io.out
 
 
   val wb_state_dnxt = Wire(UInt(2.W))
@@ -93,14 +85,14 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
   wb_state_dnxt :=
     Mux1H(Seq(
       (wb_state_qout === 0.U) -> Mux(
-        op_fifo.io.deq.valid & (
-          (~io.release_ban & ( op_fifo.io.deq.bits.is_release | op_fifo.io.deq.bits.is_releaseData )) |
-          ( op_fifo.io.deq.bits.is_probe | op_fifo.io.deq.bits.is_probeData )
+        wb_fifo.io.deq.valid & (
+          (~io.release_ban & ( wb_fifo.io.deq.bits.is_release | wb_fifo.io.deq.bits.is_releaseData )) |
+          ( wb_fifo.io.deq.bits.is_probe | wb_fifo.io.deq.bits.is_probeData )
         )
         , 1.U, 0.U),
       (wb_state_qout === 1.U) ->
         Mux(~is_release_done, 1.U,
-          Mux( op_fifo.io.deq.bits.is_probeData | op_fifo.io.deq.bits.is_probe, 0.U, 2.U )),
+          Mux( wb_fifo.io.deq.bits.is_probeData | wb_fifo.io.deq.bits.is_probe, 0.U, 2.U )),
       (wb_state_qout === 2.U) -> Mux( io.cache_grant.fire, 0.U, 2.U )
     ))
 
@@ -128,40 +120,40 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
 
     val info_probe = edge.ProbeAck(
       fromSource = id.U,
-      toAddress = op_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
+      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       reportPermissions = permit,    
     )
 
     val info_probeData = edge.ProbeAck(
       fromSource = id.U,
-      toAddress = op_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
+      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       reportPermissions = permit,
-      data = op_fifo.io.deq.bits.data >> (beatCnt << log2Ceil(l1BeatBits))
+      data = wb_fifo.io.deq.bits.data >> (beatCnt << log2Ceil(l1BeatBits))
     )
 
     val info_release = edge.Release(
       fromSource = id.U,
-      toAddress = op_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
+      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = permit
     )._2
 
     val info_releaseData = edge.Release(
       fromSource = id.U,
-      toAddress = op_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
+      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
       lgSize = log2Ceil(256/8).U,
       shrinkPermissions = permit,
-      data = op_fifo.io.deq.bits.data >> (beatCnt << log2Ceil(l1BeatBits))
+      data = wb_fifo.io.deq.bits.data >> (beatCnt << log2Ceil(l1BeatBits))
     )._2
 
 
     Mux1H(Seq(
-      op_fifo.io.deq.bits.is_probe       -> info_probe,
-      op_fifo.io.deq.bits.is_probeData   -> info_probeData,
-      op_fifo.io.deq.bits.is_release     -> info_release,
-      op_fifo.io.deq.bits.is_releaseData -> info_releaseData,
+      wb_fifo.io.deq.bits.is_probe       -> info_probe,
+      wb_fifo.io.deq.bits.is_probeData   -> info_probeData,
+      wb_fifo.io.deq.bits.is_release     -> info_release,
+      wb_fifo.io.deq.bits.is_releaseData -> info_releaseData,
     ))    
   }
 
@@ -173,16 +165,12 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
     assert( wb_state_qout === 2.U )   
   }
   assert( ~(io.cache_grant.fire & io.cache_grant.bits.source =/= id.U), "Assert Failed at writeBack-Unit, grant-id mis-match" )
-  op_fifo.io.deq.ready := 
+  wb_fifo.io.deq.ready := 
     wb_state_qout =/= 0.U & wb_state_dnxt === 0.U
 
-  io.miss_ban := wb_state_qout === 1.U | wb_state_qout === 2.U | ~op_fifo.io.enq.ready
+  io.miss_ban := wb_state_qout === 1.U | wb_state_qout === 2.U | ~wb_fifo.io.enq.ready
 
 
-
-  when( ~pb_fifo.io.enq.ready ) {
-    assert( ~pb_fifo.io.enq.valid, "Once the Probe is issued, the slave should not issue further Probes on that block until it receives a ProbeAck. Spec-1.8.1 Page-69")
-  }
 
   when( ~wb_fifo.io.enq.ready ) {
     assert(~io.wb_req.valid, "When WriteBack Unit is busy, no new acquire will be emitted, and there is no wb request!")

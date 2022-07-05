@@ -197,8 +197,12 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
   
   if ( hasFpu ) {
   } else {
-    assert( io.bd_dpt.forall{ x:DecoupledIO[IF4_Bundle] => x.bits.fpu_isa.is_fpu === false.B} )
-    assert( io.bd_dpt.forall{ x:DecoupledIO[IF4_Bundle] => x.bits.is_fwb === false.B} )
+    for ( i <- 0 until rn_chn ) {
+      when( io.bd_dpt(i).fire ) {
+        assert(io.bd_dpt(i).bits.fpu_isa.is_fpu === false.B)
+        assert(io.bd_dpt(i).bits.is_fwb === false.B)
+      }
+    }
   }
 }
 

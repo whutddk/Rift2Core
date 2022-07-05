@@ -255,7 +255,7 @@ trait LSU_CacheMux { this: LsuBase =>
   val grantAckArb = Module(new Arbiter(new TLBundleE(dEdge(0).bundle), n = bk))
   val releaseArb  = Module(new Arbiter(new TLBundleC(dEdge(0).bundle), n = bk))
 
-  val chn = CacheMuxBits.paddr(addr_lsb+bk_w-1,addr_lsb)
+  val chn = if( bk > 1 ) { CacheMuxBits.paddr(addr_lsb+bk_w-1,addr_lsb) } else { 0.U }
 
   regionDCacheIO.ready := false.B
   
@@ -303,7 +303,7 @@ trait LSU_CacheMux { this: LsuBase =>
 
     grantAckArb.io.in(i) <> cache(i).io.missUnit_dcache_grantAck
 
-    when( io.probeUnit_dcache_probe.bits.address(addr_lsb+bk_w-1,addr_lsb) === i.U ) {
+    when( (if( bk > 1 ) {io.probeUnit_dcache_probe.bits.address(addr_lsb+bk_w-1,addr_lsb)} else {0.U}) === i.U ) {
       cache(i).io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe   
     }
 

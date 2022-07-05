@@ -167,7 +167,7 @@ trait IF4_Predict{ this: IF4Base =>
     isIf4Redirect(i) := io.if4_req(i).fire & isDisAgreeWithIF1(i)
 
     when( ~isRedirect(i) ) { assert( redirectTarget(i) === 0.U ) }
-    when( ~io.if4_req(i).bits.isRedirect ) { assert( io.if4_req(i).bits.target === 0.U ) }
+    when( io.if4_req(i).valid & ~io.if4_req(i).bits.isRedirect ) { assert( io.if4_req(i).bits.target === 0.U ) }
   }
 
   io.if4Redirect.valid := isIf4Redirect.reduce(_|_)

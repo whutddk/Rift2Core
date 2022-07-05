@@ -31,7 +31,8 @@ class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int, zip: Int ) extends M
 
 
 
-  val buff  = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
+  // val buff  = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
+  val buff  = Reg(Vec(dp, dw))
   val valid = RegInit(VecInit(Seq.fill(dp)(false.B)))
 
   val buff_next  = Wire(Vec( zip, Vec(dp, dw    )))

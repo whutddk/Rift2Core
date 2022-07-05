@@ -41,17 +41,11 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
 
     val missUnit_req = Valid(new Info_miss_req)
     val wb_req = Valid(new Info_writeBack_req)
-    val pb_req =Valid(new Info_writeBack_req)
 
     val isCacheEmpty = Input(Bool())
     val flush = Input(Bool())
 
   })
-
-  // val addr_lsb = log2Ceil(dw/8)
-  // val line_w   = log2Ceil(cl)
-  // val bk_w     = log2Ceil(bk)
-  // val tag_w   = plen - addr_lsb - line_w - bk_w
 
 
   val datInfoR = Wire( Vec(cb, Vec(dw/8, UInt(8.W))) )
@@ -120,21 +114,11 @@ trait DcacheStageSRAM{ this: DcacheStageBase =>
 
   for( i <- 0 until cb ) {
 
-    // tagInfoR(i) := tagRAM(i)(addrSelR)
-
     tagRAM(i).io.addr  := Mux(tagEnW(i), addrSelW, addrSelR)
     tagRAM(i).io.dataw := tagInfoW
     tagInfoR(i) := tagRAM(i).io.datar
     tagRAM(i).io.enw   := tagEnW(i)
     tagRAM(i).io.enr   := io.enq.fire
-
-
-    // when( tagEnW(i)  ) {
-    //   tagRAM(i).write( addrSelW, tagInfoW )
-    // } .otherwise {
-
-    // }
-
 
     datRAM(i).io.enr    := io.enq.fire
     datRAM(i).io.addr   := Mux(datEnW(i), addrSelW, addrSelR)
@@ -143,10 +127,6 @@ trait DcacheStageSRAM{ this: DcacheStageBase =>
     datInfoR(i) := datRAM(i).io.datar
     datRAM(i).io.enw    := datEnW(i)
 
-    // when()
-    // when( datEnW(i) ) {
-    //   datRAM(i).write( addrSelW, datInfoW, datInfoWM )
-    // }
   }
 
 }
@@ -210,8 +190,8 @@ trait DcacheStageWData { this: DcacheStageBase =>
       pipeStage1Bits.fun.is_su -> pipeStage1Bits.wdata,
       pipeStage1Bits.fun.is_sc -> pipeStage1Bits.wdata,
       (pipeStage1Bits.fun.amoswap_w | pipeStage1Bits.fun.amoswap_d) -> reAlign_data( from = 64, to = 256,  amo_reAlign_64_a, pipeStage1Bits.paddr ),
-      (pipeStage1Bits.fun.amoadd_w                 ) -> reAlign_data( from = 64, to = 256, ( Mux(high_sel, amo_reAlign_64_a >> 32 << 32, amo_reAlign_64_a) + amo_reAlign_64_b), pipeStage1Bits.paddr ), //when sel msb-32, set one of op's lsb-32 to zore to prevent carry-in
-      (pipeStage1Bits.fun.amoadd_d                 ) -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a + amo_reAlign_64_b), pipeStage1Bits.paddr ),
+      (pipeStage1Bits.fun.amoadd_w                 )                -> reAlign_data( from = 64, to = 256, ( Mux(high_sel, amo_reAlign_64_a >> 32 << 32, amo_reAlign_64_a) + amo_reAlign_64_b), pipeStage1Bits.paddr ), //when sel msb-32, set one of op's lsb-32 to zore to prevent carry-in
+      (pipeStage1Bits.fun.amoadd_d                 )                -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a + amo_reAlign_64_b), pipeStage1Bits.paddr ),
       (pipeStage1Bits.fun.amoxor_w  | pipeStage1Bits.fun.amoxor_d ) -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a ^ amo_reAlign_64_b), pipeStage1Bits.paddr ),
       (pipeStage1Bits.fun.amoand_w  | pipeStage1Bits.fun.amoand_d ) -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a & amo_reAlign_64_b), pipeStage1Bits.paddr ),
       (pipeStage1Bits.fun.amoor_w   | pipeStage1Bits.fun.amoor_d  ) -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a | amo_reAlign_64_b), pipeStage1Bits.paddr ),
@@ -292,38 +272,45 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
   }
 
   val wbReqValid = RegInit(false.B)
-  val pbReqValid = RegInit(false.B)
+  // val pbReqValid = RegInit(false.B)
   val wbReqPaddr = Reg(UInt(plen.W))
-  val pbReqPaddr = Reg(UInt(plen.W))
+  // val pbReqPaddr = Reg(UInt(plen.W))
   val wbReqData  = Reg(UInt(256.W))
-  val pbReqData  = Reg(UInt(256.W))
+  // val pbReqData  = Reg(UInt(256.W))
   val wbReqisData = Reg(Bool())
-  val pbReqisData = Reg(Bool())
+  val isPb        = Reg(Bool())
 
   io.wb_req.valid := wbReqValid
-  io.pb_req.valid := pbReqValid
+  // io.pb_req.valid := pbReqValid
 
   io.wb_req.bits.paddr := wbReqPaddr
-  io.pb_req.bits.paddr := pbReqPaddr
+  // io.pb_req.bits.paddr := pbReqPaddr
 
   io.wb_req.bits.data := wbReqData
-  io.pb_req.bits.data := pbReqData
+  // io.pb_req.bits.data := pbReqData
 
-  io.wb_req.bits.is_releaseData :=  wbReqisData
-  io.wb_req.bits.is_release     := ~wbReqisData
-  io.wb_req.bits.is_probeData   := false.B
-  io.wb_req.bits.is_probe       := false.B
+  io.wb_req.bits.is_releaseData :=  wbReqisData & ~isPb
+  io.wb_req.bits.is_release     := ~wbReqisData & ~isPb
+  io.wb_req.bits.is_probeData   :=  wbReqisData &  isPb
+  io.wb_req.bits.is_probe       := ~wbReqisData &  isPb
 
-  io.pb_req.bits.is_releaseData := false.B
-  io.pb_req.bits.is_release     := false.B
-  io.pb_req.bits.is_probeData   :=  pbReqisData
-  io.pb_req.bits.is_probe       := ~pbReqisData
+  // io.pb_req.bits.is_releaseData := false.B
+  // io.pb_req.bits.is_release     := false.B
+  // io.pb_req.bits.is_probeData   :=  pbReqisData
+  // io.pb_req.bits.is_probe       := ~pbReqisData
 
   when( pipeStage1Valid & ( pipeStage1Bits.fun.grant & ~isCBValid(addrSelW).contains(false.B) ) ) {
     wbReqValid  := true.B
-    wbReqPaddr  := Cat( tagInfoR(cbSel), addrSelW, id.U(bk_w.W), 0.U(addr_lsb.W) )
+    wbReqPaddr  := (if(bk > 1) {Cat( tagInfoR(cbSel), addrSelW, id.U(bk_w.W), 0.U(addr_lsb.W) )} else {Cat( tagInfoR(cbSel), addrSelW, 0.U(addr_lsb.W) )}) 
     wbReqData   := Cat(datInfoR(cbSel).reverse)
     wbReqisData := isCBDirty(addrSelW)(cbSel)
+    isPb        := false.B
+  } .elsewhen( pipeStage1Valid & pipeStage1Bits.fun.probe) {
+    wbReqValid  := true.B
+    wbReqPaddr  := pipeStage1Bits.paddr >> addr_lsb.U << addr_lsb.U 
+    wbReqData   := Cat(datInfoR(cbSel).reverse)
+    wbReqisData := isCBDirty(addrSelW)(cbSel)
+    isPb        := true.B
   } .otherwise {
     wbReqValid  := false.B
 
@@ -331,24 +318,10 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
       wbReqPaddr  := 0.U
       wbReqData   := 0.U
       wbReqisData := false.B
+      isPb        := false.B
     }
   }
 
-  when( pipeStage1Valid & pipeStage1Bits.fun.probe) {
-    pbReqValid  := true.B
-    pbReqPaddr  := pipeStage1Bits.paddr >> addr_lsb.U << addr_lsb.U 
-    pbReqData   := Cat(datInfoR(cbSel).reverse)
-    pbReqisData := isCBDirty(addrSelW)(cbSel)
-  } .otherwise {
-    pbReqValid  := false.B
-
-    if( isLowPower ) {
-      pbReqPaddr  := 0.U
-      pbReqData   := 0.U
-      pbReqisData := false.B
-    }
-  
-  }
 
 
   val reloadValid = RegInit(false.B)

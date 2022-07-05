@@ -110,94 +110,103 @@ class TAGE(param: TageParams = TageParams())(implicit p: Parameters) extends IFe
     val flush = Input(Bool())
   })
 
-  val tageTable = param.tableInfo.map{
-    case ( nRows, len ) => {
-      val mdl = Module(new TageTable(nRows = nRows, histlen = len))
-      mdl.io.req  := io.req.bits
-      mdl.io.flush := io.flush
-      
-      mdl
-    }
-  }
-  
-  for ( i <- 0 until 6 ) yield { io.resp.bits(i) := tageTable(i).io.resp }
-  io.resp.valid := RegNext(io.req.fire)
-  io.req.ready  := io.resp.ready
-
-  io.isReady := tageTable.map{_.io.isReady}.reduce(_|_)
-
-
-
-
-
-
-  for ( i <- 0 until 6 ) yield {
-    tageTable(i).io.update.valid      := false.B
-    tageTable(i).io.update.bits.ctl   := 0.U
-    tageTable(i).io.update.bits.pc    := 0.U
-    tageTable(i).io.update.bits.ghist := 0.U
-    tageTable(i).io.update.bits.use   := 0.U
-  } // override
-  when( io.update.valid ) {
-    when( io.update.bits.isAlloc.reduce(_&_) ) {
-      tageTable(0).io.update.valid      := true.B
-      tageTable(0).io.update.bits.ctl   := Mux( io.update.bits.isFinalTaken, 4.U, 3.U)
-      tageTable(0).io.update.bits.pc    := io.update.bits.pc
-      tageTable(0).io.update.bits.ghist := io.update.bits.ghist
-      tageTable(0).io.update.bits.use   := 1.U
-      assert( io.update.bits.ftqTage(0).use === 0.U )
-    } .otherwise{
-      when( io.update.bits.isMisPredict ) {
-        for ( i <- 0 until 6 ) yield {
-          when( io.update.bits.isProvider(i) === i.U ) {
-            tageTable(i).io.update.valid      := true.B
-            tageTable(i).io.update.bits.ctl   := inc_ctl( in = io.update.bits.ftqTage(i).ctl, isTaken = ~io.update.bits.isPredictTaken )
-            tageTable(i).io.update.bits.pc    := io.update.bits.pc
-            tageTable(i).io.update.bits.ghist := io.update.bits.ghist
-            tageTable(i).io.update.bits.use   := inc_use( in = io.update.bits.ftqTage(i).use, isInc = false.B )
-          }
-
-          when( io.update.bits.isDisAgree(i) ) {
-            tageTable(i).io.update.valid      := true.B
-            tageTable(i).io.update.bits.ctl   := io.update.bits.ftqTage(i).ctl
-            tageTable(i).io.update.bits.pc    := io.update.bits.pc
-            tageTable(i).io.update.bits.ghist := io.update.bits.ghist
-            tageTable(i).io.update.bits.use   := inc_use( in = io.update.bits.ftqTage(i).use, isInc = true.B )
-            assert( io.update.bits.ftqTage(i).use =/= 0.U )
-          }
-
-          when( io.update.bits.isAlloc(i) & (i.U === (io.update.bits.providerSel + 1.U)) & ( i.U =/= 0.U ) ) {
-            tageTable(i).io.update.valid      := true.B
-            tageTable(i).io.update.bits.ctl   := Mux( io.update.bits.isPredictTaken, 3.U, 4.U) //revert, because mis-predict here 
-            tageTable(i).io.update.bits.pc    := io.update.bits.pc
-            tageTable(i).io.update.bits.ghist := io.update.bits.ghist
-            tageTable(i).io.update.bits.use   := 1.U
-
-            assert( io.update.bits.ftqTage(i).use === 0.U )
-          }
-        }
-      } .otherwise {
-        for ( i <- 0 until 6 ) yield {
-          when( io.update.bits.isProvider(i) === i.U ) {
-            tageTable(i).io.update.valid      := true.B
-            tageTable(i).io.update.bits.ctl   := inc_ctl( in = io.update.bits.ftqTage(i).ctl, isTaken = io.update.bits.isPredictTaken )
-            tageTable(i).io.update.bits.use   := inc_use( in = io.update.bits.ftqTage(i).use, isInc = true.B )
-            tageTable(i).io.update.bits.pc    := io.update.bits.pc
-            tageTable(i).io.update.bits.ghist := io.update.bits.ghist
-          }
-
-          when( io.update.bits.isAgree(i) ) {
-            tageTable(i).io.update.valid      := true.B
-            tageTable(i).io.update.bits.ctl   := io.update.bits.ftqTage(i).ctl
-            tageTable(i).io.update.bits.pc    := io.update.bits.pc
-            tageTable(i).io.update.bits.ghist := io.update.bits.ghist
-            tageTable(i).io.update.bits.use   := inc_use( in = io.update.bits.ftqTage(i).use, isInc = true.B )
-          }
-        }
+  if (!isMinArea) {
+    val tageTable = param.tableInfo.map{
+      case ( nRows, len ) => {
+        val mdl = Module(new TageTable(nRows = nRows, histlen = len))
+        mdl.io.req  := io.req.bits
+        mdl.io.flush := io.flush
+        
+        mdl
       }
     }
+  
+    for ( i <- 0 until 6 ) yield { io.resp.bits(i) := tageTable(i).io.resp }
+    io.resp.valid := RegNext(io.req.fire)
+    io.req.ready  := io.resp.ready
 
+    io.isReady := tageTable.map{_.io.isReady}.reduce(_|_)
+
+
+
+
+
+
+    for ( i <- 0 until 6 ) yield {
+      tageTable(i).io.update.valid      := false.B
+      tageTable(i).io.update.bits.ctl   := 0.U
+      tageTable(i).io.update.bits.pc    := 0.U
+      tageTable(i).io.update.bits.ghist := 0.U
+      tageTable(i).io.update.bits.use   := 0.U
+    } // override
+    when( io.update.valid ) {
+      when( io.update.bits.isAlloc.reduce(_&_) ) {
+        tageTable(0).io.update.valid      := true.B
+        tageTable(0).io.update.bits.ctl   := Mux( io.update.bits.isFinalTaken, 4.U, 3.U)
+        tageTable(0).io.update.bits.pc    := io.update.bits.pc
+        tageTable(0).io.update.bits.ghist := io.update.bits.ghist
+        tageTable(0).io.update.bits.use   := 1.U
+        assert( io.update.bits.ftqTage(0).use === 0.U )
+      } .otherwise{
+        when( io.update.bits.isMisPredict ) {
+          for ( i <- 0 until 6 ) yield {
+            when( io.update.bits.isProvider(i) === i.U ) {
+              tageTable(i).io.update.valid      := true.B
+              tageTable(i).io.update.bits.ctl   := inc_ctl( in = io.update.bits.ftqTage(i).ctl, isTaken = ~io.update.bits.isPredictTaken )
+              tageTable(i).io.update.bits.pc    := io.update.bits.pc
+              tageTable(i).io.update.bits.ghist := io.update.bits.ghist
+              tageTable(i).io.update.bits.use   := inc_use( in = io.update.bits.ftqTage(i).use, isInc = false.B )
+            }
+
+            when( io.update.bits.isDisAgree(i) ) {
+              tageTable(i).io.update.valid      := true.B
+              tageTable(i).io.update.bits.ctl   := io.update.bits.ftqTage(i).ctl
+              tageTable(i).io.update.bits.pc    := io.update.bits.pc
+              tageTable(i).io.update.bits.ghist := io.update.bits.ghist
+              tageTable(i).io.update.bits.use   := inc_use( in = io.update.bits.ftqTage(i).use, isInc = true.B )
+              assert( io.update.bits.ftqTage(i).use =/= 0.U )
+            }
+
+            when( io.update.bits.isAlloc(i) & (i.U === (io.update.bits.providerSel + 1.U)) & ( i.U =/= 0.U ) ) {
+              tageTable(i).io.update.valid      := true.B
+              tageTable(i).io.update.bits.ctl   := Mux( io.update.bits.isPredictTaken, 3.U, 4.U) //revert, because mis-predict here 
+              tageTable(i).io.update.bits.pc    := io.update.bits.pc
+              tageTable(i).io.update.bits.ghist := io.update.bits.ghist
+              tageTable(i).io.update.bits.use   := 1.U
+
+              assert( io.update.bits.ftqTage(i).use === 0.U )
+            }
+          }
+        } .otherwise {
+          for ( i <- 0 until 6 ) yield {
+            when( io.update.bits.isProvider(i) === i.U ) {
+              tageTable(i).io.update.valid      := true.B
+              tageTable(i).io.update.bits.ctl   := inc_ctl( in = io.update.bits.ftqTage(i).ctl, isTaken = io.update.bits.isPredictTaken )
+              tageTable(i).io.update.bits.use   := inc_use( in = io.update.bits.ftqTage(i).use, isInc = true.B )
+              tageTable(i).io.update.bits.pc    := io.update.bits.pc
+              tageTable(i).io.update.bits.ghist := io.update.bits.ghist
+            }
+
+            when( io.update.bits.isAgree(i) ) {
+              tageTable(i).io.update.valid      := true.B
+              tageTable(i).io.update.bits.ctl   := io.update.bits.ftqTage(i).ctl
+              tageTable(i).io.update.bits.pc    := io.update.bits.pc
+              tageTable(i).io.update.bits.ghist := io.update.bits.ghist
+              tageTable(i).io.update.bits.use   := inc_use( in = io.update.bits.ftqTage(i).use, isInc = true.B )
+            }
+          }
+        }
+      }     
+    }
+  } else {
+    io.isReady := true.B
+    io.req.ready := true.B
+    io.resp.valid := false.B
+    io.resp.bits := 0.U.asTypeOf(Vec(6, new TageTableResp_Bundle ))
   }
+
+
+
 
   def inc_ctl( in: UInt, isTaken: Bool ): UInt = {
     val newCtl = Wire(UInt(3.W))
@@ -222,6 +231,8 @@ class TAGE(param: TageParams = TageParams())(implicit p: Parameters) extends IFe
 
 
 }
+
+
 
 object Tage_Decode{
   def apply( in: Vec[TageTableResp_Bundle] )(implicit p: Parameters): TageResp_Bundle = {

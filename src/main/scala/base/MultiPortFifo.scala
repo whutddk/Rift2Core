@@ -46,7 +46,8 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int, flow: Boolean =
 
 
 
-    val buf = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
+    // val buf = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
+    val buf = Reg(Vec(dp,dw))
     val buf_valid = RegInit(VecInit(Seq.fill(dp)(false.B)))
 
     val rd_ptr = RegInit(0.U(aw.W))

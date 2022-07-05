@@ -184,7 +184,6 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
 
   stage.io.missUnit_req      <> missUnit.io.req
   stage.io.wb_req <> writeBackUnit.io.wb_req
-  stage.io.pb_req <> writeBackUnit.io.pb_req
   stage.io.flush := io.flush
 
   missUnit.io.miss_ban := writeBackUnit.io.miss_ban

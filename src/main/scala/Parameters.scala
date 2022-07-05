@@ -24,7 +24,6 @@ import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp, Trans
 import freechips.rocketchip.tilelink._
 import chipsalliance.rocketchip.config.{Field, Parameters}
 
-import rift2Core.L1Cache._
 import rift2Core.define._
 
 abstract class RiftModule(implicit val p: Parameters) extends Module with HasRiftParameters { def io: Record }
@@ -127,6 +126,7 @@ case class RiftSetting(
 
   regNum: Int = 64,
   pmpNum: Int = 1,
+  hpmNum: Int = 4,
 
   l1BeatBits: Int = 128,
   memBeatBits: Int = 128,
@@ -199,6 +199,7 @@ trait HasRiftParameters {
 
   def regNum = riftSetting.regNum
   def pmpNum = riftSetting.pmpNum
+  def hpmNum = riftSetting.hpmNum
 
   def l1BeatBits = riftSetting.l1BeatBits
   def memBeatBits = riftSetting.memBeatBits

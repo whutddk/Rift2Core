@@ -20,7 +20,6 @@ package rift2Core.privilege
 
 import chisel3._
 import chisel3.util._
-import rift2Core.L1Cache._
 import chisel3.experimental.dataview._
 
 import rift._

@@ -1169,7 +1169,10 @@ trait CsrFiles { this: BaseCommit =>
     val mhpmcounter = WireDefault( in.csrfiles.mhpmcounter )
     for ( i <- 0 until 32 ) yield {
       val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mhpmcounter(i), "hB00".U + i.U, in.csrExe )
-      when(enable) { mhpmcounter(i) := dnxt }
+
+      if ( i == 3 || i == 4 || i == 5 || i == 6 ) {
+        when(enable) { mhpmcounter(i) := dnxt } //other counter will be hardwire to 0
+      }
 
       if ( i == 3 ) {
         //branch success
@@ -1214,10 +1217,15 @@ trait CsrFiles { this: BaseCommit =>
     val mhpmevent = WireDefault(in.csrfiles.mhpmevent)
 
     for ( i <- 0 until 32 ) yield {
-      if ( i == 0 || i == 1 || i == 2 ) { mhpmevent(i) := 0.U }
-      else {
-        val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mhpmevent(i), "hB20".U + i.U, in.csrExe )
-        when(enable) { mhpmevent(i) := dnxt }
+      // if ( i == 0 || i == 1 || i == 2 ) { mhpmevent(i) := 0.U }
+      // else {
+      //   val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mhpmevent(i), "hB20".U + i.U, in.csrExe )
+      //   when(enable) { mhpmevent(i) := dnxt }
+      // }
+      if ( i == 3 || i == 4 || i == 5 || i == 6 ) {
+        mhpmevent(i) := 1.U
+      } else {
+        mhpmevent(i) := 0.U
       }
     }
 

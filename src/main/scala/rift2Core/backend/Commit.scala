@@ -22,7 +22,6 @@ import chisel3._
 import chisel3.util._
 
 import rift2Core.define._
-import rift2Core.L1Cache._
 import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.privilege._
@@ -741,9 +740,11 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
         io.cmmRedirect.valid := true.B
         io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
       }
+
+      assert( PopCount(Seq( cmm_state(i).is_xRet, cmm_state(i).is_trap, cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U )
     }
 
-    assert( PopCount(Seq( cmm_state(i).is_xRet, cmm_state(i).is_trap, cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U )
+    
   }
 
 

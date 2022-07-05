@@ -23,12 +23,9 @@ package test
 import chisel3._
 import rift2Chip._
 import rift2Core._
-// import rift2Core.frontend._
-// import rift2Core.backend._
-// import rift2Core.cache._
+
 import rift._
 import rift2Core.define.{IFParameters}
-// import rift2Core.L1Cache.{IcacheParameters, DcacheParameters}
 import rift2Core.privilege._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.config._
@@ -67,7 +64,7 @@ class Rift2GoCfg extends Config((site, here, up) => {
       cb = 2,
     ),
     dcacheParameters = DcacheParameters(
-      bk = 2,
+      bk = 1,
       cb = 2,
       sbEntry = 4,
       stEntry = 4,

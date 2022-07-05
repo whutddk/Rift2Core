@@ -9,7 +9,7 @@ compile: clean
 	--target-dir generated \
 	--show-registrations \
 	--full-stacktrace \
-	-e verilog"
+	-E verilog"
 	
 #--gen-mem-verilog \
 # --inline \
