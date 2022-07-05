@@ -150,6 +150,42 @@ trait Mul { this: MulDivBase =>
     return rows
   }
 
+  def SignOpt( a: UInt, b: UInt ): UInt = {
+    require( a.getWidth == b.getWidth )
+    val len = a.getWidth
+    require( a.getWidth == 65 )
+
+
+    val signOpt = Wire(Vec( (2*len), Bool() ))
+
+    for( i <- 0 until (len+1)/2 ) {
+      val booth4 = if ( i == 0 ) { Cat( a(1), a(0), 0.U(1.W) ) } else if(2*i+1 == len) { Cat( a(2*i), a(2*i), a(2*i-1)) } else { a(2*i+1, 2*i-1) } 
+      
+      signOpt(2*i) := Mux1H(Seq(
+        ( booth4 === "b000".U ) -> false.B,
+        ( booth4 === "b001".U ) -> false.B,
+        ( booth4 === "b010".U ) -> false.B,
+        ( booth4 === "b011".U ) -> false.B,
+        ( booth4 === "b100".U ) -> false.B,
+        ( booth4 === "b101".U ) -> true.B,
+        ( booth4 === "b110".U ) -> true.B,
+        ( booth4 === "b111".U ) -> false.B,
+      ))
+
+      signOpt(2*i+1) := Mux1H(Seq(
+        ( booth4 === "b000".U ) -> false.B,
+        ( booth4 === "b001".U ) -> false.B,
+        ( booth4 === "b010".U ) -> false.B,
+        ( booth4 === "b011".U ) -> false.B,
+        ( booth4 === "b100".U ) -> true.B,
+        ( booth4 === "b101".U ) -> false.B,
+        ( booth4 === "b110".U ) -> false.B,
+        ( booth4 === "b111".U ) -> false.B,
+      ))
+    }
+    return rows
+  }
+
 
   def addRows(rowsIn: Vec[UInt]): Vec[UInt] = {
     val iWidth = rowsIn(0).getWidth
