@@ -77,42 +77,53 @@ trait Mul { this: MulDivBase =>
     )
 
 
-  val rows33 = Wire( Vec(33, UInt(130.W)) )
-  val rows22 = Wire( Vec(22, UInt(130.W)) )
-  val rows15 = Wire( Vec(15, UInt(130.W)) )
-  val rows10 = Wire( Vec(10, UInt(130.W)) )
-  val rows07 = Wire( Vec( 7, UInt(130.W)) )
-  val rows05 = Wire( Vec( 5, UInt(130.W)) )
+  val rows34 = Wire( Vec(34, UInt(130.W)) )
+  val rows23 = Wire( Vec(23, UInt(130.W)) )
+  val rows16 = Wire( Vec(16, UInt(130.W)) )
+  val rows11 = Wire( Vec(11, UInt(130.W)) )
+  val rows08 = Wire( Vec( 8, UInt(130.W)) )
+  val rows06 = Wire( Vec( 6, UInt(130.W)) )
   val rows04 = Wire( Vec( 4, UInt(130.W)) )
   val rows03 = Wire( Vec( 3, UInt(130.W)) )
   val rows02 = Wire( Vec( 2, UInt(130.W)) )
 
 
-  val pipeStage05Rows = Module( new Queue( Vec( 5, UInt(130.W)), 1, true, false ) )
-  val pipeStage05Info  = RegEnable( io.mul_iss_exe.bits, io.mul_iss_exe.fire & io.mul_iss_exe.bits.fun.isMul)
+  val pipeStage06Rows = Module( new Queue( Vec( 6, UInt(130.W)), 1, true, false ) )
+  val pipeStage06Info  = RegEnable( io.mul_iss_exe.bits, io.mul_iss_exe.fire & io.mul_iss_exe.bits.fun.isMul)
   val pipeStage02Rows = Module( new Queue( Vec( 2, UInt(130.W)), 1, true, false ) )
-  val pipeStage02Info  = RegEnable( pipeStage05Info, pipeStage05Rows.io.deq.fire )
+  val pipeStage02Info  = RegEnable( pipeStage06Info, pipeStage06Rows.io.deq.fire )
 
-  pipeStage05Rows.reset := reset.asBool | io.flush
+  pipeStage06Rows.reset := reset.asBool | io.flush
   pipeStage02Rows.reset := reset.asBool | io.flush
 
 
-  rows33 := booth4Enc( a = mul_op1, b = mul_op2 )
-  rows22 := addRows(rowsIn = rows33)
-  rows15 := addRows(rowsIn = rows22)
-  rows10 := addRows(rowsIn = rows15)
-  rows07 := addRows(rowsIn = rows10)
-  rows05 := addRows(rowsIn = rows07)
-  pipeStage05Rows.io.enq.bits := rows05
-  pipeStage05Rows.io.enq.valid := io.mul_iss_exe.valid & io.mul_iss_exe.bits.fun.isMul
+  rows34 := booth4Enc( a = mul_op1, b = mul_op2 ) ++ VecInit(SignOpt( a = mul_op1, b = mul_op2 ))
 
-  rows04 := addRows(rowsIn = pipeStage05Rows.io.deq.bits)
+  dontTouch(rows34)
+  dontTouch(rows23)
+  dontTouch(rows16)
+  dontTouch(rows11)
+  dontTouch(rows08)
+  dontTouch(rows06)
+  dontTouch(rows04)
+  dontTouch(rows03)
+  dontTouch(rows02)
+
+  rows23 := addRows(rowsIn = rows34)
+  rows16 := addRows(rowsIn = rows23)
+  rows11 := addRows(rowsIn = rows16)
+  rows08 := addRows(rowsIn = rows11)
+  rows06 := addRows(rowsIn = rows08)
+  pipeStage06Rows.io.enq.bits := rows06
+  pipeStage06Rows.io.enq.valid := io.mul_iss_exe.valid & io.mul_iss_exe.bits.fun.isMul
+
+  rows04 := addRows(rowsIn = pipeStage06Rows.io.deq.bits)
   rows03 := addRows(rowsIn = rows04)
   rows02 := addRows(rowsIn = rows03)
 
   pipeStage02Rows.io.enq.bits := rows02
-  pipeStage02Rows.io.enq.valid := pipeStage05Rows.io.deq.valid
-  pipeStage05Rows.io.deq.ready := pipeStage02Rows.io.enq.ready
+  pipeStage02Rows.io.enq.valid := pipeStage06Rows.io.deq.valid
+  pipeStage06Rows.io.deq.ready := pipeStage02Rows.io.enq.ready
 
   // val mul_res_128w = mul_op1.asSInt * mul_op2.asSInt
   val mul_res_128w = pipeStage02Rows.io.deq.bits(0) + pipeStage02Rows.io.deq.bits(1)
@@ -129,25 +140,36 @@ trait Mul { this: MulDivBase =>
     require( a.getWidth == b.getWidth )
     val len = a.getWidth
     require( a.getWidth == 65 )
-
+    val oriB, ori2B, negB, neg2B = Wire(UInt((len+1).W))
+    oriB  := sextXTo(b, len+1)
+    ori2B := sextXTo(b << 1, len+1)
+    negB  := sextXTo(-b, len+1)
+    neg2B := sextXTo(-(b << 1), len+1)
 
     val rows = Wire(Vec((len+1)/2, UInt((2*len).W)))
 
     for( i <- 0 until (len+1)/2 ) {
       val booth4 = if ( i == 0 ) { Cat( a(1), a(0), 0.U(1.W) ) } else if(2*i+1 == len) { Cat( a(2*i), a(2*i), a(2*i-1)) } else { a(2*i+1, 2*i-1) } 
       
+
+
       rows(i) := Mux1H(Seq(
-        ( booth4 === "b000".U ) -> 0.U,
-        ( booth4 === "b001".U ) -> sextXTo( b, 2*len),
-        ( booth4 === "b010".U ) -> sextXTo( b, 2*len),
-        ( booth4 === "b011".U ) -> sextXTo(  b << 1, 2*len),
-        ( booth4 === "b100".U ) -> sextXTo(-(b << 1), 2*len),
-        ( booth4 === "b101".U ) -> sextXTo(-b, 2*len),
-        ( booth4 === "b110".U ) -> sextXTo(-b, 2*len),
-        ( booth4 === "b111".U ) -> 0.U,
+        ( booth4 === "b000".U ) -> padXTo(prePorcess((0.U)((len+1).W)), 2*len),
+        ( booth4 === "b001".U ) -> padXTo(prePorcess( oriB ), 2*len),
+        ( booth4 === "b010".U ) -> padXTo(prePorcess( oriB ), 2*len),
+        ( booth4 === "b011".U ) -> padXTo(prePorcess( ori2B ), 2*len),
+        ( booth4 === "b100".U ) -> padXTo(prePorcess( neg2B ), 2*len),
+        ( booth4 === "b101".U ) -> padXTo(prePorcess( negB ), 2*len),
+        ( booth4 === "b110".U ) -> padXTo(prePorcess( negB ), 2*len),
+        ( booth4 === "b111".U ) -> padXTo(prePorcess((0.U)((len+1).W)), 2*len),
       )) << (2*i)
     }
     return rows
+  }
+
+  def prePorcess( a: UInt ): UInt = {
+    val len = a.getWidth
+    return Cat( 1.U(1.W), ~a(len-1), a(len-2, 0) )
   }
 
   def SignOpt( a: UInt, b: UInt ): UInt = {
@@ -156,34 +178,39 @@ trait Mul { this: MulDivBase =>
     require( a.getWidth == 65 )
 
 
-    val signOpt = Wire(Vec( (2*len), Bool() ))
+    val signOpt = Wire(Vec( (len+1), Bool() ))
+    dontTouch(signOpt)
 
     for( i <- 0 until (len+1)/2 ) {
       val booth4 = if ( i == 0 ) { Cat( a(1), a(0), 0.U(1.W) ) } else if(2*i+1 == len) { Cat( a(2*i), a(2*i), a(2*i-1)) } else { a(2*i+1, 2*i-1) } 
       
-      signOpt(2*i) := Mux1H(Seq(
-        ( booth4 === "b000".U ) -> false.B,
-        ( booth4 === "b001".U ) -> false.B,
-        ( booth4 === "b010".U ) -> false.B,
-        ( booth4 === "b011".U ) -> false.B,
-        ( booth4 === "b100".U ) -> false.B,
-        ( booth4 === "b101".U ) -> true.B,
-        ( booth4 === "b110".U ) -> true.B,
-        ( booth4 === "b111".U ) -> false.B,
-      ))
+      signOpt(2*i) := false.B
+      // Mux1H(Seq(
+      //   ( booth4 === "b000".U ) -> false.B,
+      //   ( booth4 === "b001".U ) -> false.B,
+      //   ( booth4 === "b010".U ) -> false.B,
+      //   ( booth4 === "b011".U ) -> false.B,
+      //   ( booth4 === "b100".U ) -> false.B,
+      //   ( booth4 === "b101".U ) -> true.B,
+      //   ( booth4 === "b110".U ) -> true.B,
+      //   ( booth4 === "b111".U ) -> false.B,
+      // ))
 
-      signOpt(2*i+1) := Mux1H(Seq(
-        ( booth4 === "b000".U ) -> false.B,
-        ( booth4 === "b001".U ) -> false.B,
-        ( booth4 === "b010".U ) -> false.B,
-        ( booth4 === "b011".U ) -> false.B,
-        ( booth4 === "b100".U ) -> true.B,
-        ( booth4 === "b101".U ) -> false.B,
-        ( booth4 === "b110".U ) -> false.B,
-        ( booth4 === "b111".U ) -> false.B,
-      ))
+      signOpt(2*i+1) := false.B
+      // Mux1H(Seq(
+      //   ( booth4 === "b000".U ) -> false.B,
+      //   ( booth4 === "b001".U ) -> false.B,
+      //   ( booth4 === "b010".U ) -> false.B,
+      //   ( booth4 === "b011".U ) -> false.B,
+      //   ( booth4 === "b100".U ) -> true.B,
+      //   ( booth4 === "b101".U ) -> false.B,
+      //   ( booth4 === "b110".U ) -> false.B,
+      //   ( booth4 === "b111".U ) -> false.B,
+      // ))
+  
     }
-    return rows
+    signOpt(len) := true.B //the last booth cannot be -2b
+    return signOpt.asUInt
   }
 
 
@@ -312,7 +339,7 @@ class MulDiv(implicit p: Parameters) extends MulDivBase with Mul with Div {
 
   // io.mul_iss_exe.ready := ~isDivBusy
   io.mul_iss_exe.ready :=
-    Mux( io.mul_iss_exe.bits.fun.isMul, pipeStage05Rows.io.enq.ready, dividor.io.enq.ready )
+    Mux( io.mul_iss_exe.bits.fun.isMul, pipeStage06Rows.io.enq.ready, dividor.io.enq.ready )
 
 
   val iwbArb = Module(new Arbiter(new WriteBack_info(dw=64), 2))

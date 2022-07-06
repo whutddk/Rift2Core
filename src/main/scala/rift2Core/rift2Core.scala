@@ -89,7 +89,7 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule with HasRiftParamet
   lazy val module = new Rift2CoreImp(this)
 }
  
-class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer){ // with FlattenInstance
+class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) { //with FlattenInstance
   val io = IO(new Bundle{
     val dm      = Flipped(new Info_DM_cmm)
     val rtc_clock = Input(Bool())

@@ -284,7 +284,6 @@ VSimTop:
 	+define+RANDOMIZE_INVALID_ASSIGN \
 	+define+RANDOMIZE_REG_INIT \
 	+define+RANDOMIZE_MEM_INIT \
-	+define+VERILATOR \
 	--exe --build \
 	./verilator/sim_main.cpp  \
 	./verilator/diff.cpp \
