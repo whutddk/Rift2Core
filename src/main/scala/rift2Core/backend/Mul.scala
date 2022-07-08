@@ -77,174 +77,82 @@ trait Mul { this: MulDivBase =>
     )
 
 
-  // val rows34 = Wire( Vec(34, UInt(130.W)) )
-  // val rows23 = Wire( Vec(23, UInt(130.W)) )
-  // val rows16 = Wire( Vec(16, UInt(130.W)) )
-  // val rows11 = Wire( Vec(11, UInt(130.W)) )
-  // val rows08 = Wire( Vec( 8, UInt(130.W)) )
-  // val rows06 = Wire( Vec( 6, UInt(130.W)) )
-  // val rows04 = Wire( Vec( 4, UInt(130.W)) )
-  // val rows03 = Wire( Vec( 3, UInt(130.W)) )
-  // val rows02 = Wire( Vec( 2, UInt(130.W)) )
+  val pipeMidStageInfo = Module( new Queue( new Mul_iss_info, 1, true, false ) )
+  val pipeFnlStageInfo = Module( new Queue( new Mul_iss_info, 1, true, false ) )
+
+  pipeMidStageInfo.reset := reset.asBool | io.flush
+  pipeFnlStageInfo.reset := reset.asBool | io.flush
+
+  val (oriTree, oriLat) = booth4Enc( a = mul_op1, b = mul_op2 )
+  val (sum, lat) = WallaceTreeCompress( oriTree, oriLat )
 
 
-  // val pipeStage06Rows = Module( new Queue( Vec( 6, UInt(130.W)), 1, true, false ) )
-  // val pipeStage06Info  = RegEnable( io.mul_iss_exe.bits, io.mul_iss_exe.fire & io.mul_iss_exe.bits.fun.isMul)
-  val pipeStage02Rows = Module( new Queue( Vec( 2, UInt(128.W)), 1, true, false ) )
-  val pipeStage02Info  = RegEnable( io.mul_iss_exe.bits, io.mul_iss_exe.fire & io.mul_iss_exe.bits.fun.isMul )
-
-  // pipeStage06Rows.reset := reset.asBool | io.flush
-  pipeStage02Rows.reset := reset.asBool | io.flush
-
-  val oriTree = booth4Enc( a = mul_op1, b = mul_op2 )
-  val (cout, sum) = WallaceTreeCompress( oriTree )
 
 
-  // rows34 := booth4Enc( a = mul_op1, b = mul_op2 ) ++ VecInit(SignOpt( a = mul_op1, b = mul_op2 ))
+  pipeMidStageInfo.io.enq.bits  := io.mul_iss_exe.bits
+  pipeMidStageInfo.io.enq.valid := io.mul_iss_exe.valid & io.mul_iss_exe.bits.fun.isMul
 
-  // dontTouch(rows34)
-  // dontTouch(rows23)
-  // dontTouch(rows16)
-  // dontTouch(rows11)
-  // dontTouch(rows08)
-  // dontTouch(rows06)
-  // dontTouch(rows04)
-  // dontTouch(rows03)
-  // dontTouch(rows02)
-
-  // rows23 := addRows(rowsIn = rows34)
-  // rows16 := addRows(rowsIn = rows23)
-  // rows11 := addRows(rowsIn = rows16)
-  // rows08 := addRows(rowsIn = rows11)
-  // rows06 := addRows(rowsIn = rows08)
-  // pipeStage06Rows.io.enq.bits := rows06
-  // pipeStage06Rows.io.enq.valid := io.mul_iss_exe.valid & io.mul_iss_exe.bits.fun.isMul
-
-  // rows04 := addRows(rowsIn = pipeStage06Rows.io.deq.bits)
-  // rows03 := addRows(rowsIn = rows04)
-  // rows02 := addRows(rowsIn = rows03)
-
-  pipeStage02Rows.io.enq.bits  := VecInit(cout, sum)
-  pipeStage02Rows.io.enq.valid := io.mul_iss_exe.valid & io.mul_iss_exe.bits.fun.isMul//pipeStage06Rows.io.deq.valid
-  // pipeStage06Rows.io.deq.ready := pipeStage02Rows.io.enq.ready
 
   // val mul_res_128w = mul_op1.asSInt * mul_op2.asSInt
-  val mul_res_128w = pipeStage02Rows.io.deq.bits(0) + pipeStage02Rows.io.deq.bits(1)
+  val mul_res_128w = sum(0) + sum(1)
   val mulRes = Mux1H(Seq(
-    pipeStage02Info.fun.mul    -> mul_res_128w(63,0),
-    pipeStage02Info.fun.mulh   -> mul_res_128w(127,64),
-    pipeStage02Info.fun.mulhsu -> mul_res_128w(127,64),
-    pipeStage02Info.fun.mulhu  -> mul_res_128w(127,64),
-    pipeStage02Info.fun.mulw   -> sextXTo(mul_res_128w(31,0), 64 ),
+    pipeFnlStageInfo.io.deq.bits.fun.mul    -> mul_res_128w(63,0),
+    pipeFnlStageInfo.io.deq.bits.fun.mulh   -> mul_res_128w(127,64),
+    pipeFnlStageInfo.io.deq.bits.fun.mulhsu -> mul_res_128w(127,64),
+    pipeFnlStageInfo.io.deq.bits.fun.mulhu  -> mul_res_128w(127,64),
+    pipeFnlStageInfo.io.deq.bits.fun.mulw   -> sextXTo(mul_res_128w(31,0), 64 ),
   ))
 
 
-  // def booth4Enc( a: UInt, b: UInt ): Vec[UInt] = {
-  //   require( a.getWidth == b.getWidth )
-  //   val len = a.getWidth
-  //   require( a.getWidth == 65 )
-  //   val oriB, ori2B, negB, neg2B = Wire(UInt((len+1).W))
-  //   oriB  := sextXTo(b, len+1)
-  //   ori2B := sextXTo(b << 1, len+1)
-  //   negB  := sextXTo(-b, len+1)
-  //   neg2B := sextXTo(-(b << 1), len+1)
 
-  //   val rows = Wire(Vec((len+1)/2, UInt((2*len).W)))
-
-  //   for( i <- 0 until (len+1)/2 ) {
-  //     val booth4 = if ( i == 0 ) { Cat( a(1), a(0), 0.U(1.W) ) } else if(2*i+1 == len) { Cat( a(2*i), a(2*i), a(2*i-1)) } else { a(2*i+1, 2*i-1) } 
-      
-
-
-  //     rows(i) := Mux1H(Seq(
-  //       ( booth4 === "b000".U ) -> padXTo(prePorcess((0.U)((len+1).W)), 2*len),
-  //       ( booth4 === "b001".U ) -> padXTo(prePorcess( oriB ), 2*len),
-  //       ( booth4 === "b010".U ) -> padXTo(prePorcess( oriB ), 2*len),
-  //       ( booth4 === "b011".U ) -> padXTo(prePorcess( ori2B ), 2*len),
-  //       ( booth4 === "b100".U ) -> padXTo(prePorcess( neg2B ), 2*len),
-  //       ( booth4 === "b101".U ) -> padXTo(prePorcess( negB ), 2*len),
-  //       ( booth4 === "b110".U ) -> padXTo(prePorcess( negB ), 2*len),
-  //       ( booth4 === "b111".U ) -> padXTo(prePorcess((0.U)((len+1).W)), 2*len),
-  //     )) << (2*i)
-  //   }
-  //   return rows
-  // }
-
-  def prePorcess( a: UInt ): UInt = {
+  def preProcess( a: UInt ): UInt = {
     val len = a.getWidth
     return Cat( 1.U(1.W), ~a(len-1), a(len-2, 0) )
   }
 
-  // def SignOpt( a: UInt, b: UInt ): UInt = {
-  //   require( a.getWidth == b.getWidth )
-  //   val len = a.getWidth
-  //   require( a.getWidth == 65 )
-
-  //   val signOpt = Wire(Vec( (len+1), Bool() ))
-  //   dontTouch(signOpt)
-
-  //   for( i <- 0 until (len+1)/2 ) {
-  //     val booth4 = if ( i == 0 ) { Cat( a(1), a(0), 0.U(1.W) ) } else if(2*i+1 == len) { Cat( a(2*i), a(2*i), a(2*i-1)) } else { a(2*i+1, 2*i-1) } 
-      
-  //     signOpt(2*i) := false.B
-  //     signOpt(2*i+1) := false.B
-  
-  //   }
-  //   signOpt(len) := true.B //the last booth cannot be -2b
-  //   return signOpt.asUInt
-  // }
-
-
-  // def addRows(rowsIn: Vec[UInt]): Vec[UInt] = {
-  //   val iWidth = rowsIn(0).getWidth
-  //   val iLen = rowsIn.length
-  //   require( iLen >= 3, "inLen is "+iLen+", Which less than 3!\n" )
-
-  //   val oLen = ((iLen / 3) * 2) + (iLen % 3)
-
-  //   val rowsOut = Wire( Vec(oLen, UInt(iWidth.W) ) )
-    
-  //   for( i <- 0 until iLen / 3 ) {
-  //     val (cout, sum) = csa_3_2( rowsIn((iLen%3)+(3*i)), rowsIn((iLen%3)+(3*i)+1), rowsIn((iLen%3)+(3*i)+2) )
-  //     rowsOut(2*i)   := cout
-  //     rowsOut(2*i+1) := sum      
-  //   }
-
-  //   for( i <- 0 until (iLen%3) ) {
-  //     rowsOut( oLen-1-i ) := rowsIn(i)
-  //   }
-  //   return rowsOut
-
-  // }
-
-  def csa_3_2( in: Vec[Bool] ): (Bool, Bool) = {
+ 
+  /** a single bits full-adder*/
+  def csa_3_2( in: Vec[Bool], lat: Seq[Int] ): (Bool, Bool, Int) = {
     require( in.length == 3 )
     val sum  = WireDefault(in(0) ^ in(1) ^ in(2))
     val cout = WireDefault((in(0) & in(1)) | ((in(0) ^ in(1)) & in(2)))
-    return (cout, sum)
+    val latency = lat.max + 1
+    return (cout, sum, latency)
   }
 
-  def ColumnCompress(col: Seq[Bool]): ( Seq[Bool], Seq[Bool] ) = {
-    val len = col.length
-    val column = col ++ Seq.fill(3-(len%3))(false.B)
+  /** compress one Column */
+  def ColumnCompress(col: Seq[Bool], lat: Seq[Int]): ( Seq[Bool], Seq[Bool], Seq[Int] ) = {
+    require( col.length == lat.length )
 
-    println( "ColumnCompress: col length = "+ col.length + " , column length = "+ column.length + " \n" )
+    val len = col.length
+    val column  = col ++ Seq.fill(3-(len%3))(false.B)
+    val latency = lat ++ Seq.fill(3-(len%3))(0)
+
+    // println( "ColumnCompress: col length = "+ col.length + " , column length = "+ column.length + " \n" )
 
     val adder = for( i <- 0 until ((len+2) / 3) ) yield {
-      csa_3_2(VecInit(column(3*i), column(3*i+1), column(3*i+2)) )
+      csa_3_2(VecInit(column(3*i), column(3*i+1), column(3*i+2)), Seq( latency(3*i), latency(3*i+1), latency(3*i+2) ) )
     }
 
-    val csa32_cout: Seq[Bool] = adder.map{_._1}
+    val csa32_cout: Seq[Bool] = adder.map{_._1} 
     val csa32_sum : Seq[Bool] = adder.map{_._2}
+    val csa32_lat : Seq[Int]  = adder.map{_._3}
 
-    return (csa32_cout , csa32_sum)
+    return (csa32_cout , csa32_sum, csa32_lat)
   }
 
-  def WallaceTreeCompress( tree: Seq[Seq[Bool]] ): (UInt, UInt) = {
+  /** compress the WallaceTree */
+  def WallaceTreeCompress( tree: MixedVec[Vec[Bool]], lat: Seq[Seq[Int]] ): (Vec[UInt], Int) = {
+    require( tree.length == lat.length )
+    require( (tree zip lat).map{ case(x, y) => (x.length == y.length) }.foldLeft( true )( _ & _ ) )
+
     require(tree.length == 128)
 
-    val treeHight = tree.map{ _.length}.max
-    println( "WallaceTree is "+ treeHight + " meters tall" )
+    val treeHight   = tree.map{ _.length}.max
+    val treeLatency = lat.map{ _.max }.max
+
+
+    println( "WallaceTree is "+ treeHight + " meters tall. WallaceTree is "+ treeLatency + " seconds delay\n" )
 
     if ( treeHight == 2 ) {
       val sum = Wire( Vec(128, Bool() ))
@@ -266,28 +174,46 @@ trait Mul { this: MulDivBase =>
           cin(i) := false.B
         }
       }
-      return ( cin.asUInt, sum.asUInt )
+      println( "WallaceTree Compression Finish, latency is " + treeLatency +"\n")
+      return (RegEnable( VecInit(cin.asUInt, sum.asUInt), pipeFnlStageInfo.io.enq.fire ), treeLatency )
     } else if ( treeHight > 2 ) {
-      val compress = for( i <- 0 until 128 ) yield { ColumnCompress(col = tree(i)) }
+      val compress = for( i <- 0 until 128 ) yield { ColumnCompress(col = tree(i), lat(i)) }
 
-      val newCout = compress.map{ _._1 }
-      val newSum  = compress.map{ _._2 }
+      val newCout: Seq[Seq[Bool]] = compress.map{ _._1 }
+      val newSum : Seq[Seq[Bool]] = compress.map{ _._2 }
+      val newLat : Seq[Seq[Int ]] = compress.map{ _._3 }
 
-      val newTree = for( i <- 0 until 128 ) yield {
-        if( i == 0 ) { newSum(0) }
-        else {  newSum(i) ++ newCout(i-1) }
+      val newTree = MixedVecInit(for( i <- 0 until 128 ) yield {
+        if( i == 0 ) { VecInit(newSum(0)) }
+        else {  VecInit(newSum(i) ++ newCout(i-1)) }
+      })
+
+      val newLatency = for( i <- 0 until 128 ) yield {
+        if( i == 0 ) { newLat(0) }
+        else { newLat(i) ++ newLat(i-1) }
       }
 
-      return WallaceTreeCompress( tree = newTree )
+      val emptyLatency = for( i <- 0 until 128 ) yield {
+        if( i == 0 ) { newLat(0).map{ _ => 0} }
+        else { (newLat(i) ++ newLat(i-1)).map{ _ => 0} }
+      }
+
+      if( treeLatency == 60 ) {
+        return WallaceTreeCompress( RegEnable( newTree, pipeMidStageInfo.io.enq.fire ), emptyLatency )
+      } else {
+        return WallaceTreeCompress( tree = newTree, lat = newLatency )        
+      }
+
     } else {
       require(false)
-      return ( 0.U, 0.U )
+      return ( VecInit(0.U, 0.U), 0 )
     }
 
 
   }
 
-  def booth4Enc( a: UInt, b: UInt ): Seq[Seq[Bool]] = {
+
+  def booth4Enc( a: UInt, b: UInt ): (MixedVec[Vec[Bool]], Seq[Seq[Int]]) = {
     require( a.getWidth == b.getWidth )
     val len = a.getWidth
     require( a.getWidth == 65 )
@@ -298,48 +224,53 @@ trait Mul { this: MulDivBase =>
     neg2B := sextXTo(-(b << 1), len+1)
 
 
-    val rows34 = Wire( Vec(34, UInt(130.W)) )
-    dontTouch(rows34)
+    // val rows34 = Wire( Vec(34, UInt(130.W)) )
+    // dontTouch(rows34)
 
-    val trees = for( i <- 0 until (len+1)/2 ) yield {
+    val buildingTrees = for( i <- 0 until (len+1)/2 ) yield {
       val booth4 = if ( i == 0 ) { Cat( a(1), a(0), 0.U(1.W) ) } else if(2*i+1 == len) { Cat( a(2*i), a(2*i), a(2*i-1)) } else { a(2*i+1, 2*i-1) } 
       
       val payload = Mux1H(Seq(
-        ( booth4 === "b000".U ) -> prePorcess((0.U)((len+1).W)),
-        ( booth4 === "b001".U ) -> prePorcess( oriB ),
-        ( booth4 === "b010".U ) -> prePorcess( oriB ),
-        ( booth4 === "b011".U ) -> prePorcess( ori2B ),
-        ( booth4 === "b100".U ) -> prePorcess( neg2B ),
-        ( booth4 === "b101".U ) -> prePorcess( negB ),
-        ( booth4 === "b110".U ) -> prePorcess( negB ),
-        ( booth4 === "b111".U ) -> prePorcess((0.U)((len+1).W)),
+        ( booth4 === "b000".U ) -> preProcess((0.U)((len+1).W)),
+        ( booth4 === "b001".U ) -> preProcess( oriB ),
+        ( booth4 === "b010".U ) -> preProcess( oriB ),
+        ( booth4 === "b011".U ) -> preProcess( ori2B ),
+        ( booth4 === "b100".U ) -> preProcess( neg2B ),
+        ( booth4 === "b101".U ) -> preProcess( negB ),
+        ( booth4 === "b110".U ) -> preProcess( negB ),
+        ( booth4 === "b111".U ) -> preProcess((0.U)((len+1).W)),
       ))
 
-      rows34(i) := payload << 2*i
+      // rows34(i) := payload << 2*i
       map2WallaceTree( payload, offset = 2*i )
     }
 
+    val trees = buildingTrees.map{_._1}
+    val lats  = buildingTrees.map{_._2}
 
-    for ( i <- 0 until 33 ) {
-      
-    }
-     rows34(33) := 1.U << (len)
 
-    val oriTree = for( i <- 0 until 128 ) yield {
+    // println( "trees is "+ trees )
+    val oriTree = for( i <- 0 until 128 ) yield { VecInit(
       if ( i == (len) ) {
         trees.map{ _(i) }.foldLeft(Seq(): Seq[Bool])( _ ++ _ ) ++ Seq(true.B)
       } else {
-        trees.map{ _(i) }.foldLeft(Seq(): Seq[Bool])( _ ++ _ )        
+        trees.map{ _(i) }.foldLeft(Seq(): Seq[Bool])( _ ++ _ )
+      }
+    )}
+
+    val oriLat = for( i <- 0 until 128 ) yield { 
+      if ( i == (len) ) {
+        lats.map{ _(i) }.foldLeft(Seq(): Seq[Int])( _ ++ _ ) ++ Seq(0)
+      } else {
+        lats.map{ _(i) }.foldLeft(Seq(): Seq[Int])( _ ++ _ )        
       }
     }
 
 
-
-
-    return oriTree
+    return (MixedVecInit(oriTree), oriLat)
   }
 
-  def map2WallaceTree( payload: UInt, offset: Int ): Seq[Seq[Bool]] = {
+  def map2WallaceTree( payload: UInt, offset: Int ): (Seq[Seq[Bool]], Seq[Seq[Int]]) = {
 
     val tree = for ( i <- 0 until 128 ) yield {
       if ( (i >= offset) && ( i < offset + payload.getWidth ) ) {
@@ -349,7 +280,16 @@ trait Mul { this: MulDivBase =>
       }
     }
 
-    return tree
+    val lat = for ( i <- 0 until 128 ) yield {
+      if ( (i >= offset) && ( i < offset + payload.getWidth ) ) {
+        Seq( 0 )
+      } else {
+        Seq(): Seq[Int]
+      }
+    }
+
+    // println( "tree is" + tree+"\n" )
+    return (tree, lat)
   }
 }
 
@@ -373,15 +313,16 @@ class MulDiv(implicit p: Parameters) extends MulDivBase with Mul with Div {
 
   // io.mul_iss_exe.ready := ~isDivBusy
   io.mul_iss_exe.ready :=
-    Mux( io.mul_iss_exe.bits.fun.isMul, pipeStage02Rows.io.enq.ready, dividor.io.enq.ready )
+    Mux( io.mul_iss_exe.bits.fun.isMul, pipeMidStageInfo.io.enq.ready, dividor.io.enq.ready )
 
+  pipeMidStageInfo.io.deq <> pipeFnlStageInfo.io.enq
 
   val iwbArb = Module(new Arbiter(new WriteBack_info(dw=64), 2))
 
 
-  pipeStage02Rows.io.deq.ready := iwbArb.io.in(0).ready
-  iwbArb.io.in(0).valid := pipeStage02Rows.io.deq.valid
-  iwbArb.io.in(0).bits.rd0 <> pipeStage02Info.param.rd0
+  pipeFnlStageInfo.io.deq.ready := iwbArb.io.in(0).ready
+  iwbArb.io.in(0).valid := pipeFnlStageInfo.io.deq.valid
+  iwbArb.io.in(0).bits.rd0 <> pipeFnlStageInfo.io.deq.bits.param.rd0
   iwbArb.io.in(0).bits.res <> mulRes
 
   iwbArb.io.in(1) <> dividor.io.deq
@@ -399,19 +340,6 @@ class MulDiv(implicit p: Parameters) extends MulDivBase with Mul with Div {
 
 
 
-
-// object csa_3_2 {
-//   def apply( a: Seq[Bool] ): ( UInt, UInt ) = {
-//     require( a.length === 3 )
-//     require( lat.length === 3 )
-
-//     val mdl = Module(new csa_3_2)
-
-//     mdl.io.in := VecInit(a)
-
-//     return ( mdl.io.cout, mdl.io.sum )
-//   }
-// }
 
 class Dividor(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
