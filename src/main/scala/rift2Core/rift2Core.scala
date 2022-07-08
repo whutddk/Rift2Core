@@ -20,6 +20,7 @@ package rift2Core
 
 import chisel3._
 import chisel3.util._
+import rift._
 import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.diff._
@@ -30,10 +31,10 @@ import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
+import chisel3.util.experimental.{FlattenInstance}
 
 
-
-class Rift2Core()(implicit p: Parameters) extends LazyModule{
+class Rift2Core()(implicit p: Parameters) extends LazyModule with HasRiftParameters {
   val prefetcherClientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "prefetch",
@@ -44,7 +45,7 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
   val dcacheClientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "dcache",
-      sourceId = IdRange(0, 16),
+      sourceId = IdRange(0, dcacheParams.bk),
       supportsProbe = TransferSizes(32)
     ))
   )
@@ -88,7 +89,7 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule{
   lazy val module = new Rift2CoreImp(this)
 }
  
-class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
+class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) { //with FlattenInstance
   val io = IO(new Bundle{
     val dm      = Flipped(new Info_DM_cmm)
     val rtc_clock = Input(Bool())
@@ -138,10 +139,8 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   val iss_stage = {
     val mdl = Module(new Issue)
     mdl.io.ooo_dpt_iss <> dpt_stage.io.ooo_dpt_iss
-    mdl.io.bru_dpt_iss <> dpt_stage.io.bru_dpt_iss
-    mdl.io.csr_dpt_iss <> dpt_stage.io.csr_dpt_iss
-    mdl.io.lsu_dpt_iss <> dpt_stage.io.lsu_dpt_iss
-    mdl.io.fpu_dpt_iss <> dpt_stage.io.fpu_dpt_iss
+    mdl.io.ito_dpt_iss <> dpt_stage.io.ito_dpt_iss
+
     mdl
   }
 
@@ -166,12 +165,9 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
     mdl.io.dpt_Frename <> dpt_stage.io.dpt_Frename
 
     mdl.io.ooo_readOp <> iss_stage.io.ooo_readOp
-    mdl.io.bru_readOp <> iss_stage.io.bru_readOp
-    mdl.io.csr_readOp <> iss_stage.io.csr_readOp
-    mdl.io.lsu_readXOp <> iss_stage.io.lsu_readXOp
-    mdl.io.lsu_readFOp <> iss_stage.io.lsu_readFOp
-    mdl.io.fpu_readXOp <> iss_stage.io.fpu_readXOp
-    mdl.io.fpu_readFOp <> iss_stage.io.fpu_readFOp
+    mdl.io.ito_readOp <> iss_stage.io.ito_readOp
+    mdl.io.frg_readOp <> iss_stage.io.frg_readOp
+
 
     mdl.io.alu_iWriteBack <> exe_stage.io.alu_exe_iwb
     mdl.io.bru_iWriteBack <> exe_stage.io.bru_exe_iwb
@@ -228,7 +224,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   if4.io.flush := cmm_stage.io.cmmRedirect.fire
 
   dpt_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
-  iss_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
+  iss_stage.io.flush := cmm_stage.io.cmmRedirect.fire
   exe_stage.io.flush := cmm_stage.io.cmmRedirect.fire
 
 
@@ -316,6 +312,7 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   i_mmu.io.ptw_access.bits  := mmu_bus.d.bits
   i_mmu.io.ptw_access.valid := mmu_bus.d.valid
 
+
   val prefetcher = Module(new PreFetcher(prefetch_edge))
   prefetcher.io.stqReq          := exe_stage.io.preFetch
   prefetcher.io.icacheRefillReq := if2.io.preFetch
@@ -325,7 +322,9 @@ class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) {
   prefetcher.io.intent.ready := prefetch_bus.a.ready
   prefetch_bus.d.ready := prefetcher.io.hintAck.ready
   prefetcher.io.hintAck.bits  := prefetch_bus.d.bits
-  prefetcher.io.hintAck.valid := prefetch_bus.d.valid
+  prefetcher.io.hintAck.valid := prefetch_bus.d.valid    
+
+
 
 
   val diff = {

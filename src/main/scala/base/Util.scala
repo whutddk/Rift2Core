@@ -22,7 +22,6 @@ package base
 import chisel3._
 import chisel3.util._
 
-
 object sextXTo{
   def apply(x: UInt, n: Int): UInt = {
     require(x.getWidth <= n)
@@ -39,3 +38,14 @@ object padXTo{
     else Cat( (0.U)((n - x.getWidth).W), x)
   }  
 }
+
+object extVaddr{
+  def apply(vaddr: UInt, vlen: Int): UInt = {
+    require(vaddr.getWidth == vlen)
+    val v64 = Wire(UInt(64.W))
+
+    v64 := Cat( Fill(25, vaddr(vlen-1)), vaddr(vlen-1, 0) )
+    return v64
+  }  
+}
+

@@ -26,7 +26,7 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 import rift2Core.backend.fpu._
-import rift2Core.backend.memory._
+import rift2Core.backend.lsu._
 import rift2Core.privilege._
 import rift._
 import chipsalliance.rocketchip.config._
@@ -37,19 +37,19 @@ import freechips.rocketchip.tilelink._
 class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
-    val alu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
+    val alu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
-    val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
+    val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
     val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
-    val csr_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
+    val csr_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
-    val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65,dp=64))
+    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
+    val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
     val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
-    val mul_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
+    val mul_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
     val fpu_iss_exe = Flipped(new DecoupledIO(new Fpu_iss_info))
-    val fpu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
-    val fpu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65,dp=64))
+    val fpu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
+    val fpu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
     val fcsr = Input(UInt(24.W))
     val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
 
@@ -151,10 +151,16 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
 
   }
   val csr = Module(new Csr)
-  val mul = Module(new Mul)
+  val mulDiv = Module(new MulDiv)
 
   val fpu = {
-    val mdl = Module(new FAlu(cm=cm_chn))
+    val mdl = 
+      if( hasFpu ) {
+        Module(new FAlu())        
+      } else {
+        Module(new FakeFAlu()) 
+      }
+
 
     mdl.io.fpu_iss_exe <> io.fpu_iss_exe
     mdl.io.fpu_exe_iwb <> io.fpu_exe_iwb
@@ -194,9 +200,9 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   csr.io.csr_cmm_op <> io.csr_cmm_op
   csr.io.flush <> io.flush
 
-  mul.io.mul_iss_exe <> io.mul_iss_exe
-  mul.io.mul_exe_iwb <> io.mul_exe_iwb
-  mul.reset := reset.asBool | io.flush
+  mulDiv.io.mul_iss_exe <> io.mul_iss_exe
+  mulDiv.io.mul_exe_iwb <> io.mul_exe_iwb
+  mulDiv.io.flush := io.flush
 
 
 

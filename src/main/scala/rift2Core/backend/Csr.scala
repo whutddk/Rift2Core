@@ -24,12 +24,13 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.privilege._
 
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
-
-class Csr extends Module {
+class Csr(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
-    val csr_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
+    val csr_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
 
     val csr_addr = ValidIO(UInt(12.W))
     val csr_data = Flipped(ValidIO(UInt(64.W)))
@@ -39,7 +40,7 @@ class Csr extends Module {
     val flush = Input(Bool())
   })
 
-  val csr_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, true, false ) )
+  val csr_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, true, false ) )
   io.csr_exe_iwb <> csr_exe_iwb_fifo.io.deq
   csr_exe_iwb_fifo.reset := reset.asBool | io.flush
 

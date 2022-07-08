@@ -77,11 +77,11 @@ void dromajo_step() {
     // diff.tdata3[MAX_TRIGGERS] = cpu -> tdata3[MAX_TRIGGERS];
     // diff.mhpmevent[32] = cpu -> mhpmevent[32];
 
-    for ( uint8_t i = 0; i < 4; i += 2 ) {
-        diff.pmpcfg[i] = cpu -> csr_pmpcfg[i];  // But only 0 and 2 are valid    	
+    for ( uint8_t i = 0; i < 1; i += 2 ) {
+        diff.pmpcfg[i] = cpu -> csr_pmpcfg[i];  // But only 0 and 2 are valid
     }
 
-    for ( uint8_t i = 0; i < 16; i++ ) {
+    for ( uint8_t i = 0; i < 8; i++ ) {
 	    diff.pmpaddr[i] = cpu -> csr_pmpaddr[i];
 	}
 
@@ -103,17 +103,25 @@ void dromajo_step() {
 
 
 int dromajo_init() {
-	char * temp[4];
+	char * temp[6];
 	temp[0] = "dromajo_init";
 	
 	temp[1] = "--reset_vector";
 	temp[2] = "0x80000000";
-	temp[3] = img;
+	
+	temp[3] = "--mmio_range";
+	temp[4] = "0x20000000:0x3fffffff";
+	// temp[3] = "--memory_addr";
+	// temp[4] = "0x20000000";	
+	// temp[5] = "--memory_size";
+	// temp[6] = "2048";
 
+
+	temp[5] = img;
 
 	char **argv_temp = temp;
 
-	machine = virt_machine_main(4,  argv_temp );
+	machine = virt_machine_main(6,  argv_temp );
 	cpu = machine->cpu_state[0];
 	if ( machine == NULL ) {
 		std::cout << "DROMAJO Init Failed!!!" << std::endl;;
@@ -240,18 +248,21 @@ int diff_chk_reg(VSimTop *top) {
     // CHK_REG( "tdata3", diff.tdata3[MAX_TRIGGERS], top->trace_tdata3[MAX_TRIGGERS] )
     // CHK_REG( "mhpmevent", diff.mhpmevent[32],     top->trace_mhpmevent[32] )
 
-
     CHK_REG( "pmpcfg[0]", diff.pmpcfg[0], top->trace_pmpcfg_0 )
-    CHK_REG( "pmpcfg[2]", diff.pmpcfg[2], top->trace_pmpcfg_2 )
+    // CHK_REG( "pmpcfg[2]", diff.pmpcfg[2], top->trace_pmpcfg_2 )
 
     CHK_REG( "pmpaddr[0]", diff.pmpaddr[0], top->trace_pmpaddr_0 )
+    CHK_REG( "pmpaddr[0]", diff.pmpaddr[1], top->trace_pmpaddr_1 )
     CHK_REG( "pmpaddr[2]", diff.pmpaddr[2], top->trace_pmpaddr_2 )
+    CHK_REG( "pmpaddr[2]", diff.pmpaddr[3], top->trace_pmpaddr_3 )
     CHK_REG( "pmpaddr[4]", diff.pmpaddr[4], top->trace_pmpaddr_4 )
+    CHK_REG( "pmpaddr[4]", diff.pmpaddr[5], top->trace_pmpaddr_5 )
     CHK_REG( "pmpaddr[6]", diff.pmpaddr[6], top->trace_pmpaddr_6 )
-    CHK_REG( "pmpaddr[8]", diff.pmpaddr[8], top->trace_pmpaddr_8 )
-    CHK_REG( "pmpaddr[10]", diff.pmpaddr[10], top->trace_pmpaddr_10 )
-    CHK_REG( "pmpaddr[12]", diff.pmpaddr[12], top->trace_pmpaddr_12 )
-    CHK_REG( "pmpaddr[14]", diff.pmpaddr[14], top->trace_pmpaddr_14 )
+    CHK_REG( "pmpaddr[6]", diff.pmpaddr[7], top->trace_pmpaddr_7 )
+    // CHK_REG( "pmpaddr[8]", diff.pmpaddr[8], top->trace_pmpaddr_8 )
+    // CHK_REG( "pmpaddr[10]", diff.pmpaddr[10], top->trace_pmpaddr_10 )
+    // CHK_REG( "pmpaddr[12]", diff.pmpaddr[12], top->trace_pmpaddr_12 )
+    // CHK_REG( "pmpaddr[14]", diff.pmpaddr[14], top->trace_pmpaddr_14 )
 
 
     CHK_REG( "stvec",      diff.stvec,      top->trace_stvec )

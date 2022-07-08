@@ -20,6 +20,8 @@ package rift2Core.privilege
 import chisel3._
 import chisel3.util._
 
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
 class Info_pmpcfg extends Bundle {
   val value = UInt(8.W)
@@ -38,15 +40,14 @@ class Info_pmpcfg extends Bundle {
   * physical memory protection
   * It asserts that only '''8''' pmp entry is implemented
   */ 
-class PMP(entry: Int) extends RawModule {
+class PMP(implicit p: Parameters) extends RiftModule {
+  require(pmpNum == 1)
   val io = IO(new Bundle{
-    // val pmp_addr = Input(Vec( entry+1, UInt(54.W)))
-    // val pmp_cfg  = Input(Vec( entry, new Info_pmpcfg))
 
     val cmm_mmu = Input( new Info_cmm_mmu )
 
     val chk_addr = Input(UInt(64.W))
-    // val chk_priv = Input(UInt(2.W))
+
     val chk_type = Input(UInt(3.W))
 
     val is_fault = Output(Bool())
@@ -65,7 +66,6 @@ class PMP(entry: Int) extends RawModule {
     *
     * @return Bool false
     */
-
   def off_range: Bool = return false.B
 
   /**
@@ -76,7 +76,6 @@ class PMP(entry: Int) extends RawModule {
     * @param addr_c (56.W) the address needed to be check
     * @return Bool whether the addr_c is in the range
     */
- 
   def tor_range( addr_b: UInt, addr_t: UInt, addr_c: UInt): Bool = {
     return (addr_c < (addr_t << 2)) & (addr_c > (addr_b << 2))
   }
@@ -88,7 +87,6 @@ class PMP(entry: Int) extends RawModule {
     * @param addr_c (56.W) the address needed to be check
     * @return Bool whether the addr_c is in the range
     */
-
   def na4_range( addr_p: UInt, addr_c: UInt ): Bool = {
     val mask = "hffffffffffffffff".U << 2 
     return ((addr_c & mask) === ((addr_p << 2) & mask))
@@ -101,7 +99,6 @@ class PMP(entry: Int) extends RawModule {
     * @param addr_c (56.W) the address needed to be check
     * @return Bool whether the addr_c is in the range
     */
-
   def napot_range( addr_p: UInt, addr_c: UInt ): Bool = {
     val zero_pos = for( i <- 0 until 54 ) yield { addr_p(i) === 0.U }
     val cnt_idx  = for( i <- 0 until 54 ) yield { i.U + 3.U }
@@ -136,9 +133,9 @@ class PMP(entry: Int) extends RawModule {
   //   return (chk_priv === "b11".U & ~is_L)
   // }
 
-  val is_inRange = Wire( Vec(entry, Bool()) )
-  val is_inType  = Wire( Vec(entry, Bool()) )
-  val is_inEnfce = Wire( Vec(entry, Bool()) )
+  val is_inRange = Wire( Vec( 8*pmpNum, Bool()) )
+  val is_inType  = Wire( Vec( 8*pmpNum, Bool()) )
+  val is_inEnfce = Wire( Vec( 8*pmpNum, Bool()) )
 
   val pmp_cfg = VecInit(
      io.cmm_mmu.pmpcfg(0)( 7, 0).asTypeOf(new Info_pmpcfg), io.cmm_mmu.pmpcfg(0)(15, 8).asTypeOf(new Info_pmpcfg),
@@ -151,7 +148,7 @@ class PMP(entry: Int) extends RawModule {
 
 
 
-  for( i <- 0 until entry ) yield {
+  for( i <- 0 until 8*pmpNum ) yield {
     is_inRange(i) := Mux1H( Seq(
       (pmp_cfg(i).A === 0.U) -> off_range,
       (pmp_cfg(i).A === 1.U) -> tor_range  (pmp_addr(i),   pmp_addr(i+1), io.chk_addr),
@@ -206,8 +203,8 @@ object PMP{
     cmm_mmu: Info_cmm_mmu,
     chk_addr: UInt,
     chk_type: UInt
-  ) = {
-    val mdl = Module( new PMP(8) )
+  )(implicit p: Parameters) = {
+    val mdl = Module( new PMP )
     mdl.io.cmm_mmu  := cmm_mmu
     mdl.io.chk_addr := chk_addr
     mdl.io.chk_type := chk_type

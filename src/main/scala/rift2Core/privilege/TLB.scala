@@ -22,8 +22,10 @@ import chisel3._
 import chisel3.util._
 
 import chisel3.util.random._
+import chisel3.experimental.dataview._
 
-
+import rift._
+import chipsalliance.rocketchip.config._
 
 class Info_tlb_tag extends Bundle {
   val is_valid = Bool()
@@ -39,7 +41,7 @@ class Info_tlb_tag extends Bundle {
   * 
   * 
   */ 
-class TLB( entry: Int = 32 ) extends Module {
+class TLB()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
 
     val req = Flipped(ValidIO( new Info_mmu_req ))
@@ -48,27 +50,25 @@ class TLB( entry: Int = 32 ) extends Module {
 
     val asid_i = Input(UInt(16.W))
 
-    val tlb_renew = Flipped(ValidIO(new Info_pte_sv39))
+    val tlb_renew = Flipped(ValidIO(new TLB_Renew_Bundle))
 
     val sfence_vma = Input(Bool())
   })
 
   /** The tag including *is_valid*, *asid*, and *vpn[8:0]* X 3 */
-  val tag = RegInit( VecInit( Seq.fill(entry)(0.U.asTypeOf( new Info_tlb_tag  ))))
+  val tag = RegInit( VecInit( Seq.fill(tlbEntry)(0.U.asTypeOf( new Info_tlb_tag  ))))
 
   /** The PTE info of page */
-  val pte = RegInit( VecInit( Seq.fill(entry)(0.U.asTypeOf( new Info_pte_sv39 ))))
+  val pte = RegInit( VecInit( Seq.fill(tlbEntry)(0.U.asTypeOf( new Info_pte_sv39 ))))
 
   when( io.sfence_vma ) {
-    for( i <- 0 until entry ) yield tag(i) := 0.U.asTypeOf( new Info_tlb_tag )
+    for( i <- 0 until tlbEntry ) yield tag(i) := 0.U.asTypeOf( new Info_tlb_tag )
   }
   .elsewhen(io.tlb_renew.valid) {
     tag(tlb_update_idx).is_valid := true.B
-    tag(tlb_update_idx).asid := io.asid_i
-    tag(tlb_update_idx).vpn(0) := io.req.bits.vaddr(20,12)
-    tag(tlb_update_idx).vpn(1) := io.req.bits.vaddr(29,21)
-    tag(tlb_update_idx).vpn(2) := io.req.bits.vaddr(38,30)
-    pte(tlb_update_idx) := io.tlb_renew.bits
+    tag(tlb_update_idx).asid   := io.tlb_renew.bits.asid
+    tag(tlb_update_idx).vpn    := io.tlb_renew.bits.vpn
+    pte(tlb_update_idx)        := io.tlb_renew.bits.viewAsSupertype(new Info_pte_sv39)
   }
 
 
@@ -84,7 +84,7 @@ class TLB( entry: Int = 32 ) extends Module {
   def tlb_update_idx: UInt = {
     val is_runout = tag.forall( (x:Info_tlb_tag) => (x.is_valid === true.B) )
 
-    val random_idx = LFSR( log2Ceil(entry) )
+    val random_idx = LFSR( log2Ceil(tlbEntry) max 2 )
     val empty_idx  = tag.indexWhere( (x:Info_tlb_tag) => (x.is_valid === false.B) )
 
     return Mux( is_runout, random_idx, empty_idx )
@@ -98,7 +98,7 @@ class TLB( entry: Int = 32 ) extends Module {
    * @note lvl0_hit 
    */
   val tlb_hit = VecInit(
-    for ( i <- 0 until entry ) yield {
+    for ( i <- 0 until tlbEntry ) yield {
       val lvl2 = tag(i).is_valid & io.asid_i === tag(i).asid & io.req.bits.vaddr(38,30) === tag(i).vpn(2)
       val lvl1 = io.req.bits.vaddr(29,21) === tag(i).vpn(1)
       val lvl0 = io.req.bits.vaddr(20,12) === tag(i).vpn(0)

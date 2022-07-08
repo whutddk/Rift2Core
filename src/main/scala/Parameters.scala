@@ -24,8 +24,85 @@ import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp, Trans
 import freechips.rocketchip.tilelink._
 import chipsalliance.rocketchip.config.{Field, Parameters}
 
-import rift2Core.L1Cache._
 import rift2Core.define._
+
+abstract class RiftModule(implicit val p: Parameters) extends Module with HasRiftParameters { def io: Record }
+abstract class RiftBundle(implicit val p: Parameters) extends Bundle with HasRiftParameters
+
+
+trait HasIcacheParameters extends HasRiftParameters {
+  val icacheParams: IcacheParameters
+
+  def dw = icacheParams.dw
+  def bk = icacheParams.bk
+  def cb = icacheParams.cb
+  def cl = icacheParams.cl
+
+
+  def addr_lsb = log2Ceil(dw/8)
+  def line_w   = log2Ceil(cl)
+  def cb_w = log2Ceil(cb)
+
+  require( (addr_lsb + line_w) == 12 )
+  require( bk == 1 )
+ 
+  def tag_w    = plen - addr_lsb - line_w
+}
+
+
+
+
+
+case class IcacheParameters(
+  dw: Int = 256,
+  bk: Int = 1,
+  cb: Int = 4,
+  cl: Int = 128,
+
+)
+
+
+
+abstract class IcacheModule(implicit val p: Parameters) extends Module with HasIcacheParameters { def io: Record }
+abstract class IcacheBundle(implicit val p: Parameters) extends Bundle with HasIcacheParameters
+
+
+
+
+case class DcacheParameters(
+  dw: Int = 256,
+  bk: Int = 8,
+  cb: Int = 8,
+  cl: Int = 128,
+  sbEntry: Int = 16,
+  stEntry: Int = 16,
+)
+
+trait HasDcacheParameters extends HasRiftParameters {
+  val dcacheParams: DcacheParameters
+
+  def dw = dcacheParams.dw
+  def bk = dcacheParams.bk
+  def cb = dcacheParams.cb
+  def cl = dcacheParams.cl
+  def sbEntry = dcacheParams.sbEntry
+  def stEntry = dcacheParams.stEntry
+
+  def addr_lsb = log2Ceil(dw/8)
+  def bk_w = log2Ceil(bk)
+  def line_w   = log2Ceil(cl)
+  def cb_w = log2Ceil(cb)
+
+
+  def tag_w    = plen - addr_lsb - line_w - bk_w
+
+  // require( (addr_lsb + line_w) == 12 )
+  
+}
+
+abstract class DcacheModule(implicit val p: Parameters) extends Module with HasDcacheParameters { def io: Record }
+abstract class DcacheBundle(implicit val p: Parameters) extends Bundle with HasDcacheParameters
+
 
 
 
@@ -35,8 +112,29 @@ case object RiftParamsKey extends Field[RiftSetting]
 
 
 case class RiftSetting(
+  hasFpu: Boolean = true,
+  hasPreFetch: Boolean = true,
+
+  isMinArea: Boolean = false,
+  isLowPower: Boolean = true,
+
+
   rn_chn: Int = 2,
   cm_chn: Int = 2,
+  opChn: Int = 6,
+  wbChn: Int = 4,
+
+  regNum: Int = 64,
+  pmpNum: Int = 1,
+  hpmNum: Int = 4,
+
+  l1BeatBits: Int = 128,
+  memBeatBits: Int = 128,
+
+  vlen: Int = 39,
+  plen: Int = 32,
+
+  tlbEntry: Int = 16, 
   ifetchParameters: IFParameters = IFParameters(
     // GHR_length = 64,
     // UBTB_entry = 16,
@@ -56,20 +154,30 @@ case class RiftSetting(
     // tage_tag_w = 8,
   ),
 
-  icacheParameters: L1CacheParameters = IcacheParameters(
+  icacheParameters: IcacheParameters = IcacheParameters(
     dw = 256,
     bk = 1,
     cb = 4,
     cl = 128
   ),
-  dcacheParameters: L1CacheParameters = DcacheParameters(
+  dcacheParameters: DcacheParameters = DcacheParameters(
     dw = 256,
     bk = 8,
     cb = 8,
-    cl = 128
+    cl = 128,
+    stEntry = 16,
+    sbEntry = 16,
   ),
 ){
+  require( icacheParameters.bk == 1 )
   require( log2Ceil( ifetchParameters.uBTB_entry ) <= ifetchParameters.uBTB_tag_w )
+  require( vlen == 39 )
+  require( plen >=32 && plen <= 56 )
+  require( memBeatBits <= l1BeatBits )
+  require( opChn % 2 == 0 )
+  require( regNum > 32 )
+  require( pmpNum > 0 && pmpNum <= 8 )
+  require( icacheParameters.dw == dcacheParameters.dw )
 }
 
 trait HasRiftParameters {
@@ -81,8 +189,28 @@ trait HasRiftParameters {
   val icacheParams = riftSetting.icacheParameters
   val dcacheParams = riftSetting.dcacheParameters
 
+  def hasFpu = riftSetting.hasFpu
+  def hasPreFetch = riftSetting.hasPreFetch
+  
   def cm_chn = riftSetting.cm_chn
   def rn_chn = riftSetting.rn_chn
+  def opChn = riftSetting.opChn
+  def wbChn = riftSetting.wbChn
+
+  def regNum = riftSetting.regNum
+  def pmpNum = riftSetting.pmpNum
+  def hpmNum = riftSetting.hpmNum
+
+  def l1BeatBits = riftSetting.l1BeatBits
+  def memBeatBits = riftSetting.memBeatBits
+
+  def vlen = riftSetting.vlen
+  def plen = riftSetting.plen
+
+  def tlbEntry = riftSetting.tlbEntry
+
+  def isMinArea = riftSetting.isMinArea
+  def isLowPower = riftSetting.isLowPower
 }
 
 

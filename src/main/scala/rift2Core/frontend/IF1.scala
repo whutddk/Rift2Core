@@ -20,6 +20,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import chipsalliance.rocketchip.config.Parameters
+import base._
 
 /**
   * instract fetch stage 1, generate pc
@@ -38,7 +39,6 @@ abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
     val bcmm_update = Flipped(Valid(new Branch_CTarget_Bundle))
   })
 
-  // val pc_dnxt = Wire(UInt(64.W))
   val pc_qout = RegInit("h80000000".U(64.W))
 
 }
@@ -55,7 +55,7 @@ trait IF1Predict { this: IF1Base =>
   uBTB.io.update.valid := io.bcmm_update.fire | io.jcmm_update.fire
 
   uBTB.io.update.bits.target :=
-    Mux( io.bcmm_update.fire, Mux( io.bcmm_update.bits.isMisPredict, io.bcmm_update.bits.revertTarget, io.bcmm_update.bits.predicTarget),
+    Mux( io.bcmm_update.fire, io.bcmm_update.bits.finalTarget,
       Mux( io.jcmm_update.fire, io.jcmm_update.bits.finalTarget, 0.U ) )
 
   uBTB.io.update.bits.pc     :=
@@ -77,10 +77,10 @@ class IF1()(implicit p: Parameters) extends IF1Base with IF1Predict{
 
   when( any_reset ) { pc_qout := "h80000000".U }
   .elsewhen( io.cmmRedirect.fire ) { pc_qout := io.cmmRedirect.bits.pc }
-  .elsewhen( io.if4Redirect.fire ) { pc_qout := io.if4Redirect.bits.target }
+  .elsewhen( io.if4Redirect.fire ) { pc_qout := extVaddr(io.if4Redirect.bits.target, vlen) }
   .elsewhen( io.pc_gen.fire ) {
     when( uBTB.io.resp.isRedirect.reduce(_|_) ){
-      pc_qout := uBTB.io.resp.target
+      pc_qout :=  extVaddr(uBTB.io.resp.target, vlen)
     } .otherwise {
       pc_qout := (pc_qout + 16.U) >> 4 << 4        
     }

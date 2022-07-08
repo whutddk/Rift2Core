@@ -21,12 +21,13 @@ package base
 import chisel3._
 import chisel3.util._
 
-
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
 
 //dw:data type aw:address width, in: input port num, out: output port num 
 
-class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int, flow: Boolean = false ) extends Module{
+class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int, flow: Boolean = false )(implicit p: Parameters) extends RiftModule{
   val io = IO(new Bundle{
     val enq = Vec(in, Flipped(new DecoupledIO(dw)) )
     val deq  = Vec(out, new DecoupledIO(dw) )
@@ -45,7 +46,8 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int, flow: Boolean =
 
 
 
-    val buf = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
+    // val buf = RegInit(VecInit(Seq.fill(dp)(0.U.asTypeOf(dw))))
+    val buf = Reg(Vec(dp,dw))
     val buf_valid = RegInit(VecInit(Seq.fill(dp)(false.B)))
 
     val rd_ptr = RegInit(0.U(aw.W))
@@ -100,7 +102,13 @@ class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int, flow: Boolean =
 
     for ( i <- 0 until out ) yield {
       val fifo_ptr_r = (rd_ptr + i.U)(aw-1,0)
-      io.deq(i).bits := Mux(buf_valid(fifo_ptr_r), buf(fifo_ptr_r), 0.U.asTypeOf(dw))
+
+      io.deq(i).bits := 
+        Mux( if ( isLowPower ) {buf_valid(fifo_ptr_r)} else {true.B},
+          buf(fifo_ptr_r),
+          0.U.asTypeOf(dw))
+
+
     }
 
 

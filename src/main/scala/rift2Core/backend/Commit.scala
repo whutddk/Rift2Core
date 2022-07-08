@@ -22,7 +22,7 @@ import chisel3._
 import chisel3.util._
 
 import rift2Core.define._
-import rift2Core.L1Cache._
+import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.privilege._
 import debug._
@@ -48,7 +48,7 @@ class ExInt_Bundle extends Bundle {
 
 
 @chiselName
-class CMMState_Bundle extends Bundle{
+class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   val rod = new Info_reorder_i
   val csrfiles = new CSR_Bundle
   val lsu_cmm = new Info_lsu_cmm
@@ -245,7 +245,7 @@ class CMMState_Bundle extends Bundle{
   }
 
   def commit_pc: UInt = {
-    val commit_pc = rod.pc
+    val commit_pc = extVaddr(rod.pc, vlen)
     return commit_pc
   } 
 
@@ -281,7 +281,7 @@ class CMMState_Bundle extends Bundle{
 
 abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
-    val cm_op = Vec(cm_chn, new Info_commit_op(64))
+    val cm_op = Vec(cm_chn, new Info_commit_op)
     val rod = Vec(cm_chn, Flipped(new DecoupledIO( new Info_reorder_i ) ))
 
     val cmm_lsu = Output(new Info_cmm_lsu)
@@ -522,8 +522,8 @@ trait CommitState { this: BaseCommit =>
     csrfiles.dscratch0     := 0.U
     csrfiles.dscratch1     := 0.U
     csrfiles.dscratch2     := 0.U
-    csrfiles.pmpcfg        := VecInit( Seq.fill(16)(VecInit( Seq.fill(8)(0.U.asTypeOf( new PmpcfgBundle) ))))
-    csrfiles.pmpaddr       := VecInit( Seq.fill(64)(0.U(64.W)) )
+    csrfiles.pmpcfg        := VecInit( Seq.fill(pmpNum)(VecInit( Seq.fill(8)(0.U.asTypeOf( new PmpcfgBundle) ))))
+    csrfiles.pmpaddr       := VecInit( Seq.fill(8*pmpNum)(0.U(64.W)) )
     csrfiles.hpmcounter    := VecInit( Seq.fill(32)(0.U(64.W)) )
     csrfiles.mhpmcounter   := VecInit( Seq.fill(32)(0.U(64.W)) )
     csrfiles.mhpmevent     := VecInit( Seq.fill(32)(0.U(64.W)) )    
@@ -560,8 +560,8 @@ trait CommitIFRedirect { this: BaseCommit =>
 
 
 trait CommitDiff { this: BaseCommit =>
-  io.diff_commit.pc(0) := io.rod(0).bits.pc
-  io.diff_commit.pc(1) := io.rod(1).bits.pc
+  io.diff_commit.pc(0) := extVaddr(io.rod(0).bits.pc, vlen)
+  io.diff_commit.pc(1) := extVaddr(io.rod(1).bits.pc, vlen)
   io.diff_commit.comfirm(0) := commit_state_is_comfirm(0) | commit_state_is_misPredict(0)
   io.diff_commit.comfirm(1) := commit_state_is_comfirm(1) | commit_state_is_misPredict(1)
   io.diff_commit.abort(0) := commit_state_is_abort(0)
@@ -594,10 +594,10 @@ trait CommitDiff { this: BaseCommit =>
   // io.diff_csr.tdata2[MAX_TRIGGERS] = tdata2
   // io.diff_csr.tdata3[MAX_TRIGGERS] = tdata3
   // io.diff_csr.mhpmevent[32]        = mhpmevent
-  for ( i <- 0 until 4 ) yield {
+  for ( i <- 0 until pmpNum ) yield {
     io.diff_csr.pmpcfg(i) := csrfiles.pmpcfg(i).asUInt
   }
-  for ( i <- 0 until 16 ) yield {
+  for ( i <- 0 until 8*pmpNum ) yield {
 	  io.diff_csr.pmpaddr(i)  := csrfiles.pmpaddr(i)  
   }
 
@@ -705,7 +705,7 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
   for ( i <- 0 until cm_chn ) yield {
     when(io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & is_retired(i) & ~cmm_state(i).is_step) {
       io.cmmRedirect.valid := true.B
-      io.cmmRedirect.bits.pc := bctq(i).bits.revertTarget
+      io.cmmRedirect.bits.pc := bctq(i).bits.finalTarget
     }
     
     when(io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & is_retired(i) & ~cmm_state(i).is_step) {
@@ -738,11 +738,13 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
       } 
       when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
         io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := (io.rod(i).bits.pc + 4.U)
+        io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
       }
+
+      assert( PopCount(Seq( cmm_state(i).is_xRet, cmm_state(i).is_trap, cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U )
     }
 
-    assert( PopCount(Seq( cmm_state(i).is_xRet, cmm_state(i).is_trap, cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U )
+    
   }
 
 
@@ -797,8 +799,8 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
 
 
   io.cmm_mmu.satp := csrfiles.satp.asUInt
-  for ( i <- 0 until 16 ) yield io.cmm_mmu.pmpcfg(i) := csrfiles.pmpcfg(i).asUInt
-  for ( i <- 0 until 64 ) yield io.cmm_mmu.pmpaddr(i) := csrfiles.pmpaddr(i)
+  for ( i <- 0 until pmpNum )   yield io.cmm_mmu.pmpcfg(i) := csrfiles.pmpcfg(i).asUInt
+  for ( i <- 0 until 8*pmpNum ) yield io.cmm_mmu.pmpaddr(i) := csrfiles.pmpaddr(i)
   io.cmm_mmu.priv_lvl_if   := csrfiles.priv_lvl
   io.cmm_mmu.priv_lvl_ls   := Mux( csrfiles.mstatus.mprv.asBool, csrfiles.mstatus.mpp, csrfiles.priv_lvl )
   io.cmm_mmu.mstatus    := csrfiles.mstatus.asUInt

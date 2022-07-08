@@ -64,13 +64,4 @@ class BTB()(implicit p: Parameters) extends IFetchModule {
     )
   }
 
-  // when( por_reset ) {
-  //   btb_table.write( reset_cl, "h80000000".U.asTypeOf(new BTBResp_Bundle) )
-  // } .otherwise {
-  //   when( io.update.valid ) {
-  //     btb_table.write(wr_cl_sel, io.update.bits.viewAsSupertype( new BTBResp_Bundle ))
-  //   }
-  // }
-
-
 }

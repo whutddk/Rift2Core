@@ -23,10 +23,9 @@ package test
 import chisel3._
 import rift2Chip._
 import rift2Core._
-// import rift2Core.frontend._
-// import rift2Core.backend._
-// import rift2Core.cache._
+
 import rift._
+import rift2Core.define.{IFParameters}
 import rift2Core.privilege._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.config._
@@ -34,21 +33,56 @@ import chisel3.stage._
 
 
 
-class miniCfg extends Config((site, here, up) => {
+class NormalCfg extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting()
-
-  
 })
 
+class Rift2GoCfg extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+    hasFpu = false,
+    hasPreFetch = false,
 
+    opChn = 4,
+    wbChn = 2,
+
+    regNum = 40,
+
+    l1BeatBits = 64,
+    memBeatBits = 64,
+
+    tlbEntry = 2,
+
+    ifetchParameters = IFParameters(
+      uBTB_entry = 4,
+      // uBTB_tag_w = 16,
+      // btb_cl = 4096,
+      // bim_cl = 4096,
+      // ras_dp = 256,
+      // tage_table = 6, 
+    ),
+    icacheParameters = IcacheParameters(
+      cb = 2,
+    ),
+    dcacheParameters = DcacheParameters(
+      bk = 1,
+      cb = 2,
+      sbEntry = 4,
+      stEntry = 4,
+    ),
+
+
+    isMinArea = true,
+    isLowPower = false,
+
+  )
+})
 
 
 object testMain extends App {
 
-  // Driver.execute(args, () => new Rift2Chip )
 
-
-  val cfg = new miniCfg
+  val cfg = new NormalCfg
+  // val cfg = new Rift2GoCfg
 
   (new chisel3.stage.ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => {

@@ -3,7 +3,7 @@
 // See README.md for license details.
 
 ThisBuild / scalaVersion     := "2.12.9"
-ThisBuild / version          := "2.1.0"
+ThisBuild / version          := "2.3.2"
 ThisBuild / organization     := "WUT"
 
 lazy val rocketchip = (project in file("./rocket-chip"))
