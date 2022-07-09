@@ -29,7 +29,7 @@ import chipsalliance.rocketchip.config.Parameters
 abstract class BruBase()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
-    val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64,dp=64))
+    val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
 
     val bftq = Flipped(Decoupled(new Branch_FTarget_Bundle))
     val jftq = Flipped(Decoupled(new Jump_FTarget_Bundle))
@@ -43,15 +43,17 @@ abstract class BruBase()(implicit p: Parameters) extends RiftModule {
     val flush = Input(Bool())
   })
 
-  val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64,dp=64), 1, true, false ) )
-  val bctq = Module(new Queue( new Branch_CTarget_Bundle, 4 ) )
-  val jctq = Module(new Queue( new Jump_CTarget_Bundle,   4 ) )
+  val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, true, false ) )
+  val bctq = Module(new Queue( new Branch_CTarget_Bundle, (if(!isMinArea) 4 else 2) ) )
+  val jctq = Module(new Queue( new Jump_CTarget_Bundle,   (if(!isMinArea) 4 else 2) ) )
 
   val misPredict_locker = RegInit(false.B)
 
   val op1 = io.bru_iss_exe.bits.param.dat.op1
   val op2 = io.bru_iss_exe.bits.param.dat.op2
   val imm = io.bru_iss_exe.bits.param.imm
+  val pc  = io.bru_iss_exe.bits.param.pc
+  val isRVC = io.bru_iss_exe.bits.param.is_rvc
 }
 
 trait BranchExe { this: BruBase => 
@@ -67,6 +69,8 @@ trait BranchExe { this: BruBase =>
 
   bctq.io.enq.bits.viewAsSupertype(new Branch_FTarget_Bundle) := io.bftq.bits
   bctq.io.enq.bits.isFinalTaken := is_branchTaken
+  bctq.io.enq.bits.finalTarget  := Mux( is_branchTaken, (pc + imm), (pc + Mux(isRVC, 2.U, 4.U)) )
+
 
 }
 
@@ -112,7 +116,7 @@ class Bru()(implicit p: Parameters) extends BruBase with BranchExe with JumpExe 
   bctq.io.enq.valid := io.bru_iss_exe.fire & io.bru_iss_exe.bits.fun.is_branch
   jctq.io.enq.valid := io.bru_iss_exe.fire & io.bru_iss_exe.bits.fun.jalr
 
-  bru_exe_iwb_fifo.io.enq.bits.res := io.bru_iss_exe.bits.param.pc + Mux( io.bru_iss_exe.bits.param.is_rvc, 2.U, 4.U)
+  bru_exe_iwb_fifo.io.enq.bits.res := pc + Mux( isRVC, 2.U, 4.U)
   bru_exe_iwb_fifo.io.enq.bits.rd0 := io.bru_iss_exe.bits.param.rd0
 
 

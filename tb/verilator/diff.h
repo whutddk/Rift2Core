@@ -53,8 +53,8 @@ struct diff {
     // uint64_t tdata3[MAX_TRIGGERS];
     // uint64_t mhpmevent[32];
 
-    uint64_t pmpcfg[4];
-	uint64_t pmpaddr[16];
+    uint64_t pmpcfg[1];
+  	uint64_t pmpaddr[8];
 
 
     uint64_t stvec;

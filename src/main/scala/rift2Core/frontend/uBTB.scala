@@ -36,7 +36,7 @@ abstract class uBTBBase()(implicit p: Parameters) extends IFetchModule {
   })
 
 
-  val buff    = RegInit(VecInit( Seq.fill(uBTB_entry)(0.U(64.W))))
+  val buff    = RegInit(VecInit( Seq.fill(uBTB_entry)(0.U(vlen.W))))
   val tag     = RegInit(VecInit( for( entry <- 0 until uBTB_entry ) yield { ~(entry.U)(uBTB_tag_w.W) } ) )
   val isValid = RegInit(VecInit( Seq.fill(uBTB_entry)(false.B) ) )
 }

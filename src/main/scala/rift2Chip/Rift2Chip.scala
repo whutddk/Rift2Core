@@ -20,6 +20,7 @@ package rift2Chip
 
 import chisel3._
 import chisel3.util._
+import rift._
 import rift2Core._
 import axi._
 import debug._
@@ -66,14 +67,14 @@ periph(64)        sba(64)      sys(64)      l1i(128*2)      l1d(128*2)     mmu(1
 
 
 
-class Rift2Chip(implicit p: Parameters) extends LazyModule {
+class Rift2Chip(implicit p: Parameters) extends LazyModule with HasRiftParameters{
 
   val i_rift2Core = LazyModule( new Rift2Core )
   val i_debugger = LazyModule(new Debugger(nComponents = 1))
 
   val sifiveCache = LazyModule(new InclusiveCache(
-      cache = CacheParameters( level = 2, ways = 8, sets = 2048, blockBytes = 256/8, beatBytes = 128/8 ),
-      micro = InclusiveCacheMicroParameters( writeBytes = 128/8, memCycles = 40, portFactor = 4),
+      cache = CacheParameters( level = 2, ways = 8, sets = 2048, blockBytes = 256/8, beatBytes = l1BeatBits/8 ),
+      micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
       control = None
     ))
 
@@ -123,9 +124,9 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
   //   )
 
 
-  val l2_xbar128 = TLXbar()
+  val l2_xbarMem = TLXbar()
   val l2_xbar64 = TLXbar()
-  val l1_xbar128 = TLXbar()
+  val l1_xbarMem = TLXbar()
   val l1_xbar64 = TLXbar()
   // val tlcork = TLCacheCork()
 
@@ -137,7 +138,7 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     AXI4IdIndexer(4) :=
     AXI4Deinterleaver(256/8) :=
     TLToAXI4() :=
-    TLWidthWidget(128 / 8) := l2_xbar128
+    TLWidthWidget(memBeatBits / 8) := l2_xbarMem
 
   sysAXI4SlaveNode := 
     AXI4UserYanker() := 
@@ -146,17 +147,17 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule {
     TLToAXI4() :=
     TLWidthWidget(64 / 8) := l2_xbar64
 
-    l2_xbar128 :=* TLBuffer() :=* TLCacheCork() := sifiveCache.node := TLBuffer() := l1_xbar128
-    l2_xbar128 := TLBuffer() := TLWidthWidget(64 / 8) := l1_xbar64
-    l2_xbar64 :=  TLBuffer() := TLWidthWidget(128 / 8) := TLBuffer()  :=l1_xbar128    
+    l2_xbarMem :=* TLBuffer() :=* TLCacheCork() := sifiveCache.node := TLBuffer() := l1_xbarMem
+    l2_xbarMem := TLBuffer() := TLWidthWidget(64 / 8) := l1_xbar64
+    l2_xbar64 :=  TLBuffer() := TLWidthWidget(l1BeatBits / 8) := TLBuffer()  :=l1_xbarMem    
     l2_xbar64 :=  TLBuffer() :=  l1_xbar64
 
 
 
-    l1_xbar128 := TLBuffer() := i_rift2Core.icacheClientNode
-    l1_xbar128 := TLBuffer() := i_rift2Core.dcacheClientNode
-    l1_xbar128 := TLBuffer() := i_rift2Core.mmuClientNode
-    l1_xbar128 := TLBuffer() := i_rift2Core.prefetchClinetNode
+    l1_xbarMem := TLBuffer() := i_rift2Core.icacheClientNode
+    l1_xbarMem := TLBuffer() := i_rift2Core.dcacheClientNode
+    l1_xbarMem := TLBuffer() := i_rift2Core.mmuClientNode
+    l1_xbarMem := TLBuffer() := i_rift2Core.prefetchClinetNode
 
 
    l1_xbar64 := TLBuffer() := i_rift2Core.systemClientNode

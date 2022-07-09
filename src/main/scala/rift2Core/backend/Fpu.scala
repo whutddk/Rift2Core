@@ -22,7 +22,8 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend.fpu._
 
-
+import rift._
+import chipsalliance.rocketchip.config.Parameters
 
 case class FType(exp: Int, sig: Int) {
   def ieeeWidth = exp + sig
@@ -271,13 +272,13 @@ class Fpu_float2int_iss_info extends Bundle {
   val rd0_phy = UInt(6.W)
 }
 
-class Fpu_param extends Register_dstntn(64){
+class Fpu_param(implicit p: Parameters) extends RD_PHY{
   val dat = new Operation_source(dw=65)
   val rm = UInt(3.W)
 
 }
 
-class Fpu_iss_info() extends Bundle {
+class Fpu_iss_info()(implicit p: Parameters) extends RiftBundle {
 
   val fun = new Fpu_isa
   val param = new Fpu_param

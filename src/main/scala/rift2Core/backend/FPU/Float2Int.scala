@@ -23,8 +23,10 @@ import rift2Core.backend._
 import base._
 import chisel3.experimental.dataview._
 
+import rift._
+import chipsalliance.rocketchip.config._
 
-class FPToInt(latency: Int) extends Module with HasFPUParameters{
+class FPToInt(latency: Int)(implicit p: Parameters) extends RiftModule with HasFPUParameters{
   val io = IO(new Bundle {
     val in = Flipped(ValidIO(new Fpu_iss_info))
     val frm = Input(UInt(3.W))
