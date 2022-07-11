@@ -40,6 +40,7 @@ class NormalCfg extends Config((site, here, up) => {
 class Rift2GoCfg extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     hasFpu = false,
+    hasDebugger = false,
     hasPreFetch = false,
 
     opChn = 4,
@@ -81,8 +82,8 @@ class Rift2GoCfg extends Config((site, here, up) => {
 object testMain extends App {
 
 
-  val cfg = new NormalCfg
-  // val cfg = new Rift2GoCfg
+  // val cfg = new NormalCfg
+  val cfg = new Rift2GoCfg
 
   (new chisel3.stage.ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => {

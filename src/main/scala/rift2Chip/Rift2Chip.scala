@@ -70,7 +70,7 @@ periph(64)        sba(64)      sys(64)      l1i(128*2)      l1d(128*2)     mmu(1
 class Rift2Chip(implicit p: Parameters) extends LazyModule with HasRiftParameters{
 
   val i_rift2Core = LazyModule( new Rift2Core )
-  val i_debugger = LazyModule(new Debugger(nComponents = 1))
+  val i_debugger = if ( hasDebugger) {Some(LazyModule(new Debugger(nComponents = 1)))} else {None}
 
   val sifiveCache = LazyModule(new InclusiveCache(
       cache = CacheParameters( level = 2, ways = 8, sets = 2048, blockBytes = 256/8, beatBytes = l1BeatBits/8 ),
@@ -160,11 +160,16 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule with HasRiftParameter
     l1_xbarMem := TLBuffer() := i_rift2Core.prefetchClinetNode
 
 
-   l1_xbar64 := TLBuffer() := i_rift2Core.systemClientNode
-   l1_xbar64 := TLBuffer() := i_rift2Core.periphClientNode
-   l1_xbar64 := TLBuffer() := i_debugger.dm.sbaClientNode
+    l1_xbar64 := TLBuffer() := i_rift2Core.systemClientNode
+    l1_xbar64 := TLBuffer() := i_rift2Core.periphClientNode
 
-  i_debugger.dm.peripNode := TLBuffer():= TLFragmenter(8, 32) := TLBuffer() := l2_xbar64
+    if( hasDebugger ) {
+      l1_xbar64 := TLBuffer() := i_debugger.get.dm.sbaClientNode
+      i_debugger.get.dm.peripNode := TLBuffer():= TLFragmenter(8, 32) := TLBuffer() := l2_xbar64      
+    }
+
+
+
 
 
   val memory = InModuleBody {
@@ -204,20 +209,22 @@ class Rift2Chip(implicit p: Parameters) extends LazyModule with HasRiftParameter
 
   lazy val module = new LazyModuleImp(this) {
     val io = IO( new Bundle{
-      val JtagIO = new JtagIO()
-      val ndreset     = Output(Bool())
+      val JtagIO  = if (hasDebugger) {Some(new JtagIO())} else { None }
+      val ndreset = if (hasDebugger) {Some(Output(Bool()))}  else { None }
 
 
       val rtc_clock = Input(Bool())
     })
   
-      // val JtagIO = Flipped(new JtagIO())
-      // val ndreset     = Output(Bool())
-      // val dm_cmm      = new Info_DM_cmm(nComponents)
 
-    i_debugger.module.io.JtagIO <> io.JtagIO
-    io.ndreset := i_debugger.module.io.ndreset
-    i_debugger.module.io.dm_cmm(0) <> i_rift2Core.module.io.dm
+    if( hasDebugger ) {
+      i_debugger.get.module.io.JtagIO <> io.JtagIO.get
+      io.ndreset.get := i_debugger.get.module.io.ndreset
+      i_debugger.get.module.io.dm_cmm(0) <> i_rift2Core.module.io.dm.get
+    }
+
+
+
     i_rift2Core.module.io.rtc_clock := io.rtc_clock
   }
 

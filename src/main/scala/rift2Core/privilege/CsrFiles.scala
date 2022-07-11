@@ -1737,29 +1737,42 @@ trait CsrFiles { this: BaseCommit =>
   //Debug/Trace Register
   def update_tselect( in: CMMState_Bundle): UInt = {
     val tselect = WireDefault( in.csrfiles.tselect )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tselect, "h7A0".U, in.csrExe )
-    when(enable) { tselect := Mux( dnxt >= 0.U, ~dnxt, dnxt ) }
+
+    if (hasDebugger) {
+      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tselect, "h7A0".U, in.csrExe )
+      when(enable) { tselect := Mux( dnxt >= 0.U, ~dnxt, dnxt ) }      
+    }
+
     return tselect
   }
 
   def update_tdata1( in: CMMState_Bundle): UInt = {
     val tdata1 = WireDefault( in.csrfiles.tdata1 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata1, "h7A1".U, in.csrExe )
-    when(enable) { tdata1 := dnxt }
+
+    if (hasDebugger) {
+      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata1, "h7A1".U, in.csrExe )
+      when(enable) { tdata1 := dnxt }
+    }
     return tdata1
   }
 
   def update_tdata2( in: CMMState_Bundle): UInt = {
     val tdata2 = WireDefault( in.csrfiles.tdata2 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata2, "h7A2".U, in.csrExe )
-    when(enable) { tdata2 := dnxt }
+
+    if (hasDebugger) {
+      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata2, "h7A2".U, in.csrExe )
+      when(enable) { tdata2 := dnxt }
+    }
     return tdata2
   }
 
   def update_tdata3( in: CMMState_Bundle ): UInt = {
     val tdata3 = WireDefault( in.csrfiles.tdata3 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata3, "h7A3".U, in.csrExe )
-    when(enable) { tdata3 := dnxt }
+
+    if (hasDebugger) {
+      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.tdata3, "h7A3".U, in.csrExe )
+      when(enable) { tdata3 := dnxt }
+    }
     return tdata3
   }
 
@@ -1774,23 +1787,19 @@ trait CsrFiles { this: BaseCommit =>
     dcsr.reserved2 := 0.U
     dcsr.mprven    := 0.U(1.W)
 
-
-
-
-
-
-
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dcsr.asUInt, "h7B0".U, in.csrExe )
-    when(false.B) {}
-    .elsewhen( in.is_debug_interrupt ){
-      dcsr.prv := in.csrfiles.priv_lvl
-    }
-    .elsewhen(enable) {
-      dcsr.ebreakm   := dnxt(15)
-      dcsr.ebreaks   := dnxt(13)
-      dcsr.ebreaku   := dnxt(12)
-      dcsr.step := dnxt(2)
-      dcsr.prv  := dnxt(1,0)
+    if (hasDebugger) {
+      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dcsr.asUInt, "h7B0".U, in.csrExe )
+      when(false.B) {}
+      .elsewhen( in.is_debug_interrupt ){
+        dcsr.prv := in.csrfiles.priv_lvl
+      }
+      .elsewhen(enable) {
+        dcsr.ebreakm   := dnxt(15)
+        dcsr.ebreaks   := dnxt(13)
+        dcsr.ebreaku   := dnxt(12)
+        dcsr.step := dnxt(2)
+        dcsr.prv  := dnxt(1,0)
+      }
     }
 
     return dcsr
@@ -1799,15 +1808,17 @@ trait CsrFiles { this: BaseCommit =>
   def update_dpc( in: CMMState_Bundle ): UInt = {
     val dpc  = WireDefault( in.csrfiles.dpc )
 
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dpc, "h7B1".U, in.csrExe )
-    when(enable) { dpc := dnxt }
-    .elsewhen( update_DMode(in) === true.B ) {
-      dpc := Mux1H(Seq(
-        in.is_ebreak_dm      -> in.commit_pc,
-        in.exint.is_single_step    -> in.commit_pc,
-        in.exint.is_trigger        -> 0.U,
-        in.exint.hartHaltReq       -> in.commit_pc,
-      ))
+    if (hasDebugger) {
+      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dpc, "h7B1".U, in.csrExe )
+      when(enable) { dpc := dnxt }
+      .elsewhen( update_DMode(in) === true.B ) {
+        dpc := Mux1H(Seq(
+          in.is_ebreak_dm      -> in.commit_pc,
+          in.exint.is_single_step    -> in.commit_pc,
+          in.exint.is_trigger        -> 0.U,
+          in.exint.hartHaltReq       -> in.commit_pc,
+        ))
+      }
     }
 
     return dpc
@@ -1815,29 +1826,38 @@ trait CsrFiles { this: BaseCommit =>
 
   def update_dscratch0( in: CMMState_Bundle ): UInt = {
     val dscratch0 = WireDefault( in.csrfiles.dscratch0 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch0, "h7B2".U, in.csrExe )
-    when(enable) { dscratch0 := dnxt }
+
+    if (hasDebugger) {
+      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch0, "h7B2".U, in.csrExe )
+      when(enable) { dscratch0 := dnxt }
+    }
     return dscratch0
   }
 
   def update_dscratch1( in: CMMState_Bundle ): UInt = {
     val dscratch1 = WireDefault( in.csrfiles.dscratch1 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch1, "h7B3".U, in.csrExe )
-    when(enable) { dscratch1 := dnxt }
+    if (hasDebugger) {
+      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch1, "h7B3".U, in.csrExe )
+      when(enable) { dscratch1 := dnxt }
+    }
     return dscratch1
   }
 
   def update_dscratch2( in: CMMState_Bundle ): UInt = {
     val dscratch2 = WireDefault( in.csrfiles.dscratch2 )
-    val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch2, "h7B4".U, in.csrExe )
-    when(enable) { dscratch2 := dnxt }
+    if (hasDebugger) {
+      val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dscratch2, "h7B4".U, in.csrExe )
+      when(enable) { dscratch2 := dnxt }
+    }
     return dscratch2
   }
 
   def update_DMode( in: CMMState_Bundle ): Bool = {
     val DMode = WireDefault( in.csrfiles.DMode )
-    when( in.is_debug_interrupt ) { DMode := true.B }
-    .elsewhen( in.is_dRet ) { DMode := false.B }
+    if (hasDebugger) {
+      when( in.is_debug_interrupt ) { DMode := true.B }
+      .elsewhen( in.is_dRet ) { DMode := false.B }
+    }
     return DMode
   }
   

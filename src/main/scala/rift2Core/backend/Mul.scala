@@ -27,7 +27,7 @@ import rift._
 import chipsalliance.rocketchip.config.Parameters
 
 
-
+/** the RV64M will be executed in this module */
 abstract class MulDivBase(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle {
     val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
@@ -39,14 +39,11 @@ abstract class MulDivBase(implicit p: Parameters) extends RiftModule {
   mul_exe_iwb_fifo.reset := reset.asBool | io.flush
   io.mul_exe_iwb <> mul_exe_iwb_fifo.io.deq
 
-  
-
-
-
 }
 
-trait Mul { this: MulDivBase =>
 
+/** construct multiplier in this trait */
+trait Mul { this: MulDivBase =>
 
   val mul_op1_sign =
     Mux(
@@ -104,41 +101,82 @@ trait Mul { this: MulDivBase =>
   ))
 
 
-
+  /** an algorithm that reduce the sign-bits at MSB
+    * @param a the input of partial product, the length of a should be clearly stated or the sign may insert at wrong bits
+    * @return the processed partial product with sign optimation
+    */
   def preProcess( a: UInt ): UInt = {
     val len = a.getWidth
     return Cat( 1.U(1.W), ~a(len-1), a(len-2, 0) )
   }
 
  
-  /** a single bits full-adder*/
-  def csa_3_2( in: Vec[Bool], lat: Seq[Int] ): (Bool, Bool, Int) = {
+  /** a single bits full-adder
+    * @param in Three input of the adder
+    * @param lat the latency of the input
+    * @return cout is the carry result
+    * @return sum is the sum
+    * @return latency the the latency module of the adder, in this version, the output latency is the maximum of the input + 2
+    */
+  def fullAdder( in: Vec[Bool], lat: Seq[Int] ): (Bool, Bool, Int) = {
     require( in.length == 3 )
     val sum  = WireDefault(in(0) ^ in(1) ^ in(2))
     val cout = WireDefault((in(0) & in(1)) | ((in(0) ^ in(1)) & in(2)))
+    val latency = lat.max + 2
+    return (cout, sum, latency)
+  }
+
+  /** a single bits half-adder
+    * @param in Two input of the adder
+    * @param lat the latency of the input
+    * @return cout is the carry result
+    * @return sum is the sum
+    * @return latency the the latency module of the adder, in this version, the output latency is the maximum of the input + 1
+    */
+  def halfAdder( in: Vec[Bool], lat: Seq[Int] ): (Bool, Bool, Int) = {
+    require( in.length == 2 )
+    val sum  = WireDefault(in(0) ^ in(1))
+    val cout = WireDefault(in(0) & in(1))
     val latency = lat.max + 1
     return (cout, sum, latency)
   }
+
 
   /** compress one Column */
   def ColumnCompress(col: Seq[Bool], lat: Seq[Int]): ( Seq[Bool], Seq[Bool], Seq[Int] ) = {
     require( col.length == lat.length )
 
     val len = col.length
-    val column  = col ++ Seq.fill(3-(len%3))(false.B)
-    val latency = lat ++ Seq.fill(3-(len%3))(0)
+            val column  = col ++ Seq.fill(3-(len%3))(false.B)
+            val latency = lat ++ Seq.fill(3-(len%3))(0)
 
     // println( "ColumnCompress: col length = "+ col.length + " , column length = "+ column.length + " \n" )
 
-    val adder = for( i <- 0 until ((len+2) / 3) ) yield {
-      csa_3_2(VecInit(column(3*i), column(3*i+1), column(3*i+2)), Seq( latency(3*i), latency(3*i+1), latency(3*i+2) ) )
-    }
+            // val adder = for( i <- 0 until ((len+2) / 3) ) yield {
+            //   csa_3_2(VecInit(column(3*i), column(3*i+1), column(3*i+2)), Seq( latency(3*i), latency(3*i+1), latency(3*i+2) ) )
+            // }
 
-    val csa32_cout: Seq[Bool] = adder.map{_._1} 
-    val csa32_sum : Seq[Bool] = adder.map{_._2}
-    val csa32_lat : Seq[Int]  = adder.map{_._3}
 
-    return (csa32_cout , csa32_sum, csa32_lat)
+
+      if ( len == 1) {
+        return ( Seq(false.B), Seq(col(0)), Seq(lat(0)) )
+      } else if ( len == 2 ) { 
+        val adder1 = halfAdder( VecInit(col), lat = lat )
+        return ( Seq(adder1._1),Seq(adder1._2), Seq(adder1._3) )
+      } else if ( len == 3 ) {
+        val adder2 = fullAdder( VecInit(col), lat = lat )
+        return ( Seq(adder2._1),Seq(adder2._2), Seq(adder2._3) )
+      } else if ( len == 4 ) {
+        val adder3 = halfAdder( VecInit(col(0), col(1)), Seq(lat(0), lat(1)) )
+        val adder4 = halfAdder( VecInit(col(2), col(3)), Seq(lat(2), lat(3)) )
+        return ( Seq(adder3._1, adder4._1), Seq(adder3._2, adder4._2), Seq(adder3._3, adder4._3) )
+      } else {
+        val (cout, sum, latency) = fullAdder( VecInit(col take 3), lat take 3 )
+        val (scout, ssum, slatency ) = ColumnCompress(col drop 3, lat drop 3)
+
+        return ( Seq(cout) ++ scout, Seq(sum) ++ ssum, Seq(latency) ++ slatency )
+      }
+
   }
 
   /** compress the WallaceTree */
@@ -153,6 +191,7 @@ trait Mul { this: MulDivBase =>
 
 
     println( "WallaceTree is "+ treeHight + " meters tall. WallaceTree is "+ treeLatency + " seconds delay\n" )
+    // for ( i <- 0 until 128 ) { println("tree("+i+") is "+tree(i).length+"meters tall") }
 
     if ( treeHight == 2 ) {
       val sum = Wire( Vec(128, Bool() ))
@@ -198,7 +237,7 @@ trait Mul { this: MulDivBase =>
         else { (newLat(i) ++ newLat(i-1)).map{ _ => 0} }
       }
 
-      if( treeLatency == 60 ) {
+      if( treeLatency == 120 ) {
         return WallaceTreeCompress( RegEnable( newTree, pipeMidStageInfo.io.enq.fire ), emptyLatency )
       } else {
         return WallaceTreeCompress( tree = newTree, lat = newLatency )        
