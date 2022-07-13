@@ -37,6 +37,7 @@ class NormalCfg extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting()
 })
 
+
 class Rift2GoCfg extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     hasFpu = false,
@@ -75,6 +76,56 @@ class Rift2GoCfg extends Config((site, here, up) => {
     isMinArea = true,
     isLowPower = false,
 
+  )
+})
+
+class RiftToGo2300 extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+  )
+})
+
+class RiftToGo2310 extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+  )
+})
+
+class RiftToGo2320 extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+  )
+})
+
+class RiftToGo2330 extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+  )
+})
+
+class RiftToGo2340 extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+  )
+})
+
+class RiftToGo2350 extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+  )
+})
+
+class RiftToGo2360 extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+  )
+})
+
+class RiftToGo2370 extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+  )
+})
+
+class RiftToGo2380 extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+  )
+})
+
+class RiftToGo2390 extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
   )
 })
 
