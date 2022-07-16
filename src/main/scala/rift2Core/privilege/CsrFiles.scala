@@ -696,7 +696,7 @@ trait CsrFiles { this: BaseCommit =>
 
   //machine information register
   def update_mvendorid( in: CMMState_Bundle ) = 0.U
-  def update_marchid  ( in: CMMState_Bundle ) = 0.U
+  def update_marchid  ( in: CMMState_Bundle ) = 29.U
   def update_mimpid   ( in: CMMState_Bundle ) = 0.U
   def update_mhartid  ( in: CMMState_Bundle ) = 0.U
 
