@@ -41,7 +41,7 @@ class NormalCfg extends Config((site, here, up) => {
 class Rift2GoCfg extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     hasFpu = false,
-    hasDebugger = false,
+    hasDebugger = true,
     hasPreFetch = false,
 
     opChn = 4,
@@ -79,70 +79,380 @@ class Rift2GoCfg extends Config((site, here, up) => {
   )
 })
 
-class RiftToGo2300 extends Config((site, here, up) => {
+// class Rift2300 extends Config((site, here, up) => {
+//   case RiftParamsKey => RiftSetting(
+
+//     hasFpu = false,
+//     hasDebugger = false,
+//     hasPreFetch = false,
+
+//     isMinArea = true,
+//     isLowPower = false,
+
+//     rn_chn = 1,
+//     cm_chn = 1,
+//     opChn = 2,
+//     wbChn = 2,
+
+//     regNum = 33,
+
+//     l1BeatBits = 64,
+//     memBeatBits = 64,
+
+
+//     tlbEntry = 2, 
+//     ifetchParameters = IFParameters(
+//       uBTB_entry = 4,
+//       btb_cl = 64,
+//       bim_cl = 64,
+//       ras_dp = 8,
+//       tage_table = 1, 
+//     ),
+
+//     icacheParameters = IcacheParameters(
+//       cb = 2,
+//     ),
+//     dcacheParameters = DcacheParameters(
+//       bk = 1,
+//       cb = 2,
+//       sbEntry = 2,
+//       stEntry = 2,
+//     ),
+//   )
+// })
+
+// class Rift2310 extends Config((site, here, up) => {
+//   case RiftParamsKey => RiftSetting(
+//     hasFpu = false,
+//     hasDebugger = false,
+//     hasPreFetch = false,
+
+//     isMinArea = true,
+//     isLowPower = false,
+
+//     rn_chn = 1,
+//     cm_chn = 1,
+//     opChn = 2,
+//     wbChn = 2,
+
+//     regNum = 36,
+
+//     l1BeatBits = 64,
+//     memBeatBits = 64,
+
+
+//     tlbEntry = 2, 
+//     ifetchParameters = IFParameters(
+//       uBTB_entry = 4,
+//       btb_cl = 128,
+//       bim_cl = 128,
+//       ras_dp = 16,
+//       tage_table = 1, 
+//     ),
+
+//     icacheParameters = IcacheParameters(
+//       cb = 2,
+//     ),
+//     dcacheParameters = DcacheParameters(
+//       bk = 1,
+//       cb = 2,
+//       sbEntry = 4,
+//       stEntry = 4,
+//     ),
+//   )
+// })
+
+// class Rift2320 extends Config((site, here, up) => {
+//   case RiftParamsKey => RiftSetting(
+//     hasFpu = false,
+//     hasDebugger = false,
+//     hasPreFetch = false,
+
+//     isMinArea = true,
+//     isLowPower = false,
+
+//     rn_chn = 1,
+//     cm_chn = 1,
+//     opChn = 2,
+//     wbChn = 2,
+
+//     regNum = 38,
+
+//     l1BeatBits = 64,
+//     memBeatBits = 64,
+
+
+//     tlbEntry = 2, 
+//     ifetchParameters = IFParameters(
+//       uBTB_entry = 4,
+//       btb_cl = 128,
+//       bim_cl = 128,
+//       ras_dp = 16,
+//       tage_table = 1, 
+//     ),
+
+//     icacheParameters = IcacheParameters(
+//       cb = 2,
+//     ),
+//     dcacheParameters = DcacheParameters(
+//       bk = 1,
+//       cb = 2,
+//       sbEntry = 4,
+//       stEntry = 4,
+//     ),
+//   )
+// })
+
+class Rift2330 extends Rift2GoCfg
+
+class Rift2340 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
+    hasFpu = true,
+    hasDebugger = true,
+    hasPreFetch = false,
+
+    opChn = 4,
+    wbChn = 2,
+
+    regNum = 48,
+
+    l1BeatBits = 64,
+    memBeatBits = 64,
+
+    tlbEntry = 4,
+
+    ifetchParameters = IFParameters(
+      uBTB_entry = 8,
+      // uBTB_tag_w = 16,
+      // btb_cl = 4096,
+      // bim_cl = 4096,
+      // ras_dp = 256,
+      // tage_table = 6, 
+    ),
+    icacheParameters = IcacheParameters(
+      cb = 2,
+    ),
+    dcacheParameters = DcacheParameters(
+      bk = 1,
+      cb = 2,
+      sbEntry = 8,
+      stEntry = 8,
+    ),
+
+
+    isMinArea = true,
+    isLowPower = false,
   )
 })
 
-class RiftToGo2310 extends Config((site, here, up) => {
+class Rift2350 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
+    hasFpu = true,
+    hasDebugger = true,
+    hasPreFetch = false,
+
+    opChn = 4,
+    wbChn = 2,
+
+    regNum = 48,
+
+    l1BeatBits = 128,
+    memBeatBits = 128,
+
+    tlbEntry = 8,
+
+    ifetchParameters = IFParameters(
+      uBTB_entry = 16,
+      // uBTB_tag_w = 16,
+      // btb_cl = 4096,
+      // bim_cl = 4096,
+      // ras_dp = 256,
+      // tage_table = 6, 
+    ),
+    icacheParameters = IcacheParameters(
+      cb = 2,
+    ),
+    dcacheParameters = DcacheParameters(
+      bk = 2,
+      cb = 2,
+      sbEntry = 8,
+      stEntry = 8,
+    ),
+
+
+    isMinArea = true,
+    isLowPower = false,
   )
 })
 
-class RiftToGo2320 extends Config((site, here, up) => {
+class Rift2360 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
+    hasFpu = true,
+    hasDebugger = true,
+    hasPreFetch = false,
+
+    opChn = 4,
+    wbChn = 4,
+
+    regNum = 54,
+
+    l1BeatBits = 128,
+    memBeatBits = 128,
+
+    tlbEntry = 8,
+
+    ifetchParameters = IFParameters(
+      uBTB_entry = 16,
+      // uBTB_tag_w = 16,
+      // btb_cl = 4096,
+      // bim_cl = 4096,
+      // ras_dp = 256,
+      // tage_table = 6, 
+    ),
+    icacheParameters = IcacheParameters(
+      cb = 2,
+    ),
+    dcacheParameters = DcacheParameters(
+      bk = 2,
+      cb = 4,
+      sbEntry = 12,
+      stEntry = 12,
+    ),
+
+
+    isMinArea = false,
+    isLowPower = true,
   )
 })
 
-class RiftToGo2330 extends Config((site, here, up) => {
+class Rift2370  extends NormalCfg
+
+class Rift2380 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
+    hasFpu = true,
+    hasDebugger = true,
+    hasPreFetch = true,
+
+    opChn = 6,
+    wbChn = 4,
+
+    regNum = 96,
+
+    l1BeatBits = 128,
+    memBeatBits = 128,
+
+    tlbEntry = 24,
+
+    ifetchParameters = IFParameters(
+      uBTB_entry = 24,
+      // uBTB_tag_w = 16,
+      // btb_cl = 4096,
+      // bim_cl = 4096,
+      // ras_dp = 256,
+      // tage_table = 6, 
+    ),
+    icacheParameters = IcacheParameters(
+      cb = 8,
+    ),
+    dcacheParameters = DcacheParameters(
+      bk = 4,
+      cb = 8,
+      sbEntry = 24,
+      stEntry = 24,
+    ),
+
+
+    isMinArea = false,
+    isLowPower = true,
   )
 })
 
-class RiftToGo2340 extends Config((site, here, up) => {
+class Rift2390 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-  )
-})
+    hasFpu = true,
+    hasDebugger = true,
+    hasPreFetch = true,
 
-class RiftToGo2350 extends Config((site, here, up) => {
-  case RiftParamsKey => RiftSetting(
-  )
-})
+    opChn = 8,
+    wbChn = 4,
 
-class RiftToGo2360 extends Config((site, here, up) => {
-  case RiftParamsKey => RiftSetting(
-  )
-})
+    regNum = 128,
 
-class RiftToGo2370 extends Config((site, here, up) => {
-  case RiftParamsKey => RiftSetting(
-  )
-})
+    l1BeatBits = 128,
+    memBeatBits = 128,
 
-class RiftToGo2380 extends Config((site, here, up) => {
-  case RiftParamsKey => RiftSetting(
-  )
-})
+    tlbEntry = 32,
 
-class RiftToGo2390 extends Config((site, here, up) => {
-  case RiftParamsKey => RiftSetting(
+    ifetchParameters = IFParameters(
+      uBTB_entry = 32,
+      // uBTB_tag_w = 16,
+      // btb_cl = 4096,
+      // bim_cl = 4096,
+      // ras_dp = 256,
+      // tage_table = 6, 
+    ),
+    icacheParameters = IcacheParameters(
+      cb = 8,
+    ),
+    dcacheParameters = DcacheParameters(
+      bk = 8,
+      cb = 8,
+      sbEntry = 32,
+      stEntry = 32,
+    ),
+
+
+    isMinArea = false,
+    isLowPower = true,
   )
 })
 
 
 object testMain extends App {
 
-
   // val cfg = new NormalCfg
   val cfg = new Rift2GoCfg
 
-  (new chisel3.stage.ChiselStage).execute(args, Seq(
+  (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated") ++ args, Seq(
       ChiselGeneratorAnnotation(() => {
     val soc = LazyModule(new Rift2Chip()(cfg))
     soc.module
   })
   ))
 }
+
+object testAll extends App {
+
+  val config = Seq(
+    // (new Rift2300, "Rift2300" ),
+    // (new Rift2310, "Rift2310" ),
+    // (new Rift2320, "Rift2320" ),
+    (new Rift2330, "Rift2330" ),
+    (new Rift2340, "Rift2340" ),
+    (new Rift2350, "Rift2350" ),
+    (new Rift2360, "Rift2360" ),
+    (new Rift2370, "Rift2370" ),
+    (new Rift2380, "Rift2380" ),
+    (new Rift2390, "Rift2390" ),
+  )
+
+  config.map{ cfg =>
+    (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Release/"++cfg._2, "-E", "verilog" ) ++ args, Seq(
+        ChiselGeneratorAnnotation(() => {
+      val soc = LazyModule(new Rift2Chip()(cfg._1))
+      soc.module
+    })
+    ))
+
+    (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Debug/"++cfg._2, "-e", "verilog" ) ++ args, Seq(
+        ChiselGeneratorAnnotation(() => {
+      val soc = LazyModule(new Rift2Chip()(cfg._1))
+      soc.module
+    })
+    ))
+  }
+}
+
 
 // import rift2Core.backend.fpu._
 

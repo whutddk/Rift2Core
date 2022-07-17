@@ -190,7 +190,7 @@ trait Mul { this: MulDivBase =>
     val treeLatency = lat.map{ _.max }.max
 
 
-    println( "WallaceTree is "+ treeHight + " meters tall. WallaceTree is "+ treeLatency + " seconds delay\n" )
+    // println( "WallaceTree is "+ treeHight + " meters tall. WallaceTree is "+ treeLatency + " seconds delay\n" )
     // for ( i <- 0 until 128 ) { println("tree("+i+") is "+tree(i).length+"meters tall") }
 
     if ( treeHight == 2 ) {
@@ -213,7 +213,7 @@ trait Mul { this: MulDivBase =>
           cin(i) := false.B
         }
       }
-      println( "WallaceTree Compression Finish, latency is " + treeLatency +"\n")
+      // println( "WallaceTree Compression Finish, latency is " + treeLatency +"\n")
       return (RegEnable( VecInit(cin.asUInt, sum.asUInt), pipeFnlStageInfo.io.enq.fire ), treeLatency )
     } else if ( treeHight > 2 ) {
       val compress = for( i <- 0 until 128 ) yield { ColumnCompress(col = tree(i), lat(i)) }
