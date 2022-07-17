@@ -39,16 +39,25 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 
 ## Rift To Go
 
-Download Pre-compile(NormalCfg) FIRRTL Here:
+Download Pre-compile Version Here:
 
-* [Master Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Rift2Chip.fir)
-* [Develop Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Rift2Chip.fir)
+|Version|FIRRTL|Verilog|Test|Dhrystone|CoreMark|
+|:----: |:----:|:-----:|:--:|:-----:|:-----:|
+|Rift-2300|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2300/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2300/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2300/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2300/Rift2Chip.v)|N/A|N/A|N/A|
+|Rift-2310|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2310/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2310/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2310/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2310/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2320|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2320/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2320/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2320/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2320/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2330|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2330/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2330/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2330/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2330/Rift2Chip.v) |Pass|N/A|N/A|
+|Rift-2340|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2340/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2340/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2340/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2340/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2350|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2350/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2350/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2350/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2350/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2360|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2360/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2360/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2360/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2360/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2370|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2370/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2370/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2370/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2370/Rift2Chip.v) |Pass|1.281689|1.912046|
+|Rift-2380|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2380/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2380/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2380/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2380/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2390|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2390/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2390/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Release/Rift2390/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Release/Rift2390/Rift2Chip.v) |N/A|N/A|N/A|
 
 
-Download Pre-compile(NormalCfg) Verilog Here:
 
-* [Master Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Rift2Chip.v)
-* [Develop Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Rift2Chip.v)
+
+
 
 
 ## API

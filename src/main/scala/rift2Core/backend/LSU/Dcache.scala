@@ -34,7 +34,12 @@ import freechips.rocketchip.tilelink._
 
 
 
-
+/** the operation that dcache support
+  * @note Lsu isa
+  * @note probe
+  * @note grant
+  * @note preft
+  */
 class Cache_op extends Lsu_isa {
 
   val probe = Bool()
