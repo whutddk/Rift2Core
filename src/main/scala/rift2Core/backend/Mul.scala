@@ -73,32 +73,99 @@ trait Mul { this: MulDivBase =>
       Cat(mul_op2_sign, io.mul_iss_exe.bits.param.dat.op2)
     )
 
+  
 
-  val pipeMidStageInfo = Module( new Queue( new Mul_iss_info, 1, true, false ) )
-  val pipeFnlStageInfo = Module( new Queue( new Mul_iss_info, 1, true, false ) )
+  val multiplier = Module(new Multiplier(new Mul_iss_info, 65) )
+  multiplier.io.enq.valid := io.mul_iss_exe.valid & io.mul_iss_exe.bits.fun.isMul
+  multiplier.io.op1 := mul_op1
+  multiplier.io.op2 := mul_op2
+  multiplier.io.enq.bits := io.mul_iss_exe.bits
+  multiplier.io.flush := io.flush
+
+
+  val mulRes = Mux1H(Seq(
+    multiplier.io.deq.bits.fun.mul    -> multiplier.io.res(63,0),
+    multiplier.io.deq.bits.fun.mulh   -> multiplier.io.res(127,64),
+    multiplier.io.deq.bits.fun.mulhsu -> multiplier.io.res(127,64),
+    multiplier.io.deq.bits.fun.mulhu  -> multiplier.io.res(127,64),
+    multiplier.io.deq.bits.fun.mulw   -> sextXTo(multiplier.io.res(31,0), 64 ),
+  ))
+
+
+
+}
+
+trait Div { this: MulDivBase =>
+  val dividor = Module(new Dividor)
+
+  dividor.io.enq.bits  := io.mul_iss_exe.bits
+  dividor.io.enq.valid := io.mul_iss_exe.bits.fun.isDiv & io.mul_iss_exe.valid
+
+  dividor.io.flush := io.flush
+
+
+
+
+}
+
+
+
+class MulDiv(implicit p: Parameters) extends MulDivBase with Mul with Div {
+
+
+  // io.mul_iss_exe.ready := ~isDivBusy
+  io.mul_iss_exe.ready :=
+    Mux( io.mul_iss_exe.bits.fun.isMul, multiplier.io.enq.ready, dividor.io.enq.ready )
+
+  
+
+  val iwbArb = Module(new Arbiter(new WriteBack_info(dw=64), 2))
+
+
+  multiplier.io.deq.ready := iwbArb.io.in(0).ready
+  iwbArb.io.in(0).valid := multiplier.io.deq.valid
+  iwbArb.io.in(0).bits.rd0 := multiplier.io.deq.bits.param.rd0
+  iwbArb.io.in(0).bits.res := mulRes
+
+  iwbArb.io.in(1) <> dividor.io.deq
+  
+  
+
+  mul_exe_iwb_fifo.io.enq <> iwbArb.io.out
+
+
+}
+
+class Multiplier[T<:Data]( pipeType: T, dw: Int ) extends Module {
+  val io = IO(new Bundle{
+    val enq = Flipped(new DecoupledIO(pipeType))
+    val deq = Decoupled(pipeType)
+    val op1 = Input(UInt(dw.W))
+    val op2 = Input(UInt(dw.W))
+    val res = Output(UInt((2*dw).W))
+    val flush = Input(Bool()) 
+  })
+
+  val pipeMidStageInfo = Module( new Queue( pipeType, 1, true, false ) )
+  val pipeFnlStageInfo = Module( new Queue( pipeType, 1, true, false ) )
 
   pipeMidStageInfo.reset := reset.asBool | io.flush
   pipeFnlStageInfo.reset := reset.asBool | io.flush
 
-  val (oriTree, oriLat) = booth4Enc( a = mul_op1, b = mul_op2 )
+  val (oriTree, oriLat) = booth4Enc( a = io.op1, b = io.op2 )
   val (sum, lat) = WallaceTreeCompress( oriTree, oriLat )
+  io.res  := sum(0) + sum(1)
+
+  io.enq <> pipeMidStageInfo.io.enq
+  pipeMidStageInfo.io.deq <> pipeFnlStageInfo.io.enq
+  io.deq <> pipeFnlStageInfo.io.deq
 
 
 
 
-  pipeMidStageInfo.io.enq.bits  := io.mul_iss_exe.bits
-  pipeMidStageInfo.io.enq.valid := io.mul_iss_exe.valid & io.mul_iss_exe.bits.fun.isMul
 
 
-  // val mul_res_128w = mul_op1.asSInt * mul_op2.asSInt
-  val mul_res_128w = sum(0) + sum(1)
-  val mulRes = Mux1H(Seq(
-    pipeFnlStageInfo.io.deq.bits.fun.mul    -> mul_res_128w(63,0),
-    pipeFnlStageInfo.io.deq.bits.fun.mulh   -> mul_res_128w(127,64),
-    pipeFnlStageInfo.io.deq.bits.fun.mulhsu -> mul_res_128w(127,64),
-    pipeFnlStageInfo.io.deq.bits.fun.mulhu  -> mul_res_128w(127,64),
-    pipeFnlStageInfo.io.deq.bits.fun.mulw   -> sextXTo(mul_res_128w(31,0), 64 ),
-  ))
+
 
 
   /** an algorithm that reduce the sign-bits at MSB
@@ -158,24 +225,24 @@ trait Mul { this: MulDivBase =>
 
 
 
-      if ( len == 1) {
-        return ( Seq(false.B), Seq(col(0)), Seq(lat(0)) )
-      } else if ( len == 2 ) { 
-        val adder1 = halfAdder( VecInit(col), lat = lat )
-        return ( Seq(adder1._1),Seq(adder1._2), Seq(adder1._3) )
-      } else if ( len == 3 ) {
-        val adder2 = fullAdder( VecInit(col), lat = lat )
-        return ( Seq(adder2._1),Seq(adder2._2), Seq(adder2._3) )
-      } else if ( len == 4 ) {
-        val adder3 = halfAdder( VecInit(col(0), col(1)), Seq(lat(0), lat(1)) )
-        val adder4 = halfAdder( VecInit(col(2), col(3)), Seq(lat(2), lat(3)) )
-        return ( Seq(adder3._1, adder4._1), Seq(adder3._2, adder4._2), Seq(adder3._3, adder4._3) )
-      } else {
-        val (cout, sum, latency) = fullAdder( VecInit(col take 3), lat take 3 )
-        val (scout, ssum, slatency ) = ColumnCompress(col drop 3, lat drop 3)
+    if ( len == 1) {
+      return ( Seq(false.B), Seq(col(0)), Seq(lat(0)) )
+    } else if ( len == 2 ) { 
+      val adder1 = halfAdder( VecInit(col), lat = lat )
+      return ( Seq(adder1._1),Seq(adder1._2), Seq(adder1._3) )
+    } else if ( len == 3 ) {
+      val adder2 = fullAdder( VecInit(col), lat = lat )
+      return ( Seq(adder2._1),Seq(adder2._2), Seq(adder2._3) )
+    } else if ( len == 4 ) {
+      val adder3 = halfAdder( VecInit(col(0), col(1)), Seq(lat(0), lat(1)) )
+      val adder4 = halfAdder( VecInit(col(2), col(3)), Seq(lat(2), lat(3)) )
+      return ( Seq(adder3._1, adder4._1), Seq(adder3._2, adder4._2), Seq(adder3._3, adder4._3) )
+    } else {
+      val (cout, sum, latency) = fullAdder( VecInit(col take 3), lat take 3 )
+      val (scout, ssum, slatency ) = ColumnCompress(col drop 3, lat drop 3)
 
-        return ( Seq(cout) ++ scout, Seq(sum) ++ ssum, Seq(latency) ++ slatency )
-      }
+      return ( Seq(cout) ++ scout, Seq(sum) ++ ssum, Seq(latency) ++ slatency )
+    }
 
   }
 
@@ -184,7 +251,7 @@ trait Mul { this: MulDivBase =>
     require( tree.length == lat.length )
     require( (tree zip lat).map{ case(x, y) => (x.length == y.length) }.foldLeft( true )( _ & _ ) )
 
-    require(tree.length == 128)
+    require(tree.length == 2*dw)
 
     val treeHight   = tree.map{ _.length}.max
     val treeLatency = lat.map{ _.max }.max
@@ -194,10 +261,10 @@ trait Mul { this: MulDivBase =>
     // for ( i <- 0 until 128 ) { println("tree("+i+") is "+tree(i).length+"meters tall") }
 
     if ( treeHight == 2 ) {
-      val sum = Wire( Vec(128, Bool() ))
-      val cin = Wire( Vec(128, Bool() ))
+      val sum = Wire( Vec(2*dw, Bool() ))
+      val cin = Wire( Vec(2*dw, Bool() ))
 
-      for ( i <- 0 until 128 ) {
+      for ( i <- 0 until 2*dw ) {
         if ( tree(i).length == 0 ) {
           sum(i) := false.B
           cin(i) := false.B
@@ -216,23 +283,23 @@ trait Mul { this: MulDivBase =>
       // println( "WallaceTree Compression Finish, latency is " + treeLatency +"\n")
       return (RegEnable( VecInit(cin.asUInt, sum.asUInt), pipeFnlStageInfo.io.enq.fire ), treeLatency )
     } else if ( treeHight > 2 ) {
-      val compress = for( i <- 0 until 128 ) yield { ColumnCompress(col = tree(i), lat(i)) }
+      val compress = for( i <- 0 until 2*dw ) yield { ColumnCompress(col = tree(i), lat(i)) }
 
       val newCout: Seq[Seq[Bool]] = compress.map{ _._1 }
       val newSum : Seq[Seq[Bool]] = compress.map{ _._2 }
       val newLat : Seq[Seq[Int ]] = compress.map{ _._3 }
 
-      val newTree = MixedVecInit(for( i <- 0 until 128 ) yield {
+      val newTree = MixedVecInit(for( i <- 0 until 2*dw ) yield {
         if( i == 0 ) { VecInit(newSum(0)) }
         else {  VecInit(newSum(i) ++ newCout(i-1)) }
       })
 
-      val newLatency = for( i <- 0 until 128 ) yield {
+      val newLatency = for( i <- 0 until 2*dw ) yield {
         if( i == 0 ) { newLat(0) }
         else { newLat(i) ++ newLat(i-1) }
       }
 
-      val emptyLatency = for( i <- 0 until 128 ) yield {
+      val emptyLatency = for( i <- 0 until 2*dw ) yield {
         if( i == 0 ) { newLat(0).map{ _ => 0} }
         else { (newLat(i) ++ newLat(i-1)).map{ _ => 0} }
       }
@@ -255,7 +322,7 @@ trait Mul { this: MulDivBase =>
   def booth4Enc( a: UInt, b: UInt ): (MixedVec[Vec[Bool]], Seq[Seq[Int]]) = {
     require( a.getWidth == b.getWidth )
     val len = a.getWidth
-    require( a.getWidth == 65 )
+    require( a.getWidth == dw )
     val oriB, ori2B, negB, neg2B = Wire(UInt((len+1).W))
     oriB  := sextXTo(b, len+1)
     ori2B := sextXTo(b << 1, len+1)
@@ -289,7 +356,7 @@ trait Mul { this: MulDivBase =>
 
 
     // println( "trees is "+ trees )
-    val oriTree = for( i <- 0 until 128 ) yield { VecInit(
+    val oriTree = for( i <- 0 until 2*dw ) yield { VecInit(
       if ( i == (len) ) {
         trees.map{ _(i) }.foldLeft(Seq(): Seq[Bool])( _ ++ _ ) ++ Seq(true.B)
       } else {
@@ -297,7 +364,7 @@ trait Mul { this: MulDivBase =>
       }
     )}
 
-    val oriLat = for( i <- 0 until 128 ) yield { 
+    val oriLat = for( i <- 0 until 2*dw ) yield { 
       if ( i == (len) ) {
         lats.map{ _(i) }.foldLeft(Seq(): Seq[Int])( _ ++ _ ) ++ Seq(0)
       } else {
@@ -311,7 +378,7 @@ trait Mul { this: MulDivBase =>
 
   def map2WallaceTree( payload: UInt, offset: Int ): (Seq[Seq[Bool]], Seq[Seq[Int]]) = {
 
-    val tree = for ( i <- 0 until 128 ) yield {
+    val tree = for ( i <- 0 until 2*dw ) yield {
       if ( (i >= offset) && ( i < offset + payload.getWidth ) ) {
         Seq( Mux( payload(i-offset) === 1.U, true.B, false.B ) )
       } else {
@@ -319,7 +386,7 @@ trait Mul { this: MulDivBase =>
       }
     }
 
-    val lat = for ( i <- 0 until 128 ) yield {
+    val lat = for ( i <- 0 until 2*dw ) yield {
       if ( (i >= offset) && ( i < offset + payload.getWidth ) ) {
         Seq( 0 )
       } else {
@@ -331,53 +398,6 @@ trait Mul { this: MulDivBase =>
     return (tree, lat)
   }
 }
-
-trait Div { this: MulDivBase =>
-  val dividor = Module(new Dividor)
-
-  dividor.io.enq.bits  := io.mul_iss_exe.bits
-  dividor.io.enq.valid := io.mul_iss_exe.bits.fun.isDiv & io.mul_iss_exe.valid
-
-  dividor.io.flush := io.flush
-
-
-
-
-}
-
-
-
-class MulDiv(implicit p: Parameters) extends MulDivBase with Mul with Div {
-
-
-  // io.mul_iss_exe.ready := ~isDivBusy
-  io.mul_iss_exe.ready :=
-    Mux( io.mul_iss_exe.bits.fun.isMul, pipeMidStageInfo.io.enq.ready, dividor.io.enq.ready )
-
-  pipeMidStageInfo.io.deq <> pipeFnlStageInfo.io.enq
-
-  val iwbArb = Module(new Arbiter(new WriteBack_info(dw=64), 2))
-
-
-  pipeFnlStageInfo.io.deq.ready := iwbArb.io.in(0).ready
-  iwbArb.io.in(0).valid := pipeFnlStageInfo.io.deq.valid
-  iwbArb.io.in(0).bits.rd0 <> pipeFnlStageInfo.io.deq.bits.param.rd0
-  iwbArb.io.in(0).bits.res <> mulRes
-
-  iwbArb.io.in(1) <> dividor.io.deq
-  
-  
-
-
-
-  
-
-  mul_exe_iwb_fifo.io.enq <> iwbArb.io.out
-
-
-}
-
-
 
 
 class Dividor(implicit p: Parameters) extends RiftModule {

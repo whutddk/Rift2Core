@@ -23,7 +23,7 @@ jobs:
 
     #   - name: cleanCommit
     #     run: |
-    #       cd /home/runner/work/RiftCore/
+    #       cd /Users/runner/work/RiftCore/
     #       git clone https://github.com/whutddk/RiftCore/
     #       cd RiftCore/
     #       git fetch --all
@@ -38,7 +38,7 @@ jobs:
     #       force: true
   build:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: macos-12
     # needs: clean
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -57,20 +57,20 @@ jobs:
           sbt doc
 
           echo $GITHUB_REF_NAME
-          mkdir /home/runner/work/Rift2Core/Verilog/
-          mkdir /home/runner/work/Rift2Core/ScalaDoc/
+          mkdir /Users/runner/work/Rift2Core/Verilog/
+          mkdir /Users/runner/work/Rift2Core/ScalaDoc/
 
-          mkdir /home/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/
-          mkdir /home/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/
+          mkdir /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/
+          mkdir /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/
 
-          cd /home/runner/work/Rift2Core/Rift2Core/
+          cd /Users/runner/work/Rift2Core/Rift2Core/
 
-          cp generated/Release /home/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/ -r
-          cp target/scala-2.12/api /home/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME -r
+          cp -R generated/Release /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME 
+          cp -R target/scala-2.12/api /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME 
 
       # - name: Restore Data
       #   run: |
-      #     cd /home/runner/work/Rift2Core/Rift2Core/
+      #     cd /Users/runner/work/Rift2Core/Rift2Core/
       #     git fetch --all
       #     git checkout origin/gh-pages data/performance.js
       #     cp data/performance.js tb/ci/
@@ -80,16 +80,16 @@ jobs:
 
       - name: Commit
         run: |
-          cd /home/runner/work/Rift2Core/Rift2Core
+          cd /Users/runner/work/Rift2Core/Rift2Core
           git checkout -- .
           git fetch --all
           git checkout gh_pages
 
-          rm /home/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME -rf
-          rm /home/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME -rf
+          rm -rf /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME
+          rm -rf /Users/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
 
-          cp /home/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/ /home/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME/ -r
-          cp /home/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/ /home/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/ -r
+          cp -R /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME
+          cp -R /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME /Users/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
 
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
