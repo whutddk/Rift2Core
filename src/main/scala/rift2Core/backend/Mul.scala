@@ -541,3 +541,100 @@ class Dividor(implicit p: Parameters) extends RiftModule {
 }
 
 
+
+class SRTDivider[T<:Data]( pipeType: T, dw: Int, vs: Int = 1, srtBase: Int = 4 ) extends Module {
+  require( vs >= 1 )
+  require( srtBase >= 2 )
+  require( isPow2(srtBase) == true )
+
+  val io = IO(new Bundle{
+    val enq = Flipped(new DecoupledIO(pipeType))
+    val deq = Decoupled(pipeType)
+    val op1 = Input(UInt(dw.W))
+    val op2 = Input(UInt(dw.W))
+    val quo = Output(UInt((dw).W))
+    val rem = Output(UInt((dw).W))
+    val flush = Input(Bool()) 
+  })
+
+  val isRecurrence = RegInit(false.B)
+  val isRecovery = RegInit(false.B)
+  val partRemainder = Reg(UInt(dw.W))
+  val divisor = Reg(UInt(dw.W))
+  val partQuotients = Reg(UInt(dw.W))
+  val idx = Reg(UInt((log2Ceil(dw)).W))
+  val isBusy = isRecurrence | isRecovery
+
+
+    val partQuo = Wire(Vec( 4, SInt((dw+1).W) ))
+    partQuo(0) := -(divisor.asSInt << 1)
+    partQuo(1) := -(divisor.asSInt)
+    partQuo(2) := divisor.asSInt
+    partQuo(3) := divisor.asSInt << 1
+
+
+
+
+
+
+
+
+  when( io.enq.fire ) {
+    assert( ~isRecurrence && ~isRecovery )
+    isRecurrence := true.B
+    partRemainder := op1
+    partQuotients := 0.U
+    divisor := op2
+    idx := (dw-2).U //log2(srtBase)
+  } .elsewhen( isRecurrence ) {
+    assert( ~isRecovery )
+
+    val cmp = for ( i <- 0 until vs ) yield {
+      BoothCmp(partRemainder(dw-1, idx))
+    }
+
+    partRemainder := UpdatePartRemainder
+    partQuotients := UpdatePartQuotients
+
+    when( idx >= 2  ) { //log2(srtBase)
+      idx := idx - 2 //log2(srtBase)
+    } else {
+      isRecurrence := false.B
+      isRecovery := true.B
+    }
+  } .elsewhen( isRecovery ) {
+    assert( ~isRecurrence )
+    // isRecovery := false.B
+  }
+
+
+
+  def BoothCmp(a: SInt): (SInt, SInt) = {
+    require( srtBase == 4 )
+
+
+
+    val con = Seq(
+                            ( a < partQuo(0) ), 
+      ( (partQuo(0) <= a) && (a < partQuo(1))),
+      ( (partQuo(1) <= a) && (a < partQuo(2))),
+      ( (partQuo(2) <= a) && (a < partQuo(3))),
+      (  partQuo(3) <= a ),
+    )
+
+    val out = Seq(
+      -2.S,
+      -1.S,
+       0.S,
+       1.S,
+       2.S,
+    )
+
+    return Mux1H(con zip out)
+  }
+
+  def UpdatePartRemainder
+
+  def UpdatePartQuotients
+
+}
