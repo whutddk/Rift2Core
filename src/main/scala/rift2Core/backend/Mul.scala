@@ -409,41 +409,40 @@ class Dividor(implicit p: Parameters) extends RiftModule {
 
   when( io.enq.fire ) { assert( io.enq.bits.fun.isDiv ) }
 
-  val divBypass = Wire(Bool())
   
-  val pendingInfo = RegEnable( io.enq.bits, io.enq.fire & ~divBypass )
+  // val pendingInfo = RegEnable( io.enq.bits, io.enq.fire & ~divBypass )
 
 
 
-  val info = Mux( io.enq.fire, io.enq.bits, pendingInfo )
+  // val info = Mux( io.enq.fire, io.enq.bits, pendingInfo )
 
-  val divOp1 = info.param.dat.op1
-  val divOp2 = info.param.dat.op2
-  val is_32w = info.fun.divw | info.fun.divuw | info.fun.remw | info.fun.remuw;
-  val is_usi = info.fun.divu | info.fun.remu | info.fun.divuw | info.fun.remuw;
-  val is_div = io.enq.bits.fun.isDiv
+  val op1Pre   = io.enq.bits.param.dat.op1
+  val op2Pre   = io.enq.bits.param.dat.op2
+  val is32wPre = io.enq.bits.fun.isDiv32w;
+  val isUsiPre = io.enq.bits.fun.isDivusi;
+
 
   val dividend_load =
-    Cat ( 0.U(64.W),
+    // Cat ( 0.U(64.W),
       Mux(
-        is_usi, 
-        Mux(is_32w, divOp1(31,0), divOp1),
+        isUsiPre, 
+        Mux(is32wPre, op1Pre(31,0), op1Pre),
         Mux(  
-          is_32w,
-          Cat( 0.U(32.W), Mux(divOp1(31), (~divOp1(31,0) + 1.U), divOp1(31,0))),
-          Mux( divOp1(63), (~divOp1 + 1.U), divOp1)
+          is32wPre,
+          Cat( 0.U(32.W), Mux(op1Pre(31), (~op1Pre(31,0) + 1.U), op1Pre(31,0))),
+          Mux( op1Pre(63), (~op1Pre + 1.U), op1Pre)
         )
       )
-    )
+    // )
 
   val divisor_load =
     Mux(
-      is_usi,
-      Mux(is_32w, divOp2(31,0), divOp2),
+      isUsiPre,
+      Mux(is32wPre, op2Pre(31,0), op2Pre),
       Mux( 
-        is_32w,
-        Cat( Fill(32, 0.U), Mux(divOp2(31), (~divOp2(31,0) + 1.U), divOp2(31,0))),
-        Mux( divOp2(63), (~divOp2 + 1.U), divOp2 )
+        is32wPre,
+        Cat( Fill(32, 0.U), Mux(op2Pre(31), (~op2Pre(31,0) + 1.U), op2Pre(31,0))),
+        Mux( op2Pre(63), (~op2Pre + 1.U), op2Pre )
       )
     )
 
@@ -457,69 +456,98 @@ class Dividor(implicit p: Parameters) extends RiftModule {
 
 
 
-  val dividend_sign = Mux(is_usi, false.B, Mux(is_32w, divOp1(31).asBool, divOp1(63).asBool))
-  val divisor_sign  = Mux(is_usi, false.B, Mux(is_32w, divOp2(31).asBool, divOp2(63).asBool))
-  val div_by_zero = (divOp2 === 0.U)
-  val div_overflow = ~is_usi & 
+
+  val isDivByZero = (op2Pre === 0.U)
+  val isDivOverflow = ~isUsiPre & 
               (
-                ( is_32w & (divOp1(31).asBool & (divOp1(30,0) === 0.U) ) & (divOp2(31,0).andR.asBool))
+                ( is32wPre & (op1Pre(31).asBool & (op1Pre(30,0) === 0.U) ) & (op2Pre(31,0).andR.asBool))
                 |
-                (~is_32w & (divOp1(63).asBool & (divOp1(62,0) === 0.U) ) & (divOp2(63,0).andR.asBool))								
+                (~is32wPre & (op1Pre(63).asBool & (op1Pre(62,0) === 0.U) ) & (op2Pre(63,0).andR.asBool))								
               )
-  divBypass := div_by_zero | div_overflow
+  val divBypass = isDivByZero | isDivOverflow
 
   val quotDZRes = Fill(64, 1.U)
-  val remaDZRes = Mux(is_32w, sextXTo(divOp1(31,0), 64), divOp1)
-  val quotOFRes = Mux( is_32w, Cat( Fill(33, 1.U(1.W)), 0.U(31.W)), Cat(1.U, 0.U(63.W)))
+  val remaDZRes = Mux( is32wPre, sextXTo(op1Pre(31,0), 64), op1Pre)
+  val quotOFRes = Mux( is32wPre, Cat( Fill(33, 1.U(1.W)), 0.U(31.W)), Cat(1.U, 0.U(63.W)))
   val remaOFRes = 0.U
+  val byPassQuo = Mux1H( Seq( isDivByZero -> quotDZRes, isDivOverflow -> quotOFRes, ))
+  val byPassRem = Mux1H( Seq( isDivByZero -> remaDZRes, isDivOverflow -> remaOFRes, ))
+  val byPassRes = Mux1H(Seq(
+                    io.enq.bits.fun.div    -> byPassQuo,
+                    io.enq.bits.fun.divu   -> byPassQuo,
+                    io.enq.bits.fun.divw   -> byPassQuo,
+                    io.enq.bits.fun.divuw  -> byPassQuo,
+                    io.enq.bits.fun.remw   -> byPassRem,
+                    io.enq.bits.fun.remuw  -> byPassRem,
+                    io.enq.bits.fun.rem    -> byPassRem,
+                    io.enq.bits.fun.remu   -> byPassRem,
+                  ))
+
+
+  val algDivider = Module(new NorDivider(new Mul_iss_info, 64))
+    algDivider.io.enq.valid := io.enq.valid & ~divBypass
+    algDivider.io.enq.bits  := io.enq.bits
+    
+    algDivider.io.op1 := dividend_load
+    algDivider.io.op2 := divisor_load
+
+    algDivider.io.flush := io.flush
+
+  val op1Post   = algDivider.io.deq.bits.param.dat.op1
+  val op2Post   = algDivider.io.deq.bits.param.dat.op2
+  val is32wPost = algDivider.io.deq.bits.fun.isDiv32w;
+  val isUsiPost = algDivider.io.deq.bits.fun.isDivusi;
 
 
 
 
-
-
-
-
-
+  val dividend_sign = Mux(isUsiPost, false.B, Mux(is32wPost, op1Post(31).asBool, op1Post(63).asBool))
+  val divisor_sign  = Mux(isUsiPost, false.B, Mux(is32wPost, op2Post(31).asBool, op2Post(63).asBool))
 
   val quot_sign_corrcet = 
-    Mux(dividend_sign^divisor_sign, ~dividend(63,0) + 1.U, dividend(63,0))
+    Mux(dividend_sign^divisor_sign, ~algDivider.io.quo + 1.U, algDivider.io.quo)
 
   val rema_sign_corrcet = 
-    Mux(dividend_sign, ~dividend(127,64) + 1.U, dividend(127,64))
+    Mux(dividend_sign, ~algDivider.io.rem + 1.U, algDivider.io.rem)
 
-  val quot_res = MuxCase(quot_sign_corrcet, Array(
-    div_by_zero  -> quotDZRes,
-    div_overflow -> quotOFRes,
-  ))
-
-  val rema_res = MuxCase(rema_sign_corrcet, Array(
-    div_by_zero  -> remaDZRes,
-    div_overflow -> remaOFRes,
-  ))
 
   val divRes = Mux1H(Seq(
-    info.fun.div    -> quot_res,
-    info.fun.divu   -> quot_res,
-    info.fun.rem    -> rema_res,
-    info.fun.remu   -> rema_res,
-    info.fun.divw   -> sextXTo(quot_res(31,0), 64),
-    info.fun.divuw  -> sextXTo(quot_res(31,0), 64),
-    info.fun.remw   -> sextXTo(rema_res(31,0), 64),
-    info.fun.remuw  -> sextXTo(rema_res(31,0), 64)
+    algDivider.io.deq.bits.fun.div    -> quot_sign_corrcet,
+    algDivider.io.deq.bits.fun.divu   -> quot_sign_corrcet,
+    algDivider.io.deq.bits.fun.rem    -> rema_sign_corrcet,
+    algDivider.io.deq.bits.fun.remu   -> rema_sign_corrcet,
+    algDivider.io.deq.bits.fun.divw   -> sextXTo(quot_sign_corrcet(31,0), 64),
+    algDivider.io.deq.bits.fun.divuw  -> sextXTo(quot_sign_corrcet(31,0), 64),
+    algDivider.io.deq.bits.fun.remw   -> sextXTo(rema_sign_corrcet(31,0), 64),
+    algDivider.io.deq.bits.fun.remuw  -> sextXTo(rema_sign_corrcet(31,0), 64)
   ))
 
-  io.deq.valid := 
-    (io.enq.valid & divBypass ) |
-    (divFinish)
 
-  io.deq.bits.res := divRes
-  io.deq.bits.rd0 := info.param.rd0
+
+  val divRtnArb = Module(newArbiter(gen = new WriteBack_info(dw=64), n = 2))
+  divRtnArb.io.in(1).valid := io.enq.valid & divBypass
+  divRtnArb.io.in(1).bits.res := byPassRes
+  divRtnArb.io.in(1).bits.rd0 := io.enq.bits.param.rd0
+
+
+  divRtnArb.io.in(0).valid := algDivider.io.deq.valid
+  divRtnArb.io.in(0).bits.res := divRes
+  divRtnArb.io.in(0).bits.rd0 := algDivider.io.deq.bits.param.rd0
+  algDivider.io.deq.ready  := divRtnArb.io.in(0).ready
+
+  io.enq.ready := Mux(divBypass, divRtnArb.io.in(1).ready, algDivider.io.enq.ready)
+  io.deq <> divRtnArb.io.out
+
+
+
+
+
+
 
 }
 
 
-class NorDivider extends Module {
+class NorDivider[T<:Data]( pipeType: T, dw: Int ) extends Module {
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(pipeType))
     val deq = Decoupled(pipeType)
@@ -529,15 +557,16 @@ class NorDivider extends Module {
     val rem = Output(UInt((dw).W))
     val flush = Input(Bool()) 
   })
-  
+
+  val isDivBusy = RegInit(false.B)  
   val ( cnt, isEnd ) = Counter( 0 until 66 by 1, isDivBusy, io.enq.fire | io.flush)
 
-  val isDivBusy = RegInit(false.B)
+
   io.enq.ready := ~isDivBusy
 
   when( io.deq.fire | io.flush ) {
     isDivBusy := false.B
-  } .elsewhen( io.enq.fire & ~divBypass) {
+  } .elsewhen( io.enq.fire ) {
     isDivBusy := true.B
   } 
 
@@ -556,15 +585,20 @@ class NorDivider extends Module {
     )
 
   when( cnt === 0.U ) {
-    dividend := dividend_load 
-    divisor := divisor_load
+    dividend := io.op1
+    divisor := io.op2
   }
   .otherwise {
     dividend := divided
+
   }
 
+  val pendingInfo = RegEnable( io.enq.bits, io.enq.fire )
   val divFinish = isDivBusy & (cnt === 65.U)
   io.deq.valid := divFinish
+  io.deq.bits := pendingInfo
+  io.quo := dividend(63,0)
+  io.rem := dividend(127,64)
 }
 
 
@@ -586,9 +620,9 @@ class SRTDivider[T<:Data]( pipeType: T, dw: Int, vs: Int = 1, srtBase: Int = 4 )
 
   val isRecurrence = RegInit(false.B)
   val isRecovery = RegInit(false.B)
-  val partRemainder = Reg(UInt(dw.W))
+  val partRemainder = Reg(SInt(dw.W))
   val divisor = Reg(UInt(dw.W))
-  val partQuotients = Reg(UInt(dw.W))
+  val partQuotients = Reg(SInt(dw.W))
   val idx = Reg(UInt((log2Ceil(dw)).W))
   val isBusy = isRecurrence | isRecovery
 
@@ -610,28 +644,28 @@ class SRTDivider[T<:Data]( pipeType: T, dw: Int, vs: Int = 1, srtBase: Int = 4 )
   } .elsewhen( io.enq.fire ) {
     assert( ~isRecurrence && ~isRecovery )
     isRecurrence := true.B
-    partRemainder := op1
-    partQuotients := 0.U
-    divisor := op2
+    partRemainder := io.op1.asSInt
+    partQuotients := 0.S
+    divisor := io.op2
     idx := (dw-2).U  //log2(srtBase)
   } .elsewhen( isRecurrence ) {
     assert( ~isRecovery )
 
     val cmp = BoothCmp(partRemainder >> idx << idx)
 
-    partQuotients := (partQuotients.asSInt + (cmp << idx)).asUInt
-    partRemainder := (partRemainder.asSInt - Mux1H( Seq(
+    partQuotients := (partQuotients + (cmp << idx))
+    partRemainder := (partRemainder - Mux1H( Seq(
                             (cmp === -2.S) -> partQuo(0), 
                             (cmp === -1.S) -> partQuo(1), 
                             (cmp ===  0.S)  -> 0.S, 
                             (cmp ===  1.S) -> partQuo(2), 
                             (cmp ===  2.S) -> partQuo(3), 
-                          ) ) << idx).asUInt
+                          ) ) << idx)
 
 
-    when( idx >= 2  ) { //log2(srtBase)
-      idx := idx - 2 //log2(srtBase)
-    } else {
+    when( idx >= 2.U  ) { //log2(srtBase)
+      idx := idx - 2.U //log2(srtBase)
+    } .otherwise {
       isRecurrence := false.B
       isRecovery := true.B
     }
@@ -648,18 +682,18 @@ class SRTDivider[T<:Data]( pipeType: T, dw: Int, vs: Int = 1, srtBase: Int = 4 )
       io.quo := 0.U
       io.rem := 0.U
     } .elsewhen( partRemainder < partQuo(1) ) {
-      io.quo := partQuotients - 2.U
-      io.rem := partRemainder + partQuo(3)
-    } .elsewhen( partRemainder < 0 ) {
-      io.quo := partQuotients - 1.U
-      io.rem := partRemainder + partQuo(2)
+      io.quo := (partQuotients - 2.S).asUInt
+      io.rem := (partRemainder + partQuo(3)).asUInt
+    } .elsewhen( partRemainder < 0.S ) {
+      io.quo := (partQuotients - 1.S).asUInt
+      io.rem := (partRemainder + partQuo(2)).asUInt
     } .elsewhen( partRemainder < partQuo(2) ) {
-      io.quo := partQuotients
-      io.rem := partRemainder
+      io.quo := (partQuotients).asUInt
+      io.rem := (partRemainder).asUInt
     } .elsewhen( partRemainder < partQuo(3) ) {
-      io.quo := partQuotients + 1.U
-      io.rem := partRemainder - partQuo(2)
-    } .else {
+      io.quo := (partQuotients + 1.S).asUInt
+      io.rem := (partRemainder - partQuo(2)).asUInt
+    } .otherwise {
       assert(false.B)
       io.quo := 0.U
       io.rem := 0.U
@@ -675,18 +709,18 @@ class SRTDivider[T<:Data]( pipeType: T, dw: Int, vs: Int = 1, srtBase: Int = 4 )
   io.deq.valid := isRecovery
   io.deq.bits  := pendingInfo
 
-  def BoothCmp(a: SInt): (SInt, SInt) = {
+  def BoothCmp(a: SInt): SInt = {
     require( srtBase == 4 )
 
     val con = Seq(
-                            ( a < partQuo(0) ), 
-      ( (partQuo(0) <= a) && (a < partQuo(1))),
-      ( (partQuo(1) <= a) && (a < partQuo(2))),
-      ( (partQuo(2) <= a) && (a < partQuo(3))),
-      (  partQuo(3) <= a ),
+                                   ( a < partQuo(0) ), 
+      ( (partQuo(0) <= a ) && (a < partQuo(1))),
+      ( (partQuo(1) <= a ) && (a < partQuo(2))),
+      ( (partQuo(2) <= a ) && (a < partQuo(3))),
+      (  partQuo(3) <= a  )
     )
 
-    val out = Seq( -2.S, -1.S, 0.S, 1.S, 2.S, )
+    val out = Seq( -2.S, -1.S, 0.S, 1.S, 2.S )
 
     return Mux1H(con zip out)
   }
