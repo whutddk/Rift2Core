@@ -410,16 +410,10 @@ class Dividor(implicit p: Parameters) extends RiftModule {
   when( io.enq.fire ) { assert( io.enq.bits.fun.isDiv ) }
 
   val divBypass = Wire(Bool())
-  val isDivBusy = RegInit(false.B)
+  
   val pendingInfo = RegEnable( io.enq.bits, io.enq.fire & ~divBypass )
 
-  io.enq.ready := ~isDivBusy & io.deq.ready
 
-  when( io.deq.fire | io.flush ) {
-    isDivBusy := false.B
-  } .elsewhen( io.enq.fire & ~divBypass) {
-    isDivBusy := true.B
-  } 
 
   val info = Mux( io.enq.fire, io.enq.bits, pendingInfo )
 
@@ -454,22 +448,12 @@ class Dividor(implicit p: Parameters) extends RiftModule {
     )
 
 
-  val ( cnt, isEnd ) = Counter( 0 until 66 by 1, isDivBusy, io.enq.fire | io.flush)
 
 
 
 
-  val dividend = Reg(UInt(128.W))
-  val divisor = Reg(UInt(64.W))
 
-  val dividend_shift = dividend << 1;
-  val div_cmp = (dividend_shift(127,64) >= divisor);
-  val divided = 
-    Mux(
-      div_cmp,
-      Cat((dividend_shift(127,64) - divisor), dividend_shift(63,1), 1.U(1.W)),
-      dividend_shift
-    )
+
 
 
 
@@ -483,7 +467,7 @@ class Dividor(implicit p: Parameters) extends RiftModule {
                 (~is_32w & (divOp1(63).asBool & (divOp1(62,0) === 0.U) ) & (divOp2(63,0).andR.asBool))								
               )
   divBypass := div_by_zero | div_overflow
-  val divFinish = isDivBusy & (cnt === 65.U)
+
   val quotDZRes = Fill(64, 1.U)
   val remaDZRes = Mux(is_32w, sextXTo(divOp1(31,0), 64), divOp1)
   val quotOFRes = Mux( is_32w, Cat( Fill(33, 1.U(1.W)), 0.U(31.W)), Cat(1.U, 0.U(63.W)))
@@ -496,13 +480,7 @@ class Dividor(implicit p: Parameters) extends RiftModule {
 
 
 
-  when( cnt === 0.U ) {
-    dividend := dividend_load 
-    divisor := divisor_load
-  }
-  .otherwise {
-    dividend := divided
-  }
+
 
   val quot_sign_corrcet = 
     Mux(dividend_sign^divisor_sign, ~dividend(63,0) + 1.U, dividend(63,0))
@@ -538,6 +516,55 @@ class Dividor(implicit p: Parameters) extends RiftModule {
   io.deq.bits.res := divRes
   io.deq.bits.rd0 := info.param.rd0
 
+}
+
+
+class NorDivider extends Module {
+  val io = IO(new Bundle{
+    val enq = Flipped(new DecoupledIO(pipeType))
+    val deq = Decoupled(pipeType)
+    val op1 = Input(UInt(dw.W))
+    val op2 = Input(UInt(dw.W))
+    val quo = Output(UInt((dw).W))
+    val rem = Output(UInt((dw).W))
+    val flush = Input(Bool()) 
+  })
+  
+  val ( cnt, isEnd ) = Counter( 0 until 66 by 1, isDivBusy, io.enq.fire | io.flush)
+
+  val isDivBusy = RegInit(false.B)
+  io.enq.ready := ~isDivBusy
+
+  when( io.deq.fire | io.flush ) {
+    isDivBusy := false.B
+  } .elsewhen( io.enq.fire & ~divBypass) {
+    isDivBusy := true.B
+  } 
+
+
+
+  val dividend = Reg(UInt(128.W))
+  val divisor = Reg(UInt(64.W))
+
+  val dividend_shift = dividend << 1;
+  val div_cmp = (dividend_shift(127,64) >= divisor);
+  val divided = 
+    Mux(
+      div_cmp,
+      Cat((dividend_shift(127,64) - divisor), dividend_shift(63,1), 1.U(1.W)),
+      dividend_shift
+    )
+
+  when( cnt === 0.U ) {
+    dividend := dividend_load 
+    divisor := divisor_load
+  }
+  .otherwise {
+    dividend := divided
+  }
+
+  val divFinish = isDivBusy & (cnt === 65.U)
+  io.deq.valid := divFinish
 }
 
 
@@ -577,24 +604,30 @@ class SRTDivider[T<:Data]( pipeType: T, dw: Int, vs: Int = 1, srtBase: Int = 4 )
 
 
 
-
-
-  when( io.enq.fire ) {
+  when( io.flush ) {
+    isRecurrence := false.B
+    isRecovery   := false.B
+  } .elsewhen( io.enq.fire ) {
     assert( ~isRecurrence && ~isRecovery )
     isRecurrence := true.B
     partRemainder := op1
     partQuotients := 0.U
     divisor := op2
-    idx := (dw-2).U //log2(srtBase)
+    idx := (dw-2).U  //log2(srtBase)
   } .elsewhen( isRecurrence ) {
     assert( ~isRecovery )
 
-    val cmp = for ( i <- 0 until vs ) yield {
-      BoothCmp(partRemainder(dw-1, idx))
-    }
+    val cmp = BoothCmp(partRemainder >> idx << idx)
 
-    partRemainder := UpdatePartRemainder
-    partQuotients := UpdatePartQuotients
+    partQuotients := (partQuotients.asSInt + (cmp << idx)).asUInt
+    partRemainder := (partRemainder.asSInt - Mux1H( Seq(
+                            (cmp === -2.S) -> partQuo(0), 
+                            (cmp === -1.S) -> partQuo(1), 
+                            (cmp ===  0.S)  -> 0.S, 
+                            (cmp ===  1.S) -> partQuo(2), 
+                            (cmp ===  2.S) -> partQuo(3), 
+                          ) ) << idx).asUInt
+
 
     when( idx >= 2  ) { //log2(srtBase)
       idx := idx - 2 //log2(srtBase)
@@ -604,15 +637,46 @@ class SRTDivider[T<:Data]( pipeType: T, dw: Int, vs: Int = 1, srtBase: Int = 4 )
     }
   } .elsewhen( isRecovery ) {
     assert( ~isRecurrence )
+
+    when( io.deq.fire ) {
+      isRecovery := false.B
+    }
+
+
+    when( partRemainder < partQuo(0) ) {
+      assert(false.B)
+      io.quo := 0.U
+      io.rem := 0.U
+    } .elsewhen( partRemainder < partQuo(1) ) {
+      io.quo := partQuotients - 2.U
+      io.rem := partRemainder + partQuo(3)
+    } .elsewhen( partRemainder < 0 ) {
+      io.quo := partQuotients - 1.U
+      io.rem := partRemainder + partQuo(2)
+    } .elsewhen( partRemainder < partQuo(2) ) {
+      io.quo := partQuotients
+      io.rem := partRemainder
+    } .elsewhen( partRemainder < partQuo(3) ) {
+      io.quo := partQuotients + 1.U
+      io.rem := partRemainder - partQuo(2)
+    } .else {
+      assert(false.B)
+      io.quo := 0.U
+      io.rem := 0.U
+    }
+
+
     // isRecovery := false.B
   }
 
+  val pendingInfo = RegEnable( io.enq.bits, io.enq.fire )
 
+  io.enq.ready := isBusy
+  io.deq.valid := isRecovery
+  io.deq.bits  := pendingInfo
 
   def BoothCmp(a: SInt): (SInt, SInt) = {
     require( srtBase == 4 )
-
-
 
     val con = Seq(
                             ( a < partQuo(0) ), 
@@ -622,19 +686,9 @@ class SRTDivider[T<:Data]( pipeType: T, dw: Int, vs: Int = 1, srtBase: Int = 4 )
       (  partQuo(3) <= a ),
     )
 
-    val out = Seq(
-      -2.S,
-      -1.S,
-       0.S,
-       1.S,
-       2.S,
-    )
+    val out = Seq( -2.S, -1.S, 0.S, 1.S, 2.S, )
 
     return Mux1H(con zip out)
   }
-
-  def UpdatePartRemainder
-
-  def UpdatePartQuotients
 
 }
