@@ -172,7 +172,7 @@ always @(posedge CLK ) begin
 		$display( "The DMIPS/MHz is %f", 1000000.0/(cycle_cnt/500.0)/1757.0 );
 
 
-		file = $fopen("../ci/dhrystone.json", "w");
+		file = $fopen("./dhrystone.json", "w");
 
 		$fwrite(file, "{\n  \"schemaVersion\": 1, \n  \"label\": \"dhrystone\", \n  \"message\": \"%f\", \n  \"color\": \"ff69b4\" \n}", 1000000.0/(cycle_cnt/500.0)/1757.0 );
 		$fclose(file);
@@ -185,7 +185,7 @@ always @(posedge CLK ) begin
 		$display("CoreMark 1.0 : %f",1*1*1000000.0/cycle_cnt);
 
 
-		file = $fopen("../ci/coremakr.json", "w");
+		file = $fopen("./coremark.json", "w");
 
 		$fwrite(file, "{\n  \"schemaVersion\": 1, \n  \"label\": \"coremark\", \n  \"message\": \"%f\", \n  \"color\": \"ff69b4\" \n}", 1000000.0/(cycle_cnt/500.0)/1757.0 );
 		$fclose(file);

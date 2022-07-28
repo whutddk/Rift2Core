@@ -118,7 +118,7 @@ int main(int argc, char **argv, char **env) {
 	char * temp[2];
 	char cmd[64] = "+";
 	strcat(cmd, img);
-	strcat(cmd, ".verilog");
+	// strcat(cmd, ".chi");
 	temp[0] = "Verilated";
 	temp[1] = cmd;
 	char **argv_temp = temp;

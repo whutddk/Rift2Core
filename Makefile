@@ -260,7 +260,8 @@ isa ?= $(aluisa) $(bruisa) $(lsuisa) $(mulisa) $(privisa) #$(fpuisa)
 test:
 	sbt "test:runMain test.testModule --target-dir generated --show-registrations --full-stacktrace -e verilog"
 
-compile: clean
+compile:
+	rm -rf ./generated/Main/
 	sbt "test:runMain test.testMain \
 	-E verilog"
 
@@ -269,47 +270,108 @@ compile: clean
 
 # --list-clocks \
 
-line: clean
+line: 
+	rm -rf generated/Debug/
+	rm -rf generated/Release/
 	sbt "test:runMain test.testAll"
 
+CONFIG ?= /Main/
+# linecfg += Rift2300
+# linecfg += Rift2310
+# linecfg += Rift2320
+# linecfg += Rift2330
+# linecfg += Rift2340
+# linecfg += Rift2350
+# linecfg += Rift2360
+# linecfg += Rift2370
+# linecfg += Rift2380
+# linecfg += Rift2390
 
-CONFIG ?= Rift2330
+# CONFIG ?= /Debug/Rift2330
 
-lineSim: 
-	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.cpp
-	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.o
-	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.d
-	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.h
-	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.mk
-	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.a
+VSimTop: 
+	rm -rf ./generated/build
+	mkdir -p ./generated/build/$(CONFIG)
 	verilator -Wno-fatal  \
 	--timescale "1 ns / 1 ps" \
-	-y ${R2}/generated/Debug/$(CONFIG)/ \
+	-y ${R2}/generated/$(CONFIG) \
 	-y ${R2}/tb/ \
 	-y ${R2}/tb/vtb/ \
 	--top-module SimTop \
 	--trace \
+	-LDFLAGS -ldromajo_cosim \
 	--cc ${R2}/tb/verilator/SimTop.v  \
 	+define+RANDOMIZE_GARBAGE_ASSIGN \
 	+define+RANDOMIZE_INVALID_ASSIGN \
 	+define+RANDOMIZE_REG_INIT \
 	+define+RANDOMIZE_MEM_INIT \
 	--exe --build \
-	-LDFLAGS -ldromajo_cosim \
 	${R2}/tb/verilator/sim_main.cpp  \
 	${R2}/tb/verilator/diff.cpp \
-	-Mdir  ${R2}/generated/Debug/$(CONFIG)/build \
+	-Mdir ./generated/build/$(CONFIG) \
 	-j 128
 
 
-lineUnit:
-	$(foreach test, $(isa), ${R2}/generated/Debug/$(CONFIG)/build/VSimTop -l -f ./tb/ci/$(test); )
+unit: VSimTop
+	$(foreach test, $(isa), ${R2}/generated/build/$(CONFIG)/VSimTop -l -f ./tb/ci/$(test); )
 
-lineDhrystone500:
-	${R2}/generated/Debug/$(CONFIG)/build/VSimTop -p -f ./tb/ci/dhrystone500.riscv
+single: VSimTop
+	${R2}/generated/build/$(CONFIG)/VSimTop -w -d -l -p -f ./tb/ci/$(TESTFILE)
 
-lineCoremark:
-	${R2}/generated/Debug/$(CONFIG)/build/VSimTop -p -f ./tb/ci/coremark1_bare
+torture:
+	${R2}/generated/build/$(CONFIG)/VSimTop -d -l -p -f ./tb/torture/output/test
+
+dhrystone5: VSimTop
+	${R2}/generated/build/$(CONFIG)/VSimTop -w -p -f  ./tb/ci/dhrystone5.riscv
+
+dhrystone500: VSimTop
+	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ./tb/ci/dhrystone500.riscv
+
+coremark: VSimTop
+	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ./tb/ci/coremark1_bare
+
+wave:
+	gtkwave ${R2}/generated/build/$(CONFIG)/wave.vcd &
+
+
+
+
+# CONFIG ?= Rift2330
+# lineSim: 
+# 	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.cpp
+# 	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.o
+# 	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.d
+# 	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.h
+# 	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.mk
+# 	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.a
+# 	verilator -Wno-fatal  \
+# 	--timescale "1 ns / 1 ps" \
+# 	-y ${R2}/generated/Debug/$(CONFIG)/ \
+# 	-y ${R2}/tb/ \
+# 	-y ${R2}/tb/vtb/ \
+# 	--top-module SimTop \
+# 	--trace \
+# 	--cc ${R2}/tb/verilator/SimTop.v  \
+# 	+define+RANDOMIZE_GARBAGE_ASSIGN \
+# 	+define+RANDOMIZE_INVALID_ASSIGN \
+# 	+define+RANDOMIZE_REG_INIT \
+# 	+define+RANDOMIZE_MEM_INIT \
+# 	--exe --build \
+# 	-LDFLAGS -ldromajo_cosim \
+# 	${R2}/tb/verilator/sim_main.cpp  \
+# 	${R2}/tb/verilator/diff.cpp \
+# 	-Mdir  ${R2}/generated/Debug/$(CONFIG)/build \
+# 	-j 128
+
+
+# lineUnit:
+# 	$(foreach test, $(isa), ${R2}/generated/Debug/$(CONFIG)/build/VSimTop -l -f ./tb/ci/$(test); )
+
+# lineDhrystone500:
+# 	${R2}/generated/Debug/$(CONFIG)/build/VSimTop -p -f ./tb/ci/dhrystone500.riscv
+
+# lineCoremark:
+# 	${R2}/generated/Debug/$(CONFIG)/build/VSimTop -p -f ./tb/ci/coremark1_bare
 
 
 

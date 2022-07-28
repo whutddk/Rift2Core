@@ -413,7 +413,7 @@ object testMain extends App {
   // val cfg = new NormalCfg
   val cfg = new Rift2GoCfg
 
-  (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated") ++ args, Seq(
+  (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
       ChiselGeneratorAnnotation(() => {
     val soc = LazyModule(new Rift2Chip()(cfg))
     soc.module
@@ -436,7 +436,11 @@ object testAll extends App {
     (new Rift2390, "Rift2390" ),
   )
 
+  
+
   config.map{ cfg =>
+    println("Compiling " + cfg._2)
+
     (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Release/"++cfg._2, "-E", "verilog" ) ++ args, Seq(
         ChiselGeneratorAnnotation(() => {
       val soc = LazyModule(new Rift2Chip()(cfg._1))

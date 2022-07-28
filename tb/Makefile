@@ -264,32 +264,32 @@ clean:
 	rm -f ./build/*.a
 
 
-VSimTop: 
-	rm -f ./build/*.cpp
-	rm -f ./build/*.o
-	rm -f ./build/*.d
-	rm -f ./build/*.h
-	rm -f ./build/*.mk
-	rm -f ./build/*.a
-	verilator -Wno-fatal  \
-	--timescale "1 ns / 1 ps" \
-	-y ${R2}/generated/ \
-	-y ${R2}/tb/ \
-	-y ${R2}/tb/vtb/ \
-	--top-module SimTop \
-	--trace \
-	-LDFLAGS -ldromajo_cosim \
-	--cc ${R2}/tb/verilator/SimTop.v  \
-	+define+RANDOMIZE_GARBAGE_ASSIGN \
-	+define+RANDOMIZE_INVALID_ASSIGN \
-	+define+RANDOMIZE_REG_INIT \
-	+define+RANDOMIZE_MEM_INIT \
-	--exe --build \
-	./verilator/sim_main.cpp  \
-	./verilator/diff.cpp \
-	-Mdir build \
-	-j 128
-# 	rm ./obj_dir/*.d ./obj_dir/*.o ./obj_dir/*.cpp
+# VSimTop: 
+# 	rm -f ./build/*.cpp
+# 	rm -f ./build/*.o
+# 	rm -f ./build/*.d
+# 	rm -f ./build/*.h
+# 	rm -f ./build/*.mk
+# 	rm -f ./build/*.a
+# 	verilator -Wno-fatal  \
+# 	--timescale "1 ns / 1 ps" \
+# 	-y ${R2}/generated/ \
+# 	-y ${R2}/tb/ \
+# 	-y ${R2}/tb/vtb/ \
+# 	--top-module SimTop \
+# 	--trace \
+# 	-LDFLAGS -ldromajo_cosim \
+# 	--cc ${R2}/tb/verilator/SimTop.v  \
+# 	+define+RANDOMIZE_GARBAGE_ASSIGN \
+# 	+define+RANDOMIZE_INVALID_ASSIGN \
+# 	+define+RANDOMIZE_REG_INIT \
+# 	+define+RANDOMIZE_MEM_INIT \
+# 	--exe --build \
+# 	./verilator/sim_main.cpp  \
+# 	./verilator/diff.cpp \
+# 	-Mdir build \
+# 	-j 128
+
 
 
 
@@ -320,16 +320,16 @@ VSimTop:
 # 	isa = $(fpuisa)
 # endif
 
-unit: VSimTop
-	$(foreach test, $(isa), ./build/VSimTop -l -f ./ci/$(test); )
+# unit: VSimTop
+# 	$(foreach test, $(isa), ./build/VSimTop -l -f ./ci/$(test); )
 
 
 # TESTFILE ?= rv64ui-p-add
-single: VSimTop
-	./build/VSimTop -w -d -l -p -f ./ci/$(TESTFILE)
+# single: VSimTop
+# 	./build/VSimTop -w -d -l -p -f ./ci/$(TESTFILE)
 
-torture:
-	./build/VSimTop -d -l -p -f ./torture/output/test
+# torture:
+# 	./build/VSimTop -d -l -p -f ./torture/output/test
 
 dromajo:
 	verilator -Wno-fatal  \
@@ -348,18 +348,18 @@ dromajo:
 	-Mdir build \
 	-j 8
 
-dhrystone5: VSimTop
-	./build/VSimTop -w -p -f  ./ci/dhrystone5.riscv
+# dhrystone5: VSimTop
+# 	./build/VSimTop -w -p -f  ./ci/dhrystone5.riscv
 
-dhrystone500: VSimTop
-	./build/VSimTop -p -f ./ci/dhrystone500.riscv
+# dhrystone500: VSimTop
+# 	./build/VSimTop -p -f ./ci/dhrystone500.riscv
 
 
-coremark: VSimTop
-	./build/VSimTop -p -f ./ci/coremark1_bare
+# coremark: VSimTop
+# 	./build/VSimTop -p -f ./ci/coremark1_bare
 
-wave:
-	gtkwave ./build/wave.vcd &
+# wave:
+# 	gtkwave ./build/wave.vcd &
 
 
 
