@@ -118,7 +118,7 @@ int main(int argc, char **argv, char **env) {
 	char * temp[2];
 	char cmd[64] = "+";
 	strcat(cmd, img);
-	// strcat(cmd, ".chi");
+	strcat(cmd, ".verilog");
 	temp[0] = "Verilated";
 	temp[1] = cmd;
 	char **argv_temp = temp;
@@ -133,7 +133,7 @@ int main(int argc, char **argv, char **env) {
 	if (flag_waveEnable) {
 		Verilated::traceEverOn(true);
 		top->trace(tfp, 99); // Trace 99 levels of hierarchy
-		tfp->open("./build/wave.vcd");		
+		tfp->open("./generated/build/wave.vcd");		
 	}
 
 #endif

@@ -255,9 +255,9 @@ isa ?= $(aluisa) $(bruisa) $(lsuisa) $(mulisa) $(privisa) #$(fpuisa)
 
 
 
-.PHONY: test compile clean
+.PHONY: compile clean
 
-test:
+module:
 	sbt "test:runMain test.testModule --target-dir generated --show-registrations --full-stacktrace -e verilog"
 
 compile:
@@ -276,21 +276,10 @@ line:
 	sbt "test:runMain test.testAll"
 
 CONFIG ?= /Main/
-# linecfg += Rift2300
-# linecfg += Rift2310
-# linecfg += Rift2320
-# linecfg += Rift2330
-# linecfg += Rift2340
-# linecfg += Rift2350
-# linecfg += Rift2360
-# linecfg += Rift2370
-# linecfg += Rift2380
-# linecfg += Rift2390
 
-# CONFIG ?= /Debug/Rift2330
 
 VSimTop: 
-	rm -rf ./generated/build
+	rm -rf ./generated/build/$(CONFIG)
 	mkdir -p ./generated/build/$(CONFIG)
 	verilator -Wno-fatal  \
 	--timescale "1 ns / 1 ps" \
@@ -312,29 +301,51 @@ VSimTop:
 	-j 128
 
 
-unit: VSimTop
-	$(foreach test, $(isa), ${R2}/generated/build/$(CONFIG)/VSimTop -l -f ./tb/ci/$(test); )
+isa: VSimTop
+	$(foreach test, $(isa), ${R2}/generated/build/$(CONFIG)/VSimTop -l -f ${R2}/tb/ci/$(test); )
+	echo -e "{\n  \"schemaVersion\": 1, \n  \"label\": \"ISA\", \n  \"message\": \"Pass\", \n  \"color\": \"f6bf94\" \n}" >> isa
+	mv isa ${R2}/generated/build/$(CONFIG)/isa
 
 single: VSimTop
-	${R2}/generated/build/$(CONFIG)/VSimTop -w -d -l -p -f ./tb/ci/$(TESTFILE)
+	${R2}/generated/build/$(CONFIG)/VSimTop -w -d -l -p -f ${R2}/tb/ci/$(TESTFILE)
 
 torture:
-	${R2}/generated/build/$(CONFIG)/VSimTop -d -l -p -f ./tb/torture/output/test
+	${R2}/generated/build/$(CONFIG)/VSimTop -d -l -p -f ${R2}/tb/torture/output/test
 
 dhrystone5: VSimTop
-	${R2}/generated/build/$(CONFIG)/VSimTop -w -p -f  ./tb/ci/dhrystone5.riscv
+	${R2}/generated/build/$(CONFIG)/VSimTop -w -p -f  ${R2}/tb/ci/dhrystone5.riscv
 
 dhrystone500: VSimTop
-	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ./tb/ci/dhrystone500.riscv
+	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ${R2}/tb/ci/dhrystone500.riscv
+	mv dhrystone.json ${R2}/generated/build/$(CONFIG)/dhrystone.json
 
 coremark: VSimTop
-	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ./tb/ci/coremark1_bare
+	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ${R2}/tb/ci/coremark1_bare
+	mv coremark.json ${R2}/generated/build/$(CONFIG)/coremark.json
 
 wave:
-	gtkwave ${R2}/generated/build/$(CONFIG)/wave.vcd &
+	gtkwave ${R2}/generated/build/wave.vcd &
+
+test: VSimTop isa dhrystone500 coremark
+	
 
 
+# lineCfg += Rift2300
+# lineCfg += Rift2310
+# lineCfg += Rift2320
+lineCfg += Rift2330
+lineCfg += Rift2340
+lineCfg += Rift2350
+lineCfg += Rift2360
+lineCfg += Rift2370
+lineCfg += Rift2380
+lineCfg += Rift2390
 
+# CONFIG ?= /Debug/Rift2330
+
+
+testAll:
+	$(foreach cfg, $(lineCfg), make test CONFIG=/Debug/$(cfg); )
 
 # CONFIG ?= Rift2330
 # lineSim: 

@@ -316,7 +316,7 @@ class Rift2360 extends Config((site, here, up) => {
       bk = 2,
       cb = 4,
       sbEntry = 12,
-      stEntry = 12,
+      stEntry = 16,
     ),
 
 
@@ -358,7 +358,7 @@ class Rift2380 extends Config((site, here, up) => {
       bk = 4,
       cb = 8,
       sbEntry = 24,
-      stEntry = 24,
+      stEntry = 32,
     ),
 
 
