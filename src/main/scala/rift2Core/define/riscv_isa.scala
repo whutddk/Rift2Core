@@ -749,7 +749,7 @@ class Fpu_dpt_info(implicit p: Parameters) extends RiftBundle {
 class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val pc = UInt(vlen.W)
   val rd0_raw = UInt(5.W)
-  val rd0_phy = UInt(6.W)
+  val rd0_phy = UInt((log2Ceil(regNum)).W)
 
   val is_branch = Bool()
   val is_jalr = Bool()
