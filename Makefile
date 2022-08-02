@@ -303,8 +303,8 @@ VSimTop:
 
 isa: VSimTop
 	$(foreach test, $(isa), ${R2}/generated/build/$(CONFIG)/VSimTop -l -f ${R2}/tb/ci/$(test); )
-	echo -e "{\n  \"schemaVersion\": 1, \n  \"label\": \"ISA\", \n  \"message\": \"Pass\", \n  \"color\": \"f6bf94\" \n}" >> isa
-	mv isa ${R2}/generated/build/$(CONFIG)/isa
+	echo "{\n  \"schemaVersion\": 1, \n  \"label\": \"ISA\", \n  \"message\": \"Pass\", \n  \"color\": \"f6bf94\" \n}" >> isa.json
+	mv isa.json ${R2}/generated/build/$(CONFIG)/isa.json
 
 single: VSimTop
 	${R2}/generated/build/$(CONFIG)/VSimTop -w -d -l -p -f ${R2}/tb/ci/$(TESTFILE)

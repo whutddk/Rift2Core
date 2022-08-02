@@ -1,0 +1,5 @@
+read -sv Rift2Chip.v plusarg_reader.v
+hierarchy -top Rift2Core
+flatten
+proc; fsm; opt; techmap; opt; dfflibmap -liberty /YOSYS/vsclib013.lib; abc -liberty /YOSYS/vsclib013.lib
+tee -a stat.log  stat -liberty /YOSYS/vsclib013.lib
