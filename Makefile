@@ -298,55 +298,65 @@ VSimTop:
 	${R2}/tb/verilator/sim_main.cpp  \
 	${R2}/tb/verilator/diff.cpp \
 	-Mdir ./generated/build/$(CONFIG) \
-	-j 128
+	-j 8
 
 
 isa: VSimTop
-	$(foreach test, $(isa), ${R2}/generated/build/$(CONFIG)/VSimTop -l -f ${R2}/tb/ci/$(test); )
-	echo "{\n  \"schemaVersion\": 1, \n  \"label\": \"ISA\", \n  \"message\": \"Pass\", \n  \"color\": \"f6bf94\" \n}" >> isa.json
-	mv isa.json ${R2}/generated/build/$(CONFIG)/isa.json
+	$(foreach test, $(isa), ${R2}/generated/build/$(CONFIG)/VSimTop -l -f ./tb/ci/$(test) || exit; )
+	echo "{\n  \"schemaVersion\": 1, \n  \"label\": \"\", \n  \"message\": \"Pass\", \n  \"color\": \"f6bf94\" \n}" >> isa.json
+	mv isa.json ${R2}/generated/$(CONFIG)/isa.json
 
 single: VSimTop
-	${R2}/generated/build/$(CONFIG)/VSimTop -w -d -l -p -f ${R2}/tb/ci/$(TESTFILE)
+	${R2}/generated/build/$(CONFIG)/VSimTop -w -d -l -p -f ./tb/ci/$(TESTFILE)
 
 torture:
-	${R2}/generated/build/$(CONFIG)/VSimTop -d -l -p -f ${R2}/tb/torture/output/test
+	${R2}/generated/build/$(CONFIG)/VSimTop -d -l -p -f ./tb/torture/output/test
 
 dhrystone5: VSimTop
-	${R2}/generated/build/$(CONFIG)/VSimTop -w -p -f  ${R2}/tb/ci/dhrystone5.riscv
+	${R2}/generated/build/$(CONFIG)/VSimTop -w -p -f  ./tb/ci/dhrystone5.riscv
 
 dhrystone500: VSimTop
-	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ${R2}/tb/ci/dhrystone500.riscv
-	mv dhrystone.json ${R2}/generated/build/$(CONFIG)/dhrystone.json
+	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ./tb/ci/dhrystone500.riscv
+	mv dhrystone.json ${R2}/generated/$(CONFIG)/dhrystone.json
 
 coremark: VSimTop
-	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ${R2}/tb/ci/coremark1_bare
-	mv coremark.json ${R2}/generated/build/$(CONFIG)/coremark.json
+	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ./tb/ci/coremark1_bare
+	mv coremark.json ${R2}/generated/$(CONFIG)/coremark.json
 
 wave:
 	gtkwave ${R2}/generated/build/wave.vcd &
 
 test: VSimTop isa dhrystone500 coremark
 	
+yosys:
+	rm -f $(R2)/generated/$(CONFIG)/area.json
+	cd $(R2)/generated/$(CONFIG) \
+	&& yosys ./Rift2Chip.v ./plusarg_reader.v $(R2)/src/yosys/area.ys
+
+area: yosys
+	echo "{\n  \"schemaVersion\": 1, \n  \"label\": \"\", \n  \"message\": \""$(basename $(filter %.000000, $(shell cat $(R2)/generated/$(CONFIG)/stat.log) ))"\", \n  \"color\": \"a6bf94\" \n}" >> $(R2)/generated/$(CONFIG)/area.json
+# rm -f $(R2)/generated/$(CONFIG)/stat.log
 
 
 # lineCfg += Rift2300
 # lineCfg += Rift2310
 # lineCfg += Rift2320
-lineCfg += Rift2330
-lineCfg += Rift2340
-lineCfg += Rift2350
-lineCfg += Rift2360
-lineCfg += Rift2370
-lineCfg += Rift2380
-lineCfg += Rift2390
+# lineCfg += Rift2330
+# lineCfg += Rift2340
+# lineCfg += Rift2350
+# lineCfg += Rift2360
+# lineCfg += Rift2370
+# lineCfg += Rift2380
+# lineCfg += Rift2390
 
 # CONFIG ?= /Debug/Rift2330
 
 
-testAll:
-	$(foreach cfg, $(lineCfg), make test CONFIG=/Debug/$(cfg); )
+# testAll:
+# 	$(foreach cfg, $(lineCfg), make test CONFIG=/Debug/$(cfg); )
 
+# yosysAll:
+# 	$(foreach cfg, $(lineCfg), make yosys CONFIG=/Release/$(cfg); )
 # CONFIG ?= Rift2330
 # lineSim: 
 # 	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.cpp

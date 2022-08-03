@@ -1,4 +1,4 @@
-name: Chisel CI
+name: ChiselStage
 
 
 on:
@@ -57,17 +57,38 @@ jobs:
           sbt doc
 
           echo $GITHUB_REF_NAME
-          mkdir /Users/runner/work/Rift2Core/Verilog/
-          mkdir /Users/runner/work/Rift2Core/ScalaDoc/
-
-          mkdir /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/
-          mkdir /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/
+          
+          mkdir -p /Users/runner/work/Rift2Core/ScalaDoc/
+          mkdir -p /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/
 
           cd /Users/runner/work/Rift2Core/Rift2Core/
 
-          cp -R generated/Release /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME 
-          cp -R target/scala-2.12/api /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME 
+          cp /Users/runner/work/Rift2Core/Rift2Core/LICENSE.Apache /Users/runner/work/Rift2Core/
+          cp /Users/runner/work/Rift2Core/Rift2Core/LICENSE.NPL /Users/runner/work/Rift2Core/
+          cp -R target/scala-2.12/api /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
 
+          cd /Users/runner/work/Rift2Core/Rift2Core/generated/Release/
+          tar -cvf Rift2330-Release.tar Rift2330/*
+          tar -cvf Rift2340-Release.tar Rift2340/*
+          tar -cvf Rift2350-Release.tar Rift2350/*
+          tar -cvf Rift2360-Release.tar Rift2360/*
+          tar -cvf Rift2370-Release.tar Rift2370/*
+          tar -cvf Rift2380-Release.tar Rift2380/*
+          tar -cvf Rift2390-Release.tar Rift2390/*
+          cd /Users/runner/work/Rift2Core/Rift2Core/generated/Debug/
+          tar -cvf Rift2330-Debug.tar  Rift2330/*
+          tar -cvf Rift2340-Debug.tar  Rift2340/*
+          tar -cvf Rift2350-Debug.tar  Rift2350/*
+          tar -cvf Rift2360-Debug.tar  Rift2360/*
+          tar -cvf Rift2370-Debug.tar  Rift2370/*
+          tar -cvf Rift2380-Debug.tar  Rift2380/*
+          tar -cvf Rift2390-Debug.tar  Rift2390/*
+          cd /Users/runner/work/Rift2Core/Rift2Core/
+
+
+      # mkdir /Users/runner/work/Rift2Core/Verilog/
+      # mkdir /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/
+      # cp -R generated/Release /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME 
       # - name: Restore Data
       #   run: |
       #     cd /Users/runner/work/Rift2Core/Rift2Core/
@@ -76,8 +97,8 @@ jobs:
       #     cp data/performance.js tb/ci/
       #     cp ~/riscv-tests/benchmarks/*.verilog tb/ci/
 
-  
-
+      # rm -rf /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME  
+      # cp -R /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME
       - name: Commit
         run: |
           cd /Users/runner/work/Rift2Core/Rift2Core
@@ -85,15 +106,14 @@ jobs:
           git fetch --all
           git checkout gh_pages
 
-          rm -rf /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME
           rm -rf /Users/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
-
-          cp -R /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME
           cp -R /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME /Users/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
+          cp /Users/runner/work/Rift2Core/LICENSE.Apache /Users/runner/work/Rift2Core/Rift2Core/
+          cp /Users/runner/work/Rift2Core/LICENSE.NPL /Users/runner/work/Rift2Core/Rift2Core/
 
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add ./Verilog
+
           git add ./ScalaDoc
           git commit --allow-empty -m "update ci result"
  
@@ -104,8 +124,68 @@ jobs:
           branch: gh_pages
           force: false
 
+      - name: Get current time
+        id: gettime
+        run: |
+          echo "::set-output name=time::$(date +'%Y-%m-%d-%H-%M-%S')"
 
+        #echo "NOW::$(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV
 
+      - name: Create Pre-Release and Upload Release Asset
+        if: github.ref_name != 'master'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: PreRelease-${{ steps.gettime.outputs.time }} 
+          name: PreRelease-${{ steps.gettime.outputs.time }}
+          body: CI compile on ${{ steps.gettime.outputs.time }}.
+          draft: false
+          prerelease: true
+          target_commitish: ${{github.ref_name}}
+          files: |
+            ./generated/Release/Rift2330-Release.tar
+            ./generated/Debug/Rift2330-Debug.tar
+            ./generated/Release/Rift2340-Release.tar
+            ./generated/Debug/Rift2340-Debug.tar
+            ./generated/Release/Rift2350-Release.tar
+            ./generated/Debug/Rift2350-Debug.tar
+            ./generated/Release/Rift2360-Release.tar
+            ./generated/Debug/Rift2360-Debug.tar
+            ./generated/Release/Rift2370-Release.tar
+            ./generated/Debug/Rift2370-Debug.tar
+            ./generated/Release/Rift2380-Release.tar
+            ./generated/Debug/Rift2380-Debug.tar
+            ./generated/Release/Rift2390-Release.tar
+            ./generated/Debug/Rift2390-Debug.tar
+            ./LICENSE.Apache
+            ./LICENSE.NPL
+
+      - name: Create Release and Upload Release Asset
+        if: github.ref_name == 'master'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.gettime.outputs.time }} 
+          name: Release-${{ steps.gettime.outputs.time }} 
+          body: CI compile on ${{ steps.gettime.outputs.time }}.
+          draft: false
+          prerelease: false
+          target_commitish: ${{github.ref_name}}
+          files: |
+            ./generated/Release/Rift2330-Release.tar
+            ./generated/Debug/Rift2330-Debug.tar
+            ./generated/Release/Rift2340-Release.tar
+            ./generated/Debug/Rift2340-Debug.tar
+            ./generated/Release/Rift2350-Release.tar
+            ./generated/Debug/Rift2350-Debug.tar
+            ./generated/Release/Rift2360-Release.tar
+            ./generated/Debug/Rift2360-Debug.tar
+            ./generated/Release/Rift2370-Release.tar
+            ./generated/Debug/Rift2370-Debug.tar
+            ./generated/Release/Rift2380-Release.tar
+            ./generated/Debug/Rift2380-Debug.tar
+            ./generated/Release/Rift2390-Release.tar
+            ./generated/Debug/Rift2390-Debug.tar
+            ./LICENSE.Apache
+            ./LICENSE.NPL
 
       # Runs a single command using the runners shell
       # - name: Run a one-line script

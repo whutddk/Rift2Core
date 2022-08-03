@@ -13,9 +13,7 @@ include $(src_dir)/rv64um/Makefrag
 include $(src_dir)/rv64ua/Makefrag
 include $(src_dir)/rv64uf/Makefrag
 include $(src_dir)/rv64ud/Makefrag
-include $(src_dir)/rv64uzfh/Makefrag
 include $(src_dir)/rv64si/Makefrag
-include $(src_dir)/rv64ssvnapot/Makefrag
 include $(src_dir)/rv64mi/Makefrag
 
 
@@ -66,9 +64,9 @@ $(1): $$($(1)_tests_dump)
 
 COMPILER_SUPPORTS_$(1) := $$(shell $$(RISCV_GCC) $(2) -c -x c /dev/null -o /dev/null 2> /dev/null; echo $$$$?)
 
-ifeq ($$(COMPILER_SUPPORTS_$(1)),0)
+
 tests += $$($(1)_tests)
-endif
+
 
 endef
 

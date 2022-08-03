@@ -67,9 +67,9 @@ periph(64)        sba(64)      sys(64)      l1i(128*2)      l1d(128*2)     mmu(1
 
 
 
-class Rift2Chip(implicit p: Parameters) extends LazyModule with HasRiftParameters{
+class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyModule with HasRiftParameters{
 
-  val i_rift2Core = LazyModule( new Rift2Core )
+  val i_rift2Core = LazyModule( new Rift2Core(isFlatten) )
   val i_debugger = if ( hasDebugger) {Some(LazyModule(new Debugger(nComponents = 1)))} else {None}
 
   val sifiveCache = LazyModule(new InclusiveCache(

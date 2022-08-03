@@ -251,7 +251,7 @@ int main(int argc, char **argv, char **env) {
 
 	
 	sim_exit();
-	return 0;
+	return -1;
 
 
 }

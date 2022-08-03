@@ -443,14 +443,14 @@ object testAll extends App {
 
     (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Release/"++cfg._2, "-E", "verilog" ) ++ args, Seq(
         ChiselGeneratorAnnotation(() => {
-      val soc = LazyModule(new Rift2Chip()(cfg._1))
+      val soc = LazyModule(new Rift2Chip(isFlatten = true)(cfg._1))
       soc.module
     })
     ))
 
     (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Debug/"++cfg._2, "-e", "verilog" ) ++ args, Seq(
         ChiselGeneratorAnnotation(() => {
-      val soc = LazyModule(new Rift2Chip()(cfg._1))
+      val soc = LazyModule(new Rift2Chip(isFlatten = false)(cfg._1))
       soc.module
     })
     ))

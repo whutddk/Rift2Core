@@ -34,7 +34,7 @@ import freechips.rocketchip.tilelink._
 import chisel3.util.experimental.{FlattenInstance}
 
 
-class Rift2Core()(implicit p: Parameters) extends LazyModule with HasRiftParameters {
+class Rift2Core(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyModule with HasRiftParameters {
   val prefetcherClientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "prefetch",
@@ -86,10 +86,10 @@ class Rift2Core()(implicit p: Parameters) extends LazyModule with HasRiftParamet
   val prefetchClinetNode = TLClientNode(Seq( prefetcherClientParameters))
   
 
-  lazy val module = new Rift2CoreImp(this)
+  lazy val module = if(isFlatten) {new Rift2CoreImp(this) with FlattenInstance} else {new Rift2CoreImp(this)}
 }
  
-class Rift2CoreImp(outer: Rift2Core) extends LazyModuleImp(outer) with HasRiftParameters{ //with FlattenInstance
+class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyModuleImp(outer) with HasRiftParameters { 
   val io = IO(new Bundle{
     val dm        = if (hasDebugger) {Some(Flipped(new Info_DM_cmm))} else {None}
     val rtc_clock = Input(Bool())

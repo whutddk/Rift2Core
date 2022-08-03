@@ -1,4 +1,5 @@
-FROM whutddk/rift2env:dromajo
+FROM whutddk/rift2env:verilator
+ENV YOSYS=/YOSYS/
 
 RUN    apt-get update \
     && apt-get install -y wget \

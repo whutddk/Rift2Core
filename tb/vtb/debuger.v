@@ -174,7 +174,7 @@ always @(posedge CLK ) begin
 
 		file = $fopen("./dhrystone.json", "w");
 
-		$fwrite(file, "{\n  \"schemaVersion\": 1, \n  \"label\": \"dhrystone\", \n  \"message\": \"%f\", \n  \"color\": \"ff69b4\" \n}", 1000000.0/(cycle_cnt/500.0)/1757.0 );
+		$fwrite(file, "{\n  \"schemaVersion\": 1, \n  \"label\": \"\", \n  \"message\": \"%f\", \n  \"color\": \"ff69b4\" \n}", 1000000.0/(cycle_cnt/500.0)/1757.0 );
 		$fclose(file);
 
 		success_reg <= 1'b1;
@@ -187,7 +187,7 @@ always @(posedge CLK ) begin
 
 		file = $fopen("./coremark.json", "w");
 
-		$fwrite(file, "{\n  \"schemaVersion\": 1, \n  \"label\": \"coremark\", \n  \"message\": \"%f\", \n  \"color\": \"ff69b4\" \n}", 1000000.0/(cycle_cnt/500.0)/1757.0 );
+		$fwrite(file, "{\n  \"schemaVersion\": 1, \n  \"label\": \"\", \n  \"message\": \"%f\", \n  \"color\": \"368fb4\" \n}", 1*1*1000000.0/cycle_cnt );
 		$fclose(file);
 
 		success_reg <= 1'b1;
