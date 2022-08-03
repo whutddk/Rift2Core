@@ -53,22 +53,23 @@ RUN   apt-get update \
 	&& git pull \
 
 
-	&& cp -r /work/Rift2Core/tb/compile/isa /work/riscv-tools/riscv-tests \
-	&& cp -r /work/Rift2Core/tb/compile/env /work/riscv-tools/riscv-tests \
-	&& cp -r /work/Rift2Core/tb/compile/benchmark /work/riscv-tools/riscv-tests \
-	&& cp -r /work/Rift2Core/tb/compile/coremark /work/riscv-coremark \
-	&& cd /work/Rift2Core/tb/compile/isa \
+	&& cp -r /work/Rift2Core/tb/compile/riscv-tests/* /work/riscv-tools/riscv-tests \
+	&& cp -r /work/Rift2Core/tb/compile/coremark/* /work/riscv-coremark \
+	&& cd /work/riscv-tools/riscv-tests/isa \
+	&& rm -rf rv64uzfh \
 	&& make \
 	&& cp *-p-* /test  \
 	&& cp *-v-* /test  \
 
-	&& cd /work/riscv-tools/riscv-tests/benchmark \
+	&& cd /work/riscv-tools/riscv-tests/benchmarks \
 	&& make \
-	&& cp dhrystone500* /test   \
+	&& cp dhrystone.riscv /test/dhrystone500.riscv   \
+	&& cp dhrystone.riscv.dump /test/dhrystone500.riscv.dump   \
+	&& cp dhrystone.riscv.verilog /test/dhrystone500.riscv.verilog   \
 
 	&& cd /work/riscv-coremark  \
 	&& ./build-coremark.sh      \
-	&& cp coremark1* /test      \
+	&& cp coremark1_bare* /test      \
 
 
 
