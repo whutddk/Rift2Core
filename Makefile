@@ -328,6 +328,12 @@ wave:
 
 test: VSimTop isa dhrystone500 coremark
 	
+yosys:
+	rm -f $(R2)/generated/$(CONFIG)/area.json
+	cd $(R2)/generated/$(CONFIG) \
+	&& yosys ./Rift2Chip.v ./plusarg_reader.v $(R2)/src/yosys/area.ys
+	echo "{\n  \"schemaVersion\": 1, \n  \"label\": \"\", \n  \"message\": \""$(basename $(filter %.000000, $(shell cat $(R2)/generated/$(CONFIG)/stat.log) ))"\", \n  \"color\": \"a6bf94\" \n}" >> $(R2)/generated/$(CONFIG)/area.json
+	rm -f $(R2)/generated/$(CONFIG)/stat.log
 
 
 # lineCfg += Rift2300
@@ -347,6 +353,8 @@ lineCfg += Rift2390
 testAll:
 	$(foreach cfg, $(lineCfg), make test CONFIG=/Debug/$(cfg); )
 
+yosysAll:
+	$(foreach cfg, $(lineCfg), make yosys CONFIG=/Release/$(cfg); )
 # CONFIG ?= Rift2330
 # lineSim: 
 # 	rm -f ${R2}/generated/Debug/$(CONFIG)/build/*.cpp

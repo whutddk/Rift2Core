@@ -1,4 +1,4 @@
-FROM whutddk/riscv-gnu-toolchain
+FROM whutddk/rift2env:yosys
 
 ENV RISCV=/RISCV/ PATH=$PATH:/RISCV/bin:/RISCV/lib
 
@@ -38,9 +38,13 @@ RUN   apt-get update \
 	&& make -j128 \
 	&& make install \
 
-	&& mkdir -p /test
+	&& mkdir -p /test \
 	&& cd /work \
 	&& git clone https://github.com/whutddk/Rift2Core.git \
+	&& cd Rift2Core \
+	&& git checkout feature/actionTest \
+	&& git pull \
+	&& cd /work \
 	&& git clone https://github.com/riscv-boom/riscv-coremark.git \
 	&& cd /work/riscv-coremark \
 	&& git submodule update --init --recursive \
