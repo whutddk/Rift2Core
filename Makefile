@@ -341,11 +341,11 @@ yosys:
 # lineCfg += Rift2320
 lineCfg += Rift2330
 lineCfg += Rift2340
-lineCfg += Rift2350
-lineCfg += Rift2360
-lineCfg += Rift2370
-lineCfg += Rift2380
-lineCfg += Rift2390
+# lineCfg += Rift2350
+# lineCfg += Rift2360
+# lineCfg += Rift2370
+# lineCfg += Rift2380
+# lineCfg += Rift2390
 
 # CONFIG ?= /Debug/Rift2330
 
