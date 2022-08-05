@@ -106,9 +106,7 @@ jobs:
 
 
       - name: Create Release and Upload Release Asset
-        run: |
-          echo $GITHUB_REF_NAME
-        if: GITHUB_REF_NAME != 'master'
+        - if: GITHUB_REF_NAME != 'master'
           uses: softprops/action-gh-release@v1
           with:
             # tag_name: $GITHUB_SHA
@@ -121,7 +119,7 @@ jobs:
               Rift2330-Debug.tar
               LICENSE.Apache
               LICENSE.NPL
-        if: GITHUB_REF_NAME == 'master'
+        - if: GITHUB_REF_NAME == 'master'
           uses: softprops/action-gh-release@v1
           with:
             # tag_name: $GITHUB_SHA
