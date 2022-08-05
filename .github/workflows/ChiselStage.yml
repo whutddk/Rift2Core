@@ -58,8 +58,8 @@ jobs:
 
           echo $GITHUB_REF_NAME
           
-          mkdir /Users/runner/work/Rift2Core/ScalaDoc/
-          mkdir /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/
+          mkdir -p /Users/runner/work/Rift2Core/ScalaDoc/
+          mkdir -p /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/
 
           cd /Users/runner/work/Rift2Core/Rift2Core/
 

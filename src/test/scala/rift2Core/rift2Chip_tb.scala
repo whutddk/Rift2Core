@@ -429,11 +429,11 @@ object testAll extends App {
     // (new Rift2320, "Rift2320" ),
     (new Rift2330, "Rift2330" ),
     (new Rift2340, "Rift2340" ),
-    (new Rift2350, "Rift2350" ),
-    (new Rift2360, "Rift2360" ),
-    (new Rift2370, "Rift2370" ),
-    (new Rift2380, "Rift2380" ),
-    (new Rift2390, "Rift2390" ),
+    // (new Rift2350, "Rift2350" ),
+    // (new Rift2360, "Rift2360" ),
+    // (new Rift2370, "Rift2370" ),
+    // (new Rift2380, "Rift2380" ),
+    // (new Rift2390, "Rift2390" ),
   )
 
   
