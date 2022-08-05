@@ -24,6 +24,7 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 
 
 ## [How to Setup](doc/Setup.md)
+You can complete the deployment of the compilation and test environment following the steps below:
 * Setup Repo
 * Setup sbt
 * Setup verilator and gtkwave
@@ -31,6 +32,8 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 * Compile Model of Rif2Chip
 * Test a single ISA with waveform
 * Test all ISA without waveform
+
+Also we provide a [Docker-Image](https://hub.docker.com/repository/docker/whutddk/rift2env) mainly for CI, which can also be used for compiling and testing.
 
 ## [How to Config](doc/Configuration.md)
 
@@ -79,6 +82,10 @@ Download Pre-compile Version Here:
 
 
 ## API
+
+Rift2Core is not only a highly configurable RISC-V CPU generator, but also provides configurable generation of submodules.
+
+Search the provided API in the Scala Doc.
 
 [API Here](https://whutddk.github.io/Rift2Core/ScalaDoc/api/index.html)
 

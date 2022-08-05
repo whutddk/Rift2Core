@@ -304,7 +304,7 @@ VSimTop:
 isa: VSimTop
 	$(foreach test, $(isa), ${R2}/generated/build/$(CONFIG)/VSimTop -l -f ${R2}/tb/ci/$(test); )
 	echo "{\n  \"schemaVersion\": 1, \n  \"label\": \"ISA\", \n  \"message\": \"Pass\", \n  \"color\": \"f6bf94\" \n}" >> isa.json
-	mv isa.json ${R2}/generated/build/$(CONFIG)/isa.json
+	mv isa.json ${R2}/generated/$(CONFIG)/isa.json
 
 single: VSimTop
 	${R2}/generated/build/$(CONFIG)/VSimTop -w -d -l -p -f ${R2}/tb/ci/$(TESTFILE)
@@ -317,11 +317,11 @@ dhrystone5: VSimTop
 
 dhrystone500: VSimTop
 	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ${R2}/tb/ci/dhrystone500.riscv
-	mv dhrystone.json ${R2}/generated/build/$(CONFIG)/dhrystone.json
+	mv dhrystone.json ${R2}/generated/$(CONFIG)/dhrystone.json
 
 coremark: VSimTop
 	${R2}/generated/build/$(CONFIG)/VSimTop -p -f ${R2}/tb/ci/coremark1_bare
-	mv coremark.json ${R2}/generated/build/$(CONFIG)/coremark.json
+	mv coremark.json ${R2}/generated/$(CONFIG)/coremark.json
 
 wave:
 	gtkwave ${R2}/generated/build/wave.vcd &

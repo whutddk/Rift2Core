@@ -4,7 +4,7 @@ name: ChiselStage
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master, develop ]
+    branches: [ master, develop, feature/actionTest ]
   # pull_request:
   #   branches: [ master ]
 
@@ -57,17 +57,20 @@ jobs:
           sbt doc
 
           echo $GITHUB_REF_NAME
-          mkdir /Users/runner/work/Rift2Core/Verilog/
+          
           mkdir /Users/runner/work/Rift2Core/ScalaDoc/
-
-          mkdir /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/
           mkdir /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/
 
           cd /Users/runner/work/Rift2Core/Rift2Core/
 
-          cp -R generated/Release /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME 
-          cp -R target/scala-2.12/api /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME 
+          cp -R target/scala-2.12/api /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
 
+          tar -cvf Rift2330-Release.tar ./generated/Release/Rift2330
+          tar -cvf Rift2330-Debug.tar ./generated/Debug/Rift2330
+
+      # mkdir /Users/runner/work/Rift2Core/Verilog/
+      # mkdir /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/
+      # cp -R generated/Release /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME 
       # - name: Restore Data
       #   run: |
       #     cd /Users/runner/work/Rift2Core/Rift2Core/
@@ -76,8 +79,8 @@ jobs:
       #     cp data/performance.js tb/ci/
       #     cp ~/riscv-tests/benchmarks/*.verilog tb/ci/
 
-  
-
+      # rm -rf /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME  
+      # cp -R /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME
       - name: Commit
         run: |
           cd /Users/runner/work/Rift2Core/Rift2Core
@@ -85,15 +88,12 @@ jobs:
           git fetch --all
           git checkout gh_pages
 
-          rm -rf /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME
           rm -rf /Users/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
-
-          cp -R /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME
           cp -R /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME /Users/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
 
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add ./Verilog
+
           git add ./ScalaDoc
           git commit --allow-empty -m "update ci result"
  
@@ -105,7 +105,35 @@ jobs:
           force: false
 
 
-
+      - name: Create Release and Upload Release Asset
+        run: |
+          echo ${{ GITHUB_REF }}
+        if: GITHUB_REF != 'master'
+        uses: softprops/action-gh-release@v1
+        with:
+          # tag_name: $GITHUB_SHA
+          name: Rift2xx0
+          # body: TODO New Release.
+          draft: false
+          prerelease: true
+          files: |
+            Rift2330-Release.tar
+            Rift2330-Debug.tar
+            LICENSE.Apache
+            LICENSE.NPL
+        if: github.ref == 'master'
+        uses: softprops/action-gh-release@v1
+        with:
+          # tag_name: $GITHUB_SHA
+          name: Rift2xx0
+          # body: TODO New Release.
+          draft: false
+          prerelease: false
+          files: |
+            Rift2330-Release.tar
+            Rift2330-Debug.tar
+            LICENSE.Apache
+            LICENSE.NPL
 
       # Runs a single command using the runners shell
       # - name: Run a one-line script
