@@ -121,7 +121,7 @@ jobs:
             LICENSE.NPL
 
       - name: Create Release and Upload Release Asset
-        if: $GITHUB_REF_NAME == 'master'
+        if: ${{$GITHUB_REF_NAME == 'master'}}
         uses: softprops/action-gh-release@v1
         with:
           # tag_name: $GITHUB_SHA
