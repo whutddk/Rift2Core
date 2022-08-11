@@ -470,8 +470,8 @@ class Dividor(implicit p: Parameters) extends RiftModule {
   val remaDZRes = Mux( is32wPre, sextXTo(op1Pre(31,0), 64), op1Pre)
   val quotOFRes = Mux( is32wPre, Cat( Fill(33, 1.U(1.W)), 0.U(31.W)), Cat(1.U, 0.U(63.W)))
   val remaOFRes = 0.U
-  val byPassQuo = Mux1H( Seq( isDivByZero -> quotDZRes, isDivOverflow -> quotOFRes, ))
-  val byPassRem = Mux1H( Seq( isDivByZero -> remaDZRes, isDivOverflow -> remaOFRes, ))
+  val byPassQuo = Mux1H( Seq( isDivByZero -> quotDZRes, isDivOverflow -> quotOFRes ))
+  val byPassRem = Mux1H( Seq( isDivByZero -> remaDZRes, isDivOverflow -> remaOFRes ))
   val byPassRes = Mux1H(Seq(
                     io.enq.bits.fun.div    -> byPassQuo,
                     io.enq.bits.fun.divu   -> byPassQuo,
@@ -524,7 +524,7 @@ class Dividor(implicit p: Parameters) extends RiftModule {
 
 
 
-  val divRtnArb = Module(newArbiter(gen = new WriteBack_info(dw=64), n = 2))
+  val divRtnArb = Module(new Arbiter(gen = new WriteBack_info(dw=64), n = 2))
   divRtnArb.io.in(1).valid := io.enq.valid & divBypass
   divRtnArb.io.in(1).bits.res := byPassRes
   divRtnArb.io.in(1).bits.rd0 := io.enq.bits.param.rd0
@@ -558,8 +558,16 @@ class NorDivider[T<:Data]( pipeType: T, dw: Int ) extends Module {
     val flush = Input(Bool()) 
   })
 
-  val isDivBusy = RegInit(false.B)  
-  val ( cnt, isEnd ) = Counter( 0 until 66 by 1, isDivBusy, io.enq.fire | io.flush)
+  val isDivBusy = RegInit(false.B)
+
+  val cnt = RegInit(0.U(7.W))
+  when( io.enq.fire | io.flush ) {
+    cnt := 0.U
+  } .elsewhen( isDivBusy & cnt =/= 64.U ) {
+    cnt := cnt + 1.U
+  }
+
+  // val ( cnt, isEnd ) = Counter( 0 until 65 by 1, isDivBusy, io.enq.fire | io.flush)
 
 
   io.enq.ready := ~isDivBusy
@@ -584,7 +592,7 @@ class NorDivider[T<:Data]( pipeType: T, dw: Int ) extends Module {
       dividend_shift
     )
 
-  when( cnt === 0.U ) {
+  when( io.enq.fire ) {
     dividend := io.op1
     divisor := io.op2
   }
@@ -594,7 +602,7 @@ class NorDivider[T<:Data]( pipeType: T, dw: Int ) extends Module {
   }
 
   val pendingInfo = RegEnable( io.enq.bits, io.enq.fire )
-  val divFinish = isDivBusy & (cnt === 65.U)
+  val divFinish = isDivBusy & (cnt === 64.U)
   io.deq.valid := divFinish
   io.deq.bits := pendingInfo
   io.quo := dividend(63,0)
