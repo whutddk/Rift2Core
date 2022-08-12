@@ -484,7 +484,7 @@ class Dividor(implicit p: Parameters) extends RiftModule {
                   ))
 
 
-  val algDivider = Module(new NorDivider(new Mul_iss_info, 64))
+  val algDivider = Module(new SRT4Divider(new Mul_iss_info, 64))
     algDivider.io.enq.valid := io.enq.valid & ~divBypass
     algDivider.io.enq.bits  := io.enq.bits
     
@@ -611,10 +611,7 @@ class NorDivider[T<:Data]( pipeType: T, dw: Int ) extends Module {
 
 
 
-class SRTDivider[T<:Data]( pipeType: T, dw: Int, vs: Int = 1, srtBase: Int = 4 ) extends Module {
-  require( vs >= 1 )
-  require( srtBase >= 2 )
-  require( isPow2(srtBase) == true )
+class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
 
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(pipeType))
@@ -626,111 +623,242 @@ class SRTDivider[T<:Data]( pipeType: T, dw: Int, vs: Int = 1, srtBase: Int = 4 )
     val flush = Input(Bool()) 
   })
 
+
+  def preProcess( preDividend: UInt, preDdivisor: UInt ): (UInt, UInt, UInt, UInt) = {
+    val dividend = Wire( UInt((dw+4).W) )
+    val divisor  = Wire( UInt((dw+4).W ) )
+    val iterations = Wire( UInt( (log2Ceil(dw/2)).W) )
+    val recovery   = Wire( UInt( (log2Ceil(dw/2)).W) )
+
+    val bShift = PriorityEncoder(preDdivisor.asBools.reverse)
+
+    divisor  := (preDdivisor << bShift) << 1 
+    dividend := Mux( bShift(0), preDividend, preDividend  << 1)
+
+    iterations := ( bShift + 1.U ) >> 1
+    recovery   := dw.U - bShift
+    return (dividend, divisor, iterations, recovery)
+  }
+
+
+  def QDS( dividendIdx: UInt, divisorIdx: UInt ): UInt = {
+    
+    require( dividendIdx.getWidth == 7 )
+    require( divisorIdx.getWidth  == 4 )
+    assert( divisorIdx(3) === 1.U )
+
+    val qSel = Wire(UInt(3.W))
+
+    val table = Seq(
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  12.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   4.S) && (dividendIdx.asSInt <  12.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -4.S) && (dividendIdx.asSInt <   4.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -13.S) && (dividendIdx.asSInt <  -4.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -13.S)) -> "b110".U,
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  14.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   4.S) && (dividendIdx.asSInt <  14.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -6.S) && (dividendIdx.asSInt <   4.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -15.S) && (dividendIdx.asSInt <  -6.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -15.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  15.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   4.S) && (dividendIdx.asSInt <  15.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -6.S) && (dividendIdx.asSInt <   4.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -16.S) && (dividendIdx.asSInt <  -6.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -16.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  16.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   4.S) && (dividendIdx.asSInt <  16.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -6.S) && (dividendIdx.asSInt <   4.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -18.S) && (dividendIdx.asSInt <  -6.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -18.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  18.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   6.S) && (dividendIdx.asSInt <  18.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -8.S) && (dividendIdx.asSInt <   6.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -20.S) && (dividendIdx.asSInt <  -8.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -20.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  20.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   6.S) && (dividendIdx.asSInt <  20.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -8.S) && (dividendIdx.asSInt <   6.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -20.S) && (dividendIdx.asSInt <  -8.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -20.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  20.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   8.S) && (dividendIdx.asSInt <  20.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -8.S) && (dividendIdx.asSInt <   8.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -22.S) && (dividendIdx.asSInt <  -8.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -22.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  24.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   8.S) && (dividendIdx.asSInt <  24.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -8.S) && (dividendIdx.asSInt <   8.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -24.S) && (dividendIdx.asSInt <  -8.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -24.S)) -> "b110".U,
+
+      )),
+    )
+
+
+    qSel := Mux1H(Seq(
+      (divisorIdx === "b1000".U) -> table(0),
+      (divisorIdx === "b1001".U) -> table(1),
+      (divisorIdx === "b1010".U) -> table(2),
+      (divisorIdx === "b1011".U) -> table(3),
+      (divisorIdx === "b1100".U) -> table(4),
+      (divisorIdx === "b1101".U) -> table(5),
+      (divisorIdx === "b1110".U) -> table(6),
+      (divisorIdx === "b1111".U) -> table(7),
+    ))
+    return qSel
+  }
+
+  def ontheFlyQuotientConversion( qPre: UInt, qmPre: UInt, qSel: UInt ): (UInt, UInt) =  {
+    require( qPre.getWidth  == dw )
+    require( qmPre.getWidth == dw )
+    require( qSel.getWidth  == 3  )
+
+    val qmNext = Wire(UInt(dw.W))
+    val qNext  = Wire(UInt(dw.W))
+    
+
+    qmNext := Mux1H(Seq(
+      ( qSel === "b010".U ) -> Cat( qPre (dw-3, 0), "b01".U ),
+      ( qSel === "b001".U ) -> Cat( qPre (dw-3, 0), "b00".U ),
+      ( qSel === "b000".U ) -> Cat( qmPre(dw-3, 0), "b11".U ),
+      ( qSel === "b101".U ) -> Cat( qmPre(dw-3, 0), "b10".U ),
+      ( qSel === "b110".U ) -> Cat( qmPre(dw-3, 0), "b01".U ),
+    ))
+
+
+    qNext := Mux1H(Seq(
+      ( qSel === "b010".U ) -> Cat(qPre (dw-3, 0), "b10".U ),
+      ( qSel === "b001".U ) -> Cat(qPre (dw-3, 0), "b01".U ),
+      ( qSel === "b000".U ) -> Cat(qPre (dw-3, 0), "b00".U ),
+      ( qSel === "b101".U ) -> Cat(qmPre(dw-3, 0), "b11".U ),
+      ( qSel === "b110".U ) -> Cat(qmPre(dw-3, 0), "b10".U ),
+    ))
+  
+    return (qmNext, qNext)
+  }
+
+  val ( dividendInit, divisorInit, iterationsInit, recoveryInit ) = preProcess( preDividend = io.op1, preDdivisor = io.op2 )
+
+  val isDivBusy = RegInit(false.B)
   val isRecurrence = RegInit(false.B)
-  val isRecovery = RegInit(false.B)
-  val partRemainder = Reg(SInt(dw.W))
-  val divisor = Reg(UInt(dw.W))
-  val partQuotients = Reg(SInt(dw.W))
-  val idx = Reg(UInt((log2Ceil(dw)).W))
-  val isBusy = isRecurrence | isRecovery
-
-
-    val partQuo = Wire(Vec( 4, SInt((dw+1).W) ))
-    partQuo(0) := -(divisor.asSInt << 1)
-    partQuo(1) := -(divisor.asSInt)
-    partQuo(2) := divisor.asSInt
-    partQuo(3) := divisor.asSInt << 1
 
 
 
 
+  val cnt        = Reg(UInt( (log2Ceil(dw/2)).W))
+  val ws = Reg(UInt(( dw + 4 ).W))
+  val d          = RegEnable(divisorInit, io.enq.fire)
+  val qm = Reg(UInt(dw.W))
+  val q  = Reg(UInt(dw.W))
+  val iterations = RegEnable(iterationsInit, io.enq.fire)
+  val recovery   = RegEnable(recoveryInit  , io.enq.fire)
+
+
+  val dividendIdx = ws(dw+3, dw-3)
+  dontTouch(dividendIdx)
+  val divisorIdx  = d(dw, dw-3)
+
+  val qSel = QDS( dividendIdx, divisorIdx )
+  val (qmNext, qNext) = ontheFlyQuotientConversion(q, qm, qSel)
+
+  val pd1 = Wire( UInt((dw+4).W ) ); pd1 := d
+  val pd2 = Wire( UInt((dw+4).W ) ); pd2 := d << 1
+  val nd1 = Wire( UInt((dw+4).W ) ); nd1 := ~d + 1.U
+  val nd2 = Wire( UInt((dw+4).W ) ); nd2 := nd1 << 1
+
+  val iterRem = Mux1H(Seq(
+    (qSel === "b000".U) -> (ws),
+    (qSel === "b001".U) -> (ws + nd1), (qSel === "b010".U) -> (ws + nd2),
+    (qSel === "b101".U) -> (ws + pd1), (qSel === "b110".U) -> (ws + pd2),
+  ))
 
 
   when( io.flush ) {
-    isRecurrence := false.B
-    isRecovery   := false.B
-  } .elsewhen( io.enq.fire ) {
-    assert( ~isRecurrence && ~isRecovery )
-    isRecurrence := true.B
-    partRemainder := io.op1.asSInt
-    partQuotients := 0.S
-    divisor := io.op2
-    idx := (dw-2).U  //log2(srtBase)
-  } .elsewhen( isRecurrence ) {
-    assert( ~isRecovery )
-
-    val cmp = BoothCmp(partRemainder >> idx << idx)
-
-    partQuotients := (partQuotients + (cmp << idx))
-    partRemainder := (partRemainder - Mux1H( Seq(
-                            (cmp === -2.S) -> partQuo(0), 
-                            (cmp === -1.S) -> partQuo(1), 
-                            (cmp ===  0.S)  -> 0.S, 
-                            (cmp ===  1.S) -> partQuo(2), 
-                            (cmp ===  2.S) -> partQuo(3), 
-                          ) ) << idx)
-
-
-    when( idx >= 2.U  ) { //log2(srtBase)
-      idx := idx - 2.U //log2(srtBase)
-    } .otherwise {
-      isRecurrence := false.B
-      isRecovery := true.B
-    }
-  } .elsewhen( isRecovery ) {
-    assert( ~isRecurrence )
-
-    when( io.deq.fire ) {
-      isRecovery := false.B
-    }
-
-
-    when( partRemainder < partQuo(0) ) {
-      assert(false.B)
-      io.quo := 0.U
-      io.rem := 0.U
-    } .elsewhen( partRemainder < partQuo(1) ) {
-      io.quo := (partQuotients - 2.S).asUInt
-      io.rem := (partRemainder + partQuo(3)).asUInt
-    } .elsewhen( partRemainder < 0.S ) {
-      io.quo := (partQuotients - 1.S).asUInt
-      io.rem := (partRemainder + partQuo(2)).asUInt
-    } .elsewhen( partRemainder < partQuo(2) ) {
-      io.quo := (partQuotients).asUInt
-      io.rem := (partRemainder).asUInt
-    } .elsewhen( partRemainder < partQuo(3) ) {
-      io.quo := (partQuotients + 1.S).asUInt
-      io.rem := (partRemainder - partQuo(2)).asUInt
-    } .otherwise {
-      assert(false.B)
-      io.quo := 0.U
-      io.rem := 0.U
-    }
-
-
-    // isRecovery := false.B
+    isDivBusy    := false.B
+  }.elsewhen( io.enq.fire ) {
+    assert( isDivBusy === false.B )
+    isDivBusy := true.B
+  } .elsewhen( io.deq.fire ) {
+    assert( isDivBusy === true.B )
+    assert( isRecurrence === false.B )
+    isDivBusy := false.B
   }
+
+  when( io.flush ) {
+    isRecurrence := false.B
+  }.elsewhen( io.enq.fire ) {
+    assert( isRecurrence === false.B )
+    isRecurrence := true.B
+  } .elsewhen( (cnt === iterations) & (isRecurrence === true.B) ) {
+    isRecurrence := false.B 
+  }
+
+  when( io.enq.fire ) {
+    ws := dividendInit
+    qm := 0.U
+    q  := 0.U
+    cnt := 0.U
+  } .elsewhen(isRecurrence) {
+    qm := qmNext
+    q  := qNext
+    when( cnt =/= iterations ) {
+      ws  := iterRem << 2
+      cnt := cnt + 1.U
+    } .elsewhen( cnt === iterations ) {
+      ws  := iterRem
+    }    
+  }
+
+  val wsFix = Mux( ws(dw+3), ws + pd1, ws )
+  val wsExt = Wire( UInt((2*dw).W) ); wsExt := wsFix << recovery
+  val qFix  = Mux( ws(dw+3), q - 1.U, q)
+
 
   val pendingInfo = RegEnable( io.enq.bits, io.enq.fire )
+  val divFinish = ~isRecurrence & isDivBusy
 
-  io.enq.ready := isBusy
-  io.deq.valid := isRecovery
-  io.deq.bits  := pendingInfo
+  io.enq.ready := ~isDivBusy
 
-  def BoothCmp(a: SInt): SInt = {
-    require( srtBase == 4 )
+  io.rem := wsExt( 2*dw-1, dw )
+  io.quo := qFix
 
-    val con = Seq(
-                                   ( a < partQuo(0) ), 
-      ( (partQuo(0) <= a ) && (a < partQuo(1))),
-      ( (partQuo(1) <= a ) && (a < partQuo(2))),
-      ( (partQuo(2) <= a ) && (a < partQuo(3))),
-      (  partQuo(3) <= a  )
-    )
 
-    val out = Seq( -2.S, -1.S, 0.S, 1.S, 2.S )
-
-    return Mux1H(con zip out)
-  }
+  io.deq.valid := divFinish
+  io.deq.bits := pendingInfo
 
 }
+
+
+
+
+
+
+
