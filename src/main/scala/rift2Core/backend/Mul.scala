@@ -627,15 +627,15 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
   def preProcess( preDividend: UInt, preDdivisor: UInt ): (UInt, UInt, UInt, UInt) = {
     val dividend = Wire( UInt((dw+4).W) )
     val divisor  = Wire( UInt((dw+4).W ) )
-    val iterations = Wire( UInt( (log2Ceil(dw/2)).W) )
-    val recovery   = Wire( UInt( (log2Ceil(dw/2)).W) )
+    val iterations = Wire( UInt( (log2Ceil(dw)).W) )
+    val recovery   = Wire( UInt( (log2Ceil(dw)).W) )
 
     val bShift = PriorityEncoder(preDdivisor.asBools.reverse)
 
     divisor  := (preDdivisor << bShift) << 1 
     dividend := Mux( bShift(0), preDividend, preDividend  << 1)
 
-    iterations := ( bShift + 1.U ) >> 1
+    iterations := ( bShift + 1.U( (log2Ceil(dw+1)).W) ) >> 1
     recovery   := dw.U - bShift
     return (dividend, divisor, iterations, recovery)
   }
@@ -746,20 +746,20 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
     
 
     qmNext := Mux1H(Seq(
-      ( qSel === "b010".U ) -> Cat( qPre (dw-3, 0), "b01".U ),
-      ( qSel === "b001".U ) -> Cat( qPre (dw-3, 0), "b00".U ),
-      ( qSel === "b000".U ) -> Cat( qmPre(dw-3, 0), "b11".U ),
-      ( qSel === "b101".U ) -> Cat( qmPre(dw-3, 0), "b10".U ),
-      ( qSel === "b110".U ) -> Cat( qmPre(dw-3, 0), "b01".U ),
+      ( qSel === "b010".U ) -> Cat( qPre (dw-3, 0), "b01".U(2.W) ),
+      ( qSel === "b001".U ) -> Cat( qPre (dw-3, 0), "b00".U(2.W) ),
+      ( qSel === "b000".U ) -> Cat( qmPre(dw-3, 0), "b11".U(2.W) ),
+      ( qSel === "b101".U ) -> Cat( qmPre(dw-3, 0), "b10".U(2.W) ),
+      ( qSel === "b110".U ) -> Cat( qmPre(dw-3, 0), "b01".U(2.W) ),
     ))
 
 
     qNext := Mux1H(Seq(
-      ( qSel === "b010".U ) -> Cat(qPre (dw-3, 0), "b10".U ),
-      ( qSel === "b001".U ) -> Cat(qPre (dw-3, 0), "b01".U ),
-      ( qSel === "b000".U ) -> Cat(qPre (dw-3, 0), "b00".U ),
-      ( qSel === "b101".U ) -> Cat(qmPre(dw-3, 0), "b11".U ),
-      ( qSel === "b110".U ) -> Cat(qmPre(dw-3, 0), "b10".U ),
+      ( qSel === "b010".U ) -> Cat(qPre (dw-3, 0), "b10".U(2.W) ),
+      ( qSel === "b001".U ) -> Cat(qPre (dw-3, 0), "b01".U(2.W) ),
+      ( qSel === "b000".U ) -> Cat(qPre (dw-3, 0), "b00".U(2.W) ),
+      ( qSel === "b101".U ) -> Cat(qmPre(dw-3, 0), "b11".U(2.W) ),
+      ( qSel === "b110".U ) -> Cat(qmPre(dw-3, 0), "b10".U(2.W) ),
     ))
   
     return (qmNext, qNext)
@@ -773,7 +773,7 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
 
 
 
-  val cnt        = Reg(UInt( (log2Ceil(dw/2)).W))
+  val cnt        = Reg(UInt( (log2Ceil(dw)).W))
   val ws = Reg(UInt(( dw + 4 ).W))
   val d          = RegEnable(divisorInit, io.enq.fire)
   val qm = Reg(UInt(dw.W))
