@@ -791,7 +791,7 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
 
   val pd1 = Wire( UInt((dw+4).W ) ); pd1 := d
   val pd2 = Wire( UInt((dw+4).W ) ); pd2 := d << 1
-  val nd1 = Wire( UInt((dw+4).W ) ); nd1 := ~d + 1.U
+  val nd1 = Wire( UInt((dw+4).W ) ); nd1 := -(d.asSInt).asUInt
   val nd2 = Wire( UInt((dw+4).W ) ); nd2 := nd1 << 1
 
   val iterRem = Mux1H(Seq(
@@ -838,8 +838,8 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
   }
 
   val wsFix = Mux( ws(dw+3), ws + pd1, ws )
-  val wsExt = Wire( UInt((2*dw).W) ); wsExt := wsFix << recovery
-  val qFix  = Mux( ws(dw+3), q - 1.U, q)
+  val wsExt = Wire( UInt((2*dw+1).W) ); wsExt := wsFix << recovery
+  val qFix  = Mux( ws(dw+3), qm, q)
 
 
   val pendingInfo = RegEnable( io.enq.bits, io.enq.fire )
@@ -847,7 +847,7 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
 
   io.enq.ready := ~isDivBusy
 
-  io.rem := wsExt( 2*dw-1, dw )
+  io.rem := wsExt( 2*dw, dw+1 )
   io.quo := qFix
 
 
