@@ -36,9 +36,10 @@ jobs:
     #       github_token: ${{ secrets.GITHUB_TOKEN }}
     #       branch: gh-pages
     #       force: true
-  build:
+  chiselStage:
     # The type of runner that the job will run on
     runs-on: macos-12
+    name: chiselStage
     # needs: clean
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -196,3 +197,121 @@ jobs:
       #   run: |
       #     echo Add other actions to build,
       #     echo test, and deploy your project.
+
+
+  rift23x0CI:
+    name: rift23x0 CI
+    needs: chiselStage
+      
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [Rift2330, Rift2340, Rift2350, Rift2360, Rift2370, Rift2380, Rift2390]
+    runs-on: ubuntu-latest
+    container:
+      image: whutddk/rift2env:riscvtest
+      options: --memory 6g --memory-swap -1
+
+
+    # services:
+    #   testDocker:
+    #     image: whutddk/rift2env:riscvtest
+
+
+    steps:
+
+
+      - name: set up apt
+        run: |
+          apt-get update
+          apt-get install -y wget git make g++ ccache
+
+
+          
+      - name: Checkout Github Page
+        run: |
+          cd /
+          git clone https://github.com/whutddk/Rift2Core.git
+          cd Rift2Core
+          pwd
+          git fetch --all
+          git checkout ${{ github.ref_name }}
+          git checkout gh_pages
+          git pull
+          
+     
+      - name: Get Release
+        id: getrelease
+        uses: cardinalby/git-get-release-action@1.2.2
+        with:
+          latest: true
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Check Release
+        run: |
+          echo ${{ steps.getrelease.outputs.tag_name }}
+
+      - name: Download Latest Pkg
+        run: |
+          cd /Rift2Core
+
+          wget https://github.com/whutddk/Rift2Core/releases/download/${{ steps.getrelease.outputs.tag_name }}/${{matrix.version}}-Debug.tar
+          wget https://github.com/whutddk/Rift2Core/releases/download/${{ steps.getrelease.outputs.tag_name }}/${{matrix.version}}-Release.tar
+
+
+
+      - name: Unzip files
+        run: |
+          cd /Rift2Core
+          
+          mkdir -p ./generated/Debug
+          mkdir -p ./generated/Release
+          
+          tar -xvf ./${{matrix.version}}-Debug.tar -C ./generated/Debug
+          tar -xvf ./${{matrix.version}}-Release.tar -C ./generated/Release
+
+
+
+      - name: Checkout Env
+        run: |
+          cd /Rift2Core
+          mkdir -p ./tb/ci
+          cp /test/* ./tb/ci
+          git restore -s ${{ github.ref_name }} -- ./tb
+          git restore -s ${{ github.ref_name }} -- ./Makefile
+# git restore -s ${{ github.ref_name }} -- ./src/yosys/area.ys
+
+        
+      - name: isa, dhrystone, coremark, yosys
+        run: |
+          cd /Rift2Core
+          export R2=/Rift2Core
+          make test CONFIG=/Debug/${{matrix.version}}/
+          
+# make area CONFIG=/Release/${{matrix.version}}/
+
+      - name: commit result
+        run: |
+          cd /Rift2Core
+          git pull
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add ./generated/Debug/${{matrix.version}}/isa.json
+          git add ./generated/Debug/${{matrix.version}}/dhrystone.json
+          git add ./generated/Debug/${{matrix.version}}/coremark.json
+
+          git commit --allow-empty -m "ci update ${{matrix.version}}"
+
+# git add ./generated/Release/${{matrix.version}}/area.json
+
+      - name: push
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh_pages
+          directory: /Rift2Core
+          force: false
+
