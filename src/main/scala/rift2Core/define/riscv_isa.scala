@@ -196,6 +196,9 @@ class Mul_isa extends Bundle {
   val remw    = Bool()
   val remuw   = Bool()
 
+  def isDiv32w = divw | divuw | remw  | remuw
+  def isDivusi = divu | remu  | divuw | remuw
+
 
   def isMul = mul | mulh | mulhsu | mulhu | mulw
   def isDiv = div | divu | divw | divuw | rem | remu | remw | remuw

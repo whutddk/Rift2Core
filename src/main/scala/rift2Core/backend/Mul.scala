@@ -409,53 +409,174 @@ class Dividor(implicit p: Parameters) extends RiftModule {
 
   when( io.enq.fire ) { assert( io.enq.bits.fun.isDiv ) }
 
-  val divBypass = Wire(Bool())
-  val isDivBusy = RegInit(false.B)
-  val pendingInfo = RegEnable( io.enq.bits, io.enq.fire & ~divBypass )
+  
+  // val pendingInfo = RegEnable( io.enq.bits, io.enq.fire & ~divBypass )
 
-  io.enq.ready := ~isDivBusy & io.deq.ready
 
-  when( io.deq.fire | io.flush ) {
-    isDivBusy := false.B
-  } .elsewhen( io.enq.fire & ~divBypass) {
-    isDivBusy := true.B
-  } 
 
-  val info = Mux( io.enq.fire, io.enq.bits, pendingInfo )
+  // val info = Mux( io.enq.fire, io.enq.bits, pendingInfo )
 
-  val divOp1 = info.param.dat.op1
-  val divOp2 = info.param.dat.op2
-  val is_32w = info.fun.divw | info.fun.divuw | info.fun.remw | info.fun.remuw;
-  val is_usi = info.fun.divu | info.fun.remu | info.fun.divuw | info.fun.remuw;
-  val is_div = io.enq.bits.fun.isDiv
+  val op1Pre   = io.enq.bits.param.dat.op1
+  val op2Pre   = io.enq.bits.param.dat.op2
+  val is32wPre = io.enq.bits.fun.isDiv32w;
+  val isUsiPre = io.enq.bits.fun.isDivusi;
+
 
   val dividend_load =
-    Cat ( 0.U(64.W),
+    // Cat ( 0.U(64.W),
       Mux(
-        is_usi, 
-        Mux(is_32w, divOp1(31,0), divOp1),
+        isUsiPre, 
+        Mux(is32wPre, op1Pre(31,0), op1Pre),
         Mux(  
-          is_32w,
-          Cat( 0.U(32.W), Mux(divOp1(31), (~divOp1(31,0) + 1.U), divOp1(31,0))),
-          Mux( divOp1(63), (~divOp1 + 1.U), divOp1)
+          is32wPre,
+          Cat( 0.U(32.W), Mux(op1Pre(31), (~op1Pre(31,0) + 1.U), op1Pre(31,0))),
+          Mux( op1Pre(63), (~op1Pre + 1.U), op1Pre)
         )
       )
-    )
+    // )
 
   val divisor_load =
     Mux(
-      is_usi,
-      Mux(is_32w, divOp2(31,0), divOp2),
+      isUsiPre,
+      Mux(is32wPre, op2Pre(31,0), op2Pre),
       Mux( 
-        is_32w,
-        Cat( Fill(32, 0.U), Mux(divOp2(31), (~divOp2(31,0) + 1.U), divOp2(31,0))),
-        Mux( divOp2(63), (~divOp2 + 1.U), divOp2 )
+        is32wPre,
+        Cat( Fill(32, 0.U), Mux(op2Pre(31), (~op2Pre(31,0) + 1.U), op2Pre(31,0))),
+        Mux( op2Pre(63), (~op2Pre + 1.U), op2Pre )
       )
     )
 
 
-  val ( cnt, isEnd ) = Counter( 0 until 66 by 1, isDivBusy, io.enq.fire | io.flush)
 
+
+
+
+
+
+
+
+
+
+  val isDivByZero = (op2Pre === 0.U)
+  val isDivOverflow = ~isUsiPre & 
+              (
+                ( is32wPre & (op1Pre(31).asBool & (op1Pre(30,0) === 0.U) ) & (op2Pre(31,0).andR.asBool))
+                |
+                (~is32wPre & (op1Pre(63).asBool & (op1Pre(62,0) === 0.U) ) & (op2Pre(63,0).andR.asBool))								
+              )
+  val divBypass = isDivByZero | isDivOverflow
+
+  val quotDZRes = Fill(64, 1.U)
+  val remaDZRes = Mux( is32wPre, sextXTo(op1Pre(31,0), 64), op1Pre)
+  val quotOFRes = Mux( is32wPre, Cat( Fill(33, 1.U(1.W)), 0.U(31.W)), Cat(1.U, 0.U(63.W)))
+  val remaOFRes = 0.U
+  val byPassQuo = Mux1H( Seq( isDivByZero -> quotDZRes, isDivOverflow -> quotOFRes ))
+  val byPassRem = Mux1H( Seq( isDivByZero -> remaDZRes, isDivOverflow -> remaOFRes ))
+  val byPassRes = Mux1H(Seq(
+                    io.enq.bits.fun.div    -> byPassQuo,
+                    io.enq.bits.fun.divu   -> byPassQuo,
+                    io.enq.bits.fun.divw   -> byPassQuo,
+                    io.enq.bits.fun.divuw  -> byPassQuo,
+                    io.enq.bits.fun.remw   -> byPassRem,
+                    io.enq.bits.fun.remuw  -> byPassRem,
+                    io.enq.bits.fun.rem    -> byPassRem,
+                    io.enq.bits.fun.remu   -> byPassRem,
+                  ))
+
+
+  val algDivider = Module(new SRT4Divider(new Mul_iss_info, 64))
+    algDivider.io.enq.valid := io.enq.valid & ~divBypass
+    algDivider.io.enq.bits  := io.enq.bits
+    
+    algDivider.io.op1 := dividend_load
+    algDivider.io.op2 := divisor_load
+
+    algDivider.io.flush := io.flush
+
+  val op1Post   = algDivider.io.deq.bits.param.dat.op1
+  val op2Post   = algDivider.io.deq.bits.param.dat.op2
+  val is32wPost = algDivider.io.deq.bits.fun.isDiv32w;
+  val isUsiPost = algDivider.io.deq.bits.fun.isDivusi;
+
+
+
+
+  val dividend_sign = Mux(isUsiPost, false.B, Mux(is32wPost, op1Post(31).asBool, op1Post(63).asBool))
+  val divisor_sign  = Mux(isUsiPost, false.B, Mux(is32wPost, op2Post(31).asBool, op2Post(63).asBool))
+
+  val quot_sign_corrcet = 
+    Mux(dividend_sign^divisor_sign, ~algDivider.io.quo + 1.U, algDivider.io.quo)
+
+  val rema_sign_corrcet = 
+    Mux(dividend_sign, ~algDivider.io.rem + 1.U, algDivider.io.rem)
+
+
+  val divRes = Mux1H(Seq(
+    algDivider.io.deq.bits.fun.div    -> quot_sign_corrcet,
+    algDivider.io.deq.bits.fun.divu   -> quot_sign_corrcet,
+    algDivider.io.deq.bits.fun.rem    -> rema_sign_corrcet,
+    algDivider.io.deq.bits.fun.remu   -> rema_sign_corrcet,
+    algDivider.io.deq.bits.fun.divw   -> sextXTo(quot_sign_corrcet(31,0), 64),
+    algDivider.io.deq.bits.fun.divuw  -> sextXTo(quot_sign_corrcet(31,0), 64),
+    algDivider.io.deq.bits.fun.remw   -> sextXTo(rema_sign_corrcet(31,0), 64),
+    algDivider.io.deq.bits.fun.remuw  -> sextXTo(rema_sign_corrcet(31,0), 64)
+  ))
+
+
+
+  val divRtnArb = Module(new Arbiter(gen = new WriteBack_info(dw=64), n = 2))
+  divRtnArb.io.in(1).valid := io.enq.valid & divBypass
+  divRtnArb.io.in(1).bits.res := byPassRes
+  divRtnArb.io.in(1).bits.rd0 := io.enq.bits.param.rd0
+
+
+  divRtnArb.io.in(0).valid := algDivider.io.deq.valid
+  divRtnArb.io.in(0).bits.res := divRes
+  divRtnArb.io.in(0).bits.rd0 := algDivider.io.deq.bits.param.rd0
+  algDivider.io.deq.ready  := divRtnArb.io.in(0).ready
+
+  io.enq.ready := Mux(divBypass, divRtnArb.io.in(1).ready, algDivider.io.enq.ready)
+  io.deq <> divRtnArb.io.out
+
+
+
+
+
+
+
+}
+
+
+class NorDivider[T<:Data]( pipeType: T, dw: Int ) extends Module {
+  val io = IO(new Bundle{
+    val enq = Flipped(new DecoupledIO(pipeType))
+    val deq = Decoupled(pipeType)
+    val op1 = Input(UInt(dw.W))
+    val op2 = Input(UInt(dw.W))
+    val quo = Output(UInt((dw).W))
+    val rem = Output(UInt((dw).W))
+    val flush = Input(Bool()) 
+  })
+
+  val isDivBusy = RegInit(false.B)
+
+  val cnt = RegInit(0.U(7.W))
+  when( io.enq.fire | io.flush ) {
+    cnt := 0.U
+  } .elsewhen( isDivBusy & cnt =/= 64.U ) {
+    cnt := cnt + 1.U
+  }
+
+  // val ( cnt, isEnd ) = Counter( 0 until 65 by 1, isDivBusy, io.enq.fire | io.flush)
+
+
+  io.enq.ready := ~isDivBusy
+
+  when( io.deq.fire | io.flush ) {
+    isDivBusy := false.B
+  } .elsewhen( io.enq.fire ) {
+    isDivBusy := true.B
+  } 
 
 
 
@@ -471,73 +592,273 @@ class Dividor(implicit p: Parameters) extends RiftModule {
       dividend_shift
     )
 
-
-
-  val dividend_sign = Mux(is_usi, false.B, Mux(is_32w, divOp1(31).asBool, divOp1(63).asBool))
-  val divisor_sign  = Mux(is_usi, false.B, Mux(is_32w, divOp2(31).asBool, divOp2(63).asBool))
-  val div_by_zero = (divOp2 === 0.U)
-  val div_overflow = ~is_usi & 
-              (
-                ( is_32w & (divOp1(31).asBool & (divOp1(30,0) === 0.U) ) & (divOp2(31,0).andR.asBool))
-                |
-                (~is_32w & (divOp1(63).asBool & (divOp1(62,0) === 0.U) ) & (divOp2(63,0).andR.asBool))								
-              )
-  divBypass := div_by_zero | div_overflow
-  val divFinish = isDivBusy & (cnt === 65.U)
-  val quotDZRes = Fill(64, 1.U)
-  val remaDZRes = Mux(is_32w, sextXTo(divOp1(31,0), 64), divOp1)
-  val quotOFRes = Mux( is_32w, Cat( Fill(33, 1.U(1.W)), 0.U(31.W)), Cat(1.U, 0.U(63.W)))
-  val remaOFRes = 0.U
-
-
-
-
-
-
-
-
-  when( cnt === 0.U ) {
-    dividend := dividend_load 
-    divisor := divisor_load
+  when( io.enq.fire ) {
+    dividend := io.op1
+    divisor := io.op2
   }
   .otherwise {
     dividend := divided
+
   }
 
-  val quot_sign_corrcet = 
-    Mux(dividend_sign^divisor_sign, ~dividend(63,0) + 1.U, dividend(63,0))
+  val pendingInfo = RegEnable( io.enq.bits, io.enq.fire )
+  val divFinish = isDivBusy & (cnt === 64.U)
+  io.deq.valid := divFinish
+  io.deq.bits := pendingInfo
+  io.quo := dividend(63,0)
+  io.rem := dividend(127,64)
+}
 
-  val rema_sign_corrcet = 
-    Mux(dividend_sign, ~dividend(127,64) + 1.U, dividend(127,64))
 
-  val quot_res = MuxCase(quot_sign_corrcet, Array(
-    div_by_zero  -> quotDZRes,
-    div_overflow -> quotOFRes,
+
+class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
+
+  val io = IO(new Bundle{
+    val enq = Flipped(new DecoupledIO(pipeType))
+    val deq = Decoupled(pipeType)
+    val op1 = Input(UInt(dw.W))
+    val op2 = Input(UInt(dw.W))
+    val quo = Output(UInt((dw).W))
+    val rem = Output(UInt((dw).W))
+    val flush = Input(Bool()) 
+  })
+
+
+  def preProcess( preDividend: UInt, preDdivisor: UInt ): (UInt, UInt, UInt, UInt) = {
+    val dividend = Wire( UInt((dw+4).W) )
+    val divisor  = Wire( UInt((dw+4).W ) )
+    val iterations = Wire( UInt( (log2Ceil(dw+1)).W) )
+    val recovery   = Wire( UInt( (log2Ceil(dw+1)).W) )
+
+    val bShift = PriorityEncoder(preDdivisor.asBools.reverse)
+
+    divisor  := (preDdivisor << bShift) << 1 
+    dividend := Mux( bShift(0), preDividend, preDividend  << 1)
+
+    iterations := ( bShift + 1.U((log2Ceil(dw+1)).W) ) >> 1
+    recovery   := dw.U((log2Ceil(dw+1)).W) - bShift
+    return (dividend, divisor, iterations, recovery)
+  }
+
+
+  def QDS( dividendIdx: UInt, divisorIdx: UInt ): UInt = {
+    
+    require( dividendIdx.getWidth == 7 )
+    require( divisorIdx.getWidth  == 4 )
+    assert( divisorIdx(3) === 1.U )
+
+    val qSel = Wire(UInt(3.W))
+
+    val table = Seq(
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  12.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   4.S) && (dividendIdx.asSInt <  12.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -4.S) && (dividendIdx.asSInt <   4.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -13.S) && (dividendIdx.asSInt <  -4.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -13.S)) -> "b110".U,
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  14.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   4.S) && (dividendIdx.asSInt <  14.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -6.S) && (dividendIdx.asSInt <   4.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -15.S) && (dividendIdx.asSInt <  -6.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -15.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  15.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   4.S) && (dividendIdx.asSInt <  15.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -6.S) && (dividendIdx.asSInt <   4.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -16.S) && (dividendIdx.asSInt <  -6.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -16.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  16.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   4.S) && (dividendIdx.asSInt <  16.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -6.S) && (dividendIdx.asSInt <   4.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -18.S) && (dividendIdx.asSInt <  -6.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -18.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  18.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   6.S) && (dividendIdx.asSInt <  18.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -8.S) && (dividendIdx.asSInt <   6.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -20.S) && (dividendIdx.asSInt <  -8.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -20.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  20.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   6.S) && (dividendIdx.asSInt <  20.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -8.S) && (dividendIdx.asSInt <   6.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -20.S) && (dividendIdx.asSInt <  -8.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -20.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  20.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   8.S) && (dividendIdx.asSInt <  20.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -8.S) && (dividendIdx.asSInt <   8.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -22.S) && (dividendIdx.asSInt <  -8.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -22.S)) -> "b110".U,
+
+      )),
+
+      Mux1H(Seq(
+        ((dividendIdx.asSInt >=  24.S)                                ) -> "b010".U,
+        ((dividendIdx.asSInt >=   8.S) && (dividendIdx.asSInt <  24.S)) -> "b001".U,
+        ((dividendIdx.asSInt >=  -8.S) && (dividendIdx.asSInt <   8.S)) -> 0.U,
+        ((dividendIdx.asSInt >= -24.S) && (dividendIdx.asSInt <  -8.S)) -> "b101".U,
+        (                                 (dividendIdx.asSInt < -24.S)) -> "b110".U,
+
+      )),
+    )
+
+
+    qSel := Mux1H(Seq(
+      (divisorIdx === "b1000".U) -> table(0),
+      (divisorIdx === "b1001".U) -> table(1),
+      (divisorIdx === "b1010".U) -> table(2),
+      (divisorIdx === "b1011".U) -> table(3),
+      (divisorIdx === "b1100".U) -> table(4),
+      (divisorIdx === "b1101".U) -> table(5),
+      (divisorIdx === "b1110".U) -> table(6),
+      (divisorIdx === "b1111".U) -> table(7),
+    ))
+    return qSel
+  }
+
+  def ontheFlyQuotientConversion( qPre: UInt, qmPre: UInt, qSel: UInt ): (UInt, UInt) =  {
+    require( qPre.getWidth  == dw )
+    require( qmPre.getWidth == dw )
+    require( qSel.getWidth  == 3  )
+
+    val qmNext = Wire(UInt(dw.W))
+    val qNext  = Wire(UInt(dw.W))
+    
+
+    qmNext := Mux1H(Seq(
+      ( qSel === "b010".U ) -> Cat( qPre (dw-3, 0), "b01".U(2.W) ),
+      ( qSel === "b001".U ) -> Cat( qPre (dw-3, 0), "b00".U(2.W) ),
+      ( qSel === "b000".U ) -> Cat( qmPre(dw-3, 0), "b11".U(2.W) ),
+      ( qSel === "b101".U ) -> Cat( qmPre(dw-3, 0), "b10".U(2.W) ),
+      ( qSel === "b110".U ) -> Cat( qmPre(dw-3, 0), "b01".U(2.W) ),
+    ))
+
+
+    qNext := Mux1H(Seq(
+      ( qSel === "b010".U ) -> Cat(qPre (dw-3, 0), "b10".U(2.W) ),
+      ( qSel === "b001".U ) -> Cat(qPre (dw-3, 0), "b01".U(2.W) ),
+      ( qSel === "b000".U ) -> Cat(qPre (dw-3, 0), "b00".U(2.W) ),
+      ( qSel === "b101".U ) -> Cat(qmPre(dw-3, 0), "b11".U(2.W) ),
+      ( qSel === "b110".U ) -> Cat(qmPre(dw-3, 0), "b10".U(2.W) ),
+    ))
+  
+    return (qmNext, qNext)
+  }
+
+  val ( dividendInit, divisorInit, iterationsInit, recoveryInit ) = preProcess( preDividend = io.op1, preDdivisor = io.op2 )
+
+  val isDivBusy = RegInit(false.B)
+  val isRecurrence = RegInit(false.B)
+
+
+
+
+  val cnt        = Reg(UInt( (log2Ceil(dw)).W))
+  val ws = Reg(UInt(( dw + 4 ).W))
+  val d          = RegEnable(divisorInit, io.enq.fire)
+  val qm = Reg(UInt(dw.W))
+  val q  = Reg(UInt(dw.W))
+  val iterations = RegEnable(iterationsInit, io.enq.fire)
+  val recovery   = RegEnable(recoveryInit  , io.enq.fire)
+
+
+  val dividendIdx = ws(dw+3, dw-3)
+  dontTouch(dividendIdx)
+  val divisorIdx  = d(dw, dw-3)
+
+  val qSel = QDS( dividendIdx, divisorIdx )
+  val (qmNext, qNext) = ontheFlyQuotientConversion(q, qm, qSel)
+
+  val pd1 = Wire( UInt((dw+4).W ) ); pd1 := d
+  val pd2 = Wire( UInt((dw+4).W ) ); pd2 := d << 1
+  val nd1 = Wire( UInt((dw+4).W ) ); nd1 := -(d.asSInt).asUInt
+  val nd2 = Wire( UInt((dw+4).W ) ); nd2 := nd1 << 1
+
+  val iterRem = Mux1H(Seq(
+    (qSel === "b000".U) -> (ws),
+    (qSel === "b001".U) -> (ws + nd1), (qSel === "b010".U) -> (ws + nd2),
+    (qSel === "b101".U) -> (ws + pd1), (qSel === "b110".U) -> (ws + pd2),
   ))
 
-  val rema_res = MuxCase(rema_sign_corrcet, Array(
-    div_by_zero  -> remaDZRes,
-    div_overflow -> remaOFRes,
-  ))
 
-  val divRes = Mux1H(Seq(
-    info.fun.div    -> quot_res,
-    info.fun.divu   -> quot_res,
-    info.fun.rem    -> rema_res,
-    info.fun.remu   -> rema_res,
-    info.fun.divw   -> sextXTo(quot_res(31,0), 64),
-    info.fun.divuw  -> sextXTo(quot_res(31,0), 64),
-    info.fun.remw   -> sextXTo(rema_res(31,0), 64),
-    info.fun.remuw  -> sextXTo(rema_res(31,0), 64)
-  ))
+  when( io.flush ) {
+    isDivBusy    := false.B
+  }.elsewhen( io.enq.fire ) {
+    assert( isDivBusy === false.B )
+    isDivBusy := true.B
+  } .elsewhen( io.deq.fire ) {
+    assert( isDivBusy === true.B )
+    assert( isRecurrence === false.B )
+    isDivBusy := false.B
+  }
 
-  io.deq.valid := 
-    (io.enq.valid & divBypass ) |
-    (divFinish)
+  when( io.flush ) {
+    isRecurrence := false.B
+  }.elsewhen( io.enq.fire ) {
+    assert( isRecurrence === false.B )
+    isRecurrence := true.B
+  } .elsewhen( (cnt === iterations) & (isRecurrence === true.B) ) {
+    isRecurrence := false.B 
+  }
 
-  io.deq.bits.res := divRes
-  io.deq.bits.rd0 := info.param.rd0
+  when( io.enq.fire ) {
+    ws := dividendInit
+    qm := 0.U
+    q  := 0.U
+    cnt := 0.U
+  } .elsewhen(isRecurrence) {
+    qm := qmNext
+    q  := qNext
+    when( cnt =/= iterations ) {
+      ws  := iterRem << 2
+      cnt := cnt + 1.U
+    } .elsewhen( cnt === iterations ) {
+      ws  := iterRem
+    }    
+  }
+
+  val wsFix = Mux( ws(dw+3), ws + pd1, ws )
+  val wsExt = Wire( UInt((2*dw+1).W) ); wsExt := wsFix << recovery
+  val qFix  = Mux( ws(dw+3), qm, q)
+
+
+  val pendingInfo = RegEnable( io.enq.bits, io.enq.fire )
+  val divFinish = ~isRecurrence & isDivBusy
+
+  io.enq.ready := ~isDivBusy
+
+  io.rem := wsExt( 2*dw, dw+1 )
+  io.quo := qFix
+
+
+  io.deq.valid := divFinish
+  io.deq.bits := pendingInfo
 
 }
+
+
+
+
+
 
 
