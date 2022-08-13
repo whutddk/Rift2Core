@@ -627,16 +627,16 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
   def preProcess( preDividend: UInt, preDdivisor: UInt ): (UInt, UInt, UInt, UInt) = {
     val dividend = Wire( UInt((dw+4).W) )
     val divisor  = Wire( UInt((dw+4).W ) )
-    val iterations = Wire( UInt( (log2Ceil(dw)).W) )
-    val recovery   = Wire( UInt( (log2Ceil(dw)).W) )
+    val iterations = Wire( UInt( (log2Ceil(dw+1)).W) )
+    val recovery   = Wire( UInt( (log2Ceil(dw+1)).W) )
 
     val bShift = PriorityEncoder(preDdivisor.asBools.reverse)
 
     divisor  := (preDdivisor << bShift) << 1 
     dividend := Mux( bShift(0), preDividend, preDividend  << 1)
 
-    iterations := ( bShift + 1.U( (log2Ceil(dw+1)).W) ) >> 1
-    recovery   := dw.U - bShift
+    iterations := ( bShift + 1.U((log2Ceil(dw+1)).W) ) >> 1
+    recovery   := dw.U((log2Ceil(dw+1)).W) - bShift
     return (dividend, divisor, iterations, recovery)
   }
 
