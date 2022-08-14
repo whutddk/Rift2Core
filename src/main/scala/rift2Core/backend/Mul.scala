@@ -645,7 +645,7 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
     
     require( dividendIdx.getWidth == 7 )
     require( divisorIdx.getWidth  == 4 )
-    assert( divisorIdx(3) === 1.U )
+    
 
     val qSel = Wire(UInt(3.W))
 
@@ -783,9 +783,10 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
 
 
   val dividendIdx = ws(dw+3, dw-3)
+
   dontTouch(dividendIdx)
   val divisorIdx  = d(dw, dw-3)
-
+  when(isRecurrence) { assert( divisorIdx(3) === 1.U ) }
   val qSel = QDS( dividendIdx, divisorIdx )
   val (qmNext, qNext) = ontheFlyQuotientConversion(q, qm, qSel)
 
