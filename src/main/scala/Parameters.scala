@@ -179,6 +179,7 @@ case class RiftSetting(
   require( regNum > 32 )
   require( pmpNum > 0 && pmpNum <= 8 )
   require( icacheParameters.dw == dcacheParameters.dw )
+  require( isPow2(dcacheParameters.stEntry) )
 }
 
 trait HasRiftParameters {

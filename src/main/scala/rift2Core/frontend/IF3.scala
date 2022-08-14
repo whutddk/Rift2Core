@@ -261,6 +261,13 @@ trait IF3_Predict{ this: IF3Base =>
       }
     }
 
+    ( 0 until i ).map{ j => 
+      when( reAlign(j).ready === false.B ) {
+        reAlign(i).ready := false.B
+      }
+    }
+
+
   }
 
 

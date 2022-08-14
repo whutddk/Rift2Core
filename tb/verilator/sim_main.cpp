@@ -133,7 +133,7 @@ int main(int argc, char **argv, char **env) {
 	if (flag_waveEnable) {
 		Verilated::traceEverOn(true);
 		top->trace(tfp, 99); // Trace 99 levels of hierarchy
-		tfp->open("./build/wave.vcd");		
+		tfp->open("./generated/build/wave.vcd");		
 	}
 
 #endif
@@ -251,7 +251,7 @@ int main(int argc, char **argv, char **env) {
 
 	
 	sim_exit();
-	return 0;
+	return -1;
 
 
 }

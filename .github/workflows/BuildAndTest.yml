@@ -1,0 +1,317 @@
+name: ChiselStage
+
+
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master, develop ]
+  # pull_request:
+  #   branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  # clean:
+  #   # The type of runner that the job will run on
+  #   runs-on: ubuntu-latest
+
+  #   # Steps represent a sequence of tasks that will be executed as part of the job
+    # steps:
+
+    #   - name: cleanCommit
+    #     run: |
+    #       cd /Users/runner/work/RiftCore/
+    #       git clone https://github.com/whutddk/RiftCore/
+    #       cd RiftCore/
+    #       git fetch --all
+    #       git checkout gh-pages
+    #       git reset --hard 4e5a
+ 
+    #   - name: cleanPush
+    #     uses: ad-m/github-push-action@master
+    #     with:
+    #       github_token: ${{ secrets.GITHUB_TOKEN }}
+    #       branch: gh-pages
+    #       force: true
+  chiselStage:
+    # The type of runner that the job will run on
+    runs-on: macos-12
+    name: chiselStage
+    # needs: clean
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+          
+      - uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Compile
+        run: |
+          git submodule update --init --recursive
+          sbt "test:runMain test.testAll"
+          sbt doc
+
+          echo $GITHUB_REF_NAME
+          
+          mkdir -p /Users/runner/work/Rift2Core/ScalaDoc/
+          mkdir -p /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME/
+
+          cd /Users/runner/work/Rift2Core/Rift2Core/
+
+          cp /Users/runner/work/Rift2Core/Rift2Core/LICENSE.Apache /Users/runner/work/Rift2Core/
+          cp /Users/runner/work/Rift2Core/Rift2Core/LICENSE.NPL /Users/runner/work/Rift2Core/
+          cp -R target/scala-2.12/api /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
+
+          cd /Users/runner/work/Rift2Core/Rift2Core/generated/Release/
+          tar -cvf Rift2330-Release.tar Rift2330/*
+          tar -cvf Rift2340-Release.tar Rift2340/*
+          tar -cvf Rift2350-Release.tar Rift2350/*
+          tar -cvf Rift2360-Release.tar Rift2360/*
+          tar -cvf Rift2370-Release.tar Rift2370/*
+          tar -cvf Rift2380-Release.tar Rift2380/*
+          tar -cvf Rift2390-Release.tar Rift2390/*
+          cd /Users/runner/work/Rift2Core/Rift2Core/generated/Debug/
+          tar -cvf Rift2330-Debug.tar  Rift2330/*
+          tar -cvf Rift2340-Debug.tar  Rift2340/*
+          tar -cvf Rift2350-Debug.tar  Rift2350/*
+          tar -cvf Rift2360-Debug.tar  Rift2360/*
+          tar -cvf Rift2370-Debug.tar  Rift2370/*
+          tar -cvf Rift2380-Debug.tar  Rift2380/*
+          tar -cvf Rift2390-Debug.tar  Rift2390/*
+          cd /Users/runner/work/Rift2Core/Rift2Core/
+
+
+      # mkdir /Users/runner/work/Rift2Core/Verilog/
+      # mkdir /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/
+      # cp -R generated/Release /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME 
+      # - name: Restore Data
+      #   run: |
+      #     cd /Users/runner/work/Rift2Core/Rift2Core/
+      #     git fetch --all
+      #     git checkout origin/gh-pages data/performance.js
+      #     cp data/performance.js tb/ci/
+      #     cp ~/riscv-tests/benchmarks/*.verilog tb/ci/
+
+      # rm -rf /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME  
+      # cp -R /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME /Users/runner/work/Rift2Core/Rift2Core/Verilog/$GITHUB_REF_NAME
+      - name: Commit
+        run: |
+          cd /Users/runner/work/Rift2Core/Rift2Core
+          git checkout -- .
+          git fetch --all
+          git checkout gh_pages
+
+          rm -rf /Users/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
+          cp -R /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME /Users/runner/work/Rift2Core/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
+          cp /Users/runner/work/Rift2Core/LICENSE.Apache /Users/runner/work/Rift2Core/Rift2Core/
+          cp /Users/runner/work/Rift2Core/LICENSE.NPL /Users/runner/work/Rift2Core/Rift2Core/
+
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add ./ScalaDoc
+          git commit --allow-empty -m "update ci result"
+ 
+      - name: push
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh_pages
+          force: false
+
+      - name: Get current time
+        id: gettime
+        run: |
+          echo "::set-output name=time::$(date +'%Y-%m-%d-%H-%M-%S')"
+
+        #echo "NOW::$(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV
+
+      - name: Create Pre-Release and Upload Release Asset
+        if: github.ref_name != 'master'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: PreRelease-${{ steps.gettime.outputs.time }} 
+          name: PreRelease-${{ steps.gettime.outputs.time }}
+          body: CI compile on ${{ steps.gettime.outputs.time }}.
+          draft: false
+          prerelease: true
+          target_commitish: ${{github.ref_name}}
+          files: |
+            ./generated/Release/Rift2330-Release.tar
+            ./generated/Debug/Rift2330-Debug.tar
+            ./generated/Release/Rift2340-Release.tar
+            ./generated/Debug/Rift2340-Debug.tar
+            ./generated/Release/Rift2350-Release.tar
+            ./generated/Debug/Rift2350-Debug.tar
+            ./generated/Release/Rift2360-Release.tar
+            ./generated/Debug/Rift2360-Debug.tar
+            ./generated/Release/Rift2370-Release.tar
+            ./generated/Debug/Rift2370-Debug.tar
+            ./generated/Release/Rift2380-Release.tar
+            ./generated/Debug/Rift2380-Debug.tar
+            ./generated/Release/Rift2390-Release.tar
+            ./generated/Debug/Rift2390-Debug.tar
+            ./LICENSE.Apache
+            ./LICENSE.NPL
+
+      - name: Create Release and Upload Release Asset
+        if: github.ref_name == 'master'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.gettime.outputs.time }} 
+          name: Release-${{ steps.gettime.outputs.time }} 
+          body: CI compile on ${{ steps.gettime.outputs.time }}.
+          draft: false
+          prerelease: false
+          target_commitish: ${{github.ref_name}}
+          files: |
+            ./generated/Release/Rift2330-Release.tar
+            ./generated/Debug/Rift2330-Debug.tar
+            ./generated/Release/Rift2340-Release.tar
+            ./generated/Debug/Rift2340-Debug.tar
+            ./generated/Release/Rift2350-Release.tar
+            ./generated/Debug/Rift2350-Debug.tar
+            ./generated/Release/Rift2360-Release.tar
+            ./generated/Debug/Rift2360-Debug.tar
+            ./generated/Release/Rift2370-Release.tar
+            ./generated/Debug/Rift2370-Debug.tar
+            ./generated/Release/Rift2380-Release.tar
+            ./generated/Debug/Rift2380-Debug.tar
+            ./generated/Release/Rift2390-Release.tar
+            ./generated/Debug/Rift2390-Debug.tar
+            ./LICENSE.Apache
+            ./LICENSE.NPL
+
+      # Runs a single command using the runners shell
+      # - name: Run a one-line script
+      #   run: echo Hello, world!
+
+      # Runs a set of commands using the runners shell
+      # - name: Run a multi-line script
+      #   run: |
+      #     echo Add other actions to build,
+      #     echo test, and deploy your project.
+
+
+  rift23x0CI:
+    name: rift23x0 CI
+    needs: chiselStage
+      
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [Rift2330, Rift2340, Rift2350, Rift2360, Rift2370, Rift2380, Rift2390]
+    runs-on: ubuntu-latest
+    container:
+      image: whutddk/rift2env:riscvtest
+      options: --memory 6g --memory-swap -1
+
+
+    # services:
+    #   testDocker:
+    #     image: whutddk/rift2env:riscvtest
+
+
+    steps:
+
+
+      - name: set up apt
+        run: |
+          apt-get update
+          apt-get install -y wget git make g++ ccache
+
+
+          
+      - name: Checkout Github Page
+        run: |
+          cd /
+          git clone https://github.com/whutddk/Rift2Core.git
+          cd Rift2Core
+          pwd
+          git fetch --all
+          git checkout ${{ github.ref_name }}
+          git checkout gh_pages
+          git pull
+          
+     
+      - name: Get Release
+        id: getrelease
+        uses: cardinalby/git-get-release-action@1.2.2
+        with:
+          latest: true
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Check Release
+        run: |
+          echo ${{ steps.getrelease.outputs.tag_name }}
+
+      - name: Download Latest Pkg
+        run: |
+          cd /Rift2Core
+
+          wget https://github.com/whutddk/Rift2Core/releases/download/${{ steps.getrelease.outputs.tag_name }}/${{matrix.version}}-Debug.tar
+          wget https://github.com/whutddk/Rift2Core/releases/download/${{ steps.getrelease.outputs.tag_name }}/${{matrix.version}}-Release.tar
+
+
+
+      - name: Unzip files
+        run: |
+          cd /Rift2Core
+          
+          mkdir -p ./generated/Debug
+          mkdir -p ./generated/Release
+          
+          tar -xvf ./${{matrix.version}}-Debug.tar -C ./generated/Debug
+          tar -xvf ./${{matrix.version}}-Release.tar -C ./generated/Release
+
+
+
+      - name: Checkout Env
+        run: |
+          cd /Rift2Core
+          mkdir -p ./tb/ci
+          cp /test/* ./tb/ci
+          git restore -s ${{ github.ref_name }} -- ./tb
+          git restore -s ${{ github.ref_name }} -- ./Makefile
+# git restore -s ${{ github.ref_name }} -- ./src/yosys/area.ys
+
+        
+      - name: isa, dhrystone, coremark, yosys
+        run: |
+          cd /Rift2Core
+          export R2=/Rift2Core
+          make test CONFIG=/Debug/${{matrix.version}}/
+          
+# make area CONFIG=/Release/${{matrix.version}}/
+
+      - name: commit result
+        run: |
+          cd /Rift2Core
+          git pull
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add ./generated/Debug/${{matrix.version}}/isa.json
+          git add ./generated/Debug/${{matrix.version}}/dhrystone.json
+          git add ./generated/Debug/${{matrix.version}}/coremark.json
+
+          git commit --allow-empty -m "ci update ${{matrix.version}}"
+
+# git add ./generated/Release/${{matrix.version}}/area.json
+
+      - name: push
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh_pages
+          directory: /Rift2Core
+          force: false
+

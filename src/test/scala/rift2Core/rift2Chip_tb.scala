@@ -316,7 +316,7 @@ class Rift2360 extends Config((site, here, up) => {
       bk = 2,
       cb = 4,
       sbEntry = 12,
-      stEntry = 12,
+      stEntry = 16,
     ),
 
 
@@ -358,7 +358,7 @@ class Rift2380 extends Config((site, here, up) => {
       bk = 4,
       cb = 8,
       sbEntry = 24,
-      stEntry = 24,
+      stEntry = 32,
     ),
 
 
@@ -413,7 +413,7 @@ object testMain extends App {
   // val cfg = new NormalCfg
   val cfg = new Rift2GoCfg
 
-  (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated") ++ args, Seq(
+  (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
       ChiselGeneratorAnnotation(() => {
     val soc = LazyModule(new Rift2Chip()(cfg))
     soc.module
@@ -436,17 +436,21 @@ object testAll extends App {
     (new Rift2390, "Rift2390" ),
   )
 
+  
+
   config.map{ cfg =>
+    println("Compiling " + cfg._2)
+
     (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Release/"++cfg._2, "-E", "verilog" ) ++ args, Seq(
         ChiselGeneratorAnnotation(() => {
-      val soc = LazyModule(new Rift2Chip()(cfg._1))
+      val soc = LazyModule(new Rift2Chip(isFlatten = true)(cfg._1))
       soc.module
     })
     ))
 
     (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Debug/"++cfg._2, "-e", "verilog" ) ++ args, Seq(
         ChiselGeneratorAnnotation(() => {
-      val soc = LazyModule(new Rift2Chip()(cfg._1))
+      val soc = LazyModule(new Rift2Chip(isFlatten = false)(cfg._1))
       soc.module
     })
     ))
