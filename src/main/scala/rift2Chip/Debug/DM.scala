@@ -111,10 +111,6 @@ class Info_DM_cmm() extends Bundle{
 
 
 
-
-
-
-
 class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) extends LazyModule{
   require( nComponents <= 10 )
 
@@ -150,6 +146,20 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       // val sba_access = Flipped(new DecoupledIO(new TLBundleD(edgeOut.bundle)))
 
     })
+
+
+
+    def HALTED       : Int = return 0x100
+    def GOING        : Int = return 0x104
+    def RESUMING     : Int = return 0x108
+    def EXCEPTION    : Int = return 0x10C
+    def WHERETO      : Int = return 0x300
+    def DATA         : Int = return 0x380
+    def PROGBUF      : Int = return DATA - (16 * 4) // if (cfg.hasImplicitEbreak) (tmp - 4) else tmp
+    // def IMPEBREAK : Int = return { DATA - 4 }
+    def ABSTRACT     : Int = return PROGBUF - (8 * 4)
+    def FLAGS        : Int = return 0x400
+    def ROMBASE      : Int = return 0x800
 
 
 
@@ -318,7 +328,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
 
     val abstractGeneratedMem = RegInit(VecInit(
-      "b0010011".U(32.W),
+      "b0010011".U(32.W), //addi 0, zero, 0 (nop)
       "b0010011".U(32.W),
       "b0010011".U(32.W),
       "b0010011".U(32.W),
@@ -376,11 +386,24 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
             busy := true.B
             abstract_hartId := hartsel
 
-            whereTo := Cat(("h100".U)(20), ("h100".U)(10,1), ("h100".U)(11), ("h100".U)(19,12), "b000001101111".U(12.W) ) //to h200(h100+h100) jal h100
+    // def HALTED       = 0x100
+    // def GOING        = 0x104
+    // def RESUMING     = 0x108
+    // def EXCEPTION    = 0x10C
+    // def WHERETO      = 0x300
+    // def DATA         = 0x380
+    // def PROGBUF = DATA - (16 * 4)
+    // def ABSTRACT = PROGBUF - (8 * 4)
+    // def FLAGS        = 0x400
+    // def ROMBASE      = 0x800
+
+
+
+            whereTo := Cat(((ABSTRACT-WHERETO).U)(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U)(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx (debug_abstarct)
             flags(hartsel).is_going  := true.B
 
             abstractGeneratedMem(5) := Mux( postexec, 
-              Cat(("hec".U)(20), ("hec".U)(10,1), ("hec".U)(11), ("hec".U)(19,12), "b000001101111".U(12.W) ), //to h300 (h214+hec) jal ec
+              Cat(((PROGBUF-ABSTRACT-5*4).U)(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U)(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
               "b0010011".U(32.W) ) //nop
 
             when( is_access_CSR ) {
@@ -392,11 +415,11 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
               abstractGeneratedMem(1) := Cat(       reg_sel, 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
               
               abstractGeneratedMem(2) := Cat(
-                ("h500".U)(11,5), // offset h500
-                Mux( transfer & write, ("h500".U)(4,0), 8.U(5.W)),          // offset h500 / rs2 = s0
+                ((DATA).U)(11,5), // offset (DATA)
+                Mux( transfer & write, ((DATA).U)(4,0), 8.U(5.W)),          // offset h500 / rs2 = s0
                 0.U(5.W),         // rs1 = 0 base
                 Mux( aarsize === 2.U, "b010".U(3.W), "b011".U(3.W)),       // word / double-word
-                Mux( transfer & write, 8.U(5.W), ("h500".U)(4,0)),       // rd = s0 / offset h500
+                Mux( transfer & write, 8.U(5.W), ((DATA).U)(4,0)),       // rd = s0 / offset h500
                 Mux( transfer & write, "b0000011".U(7.W),  "b0100011".U ), // ld or st
               )
               // csrw s0 regno / nop
@@ -415,11 +438,11 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
               val reg_sel = regno(4,0)
 
               abstractGeneratedMem(2) := Cat(
-                ("h500".U)(11,5), // offset h500
-                Mux( transfer & write, ("h500".U)(4,0), reg_sel),          // offset h500 / rs2 = s0
+                ((DATA).U)(11,5), // offset DATA
+                Mux( transfer & write, ((DATA).U)(4,0), reg_sel),          // offset h500 / rs2 = s0
                 0.U(5.W),         // rs1 = 0 base
                 Mux( aarsize === 2.U, "b010".U(3.W), "b011".U(3.W)),       // word / double-word
-                Mux( transfer & write, reg_sel, ("h500".U)(4,0)),       // rd = s0 / offset h500
+                Mux( transfer & write, reg_sel, ((DATA).U)(4,0)),       // rd = s0 / offset h500
                 Mux( transfer & write, "b0000011".U(7.W),  "b0100011".U(7.W) ), // ld or st
               )
 
@@ -427,11 +450,11 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
               val reg_sel = regno(4,0)
 
               abstractGeneratedMem(2) := Cat(
-                ("h500".U)(11,5), // offset h500
-                Mux( transfer & write, ("h500".U)(4,0), reg_sel),          // offset h500 / rs2 = s0
+                ((DATA).U)(11,5), // offset h500
+                Mux( transfer & write, ((DATA).U)(4,0), reg_sel),          // offset h500 / rs2 = s0
                 0.U(5.W),         // rs1 = 0 base
                 Mux( aarsize === 2.U, "b010".U(3.W), "b011".U(3.W)),       // word / double-word
-                Mux( transfer & write, reg_sel, ("h500".U)(4,0)),       // rd = s0 / offset h500
+                Mux( transfer & write, reg_sel, ((DATA).U)(4,0)),       // rd = s0 / offset h500
                 Mux( transfer & write, "b0000111".U(7.W),  "b0100111".U(7.W) ), // ld or st
               )
             }
@@ -440,7 +463,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         } 
 
         when( is_quick_access ) {
-          whereTo := Cat(("h200".U)(20), ("h200".U)(10,1), ("h200".U)(11), ("h200".U)(19,12), "b000001101111".U(12.W) ) //to h300(h100+h200) jal h200
+          whereTo := Cat(((ABSTRACT-WHERETO).U)(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U)(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx
           flags(hartsel).is_going  := true.B
 
           busy := true.B
@@ -467,7 +490,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
             busy := true.B
             abstract_hartId := hartsel
 
-            whereTo := Cat(("h200".U)(20), ("h200".U)(10,1), ("h200".U)(11), ("h200".U)(19,12), "b000001101111".U(12.W) ) //to h300 (h100+h200) jal h200
+            whereTo := Cat(((PROGBUF-WHERETO).U)(20), ((PROGBUF-WHERETO).U)(10,1), ((PROGBUF-WHERETO).U)(11), ((PROGBUF-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to PROGBUF (WHERETO+hxxx) jal hxxx
             flags(hartsel).is_going  := true.B
 
 
@@ -476,18 +499,18 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
             // csrw s1 dscratch2,
             abstractGeneratedMem(1) := Cat("h7b4".U(12.W), 9.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W))
           
-            //load s0, h508
+            //load s0, (DATA)+8 (arg1)
             abstractGeneratedMem(2) := Cat(
-              ("h508".U), // offset h500
+              ((DATA+8).U), // offset (DATA+8)
               0.U(5.W),         // rs1 = 0 base
               "b011".U(3.W),       // word / double-word
               8.U(5.W),       //rd=s0
               "b0000011".U(7.W)
             )
             
-            //write ld/lw/lh/lb s1 h500 / read ld s1 s0
+            //write ld/lw/lh/lb s1 (DATA)(arg0) / read ld s1 s0 
             abstractGeneratedMem(3) := Cat(
-              Mux(write, ("h500".U(12.W)),  0.U(12.W)), // offset h500
+              Mux(write, ((DATA).U(12.W)),  0.U(12.W)), // offset (DATA)
               Mux(write, 0.U(5.W), 8.U(5.W) ),        // rs1 = 0 base rs1 = s0
               aamsize,       // word / double-word
               9.U(5.W),                              //rd=s1
@@ -496,11 +519,11 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
             //write st/sw/sh/sb s1 s0(0) / read st s1 h500
             abstractGeneratedMem(4) := Cat(
-              Mux(write, 0.U(7.W), ("h500".U)(11,5) ), // offset h00 / h500
+              Mux(write, 0.U(7.W), ((DATA).U)(11,5) ), // offset h00 / h500
               9.U(5.W),                               //  rs2 = s1
               Mux(write, 8.U(5.W), 0.U(5.W)),          // rs1 = s0 / rs1 = 0 base
               aamsize,                                 // word / double-word
-              Mux(write, 0.U(5.W), ("h500".U)(4,0)),   //  offset h00 / h500
+              Mux(write, 0.U(5.W), ((DATA).U)(4,0)),   //  offset h00 / h500
               "b0100011".U(7.W) ,                          //  st
             )
 
@@ -725,7 +748,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         )),
 
         (0x12 << 2) -> RegFieldGroup("hartInfo", Some("Hart Info"), Seq(
-          RegField.r(12, "h10".U, RegFieldDesc("dataaddr",         "dataaddr",         reset=Some(16))),
+          RegField.r(12, (DATA).U, RegFieldDesc("dataaddr",         "dataaddr",         reset=Some(16))),
           RegField.r(4,  12.U,    RegFieldDesc("datasize",         "datasize",         reset=Some(12))),
           RegField.r(1,  1.U,     RegFieldDesc("dataaccess",       "dataaccess",       reset=Some(1))),
           RegField(3),
@@ -797,20 +820,24 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     io.dmi.resp.bits.op   := DontCare
 
 
-
-
     peripNode.regmap(
-      (0x000 ) -> RegFieldGroup("debug_rom", Some("Debug ROM"), DebugRomContents().zipWithIndex.map{case (x, i) => RegField.r(8, (x & 0xFF).U(8.W))}),
-      (0x100 ) -> Seq(RegField.r(32, whereTo, RegFieldDesc("debug_whereto", "Instruction filled in by Debug Module to control hart in Debug Mode", volatile = true))),
-      (0x200 ) -> RegFieldGroup("debug_abstract", Some("Instructions generated by Debug Module"), abstractGeneratedMem.zipWithIndex.map{ case (x,i) => RegField.r(32, x)}),
-      (0x300 ) -> RegFieldGroup("debug_progbuf", Some("Program buffer used to communicate with Debug Module"), (0 to 15).map{ i => WNotifyVal(32, programBufferMem_qout(i), programBufferMem_dnxt2(i), programBufferMem_en2(i))}),
       
-      (0x400 ) -> Seq(WNotifyVal(32, 0.U, hartHaltedId, hartHaltedWrEn, RegFieldDesc("debug_hart_halted", "Debug ROM Causes hart to write its hartID here when it is in Debug Mode."))), //HALTED
-      (0x404 ) -> Seq(WNotifyVal(32, 0.U, hartGoingId,  hartGoingWrEn, RegFieldDesc("debug_hart_going", "Debug ROM causes hart to write 0 here when it begins executing Debug Mode instructions."))), //GOING
-      (0x408 ) -> Seq(WNotifyVal(32, 0.U, hartResumingId,  hartResumingWrEn, RegFieldDesc("debug_hart_resuming", "Debug ROM causes hart to write its hartID here when it leaves Debug Mode."))), //RESUMING
-      (0x40C ) -> Seq(WNotifyVal(32, 0.U, hartExceptionId,  hartExceptionWrEn, RegFieldDesc("debug_hart_exception", "Debug ROM causes hart to write 0 here if it gets an exception in Debug Mode."))), //EXCEPTION
-      (0x500 ) -> RegFieldGroup("debug_data", Some("Data used to communicate with Debug Module"), (0 to 11).map{ i => WNotifyVal(32, abstractDataMem_qout(i), abstractDataMem_dnxt2(i), abstractDataMem_en2(i))}),
-      (0x600 ) -> RegFieldGroup("debug_flags", Some("Memory region used to control hart going/resuming in Debug Mode"), flags.zipWithIndex.map{case(x, i) => RegField.r(8, x.asUInt())}),
+      
+      
+        (HALTED ) -> Seq(WNotifyVal(32, 0.U, hartHaltedId, hartHaltedWrEn, RegFieldDesc("debug_hart_halted", "Debug ROM Causes hart to write its hartID here when it is in Debug Mode."))), //HALTED
+        (GOING ) -> Seq(WNotifyVal(32, 0.U, hartGoingId,  hartGoingWrEn, RegFieldDesc("debug_hart_going", "Debug ROM causes hart to write 0 here when it begins executing Debug Mode instructions."))), //GOING
+        (RESUMING ) -> Seq(WNotifyVal(32, 0.U, hartResumingId,  hartResumingWrEn, RegFieldDesc("debug_hart_resuming", "Debug ROM causes hart to write its hartID here when it leaves Debug Mode."))), //RESUMING
+        (EXCEPTION ) -> Seq(WNotifyVal(32, 0.U, hartExceptionId,  hartExceptionWrEn, RegFieldDesc("debug_hart_exception", "Debug ROM causes hart to write 0 here if it gets an exception in Debug Mode."))), //EXCEPTION
+        (WHERETO ) -> Seq(RegField.r(32, whereTo, RegFieldDesc("debug_whereto", "Instruction filled in by Debug Module to control hart in Debug Mode", volatile = true))),
+        
+        (ABSTRACT ) -> RegFieldGroup("debug_abstract", Some("Instructions generated by Debug Module"), abstractGeneratedMem.zipWithIndex.map{ case (x,i) => RegField.r(32, x)}),
+        (PROGBUF ) -> RegFieldGroup("debug_progbuf", Some("Program buffer used to communicate with Debug Module"), (0 to 15).map{ i => WNotifyVal(32, programBufferMem_qout(i), programBufferMem_dnxt2(i), programBufferMem_en2(i))}),
+        (DATA ) -> RegFieldGroup("debug_data", Some("Data used to communicate with Debug Module"), (0 to 11).map{ i => WNotifyVal(32, abstractDataMem_qout(i), abstractDataMem_dnxt2(i), abstractDataMem_en2(i))}),
+        
+        
+        (FLAGS ) -> RegFieldGroup("debug_flags", Some("Memory region used to control hart going/resuming in Debug Mode"), flags.zipWithIndex.map{case(x, i) => RegField.r(8, x.asUInt())}),
+        (ROMBASE ) -> RegFieldGroup("debug_rom", Some("Debug ROM"), DebugRomContents().zipWithIndex.map{case (x, i) => RegField.r(8, (x & 0xFF).U(8.W))}),
+    
     )
 
   }
