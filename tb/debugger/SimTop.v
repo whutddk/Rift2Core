@@ -522,7 +522,8 @@ always @(negedge CLK ) begin
 end
 
 
-reg [255:0] testName;
+// reg [255:0] testName;
+string testName;
 
 `define MEM s_axi_full_slv_sram.i_sram.ram
 reg [7:0] mem [0:200000];
@@ -532,12 +533,13 @@ integer i, by;
 initial begin
 
 
-	if ( $value$plusargs("%s",testName[255:0]) ) begin
+	if ( $value$plusargs("%s",testName) ) begin
 		$display("%s",testName);
 	  $readmemh(testName, mem);		
 
 	end
 	else begin 
+    $display("%s",testName);
 		$error("Failed to read Files!");
 	end
 
@@ -546,6 +548,7 @@ initial begin
 		for ( by = 0; by < 16; by = by + 1 ) begin
 			if ( | mem[i*16+by] ) begin
 				`MEM[i][8*by +: 8] = mem[i*16+by];
+        $display("%x", mem[i*16+by]);
 			end
 			else begin
 				`MEM[i][8*by +: 8] = 8'h0;

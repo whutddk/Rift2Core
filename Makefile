@@ -419,19 +419,20 @@ VSimDebugger:
 	--trace-fst \
 	--cc ${R2}/tb/debugger/SimTop.v  \
 	--exe --build \
+	+define+RANDOMIZE_GARBAGE_ASSIGN \
+	+define+RANDOMIZE_INVALID_ASSIGN \
+	+define+RANDOMIZE_REG_INIT \
+	+define+RANDOMIZE_MEM_INIT \
 	${R2}/tb/debugger/sim_main.cpp  \
 	${R2}/tb/debugger/SimJTAG.cc \
 	${R2}/tb/debugger/remote_bitbang.cc \
 	-Mdir ./generated/build/$(CONFIG) \
 	-j 128
 
-# +define+RANDOMIZE_GARBAGE_ASSIGN \
-# +define+RANDOMIZE_INVALID_ASSIGN \
-# +define+RANDOMIZE_REG_INIT \
-# +define+RANDOMIZE_MEM_INIT \
+
 
 jtag:
-	${R2}/generated/build/$(CONFIG)/VSimTop -j -f ./tb/debugger/jtag
+	${R2}/generated/build/$(CONFIG)/VSimTop -j -w -f ./tb/debugger/jtag
 
 fst:
 	gtkwave ${R2}/generated/build/wave.fst &

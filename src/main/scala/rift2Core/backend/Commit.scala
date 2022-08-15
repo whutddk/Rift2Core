@@ -725,7 +725,7 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
         io.cmmRedirect.valid := true.B
         io.cmmRedirect.bits.pc := Mux1H(Seq(
             emu_reset                                   -> "h80000000".U,
-            cmm_state(i).is_debug_interrupt             -> "h00000000".U,
+            cmm_state(i).is_debug_interrupt             -> "h00000800".U,
             (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
             (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
           )),
