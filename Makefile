@@ -263,7 +263,7 @@ module:
 compile:
 	rm -rf ./generated/Main/
 	sbt "test:runMain test.testMain \
-	-E verilog"
+	-e verilog"
 
 #--gen-mem-verilog \
 # --inline \
@@ -400,6 +400,41 @@ area: yosys
 
 # sim:
 # 	verilator --cc  -I./generated -I./tb  --exe  -o rift2tb -Mdir ./tb/build rift2core_tb.cpp Rift2Chip.v
+
+
+
+VSimDebugger: 
+	rm -rf ./generated/build/$(CONFIG)
+	mkdir -p ./generated/build/$(CONFIG)
+	verilator -Wno-fatal  \
+	--timescale "1 ns / 1 ps" \
+	-O3 \
+	--x-assign fast \
+	--x-initial fast \
+	--threads 30 \
+	-y ${R2}/generated/$(CONFIG) \
+	-y ${R2}/tb/ \
+	-y ${R2}/tb/vtb/ \
+	--top-module SimTop \
+	--trace-fst \
+	--cc ${R2}/tb/debugger/SimTop.v  \
+	--exe --build \
+	${R2}/tb/debugger/sim_main.cpp  \
+	${R2}/tb/debugger/SimJTAG.cc \
+	${R2}/tb/debugger/remote_bitbang.cc \
+	-Mdir ./generated/build/$(CONFIG) \
+	-j 128
+
+# +define+RANDOMIZE_GARBAGE_ASSIGN \
+# +define+RANDOMIZE_INVALID_ASSIGN \
+# +define+RANDOMIZE_REG_INIT \
+# +define+RANDOMIZE_MEM_INIT \
+
+jtag:
+	${R2}/generated/build/$(CONFIG)/VSimTop -j -f ./tb/debugger/jtag
+
+fst:
+	gtkwave ${R2}/generated/build/wave.fst &
 
 clean:
 	rm -rf generated/*
