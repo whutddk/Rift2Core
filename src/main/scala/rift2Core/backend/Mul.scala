@@ -625,17 +625,31 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
 
 
   def preProcess( preDividend: UInt, preDdivisor: UInt ): (UInt, UInt, UInt, UInt) = {
+    require( preDividend.getWidth == dw )
+    require( preDdivisor.getWidth == dw )
+
     val dividend = Wire( UInt((dw+4).W) )
     val divisor  = Wire( UInt((dw+4).W ) )
     val iterations = Wire( UInt( (log2Ceil(dw+1)).W) )
     val recovery   = Wire( UInt( (log2Ceil(dw+1)).W) )
 
+    val aShift = PriorityEncoder(preDividend.asBools.reverse)
     val bShift = PriorityEncoder(preDdivisor.asBools.reverse)
 
-    divisor  := (preDdivisor << bShift) << 1 
-    dividend := Mux( bShift(0), preDividend, preDividend  << 1)
+    val shiftDiff = Cat(0.U(1.W), bShift).asSInt - Cat(0.U(1.W), aShift).asSInt
+    val quoBits   = Mux( shiftDiff < 0.S, 0.U, shiftDiff.asUInt())
 
-    iterations := ( bShift + 1.U((log2Ceil(dw+1)).W) ) >> 1
+
+    dividend := 
+      Mux( quoBits(0), 
+        Mux( shiftDiff < 0.S, preDividend << bShift, preDividend << aShift ), 
+        Mux( shiftDiff < 0.S, preDividend << bShift, preDividend << aShift )  << 1
+      )
+    divisor  := (preDdivisor << bShift) << 1 
+
+
+    iterations := (quoBits + 1.U) >> 1
+    // ( bShift + 1.U((log2Ceil(dw+1)).W) ) >> 1
     recovery   := dw.U((log2Ceil(dw+1)).W) - bShift
     return (dividend, divisor, iterations, recovery)
   }
