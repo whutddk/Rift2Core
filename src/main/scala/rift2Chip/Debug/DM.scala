@@ -156,13 +156,16 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     def WHERETO      : Int = return 0x300
     def DATA         : Int = return 0x380
     def PROGBUF      : Int = return DATA - (16 * 4) // if (cfg.hasImplicitEbreak) (tmp - 4) else tmp
+      // 340 344 348 34c
+      // 350 354 358 35c
+      // 360 364 368 36c
+      // 370 374 378 37c
     // def IMPEBREAK : Int = return { DATA - 4 }
     def ABSTRACT     : Int = return PROGBUF - (8 * 4)
+      // 320 324 328 32c
+      // 330 334 338 33c
     def FLAGS        : Int = return 0x400
     def ROMBASE      : Int = return 0x800
-
-
-
 
 
 
@@ -386,25 +389,14 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
             busy := true.B
             abstract_hartId := hartsel
 
-    // def HALTED       = 0x100
-    // def GOING        = 0x104
-    // def RESUMING     = 0x108
-    // def EXCEPTION    = 0x10C
-    // def WHERETO      = 0x300
-    // def DATA         = 0x380
-    // def PROGBUF = DATA - (16 * 4)
-    // def ABSTRACT = PROGBUF - (8 * 4)
-    // def FLAGS        = 0x400
-    // def ROMBASE      = 0x800
+
 
 
 
             whereTo := Cat(((ABSTRACT-WHERETO).U)(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U)(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx (debug_abstarct)
             flags(hartsel).is_going  := true.B
 
-            abstractGeneratedMem(5) := Mux( postexec, 
-              Cat(((PROGBUF-ABSTRACT-5*4).U)(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U)(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
-              "b0010011".U(32.W) ) //nop
+
 
             when( is_access_CSR ) {
               val reg_sel = regno(11,0)
@@ -430,12 +422,18 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
               )
               // csrr s0 dscratch1   
               abstractGeneratedMem(4) := Cat("h7b3".U(12.W), 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
-              abstractGeneratedMem(5) := "b0010011".U(32.W)  //nop
+              abstractGeneratedMem(5) := Mux( postexec, 
+              Cat(((PROGBUF-ABSTRACT-5*4).U)(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U)(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
+              "b0010011".U(32.W) ) //nop
               abstractGeneratedMem(6) := "b0010011".U(32.W)  //nop
               abstractGeneratedMem(7) := "b000000000000100000000000001110011".U
 
             } .elsewhen( is_access_GPR ) {
               val reg_sel = regno(4,0)
+
+
+              abstractGeneratedMem(0) := "b0010011".U(32.W) //addi 0, zero, 0 (nop)
+              abstractGeneratedMem(1) := "b0010011".U(32.W)
 
               abstractGeneratedMem(2) := Cat(
                 ((DATA).U)(11,5), // offset DATA
@@ -445,9 +443,20 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
                 Mux( transfer & write, reg_sel, ((DATA).U)(4,0)),       // rd = s0 / offset h500
                 Mux( transfer & write, "b0000011".U(7.W),  "b0100011".U(7.W) ), // ld or st
               )
+              abstractGeneratedMem(3) := "b0010011".U(32.W)
+              abstractGeneratedMem(4) := "b0010011".U(32.W)
+              abstractGeneratedMem(5) := Mux( postexec, 
+                Cat(((PROGBUF-ABSTRACT-5*4).U)(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U)(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
+                "b0010011".U(32.W) ) //nop
+              abstractGeneratedMem(6) := "b0010011".U(32.W)
+              abstractGeneratedMem(7) := "b000000000000100000000000001110011".U  //ebreak
+  
 
             } .elsewhen( is_access_FPR ) {
               val reg_sel = regno(4,0)
+
+              abstractGeneratedMem(0) := "b0010011".U(32.W) //addi 0, zero, 0 (nop)
+              abstractGeneratedMem(1) := "b0010011".U(32.W)
 
               abstractGeneratedMem(2) := Cat(
                 ((DATA).U)(11,5), // offset h500
@@ -457,6 +466,15 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
                 Mux( transfer & write, reg_sel, ((DATA).U)(4,0)),       // rd = s0 / offset h500
                 Mux( transfer & write, "b0000111".U(7.W),  "b0100111".U(7.W) ), // ld or st
               )
+
+              abstractGeneratedMem(3) := "b0010011".U(32.W)
+              abstractGeneratedMem(4) := "b0010011".U(32.W)
+              abstractGeneratedMem(5) := Mux( postexec, 
+                Cat(((PROGBUF-ABSTRACT-5*4).U)(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U)(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
+                "b0010011".U(32.W) ) //nop
+              abstractGeneratedMem(6) := "b0010011".U(32.W)
+              abstractGeneratedMem(7) := "b000000000000100000000000001110011".U  //ebreak
+
             }
           }
 
