@@ -1792,6 +1792,13 @@ trait CsrFiles { this: BaseCommit =>
       when(false.B) {}
       .elsewhen( in.is_debug_interrupt ){
         dcsr.prv := in.csrfiles.priv_lvl
+        dcsr.cause := MuxCase( 0.U, Seq(
+                  in.exint.is_trigger     -> 2.U,
+        in.is_ebreak_dm         -> 1.U,
+        in.exint.hartHaltReq    -> 3.U,
+        in.exint.is_single_step -> 4.U,
+
+        ))
       }
       .elsewhen(enable) {
         dcsr.ebreakm   := dnxt(15)

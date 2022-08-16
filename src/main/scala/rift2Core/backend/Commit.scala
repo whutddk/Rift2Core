@@ -225,7 +225,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
 
 
   def is_ebreak_breakpointn: Bool = {
-    val is_ebreak_breakpointn = 
+    val is_ebreak_breakpointn = ~csrfiles.DMode & 
       Mux1H(Seq(
         ( csrfiles.priv_lvl === "b11".U) -> csrfiles.dcsr.ebreakm,
         ( csrfiles.priv_lvl === "b01".U) -> csrfiles.dcsr.ebreaks,
