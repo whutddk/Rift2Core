@@ -709,33 +709,53 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
 
 
     when( commit_state_is_abort(i) ) {
-      when( cmm_state(i).is_mRet ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.mepc
-      } 
-      when( cmm_state(i).is_sRet ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.sepc
-      } 
-      when( cmm_state(i).is_dRet ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.dpc
-      } 
-      when( cmm_state(i).is_trap ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := Mux1H(Seq(
-            emu_reset                                   -> "h80000000".U,
-            cmm_state(i).is_debug_interrupt             -> "h00000800".U,
-            (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
-            (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
-          )),
-      } 
-      when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
-        io.cmmRedirect.valid := true.B
-        io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
+      when( cmm_state(i).csrfiles.DMode ) {
+        when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
+        }
+        when( cmm_state(i).is_interrupt ) { 
+          assert(false.B, "Assert Failed, All interrupts (including NMI) are masked in Dmode! Page-39")
+        }
+        when( cmm_state(i).is_exception ) {
+          when( cmm_state(i).is_ebreak_exc ) {
+            io.cmmRedirect.valid := true.B
+            io.cmmRedirect.bits.pc := "h00000800".U //for ebreak, jump to rom to halt again
+          } .otherwise {
+            io.cmmRedirect.valid := true.B
+            io.cmmRedirect.bits.pc := "h00000808".U //for other exception, jump to exception flag
+          }
+        }
+        when( cmm_state(i).is_dRet ) {
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.dpc
+        } 
+      } .otherwise {
+        when( cmm_state(i).is_mRet ) {
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.mepc
+        } 
+        when( cmm_state(i).is_sRet ) {
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.sepc
+        } 
+        when( cmm_state(i).is_trap ) {
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := Mux1H(Seq(
+              emu_reset                                   -> "h80000000".U,
+              cmm_state(i).is_debug_interrupt             -> "h00000800".U,
+              (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
+              (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
+            )),
+        } 
+        when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
+        }
+
+        assert( PopCount(Seq( cmm_state(i).is_xRet, cmm_state(i).is_trap, cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U )
       }
 
-      assert( PopCount(Seq( cmm_state(i).is_xRet, cmm_state(i).is_trap, cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U )
     }
 
     
