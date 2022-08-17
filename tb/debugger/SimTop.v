@@ -310,7 +310,6 @@ SimJTAG s_simJtag(
   );
 
 
-
 Rift2Chip s_Rift2Chip(
 	.clock(CLK),
 	.reset(~RSTn),
@@ -407,7 +406,7 @@ Rift2Chip s_Rift2Chip(
 
 
 
-
+/*verilator tracing_off*/
 axi_full_slv_sram # ( .DW(128), .AW(6) ) s_axi_full_slv_sram 
 (
 
@@ -452,7 +451,7 @@ axi_full_slv_sram # ( .DW(128), .AW(6) ) s_axi_full_slv_sram
 );
 
 
-
+/*verilator tracing_off*/
 debuger i_debuger(
 
 	.DEBUGER_AWID   (io_sys_chn_aw_bits_id),
