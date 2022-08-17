@@ -109,7 +109,7 @@ class Info_DM_cmm() extends Bundle{
 
 
 
-abstract class DMBase extends Module
+
 
 
 
@@ -119,7 +119,6 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
   val peripNode = TLRegisterNode(
     address = Seq(AddressSet(0x00000000L, 0x0000ffffL)),
-    // Seq(AddressSet(0x00000000L, 0x0000ffffL)),
     device = device,
     beatBytes = 8,
     executable = true
@@ -131,9 +130,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
   //   TLClientNode(Seq(sbaClientParameters))
   // }
   
-  lazy val module = new LazyModuleImp(this) {
-    
-
+  abstract class DMBase extends LazyModuleImp(this) {
     val io = IO(new Bundle{
       val dmi = Flipped(new DMIIO())
 
@@ -147,10 +144,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
       // val sba_getPut    = new DecoupledIO(new TLBundleA(edgeOut.bundle))
       // val sba_access = Flipped(new DecoupledIO(new TLBundleD(edgeOut.bundle)))
-
     })
-
-
 
     def HALTED       : Int = return 0x100
     def GOING        : Int = return 0x104
@@ -171,33 +165,21 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     def ROMBASE      : Int = return 0x800
 
 
+    val dmstatus = WireInit(0.U.asTypeOf(new DMSTATUSFields()))
+      val dmactive = RegInit(false.B)
+      val ndmreset = RegInit(false.B)
+    val hartsel = WireDefault(0.U(1.W))//RegInit(0.U( (log2Ceil(nComponents) max 1).W))
+    val havereset = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
+    val hartreset = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
+    // val resumereq = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
+    val resumeack = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
+    val haltreq = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
 
-  val dmstatus = WireInit(0.U.asTypeOf(new DMSTATUSFields()))
-    val dmactive = RegInit(false.B)
-    val ndmreset = RegInit(false.B)
-  val hartsel = WireDefault(0.U(1.W))//RegInit(0.U( (log2Ceil(nComponents) max 1).W))
-  val havereset = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
-  val hartreset = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
-  // val resumereq = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
-  val resumeack = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
-  val haltreq = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
+    val resethaltreq = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
+    val is_halted = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
+    val busy = RegInit(false.B)
+    val cmderr = RegInit(0.U(3.W))
 
-  val resethaltreq = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
-  val is_halted = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
-  val busy = RegInit(false.B)
-  val cmderr = RegInit(0.U(3.W))
-
-
-    val programBufferMem_qout = RegInit(VecInit(Seq.fill(16)(0.U(32.W))))
-    val programBufferMem_dnxt1 = Wire(Vec(16, UInt(32.W)))
-    val programBufferMem_dnxt2 = Wire(Vec(16, UInt(32.W)))
-    val programBufferMem_en1   = Wire(Vec(16, Bool() ))
-    val programBufferMem_en2   = Wire(Vec(16, Bool() ))
-
-    for ( i <- 0 until 16 ) yield {
-      when( programBufferMem_en1(i) ){ programBufferMem_qout(i) := programBufferMem_dnxt1(i) }
-      .elsewhen( programBufferMem_en2(i) ) { programBufferMem_qout(i) := programBufferMem_dnxt2(i) }
-    }
 
 
     val abstractDataMem_qout = RegInit(VecInit(Seq.fill(12)(0.U(32.W))))
@@ -230,7 +212,35 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       val is_going  = Bool()
     }))))
 
+    val setresethaltEn = Wire(Bool())
+    val clrresethaltEn = Wire(Bool())
 
+    val ackhavereset_W1 = Wire(Bool())
+
+    val resumeReq_W1 = Wire(Bool())
+  }
+
+  trait DMStatus { this: DMBase =>
+
+  }
+
+  /**
+    * Program Buffer instance, we have 16 program buffer, it can either be modified by  openocd through dtm-bus or be read by core through icache 
+    */
+  trait DMPBuff{ this: DMBase =>
+    val programBufferMem_qout = RegInit(VecInit(Seq.fill(16)(0.U(32.W))))
+    val programBufferMem_dnxt1 = Wire(Vec(16, UInt(32.W)))
+    val programBufferMem_dnxt2 = Wire(Vec(16, UInt(32.W)))
+    val programBufferMem_en1   = Wire(Vec(16, Bool() ))
+    val programBufferMem_en2   = Wire(Vec(16, Bool() ))
+
+    for ( i <- 0 until 16 ) yield {
+      when( programBufferMem_en1(i) ){ programBufferMem_qout(i) := programBufferMem_dnxt1(i) }
+      .elsewhen( programBufferMem_en2(i) ) { programBufferMem_qout(i) := programBufferMem_dnxt2(i) }
+    }
+  }
+
+  trait DMAbstract{ this: DMBase =>
     for ( i <- 0 until 12 ) yield {
       when( abstractDataMem_en1(i) ) { abstractDataMem_qout(i) := abstractDataMem_dnxt1(i) }
       .elsewhen( abstractDataMem_en2(i) ) { abstractDataMem_qout(i) := abstractDataMem_dnxt2(i) }
@@ -240,92 +250,6 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       abstractDataMem_qout(3) := (Cat(abstractDataMem_qout(3), abstractDataMem_qout(2)) + 1.U << control(22,20))(63,32)
       abstractDataMem_qout(2) := abstractDataMem_qout(2) + 1.U << control(22,20)
     }
-
-
-    val setresethaltEn = Wire(Bool())
-    val clrresethaltEn = Wire(Bool())
-    when( clrresethaltEn ) { resethaltreq(hartsel) := false.B }
-    .elsewhen( setresethaltEn ) { resethaltreq(hartsel) := true.B }
-
-
-
-
-    val ackhavereset_W1 = Wire(Bool())
-    for ( i <- 0 until nComponents) yield {
-      when( ~dmactive ) {
-        havereset(i) := false.B
-      } .elsewhen( io.dm_cmm(i).hartIsInReset ) {
-        havereset(i) := true.B       
-      } .elsewhen( ackhavereset_W1 ) {
-        havereset(hartsel) := false.B
-      }
-    }
-
-
-    for ( i <- 0 until nComponents) yield {
-      io.dm_cmm(i).hartResetReq := hartreset(i)
-      io.dm_cmm(i).hartHaltReq  := haltreq(i) | resethaltreq(i)
-    }
-
-
-    val resumeReq_W1 = Wire(Bool())
-    for ( i <- 0 until nComponents ) yield {
-      when( resumeReq_W1 & (i.U === hartsel) ){
-        flags(i).is_resume := true.B
-      } .elsewhen( hartResumingWrEn & (i.U === hartResumingId) ) {
-        flags(i).is_resume := false.B
-      }
-
-      when( io.dm_cmm(i).hartIsInReset ) {
-        is_halted(i) := false.B
-        resumeack(i) := false.B
-      } .elsewhen( resumeReq_W1 & (i.U === hartsel)) {
-        resumeack(i) := false.B
-      } .elsewhen( hartResumingWrEn & (i.U === hartResumingId)) {
-        is_halted(i) := false.B
-        resumeack(i) := true.B
-      } .elsewhen( hartHaltedWrEn & (i.U === hartHaltedId)) {
-        is_halted(i) := true.B
-      }
-        
-    }
-
-
-
-    dmstatus.anyhavereset := havereset(hartsel) === true.B
-    dmstatus.allhavereset := havereset(hartsel) === true.B
-    dmstatus.anyresumeack := resumeack(hartsel) === true.B
-    dmstatus.allresumeack := resumeack(hartsel) === true.B
-    dmstatus.anynonexistent := hartsel >= nComponents.U
-    dmstatus.allnonexistent := hartsel >= nComponents.U
-    dmstatus.anyunavail := io.dm_cmm(hartsel).hartIsInReset === true.B
-    dmstatus.allunavail := io.dm_cmm(hartsel).hartIsInReset === true.B
-    dmstatus.anyrunning := ~io.dm_cmm(hartsel).hartIsInReset & ~is_halted(hartsel)
-    dmstatus.allrunning := ~io.dm_cmm(hartsel).hartIsInReset & ~is_halted(hartsel)
-    dmstatus.anyhalted := is_halted(hartsel) === true.B
-    dmstatus.allhalted := is_halted(hartsel) === true.B
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     val commandVal = Wire(UInt(32.W))
     val commandEn  = Wire(Bool())
@@ -344,12 +268,6 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       "b000000000000100000000000001110011".U  //ebreak
     ))
 
-
-
-    // val sba_addr = RegInit(0.U(64.W))
-    // val sba_wdata = RegInit(0.U(64.W))
-    // val sba_wstrb = RegInit(0.U(8.W))
-    // val sba_isWrite = RegInit(false.B)
 
     //abstract command
 
@@ -559,7 +477,73 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
           // }
         }
       }
-    } .elsewhen(hartGoingWrEn) {
+    } 
+
+  }
+
+
+  class DebugModuleImp extends DMBase with DMStatus with DMPBuff with DMAbstract {
+
+    when( clrresethaltEn ) { resethaltreq(hartsel) := false.B }
+    .elsewhen( setresethaltEn ) { resethaltreq(hartsel) := true.B }
+
+
+    for ( i <- 0 until nComponents) yield {
+      when( ~dmactive ) {
+        havereset(i) := false.B
+      } .elsewhen( io.dm_cmm(i).hartIsInReset ) {
+        havereset(i) := true.B       
+      } .elsewhen( ackhavereset_W1 ) {
+        havereset(hartsel) := false.B
+      }
+    }
+
+
+    for ( i <- 0 until nComponents) yield {
+      io.dm_cmm(i).hartResetReq := hartreset(i)
+      io.dm_cmm(i).hartHaltReq  := haltreq(i) | resethaltreq(i)
+    }
+
+
+    
+    for ( i <- 0 until nComponents ) yield {
+      when( resumeReq_W1 & (i.U === hartsel) ){
+        flags(i).is_resume := true.B
+      } .elsewhen( hartResumingWrEn & (i.U === hartResumingId) ) {
+        flags(i).is_resume := false.B
+      }
+
+      when( io.dm_cmm(i).hartIsInReset ) {
+        is_halted(i) := false.B
+        resumeack(i) := false.B
+      } .elsewhen( resumeReq_W1 & (i.U === hartsel)) {
+        resumeack(i) := false.B
+      } .elsewhen( hartResumingWrEn & (i.U === hartResumingId)) {
+        is_halted(i) := false.B
+        resumeack(i) := true.B
+      } .elsewhen( hartHaltedWrEn & (i.U === hartHaltedId)) {
+        is_halted(i) := true.B
+      }
+        
+    }
+
+
+
+    dmstatus.anyhavereset := havereset(hartsel) === true.B
+    dmstatus.allhavereset := havereset(hartsel) === true.B
+    dmstatus.anyresumeack := resumeack(hartsel) === true.B
+    dmstatus.allresumeack := resumeack(hartsel) === true.B
+    dmstatus.anynonexistent := hartsel >= nComponents.U
+    dmstatus.allnonexistent := hartsel >= nComponents.U
+    dmstatus.anyunavail := io.dm_cmm(hartsel).hartIsInReset === true.B
+    dmstatus.allunavail := io.dm_cmm(hartsel).hartIsInReset === true.B
+    dmstatus.anyrunning := ~io.dm_cmm(hartsel).hartIsInReset & ~is_halted(hartsel)
+    dmstatus.allrunning := ~io.dm_cmm(hartsel).hartIsInReset & ~is_halted(hartsel)
+    dmstatus.anyhalted := is_halted(hartsel) === true.B
+    dmstatus.allhalted := is_halted(hartsel) === true.B
+
+    
+    when(hartGoingWrEn) {
       flags(hartGoingId).is_going := false.B
     } .elsewhen( hartHaltedWrEn & busy & abstract_hartId === hartHaltedId ){
       busy := false.B
@@ -734,144 +718,144 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
 
     peripNode.regmap(
+      (HALTED ) -> Seq(WNotifyVal(32, 0.U, hartHaltedId, hartHaltedWrEn, RegFieldDesc("debug_hart_halted", "Debug ROM Causes hart to write its hartID here when it is in Debug Mode."))), //HALTED
+      (GOING ) -> Seq(WNotifyVal(32, 0.U, hartGoingId,  hartGoingWrEn, RegFieldDesc("debug_hart_going", "Debug ROM causes hart to write 0 here when it begins executing Debug Mode instructions."))), //GOING
+      (RESUMING ) -> Seq(WNotifyVal(32, 0.U, hartResumingId,  hartResumingWrEn, RegFieldDesc("debug_hart_resuming", "Debug ROM causes hart to write its hartID here when it leaves Debug Mode."))), //RESUMING
+      (EXCEPTION ) -> Seq(WNotifyVal(32, 0.U, hartExceptionId,  hartExceptionWrEn, RegFieldDesc("debug_hart_exception", "Debug ROM causes hart to write 0 here if it gets an exception in Debug Mode."))), //EXCEPTION
+      (WHERETO ) -> Seq(RegField.r(32, whereTo, RegFieldDesc("debug_whereto", "Instruction filled in by Debug Module to control hart in Debug Mode", volatile = true))),
       
+      (ABSTRACT ) -> RegFieldGroup("debug_abstract", Some("Instructions generated by Debug Module"), abstractGeneratedMem.zipWithIndex.map{ case (x,i) => RegField.r(32, x)}),
+      (PROGBUF ) -> RegFieldGroup("debug_progbuf", Some("Program buffer used to communicate with Debug Module"), (0 to 15).map{ i => WNotifyVal(32, programBufferMem_qout(i), programBufferMem_dnxt2(i), programBufferMem_en2(i))}),
+      (DATA ) -> RegFieldGroup("debug_data", Some("Data used to communicate with Debug Module"), (0 to 11).map{ i => WNotifyVal(32, abstractDataMem_qout(i), abstractDataMem_dnxt2(i), abstractDataMem_en2(i))}),
       
-      
-        (HALTED ) -> Seq(WNotifyVal(32, 0.U, hartHaltedId, hartHaltedWrEn, RegFieldDesc("debug_hart_halted", "Debug ROM Causes hart to write its hartID here when it is in Debug Mode."))), //HALTED
-        (GOING ) -> Seq(WNotifyVal(32, 0.U, hartGoingId,  hartGoingWrEn, RegFieldDesc("debug_hart_going", "Debug ROM causes hart to write 0 here when it begins executing Debug Mode instructions."))), //GOING
-        (RESUMING ) -> Seq(WNotifyVal(32, 0.U, hartResumingId,  hartResumingWrEn, RegFieldDesc("debug_hart_resuming", "Debug ROM causes hart to write its hartID here when it leaves Debug Mode."))), //RESUMING
-        (EXCEPTION ) -> Seq(WNotifyVal(32, 0.U, hartExceptionId,  hartExceptionWrEn, RegFieldDesc("debug_hart_exception", "Debug ROM causes hart to write 0 here if it gets an exception in Debug Mode."))), //EXCEPTION
-        (WHERETO ) -> Seq(RegField.r(32, whereTo, RegFieldDesc("debug_whereto", "Instruction filled in by Debug Module to control hart in Debug Mode", volatile = true))),
-        
-        (ABSTRACT ) -> RegFieldGroup("debug_abstract", Some("Instructions generated by Debug Module"), abstractGeneratedMem.zipWithIndex.map{ case (x,i) => RegField.r(32, x)}),
-        (PROGBUF ) -> RegFieldGroup("debug_progbuf", Some("Program buffer used to communicate with Debug Module"), (0 to 15).map{ i => WNotifyVal(32, programBufferMem_qout(i), programBufferMem_dnxt2(i), programBufferMem_en2(i))}),
-        (DATA ) -> RegFieldGroup("debug_data", Some("Data used to communicate with Debug Module"), (0 to 11).map{ i => WNotifyVal(32, abstractDataMem_qout(i), abstractDataMem_dnxt2(i), abstractDataMem_en2(i))}),
-        
-        
-        (FLAGS ) -> RegFieldGroup("debug_flags", Some("Memory region used to control hart going/resuming in Debug Mode"), flags.zipWithIndex.map{case(x, i) => RegField.r(8, x.asUInt())}),
-        (ROMBASE ) -> RegFieldGroup("debug_rom", Some("Debug ROM"), DebugRomContents().zipWithIndex.map{case (x, i) => RegField.r(8, (x & 0xFF).U(8.W))}),
-    
+      (FLAGS ) -> RegFieldGroup("debug_flags", Some("Memory region used to control hart going/resuming in Debug Mode"), flags.zipWithIndex.map{case(x, i) => RegField.r(8, x.asUInt())}),
+      (ROMBASE ) -> RegFieldGroup("debug_rom", Some("Debug ROM"), DebugRomContents().zipWithIndex.map{case (x, i) => RegField.r(8, (x & 0xFF).U(8.W))}),
     )
 
   }
 
+  trait sba { this: DMBase =>
+    // val ( sba_bus, edgeOut ) = sbaClientNode.out.head
+
+    //   val sberror = RegInit(0.U(3.W))
+    //   val sbreadondata = RegInit(false.B)
+    //   val sbautoincrement = RegInit(false.B)
+    //   val sbaccess = RegInit(2.U(3.W))
+    //   val sbreadonaddr = RegInit(false.B)
+    //   val sbbusy = RegInit(false.B)
+    //   val sbbusyerror = RegInit(false.B)
+    //   val sbaddress = RegInit(VecInit(Seq.fill(2)(0.U(32.W))))
+    //   val sbdata = RegInit(VecInit(Seq.fill(2)(0.U(32.W))))
+
+    //   val sbaddressWrEn   = Wire(Bool())
+    //   val sbaddressWrData = Wire(UInt(32.W))
+
+    //   val sbdataWrEn   = Wire(Bool())
+    //   val sbdataWrData = Wire(UInt(32.W)) 
+    //   val sbdataRdEn   = Wire(Bool())
+
+
+
+
+    //   val sba = {
+    //     val mdl = Module(new SBA(edgeOut))
+    //     sba_bus.a.valid := mdl.io.getPut.valid
+    //     sba_bus.a.bits := mdl.io.getPut.bits
+    //     mdl.io.getPut.ready := sba_bus.a.ready
+
+    //     mdl.io.access.valid := sba_bus.d.valid
+    //     mdl.io.access.bits := sba_bus.d.bits
+    //     sba_bus.d.ready := mdl.io.access.ready
+    //     mdl
+    //   }
+
+    //     val req = Flipped(Decoupled(new Info_sba_req))
+    //     val rsp = Decoupled(new Info_sba_rsp)
+
+    //   val sba_req_valid = RegInit(false.B)
+    //   val sba_op = RegInit(false.B)
+    //   sba.io.req.valid := sba_req_valid
+
+    //   sba.io.req.bits.paddr := Cat(sbaddress(1),sbaddress(0))
+    //   sba.io.req.bits.wdata := Cat(sbdata(1), sbdata(0))
+    //   sba.io.req.bits.is_byte   := (sbaccess === 0.U)
+    //   sba.io.req.bits.is_half   := (sbaccess === 1.U)
+    //   sba.io.req.bits.is_word   := (sbaccess === 2.U)
+    //   sba.io.req.bits.is_dubl := (sbaccess === 3.U)
+    //   sba.io.req.bits.is_rd_wrn := sba_op
+
+
+    //           // val sbaddressWrEn   = Wire(Bool())
+    //           // val sbaddressWrData = Wire(UInt(32.W))
+
+    //           // val sbdataWrEn   = Wire(Bool())
+    //           // val sbdataWrData = Wire(UInt(32.W)) 
+    //           // val sbdataRdEn   = Wire(Bool())
+
+    //   when( sbaddressWrEn ) {
+    //     when( sbbusy ) {
+    //       sbbusyerror := true.B
+    //     } .otherwise {
+    //       sbaddress(0) := sbaddressWrData
+    //       when( sbreadonaddr & sberror === 0.U & ~sbbusyerror) {
+    //         sbbusy := true.B
+    //         sba_op := true.B
+    //         sba_req_valid := true.B
+    //       }
+    //     }
+    //   }
+
+    //   when( sbdataRdEn ) {
+    //     when( sbbusy ) {
+    //       sbbusyerror := true.B
+    //     } .elsewhen( sbreadondata & sberror === 0.U & ~sbbusyerror) {
+    //       sbbusy := true.B
+    //       sba_op := true.B
+    //       sba_req_valid := true.B
+    //     }
+    //   }
+
+    //   when( sbdataWrEn ) {
+    //     when( sbbusy ) {
+    //       sbbusyerror := true.B
+    //     } .otherwise {
+    //       sbdata(0) := sbdataWrData
+    //       when( sberror === 0.U & ~sbbusyerror) {
+    //         sbbusy := true.B
+    //         sba_op := false.B
+    //         sba_req_valid := true.B
+    //       }      
+    //     }
+    //   }
+
+    //   when( sba.io.req.fire ) {
+    //     sba_req_valid := false.B
+    //   }
+
+    //   sba.io.rsp.ready := true.B
+
+    //   when( sba.io.rsp.fire ) {
+    //     sbbusy := false.B
+    //     when( sbautoincrement ) {
+    //       sbaddress(1) := (Cat(sbaddress(1), sbaddress(0)) + (1.U << sbaccess)) >> 32
+    //       sbaddress(0) := sbaddress(0) + (1.U << sbaccess)
+    //     }
+
+    //     when( sba_op === true.B ) {
+    //       sbdata(0) := sba.io.rsp.bits.rdata(31,0) 
+    //       sbdata(1) := sba.io.rsp.bits.rdata(63,32)
+    //     }
+
+    //   }
+  }
+  
+
+
+  lazy val module = new DebugModuleImp {}
 // WNotifyVal {
 //   def apply(n: Int, rVal: UInt, wVal: UInt, wNotify: Bool, desc: RegFieldDesc)
 
 // }
 }
 
-trait sba { this: DMBase =>
-  // val ( sba_bus, edgeOut ) = sbaClientNode.out.head
 
-  //   val sberror = RegInit(0.U(3.W))
-  //   val sbreadondata = RegInit(false.B)
-  //   val sbautoincrement = RegInit(false.B)
-  //   val sbaccess = RegInit(2.U(3.W))
-  //   val sbreadonaddr = RegInit(false.B)
-  //   val sbbusy = RegInit(false.B)
-  //   val sbbusyerror = RegInit(false.B)
-  //   val sbaddress = RegInit(VecInit(Seq.fill(2)(0.U(32.W))))
-  //   val sbdata = RegInit(VecInit(Seq.fill(2)(0.U(32.W))))
-
-  //   val sbaddressWrEn   = Wire(Bool())
-  //   val sbaddressWrData = Wire(UInt(32.W))
-
-  //   val sbdataWrEn   = Wire(Bool())
-  //   val sbdataWrData = Wire(UInt(32.W)) 
-  //   val sbdataRdEn   = Wire(Bool())
-
-
-
-
-  //   val sba = {
-  //     val mdl = Module(new SBA(edgeOut))
-  //     sba_bus.a.valid := mdl.io.getPut.valid
-  //     sba_bus.a.bits := mdl.io.getPut.bits
-  //     mdl.io.getPut.ready := sba_bus.a.ready
-
-  //     mdl.io.access.valid := sba_bus.d.valid
-  //     mdl.io.access.bits := sba_bus.d.bits
-  //     sba_bus.d.ready := mdl.io.access.ready
-  //     mdl
-  //   }
-
-  //     val req = Flipped(Decoupled(new Info_sba_req))
-  //     val rsp = Decoupled(new Info_sba_rsp)
-
-  //   val sba_req_valid = RegInit(false.B)
-  //   val sba_op = RegInit(false.B)
-  //   sba.io.req.valid := sba_req_valid
-
-  //   sba.io.req.bits.paddr := Cat(sbaddress(1),sbaddress(0))
-  //   sba.io.req.bits.wdata := Cat(sbdata(1), sbdata(0))
-  //   sba.io.req.bits.is_byte   := (sbaccess === 0.U)
-  //   sba.io.req.bits.is_half   := (sbaccess === 1.U)
-  //   sba.io.req.bits.is_word   := (sbaccess === 2.U)
-  //   sba.io.req.bits.is_dubl := (sbaccess === 3.U)
-  //   sba.io.req.bits.is_rd_wrn := sba_op
-
-
-  //           // val sbaddressWrEn   = Wire(Bool())
-  //           // val sbaddressWrData = Wire(UInt(32.W))
-
-  //           // val sbdataWrEn   = Wire(Bool())
-  //           // val sbdataWrData = Wire(UInt(32.W)) 
-  //           // val sbdataRdEn   = Wire(Bool())
-
-  //   when( sbaddressWrEn ) {
-  //     when( sbbusy ) {
-  //       sbbusyerror := true.B
-  //     } .otherwise {
-  //       sbaddress(0) := sbaddressWrData
-  //       when( sbreadonaddr & sberror === 0.U & ~sbbusyerror) {
-  //         sbbusy := true.B
-  //         sba_op := true.B
-  //         sba_req_valid := true.B
-  //       }
-  //     }
-  //   }
-
-  //   when( sbdataRdEn ) {
-  //     when( sbbusy ) {
-  //       sbbusyerror := true.B
-  //     } .elsewhen( sbreadondata & sberror === 0.U & ~sbbusyerror) {
-  //       sbbusy := true.B
-  //       sba_op := true.B
-  //       sba_req_valid := true.B
-  //     }
-  //   }
-
-  //   when( sbdataWrEn ) {
-  //     when( sbbusy ) {
-  //       sbbusyerror := true.B
-  //     } .otherwise {
-  //       sbdata(0) := sbdataWrData
-  //       when( sberror === 0.U & ~sbbusyerror) {
-  //         sbbusy := true.B
-  //         sba_op := false.B
-  //         sba_req_valid := true.B
-  //       }      
-  //     }
-  //   }
-
-  //   when( sba.io.req.fire ) {
-  //     sba_req_valid := false.B
-  //   }
-
-  //   sba.io.rsp.ready := true.B
-
-  //   when( sba.io.rsp.fire ) {
-  //     sbbusy := false.B
-  //     when( sbautoincrement ) {
-  //       sbaddress(1) := (Cat(sbaddress(1), sbaddress(0)) + (1.U << sbaccess)) >> 32
-  //       sbaddress(0) := sbaddress(0) + (1.U << sbaccess)
-  //     }
-
-  //     when( sba_op === true.B ) {
-  //       sbdata(0) := sba.io.rsp.bits.rdata(31,0) 
-  //       sbdata(1) := sba.io.rsp.bits.rdata(63,32)
-  //     }
-
-  //   }
-}
