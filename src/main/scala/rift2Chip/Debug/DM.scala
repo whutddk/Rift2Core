@@ -109,6 +109,9 @@ class Info_DM_cmm() extends Bundle{
 
 
 
+abstract class DMBase extends Module
+
+
 
 
 class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) extends LazyModule{
@@ -123,13 +126,13 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
   )
 
 
-  val sbaClientNode = {
-    val sbaClientParameters = TLMasterPortParameters.v1( Seq(TLMasterParameters.v1( name = "sba", sourceId = IdRange(0, 1)  )))
-    TLClientNode(Seq(sbaClientParameters))
-  }
+  // val sbaClientNode = {
+  //   val sbaClientParameters = TLMasterPortParameters.v1( Seq(TLMasterParameters.v1( name = "sba", sourceId = IdRange(0, 1)  )))
+  //   TLClientNode(Seq(sbaClientParameters))
+  // }
   
   lazy val module = new LazyModuleImp(this) {
-    val ( sba_bus, edgeOut ) = sbaClientNode.out.head
+    
 
     val io = IO(new Bundle{
       val dmi = Flipped(new DMIIO())
@@ -481,77 +484,79 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         } 
 
         when( is_quick_access ) {
-          whereTo := Cat(((ABSTRACT-WHERETO).U)(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U)(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx
-          flags(hartsel).is_going  := true.B
+          cmderr := 2.U
+          // whereTo := Cat(((ABSTRACT-WHERETO).U)(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U)(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx
+          // flags(hartsel).is_going  := true.B
 
-          busy := true.B
-          abstract_hartId := hartsel
+          // busy := true.B
+          // abstract_hartId := hartsel
         } 
 
         when( is_access_memory ) {
-          val aamvirtual = control(23).asBool
-          val aamsize    = control(22,20)
-          val aampostincrement = control(19).asBool
-          val write = control(16).asBool
-          val target_specific = control(15,14)
+          cmderr := 2.U
+          // val aamvirtual = control(23).asBool
+          // val aamsize    = control(22,20)
+          // val aampostincrement = control(19).asBool
+          // val write = control(16).asBool
+          // val target_specific = control(15,14)
 
-          val is_misalign = Mux1H(Seq(
-            (aamsize === 0.U) -> false.B,
-            (aamsize === 1.U) -> (abstractDataMem_qout(2)(0) =/= 0.U ),
-            (aamsize === 2.U) -> (abstractDataMem_qout(2)(1,0) =/= 0.U ),
-            (aamsize === 3.U) -> (abstractDataMem_qout(2)(2,0) =/= 0.U ),
-          ))
+          // val is_misalign = Mux1H(Seq(
+          //   (aamsize === 0.U) -> false.B,
+          //   (aamsize === 1.U) -> (abstractDataMem_qout(2)(0) =/= 0.U ),
+          //   (aamsize === 2.U) -> (abstractDataMem_qout(2)(1,0) =/= 0.U ),
+          //   (aamsize === 3.U) -> (abstractDataMem_qout(2)(2,0) =/= 0.U ),
+          // ))
 
-          when( is_misalign ) {
-            cmderr := 2.U
-          } .otherwise {
-            busy := true.B
-            abstract_hartId := hartsel
+          // when( is_misalign ) {
+          //   cmderr := 2.U
+          // } .otherwise {
+          //   busy := true.B
+          //   abstract_hartId := hartsel
 
-            whereTo := Cat(((PROGBUF-WHERETO).U)(20), ((PROGBUF-WHERETO).U)(10,1), ((PROGBUF-WHERETO).U)(11), ((PROGBUF-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to PROGBUF (WHERETO+hxxx) jal hxxx
-            flags(hartsel).is_going  := true.B
+          //   whereTo := Cat(((PROGBUF-WHERETO).U)(20), ((PROGBUF-WHERETO).U)(10,1), ((PROGBUF-WHERETO).U)(11), ((PROGBUF-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to PROGBUF (WHERETO+hxxx) jal hxxx
+          //   flags(hartsel).is_going  := true.B
 
 
-            // csrw s0 dscratch1,
-            abstractGeneratedMem(0) := Cat("h7b3".U(12.W), 8.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W))
-            // csrw s1 dscratch2,
-            abstractGeneratedMem(1) := Cat("h7b4".U(12.W), 9.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W))
+          //   // csrw s0 dscratch1,
+          //   abstractGeneratedMem(0) := Cat("h7b3".U(12.W), 8.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W))
+          //   // csrw s1 dscratch2,
+          //   abstractGeneratedMem(1) := Cat("h7b4".U(12.W), 9.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W))
           
-            //load s0, (DATA)+8 (arg1)
-            abstractGeneratedMem(2) := Cat(
-              ((DATA+8).U), // offset (DATA+8)
-              0.U(5.W),         // rs1 = 0 base
-              "b011".U(3.W),       // word / double-word
-              8.U(5.W),       //rd=s0
-              "b0000011".U(7.W)
-            )
+          //   //load s0, (DATA)+8 (arg1)
+          //   abstractGeneratedMem(2) := Cat(
+          //     ((DATA+8).U), // offset (DATA+8)
+          //     0.U(5.W),         // rs1 = 0 base
+          //     "b011".U(3.W),       // word / double-word
+          //     8.U(5.W),       //rd=s0
+          //     "b0000011".U(7.W)
+          //   )
             
-            //write ld/lw/lh/lb s1 (DATA)(arg0) / read ld s1 s0 
-            abstractGeneratedMem(3) := Cat(
-              Mux(write, ((DATA).U(12.W)),  0.U(12.W)), // offset (DATA)
-              Mux(write, 0.U(5.W), 8.U(5.W) ),        // rs1 = 0 base rs1 = s0
-              aamsize,       // word / double-word
-              9.U(5.W),                              //rd=s1
-              "b0000011".U(7.W)
-            )
+          //   //write ld/lw/lh/lb s1 (DATA)(arg0) / read ld s1 s0 
+          //   abstractGeneratedMem(3) := Cat(
+          //     Mux(write, ((DATA).U(12.W)),  0.U(12.W)), // offset (DATA)
+          //     Mux(write, 0.U(5.W), 8.U(5.W) ),        // rs1 = 0 base rs1 = s0
+          //     aamsize,       // word / double-word
+          //     9.U(5.W),                              //rd=s1
+          //     "b0000011".U(7.W)
+          //   )
 
-            //write st/sw/sh/sb s1 s0(0) / read st s1 h500
-            abstractGeneratedMem(4) := Cat(
-              Mux(write, 0.U(7.W), ((DATA).U)(11,5) ), // offset h00 / h500
-              9.U(5.W),                               //  rs2 = s1
-              Mux(write, 8.U(5.W), 0.U(5.W)),          // rs1 = s0 / rs1 = 0 base
-              aamsize,                                 // word / double-word
-              Mux(write, 0.U(5.W), ((DATA).U)(4,0)),   //  offset h00 / h500
-              "b0100011".U(7.W) ,                          //  st
-            )
+          //   //write st/sw/sh/sb s1 s0(0) / read st s1 h500
+          //   abstractGeneratedMem(4) := Cat(
+          //     Mux(write, 0.U(7.W), ((DATA).U)(11,5) ), // offset h00 / h500
+          //     9.U(5.W),                               //  rs2 = s1
+          //     Mux(write, 8.U(5.W), 0.U(5.W)),          // rs1 = s0 / rs1 = 0 base
+          //     aamsize,                                 // word / double-word
+          //     Mux(write, 0.U(5.W), ((DATA).U)(4,0)),   //  offset h00 / h500
+          //     "b0100011".U(7.W) ,                          //  st
+          //   )
 
-            // csrr s0 dscratch1   
-            abstractGeneratedMem(5) := Cat("h7b3".U(12.W), 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
-            // csrr s1 dscratch2   
-            abstractGeneratedMem(6) := Cat("h7b4".U(12.W), 0.U(5.W), "b010".U(3.W), 9.U(5.W), "b1110011".U(7.W))
-            abstractGeneratedMem(7) := "b000000000000100000000000001110011".U
+          //   // csrr s0 dscratch1   
+          //   abstractGeneratedMem(5) := Cat("h7b3".U(12.W), 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
+          //   // csrr s1 dscratch2   
+          //   abstractGeneratedMem(6) := Cat("h7b4".U(12.W), 0.U(5.W), "b010".U(3.W), 9.U(5.W), "b1110011".U(7.W))
+          //   abstractGeneratedMem(7) := "b000000000000100000000000001110011".U
 
-          }
+          // }
         }
       }
     } .elsewhen(hartGoingWrEn) {
@@ -569,117 +574,6 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
 
 
-
-    val sberror = RegInit(0.U(3.W))
-    val sbreadondata = RegInit(false.B)
-    val sbautoincrement = RegInit(false.B)
-    val sbaccess = RegInit(2.U(3.W))
-    val sbreadonaddr = RegInit(false.B)
-    val sbbusy = RegInit(false.B)
-    val sbbusyerror = RegInit(false.B)
-    val sbaddress = RegInit(VecInit(Seq.fill(2)(0.U(32.W))))
-    val sbdata = RegInit(VecInit(Seq.fill(2)(0.U(32.W))))
-
-    val sbaddressWrEn   = Wire(Bool())
-    val sbaddressWrData = Wire(UInt(32.W))
-
-    val sbdataWrEn   = Wire(Bool())
-    val sbdataWrData = Wire(UInt(32.W)) 
-    val sbdataRdEn   = Wire(Bool())
-
-
-
-
-    val sba = {
-      val mdl = Module(new SBA(edgeOut))
-      sba_bus.a.valid := mdl.io.getPut.valid
-      sba_bus.a.bits := mdl.io.getPut.bits
-      mdl.io.getPut.ready := sba_bus.a.ready
-
-      mdl.io.access.valid := sba_bus.d.valid
-      mdl.io.access.bits := sba_bus.d.bits
-      sba_bus.d.ready := mdl.io.access.ready
-      mdl
-    }
-
-      val req = Flipped(Decoupled(new Info_sba_req))
-      val rsp = Decoupled(new Info_sba_rsp)
-
-    val sba_req_valid = RegInit(false.B)
-    val sba_op = RegInit(false.B)
-    sba.io.req.valid := sba_req_valid
-
-    sba.io.req.bits.paddr := Cat(sbaddress(1),sbaddress(0))
-    sba.io.req.bits.wdata := Cat(sbdata(1), sbdata(0))
-    sba.io.req.bits.is_byte   := (sbaccess === 0.U)
-    sba.io.req.bits.is_half   := (sbaccess === 1.U)
-    sba.io.req.bits.is_word   := (sbaccess === 2.U)
-    sba.io.req.bits.is_dubl := (sbaccess === 3.U)
-    sba.io.req.bits.is_rd_wrn := sba_op
-
-
-    // val sbaddressWrEn   = Wire(Bool())
-    // val sbaddressWrData = Wire(UInt(32.W))
-
-    // val sbdataWrEn   = Wire(Bool())
-    // val sbdataWrData = Wire(UInt(32.W)) 
-    // val sbdataRdEn   = Wire(Bool())
-
-    when( sbaddressWrEn ) {
-      when( sbbusy ) {
-        sbbusyerror := true.B
-      } .otherwise {
-        sbaddress(0) := sbaddressWrData
-        when( sbreadonaddr & sberror === 0.U & ~sbbusyerror) {
-          sbbusy := true.B
-          sba_op := true.B
-          sba_req_valid := true.B
-        }
-      }
-    }
-
-    when( sbdataRdEn ) {
-      when( sbbusy ) {
-        sbbusyerror := true.B
-      } .elsewhen( sbreadondata & sberror === 0.U & ~sbbusyerror) {
-        sbbusy := true.B
-        sba_op := true.B
-        sba_req_valid := true.B
-      }
-    }
-
-    when( sbdataWrEn ) {
-      when( sbbusy ) {
-        sbbusyerror := true.B
-      } .otherwise {
-        sbdata(0) := sbdataWrData
-        when( sberror === 0.U & ~sbbusyerror) {
-          sbbusy := true.B
-          sba_op := false.B
-          sba_req_valid := true.B
-        }      
-      }
-    }
-
-    when( sba.io.req.fire ) {
-      sba_req_valid := false.B
-    }
-
-    sba.io.rsp.ready := true.B
-
-    when( sba.io.rsp.fire ) {
-      sbbusy := false.B
-      when( sbautoincrement ) {
-        sbaddress(1) := (Cat(sbaddress(1), sbaddress(0)) + (1.U << sbaccess)) >> 32
-        sbaddress(0) := sbaddress(0) + (1.U << sbaccess)
-      }
-
-      when( sba_op === true.B ) {
-        sbdata(0) := sba.io.rsp.bits.rdata(31,0) 
-        sbdata(1) := sba.io.rsp.bits.rdata(63,32)
-      }
-
-    }
 
 
 
@@ -723,112 +617,113 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     dmi_req.bits.data  := io.dmi.req.bits.data
     dmi_req.bits.mask  := Mux(io.dmi.req.bits.op === 2.U, ~(0.U(8.W)), 0.U)
 
-    val dmi_resp = RegMapper(bytes = 4, concurrency = 0, undefZero = true, in = dmi_req,
-      mapping = 
-        (0x04 << 2) -> RegFieldGroup("data", Some("Data used to communicate with Debug Module"), (0 to 11).map{ i => WNotifyVal(32, abstractDataMem_qout(i), abstractDataMem_dnxt1(i), abstractDataMem_en1(i))}),
+    val respMap = Seq(
+    (0x04 << 2) -> RegFieldGroup("data", Some("Data used to communicate with Debug Module"), (0 to 11).map{ i => WNotifyVal(32, abstractDataMem_qout(i), abstractDataMem_dnxt1(i), abstractDataMem_en1(i))}),
 
-        (0x10 << 2) -> RegFieldGroup("dmcontrol", Some("debug module control register"), Seq(
-          RegField(1,  dmactive, RegFieldDesc("dmactive",         "dmactive",         reset=Some(0))),
-          RegField(1,  ndmreset, RegFieldDesc("ndmreset",         "ndmreset",         reset=Some(0))),
-          RegField.w(1, RegWriteFn((valid, data) => { clrresethaltEn := (valid & (data === 1.U)) ; true.B} ),RegFieldDesc("clrresethaltreq", "clrresethaltreq")),
-          RegField.w(1, RegWriteFn((valid, data) => { setresethaltEn := (valid & (data === 1.U)) ; true.B} ),RegFieldDesc("setresethaltreq", "setresethaltreq")),
-          RegField(2),
-          RegField.r(10, 0.U, RegFieldDesc("hartselhi",         "hartselhi(ignore)")),
-          RegField.r(10, 0.U, RegFieldDesc("hartsello",         "hartsello(ignore)")),
-          RegField.r(1, 0.U, RegFieldDesc("hasel",         "hasel",         reset=Some(0))),
-          RegField(1),
-          RegField.w(1, RegWriteFn((valid, data) => { { ackhavereset_W1 := valid & (data === 1.U) }; true.B }), RegFieldDesc("ackhavereset", "0: No effect; 1: Clear havereset for any selected harts")),
-          RegField(1, hartreset(hartsel), RegFieldDesc("hartreset",         "hartreset",         reset=Some(0))),
-          RegField.w(1, RegWriteFn((valid, data) => { resumeReq_W1 := (haltreq(hartsel) === 0.U & valid & data === 1.U); true.B }), RegFieldDesc("resumereq", "Writing 1 causes the currently selected harts to resume once, if they are halted when the write occurs. It also clears the resume ack bit for those harts.resumereq is ignored if haltreq is set.")),
-          RegField.w(1, RegWriteFn((valid, data) => { when(valid) {haltreq(hartsel) := data}; true.B }), RegFieldDesc("haltreq",         "haltreq"))
-        )),
+    (0x10 << 2) -> RegFieldGroup("dmcontrol", Some("debug module control register"), Seq(
+      RegField(1,  dmactive, RegFieldDesc("dmactive",         "dmactive",         reset=Some(0))),
+      RegField(1,  ndmreset, RegFieldDesc("ndmreset",         "ndmreset",         reset=Some(0))),
+      RegField.w(1, RegWriteFn((valid, data) => { clrresethaltEn := (valid & (data === 1.U)) ; true.B} ),RegFieldDesc("clrresethaltreq", "clrresethaltreq")),
+      RegField.w(1, RegWriteFn((valid, data) => { setresethaltEn := (valid & (data === 1.U)) ; true.B} ),RegFieldDesc("setresethaltreq", "setresethaltreq")),
+      RegField(2),
+      RegField.r(10, 0.U, RegFieldDesc("hartselhi",         "hartselhi(ignore)")),
+      RegField.r(10, 0.U, RegFieldDesc("hartsello",         "hartsello(ignore)")),
+      RegField.r(1, 0.U, RegFieldDesc("hasel",         "hasel",         reset=Some(0))),
+      RegField(1),
+      RegField.w(1, RegWriteFn((valid, data) => { { ackhavereset_W1 := valid & (data === 1.U) }; true.B }), RegFieldDesc("ackhavereset", "0: No effect; 1: Clear havereset for any selected harts")),
+      RegField(1, hartreset(hartsel), RegFieldDesc("hartreset",         "hartreset",         reset=Some(0))),
+      RegField.w(1, RegWriteFn((valid, data) => { resumeReq_W1 := (haltreq(hartsel) === 0.U & valid & data === 1.U); true.B }), RegFieldDesc("resumereq", "Writing 1 causes the currently selected harts to resume once, if they are halted when the write occurs. It also clears the resume ack bit for those harts.resumereq is ignored if haltreq is set.")),
+      RegField.w(1, RegWriteFn((valid, data) => { when(valid) {haltreq(hartsel) := data}; true.B }), RegFieldDesc("haltreq",         "haltreq"))
+    )),
 
-        (0x11 << 2) -> RegFieldGroup("dmstatus", Some("debug module status register"), Seq(
-          RegField.r(4, 2.U,                            RegFieldDesc("version",         "version",                 reset=Some(2))),
-          RegField.r(1, 0.U,                            RegFieldDesc("confstrptrvalid", "0: confstrptr0–confstrptr3 hold information which is not relevant to the configuration string", reset=Some(0))),
-          RegField.r(1, 1.U,                            RegFieldDesc("hasresethaltreq", "Debug Module supports halt-on-reset functionality controllable by the setresethaltreq and clrresethaltreq bits", reset=Some(1))),
-          RegField.r(1, 0.U,                            RegFieldDesc("authbusy",        "authbusy(ignore)",        reset=Some(0))),
-          RegField.r(1, 1.U,                            RegFieldDesc("authenticated",   "authenticated(ignore)",   reset=Some(1))),
-          RegField.r(1, dmstatus.anyhalted,       RegFieldDesc("anyhalted",       "anyhalted",               reset=Some(0))),
-          RegField.r(1, dmstatus.allhalted,       RegFieldDesc("allhalted",       "allhalted",               reset=Some(0))),
-          RegField.r(1, dmstatus.anyrunning,      RegFieldDesc("anyrunning",      "anyrunning",              reset=Some(1))),
-          RegField.r(1, dmstatus.allrunning,      RegFieldDesc("allrunning",      "allrunning",              reset=Some(1))),
-          RegField.r(1, dmstatus.anyunavail,      RegFieldDesc("anyunavail",      "anyunavail",              reset=Some(0))),
-          RegField.r(1, dmstatus.allunavail,      RegFieldDesc("allunavail",      "allunavail",              reset=Some(0))),
-          RegField.r(1, dmstatus.anynonexistent,  RegFieldDesc("anynonexistent",  "anynonexistent",          reset=Some(0))),
-          RegField.r(1, dmstatus.allnonexistent,  RegFieldDesc("allnonexistent",  "allnonexistent",          reset=Some(0))),
-          RegField.r(1, dmstatus.anyresumeack,    RegFieldDesc("anyresumeack",    "anyresumeack",            reset=Some(1))),
-          RegField.r(1, dmstatus.allresumeack,    RegFieldDesc("allresumeack",    "allresumeack",            reset=Some(1))),
-          RegField.r(1, dmstatus.anyhavereset,    RegFieldDesc("anyhavereset",    "anyhavereset",            reset=Some(0))),
-          RegField.r(1, dmstatus.allhavereset,    RegFieldDesc("allhavereset",    "allhavereset",            reset=Some(0))),
-          RegField(2),
-          RegField.r(1, 0.U,       RegFieldDesc("impebreak",       "There is no implicit ebreak after Program Buffer",       reset=Some(0)))
-        )),
+    (0x11 << 2) -> RegFieldGroup("dmstatus", Some("debug module status register"), Seq(
+      RegField.r(4, 2.U,                            RegFieldDesc("version",         "version",                 reset=Some(2))),
+      RegField.r(1, 0.U,                            RegFieldDesc("confstrptrvalid", "0: confstrptr0–confstrptr3 hold information which is not relevant to the configuration string", reset=Some(0))),
+      RegField.r(1, 1.U,                            RegFieldDesc("hasresethaltreq", "Debug Module supports halt-on-reset functionality controllable by the setresethaltreq and clrresethaltreq bits", reset=Some(1))),
+      RegField.r(1, 0.U,                            RegFieldDesc("authbusy",        "authbusy(ignore)",        reset=Some(0))),
+      RegField.r(1, 1.U,                            RegFieldDesc("authenticated",   "authenticated(ignore)",   reset=Some(1))),
+      RegField.r(1, dmstatus.anyhalted,       RegFieldDesc("anyhalted",       "anyhalted",               reset=Some(0))),
+      RegField.r(1, dmstatus.allhalted,       RegFieldDesc("allhalted",       "allhalted",               reset=Some(0))),
+      RegField.r(1, dmstatus.anyrunning,      RegFieldDesc("anyrunning",      "anyrunning",              reset=Some(1))),
+      RegField.r(1, dmstatus.allrunning,      RegFieldDesc("allrunning",      "allrunning",              reset=Some(1))),
+      RegField.r(1, dmstatus.anyunavail,      RegFieldDesc("anyunavail",      "anyunavail",              reset=Some(0))),
+      RegField.r(1, dmstatus.allunavail,      RegFieldDesc("allunavail",      "allunavail",              reset=Some(0))),
+      RegField.r(1, dmstatus.anynonexistent,  RegFieldDesc("anynonexistent",  "anynonexistent",          reset=Some(0))),
+      RegField.r(1, dmstatus.allnonexistent,  RegFieldDesc("allnonexistent",  "allnonexistent",          reset=Some(0))),
+      RegField.r(1, dmstatus.anyresumeack,    RegFieldDesc("anyresumeack",    "anyresumeack",            reset=Some(1))),
+      RegField.r(1, dmstatus.allresumeack,    RegFieldDesc("allresumeack",    "allresumeack",            reset=Some(1))),
+      RegField.r(1, dmstatus.anyhavereset,    RegFieldDesc("anyhavereset",    "anyhavereset",            reset=Some(0))),
+      RegField.r(1, dmstatus.allhavereset,    RegFieldDesc("allhavereset",    "allhavereset",            reset=Some(0))),
+      RegField(2),
+      RegField.r(1, 0.U,       RegFieldDesc("impebreak",       "There is no implicit ebreak after Program Buffer",       reset=Some(0)))
+    )),
 
-        (0x12 << 2) -> RegFieldGroup("hartInfo", Some("Hart Info"), Seq(
-          RegField.r(12, (DATA).U, RegFieldDesc("dataaddr",         "dataaddr",         reset=Some(16))),
-          RegField.r(4,  12.U,    RegFieldDesc("datasize",         "datasize",         reset=Some(12))),
-          RegField.r(1,  1.U,     RegFieldDesc("dataaccess",       "dataaccess",       reset=Some(1))),
-          RegField(3),
-          RegField.r(4,  4.U,    RegFieldDesc("nscratch",         "nscratch",         reset=Some(4))),
-        )),
+    (0x12 << 2) -> RegFieldGroup("hartInfo", Some("Hart Info"), Seq(
+      RegField.r(12, (DATA).U, RegFieldDesc("dataaddr",         "dataaddr",         reset=Some(16))),
+      RegField.r(4,  12.U,    RegFieldDesc("datasize",         "datasize",         reset=Some(12))),
+      RegField.r(1,  1.U,     RegFieldDesc("dataaccess",       "dataaccess",       reset=Some(1))),
+      RegField(3),
+      RegField.r(4,  4.U,    RegFieldDesc("nscratch",         "nscratch",         reset=Some(4))),
+    )),
 
-        (0x16 << 2) -> RegFieldGroup("abstractcs", Some("Abstract Control and Status"), Seq(
-          RegField.r(4, 12.U, RegFieldDesc("datacount", "datacount", reset=Some(12))),
-          RegField(4),
-          RegField(3, cmderr, RegWriteFn((valid, data) => { when(valid & data === 1.U) { cmderr := Mux(busy, 1.U, 0.U) }; true.B }), RegFieldDesc("cmderr", "cmderr", reset=Some(0))),
-          RegField(1),
-          RegField.r(1,  busy, RegFieldDesc("busy", "busy", reset=Some(0))),
-          RegField(11),
-          RegField.r(5, 16.U, RegFieldDesc("progbufsize", "progbufsize")),
-        )),
+    (0x16 << 2) -> RegFieldGroup("abstractcs", Some("Abstract Control and Status"), Seq(
+      RegField.r(4, 12.U, RegFieldDesc("datacount", "datacount", reset=Some(12))),
+      RegField(4),
+      RegField(3, cmderr, RegWriteFn((valid, data) => { when(valid & data === 1.U) { cmderr := Mux(busy, 1.U, 0.U) }; true.B }), RegFieldDesc("cmderr", "cmderr", reset=Some(0))),
+      RegField(1),
+      RegField.r(1,  busy, RegFieldDesc("busy", "busy", reset=Some(0))),
+      RegField(11),
+      RegField.r(5, 16.U, RegFieldDesc("progbufsize", "progbufsize")),
+    )),
 
-        (0x17 << 2) -> RegFieldGroup("command", Some("Abstract Command"), Seq(
-          WNotifyVal(32, 0.U, wVal = commandVal, wNotify = commandEn, RegFieldDesc("cmdTpye_control", "cmdTpye + control")),
-        )),
+    (0x17 << 2) -> RegFieldGroup("command", Some("Abstract Command"), Seq(
+      WNotifyVal(32, 0.U, wVal = commandVal, wNotify = commandEn, RegFieldDesc("cmdTpye_control", "cmdTpye + control")),
+    )),
 
-        (0x18 << 2) -> RegFieldGroup("abstractauto", Some("Abstract Command Auto execute"), Seq(
-          RegField(0)
-        )),
+    (0x18 << 2) -> RegFieldGroup("abstractauto", Some("Abstract Command Auto execute"), Seq(
+      RegField(0)
+    )),
 
-        (0x1D << 2) -> RegFieldGroup("nextdm", Some("Next Debug Module"), Seq(
-          RegField.r(32, 0.U)
-        )),
+    (0x1D << 2) -> RegFieldGroup("nextdm", Some("Next Debug Module"), Seq(
+      RegField.r(32, 0.U)
+    )),
 
-        (0x20 << 2) -> RegFieldGroup("progbuf", Some("Program buffer used to communicate with Debug Module"), (0 to 15).map{ i => WNotifyVal(32, programBufferMem_qout(i), programBufferMem_dnxt1(i), programBufferMem_en1(i))}),
+    (0x20 << 2) -> RegFieldGroup("progbuf", Some("Program buffer used to communicate with Debug Module"), (0 to 15).map{ i => WNotifyVal(32, programBufferMem_qout(i), programBufferMem_dnxt1(i), programBufferMem_en1(i))}),
 
-        (0x38 << 2) -> RegFieldGroup("sbcs", Some("System Bus Access Control and Status"), Seq(
-          RegField.r(1, 1.U, RegFieldDesc("sbaccess8",   "sbaccess8" )),
-          RegField.r(1, 1.U, RegFieldDesc("sbaccess16",  "sbaccess16")),
-          RegField.r(1, 1.U, RegFieldDesc("sbaccess32",  "sbaccess32")),
-          RegField.r(1, 1.U, RegFieldDesc("sbaccess64",  "sbaccess64")),
-          RegField.r(1, 0.U, RegFieldDesc("sbaccess128", "sbaccess128")),
-          RegField.r(7, 64.U, RegFieldDesc("sbasize",         "sbasize")),
-          RegField(3, sberror, RegWriteFn((valid, data) => { when (valid & data === 1.U) { sberror := 0.U }; true.B }), RegFieldDesc("sberror", "sberror", reset=Some(0))),
-          RegField(1, sbreadondata, RegFieldDesc("sbreadondata", "sbreadondata", reset=Some(0))),
-          RegField(1, sbautoincrement, RegFieldDesc("sbautoincrement", "sbautoincrement", reset=Some(0))),
-          RegField(3, sbaccess, RegFieldDesc("sbaccess", "sbaccess", reset=Some(2))),
-          RegField(1, sbreadonaddr, RegFieldDesc("abreadonaddr", "abreadonaddr", reset=Some(0))),
-          RegField.r(1, sbbusy, RegFieldDesc("sbbusy", "sbbusy", reset=Some(0))),
-          RegField(1, sbbusyerror, RegWriteFn((valid, data) => { when (valid & data === 1.U) { sbbusyerror := 0.U }; true.B }), RegFieldDesc("sbbusyerror", "sbbusyerror", reset=Some(0))),
-          RegField(6),
-          RegField.r(3, 1.U, RegFieldDesc("sbversion", "sbversion")),
-        )),
+    // (0x38 << 2) -> RegFieldGroup("sbcs", Some("System Bus Access Control and Status"), Seq(
+    //   RegField.r(1, 1.U, RegFieldDesc("sbaccess8",   "sbaccess8" )),
+    //   RegField.r(1, 1.U, RegFieldDesc("sbaccess16",  "sbaccess16")),
+    //   RegField.r(1, 1.U, RegFieldDesc("sbaccess32",  "sbaccess32")),
+    //   RegField.r(1, 1.U, RegFieldDesc("sbaccess64",  "sbaccess64")),
+    //   RegField.r(1, 0.U, RegFieldDesc("sbaccess128", "sbaccess128")),
+    //   RegField.r(7, 64.U, RegFieldDesc("sbasize",         "sbasize")),
+    //   RegField(3, sberror, RegWriteFn((valid, data) => { when (valid & data === 1.U) { sberror := 0.U }; true.B }), RegFieldDesc("sberror", "sberror", reset=Some(0))),
+    //   RegField(1, sbreadondata, RegFieldDesc("sbreadondata", "sbreadondata", reset=Some(0))),
+    //   RegField(1, sbautoincrement, RegFieldDesc("sbautoincrement", "sbautoincrement", reset=Some(0))),
+    //   RegField(3, sbaccess, RegFieldDesc("sbaccess", "sbaccess", reset=Some(2))),
+    //   RegField(1, sbreadonaddr, RegFieldDesc("abreadonaddr", "abreadonaddr", reset=Some(0))),
+    //   RegField.r(1, sbbusy, RegFieldDesc("sbbusy", "sbbusy", reset=Some(0))),
+    //   RegField(1, sbbusyerror, RegWriteFn((valid, data) => { when (valid & data === 1.U) { sbbusyerror := 0.U }; true.B }), RegFieldDesc("sbbusyerror", "sbbusyerror", reset=Some(0))),
+    //   RegField(6),
+    //   RegField.r(3, 1.U, RegFieldDesc("sbversion", "sbversion")),
+    // )),
 
-        (0x39 << 2) -> RegFieldGroup("sbaddress", Some("System Bus Address"), Seq(
-          RegField(32, sbaddress(0), RegWriteFn( (valid, data) => { sbaddressWrEn := valid; sbaddressWrData := data; true.B } ), RegFieldDesc("sbaddress0", "sbaddress[31:0]", reset=Some(0))),
-          RegField(32, sbaddress(1), RegFieldDesc("sbaddress1", "sbaddress[63:32]", reset=Some(0))),
-        )),
+    // (0x39 << 2) -> RegFieldGroup("sbaddress", Some("System Bus Address"), Seq(
+    //   RegField(32, sbaddress(0), RegWriteFn( (valid, data) => { sbaddressWrEn := valid; sbaddressWrData := data; true.B } ), RegFieldDesc("sbaddress0", "sbaddress[31:0]", reset=Some(0))),
+    //   RegField(32, sbaddress(1), RegFieldDesc("sbaddress1", "sbaddress[63:32]", reset=Some(0))),
+    // )),
 
-        (0x3C << 2) -> RegFieldGroup("sbdata", Some("System Bus Data"), Seq(
-          RegField(32, RegReadFn( ivalid => { sbdataRdEn := ivalid; (true.B, sbdata(0))}), RegWriteFn( (valid, data) => { sbdataWrEn := valid; sbdataWrData := data; true.B } ),               RegFieldDesc("sbdata0",         "sbdata[31:0]",         reset=Some(0))),
-          RegField(32, sbdata(1),                RegFieldDesc("sbdata1",         "sbdata[63:32]",        reset=Some(0))),
-        )),
+    // (0x3C << 2) -> RegFieldGroup("sbdata", Some("System Bus Data"), Seq(
+    //   RegField(32, RegReadFn( ivalid => { sbdataRdEn := ivalid; (true.B, sbdata(0))}), RegWriteFn( (valid, data) => { sbdataWrEn := valid; sbdataWrData := data; true.B } ),               RegFieldDesc("sbdata0",         "sbdata[31:0]",         reset=Some(0))),
+    //   RegField(32, sbdata(1),                RegFieldDesc("sbdata1",         "sbdata[63:32]",        reset=Some(0))),
+    // )),
 
-        (0x40 << 2) -> RegFieldGroup("haltsum0", Some("Halt Summary"), Seq( 
-          RegField.r(32, is_halted.asUInt, RegFieldDesc("haltsum", "halt summmary"))
-        ))
+    (0x40 << 2) -> RegFieldGroup("haltsum0", Some("Halt Summary"), Seq( 
+      RegField.r(32, is_halted.asUInt, RegFieldDesc("haltsum", "halt summmary"))
+    ))
     )
+
+    val dmi_resp = RegMapper(bytes = 4, concurrency = 0, undefZero = true, in = dmi_req, mapping = respMap: _* )
     
     io.dmi.resp.valid := dmi_resp.valid
     dmi_resp.ready := io.dmi.resp.ready
@@ -864,4 +759,119 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 //   def apply(n: Int, rVal: UInt, wVal: UInt, wNotify: Bool, desc: RegFieldDesc)
 
 // }
+}
+
+trait sba { this: DMBase =>
+  // val ( sba_bus, edgeOut ) = sbaClientNode.out.head
+
+  //   val sberror = RegInit(0.U(3.W))
+  //   val sbreadondata = RegInit(false.B)
+  //   val sbautoincrement = RegInit(false.B)
+  //   val sbaccess = RegInit(2.U(3.W))
+  //   val sbreadonaddr = RegInit(false.B)
+  //   val sbbusy = RegInit(false.B)
+  //   val sbbusyerror = RegInit(false.B)
+  //   val sbaddress = RegInit(VecInit(Seq.fill(2)(0.U(32.W))))
+  //   val sbdata = RegInit(VecInit(Seq.fill(2)(0.U(32.W))))
+
+  //   val sbaddressWrEn   = Wire(Bool())
+  //   val sbaddressWrData = Wire(UInt(32.W))
+
+  //   val sbdataWrEn   = Wire(Bool())
+  //   val sbdataWrData = Wire(UInt(32.W)) 
+  //   val sbdataRdEn   = Wire(Bool())
+
+
+
+
+  //   val sba = {
+  //     val mdl = Module(new SBA(edgeOut))
+  //     sba_bus.a.valid := mdl.io.getPut.valid
+  //     sba_bus.a.bits := mdl.io.getPut.bits
+  //     mdl.io.getPut.ready := sba_bus.a.ready
+
+  //     mdl.io.access.valid := sba_bus.d.valid
+  //     mdl.io.access.bits := sba_bus.d.bits
+  //     sba_bus.d.ready := mdl.io.access.ready
+  //     mdl
+  //   }
+
+  //     val req = Flipped(Decoupled(new Info_sba_req))
+  //     val rsp = Decoupled(new Info_sba_rsp)
+
+  //   val sba_req_valid = RegInit(false.B)
+  //   val sba_op = RegInit(false.B)
+  //   sba.io.req.valid := sba_req_valid
+
+  //   sba.io.req.bits.paddr := Cat(sbaddress(1),sbaddress(0))
+  //   sba.io.req.bits.wdata := Cat(sbdata(1), sbdata(0))
+  //   sba.io.req.bits.is_byte   := (sbaccess === 0.U)
+  //   sba.io.req.bits.is_half   := (sbaccess === 1.U)
+  //   sba.io.req.bits.is_word   := (sbaccess === 2.U)
+  //   sba.io.req.bits.is_dubl := (sbaccess === 3.U)
+  //   sba.io.req.bits.is_rd_wrn := sba_op
+
+
+  //           // val sbaddressWrEn   = Wire(Bool())
+  //           // val sbaddressWrData = Wire(UInt(32.W))
+
+  //           // val sbdataWrEn   = Wire(Bool())
+  //           // val sbdataWrData = Wire(UInt(32.W)) 
+  //           // val sbdataRdEn   = Wire(Bool())
+
+  //   when( sbaddressWrEn ) {
+  //     when( sbbusy ) {
+  //       sbbusyerror := true.B
+  //     } .otherwise {
+  //       sbaddress(0) := sbaddressWrData
+  //       when( sbreadonaddr & sberror === 0.U & ~sbbusyerror) {
+  //         sbbusy := true.B
+  //         sba_op := true.B
+  //         sba_req_valid := true.B
+  //       }
+  //     }
+  //   }
+
+  //   when( sbdataRdEn ) {
+  //     when( sbbusy ) {
+  //       sbbusyerror := true.B
+  //     } .elsewhen( sbreadondata & sberror === 0.U & ~sbbusyerror) {
+  //       sbbusy := true.B
+  //       sba_op := true.B
+  //       sba_req_valid := true.B
+  //     }
+  //   }
+
+  //   when( sbdataWrEn ) {
+  //     when( sbbusy ) {
+  //       sbbusyerror := true.B
+  //     } .otherwise {
+  //       sbdata(0) := sbdataWrData
+  //       when( sberror === 0.U & ~sbbusyerror) {
+  //         sbbusy := true.B
+  //         sba_op := false.B
+  //         sba_req_valid := true.B
+  //       }      
+  //     }
+  //   }
+
+  //   when( sba.io.req.fire ) {
+  //     sba_req_valid := false.B
+  //   }
+
+  //   sba.io.rsp.ready := true.B
+
+  //   when( sba.io.rsp.fire ) {
+  //     sbbusy := false.B
+  //     when( sbautoincrement ) {
+  //       sbaddress(1) := (Cat(sbaddress(1), sbaddress(0)) + (1.U << sbaccess)) >> 32
+  //       sbaddress(0) := sbaddress(0) + (1.U << sbaccess)
+  //     }
+
+  //     when( sba_op === true.B ) {
+  //       sbdata(0) := sba.io.rsp.bits.rdata(31,0) 
+  //       sbdata(1) := sba.io.rsp.bits.rdata(63,32)
+  //     }
+
+  //   }
 }

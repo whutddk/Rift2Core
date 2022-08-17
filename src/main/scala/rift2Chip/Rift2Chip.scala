@@ -164,7 +164,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
     l1_xbar64 := TLBuffer() := i_rift2Core.periphClientNode
 
     if( hasDebugger ) {
-      l1_xbar64 := TLBuffer() := i_debugger.get.dm.sbaClientNode
+      // l1_xbar64 := TLBuffer() := i_debugger.get.dm.sbaClientNode
       i_debugger.get.dm.peripNode := TLBuffer():= TLFragmenter(8, 32) := TLBuffer() := l2_xbar64      
     }
 
