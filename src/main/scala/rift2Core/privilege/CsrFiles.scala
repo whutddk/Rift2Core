@@ -1818,7 +1818,7 @@ trait CsrFiles { this: BaseCommit =>
     if (hasDebugger) {
       val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dpc, "h7B1".U, in.csrExe )
       when(enable) { dpc := dnxt }
-      .elsewhen( update_DMode(in) === true.B ) {
+      .elsewhen( (in.csrfiles.DMode === false.B) & (update_DMode(in) === true.B) ) {
         dpc := Mux1H(Seq(
           in.is_ebreak_dm      -> in.commit_pc,
           in.exint.is_single_step    -> in.commit_pc,
