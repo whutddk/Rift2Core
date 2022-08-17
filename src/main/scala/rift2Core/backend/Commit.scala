@@ -240,7 +240,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   }
 
   def is_step: Bool = {
-    val is_step = csrfiles.dcsr.step & csrfiles.DMode
+    val is_step = csrfiles.dcsr.step & ~csrfiles.DMode
     return is_step.asBool
   }
 
