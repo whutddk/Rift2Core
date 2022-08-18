@@ -111,7 +111,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
     return is_ecall_S    
   }
 
-    def is_ecall_M: Bool = {
+  def is_ecall_M: Bool = {
     val is_ecall_M = is_ecall & csrfiles.priv_lvl === "b11".U
     return is_ecall_M    
   }
@@ -204,7 +204,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   }
 
   def is_interrupt: Bool = {
-    val is_interrupt = ((csrfiles.is_m_interrupt | csrfiles.is_s_interrupt) & ~is_step_int_block) | is_nomask_interrupt
+    val is_interrupt = (((csrfiles.is_m_interrupt | csrfiles.is_s_interrupt) & ~is_step_int_block) | is_nomask_interrupt) & ~csrfiles.DMode
     return is_interrupt
   }
 
@@ -248,7 +248,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
     val commit_pc = extVaddr(rod.pc, vlen)
     return commit_pc
   } 
-
+  
   def is_ebreak_dm: Bool = {
     val is_ebreak_dm = rod.privil.ebreak & is_ebreak_breakpointn
     return is_ebreak_dm
@@ -741,7 +741,7 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
         } 
         when( cmm_state(i).is_trap ) {
           io.cmmRedirect.valid := true.B
-          io.cmmRedirect.bits.pc := Mux1H(Seq(
+          io.cmmRedirect.bits.pc := MuxCase("h80000000".U, Seq(
               emu_reset                                   -> "h80000000".U,
               cmm_state(i).is_debug_interrupt             -> "h00000800".U,
               (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
