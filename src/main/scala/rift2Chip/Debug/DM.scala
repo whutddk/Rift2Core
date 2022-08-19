@@ -581,7 +581,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     dmi_req.bits.read  := io.dmi.req.bits.op === 1.U
     dmi_req.bits.index := io.dmi.req.bits.addr
     dmi_req.bits.data  := io.dmi.req.bits.data
-    dmi_req.bits.mask  := Mux(io.dmi.req.bits.op === 2.U, ~(0.U(8.W)), 0.U)
+    dmi_req.bits.mask  := ~(0.U(8.W))//Mux(io.dmi.req.bits.op === 2.U, ~(0.U(8.W)), 0.U)
 
     val respMap = Seq(
     (0x04 << 2) -> RegFieldGroup("data", Some("Data used to communicate with Debug Module"),
@@ -589,7 +589,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       // abstractDataMem
         RegField(
           32,
-          RegReadFn( ivalid => { abstractDataMem_ren1(i) := ivalid; (true.B, abstractDataMem_qout(i))}),
+          RegReadFn ( (ready) => {abstractDataMem_ren1(i)  := ready ; (true.B, abstractDataMem_qout(i))}),
           RegWriteFn( (valid, data) => { abstractDataMem_wen1(i) := valid; abstractDataMem_dnxt1(i) := data; true.B } ),
           RegFieldDesc("abstractDataMem",         "abstractDataMem",         reset=Some(0)))
 
@@ -676,7 +676,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       (0 to 15).map{ i =>
         RegField(
           32,
-          RegReadFn( ivalid => { programBufferMem_ren1(i) := ivalid; (true.B, programBufferMem_qout(i))}),
+          RegReadFn( (ready) => { programBufferMem_ren1(i) := ready; (true.B, programBufferMem_qout(i))}),
           RegWriteFn( (valid, data) => { programBufferMem_wen1(i) := valid; programBufferMem_dnxt1(i) := data; true.B } ),
           RegFieldDesc("progbuf",         "progbuf",         reset=Some(0)))
         // WNotifyVal(32, programBufferMem_qout(i), programBufferMem_dnxt1(i), programBufferMem_wen1(i))
