@@ -38,12 +38,12 @@ class ExInt_Bundle extends Bundle {
   val hartHaltReq = Bool()
 
   val emu_reset = Bool()
-	val clint_sw_m = Bool()
-	val clint_sw_s = Bool()
-	val clint_tm_m = Bool()
-	val clint_tm_s = Bool()
-	val clint_ex_m = Bool()
-	val clint_ex_s = Bool()  
+	val msi = Bool()
+	val ssi = Bool()
+	val mti = Bool()
+	val sti = Bool()
+	val mei = Bool()
+	val sei = Bool()  
 }
 
 
@@ -309,8 +309,12 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
 
     val rtc_clock = Input(Bool())
 
+    val aclint = Input(new AClint_Bundle)
+
     val diff_commit = Output(new Info_cmm_diff)
     val diff_csr = Output(new Info_csr_reg)
+
+
   })
 
 
@@ -638,12 +642,12 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
     cmm_state(i).exint.is_trigger := false.B
     cmm_state(i).exint.emu_reset  := emu_reset
     cmm_state(i).exint.hartHaltReq := io.dm.hartHaltReq
-	  cmm_state(i).exint.clint_sw_m := false.B
-	  cmm_state(i).exint.clint_sw_s := false.B
-	  cmm_state(i).exint.clint_tm_m := false.B
-	  cmm_state(i).exint.clint_tm_s := false.B
-	  cmm_state(i).exint.clint_ex_m := false.B
-	  cmm_state(i).exint.clint_ex_s := false.B 
+	  cmm_state(i).exint.msi := io.aclint.msi
+	  cmm_state(i).exint.ssi := io.aclint.ssi
+	  cmm_state(i).exint.mti := io.aclint.mti
+	  cmm_state(i).exint.sti := io.aclint.sti
+	  cmm_state(i).exint.mei := false.B
+	  cmm_state(i).exint.sei := false.B 
 
     csr_state(i) := update_csrfiles(in = cmm_state(i))
 

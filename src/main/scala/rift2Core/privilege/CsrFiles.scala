@@ -1059,12 +1059,12 @@ trait CsrFiles { this: BaseCommit =>
   def update_mip( in: CMMState_Bundle ): MSIntBundle = {
     val mip = WireDefault( in.csrfiles.mip )
     
-    mip.mei := in.exint.clint_ex_m
-    mip.sei := in.exint.clint_ex_s
-    mip.mti := in.exint.clint_tm_m
-    mip.sti := in.exint.clint_tm_s
-    mip.msi := in.exint.clint_sw_m
-    mip.ssi := in.exint.clint_sw_s
+    mip.mei := in.exint.mei
+    mip.sei := in.exint.sei
+    mip.mti := in.exint.mti
+    mip.sti := in.exint.sti
+    mip.msi := in.exint.msi
+    mip.ssi := in.exint.ssi
 
     return mip
   }

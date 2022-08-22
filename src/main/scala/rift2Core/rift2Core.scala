@@ -93,6 +93,7 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   val io = IO(new Bundle{
     val dm        = if (hasDebugger) {Some(Flipped(new Info_DM_cmm))} else {None}
     val rtc_clock = Input(Bool())
+    val aclint = Input(new AClint_Bundle)
   })
 
   val ( icache_bus, icache_edge ) = outer.icacheClientNode.out.head
@@ -242,6 +243,7 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   cmm_stage.io.jctq <> exe_stage.io.jctq
   cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect
   cmm_stage.io.if_cmm := if2.io.if_cmm
+  cmm_stage.io.aclint := io.aclint
   if2.io.ifence := cmm_stage.io.ifence
 
 

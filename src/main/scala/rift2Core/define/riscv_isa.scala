@@ -885,3 +885,11 @@ class Info_if_cmm(implicit p: Parameters) extends RiftBundle {
   val ill_vaddr = UInt(64.W)
 }
 
+class AClint_Bundle extends Bundle {
+  val msi = Bool()
+  val mti = Bool()
+
+  val ssi = Bool()
+  val sti = Bool()
+}
+

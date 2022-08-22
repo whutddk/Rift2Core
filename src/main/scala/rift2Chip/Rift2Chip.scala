@@ -71,6 +71,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
   val i_rift2Core = LazyModule( new Rift2Core(isFlatten) )
   val i_debugger = if ( hasDebugger) {Some(LazyModule(new Debugger(nComponents = 1)))} else {None}
+  val i_aclint = LazyModule( new AClint( tile = 1 ) )
 
   val sifiveCache = LazyModule(new InclusiveCache(
       cache = CacheParameters( level = 2, ways = 8, sets = 2048, blockBytes = 256/8, beatBytes = l1BeatBits/8 ),
@@ -168,7 +169,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
       i_debugger.get.dm.peripNode := TLBuffer():= TLFragmenter(8, 32) := TLBuffer() := l2_xbar64      
     }
 
-
+    i_aclint.node := TLBuffer() := l2_xbar64
 
 
 
@@ -226,6 +227,12 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
 
     i_rift2Core.module.io.rtc_clock := io.rtc_clock
+
+      val rtc_clock = Input(Bool())
+      val int = Output( Vec(tile, new AClint_Bundle) )
+
+    i_aclint.module.io.rtc_clock := io.rtc_clock
+    i_aclint.module.io.int(0)    := i_rift2Core.module.io.aclint
   }
 
 

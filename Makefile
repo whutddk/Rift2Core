@@ -432,7 +432,7 @@ VSimDebugger:
 
 
 jtag:
-	${R2}/generated/build/$(CONFIG)/VSimTop -j -w -f ./tb/debugger/jtag
+	${R2}/generated/build/$(CONFIG)/VSimTop -j -f ./tb/debugger/jtag
 
 fst:
 	gtkwave ${R2}/generated/build/wave.fst &
