@@ -893,3 +893,7 @@ class AClint_Bundle extends Bundle {
   val sti = Bool()
 }
 
+class Plic_Bundle extends Bundle {
+  val mei = Bool()
+  val sei = Bool()
+}
