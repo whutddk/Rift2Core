@@ -330,7 +330,7 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   val cmm_state = Wire( Vec(cm_chn, new CMMState_Bundle ) )
   val csr_state = Wire( Vec(cm_chn, new CSR_Bundle ) )
 
-  val is_retired = ( 0 until cm_chn ).map{ i => {commit_state_is_comfirm(i) | commit_state_is_misPredict(i) |commit_state_is_abort(i)} }
+  val is_retired = ( 0 until cm_chn ).map{ i => {commit_state_is_comfirm(i) | commit_state_is_misPredict(i) } }
 
 
   val emptyExePort = {
@@ -385,20 +385,22 @@ trait CommitState { this: BaseCommit =>
 
 
 
-  ( 1 until cm_chn ).map{ i =>  assert( ~(is_retired(i) & ~is_retired(i-1)) ) }
+  ( 1 until cm_chn ).map{ i =>  assert(
+    ~((is_retired(i) | commit_state_is_abort(i)) & ~(is_retired(i-1) |commit_state_is_abort(i-1))  ) )
+    }
 
 
 
   csrfiles.mcycle := csrfiles.mcycle + 1.U //may be override
   val rtc = ShiftRegisters( io.rtc_clock, 4, false.B, true.B ); when(rtc(3) ^ rtc(2)) { csrfiles.time := csrfiles.time + 1.U }
   
-  for( i <- 0 until cm_chn ) yield { when( is_retired(i)) { csrfiles := csr_state(i) }   }
+  for( i <- 0 until cm_chn ) yield { when( (is_retired(i) | commit_state_is_abort(i)) ) { csrfiles := csr_state(i) }   }
   when( reset.asBool ) { resetToDefault(csrfiles) }
 
 
 
 
-  val is_single_step = RegInit(false.B); when (is_retired(0) & cmm_state(0).is_step) { is_single_step := true.B} .elsewhen( csrfiles.DMode ) { is_single_step := false.B }
+  val is_single_step = RegInit(false.B); when ((is_retired(0) | commit_state_is_abort(0)) & cmm_state(0).is_step) { is_single_step := true.B} .elsewhen( csrfiles.DMode ) { is_single_step := false.B }
   val is_trigger = false.B
 
 
@@ -681,7 +683,7 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
   }
 
   ( 0 until cm_chn ).map{ i =>
-    io.rod(i).ready := is_retired(i)
+    io.rod(i).ready := (is_retired(i) | commit_state_is_abort(i))
   }
 
 
