@@ -310,6 +310,7 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
     val rtc_clock = Input(Bool())
 
     val aclint = Input(new AClint_Bundle)
+    val plic   = Input(new Plic_Bundle)
 
     val diff_commit = Output(new Info_cmm_diff)
     val diff_csr = Output(new Info_csr_reg)
@@ -646,8 +647,8 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
 	  cmm_state(i).exint.ssi := io.aclint.ssi
 	  cmm_state(i).exint.mti := io.aclint.mti
 	  cmm_state(i).exint.sti := io.aclint.sti
-	  cmm_state(i).exint.mei := false.B
-	  cmm_state(i).exint.sei := false.B 
+	  cmm_state(i).exint.mei := io.plic.mei
+	  cmm_state(i).exint.sei := io.plic.sei 
 
     csr_state(i) := update_csrfiles(in = cmm_state(i))
 

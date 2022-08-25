@@ -203,6 +203,20 @@ int main(int argc, char **argv, char **env) {
 
 		} 
 
+		if ( main_time % 500 == 250 ) {top->rtc_clock = 1;}
+		else if ( main_time % 500 == 0 ) { top->rtc_clock = 0;}
+
+		// if ( main_time == 0xffff ) {
+		// 	top->io_interrupt_0 = 1;
+		// 	top->io_interrupt_1 = 0;
+		// 	top->io_interrupt_2 = 1;
+		// }
+		// if ( main_time == 0x1000f ) {
+		// 	top->io_interrupt_0 = 0;
+		// 	top->io_interrupt_1 = 0;
+		// 	top->io_interrupt_2 = 0;
+		// }
+
 		top->eval();
 
 #if VM_TRACE

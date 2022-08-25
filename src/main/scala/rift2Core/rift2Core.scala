@@ -27,6 +27,8 @@ import rift2Core.diff._
 import rift2Core.privilege._
 import debug._
 
+import rift2Core.define._
+
 import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
@@ -94,6 +96,7 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
     val dm        = if (hasDebugger) {Some(Flipped(new Info_DM_cmm))} else {None}
     val rtc_clock = Input(Bool())
     val aclint = Input(new AClint_Bundle)
+    val plic = Input(new Plic_Bundle)
   })
 
   val ( icache_bus, icache_edge ) = outer.icacheClientNode.out.head
@@ -244,6 +247,7 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect
   cmm_stage.io.if_cmm := if2.io.if_cmm
   cmm_stage.io.aclint := io.aclint
+  cmm_stage.io.plic := io.plic
   if2.io.ifence := cmm_stage.io.ifence
 
 

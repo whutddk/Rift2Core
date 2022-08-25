@@ -22,8 +22,10 @@ import chisel3._
 import chisel3.util._
 import rift._
 import rift2Core._
-import axi._
+// import axi._
 import debug._
+
+import rift2Core.define._
 
 import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
@@ -71,8 +73,9 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
   val i_rift2Core = LazyModule( new Rift2Core(isFlatten) )
   val i_debugger = if ( hasDebugger) {Some(LazyModule(new Debugger(nComponents = 1)))} else {None}
-  val i_aclint = LazyModule( new AClint( tile = 1 ) )
-
+  val i_aclint = LazyModule( new AClint( nTiles = 1 ) )
+  val nDevices = 31
+  val i_plic = LazyModule( new Plic( nHarts = 1, nPriorities = 8, nDevices = nDevices ))
   val sifiveCache = LazyModule(new InclusiveCache(
       cache = CacheParameters( level = 2, ways = 8, sets = 2048, blockBytes = 256/8, beatBytes = l1BeatBits/8 ),
       micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
@@ -170,7 +173,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
     }
 
     i_aclint.node := TLBuffer() := l2_xbar64
-
+    i_plic.node   := TLBuffer() := l2_xbar64
 
 
   val memory = InModuleBody {
@@ -213,7 +216,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
       val JtagIO  = if (hasDebugger) {Some(new JtagIO())} else { None }
       val ndreset = if (hasDebugger) {Some(Output(Bool()))}  else { None }
 
-
+      val interrupt = Input( Vec(nDevices, Bool()) )
       val rtc_clock = Input(Bool())
     })
   
@@ -228,11 +231,13 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
     i_rift2Core.module.io.rtc_clock := io.rtc_clock
 
-      val rtc_clock = Input(Bool())
-      val int = Output( Vec(tile, new AClint_Bundle) )
 
     i_aclint.module.io.rtc_clock := io.rtc_clock
-    i_aclint.module.io.int(0)    := i_rift2Core.module.io.aclint
+    i_rift2Core.module.io.aclint := i_aclint.module.io.int(0)
+    i_rift2Core.module.io.plic.mei := i_plic.module.io.context(0)
+    i_rift2Core.module.io.plic.sei := false.B
+
+    i_plic.module.io.interrupt := io.interrupt
   }
 
 
