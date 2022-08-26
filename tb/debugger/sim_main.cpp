@@ -109,7 +109,7 @@ int main(int argc, char **argv, char **env) {
 	VSimTop *top = new VSimTop();
 
 #if VM_TRACE
-	VerilatedFstC* tfp = new VerilatedFstC;;
+	VerilatedFstC* tfp = new VerilatedFstC;
 	if (flag_waveEnable) {
 		Verilated::traceEverOn(true);
 		top->trace(tfp, 5); // Trace 99 levels of hierarchy

@@ -27,14 +27,14 @@
 
 
 #if VM_TRACE
-#include "verilated_vcd_c.h"
+#include "verilated_fst_c.h"
 #endif
 
 
 char* img;
 VSimTop *top;
 #if VM_TRACE
-VerilatedVcdC* tfp;
+VerilatedFstC* tfp;
 #endif
 vluint64_t main_time = 0;
 
@@ -129,11 +129,11 @@ int main(int argc, char **argv, char **env) {
 	top = new VSimTop();
 
 #if VM_TRACE
-	tfp = new VerilatedVcdC;;
+	tfp = new VerilatedFstC;
 	if (flag_waveEnable) {
 		Verilated::traceEverOn(true);
 		top->trace(tfp, 99); // Trace 99 levels of hierarchy
-		tfp->open("./generated/build/wave.vcd");		
+		tfp->open("./generated/build/wave.fst");		
 	}
 
 #endif

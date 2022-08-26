@@ -255,7 +255,7 @@ isa ?= $(aluisa) $(bruisa) $(lsuisa) $(mulisa) $(privisa) #$(fpuisa)
 
 
 
-.PHONY: compile clean
+.PHONY: compile clean VSimTop
 
 module:
 	sbt "test:runMain test.testModule --target-dir generated --show-registrations --full-stacktrace -e verilog"
@@ -287,7 +287,7 @@ VSimTop:
 	-y ${R2}/tb/ \
 	-y ${R2}/tb/vtb/ \
 	--top-module SimTop \
-	--trace \
+	--trace-fst \
 	-LDFLAGS -ldromajo_cosim \
 	--cc ${R2}/tb/verilator/SimTop.v  \
 	+define+RANDOMIZE_GARBAGE_ASSIGN \
@@ -411,7 +411,7 @@ VSimDebugger:
 	-O3 \
 	--x-assign fast \
 	--x-initial fast \
-	--threads 30 \
+	--threads 32 \
 	-y ${R2}/generated/$(CONFIG) \
 	-y ${R2}/tb/ \
 	-y ${R2}/tb/vtb/ \

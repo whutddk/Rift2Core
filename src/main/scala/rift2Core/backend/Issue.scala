@@ -355,7 +355,8 @@ trait IssueIto{ this: IssueBase =>
 
     res.fun := dpt.lsu_isa
 
-    res.param.dat.op1 := (Xop.dat.op1.asSInt + dpt.param.imm.asSInt()).asUInt()
+    res.param.dat.op1 := 
+      Mux( (dpt.lsu_isa.is_lrsc | dpt.lsu_isa.is_amo), Xop.dat.op1,  (Xop.dat.op1.asSInt + dpt.param.imm.asSInt()).asUInt() )
     res.param.dat.op2 :=
       Mux(
         dpt.lsu_isa.is_fst,
