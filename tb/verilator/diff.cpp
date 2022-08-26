@@ -110,7 +110,7 @@ int dromajo_init() {
 	temp[2] = "0x80000000";
 	
 	temp[3] = "--mmio_range";
-	temp[4] = "0x00000000:0x3fffffff";
+	temp[4] = "0x020000:0x3fffffff";
 	// temp[3] = "--memory_addr";
 	// temp[4] = "0x20000000";	
 	// temp[5] = "--memory_size";
