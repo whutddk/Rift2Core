@@ -33,6 +33,8 @@ import freechips.rocketchip.tilelink._
 import freechips.rocketchip.amba.axi4._
 import sifive.blocks.inclusivecache._
 
+import sifive.blocks.devices.chiplink._
+
 
 /*
 
@@ -82,6 +84,18 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
       control = None
     ))
 
+  // val ChipLinkParam = ChipLinkParams(
+  //   TLUH = Seq(AddressSet(0x00000000L, 0x7FFFFFFFL)),
+  //   TLC  = Seq(AddressSet(0x100000000L, 0xFFFFFFFFL)),
+  //   sourceBits = 4,
+  //   sinkBits = 4,
+  //   syncTX = false,
+  //   fpgaReset = false
+  // )
+  // val chiplink = LazyModule(new ChipLink(ChipLinkParam))
+  // val chipIO = InModuleBody {chiplink.ioNode.makeSink.makeIO()}
+
+  val chipMaster = LazyModule(new ChipLinkMaster)
 
   val memRange = AddressSet(0x00000000L, 0xffffffffL).subtract(AddressSet(0x0L, 0x7fffffffL))
   val memAXI4SlaveNode = AXI4SlaveNode(Seq(
@@ -134,26 +148,41 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
   val l1_xbar64 = TLXbar()
   // val tlcork = TLCacheCork()
 
+  // val chipline_xbar64 = TLXbar()
 
 
 
-  memAXI4SlaveNode := 
-    AXI4UserYanker() := 
-    AXI4IdIndexer(4) :=
-    AXI4Deinterleaver(256/8) :=
-    TLToAXI4() :=
-    TLWidthWidget(memBeatBits / 8) := l2_xbarMem
 
-  sysAXI4SlaveNode := 
-    AXI4UserYanker() := 
-    AXI4IdIndexer(4) :=
-    AXI4Deinterleaver(256/8) :=
-    TLToAXI4() :=
-    TLWidthWidget(64 / 8) := l2_xbar64
+        memAXI4SlaveNode := 
+          AXI4UserYanker() := 
+          AXI4IdIndexer(4) :=
+          AXI4Deinterleaver(256/8) :=
+          TLToAXI4() :=
+          TLWidthWidget(memBeatBits / 8) := l2_xbarMem
+
+
+
+        // sysAXI4SlaveNode := 
+        //   AXI4UserYanker() := 
+        //   AXI4IdIndexer(4) :=
+        //   AXI4Deinterleaver(256/8) :=
+        //   TLToAXI4() :=
+        //   TLWidthWidget(64 / 8) := l2_xbar64
+
+    sysAXI4SlaveNode :=
+          AXI4UserYanker() := 
+          AXI4IdIndexer(4) :=
+          AXI4Deinterleaver(256/8) :=
+          TLToAXI4() :=
+          TLWidthWidget(64 / 8) := l2_xbar64
+
+    // chiplink.node := chipline_xbar64
+    // chipline_xbar64 := TLWidthWidget(memBeatBits / 8) := l2_xbarMem
+    // chipline_xbar64 := l2_xbar64
 
     l2_xbarMem :=* TLBuffer() :=* TLCacheCork() := sifiveCache.node := TLBuffer() := l1_xbarMem
     l2_xbarMem := TLBuffer() := TLWidthWidget(64 / 8) := l1_xbar64
-    l2_xbar64 :=  TLBuffer() := TLWidthWidget(l1BeatBits / 8) := TLBuffer()  :=l1_xbarMem    
+    l2_xbar64 :=  TLBuffer() := TLWidthWidget(l1BeatBits / 8) := TLBuffer()  := l1_xbarMem    
     l2_xbar64 :=  TLBuffer() :=  l1_xbar64
 
 
@@ -180,9 +209,9 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
     memAXI4SlaveNode.makeIOs()
   }
 
-  val system = InModuleBody {
-    sysAXI4SlaveNode.makeIOs()
-  }
+  // val system = InModuleBody {
+  //   sysAXI4SlaveNode.makeIOs()
+  // }
   
 
   // val managerParameters = TLSlavePortParameters.v1(
@@ -211,6 +240,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
 
 
+
   lazy val module = new LazyModuleImp(this) {
     val io = IO( new Bundle{
       val JtagIO  = if (hasDebugger) {Some(new JtagIO())} else { None }
@@ -218,8 +248,13 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
       val interrupt = Input( Vec(nDevices, Bool()) )
       val rtc_clock = Input(Bool())
+
+      val fpga_io = chiselTypeOf(chipMaster.module.fpga_io)
     })
-  
+
+    (chipMaster.slave zip sysAXI4SlaveNode.in) foreach { case (io, (bundle, _)) => io <> bundle }
+
+    io.fpga_io <> chipMaster.module.fpga_io
 
     if( hasDebugger ) {
       i_debugger.get.module.io.JtagIO <> io.JtagIO.get
