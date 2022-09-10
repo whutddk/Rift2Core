@@ -380,12 +380,6 @@ trait CommitState { this: BaseCommit =>
 
 
 
-
-
-
-
-  
-
   ( 1 until cm_chn ).map{ i =>  assert( ~(is_retired(i) & ~is_retired(i-1)) ) }
 
 

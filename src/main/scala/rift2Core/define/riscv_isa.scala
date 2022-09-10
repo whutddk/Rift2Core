@@ -196,6 +196,9 @@ class Mul_isa extends Bundle {
   val remw    = Bool()
   val remuw   = Bool()
 
+  def isDiv32w = divw | divuw | remw  | remuw
+  def isDivusi = divu | remu  | divuw | remuw
+
 
   def isMul = mul | mulh | mulhsu | mulhu | mulw
   def isDiv = div | divu | divw | divuw | rem | remu | remw | remuw
@@ -749,7 +752,7 @@ class Fpu_dpt_info(implicit p: Parameters) extends RiftBundle {
 class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val pc = UInt(vlen.W)
   val rd0_raw = UInt(5.W)
-  val rd0_phy = UInt(6.W)
+  val rd0_phy = UInt((log2Ceil(regNum)).W)
 
   val is_branch = Bool()
   val is_jalr = Bool()

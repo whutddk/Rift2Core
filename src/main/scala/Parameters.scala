@@ -113,6 +113,7 @@ case object RiftParamsKey extends Field[RiftSetting]
 
 case class RiftSetting(
   hasFpu: Boolean = true,
+  hasDebugger: Boolean = true,
   hasPreFetch: Boolean = true,
 
   isMinArea: Boolean = false,
@@ -178,6 +179,7 @@ case class RiftSetting(
   require( regNum > 32 )
   require( pmpNum > 0 && pmpNum <= 8 )
   require( icacheParameters.dw == dcacheParameters.dw )
+  require( isPow2(dcacheParameters.stEntry) )
 }
 
 trait HasRiftParameters {
@@ -190,6 +192,7 @@ trait HasRiftParameters {
   val dcacheParams = riftSetting.dcacheParameters
 
   def hasFpu = riftSetting.hasFpu
+  def hasDebugger = riftSetting.hasDebugger
   def hasPreFetch = riftSetting.hasPreFetch
   
   def cm_chn = riftSetting.cm_chn

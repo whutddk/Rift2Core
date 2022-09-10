@@ -24,6 +24,7 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 
 
 ## [How to Setup](doc/Setup.md)
+You can complete the deployment of the compilation and test environment following the steps below:
 * Setup Repo
 * Setup sbt
 * Setup verilator and gtkwave
@@ -32,6 +33,8 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 * Test a single ISA with waveform
 * Test all ISA without waveform
 
+Also we provide a [Docker-Image](https://hub.docker.com/repository/docker/whutddk/rift2env) mainly for CI, which can also be used for compiling and testing.
+
 ## [How to Config](doc/Configuration.md)
 
 ----------------------
@@ -39,19 +42,50 @@ Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC
 
 ## Rift To Go
 
-Download Pre-compile(NormalCfg) FIRRTL Here:
-
-* [Master Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Rift2Chip.fir)
-* [Develop Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Rift2Chip.fir)
+Download Pre-compile Version [Here](https://github.com/whutddk/Rift2Core/releases), the newest status is as follows:
 
 
-Download Pre-compile(NormalCfg) Verilog Here:
+|Version|Test|Dhrystone|CoreMark|
+|:----: |:--:|:-------:|:------:|
+|Rift-2300|N/A|N/A|N/A|
+|Rift-2310|N/A|N/A|N/A|
+|Rift-2320|N/A|N/A|N/A|
+|Rift-2330|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2330/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2330/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2330/coremark.json)|
+|Rift-2340|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2340/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2340/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2340/coremark.json)|
+|Rift-2350|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2350/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2350/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2350/coremark.json)|
+|Rift-2360|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2360/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2360/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2360/coremark.json)|
+|Rift-2370|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2370/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2370/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2370/coremark.json)|
+|Rift-2380|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2380/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2380/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2380/coremark.json)|
+|Rift-2390|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2390/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2390/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2390/coremark.json)|
 
-* [Master Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/generated/Rift2Chip.v)
-* [Develop Version](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/generated/Rift2Chip.v)
+
+
+
+
+<!-- |Version|FIRRTL|Verilog|Test|Dhrystone|CoreMark|Area|
+|:----: |:----:|:-----:|:--:|:-----:|:-----:|
+|Rift-2300|[~Master~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2300/Rift2Chip.fir) [~Develop~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2300/Rift2Chip.fir)|[~Master~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2300/Rift2Chip.v) [~Develop~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2300/Rift2Chip.v)|N/A|N/A|N/A|
+|Rift-2310|[~Master~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2310/Rift2Chip.fir) [~Develop~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2310/Rift2Chip.fir)|[~Master~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2310/Rift2Chip.v) [~Develop~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2310/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2320|[~Master~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2320/Rift2Chip.fir) [~Develop~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2320/Rift2Chip.fir)|[~Master~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2320/Rift2Chip.v) [~Develop~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2320/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2330|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2330/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2330/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2330/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2330/Rift2Chip.v) |Pass|N/A|N/A|
+|Rift-2340|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2340/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2340/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2340/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2340/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2350|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2350/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2350/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2350/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2350/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2360|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2360/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2360/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2360/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2360/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2370|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2370/Rift2Chip.fir) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2370/Rift2Chip.fir)|[Master](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2370/Rift2Chip.v) [Develop](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2370/Rift2Chip.v) |Pass|1.281689|1.912046|
+|Rift-2380|[~Master~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2380/Rift2Chip.fir) [~Develop~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2380/Rift2Chip.fir)|[~Master~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2380/Rift2Chip.v) [~Develop~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2380/Rift2Chip.v) |N/A|N/A|N/A|
+|Rift-2390|[~Master~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2390/Rift2Chip.fir) [~Develop~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2390/Rift2Chip.fir)|[~Master~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/master/Release/Rift2390/Rift2Chip.v) [~Develop~](https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/Verilog/develop/Release/Rift2390/Rift2Chip.v) |N/A|N/A|N/A| -->
+
+
+
+
+
 
 
 ## API
+
+Rift2Core is not only a highly configurable RISC-V CPU generator, but also provides configurable generation of submodules.
+
+Search the provided API in the Scala Doc.
 
 [API Here](https://whutddk.github.io/Rift2Core/ScalaDoc/api/index.html)
 
