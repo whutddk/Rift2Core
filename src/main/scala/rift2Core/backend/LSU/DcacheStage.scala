@@ -177,8 +177,8 @@ trait DcacheStageWData { this: DcacheStageBase =>
   val amo_reAlign_64_a = Wire(UInt(64.W))
   val amo_reAlign_64_b = Wire(UInt(64.W))
 
-  amo_reAlign_64_a := reAlign_data( from = 256, to = 64, pipeStage1Bits.wdata, pipeStage1Bits.paddr )
-  amo_reAlign_64_b := reAlign_data( from = 256, to = 64, Cat(datInfoR(cbSel).reverse),      pipeStage1Bits.paddr )
+  amo_reAlign_64_a := reAlign_data( from = dw, to = 64, pipeStage1Bits.wdata, pipeStage1Bits.paddr )
+  amo_reAlign_64_b := reAlign_data( from = dw, to = 64, Cat(datInfoR(cbSel).reverse),      pipeStage1Bits.paddr )
 
   val cmp_a_sel = Mux(high_sel, amo_reAlign_64_a(63,32), amo_reAlign_64_a(31,0))
   val cmp_b_sel = Mux(high_sel, amo_reAlign_64_b(63,32), amo_reAlign_64_b(31,0))
@@ -189,22 +189,22 @@ trait DcacheStageWData { this: DcacheStageBase =>
       pipeStage1Bits.fun.grant -> pipeStage1Bits.wdata,
       pipeStage1Bits.fun.is_su -> pipeStage1Bits.wdata,
       pipeStage1Bits.fun.is_sc -> pipeStage1Bits.wdata,
-      (pipeStage1Bits.fun.amoswap_w | pipeStage1Bits.fun.amoswap_d) -> reAlign_data( from = 64, to = 256,  amo_reAlign_64_a, pipeStage1Bits.paddr ),
-      (pipeStage1Bits.fun.amoadd_w                 )                -> reAlign_data( from = 64, to = 256, ( Mux(high_sel, amo_reAlign_64_a >> 32 << 32, amo_reAlign_64_a) + amo_reAlign_64_b), pipeStage1Bits.paddr ), //when sel msb-32, set one of op's lsb-32 to zore to prevent carry-in
-      (pipeStage1Bits.fun.amoadd_d                 )                -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a + amo_reAlign_64_b), pipeStage1Bits.paddr ),
-      (pipeStage1Bits.fun.amoxor_w  | pipeStage1Bits.fun.amoxor_d ) -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a ^ amo_reAlign_64_b), pipeStage1Bits.paddr ),
-      (pipeStage1Bits.fun.amoand_w  | pipeStage1Bits.fun.amoand_d ) -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a & amo_reAlign_64_b), pipeStage1Bits.paddr ),
-      (pipeStage1Bits.fun.amoor_w   | pipeStage1Bits.fun.amoor_d  ) -> reAlign_data( from = 64, to = 256, (amo_reAlign_64_a | amo_reAlign_64_b), pipeStage1Bits.paddr ),
+      (pipeStage1Bits.fun.amoswap_w | pipeStage1Bits.fun.amoswap_d) -> reAlign_data( from = 64, to = dw,  amo_reAlign_64_a, pipeStage1Bits.paddr ),
+      (pipeStage1Bits.fun.amoadd_w                 )                -> reAlign_data( from = 64, to = dw, ( Mux(high_sel, amo_reAlign_64_a >> 32 << 32, amo_reAlign_64_a) + amo_reAlign_64_b), pipeStage1Bits.paddr ), //when sel msb-32, set one of op's lsb-32 to zore to prevent carry-in
+      (pipeStage1Bits.fun.amoadd_d                 )                -> reAlign_data( from = 64, to = dw, (amo_reAlign_64_a + amo_reAlign_64_b), pipeStage1Bits.paddr ),
+      (pipeStage1Bits.fun.amoxor_w  | pipeStage1Bits.fun.amoxor_d ) -> reAlign_data( from = 64, to = dw, (amo_reAlign_64_a ^ amo_reAlign_64_b), pipeStage1Bits.paddr ),
+      (pipeStage1Bits.fun.amoand_w  | pipeStage1Bits.fun.amoand_d ) -> reAlign_data( from = 64, to = dw, (amo_reAlign_64_a & amo_reAlign_64_b), pipeStage1Bits.paddr ),
+      (pipeStage1Bits.fun.amoor_w   | pipeStage1Bits.fun.amoor_d  ) -> reAlign_data( from = 64, to = dw, (amo_reAlign_64_a | amo_reAlign_64_b), pipeStage1Bits.paddr ),
 
 
-      (pipeStage1Bits.fun.amomin_w ) -> reAlign_data( from = 64, to = 256, Mux(cmp_a_sel.asSInt        < cmp_b_sel.asSInt,        amo_reAlign_64_a, amo_reAlign_64_b), pipeStage1Bits.paddr),
-      (pipeStage1Bits.fun.amomin_d ) -> reAlign_data( from = 64, to = 256, Mux(amo_reAlign_64_a.asSInt < amo_reAlign_64_b.asSInt, amo_reAlign_64_a, amo_reAlign_64_b), pipeStage1Bits.paddr),
-      (pipeStage1Bits.fun.amomax_w ) -> reAlign_data( from = 64, to = 256, Mux(cmp_a_sel.asSInt        < cmp_b_sel.asSInt,        amo_reAlign_64_b, amo_reAlign_64_a), pipeStage1Bits.paddr),
-      (pipeStage1Bits.fun.amomax_d ) -> reAlign_data( from = 64, to = 256, Mux(amo_reAlign_64_a.asSInt < amo_reAlign_64_b.asSInt, amo_reAlign_64_b, amo_reAlign_64_a), pipeStage1Bits.paddr),
-      (pipeStage1Bits.fun.amominu_w) -> reAlign_data( from = 64, to = 256, Mux(cmp_a_sel               < cmp_b_sel,               amo_reAlign_64_a, amo_reAlign_64_b), pipeStage1Bits.paddr),
-      (pipeStage1Bits.fun.amominu_d) -> reAlign_data( from = 64, to = 256, Mux(amo_reAlign_64_a        < amo_reAlign_64_b,        amo_reAlign_64_a, amo_reAlign_64_b), pipeStage1Bits.paddr),
-      (pipeStage1Bits.fun.amomaxu_w) -> reAlign_data( from = 64, to = 256, Mux(cmp_a_sel               < cmp_b_sel,               amo_reAlign_64_b, amo_reAlign_64_a), pipeStage1Bits.paddr),
-      (pipeStage1Bits.fun.amomaxu_d) -> reAlign_data( from = 64, to = 256, Mux(amo_reAlign_64_a        < amo_reAlign_64_b,        amo_reAlign_64_b, amo_reAlign_64_a), pipeStage1Bits.paddr),
+      (pipeStage1Bits.fun.amomin_w ) -> reAlign_data( from = 64, to = dw, Mux(cmp_a_sel.asSInt        < cmp_b_sel.asSInt,        amo_reAlign_64_a, amo_reAlign_64_b), pipeStage1Bits.paddr),
+      (pipeStage1Bits.fun.amomin_d ) -> reAlign_data( from = 64, to = dw, Mux(amo_reAlign_64_a.asSInt < amo_reAlign_64_b.asSInt, amo_reAlign_64_a, amo_reAlign_64_b), pipeStage1Bits.paddr),
+      (pipeStage1Bits.fun.amomax_w ) -> reAlign_data( from = 64, to = dw, Mux(cmp_a_sel.asSInt        < cmp_b_sel.asSInt,        amo_reAlign_64_b, amo_reAlign_64_a), pipeStage1Bits.paddr),
+      (pipeStage1Bits.fun.amomax_d ) -> reAlign_data( from = 64, to = dw, Mux(amo_reAlign_64_a.asSInt < amo_reAlign_64_b.asSInt, amo_reAlign_64_b, amo_reAlign_64_a), pipeStage1Bits.paddr),
+      (pipeStage1Bits.fun.amominu_w) -> reAlign_data( from = 64, to = dw, Mux(cmp_a_sel               < cmp_b_sel,               amo_reAlign_64_a, amo_reAlign_64_b), pipeStage1Bits.paddr),
+      (pipeStage1Bits.fun.amominu_d) -> reAlign_data( from = 64, to = dw, Mux(amo_reAlign_64_a        < amo_reAlign_64_b,        amo_reAlign_64_a, amo_reAlign_64_b), pipeStage1Bits.paddr),
+      (pipeStage1Bits.fun.amomaxu_w) -> reAlign_data( from = 64, to = dw, Mux(cmp_a_sel               < cmp_b_sel,               amo_reAlign_64_b, amo_reAlign_64_a), pipeStage1Bits.paddr),
+      (pipeStage1Bits.fun.amomaxu_d) -> reAlign_data( from = 64, to = dw, Mux(amo_reAlign_64_a        < amo_reAlign_64_b,        amo_reAlign_64_b, amo_reAlign_64_a), pipeStage1Bits.paddr),
             
     ))
       
@@ -275,7 +275,7 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
   // val pbReqValid = RegInit(false.B)
   val wbReqPaddr = Reg(UInt(plen.W))
   // val pbReqPaddr = Reg(UInt(plen.W))
-  val wbReqData  = Reg(UInt(256.W))
+  val wbReqData  = Reg(UInt(dw.W))
   // val pbReqData  = Reg(UInt(256.W))
   val wbReqisData = Reg(Bool())
   val isPb        = Reg(Bool())
@@ -356,9 +356,9 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
       
       val res_pre_pre = {
         val res = Wire( UInt(64.W) )
-        val (new_data, new_strb) = overlap_wr( rdata, 0.U(32.W), overlap_wdata, overlap_wstrb)
+        val (new_data, new_strb) = overlap_wr( rdata, 0.U((dw/8).W), overlap_wdata, overlap_wstrb)
         val overlap_data = Mux( fun.is_lu, new_data, rdata) //align 256
-        res := reAlign_data( from = 256, to = 64, overlap_data, paddr )
+        res := reAlign_data( from = dw, to = 64, overlap_data, paddr )
         res
       }
       val res_pre = get_loadRes( fun, paddr, res_pre_pre ) //align 8

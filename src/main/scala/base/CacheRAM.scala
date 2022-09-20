@@ -28,6 +28,8 @@ import rift2Core.define._
 
 
 class DatRAM(dw: Int, cl: Int) extends Module {
+  require( dw == 128 )
+  require( cl <= 256 )
   def line_w   = log2Ceil(cl)
   val io = IO(new Bundle{
     val addr  = Input(UInt(line_w.W))
@@ -41,7 +43,6 @@ class DatRAM(dw: Int, cl: Int) extends Module {
   })
 
   val datMem = SyncReadMem( cl, Vec( dw/8, UInt(8.W) ) )
-
   io.datar := DontCare
   when( io.enr ) {
     io.datar := datMem.read( io.addr )
@@ -49,7 +50,90 @@ class DatRAM(dw: Int, cl: Int) extends Module {
     datMem.write( io.addr, io.dataw, io.datawm )
   }
 
+  // val datMem = Module(new Generate_sram)
+
+  //   datMem.io.data_w  := Cat(io.dataw.reverse)
+  //   datMem.io.addr_w  := io.addr
+  //   datMem.io.data_wstrb := Cat(io.datawm.reverse)
+  //   datMem.io.en_w   := io.enw
+
+  //   datMem.io.addr_r := io.addr
+  //   for ( i <- 0 until 16 ) io.datar(i) := datMem.io.data_r( 8*i+7, 8*i )
+  //   datMem.io.en_r   := io.enr
+
+  //   datMem.io.CLK := clock 
+
 }
+
+class Generate_sram extends BlackBox with HasBlackBoxInline {
+  val io = IO(new Bundle{
+    
+    val data_w  = Input( UInt(128.W) )
+    val addr_w  = Input(UInt(4.W))
+    val data_wstrb = Input( UInt(16.W)  )
+    val en_w   = Input(Bool())
+
+    val data_r = Output( UInt(128.W) )
+    val addr_r  = Input(UInt(4.W))
+    val en_r   = Input(Bool())
+
+    val CLK = Input(Clock())
+  })
+
+  setInline("Generate_sram.v",
+              """
+module Generate_sram(
+    |  	input [127:0] data_w,
+    |  	input [3:0] addr_w,
+    |  	input [15:0] data_wstrb,
+    |  	input en_w,
+    |  
+    |  	output [127:0] data_r,
+    |  	input [3:0] addr_r,
+    |  	input en_r,
+    |  
+    |  	input CLK
+    |  );
+    |  
+    |  	reg [127:0] ram[0:15];
+    |  	reg [127:0] data_r_reg;
+    |  
+    |  	generate
+    |  		for ( genvar i = 0; i < 16; i = i + 1) begin
+    |  			always @(posedge CLK) begin
+    |  				if (en_w) begin
+    |  					if (data_wstrb[i]) begin
+    |  						ram[addr_w][i*8+:8] <= #1 data_w[i*8+:8] ;					
+    |  					end
+    |  				end
+    |  
+    |  				if (en_r) begin
+    |  					data_r_reg[i*8+:8] <= #1 ram[addr_r][i*8+:8];
+    |  				end
+    |  			end
+    |  
+    |  
+    |  		end
+    |  	endgenerate
+    |  
+    |  	assign data_r = data_r_reg[127:0];
+    |  
+    |  
+    |  integer i;
+    |  initial begin
+    |  	for ( i = 0; i < 16; i = i + 1 ) begin
+    |  		ram[i] = $random;
+    |  	end
+    |  
+    |  	data_r_reg = $random;
+    |  end
+    |   
+    |endmodule
+    """.stripMargin)
+}
+
+
+
 
 class TagRAM(tag_w: Int,  cl: Int) extends Module {
   def line_w   = log2Ceil(cl)

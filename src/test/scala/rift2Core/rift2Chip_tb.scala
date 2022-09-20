@@ -40,14 +40,23 @@ class NormalCfg extends Config((site, here, up) => {
 
 class Rift2GoCfg extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
+    hasL2  = false,
     hasFpu = false,
     hasDebugger = true,
     hasPreFetch = false,
+    hasuBTB = false,
+    hasMulDiv = true,
 
-    opChn = 4,
-    wbChn = 2,
+    ftChn = 4,
 
-    regNum = 40,
+    rn_chn = 1,
+    opChn = 1,
+    wbChn = 1,
+    cm_chn = 1,
+
+    pmpNum = 0,
+    regNum = 34,
+    hpmNum  = 0,
 
     l1BeatBits = 64,
     memBeatBits = 64,
@@ -57,19 +66,25 @@ class Rift2GoCfg extends Config((site, here, up) => {
     ifetchParameters = IFParameters(
       uBTB_entry = 4,
       // uBTB_tag_w = 16,
-      // btb_cl = 4096,
-      // bim_cl = 4096,
-      // ras_dp = 256,
+      btb_cl = 4,
+      bim_cl = 8,
+      ras_dp = 4,
       // tage_table = 6, 
     ),
     icacheParameters = IcacheParameters(
-      cb = 2,
-    ),
-    dcacheParameters = DcacheParameters(
+      dw = 128,
       bk = 1,
       cb = 2,
-      sbEntry = 4,
-      stEntry = 4,
+      cl = 2,
+    ),
+    dcacheParameters = DcacheParameters(
+      dw = 128,
+      bk = 1,
+      cb = 2,
+      cl = 2,
+      sbEntry = 2,
+      stEntry = 2,
+      
     ),
 
 
@@ -247,12 +262,12 @@ class Rift2340 extends Config((site, here, up) => {
 
 class Rift2350 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasFpu = true,
+    hasFpu = false,
     hasDebugger = true,
     hasPreFetch = false,
 
     opChn = 4,
-    wbChn = 2,
+    wbChn = 4,
 
     regNum = 48,
 
@@ -287,7 +302,7 @@ class Rift2350 extends Config((site, here, up) => {
 
 class Rift2360 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasFpu = true,
+    hasFpu = false,
     hasDebugger = true,
     hasPreFetch = false,
 
@@ -412,6 +427,8 @@ object testMain extends App {
 
   // val cfg = new NormalCfg
   val cfg = new Rift2GoCfg
+  // val cfg = new Rift2350
+  // val cfg = new Rift2370
 
   (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
       ChiselGeneratorAnnotation(() => {
@@ -420,6 +437,36 @@ object testMain extends App {
   })
   ))
 }
+
+object tapeMain extends App {
+
+  val cfg = new Rift2GoCfg
+  // val cfg = new Rift2330
+  // val cfg = new Rift2350
+  // val cfg = new Rift2370
+
+  (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Main", "-E", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
+      ChiselGeneratorAnnotation(() => {
+    val soc = LazyModule(new Rift2Link()(cfg))
+    soc.module
+  })
+  ))
+
+  (new chisel3.stage.ChiselStage).execute( Array(  "--target-dir", "generated/TapeMain", "-E", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
+      ChiselGeneratorAnnotation(() => {
+    val soc = LazyModule(new Rift2LinkA(isFlatten = false)(cfg))
+    soc.module
+  })
+  ))
+
+  (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/TapeSim", "-E", "verilog") ++ args, Seq(
+      ChiselGeneratorAnnotation(() => {
+    val soc = LazyModule(new Rift2LinkB()(cfg))
+    soc.module
+  })
+  ))
+}
+
 
 object testAll extends App {
 
@@ -469,11 +516,12 @@ object testAll extends App {
 // }
 
 import base._
+import rift2Core.backend._
 
 object testModule extends App {
   (new chisel3.stage.ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => {
-    new RePort( UInt(8.W), 3)
+    new Multiplier( Bool(), 32 )
   })
     ))
 }

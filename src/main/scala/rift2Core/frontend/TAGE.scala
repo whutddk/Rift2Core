@@ -121,7 +121,7 @@ class TAGE(param: TageParams = TageParams())(implicit p: Parameters) extends IFe
       }
     }
   
-    for ( i <- 0 until 6 ) yield { io.resp.bits(i) := tageTable(i).io.resp }
+    for ( i <- 0 until 6 ) yield { io.resp.bits(i) := tageTable(i).io.resp; printf("Warning, Bugs no de!")}
     io.resp.valid := RegNext(io.req.fire)
     io.req.ready  := io.resp.ready
 

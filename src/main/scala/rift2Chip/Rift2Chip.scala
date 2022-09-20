@@ -22,8 +22,10 @@ import chisel3._
 import chisel3.util._
 import rift._
 import rift2Core._
-import axi._
+// import axi._
 import debug._
+
+import rift2Core.define._
 
 import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
@@ -71,12 +73,17 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
   val i_rift2Core = LazyModule( new Rift2Core(isFlatten) )
   val i_debugger = if ( hasDebugger) {Some(LazyModule(new Debugger(nComponents = 1)))} else {None}
-
+  val i_aclint = LazyModule( new AClint( nTiles = 1 ) )
+  val nDevices = 31
+  val i_plic = LazyModule( new Plic( nHarts = 1, nPriorities = 8, nDevices = nDevices ))
   val sifiveCache = LazyModule(new InclusiveCache(
       cache = CacheParameters( level = 2, ways = 8, sets = 2048, blockBytes = 256/8, beatBytes = l1BeatBits/8 ),
       micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
       control = None
     ))
+
+  val chipLinkMst = LazyModule( new ChipLinkMaster)
+  val chipLinkSlv = LazyModule( new ChiplinkSlave)
 
 
   val memRange = AddressSet(0x00000000L, 0xffffffffL).subtract(AddressSet(0x0L, 0x7fffffffL))
@@ -124,33 +131,38 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
   //   )
 
 
-  val l2_xbarMem = TLXbar()
-  val l2_xbar64 = TLXbar()
+  // val l2_xbarMem = TLXbar()
+  // val l2_xbar64 = TLXbar()
   val l1_xbarMem = TLXbar()
   val l1_xbar64 = TLXbar()
   // val tlcork = TLCacheCork()
 
+  val linkMXbar = TLXbar()
+  val linkSXbar = TLXbar()
 
-
+  linkSXbar := chipLinkSlv.ChipLinkSlaveNode
 
   memAXI4SlaveNode := 
     AXI4UserYanker() := 
     AXI4IdIndexer(4) :=
     AXI4Deinterleaver(256/8) :=
     TLToAXI4() :=
-    TLWidthWidget(memBeatBits / 8) := l2_xbarMem
+    TLWidthWidget(64 / 8) := linkSXbar
 
   sysAXI4SlaveNode := 
     AXI4UserYanker() := 
     AXI4IdIndexer(4) :=
     AXI4Deinterleaver(256/8) :=
     TLToAXI4() :=
-    TLWidthWidget(64 / 8) := l2_xbar64
+    TLWidthWidget(64 / 8) := linkSXbar
 
-    l2_xbarMem :=* TLBuffer() :=* TLCacheCork() := sifiveCache.node := TLBuffer() := l1_xbarMem
-    l2_xbarMem := TLBuffer() := TLWidthWidget(64 / 8) := l1_xbar64
-    l2_xbar64 :=  TLBuffer() := TLWidthWidget(l1BeatBits / 8) := TLBuffer()  :=l1_xbarMem    
-    l2_xbar64 :=  TLBuffer() :=  l1_xbar64
+    chipLinkMst.chipLinkMasterNode := linkMXbar
+    linkMXbar :=* TLBuffer() := TLFIFOFixer() :=
+    TLFragmenter(minSize = 64/8, maxSize = 256/8, alwaysMin = true) := TLFIFOFixer() := TLBuffer() :=
+    TLWidthWidget(64 / 8) :=* TLCacheCork() := sifiveCache.node := TLBuffer() := l1_xbarMem
+    linkMXbar := TLBuffer() :=  l1_xbar64
+    // l2_xbar64 :=  TLBuffer() := TLWidthWidget(l1BeatBits / 8) := TLBuffer()  :=l1_xbarMem    
+    // l2_xbar64 :=  TLBuffer() :=  l1_xbar64
 
 
 
@@ -164,12 +176,12 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
     l1_xbar64 := TLBuffer() := i_rift2Core.periphClientNode
 
     if( hasDebugger ) {
-      l1_xbar64 := TLBuffer() := i_debugger.get.dm.sbaClientNode
-      i_debugger.get.dm.peripNode := TLBuffer():= TLFragmenter(8, 32) := TLBuffer() := l2_xbar64      
+      // l1_xbar64 := TLBuffer() := i_debugger.get.dm.sbaClientNode
+      i_debugger.get.dm.peripNode := TLBuffer():= TLFragmenter(8, 32) := TLBuffer() := l1_xbar64      
     }
 
-
-
+    i_aclint.node := TLBuffer() := l1_xbar64
+    i_plic.node   := TLBuffer() := l1_xbar64
 
 
   val memory = InModuleBody {
@@ -212,10 +224,22 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
       val JtagIO  = if (hasDebugger) {Some(new JtagIO())} else { None }
       val ndreset = if (hasDebugger) {Some(Output(Bool()))}  else { None }
 
-
+      val interrupt = Input( Vec(nDevices, Bool()) )
       val rtc_clock = Input(Bool())
+
+      val hspi_clk   = Output(Bool())//Input(Bool())
+      val hspi_reset = Input(Bool())
+      val hspi_oen   = Output(Bool())
     })
   
+    chipLinkSlv.module.io.hspi_rx <> chipLinkMst.module.io.hspi_tx
+    chipLinkSlv.module.io.hspi_clk := chipLinkMst.module.io.hspi_clk
+    chipLinkSlv.module.io.hspi_reset := io.hspi_reset
+
+    chipLinkMst.module.io.hspi_rx <> chipLinkSlv.module.io.hspi_tx
+    io.hspi_clk := chipLinkMst.module.io.hspi_clk// := 
+    // chipLinkMst.module.io.hspi_reset := io.hspi_reset
+    io.hspi_oen := chipLinkMst.module.io.hspi_oen
 
     if( hasDebugger ) {
       i_debugger.get.module.io.JtagIO <> io.JtagIO.get
@@ -226,6 +250,14 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
 
     i_rift2Core.module.io.rtc_clock := io.rtc_clock
+
+
+    i_aclint.module.io.rtc_clock := io.rtc_clock
+    i_rift2Core.module.io.aclint := i_aclint.module.io.int(0)
+    i_rift2Core.module.io.plic.mei := i_plic.module.io.context(0)
+    i_rift2Core.module.io.plic.sei := false.B
+
+    i_plic.module.io.interrupt := io.interrupt
   }
 
 

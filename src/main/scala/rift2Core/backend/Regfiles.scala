@@ -45,6 +45,14 @@ class iss_readOp_info(dw: Int)(implicit p: Parameters) extends RiftBundle{
   val dat = Input(new Operation_source(dw))
 }
 
+class ReadOp_req_Bundle(implicit p: Parameters) extends RiftBundle{
+  val rs = new RS_PHY
+}
+
+class ReadOp_rsp_Bundle(dw: Int)(implicit p: Parameters) extends ReadOp_req_Bundle{
+  val dat = new Operation_source(dw)
+}
+
 class Info_commit_op(implicit p: Parameters) extends RiftBundle{
   val is_comfirm = Output(Bool())
   val is_MisPredict = Output(Bool())
@@ -56,33 +64,25 @@ class Info_commit_op(implicit p: Parameters) extends RiftBundle{
   val is_writeback = Input(Bool())
 }
 
-class RegFiles(dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(implicit p: Parameters) extends RiftModule{
+abstract class RegFilesBase(dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RiftModule{
+  def opc = rop_chn
+  def wbc = wb_chn
   val io = IO( new Bundle{
 
     val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info) )
     val dpt_rename = Vec( rn_chn, Flipped(new dpt_rename_info) )
     /** read operators based on idx, must success */
-    val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dw)) )
+    val iss_readOp = Vec(opc, Flipped( new iss_readOp_info(dw)) )
     /** writeBack request from exeUnit */
-    val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(dw))))
+    val exe_writeBack = Vec(wbc, Flipped(new DecoupledIO(new WriteBack_info(dw))))
     /** Commit request from commitUnit */
-    val commit = Vec(cmm_chn, Flipped(new Info_commit_op))
+    val commit = Vec(cm_chn, Flipped(new Info_commit_op))
 
     val diffReg = Output(Vec(32, UInt(dw.W)))
   })
 
-  /**
-    * there are regNum-1 files,
-    * @note the file(regNum) is assert to be Zero
-    */
-  val files_reg = RegInit( VecInit( Seq.fill(regNum-1)(0.U(dw.W)) ))
-  val files = {
-    val res = Wire( Vec(regNum, UInt(dw.W)) )
-    for ( i <- 0 until regNum-1 ) yield { res(i) := files_reg(i) }
-    res(regNum-1) := 0.U
-    res
-  }
-  
+  val raw = io.commit.map{ x => x.raw }
+  val phy = io.commit.map{ x => x.phy }
 
   /**
     * there are regNum-1 log,
@@ -99,6 +99,18 @@ class RegFiles(dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(im
   }
 
   /**
+    * there are regNum-1 files,
+    * @note the file(regNum) is assert to be Zero
+    */
+  val files_reg = RegInit( VecInit( Seq.fill(regNum-1)(0.U(dw.W)) ))
+  val files = {
+    val res = Wire( Vec(regNum, UInt(dw.W)) )
+    for ( i <- 0 until regNum-1 ) yield { res(i) := files_reg(i) }
+    res(regNum-1) := 0.U
+    res
+  }
+
+  /**
     * index that 32 renamed register-sources point to
     */
   val rename_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U(log2Ceil(regNum).W)} ) )
@@ -107,6 +119,17 @@ class RegFiles(dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(im
     * index that 32 commited register-sources point to
     */  
   val archit_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {i.U(log2Ceil(regNum).W)} ) )
+
+  for ( i <- 0 until 32 ) yield {
+    io.diffReg(i) := files(archit_ptr(i))
+  }
+
+
+}
+
+
+trait RegFilesReName{ this: RegFilesBase => 
+
 
   /**
     * finding out the first Free-phy-register
@@ -123,7 +146,6 @@ class RegFiles(dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(im
 
   for ( i <- 0 until rn_chn ) {
 
-
     when( io.dpt_rename(i).req.fire ) {
       val idx = io.dpt_rename(i).req.bits.rd0
       assert( log(molloc_idx(i)) === "b00".U )
@@ -136,8 +158,24 @@ class RegFiles(dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(im
 
   }
 
+  for ( i <- 0 until cm_chn ) {
+    def m = cm_chn-1-i
+    when ( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
+      for ( j <- 0 until 32 ) yield {
+        rename_ptr(j) := archit_ptr(j)
+        for ( n <- 0 until m ) {
+          when( j.U === raw(n) & io.commit(n).is_comfirm ) {
+            rename_ptr(j) := phy(n) //override renme_ptr when the perivious chn comfirm
+          } 
+        }
+        when( j.U === raw(m) & io.commit(m).is_MisPredict ) { rename_ptr(j) := phy(m) } //override renme_ptr when the this chn is mispredict
+      }
+    }
+  }
+}
 
-  for ( i <- 0 until rop_chn ) yield {
+trait RegFilesReadOPFF{ this:RegFilesBase =>
+  for ( i <- 0 until opc ) yield {
     val idx1 = io.iss_readOp(i).reg.bits.rs1
     val idx2 = io.iss_readOp(i).reg.bits.rs2
     val idx3 = io.iss_readOp(i).reg.bits.rs3
@@ -154,11 +192,63 @@ class RegFiles(dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(im
     io.iss_readOp(i).reg.ready :=
       (log(idx1) === "b11".U | idx1 === (regNum-1).U ) &
       (log(idx2) === "b11".U | idx2 === (regNum-1).U ) &
-      (log(idx3) === "b11".U | idx3 === (regNum-1).U ) 
+      (log(idx3) === "b11".U | idx3 === (regNum-1).U )
+  }
+}
+
+trait RegFilesReadOPSRAM{ this:RegFilesBase =>
+
+  for ( i <- 0 until opc ) yield {
+    val idx1 = io.iss_readOp(i).reg.bits.rs1
+    val idx2 = io.iss_readOp(i).reg.bits.rs2
+    val idx3 = io.iss_readOp(i).reg.bits.rs3
+
+    val relayFile1 = for( i <- 0 until 4 ) yield { RegNext( files( (idx1 >> 2 << 2) + i.U ) )}
+    val relayFile2 = for( i <- 0 until 4 ) yield { RegNext( files( (idx2 >> 2 << 2) + i.U ) )}
+    val relayFile3 = for( i <- 0 until 4 ) yield { RegNext( files( (idx3 >> 2 << 2) + i.U ) )}
+
+
+    io.iss_readOp(i).dat.op1 := Mux(RegNext(idx1 === (regNum-1).U), 0.U,
+      Mux1H(Seq(
+        RegNext( (idx1(1,0)) === 0.U) -> relayFile1(0),
+        RegNext( (idx1(1,0)) === 1.U) -> relayFile1(1),
+        RegNext( (idx1(1,0)) === 2.U) -> relayFile1(2),
+        RegNext( (idx1(1,0)) === 3.U) -> relayFile1(3),
+      ))
+    )
+
+
+
+    io.iss_readOp(i).dat.op2 := Mux(RegNext(idx2 === (regNum-1).U), 0.U,
+      Mux1H(Seq(
+        RegNext( (idx2(1,0)) === 0.U) -> relayFile2(0),
+        RegNext( (idx2(1,0)) === 1.U) -> relayFile2(1),
+        RegNext( (idx2(1,0)) === 2.U) -> relayFile2(2),
+        RegNext( (idx2(1,0)) === 3.U) -> relayFile2(3),
+      ))
+    )
+    io.iss_readOp(i).dat.op3 := Mux(RegNext(idx3 === (regNum-1).U), 0.U,
+      Mux1H(Seq(
+        RegNext( (idx3(1,0)) === 0.U) -> relayFile3(0),
+        RegNext( (idx3(1,0)) === 1.U) -> relayFile3(1),
+        RegNext( (idx3(1,0)) === 2.U) -> relayFile3(2),
+        RegNext( (idx3(1,0)) === 3.U) -> relayFile3(3),
+      ))
+    )
+
+
+    io.iss_readOp(i).reg.ready := RegNext( io.iss_readOp(i).reg.valid &
+      (log(idx1) === "b11".U | idx1 === (regNum-1).U ) &
+      (log(idx2) === "b11".U | idx2 === (regNum-1).U ) &
+      (log(idx3) === "b11".U | idx3 === (regNum-1).U )      
+    , false.B)
 
   }
+}
 
-  for ( i <- 0 until wb_chn ) yield {
+
+trait RegFilesWriteBack{ this:RegFilesBase =>
+  for ( i <- 0 until wbc ) {
     when( io.exe_writeBack(i).fire ) {
       val idx = io.exe_writeBack(i).bits.rd0
       assert( log(idx) === "b01".U, "Assert Failed when writeback at chn" + i + ", log(" + idx + ")" )
@@ -167,63 +257,49 @@ class RegFiles(dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(im
     }
     io.exe_writeBack(i).ready := true.B
   }
+}
 
-  {
-    val raw = io.commit.map{ x => x.raw }
-    val phy = io.commit.map{ x => x.phy }
-    val idx_pre = io.commit.map{ x => archit_ptr(x.raw) }
+trait RegFilesCommit{ this:RegFilesBase =>
 
-    for ( i <- 0 until cmm_chn ) {
-      def m = cmm_chn-1-i
 
-      io.commit(m).is_writeback := log(phy(m)) === "b11".U
+  val idx_pre = io.commit.map{ x => archit_ptr(x.raw) }
 
-      when( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
-        /** clear all log to 0, except that archit_ptr point to, may be override */
-        for ( j <- 0 until (regNum-1) ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
+  for ( i <- 0 until cm_chn ) {
+    def m = cm_chn-1-i
+
+    io.commit(m).is_writeback := log(phy(m)) === "b11".U
+
+    when( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
+      /** clear all log to 0, except that archit_ptr point to, may be override */
+      for ( j <- 0 until (regNum-1) ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
+    }
+    when( io.commit(m).is_MisPredict | io.commit(m).is_comfirm ) {
+      /** override the log(clear) */
+      assert( io.commit(m).is_writeback )
+      for ( j <- 0 until (regNum-1) ) yield {
+        when(j.U === idx_pre(m) ) {log_reg(j) := 0.U} // the log, that used before commit, will be clear to 0
       }
-      when( io.commit(m).is_MisPredict | io.commit(m).is_comfirm ) {
-        /** override the log(clear) */
-        assert( io.commit(m).is_writeback )
-        for ( j <- 0 until (regNum-1) ) yield {
-          when(j.U === idx_pre(m) ) {log_reg(j) := 0.U} // the log, that used before commit, will be clear to 0
-        }
-        assert( log_reg(phy(m)) === "b11".U, "log_reg which going to commit to will be overrided to \"b11\" if there is an abort in-front." )
-        log_reg(phy(m)) := "b11".U //the log, that going to use after commit should keep to be "b11"
-      }
+      assert( log_reg(phy(m)) === "b11".U, "log_reg which going to commit to will be overrided to \"b11\" if there is an abort in-front." )
+      log_reg(phy(m)) := "b11".U //the log, that going to use after commit should keep to be "b11"
+    }
 
-
-      when( io.commit(i).is_MisPredict | io.commit(i).is_comfirm ) {
-        archit_ptr(raw(i)) := phy(i)
-      }
-
-
-      when ( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
-        for ( j <- 0 until 32 ) yield {
-          rename_ptr(j) := archit_ptr(j)
-          for ( n <- 0 until m ) {
-            when( j.U === raw(n) & io.commit(n).is_comfirm ) {
-              rename_ptr(j) := phy(n) //override renme_ptr when the perivious chn comfirm
-            } 
-          }
-          when( j.U === raw(m) & io.commit(m).is_MisPredict ) { rename_ptr(j) := phy(m) } //override renme_ptr when the this chn is mispredict
-        }
-
-      }
+    when( io.commit(i).is_MisPredict | io.commit(i).is_comfirm ) {
+      archit_ptr(raw(i)) := phy(i)
     }
   }
-
+  
 
   archit_ptr.map{
     i => assert( log(i) === "b11".U, "Assert Failed, archit point to should be b11.U! i = "+i+"\n")
   }
 
-  for ( i <- 0 until 32 ) yield {
-    io.diffReg(i) := files(archit_ptr(i))    
-  }
+
+
 }
 
-class XRegFiles (dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(implicit p: Parameters) extends RegFiles(dw,  rn_chn, rop_chn, wb_chn, cmm_chn ) {
+
+
+class XRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RegFilesBase(dw, rop_chn, wb_chn ) with RegFilesReName with RegFilesReadOPSRAM with RegFilesWriteBack with RegFilesCommit{
 
   for ( i <- 0 until rn_chn ) {
     val idx1 = io.dpt_lookup(i).req.rs1
@@ -248,7 +324,7 @@ class XRegFiles (dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(
 
 }
 
-class FRegFiles (dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(implicit p: Parameters) extends RegFiles(dw, rn_chn, rop_chn, wb_chn, cmm_chn ) {
+class FRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RegFilesBase(dw, rop_chn, wb_chn ) with RegFilesReName with RegFilesReadOPSRAM with RegFilesWriteBack with RegFilesCommit{
 
 
   for ( i <- 0 until rn_chn ) {
@@ -276,7 +352,7 @@ class FRegFiles (dw: Int, rn_chn: Int, rop_chn: Int, wb_chn: Int, cmm_chn: Int)(
 }
 
 
-class FakeFRegFiles(dw: Int, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, cmm_chn: Int = 2)(implicit p: Parameters) extends RiftModule{
+class FakeFRegFiles(dw: Int, rop_chn: Int=6, wb_chn: Int = 6)(implicit p: Parameters) extends RiftModule{
   val io = IO( new Bundle{
 
     val dpt_lookup = Vec( rn_chn, Flipped(new dpt_lookup_info) )
@@ -284,7 +360,7 @@ class FakeFRegFiles(dw: Int, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, c
     val iss_readOp = Vec(rop_chn, Flipped( new iss_readOp_info(dw)) )
     val exe_writeBack = Vec(wb_chn, Flipped(new DecoupledIO(new WriteBack_info(dw))))
 
-    val commit = Vec(cmm_chn, Flipped(new Info_commit_op))
+    val commit = Vec(cm_chn, Flipped(new Info_commit_op))
 
     val diffReg = Output(Vec(32, UInt(dw.W)))
   })
@@ -308,7 +384,7 @@ class FakeFRegFiles(dw: Int, rn_chn: Int = 2, rop_chn: Int=6, wb_chn: Int = 6, c
     assert( ~io.exe_writeBack(i).valid )
   }
 
-  for( i <- 0 until cmm_chn ) {
+  for( i <- 0 until cm_chn ) {
     io.commit(i).is_writeback := false.B
   }
 

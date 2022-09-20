@@ -43,46 +43,46 @@ abstract class uBTBBase()(implicit p: Parameters) extends IFetchModule {
 
 trait uBTBLookup { this: uBTBBase =>
 
-  val reqTag = Wire(Vec(7, UInt(uBTB_tag_w.W) )) //never predict at 7.U
+  val reqTag = Wire(Vec(ftChn-1, UInt(uBTB_tag_w.W) )) //never predict at (ftChn-1).U
 
-  for( i <- 0 until 7 ) yield {
+  for( i <- 0 until ftChn-1 ) yield {
     reqTag(i) := io.req.pc(1+uBTB_tag_w-1, 1) + i.U
   }
 
-  for ( i <- 0 until 8 ) {io.resp.isRedirect(i) := false.B; io.resp.target := 0.U} // will be override
+  for ( i <- 0 until ftChn ) {io.resp.isRedirect(i) := false.B; io.resp.target := 0.U} // will be override
 
-  for( i <- 6 to 0 by -1 ) {
-    when( (7.U - io.req.pc(3,1)) >= i.U ) {
+  for( i <- (ftChn-2) to 0 by -1 ) {
+    when( ((ftChn-1).U - io.req.pc( (log2Ceil(ftChn*16/8)-1) ,1)) >= i.U ) {
       for ( entry <- 0 until uBTB_entry ) {
         when( reqTag(i) === tag(entry) & isValid(entry) ) {
           io.resp.isRedirect(i) := true.B
           io.resp.target := buff(entry)
-          for ( j <- i+1 until 8 ) { io.resp.isRedirect(j) := false.B }
+          for ( j <- i+1 until ftChn ) { io.resp.isRedirect(j) := false.B }
         }
       }
     }
   }
 
-  for( i <- 0 until 8 ) {  //never predict at 7.U or next frame
-    when( io.req.pc(3,1) >= i.U ) {
-      io.resp.isRedirect(7-i) := false.B      
+  for( i <- 0 until ftChn ) {  //never predict at (ftChn-1).U or next frame
+    when( io.req.pc((log2Ceil(ftChn*16/8)-1),1) >= i.U ) {
+      io.resp.isRedirect((ftChn-1)-i) := false.B      
     }
   }
 
-  assert( io.resp.isRedirect(7) === false.B )
+  assert( io.resp.isRedirect((ftChn-1)) === false.B )
 
 
 
   when( io.resp.isRedirect.reduce(_|_) === false.B ) {
-    for ( i <- 0 until 8 )
-    io.resp.isActive(i) := ((7.U - io.req.pc(3,1)) >= i.U)
+    for ( i <- 0 until ftChn )
+    io.resp.isActive(i) := (((ftChn-1).U - io.req.pc((log2Ceil(ftChn*16/8)-1),1)) >= i.U)
   } .otherwise {
-    for ( i <- 0 until 8 ) {
+    for ( i <- 0 until ftChn ) {
       if ( i == 0 ) {
         io.resp.isActive(i) := Mux( io.resp.isRedirect(i), true.B, io.resp.isActive(i+1) )
-      } else if ( i > 0 && i < 7 ) {
+      } else if ( i > 0 && i < (ftChn-1) ) {
         io.resp.isActive(i) := Mux( io.resp.isRedirect(i) || (io.resp.isRedirect(i-1) ), true.B, io.resp.isActive(i+1) )
-      } else { //i == 7
+      } else { //i == (ftChn-1)
         io.resp.isActive(i) := io.resp.isRedirect(i-1)
       }
     }
@@ -120,7 +120,7 @@ trait uBTBUpdate { this: uBTBBase =>
       Mux( isFull, LFSR( log2Ceil(uBTB_entry), true.B), isValid.indexWhere((x:Bool) => (x === false.B)) ) )
 
   when( io.update.fire ) {
-    when( io.update.bits.pc(3,1) =/= 7.U ) { //never predict at 7.U
+    when( io.update.bits.pc((log2Ceil(ftChn*16/8)-1),1) =/= (ftChn-1).U ) { //never predict at (ftChn-1).U
       when( io.update.bits.isTaken ) {
         buff(entryUpdateSel)  := io.update.bits.target
         tag(entryUpdateSel)   := io.update.bits.pc(1+uBTB_tag_w-1,1)
@@ -133,4 +133,23 @@ trait uBTBUpdate { this: uBTBBase =>
 
 
 class uBTB()(implicit p: Parameters) extends uBTBBase with uBTBLookup with uBTBFlush with uBTBUpdate {
+}
+
+
+class FakeuBTB()(implicit p: Parameters) extends IFetchModule {
+  val io = IO(new Bundle{
+    val req  = Input(new uBTBReq_Bundle)
+    val resp = Output( new uBTBResp_Bundle )
+
+    val update = Flipped(Valid(new uBTBUpdate_Bundle))
+    val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
+  })
+
+  io.resp := 0.U.asTypeOf(new uBTBResp_Bundle)
+  for ( i <- 0 until ftChn ) {
+    io.resp.isActive(i) := (((ftChn-1).U - io.req.pc((log2Ceil(ftChn*16/8)-1),1)) >= i.U)    
+  }
+
+  
+
 }

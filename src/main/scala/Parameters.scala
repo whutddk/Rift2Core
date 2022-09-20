@@ -43,7 +43,7 @@ trait HasIcacheParameters extends HasRiftParameters {
   def line_w   = log2Ceil(cl)
   def cb_w = log2Ceil(cb)
 
-  require( (addr_lsb + line_w) == 12 )
+  // require( (addr_lsb + line_w) == 12 )
   require( bk == 1 )
  
   def tag_w    = plen - addr_lsb - line_w
@@ -112,14 +112,17 @@ case object RiftParamsKey extends Field[RiftSetting]
 
 
 case class RiftSetting(
-  hasFpu: Boolean = true,
+  hasL2: Boolean = true,
+  hasFpu: Boolean = false,
   hasDebugger: Boolean = true,
-  hasPreFetch: Boolean = true,
+  hasPreFetch: Boolean = false,
+  hasuBTB: Boolean = true,
+  hasMulDiv: Boolean = true,
 
   isMinArea: Boolean = false,
-  isLowPower: Boolean = true,
+  isLowPower: Boolean = false,
 
-
+  ftChn: Int = 8, //fetch width
   rn_chn: Int = 2,
   cm_chn: Int = 2,
   opChn: Int = 6,
@@ -159,13 +162,13 @@ case class RiftSetting(
     dw = 256,
     bk = 1,
     cb = 4,
-    cl = 128
+    cl = 256
   ),
   dcacheParameters: DcacheParameters = DcacheParameters(
     dw = 256,
     bk = 8,
     cb = 8,
-    cl = 128,
+    cl = 256,
     stEntry = 16,
     sbEntry = 16,
   ),
@@ -175,11 +178,12 @@ case class RiftSetting(
   require( vlen == 39 )
   require( plen >=32 && plen <= 56 )
   require( memBeatBits <= l1BeatBits )
-  require( opChn % 2 == 0 )
+  //require( opChn % 2 == 0 )
   require( regNum > 32 )
-  require( pmpNum > 0 && pmpNum <= 8 )
-  require( icacheParameters.dw == dcacheParameters.dw )
+  require( pmpNum >= 0 && pmpNum <= 8 )
+  // require( icacheParameters.dw == dcacheParameters.dw )
   require( isPow2(dcacheParameters.stEntry) )
+  require( isPow2(ftChn) )
 }
 
 trait HasRiftParameters {
@@ -191,10 +195,15 @@ trait HasRiftParameters {
   val icacheParams = riftSetting.icacheParameters
   val dcacheParams = riftSetting.dcacheParameters
 
+  def hasL2  = riftSetting.hasL2
   def hasFpu = riftSetting.hasFpu
   def hasDebugger = riftSetting.hasDebugger
   def hasPreFetch = riftSetting.hasPreFetch
+  def hasuBTB  = riftSetting.hasuBTB
+  def hasMulDiv = riftSetting.hasMulDiv
   
+  def ftChn = riftSetting.ftChn
+
   def cm_chn = riftSetting.cm_chn
   def rn_chn = riftSetting.rn_chn
   def opChn = riftSetting.opChn

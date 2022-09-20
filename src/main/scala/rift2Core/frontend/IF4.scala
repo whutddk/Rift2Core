@@ -28,14 +28,14 @@ import base._
   */
 abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
-    val if4_req = Vec(2, Flipped(Decoupled(new IF3_Bundle)))
-    val btbResp  = Vec(2, Flipped(Decoupled(new BTBResp_Bundle)))
-    val bimResp  = Vec(2, Flipped(Decoupled(new BIMResp_Bundle)))
-    val tageResp = Vec(2, Flipped(Decoupled(Vec(6, new TageTableResp_Bundle ))))
+    val if4_req = Vec(rn_chn, Flipped(Decoupled(new IF3_Bundle)))
+    val btbResp  = Vec(rn_chn, Flipped(Decoupled(new BTBResp_Bundle)))
+    val bimResp  = Vec(rn_chn, Flipped(Decoupled(new BIMResp_Bundle)))
+    val tageResp = Vec(rn_chn, Flipped(Decoupled(Vec(6, new TageTableResp_Bundle ))))
 
-    val if4_resp = Vec(2, Decoupled(new IF4_Bundle))
+    val if4_resp = Vec(rn_chn, Decoupled(new IF4_Bundle))
 
-    val if4_update_ghist = Vec(2, Valid(new Ghist_reflash_Bundle))
+    val if4_update_ghist = Vec(rn_chn, Valid(new Ghist_reflash_Bundle))
     val if4Redirect = Valid(new IF4_Redirect_Bundle)
 
     val jcmm_update = Flipped(Valid(new Jump_CTarget_Bundle))
@@ -47,32 +47,32 @@ abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
   })
 
   val ras = Module(new RAS)
-  val instr_fifo = Module(new MultiPortFifo( new IF4_Bundle, (if(!isMinArea) 4 else 2), 2, 2 ))
-  val bftq = Module(new MultiPortFifo( dw = new Branch_FTarget_Bundle, (if(!isMinArea) 4 else 2), 2, 1 ))
-  val jftq = Module(new MultiPortFifo( dw = new Jump_FTarget_Bundle,   (if(!isMinArea) 4 else 2), 2, 1 ))
+  val instr_fifo = Module(new MultiPortFifo( new IF4_Bundle, (if(!isMinArea) 4 else 1), rn_chn, rn_chn ))
+  val bftq = Module(new MultiPortFifo( dw = new Branch_FTarget_Bundle, (if(!isMinArea) 4 else 1), rn_chn, 1 ))
+  val jftq = Module(new MultiPortFifo( dw = new Jump_FTarget_Bundle,   (if(!isMinArea) 4 else 1), rn_chn, 1 ))
 
 
-  val bRePort = Module(new RePort( new Branch_FTarget_Bundle, port = 2) )
-  val jRePort = Module(new RePort( new Jump_FTarget_Bundle, port = 2) )
+  val bRePort = Module(new RePort( new Branch_FTarget_Bundle, port = rn_chn) )
+  val jRePort = Module(new RePort( new Jump_FTarget_Bundle, port = rn_chn) )
+
+  val preDecodeAgn = io.if4_req.map{ x => Mux(x.bits.isRVC, PreDecode16(x.bits.instr(15,0)), PreDecode32(x.bits.instr) ) }
 
 
-
-
-  val is_jal       = io.if4_req.map{_.bits.preDecode.is_jal}
-  val is_jalr      = io.if4_req.map{_.bits.preDecode.is_jalr}
-  val is_branch    = io.if4_req.map{_.bits.preDecode.is_branch}
-  val is_call      = io.if4_req.map{_.bits.preDecode.is_call}
-  val is_return    = io.if4_req.map{_.bits.preDecode.is_return}
-  val is_rvc       = io.if4_req.map{_.bits.preDecode.is_rvc}
-  val is_fencei    = io.if4_req.map{_.bits.preDecode.is_fencei}
-  val is_sfencevma = io.if4_req.map{_.bits.preDecode.is_sfencevma}
+  val is_jal       = preDecodeAgn.map{_.is_jal}
+  val is_jalr      = preDecodeAgn.map{_.is_jalr}
+  val is_branch    = preDecodeAgn.map{_.is_branch}
+  val is_call      = preDecodeAgn.map{_.is_call}
+  val is_return    = preDecodeAgn.map{_.is_return}
+  val is_rvc       = io.if4_req.map{_.bits.isRVC}
+  val is_fencei    = preDecodeAgn.map{_.is_fencei}
+  val is_sfencevma = preDecodeAgn.map{_.is_sfencevma}
   val pc           = io.if4_req.map{_.bits.pc}
   val ghist        = if (!isMinArea) { io.if4_req.map{_.bits.ghist} } else { io.if4_req.map{_ => 0.U(64.W)} }
-  val imm          = io.if4_req.map{_.bits.preDecode.imm}
+  val imm          = preDecodeAgn.map{_.imm}
 
-  val is_req_btb   = io.if4_req.map{ _.bits.preDecode.is_req_btb}
-  val is_req_bim   = io.if4_req.map{ _.bits.preDecode.is_req_bim}
-  val is_req_tage  = if (!isMinArea) { io.if4_req.map{ _.bits.preDecode.is_req_tage} } else {io.if4_req.map{ _ => false.B}}
+  val is_req_btb   = (if ( btb_cl != 0 ) {preDecodeAgn.map{ _.is_req_btb}} else {preDecodeAgn.map{_ => false.B}})
+  val is_req_bim   = preDecodeAgn.map{ _.is_req_bim}
+  val is_req_tage  = if (!isMinArea) { preDecodeAgn.map{ _.is_req_tage} } else {io.if4_req.map{ _ => false.B}}
 
 
   val tageRedirect = ReDirect(io.tageResp, VecInit(is_req_tage) )
@@ -88,7 +88,7 @@ abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
 
 trait IF4_Decode{ this: IF4Base =>
 
-  for ( i <- 0 until 2 ) yield {
+  for ( i <- 0 until rn_chn ) yield {
     instr_fifo.io.enq(i).bits :=
       Mux( is_rvc(i),
         Decode16(x = io.if4_req(i).bits.instr(15,0), pc = io.if4_req(i).bits.pc, hasFpu),
@@ -99,13 +99,13 @@ trait IF4_Decode{ this: IF4Base =>
 }
 
 trait IF4_Predict{ this: IF4Base =>
-  val redirectTarget = Wire(Vec(2, UInt(64.W)))
-  val isRedirect = Wire(Vec(2, Bool()))
+  val redirectTarget = Wire(Vec(rn_chn, UInt(64.W)))
+  val isRedirect = Wire(Vec(rn_chn, Bool()))
 
-  val isDisAgreeWithIF1 = Wire(Vec(2, Bool()))
-  val isIf4Redirect = Wire(Vec(2, Bool()))
+  val isDisAgreeWithIF1 = Wire(Vec(rn_chn, Bool()))
+  val isIf4Redirect = Wire(Vec(rn_chn, Bool()))
 
-  val is_bTaken = for ( i <- 0 until 2 ) yield {
+  val is_bTaken = for ( i <- 0 until rn_chn ) yield {
     if (!isMinArea) {
     // Mux( ~tage_decode(i).isAlloc.reduce(_&_),
     //     tage_decode(i).isPredictTaken,
@@ -118,25 +118,29 @@ trait IF4_Predict{ this: IF4Base =>
 
   }  
 
-  for( i <- 0 until 2 ) {
+  for( i <- 0 until rn_chn ) {
     isRedirect(i) := 
     (is_branch(i) & is_bTaken(i)) |
     is_jal(i) |
     is_jalr(i)
   }
 
-  val jalr_pc = for( i <- 0 until 2 ) yield {
+  val jalr_pc = for( i <- 0 until rn_chn ) yield {
     extVaddr( Mux( is_return(i) & ras.io.deq.valid, ras.io.deq.bits.target, btb_decode(i).target), vlen )
   }
   //ignore ras-pop-valid
-  ras.io.deq.ready := ( 0 until 2 ).map{ i => (is_return(i) & io.if4_req(i).fire)}.reduce(_|_)
+  ras.io.deq.ready := ( 0 until rn_chn ).map{ i => (is_return(i) & io.if4_req(i).fire)}.reduce(_|_)
 
-  ras.io.enq.valid := (is_call(0)  & io.if4_req(0).fire) | (is_call(1) & io.if4_req(1).fire)
-  ras.io.enq.bits.target :=
-    Mux( is_call(0), pc(0) + Mux(is_rvc(0), 2.U, 4.U), 
-      Mux( is_call(1), pc(1) + Mux(is_rvc(1), 2.U, 4.U), 0.U ))
+  ras.io.enq.valid := ( 0 until rn_chn ).map{ i =>
+    is_call(i) & io.if4_req(i).fire
+  }.reduce(_|_)
 
-  for( i <- 0 until 2 ) yield {
+  ras.io.enq.bits.target := MuxCase( 0.U, (0 until rn_chn).map{ i => 
+    (is_call(i) -> (pc(i) + Mux(is_rvc(i), 2.U, 4.U)))
+  })
+
+
+  for( i <- 0 until rn_chn ) yield {
     redirectTarget(i) := 
     Mux1H(Seq(
       (is_branch(i) & is_bTaken(i)) -> (pc(i) + imm(i)),
@@ -147,7 +151,7 @@ trait IF4_Predict{ this: IF4Base =>
   }
 
 
-  for( i <- 0 until 2 ) yield {
+  for( i <- 0 until rn_chn ) yield {
     if (!isMinArea) { 
       io.if4_update_ghist(i).valid :=
         io.if4_req(i).fire & is_branch(i)
@@ -159,7 +163,7 @@ trait IF4_Predict{ this: IF4Base =>
 
   }
 
-  for( i <- 0 until 2 ) yield {
+  for( i <- 0 until rn_chn ) yield {
     isDisAgreeWithIF1(i) :=
       ( isRedirect(i) =/= io.if4_req(i).bits.isRedirect) |
       ((isRedirect(i) === io.if4_req(i).bits.isRedirect) & (io.if4_req(i).bits.target =/= redirectTarget(i)))
@@ -173,18 +177,22 @@ trait IF4_Predict{ this: IF4Base =>
   io.if4Redirect.valid := isIf4Redirect.reduce(_|_)
     
   io.if4Redirect.bits.target := 
-    Mux( isIf4Redirect(0), Mux( isRedirect(0), redirectTarget(0), (pc(0) + Mux(is_rvc(0), 2.U, 4.U))),
-      Mux( isIf4Redirect(1), Mux( isRedirect(1), redirectTarget(1), (pc(1) + Mux(is_rvc(1), 2.U, 4.U))), 0.U ) )
+    MuxCase(0.U, (0 until rn_chn).map{ i =>
+      (isIf4Redirect(i) -> Mux( isRedirect(i), redirectTarget(i), (pc(i) + Mux(is_rvc(i), 2.U, 4.U))))
+    })
+
 
   io.if4Redirect.bits.pc :=
-    Mux( isIf4Redirect(0), pc(0),
-      Mux( isIf4Redirect(1), pc(1), 0.U ) )
+    MuxCase( 0.U, (0 until rn_chn).map{ i => 
+      (isIf4Redirect(i) -> pc(i))
+    })
 
   io.if4Redirect.bits.isDisAgree :=
-    Mux( isIf4Redirect(0), isDisAgreeWithIF1(0) & io.if4_req(0).bits.isRedirect,
-      Mux( isIf4Redirect(1), isDisAgreeWithIF1(1) & io.if4_req(1).bits.isRedirect, 0.U ) )
+    MuxCase( 0.U, (0 until rn_chn).map{ i => 
+      ( isIf4Redirect(i) -> (isDisAgreeWithIF1(i) & io.if4_req(i).bits.isRedirect) )
+    })
 
-  for ( i <- 0 until 2 ) yield {
+  for ( i <- 0 until rn_chn ) yield {
     bRePort.io.enq(i).bits.pc             := pc(i)
     if (!isMinArea) { bRePort.io.enq(i).bits.ghist := ghist(i) } else { bRePort.io.enq(i).bits.ghist := DontCare }
     bRePort.io.enq(i).bits.bimResp        := bim_decode(i)
@@ -208,7 +216,7 @@ trait IF4SRAM { this: IF4Base =>
 
 
 
-  for ( i <- 0 until 2 ) yield {
+  for ( i <- 0 until rn_chn ) yield {
     btbRedirect(i).ready := is_req_btb(i) & io.if4_req(i).fire
     bimRedirect(i).ready := is_req_bim(i) & io.if4_req(i).fire
     if (!isMinArea) { tageRedirect(i).ready := is_req_tage(i) & io.if4_req(i).fire } else { tageRedirect(i).ready := true.B }
@@ -226,8 +234,6 @@ class IF4()(implicit p: Parameters) extends IF4Base with IF4_Decode with IF4_Pre
 
 
 
-
-
   io.if4_resp <> instr_fifo.io.deq
   io.bftq <> bftq.io.deq(0)
   io.jftq <> jftq.io.deq(0)
@@ -236,7 +242,7 @@ class IF4()(implicit p: Parameters) extends IF4Base with IF4_Decode with IF4_Pre
   jftq.io.enq <> jRePort.io.deq
 
 
-  for ( i <- 0 until 2 ) yield {
+  for ( i <- 0 until rn_chn ) yield {
 
     bRePort.io.enq(i).valid := io.if4_req(i).fire & is_branch(i)
     jRePort.io.enq(i).valid := io.if4_req(i).fire & is_jalr(i)
@@ -246,7 +252,14 @@ class IF4()(implicit p: Parameters) extends IF4Base with IF4_Decode with IF4_Pre
   }
 
   io.if4_req(0).ready := bRePort.io.enq(0).ready & jRePort.io.enq(0).ready & instr_fifo.io.enq(0).ready
-  io.if4_req(1).ready := bRePort.io.enq(1).ready & jRePort.io.enq(1).ready & instr_fifo.io.enq(1).ready & ~isIf4Redirect(0)
+
+  for( i <- 1 until rn_chn ) {
+    io.if4_req(i).ready := bRePort.io.enq(i).ready & jRePort.io.enq(i).ready & instr_fifo.io.enq(i).ready
+    for( j <- 0 until i ) {
+      when( isIf4Redirect(j) ) { io.if4_req(i).ready := false.B }     
+    }
+  }
+
 
   instr_fifo.io.flush := io.flush
   bftq.io.flush := io.flush

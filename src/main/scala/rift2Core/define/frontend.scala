@@ -130,8 +130,8 @@ class BTBResp_Bundle(implicit p: Parameters) extends IFetchBundle {
 }
 
 class uBTBResp_Bundle(implicit p: Parameters) extends BTBResp_Bundle {
-  val isRedirect = Vec( 8, Bool() )
-  val isActive   = Vec( 8, Bool() )
+  val isRedirect = Vec( ftChn, Bool() )
+  val isActive   = Vec( ftChn, Bool() )
 }
 
 class BTBUpdate_Bundle(implicit p: Parameters) extends BTBResp_Bundle {
@@ -207,6 +207,7 @@ class TageUpdate_Bundle(implicit p: Parameters) extends TageResp_Bundle {
 
 
 class IF3_Bundle(implicit p: Parameters) extends RiftBundle {
+  val isRVC = Bool()
   val preDecode = new PreDecode_Bundle
   // val predict = new Predict_Bundle
   val instr = UInt(32.W)

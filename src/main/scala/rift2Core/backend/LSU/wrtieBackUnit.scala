@@ -27,9 +27,9 @@ import freechips.rocketchip.tilelink._
 
 
 /** the operation infomation of writeback Unit */
-class Info_writeBack_req(implicit p: Parameters) extends RiftBundle {
+class Info_writeBack_req(implicit p: Parameters) extends RiftBundle with HasDcacheParameters{
   val paddr = UInt(plen.W)
-  val data = UInt(256.W)
+  val data = UInt(dw.W)
   val is_releaseData = Bool()
   val is_release = Bool()
   val is_probe = Bool()
@@ -39,9 +39,9 @@ class Info_writeBack_req(implicit p: Parameters) extends RiftBundle {
 }
 
 /**
-  * a writeBack Unit accept data and paddr from l1cache and write it back to l2cache
+  * a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Probe-Release-Mode
   */
-class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) extends RiftModule {
+class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) extends RiftModule with HasDcacheParameters{
   val io = IO(new Bundle {
     val wb_req = Flipped(new ValidIO(new Info_writeBack_req))
 
@@ -97,7 +97,7 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
     ))
 
   /** a n step counter to select data */
-  val beatCnt = RegInit( 0.U((log2Ceil(256/l1BeatBits)).W) )
+  val beatCnt = RegInit( 0.U((log2Ceil(dw/l1BeatBits)).W) )
   when( wb_state_qout === 0.U & wb_state_dnxt === 1.U ) { beatCnt := 0.U }
   .elsewhen( io.cache_release.fire ) { beatCnt := beatCnt + 1.U }
     
@@ -120,30 +120,30 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
 
     val info_probe = edge.ProbeAck(
       fromSource = id.U,
-      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
-      lgSize = log2Ceil(256/8).U,
+      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(dw/8).U),
+      lgSize = log2Ceil(dw/8).U,
       reportPermissions = permit,    
     )
 
     val info_probeData = edge.ProbeAck(
       fromSource = id.U,
-      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
-      lgSize = log2Ceil(256/8).U,
+      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(dw/8).U),
+      lgSize = log2Ceil(dw/8).U,
       reportPermissions = permit,
       data = wb_fifo.io.deq.bits.data >> (beatCnt << log2Ceil(l1BeatBits))
     )
 
     val info_release = edge.Release(
       fromSource = id.U,
-      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
-      lgSize = log2Ceil(256/8).U,
+      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(dw/8).U),
+      lgSize = log2Ceil(dw/8).U,
       shrinkPermissions = permit
     )._2
 
     val info_releaseData = edge.Release(
       fromSource = id.U,
-      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(256/8).U),
-      lgSize = log2Ceil(256/8).U,
+      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(dw/8).U),
+      lgSize = log2Ceil(dw/8).U,
       shrinkPermissions = permit,
       data = wb_fifo.io.deq.bits.data >> (beatCnt << log2Ceil(l1BeatBits))
     )._2
@@ -179,3 +179,90 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
 
 
 
+
+/**
+  * a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Put-Mode
+  */
+class PutUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule with HasDcacheParameters{
+  val io = IO(new Bundle {
+    val wb_req = Flipped(new ValidIO(new Info_writeBack_req))
+
+    val getPut    = new DecoupledIO(new TLBundleA(edge.bundle))
+    val access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
+
+
+    val release_ban = Input(Bool())
+    val miss_ban = Output(Bool())
+  })
+
+
+
+
+
+  /** a tiny fifo that temporarily store the writeback info from l1cache */
+  val wb_fifo = Module(new Queue(new Info_writeBack_req, 2, false, true))
+
+  wb_fifo.io.enq.valid := io.wb_req.valid & io.wb_req.bits.is_releaseData //bypass is_release
+  wb_fifo.io.enq.bits  := io.wb_req.bits
+
+
+  val wb_state_dnxt = Wire(UInt(2.W))
+  val wb_state_qout = RegNext(wb_state_dnxt, 0.U)
+
+  /** a last flag of release transmision */
+  val is_release_done = edge.count(io.getPut)._3
+
+  /** a register of io.getPut.valid */
+  val getPut_valid = RegInit(false.B)
+
+  /** a register of io.access.ready */
+  val access_ready   = RegInit(false.B)
+
+  io.getPut.valid := getPut_valid
+  io.access.ready := access_ready
+
+
+  wb_state_dnxt :=
+    Mux1H(Seq(
+      (wb_state_qout === 0.U) -> Mux( wb_fifo.io.deq.valid & ~io.release_ban , 1.U, 0.U),
+      (wb_state_qout === 1.U) -> Mux(~is_release_done, 1.U, 2.U ),
+      (wb_state_qout === 2.U) -> Mux( io.access.fire, 0.U, 2.U )
+    ))
+
+  /** a n step counter to select data */
+  val beatCnt = RegInit( 0.U((log2Ceil(dw/l1BeatBits)).W) )
+  when( wb_state_qout === 0.U & wb_state_dnxt === 1.U ) { beatCnt := 0.U }
+  .elsewhen( io.getPut.fire ) { beatCnt := beatCnt + 1.U }
+    
+  when( wb_state_qout === 1.U ) {
+    when( io.getPut.fire ) { getPut_valid := false.B }
+    .elsewhen( ~io.getPut.valid & ~io.release_ban ) { getPut_valid := true.B }
+  }
+
+  io.getPut.bits :=
+    edge.Put(
+      fromSource = id.U,
+      toAddress = wb_fifo.io.deq.bits.paddr & ("hFFFFFFFF".U << log2Ceil(dw/8).U),
+      lgSize = log2Ceil(dw/8).U,
+      data = wb_fifo.io.deq.bits.data >> (beatCnt << log2Ceil(l1BeatBits)),
+      mask = Fill(dw/8, 1.U)
+    )._2
+
+
+  when( io.access.valid & ~io.access.ready ) {
+    access_ready := true.B
+    assert( wb_state_qout === 2.U )
+  } .elsewhen( io.access.ready ) {
+    access_ready := false.B
+    assert( wb_state_qout === 2.U )   
+  }
+  assert( ~(io.access.fire & io.access.bits.source =/= id.U), "Assert Failed at writeBack-Unit, grant-id mis-match" )
+  wb_fifo.io.deq.ready := 
+    wb_state_qout =/= 0.U & wb_state_dnxt === 0.U
+
+  io.miss_ban := wb_state_qout === 1.U | wb_state_qout === 2.U | ~wb_fifo.io.enq.ready
+
+  when( ~wb_fifo.io.enq.ready ) {
+    assert(~io.wb_req.valid, "When WriteBack Unit is busy, no new acquire will be emitted, and there is no wb request!")
+  }
+}

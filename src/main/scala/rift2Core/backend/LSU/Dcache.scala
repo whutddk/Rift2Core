@@ -100,19 +100,25 @@ abstract class DcacheBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) exte
 
     val flush = Input(Bool())
 
-    val missUnit_dcache_acquire = new DecoupledIO(new TLBundleA(dEdge.bundle))
-    val missUnit_dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(dEdge.bundle)))
-    val missUnit_dcache_grantAck  = DecoupledIO(new TLBundleE(dEdge.bundle))
+    // val dm        = if (hasDebugger) {Some(Flipped(new Info_DM_cmm))} else {None}
 
-    val probeUnit_dcache_probe = Flipped(new DecoupledIO(new TLBundleB(dEdge.bundle)))
+    val missUnit_dcache_acquire      = if( hasL2 ) Some(new DecoupledIO(new TLBundleA(dEdge.bundle)))          else {None}
+    val missUnit_dcache_grant        = if( hasL2 ) Some(Flipped(new DecoupledIO(new TLBundleD(dEdge.bundle)))) else {None}
+    val missUnit_dcache_grantAck     = if( hasL2 ) Some(DecoupledIO(new TLBundleE(dEdge.bundle)))              else {None}
+    val probeUnit_dcache_probe       = if( hasL2 ) Some(Flipped(new DecoupledIO(new TLBundleB(dEdge.bundle)))) else {None}
+    val writeBackUnit_dcache_release = if( hasL2 ) Some(new DecoupledIO(new TLBundleC(dEdge.bundle))         ) else {None}
+    val writeBackUnit_dcache_grant   = if( hasL2 ) Some(Flipped(new DecoupledIO(new TLBundleD(dEdge.bundle)))) else {None}
 
-    val writeBackUnit_dcache_release = new DecoupledIO(new TLBundleC(dEdge.bundle))
-    val writeBackUnit_dcache_grant   = Flipped(new DecoupledIO(new TLBundleD(dEdge.bundle)))
+    val dcache_getPut = if ( hasL2 ) { None } else { Some(        new DecoupledIO(new TLBundleA(edge.bundle)) ) }
+    val dcache_access = if ( hasL2 ) { None } else { Some(Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))) }
   })
 
-  val missUnit = Module(new MissUnit(edge = edge, setting = 2, id = id))
-  val probeUnit = Module(new ProbeUnit(edge = edge, id = id))
-  val writeBackUnit = Module(new WriteBackUnit(edge = edge, setting = 2, id = id))
+  val missUnit      = if( hasL2 ) Some(Module(new MissUnit(edge = edge, setting = 2, id = id)))      else {None}
+  val probeUnit     = if( hasL2 ) Some(Module(new ProbeUnit(edge = edge, id = id)))                  else {None}
+  val writeBackUnit = if( hasL2 ) Some(Module(new WriteBackUnit(edge = edge, setting = 2, id = id))) else {None}
+
+  val getUnit = if( hasL2 ) {None} else {Some(Module(new GetUnit(edge = edge, id = id)))}
+  val putUnit = if( hasL2 ) {None} else {Some(Module(new PutUnit(edge = edge, id = id)))}
 
   val lsEntry = Module(new Queue(new Dcache_Enq_Bundle, sbEntry, pipe = false, flow = true))
 
@@ -174,26 +180,66 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
 
 
 
-
-  io.missUnit_dcache_acquire  <> missUnit.io.cache_acquire
-  missUnit.io.cache_grant <> io.missUnit_dcache_grant
-  io.missUnit_dcache_grantAck <> missUnit.io.cache_grantAck
-  probeUnit.io.cache_probe <> io.probeUnit_dcache_probe
-  io.writeBackUnit_dcache_release <> writeBackUnit.io.cache_release
-  writeBackUnit.io.cache_grant <> io.writeBackUnit_dcache_grant
-
-
+  if ( hasL2 ) {
+    io.missUnit_dcache_acquire.get  <> missUnit.get.io.cache_acquire
+    missUnit.get.io.cache_grant <> io.missUnit_dcache_grant.get
+    io.missUnit_dcache_grantAck.get <> missUnit.get.io.cache_grantAck
+    probeUnit.get.io.cache_probe <> io.probeUnit_dcache_probe.get
+    io.writeBackUnit_dcache_release.get <> writeBackUnit.get.io.cache_release
+    writeBackUnit.get.io.cache_grant <> io.writeBackUnit_dcache_grant.get  
 
 
 
 
-  stage.io.missUnit_req      <> missUnit.io.req
-  stage.io.wb_req <> writeBackUnit.io.wb_req
-  stage.io.flush := io.flush
 
-  missUnit.io.miss_ban := writeBackUnit.io.miss_ban
-  writeBackUnit.io.release_ban := missUnit.io.release_ban
 
+
+  } else {
+    val getPutArb = Module(new Arbiter(new TLBundleA(edge.bundle), 2) )
+    io.dcache_getPut.get <> getPutArb.io.out
+    getPutArb.io.in(0) <> getUnit.get.io.getPut
+    getPutArb.io.in(1) <> putUnit.get.io.getPut
+
+    getUnit.get.io.access.valid := io.dcache_access.get.valid & io.dcache_access.get.bits.opcode === TLMessages.AccessAckData
+    getUnit.get.io.access.bits  := io.dcache_access.get.bits
+    putUnit.get.io.access.valid := io.dcache_access.get.valid & io.dcache_access.get.bits.opcode === TLMessages.AccessAck
+    putUnit.get.io.access.bits  := io.dcache_access.get.bits
+
+    io.dcache_access.get.ready := 
+      Mux1H(Seq(
+        ( io.dcache_access.get.bits.opcode === TLMessages.AccessAckData ) -> getUnit.get.io.access.ready,
+        ( io.dcache_access.get.bits.opcode === TLMessages.AccessAck     ) -> putUnit.get.io.access.ready,
+      ))
+  }
+
+  if ( hasL2 ) {
+    stage.io.missUnit_req      <> missUnit.get.io.req
+    stage.io.wb_req <> writeBackUnit.get.io.wb_req
+  
+    missUnit.get.io.miss_ban := writeBackUnit.get.io.miss_ban
+    writeBackUnit.get.io.release_ban := missUnit.get.io.release_ban
+
+    rd_arb.io.in(0).bits := pkg_Dcache_Enq_Bundle( missUnit.get.io.rsp.bits )
+    rd_arb.io.in(0).valid := missUnit.get.io.rsp.valid
+    missUnit.get.io.rsp.ready := rd_arb.io.in(0).ready
+
+    rd_arb.io.in(1).bits := pkg_Dcache_Enq_Bundle(probeUnit.get.io.req.bits) 
+    rd_arb.io.in(1).valid := probeUnit.get.io.req.valid
+    probeUnit.get.io.req.ready := rd_arb.io.in(1).ready
+  } else {
+    stage.io.missUnit_req      <> getUnit.get.io.req
+    stage.io.wb_req <> putUnit.get.io.wb_req
+  
+    getUnit.get.io.miss_ban := putUnit.get.io.miss_ban
+    putUnit.get.io.release_ban := getUnit.get.io.release_ban
+
+    rd_arb.io.in(0).bits := pkg_Dcache_Enq_Bundle( getUnit.get.io.rsp.bits )
+    rd_arb.io.in(0).valid := getUnit.get.io.rsp.valid
+    getUnit.get.io.rsp.ready := rd_arb.io.in(0).ready
+
+    rd_arb.io.in(1).bits := DontCare
+    rd_arb.io.in(1).valid := false.B
+  }
 
 
 
@@ -202,21 +248,16 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
   
 
   reload_fifo.io.deq <> op_arb.io.in(0)
-
   io.enq.ready := op_arb.io.in(1).ready & sbEnqReady
   op_arb.io.in(1).valid := io.enq.fire
   op_arb.io.in(1).bits  := io.enq.bits
   op_arb.io.in(1).bits.chkIdx := sbIdx //override
-
   op_arb.io.out <> lsEntry.io.enq 
 
-  rd_arb.io.in(0).bits := pkg_Dcache_Enq_Bundle( missUnit.io.rsp.bits )
-  rd_arb.io.in(0).valid := missUnit.io.rsp.valid
-  missUnit.io.rsp.ready := rd_arb.io.in(0).ready
+  stage.io.flush := io.flush
 
-  rd_arb.io.in(1).bits := pkg_Dcache_Enq_Bundle(probeUnit.io.req.bits) 
-  rd_arb.io.in(1).valid := probeUnit.io.req.valid
-  probeUnit.io.req.ready := rd_arb.io.in(1).ready
+
+
 
   lsEntry.io.deq <> rd_arb.io.in(2)
   stage.io.enq <> rd_arb.io.out

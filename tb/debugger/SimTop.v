@@ -158,9 +158,9 @@ module SimTop (
   // output [63:0] trace_tdata3,
   // output [63:0] trace_mhpmevent,
   output [63:0] trace_pmpcfg_0,
-  output [63:0] trace_pmpcfg_1,
-  output [63:0] trace_pmpcfg_2,
-  output [63:0] trace_pmpcfg_3,
+  // output [63:0] trace_pmpcfg_1,
+  // output [63:0] trace_pmpcfg_2,
+  // output [63:0] trace_pmpcfg_3,
 
 	output [63:0] trace_pmpaddr_0,
 	output [63:0] trace_pmpaddr_1,
@@ -170,14 +170,14 @@ module SimTop (
 	output [63:0] trace_pmpaddr_5,
 	output [63:0] trace_pmpaddr_6,
 	output [63:0] trace_pmpaddr_7,
-	output [63:0] trace_pmpaddr_8,
-	output [63:0] trace_pmpaddr_9,
-	output [63:0] trace_pmpaddr_10,
-	output [63:0] trace_pmpaddr_11,
-	output [63:0] trace_pmpaddr_12,
-	output [63:0] trace_pmpaddr_13,
-	output [63:0] trace_pmpaddr_14,
-	output [63:0] trace_pmpaddr_15,
+	// output [63:0] trace_pmpaddr_8,
+	// output [63:0] trace_pmpaddr_9,
+	// output [63:0] trace_pmpaddr_10,
+	// output [63:0] trace_pmpaddr_11,
+	// output [63:0] trace_pmpaddr_12,
+	// output [63:0] trace_pmpaddr_13,
+	// output [63:0] trace_pmpaddr_14,
+	// output [63:0] trace_pmpaddr_15,
 
   output [63:0] trace_stvec,
   output [63:0] trace_sscratch,
@@ -310,7 +310,6 @@ SimJTAG s_simJtag(
   );
 
 
-
 Rift2Chip s_Rift2Chip(
 	.clock(CLK),
 	.reset(~RSTn),
@@ -407,7 +406,7 @@ Rift2Chip s_Rift2Chip(
 
 
 
-
+/*verilator tracing_off*/
 axi_full_slv_sram # ( .DW(128), .AW(6) ) s_axi_full_slv_sram 
 (
 
@@ -452,7 +451,7 @@ axi_full_slv_sram # ( .DW(128), .AW(6) ) s_axi_full_slv_sram
 );
 
 
-
+/*verilator tracing_off*/
 debuger i_debuger(
 
 	.DEBUGER_AWID   (io_sys_chn_aw_bits_id),
@@ -522,7 +521,8 @@ always @(negedge CLK ) begin
 end
 
 
-reg [255:0] testName;
+// reg [255:0] testName;
+string testName;
 
 `define MEM s_axi_full_slv_sram.i_sram.ram
 reg [7:0] mem [0:200000];
@@ -532,12 +532,13 @@ integer i, by;
 initial begin
 
 
-	if ( $value$plusargs("%s",testName[255:0]) ) begin
+	if ( $value$plusargs("%s",testName) ) begin
 		$display("%s",testName);
 	  $readmemh(testName, mem);		
 
 	end
 	else begin 
+    $display("%s",testName);
 		$error("Failed to read Files!");
 	end
 
@@ -546,6 +547,7 @@ initial begin
 		for ( by = 0; by < 16; by = by + 1 ) begin
 			if ( | mem[i*16+by] ) begin
 				`MEM[i][8*by +: 8] = mem[i*16+by];
+        $display("%x", mem[i*16+by]);
 			end
 			else begin
 				`MEM[i][8*by +: 8] = 8'h0;
@@ -700,9 +702,9 @@ end
 // assign trace_mhpmevent     = s_Rift2Chip.i_rift2Core.diff.io_csr_mhpmevent;
 
 	assign trace_pmpcfg_0 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_0;
-	assign trace_pmpcfg_1 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_1;
-	assign trace_pmpcfg_2 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_2;
-	assign trace_pmpcfg_3 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_3;
+	// assign trace_pmpcfg_1 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_1;
+	// assign trace_pmpcfg_2 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_2;
+	// assign trace_pmpcfg_3 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpcfg_3;
 
 	assign trace_pmpaddr_0  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_0;
 	assign trace_pmpaddr_1  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_1;
@@ -712,14 +714,14 @@ end
 	assign trace_pmpaddr_5  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_5;
 	assign trace_pmpaddr_6  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_6;
 	assign trace_pmpaddr_7  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_7;
-	assign trace_pmpaddr_8  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_8;
-	assign trace_pmpaddr_9  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_9;
-	assign trace_pmpaddr_10 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_10;
-	assign trace_pmpaddr_11 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_11;
-	assign trace_pmpaddr_12 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_12;
-	assign trace_pmpaddr_13 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_13;
-	assign trace_pmpaddr_14 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_14;
-	assign trace_pmpaddr_15 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_15;
+	// assign trace_pmpaddr_8  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_8;
+	// assign trace_pmpaddr_9  = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_9;
+	// assign trace_pmpaddr_10 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_10;
+	// assign trace_pmpaddr_11 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_11;
+	// assign trace_pmpaddr_12 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_12;
+	// assign trace_pmpaddr_13 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_13;
+	// assign trace_pmpaddr_14 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_14;
+	// assign trace_pmpaddr_15 = s_Rift2Chip.i_rift2Core.diff.io_csr_pmpaddr_15;
 
 	assign trace_stvec    = s_Rift2Chip.i_rift2Core.diff.io_csr_stvec;
 	assign trace_sscratch = s_Rift2Chip.i_rift2Core.diff.io_csr_sscratch;

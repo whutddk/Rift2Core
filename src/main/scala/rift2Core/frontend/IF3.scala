@@ -29,16 +29,16 @@ import base._
 abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
     val if3_req = Vec(4, Flipped(new DecoupledIO(new IF2_Bundle) ))
-    val if3_resp = Vec(2, Decoupled(new IF3_Bundle))
+    val if3_resp = Vec(rn_chn, Decoupled(new IF3_Bundle))
 
-    val btbResp  = Vec(2, Decoupled(new BTBResp_Bundle))
-    val bimResp  = Vec(2, Decoupled(new BIMResp_Bundle))
-    val tageResp = Vec(2, Decoupled(Vec(6, new TageTableResp_Bundle )))
+    val btbResp  = Vec(rn_chn, Decoupled(new BTBResp_Bundle))
+    val bimResp  = Vec(rn_chn, Decoupled(new BIMResp_Bundle))
+    val tageResp = Vec(rn_chn, Decoupled(Vec(6, new TageTableResp_Bundle )))
 
     val jcmm_update = Flipped(Valid(new Jump_CTarget_Bundle))
     val bcmm_update = Flipped(Valid(new Branch_CTarget_Bundle))
 
-    val if4_update_ghist = Vec(2, Flipped(Valid(new Ghist_reflash_Bundle)))
+    val if4_update_ghist = Vec(rn_chn, Flipped(Valid(new Ghist_reflash_Bundle)))
     val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
 
     val flush = Input(Bool())
@@ -48,6 +48,7 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val ghist_active = RegInit( 0.U(64.W) )
 
   val reAlign = Wire(Vec(4, DecoupledIO(new IF3_Bundle)))
+  val reAlignPreDecode = Wire( Vec( 4, new PreDecode_Bundle ) )
   val combPDT = Module(new RePort( new IF3_Bundle, 4))
 
   val pipeLineLock = RegInit(false.B)
@@ -56,14 +57,14 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val bim = Module(new BIM)
   val tage = Module(new TAGE)
 
-  val btbFifo =  Module(new MultiPortFifo( new BTBResp_Bundle, aw = (if(!isMinArea) 4 else 2), in = 1, out = 2, flow = true ) )
-  val bimFifo =  Module(new MultiPortFifo( new BIMResp_Bundle, aw = (if(!isMinArea) 4 else 2), in = 1, out = 2, flow = true ) )
-  val tageFifo = Module(new MultiPortFifo( Vec(6, new TageTableResp_Bundle ), aw = (if(!isMinArea) 4 else 2), in = 1, out = 2, flow = true ) )
+  val btbFifo =  Module(new MultiPortFifo( new BTBResp_Bundle, aw = (if(!isMinArea) 4 else 1), in = 1, out = rn_chn, flow = true ) )
+  val bimFifo =  Module(new MultiPortFifo( new BIMResp_Bundle, aw = (if(!isMinArea) 4 else 1), in = 1, out = rn_chn, flow = true ) )
+  val tageFifo = Module(new MultiPortFifo( Vec(6, new TageTableResp_Bundle ), aw = (if(!isMinArea) 4 else 1), in = 1, out = rn_chn, flow = true ) )
 
 
   val predictor_ready = btb.io.isReady & bim.io.isReady & (if (!isMinArea) { tage.io.isReady } else {true.B})
 
-  val if3_resp_fifo = Module(new MultiPortFifo( new IF3_Bundle, (if(!isMinArea) 4 else 3), 4, 2 ))
+  val if3_resp_fifo = Module(new MultiPortFifo( new IF3_Bundle, (if(!isMinArea) 4 else 2), 4, rn_chn ))
 
   if3_resp_fifo.io.flush := io.if4Redirect.fire | io.flush
   if3_resp_fifo.io.enq <> combPDT.io.deq
@@ -93,16 +94,19 @@ trait IF3_PreDecode{ this: IF3Base =>
   for ( i <- 0 until 4 ) {
     reAlign(i).valid := false.B
     reAlign(i).bits  := 0.U.asTypeOf(new IF3_Bundle)
+    reAlignPreDecode(i) := 0.U.asTypeOf(new PreDecode_Bundle)
     io.if3_req(i).ready := false.B
   }
   for( i <- 0 until 4 ) yield {
       when( ~isPassThrough(i) ) {
         when( is_instr32(i) ) { if ( i != 3 ) {
           reAlign(i).bits.pc         := io.if3_req(i).bits.pc
-          reAlign(i).bits.isRedirect := io.if3_req(i).bits.isRedirect | io.if3_req(i+1).bits.isRedirect
-          reAlign(i).bits.target     := io.if3_req(i).bits.target     | io.if3_req(i+1).bits.target
+          reAlign(i).bits.isRedirect := (if(hasuBTB) {io.if3_req(i).bits.isRedirect | io.if3_req(i+1).bits.isRedirect} else { false.B })
+          reAlign(i).bits.target     := (if(hasuBTB) {io.if3_req(i).bits.target     | io.if3_req(i+1).bits.target} else { 0.U})
           reAlign(i).bits.instr      := Mux( io.if3_req(i+1).bits.isFault, io.if3_req(i+1).bits.instr,              Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr) )
-          reAlign(i).bits.preDecode  := Mux( io.if3_req(i+1).bits.isFault, PreDecode16(io.if3_req(i+1).bits.instr), PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)) )
+          reAlignPreDecode(i) := Mux( io.if3_req(i+1).bits.isFault, PreDecode16(io.if3_req(i+1).bits.instr), PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)) )
+          reAlign(i).bits.isRVC := reAlignPreDecode(i).is_rvc
+          // reAlign(i).bits.preDecode  := Mux( io.if3_req(i+1).bits.isFault, PreDecode16(io.if3_req(i+1).bits.instr), PreDecode32(instr32 = Cat(io.if3_req(i+1).bits.instr, io.if3_req(i).bits.instr)) )
 
           when( ~reAlign(i).bits.isRedirect ) {
             reAlign(i).valid      := io.if3_req(i).fire & io.if3_req(i+1).fire & predictor_ready & ~pipeLineLock
@@ -128,10 +132,12 @@ trait IF3_PreDecode{ this: IF3Base =>
           assert(io.if3_req(i).fire === io.if3_req(i+1).fire)
         }} .otherwise {
           reAlign(i).bits.pc    := io.if3_req(i).bits.pc
-          reAlign(i).bits.isRedirect := io.if3_req(i).bits.isRedirect
-          reAlign(i).bits.target := io.if3_req(i).bits.target
+          reAlign(i).bits.isRedirect := (if(hasuBTB) {io.if3_req(i).bits.isRedirect} else { false.B })
+          reAlign(i).bits.target := (if(hasuBTB) {io.if3_req(i).bits.target} else { 0.U })
           reAlign(i).bits.instr := io.if3_req(i).bits.instr
-          reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
+          reAlignPreDecode(i) := PreDecode16(instr16 = io.if3_req(i).bits.instr)
+          reAlign(i).bits.isRVC := reAlignPreDecode(i).is_rvc
+          // reAlign(i).bits.preDecode  := PreDecode16(instr16 = io.if3_req(i).bits.instr)
 
           when( ~reAlign(i).bits.isRedirect ) {
             reAlign(i).valid      := io.if3_req(i).fire & predictor_ready & ~pipeLineLock
@@ -165,10 +171,10 @@ trait IF3_PreDecode{ this: IF3Base =>
 trait IF3_Predict{ this: IF3Base => 
 
 
-  val is_req_btb   = reAlign.map{ _.bits.preDecode.is_req_btb}
-  val is_req_bim   = reAlign.map{ _.bits.preDecode.is_req_bim}
-  val is_req_tage  = if (!isMinArea) {reAlign.map{ _.bits.preDecode.is_req_tage}} else { reAlign.map{ _ => false.B } }
-  val is_lock_pipe = reAlign.map{ _.bits.preDecode.is_lock_pipe}
+  val is_req_btb   = (if (btb_cl != 0) {reAlignPreDecode.map{ _.is_req_btb}} else {reAlignPreDecode.map{_ => false.B}})
+  val is_req_bim   = reAlignPreDecode.map{ _.is_req_bim}
+  val is_req_tage  = if (!isMinArea) {reAlignPreDecode.map{ _.is_req_tage}} else { reAlign.map{ _ => false.B } }
+  val is_lock_pipe = reAlignPreDecode.map{ _.is_lock_pipe}
 
   reAlign <> combPDT.io.enq//waiting for overriding
   
@@ -320,7 +326,7 @@ trait IF3_Update{ this: IF3Base =>
   }
 
   when( io.flush | io.if4Redirect.fire ) { pipeLineLock := false.B }
-  .elsewhen( (for ( i <- 0 until 4 ) yield { reAlign(i).bits.preDecode.is_lock_pipe & reAlign(i).fire}).reduce(_|_) ) { pipeLineLock := true.B }
+  .elsewhen( (for ( i <- 0 until 4 ) yield { reAlignPreDecode(i).is_lock_pipe & reAlign(i).fire}).reduce(_|_) ) { pipeLineLock := true.B }
 }
 
 

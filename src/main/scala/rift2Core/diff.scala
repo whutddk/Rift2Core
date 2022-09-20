@@ -29,10 +29,10 @@ import rift._
 import chipsalliance.rocketchip.config.Parameters
 
 
-class Info_cmm_diff extends Bundle {
-  val pc = Vec(2, UInt(64.W))
-  val comfirm = Vec(2, Bool())
-  val abort = Vec(2, Bool())
+class Info_cmm_diff(implicit p: Parameters) extends RiftBundle {
+  val pc = Vec(cm_chn, UInt(64.W))
+  val comfirm = Vec(cm_chn, Bool())
+  val abort = Vec(cm_chn, Bool())
   val priv_lvl = UInt(2.W)
   val is_ecall_M = Bool()
   val is_ecall_S = Bool()
@@ -64,8 +64,8 @@ class Info_csr_reg(implicit p: Parameters) extends RiftBundle {
   // val tdata3[MAX_TRIGGERS] = UInt(64.W)
   // val mhpmevent[32] = UInt(64.W)
 
-  val pmpcfg = Vec(pmpNum, UInt(64.W))
-	val pmpaddr = Vec(8*pmpNum, UInt(64.W))
+  val pmpcfg  = (if( pmpNum == 0 ) { Vec(1, UInt(64.W))}        else {Vec(pmpNum, UInt(64.W))})
+	val pmpaddr = (if( pmpNum == 0 ) { Vec(8, UInt(64.W))} else {Vec(8*pmpNum, UInt(64.W))})
 
 
   val stvec = UInt(64.W)

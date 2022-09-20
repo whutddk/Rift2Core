@@ -38,31 +38,35 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
 
     val getPut    = new DecoupledIO(new TLBundleA(edge.bundle))
     val access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
+
+    // val flush = Input(Bool())
   })
 
-  val is_busy = RegInit(false.B)
+  val is_busy    = RegInit(false.B)
+  val isTransing = RegInit(false.B)
   val pending = Reg(new Lsu_iss_info)
 
   io.is_empty := ~is_busy
 
-  io.getPut.valid := io.enq.valid & ~is_busy
-  io.enq.ready := io.getPut.fire
-  when( io.enq.valid ) {
-    when( io.enq.bits.fun.is_lu & ~io.enq.bits.fun.is_lr) {
+  io.getPut.valid := is_busy & ~isTransing
+  // io.enq.ready := io.getPut.fire
+  io.enq.ready := ~is_busy
+  when( is_busy ) {
+    when( pending.fun.is_lu & ~pending.fun.is_lr) {
         io.getPut.bits := 
           edge.Get(
             fromSource = 0.U,
-            toAddress = io.enq.bits.paddr >> log2Ceil(64/8).U << log2Ceil(64/8).U,
+            toAddress = pending.paddr >> log2Ceil(64/8).U << log2Ceil(64/8).U,
             lgSize = log2Ceil(64/8).U
           )._2    
-      } .elsewhen( io.enq.bits.fun.is_su & ~io.enq.bits.fun.is_sc ) {
+      } .elsewhen( pending.fun.is_su & ~pending.fun.is_sc ) {
         io.getPut.bits :=
           edge.Put(
             fromSource = 0.U,
-            toAddress = io.enq.bits.paddr >> log2Ceil(64/8).U << log2Ceil(64/8).U,
+            toAddress = pending.paddr >> log2Ceil(64/8).U << log2Ceil(64/8).U,
             lgSize = log2Ceil(64/8).U,
-            data = io.enq.bits.wdata_align64,
-            mask = io.enq.bits.wstrb_align64
+            data = pending.wdata_align(64),
+            mask = pending.wstrb_align(64)
           )._2
       } .otherwise{
         io.getPut.bits := DontCare
@@ -73,16 +77,26 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
   }
   
 
-
-  when( io.getPut.fire ) {
+  // when( io.flush ) {
+  //   is_busy := false.B
+  //   isTransing := false.B
+  // } .else
+  when( io.enq.fire ) {
     assert( is_busy === false.B  )
+    assert( isTransing === false.B  )
     pending := io.enq.bits
-    // pending_paddr := io.enq.bits.paddr
-    // pending_fun := io.enq.bits.fun
     is_busy := true.B
-  } .elsewhen( io.access.fire ) {
+  } .elsewhen( io.getPut.fire & io.access.fire ) {
+    is_busy := false.B
+    isTransing := false.B
+    printf("Warning! Accessing a Non-define Region.")
+  } .elsewhen( io.getPut.fire ) {
+    assert( is_busy === true.B )
+    isTransing := true.B
+  }.elsewhen( io.access.fire ) {
     assert( is_busy === true.B  )
     is_busy := false.B
+    isTransing := false.B
   }
 
   io.deq.valid    := io.access.valid
