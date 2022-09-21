@@ -21,7 +21,7 @@ package base
 import chisel3._
 import chisel3.util._
 
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
 

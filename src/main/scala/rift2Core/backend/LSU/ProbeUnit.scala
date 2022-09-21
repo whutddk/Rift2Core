@@ -24,7 +24,7 @@ import chipsalliance.rocketchip.config.Parameters
 import freechips.rocketchip.tilelink._
 
 import base._
-import rift._
+import rift2Chip._
 
 class Info_probe_req(implicit p: Parameters) extends RiftBundle {
   val paddr = UInt(plen.W)

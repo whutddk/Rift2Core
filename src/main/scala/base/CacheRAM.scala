@@ -21,15 +21,15 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 
-import rift._
+import rift2Chip._
 
 import chisel3.util.random._
 import rift2Core.define._
 
 
 class DatRAM(dw: Int, cl: Int) extends Module {
-  require( dw == 128 )
-  require( cl <= 256 )
+  // require( dw == 128 )
+  // require( cl <= 256 )
   def line_w   = log2Ceil(cl)
   val io = IO(new Bundle{
     val addr  = Input(UInt(line_w.W))

@@ -22,7 +22,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import base._
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config._
 
 
@@ -476,7 +476,7 @@ trait IssueSig{ this: IssueBase =>
 }
 
 
-class Issue(implicit p: Parameters) extends IssueBase with IssueSig{
+class Issue(implicit p: Parameters) extends IssueBase {
 
   if( hasFpu ) {
 

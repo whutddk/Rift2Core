@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package rift
+package rift2Chip
 
 import chisel3._
 import chisel3.util._
@@ -33,7 +33,7 @@ abstract class RiftBundle(implicit val p: Parameters) extends Bundle with HasRif
 trait HasIcacheParameters extends HasRiftParameters {
   val icacheParams: IcacheParameters
 
-  def dw = icacheParams.dw
+  def dw = l1DW
   def bk = icacheParams.bk
   def cb = icacheParams.cb
   def cl = icacheParams.cl
@@ -54,11 +54,9 @@ trait HasIcacheParameters extends HasRiftParameters {
 
 
 case class IcacheParameters(
-  dw: Int = 256,
   bk: Int = 1,
   cb: Int = 4,
   cl: Int = 128,
-
 )
 
 
@@ -70,7 +68,6 @@ abstract class IcacheBundle(implicit val p: Parameters) extends Bundle with HasI
 
 
 case class DcacheParameters(
-  dw: Int = 256,
   bk: Int = 8,
   cb: Int = 8,
   cl: Int = 128,
@@ -81,7 +78,7 @@ case class DcacheParameters(
 trait HasDcacheParameters extends HasRiftParameters {
   val dcacheParams: DcacheParameters
 
-  def dw = dcacheParams.dw
+  def dw = l1DW
   def bk = dcacheParams.bk
   def cb = dcacheParams.cb
   def cl = dcacheParams.cl
@@ -158,14 +155,14 @@ case class RiftSetting(
     // tage_tag_w = 8,
   ),
 
+  l1DW: Int = 256,
+
   icacheParameters: IcacheParameters = IcacheParameters(
-    dw = 256,
     bk = 1,
     cb = 4,
     cl = 256
   ),
   dcacheParameters: DcacheParameters = DcacheParameters(
-    dw = 256,
     bk = 8,
     cb = 8,
     cl = 256,
@@ -181,9 +178,10 @@ case class RiftSetting(
   //require( opChn % 2 == 0 )
   require( regNum > 32 )
   require( pmpNum >= 0 && pmpNum <= 8 )
-  // require( icacheParameters.dw == dcacheParameters.dw )
   require( isPow2(dcacheParameters.stEntry) )
   require( isPow2(ftChn) )
+
+
 }
 
 trait HasRiftParameters {
@@ -213,6 +211,7 @@ trait HasRiftParameters {
   def pmpNum = riftSetting.pmpNum
   def hpmNum = riftSetting.hpmNum
 
+  def l1DW = riftSetting.l1DW
   def l1BeatBits = riftSetting.l1BeatBits
   def memBeatBits = riftSetting.memBeatBits
 

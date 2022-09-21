@@ -28,7 +28,7 @@ import rift2Core.backend._
 import rift2Core.backend.fpu._
 import rift2Core.backend.lsu._
 import rift2Core.privilege._
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._

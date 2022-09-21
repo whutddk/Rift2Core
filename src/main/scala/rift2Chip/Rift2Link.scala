@@ -20,7 +20,6 @@ package rift2Chip
 
 import chisel3._
 import chisel3.util._
-import rift._
 import rift2Core._
 
 import debug._
@@ -43,7 +42,7 @@ class Rift2LinkA(isFlatten: Boolean = false)(implicit p: Parameters) extends Laz
   val i_rift2Core = LazyModule( new Rift2Core(isFlatten) )
 
   val sifiveCache = if( hasL2 ) { Some(    LazyModule(new InclusiveCache(
-      cache = CacheParameters( level = 2, ways = 2, sets = 8, blockBytes = 128/8, beatBytes = l1BeatBits/8 ),
+      cache = CacheParameters( level = 2, ways = 2, sets = 8, blockBytes = l1DW/8, beatBytes = l1BeatBits/8 ),
       micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
       control = None
     )))

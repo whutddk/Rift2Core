@@ -173,7 +173,7 @@ trait IF3_Predict{ this: IF3Base =>
 
   val is_req_btb   = (if (btb_cl != 0) {reAlignPreDecode.map{ _.is_req_btb}} else {reAlignPreDecode.map{_ => false.B}})
   val is_req_bim   = reAlignPreDecode.map{ _.is_req_bim}
-  val is_req_tage  = if (!isMinArea) {reAlignPreDecode.map{ _.is_req_tage}} else { reAlign.map{ _ => false.B } }
+  val is_req_tage  = if (false) {reAlignPreDecode.map{ _.is_req_tage}} else { reAlign.map{ _ => false.B } }
   val is_lock_pipe = reAlignPreDecode.map{ _.is_lock_pipe}
 
   reAlign <> combPDT.io.enq//waiting for overriding
@@ -290,7 +290,7 @@ trait IF3_Update{ this: IF3Base =>
   bim.io.update.bits.pc              := io.bcmm_update.bits.pc
   bim.io.update.bits.isFinalTaken    := io.bcmm_update.bits.isFinalTaken
 
-  if (!isMinArea) {
+  if (false) {
     tage.io.update.valid              := io.bcmm_update.valid
     tage.io.update.bits.viewAsSupertype( new TageResp_Bundle ) := io.bcmm_update.bits.tageResp
     tage.io.update.bits.pc            := io.bcmm_update.bits.pc

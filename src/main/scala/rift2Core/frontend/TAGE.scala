@@ -110,7 +110,7 @@ class TAGE(param: TageParams = TageParams())(implicit p: Parameters) extends IFe
     val flush = Input(Bool())
   })
 
-  if (!isMinArea) {
+  if (false) {
     val tageTable = param.tableInfo.map{
       case ( nRows, len ) => {
         val mdl = Module(new TageTable(nRows = nRows, histlen = len))

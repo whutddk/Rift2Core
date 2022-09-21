@@ -22,7 +22,7 @@ import chisel3.util.random._
 
 import rift2Core.define._
 
-import rift._
+import rift2Chip._
 import base._
 
 import chipsalliance.rocketchip.config.Parameters
@@ -440,77 +440,6 @@ class DcacheStage(idx: Int)(implicit p: Parameters) extends DcacheStageBase((idx
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  // when( io.enq.fire ) {
-    // io.tag_addr_r := io.enq.bits.paddr
-    // io.dat_addr_r := io.enq.bits.paddr
-
-    // for ( i <- 0 until cb ) yield {
-    //   io.tag_en_r(i) := io.enq.bits.fun.is_tag_r
-    // }
-
-    // for ( i <- 0 until cb ) yield {
-    //   io.dat_en_r(i) := 
-    //     io.enq.bits.fun.is_dat_r & (
-    //       (io.enq.bits.fun.probe) |
-    //       (io.enq.bits.fun.grant) |
-    //       (io.enq.bits.fun.is_access )
-    //     )
-    // }
-  // }
-
-  // for ( i <- 0 until cb ) yield {
-  //   val data_i = VecInit(for ( k <- 0 until dw/8 ) yield dat_info_w(8*k+7, 8*k))
-  //   val data_o = Cat( for ( k <- 0 until dw/8 ) yield { dat_ram(i).read(addr_sel_r, dat_en_r(i))(dw/8-1-k) } )
-
-  //   when( dat_en_w(i) ) {
-  //     dat_ram(i).write(addr_sel_w, data_i, dat_info_wstrb.asBools)
-  //   }
-
-  //   dat_info_r(i) := {
-  //     val mask = dat_info_wstrb.asBools
-
-  //     val wdata    = RegNext( dat_info_w )
-  //     val ext_mask = RegNext(Cat( for ( k <- 0 until dw/8 ) yield Fill(8, mask(dw/8-1-k)) ))
-
-  //     val isBypass = RegNext(addr_sel_r === addr_sel_w & dat_en_w(i) & dat_en_r(i), false.B)
-  //     val isEnable = RegNext(dat_en_r(i), false.B)
-
-  //     Mux( isEnable, Mux(isBypass, (wdata & ext_mask) | (data_o & ~ext_mask), data_o), 0.U )
-
-  //   }    
-  // }
-
-  // for ( i <- 0 until cb ) yield {
-  //   when( tag_en_w(i) ) {
-  //     tag_ram(i).write(addr_sel_w, tag_info_w)
-  //   }
-
-  //   val isBypass = RegNext(addr_sel_r === addr_sel_w & tag_en_w(i) & tag_en_r(i), false.B)
-  //   val isEnable = RegNext(tag_en_r(i), false.B)
-  //   val tag_o = tag_ram(i).read(addr_sel_r, tag_en_r(i))
-
-
-  //   tag_info_r(i) := 
-  //     Mux( isEnable, Mux( isBypass, RegNext(tag_info_w), tag_o ), 0.U )
-  // }
-
-  
-
-  
 
 
 

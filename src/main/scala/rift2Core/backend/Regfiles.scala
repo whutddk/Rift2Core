@@ -22,7 +22,7 @@ import rift2Core.define._
 
 import rift2Core.diff._
 
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
 class dpt_lookup_info()(implicit p: Parameters) extends RiftBundle{
@@ -242,7 +242,7 @@ trait RegFilesReadOPSRAM{ this:RegFilesBase =>
       (log(idx2) === "b11".U | idx2 === (regNum-1).U ) &
       (log(idx3) === "b11".U | idx3 === (regNum-1).U )      
     , false.B)
-
+    require(false)
   }
 }
 
@@ -299,7 +299,7 @@ trait RegFilesCommit{ this:RegFilesBase =>
 
 
 
-class XRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RegFilesBase(dw, rop_chn, wb_chn ) with RegFilesReName with RegFilesReadOPSRAM with RegFilesWriteBack with RegFilesCommit{
+class XRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RegFilesBase(dw, rop_chn, wb_chn ) with RegFilesReName with RegFilesReadOPFF with RegFilesWriteBack with RegFilesCommit{
 
   for ( i <- 0 until rn_chn ) {
     val idx1 = io.dpt_lookup(i).req.rs1
@@ -324,7 +324,7 @@ class XRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) ext
 
 }
 
-class FRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RegFilesBase(dw, rop_chn, wb_chn ) with RegFilesReName with RegFilesReadOPSRAM with RegFilesWriteBack with RegFilesCommit{
+class FRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RegFilesBase(dw, rop_chn, wb_chn ) with RegFilesReName with RegFilesReadOPFF with RegFilesWriteBack with RegFilesCommit{
 
 
   for ( i <- 0 until rn_chn ) {

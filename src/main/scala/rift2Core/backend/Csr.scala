@@ -24,7 +24,7 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.privilege._
 
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
 class Csr(implicit p: Parameters) extends RiftModule {

@@ -23,7 +23,7 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend._
 
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
 class Exe_Port extends Bundle {

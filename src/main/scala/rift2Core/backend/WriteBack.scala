@@ -28,7 +28,7 @@ import base._
 import rift2Core.define._
 import rift2Core.diff._
 
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config._
 
 class WriteBack(implicit p: Parameters) extends RiftModule {

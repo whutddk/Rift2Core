@@ -22,7 +22,7 @@ import chisel3.util._
 import rift2Core.define._
 import rift2Core.backend.fpu._
 
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
 case class FType(exp: Int, sig: Int) {

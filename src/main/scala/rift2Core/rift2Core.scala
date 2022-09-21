@@ -20,7 +20,7 @@ package rift2Core
 
 import chisel3._
 import chisel3.util._
-import rift._
+import rift2Chip._
 import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.diff._
@@ -48,7 +48,7 @@ class Rift2Core(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
     Seq(TLMasterParameters.v1(
       name = "dcache",
       sourceId = IdRange(0, dcacheParams.bk),
-      supportsProbe = if (hasL2) { TransferSizes((dcacheParams.dw)/8) } else { TransferSizes.none }
+      supportsProbe = if (hasL2) { TransferSizes((l1DW)/8) } else { TransferSizes.none }
     ))
   )
 
@@ -141,7 +141,7 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   }
 
   val iss_stage = {
-    val mdl = Module(new Issue)
+    val mdl = if( opChn > 1 ) {Module(new Issue with IssueOoo with IssueIto)} else { Module(new Issue with IssueSig)}
     if( opChn > 1 ) {
       mdl.io.ooo_dpt_iss.get <> dpt_stage.io.ooo_dpt_iss.get
       mdl.io.ito_dpt_iss.get <> dpt_stage.io.ito_dpt_iss.get      

@@ -18,7 +18,7 @@ package debug
 
 import chisel3._
 import chisel3.util._
-import rift._
+import rift2Chip._
 
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.diplomacy._

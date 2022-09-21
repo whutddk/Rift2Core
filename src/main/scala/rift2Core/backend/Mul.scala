@@ -23,7 +23,7 @@ import chisel3.util._
 import rift2Core.define._
 import base._
 
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
 

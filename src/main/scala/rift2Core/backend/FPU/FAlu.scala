@@ -24,7 +24,7 @@ import rift2Core.define._
 import rift2Core.backend._
 import rift2Core.privilege._
 import chisel3.experimental.dataview._
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config._
 
 

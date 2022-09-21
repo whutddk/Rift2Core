@@ -23,7 +23,7 @@ import chisel3._
 import chisel3.util._
 import chisel3.util.random._
 
-import rift._
+import rift2Chip._
 import base._
 
 import rift2Core.define._

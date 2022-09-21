@@ -22,7 +22,7 @@ import chisel3._
 import chisel3.util._
 import chisel3.experimental.dataview._
 
-import rift._
+import rift2Chip._
 import base._
 
 import chipsalliance.rocketchip.config.Parameters
@@ -68,7 +68,7 @@ object PTWState {
 class PTWBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
   val mEdge = edge
   val mid   = id
-  def dw = 128
+  def dw = l1DW
   def cl = 256
   
   val io = IO(new Bundle{

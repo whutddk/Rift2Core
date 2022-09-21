@@ -20,7 +20,7 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import chipsalliance.rocketchip.config.Parameters
-import rift._
+import rift2Chip._
 import base._
 
 /**
@@ -72,7 +72,7 @@ abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
 
   val is_req_btb   = (if ( btb_cl != 0 ) {preDecodeAgn.map{ _.is_req_btb}} else {preDecodeAgn.map{_ => false.B}})
   val is_req_bim   = preDecodeAgn.map{ _.is_req_bim}
-  val is_req_tage  = if (!isMinArea) { preDecodeAgn.map{ _.is_req_tage} } else {io.if4_req.map{ _ => false.B}}
+  val is_req_tage  = if (false) { preDecodeAgn.map{ _.is_req_tage} } else {io.if4_req.map{ _ => false.B}}
 
 
   val tageRedirect = ReDirect(io.tageResp, VecInit(is_req_tage) )
@@ -196,7 +196,7 @@ trait IF4_Predict{ this: IF4Base =>
     bRePort.io.enq(i).bits.pc             := pc(i)
     if (!isMinArea) { bRePort.io.enq(i).bits.ghist := ghist(i) } else { bRePort.io.enq(i).bits.ghist := DontCare }
     bRePort.io.enq(i).bits.bimResp        := bim_decode(i)
-    if (!isMinArea) { bRePort.io.enq(i).bits.tageResp := tage_decode(i) } else { bRePort.io.enq(i).bits.tageResp := DontCare }
+    if (false) { bRePort.io.enq(i).bits.tageResp := tage_decode(i) } else { bRePort.io.enq(i).bits.tageResp := DontCare }
     bRePort.io.enq(i).bits.isPredictTaken := is_bTaken(i)
 
     jRePort.io.enq(i).bits.pc      := pc(i)
@@ -219,11 +219,11 @@ trait IF4SRAM { this: IF4Base =>
   for ( i <- 0 until rn_chn ) yield {
     btbRedirect(i).ready := is_req_btb(i) & io.if4_req(i).fire
     bimRedirect(i).ready := is_req_bim(i) & io.if4_req(i).fire
-    if (!isMinArea) { tageRedirect(i).ready := is_req_tage(i) & io.if4_req(i).fire } else { tageRedirect(i).ready := true.B }
+    if (false) { tageRedirect(i).ready := is_req_tage(i) & io.if4_req(i).fire } else { tageRedirect(i).ready := true.B }
 
     assert( ~(btbRedirect(i).ready  & ~btbRedirect(i).valid) )
     assert( ~(bimRedirect(i).ready  & ~bimRedirect(i).valid) )
-    if (!isMinArea) { assert( ~(tageRedirect(i).ready & ~tageRedirect(i).valid)) }
+    if (false) { assert( ~(tageRedirect(i).ready & ~tageRedirect(i).valid)) }
   }
 
       

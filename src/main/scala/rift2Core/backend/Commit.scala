@@ -28,7 +28,7 @@ import rift2Core.privilege._
 import debug._
 import chisel3.experimental._
 import base._
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 import rift2Core.diff._
 

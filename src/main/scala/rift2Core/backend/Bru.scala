@@ -23,7 +23,7 @@ import chisel3._
 import chisel3.util._
 import chisel3.experimental.dataview._
 import rift2Core.define._
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
 abstract class BruBase()(implicit p: Parameters) extends RiftModule {

@@ -24,7 +24,7 @@ import chisel3.util.random._
 
 import rift2Core.define._
 
-import rift._
+import rift2Chip._
 import base._
 
 import chipsalliance.rocketchip.config.Parameters
