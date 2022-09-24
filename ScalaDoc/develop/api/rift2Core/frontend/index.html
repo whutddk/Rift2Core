@@ -167,16 +167,28 @@
                         <a href="Decode32.html" title="">Decode32</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="IF1.html" title=""></a>
-                        <a href="IF1.html" title="">IF1</a>
+                        <a class="class" href="FakeuBTB.html" title=""></a>
+                        <a href="FakeuBTB.html" title="">FakeuBTB</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="IF1Base.html" title="instract fetch stage 1, generate pc"></a>
                         <a href="IF1Base.html" title="instract fetch stage 1, generate pc">IF1Base</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="trait" href="IF1Predict.html" title=""></a>
+                        <a class="class" href="IF1NPredict.html" title=""></a>
+                        <a href="IF1NPredict.html" title="">IF1NPredict</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="trait" href="IF1NuBTB.html" title=""></a>
+                        <a href="IF1NuBTB.html" title="">IF1NuBTB</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="IF1Predict.html" title=""></a>
                         <a href="IF1Predict.html" title="">IF1Predict</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="trait" href="IF1uBTB.html" title=""></a>
+                        <a href="IF1uBTB.html" title="">IF1uBTB</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="IF2.html" title=""></a>
@@ -185,6 +197,10 @@
                         <span class="separator"></span>
                         <a class="class" href="IF2Base.html" title=""></a>
                         <a href="IF2Base.html" title="">IF2Base</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="trait" href="IF2Bus.html" title=""></a>
+                        <a href="IF2Bus.html" title="">IF2Bus</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="trait" href="IF2FSM.html" title=""></a>
@@ -209,6 +225,10 @@
                         <span class="separator"></span>
                         <a class="trait" href="IF2MMU.html" title=""></a>
                         <a href="IF2MMU.html" title="">IF2MMU</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="trait" href="IF2NCache.html" title=""></a>
+                        <a href="IF2NCache.html" title="">IF2NCache</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="trait" href="IF2PreFetch.html" title=""></a>
@@ -424,7 +444,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Decode16.html"><span class="name">Decode16</span></a><span class="result"> extends <a href="../../rift/RiftModule.html" class="extype" name="rift.RiftModule">RiftModule</a></span>
+        <a title="" href="Decode16.html"><span class="name">Decode16</span></a><span class="result"> extends <a href="../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></span>
       </span>
       
       
@@ -440,14 +460,14 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Decode32.html"><span class="name">Decode32</span></a><span class="result"> extends <a href="../../rift/RiftModule.html" class="extype" name="rift.RiftModule">RiftModule</a></span>
+        <a title="" href="Decode32.html"><span class="name">Decode32</span></a><span class="result"> extends <a href="../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></span>
       </span>
       
       
-    </li><li name="rift2Core.frontend.IF1" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="IF1extendsIF1BasewithIF1Predict"></a><a id="IF1:IF1"></a>
+    </li><li name="rift2Core.frontend.FakeuBTB" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="FakeuBTBextendsIFetchModule"></a><a id="FakeuBTB:FakeuBTB"></a>
       <span class="permalink">
-      <a href="../../rift2Core/frontend/IF1.html" title="Permalink">
+      <a href="../../rift2Core/frontend/FakeuBTB.html" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -456,7 +476,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="IF1.html"><span class="name">IF1</span></a><span class="result"> extends <a href="IF1Base.html" class="extype" name="rift2Core.frontend.IF1Base">IF1Base</a> with <a href="IF1Predict.html" class="extype" name="rift2Core.frontend.IF1Predict">IF1Predict</a></span>
+        <a title="" href="FakeuBTB.html"><span class="name">FakeuBTB</span></a><span class="result"> extends <a href="../define/IFetchModule.html" class="extype" name="rift2Core.define.IFetchModule">IFetchModule</a></span>
       </span>
       
       
@@ -477,10 +497,26 @@
       
       <p class="shortcomment cmt">instract fetch stage 1, generate pc
 </p>
-    </li><li name="rift2Core.frontend.IF1Predict" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
-      <a id="IF1PredictextendsAnyRef"></a><a id="IF1Predict:IF1Predict"></a>
+    </li><li name="rift2Core.frontend.IF1NPredict" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="IF1NPredictextendsIF1BasewithIF1NuBTB"></a><a id="IF1NPredict:IF1NPredict"></a>
       <span class="permalink">
-      <a href="../../rift2Core/frontend/IF1Predict.html" title="Permalink">
+      <a href="../../rift2Core/frontend/IF1NPredict.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="IF1NPredict.html"><span class="name">IF1NPredict</span></a><span class="result"> extends <a href="IF1Base.html" class="extype" name="rift2Core.frontend.IF1Base">IF1Base</a> with <a href="IF1NuBTB.html" class="extype" name="rift2Core.frontend.IF1NuBTB">IF1NuBTB</a></span>
+      </span>
+      
+      
+    </li><li name="rift2Core.frontend.IF1NuBTB" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="IF1NuBTBextendsAnyRef"></a><a id="IF1NuBTB:IF1NuBTB"></a>
+      <span class="permalink">
+      <a href="../../rift2Core/frontend/IF1NuBTB.html" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -489,12 +525,44 @@
         <span class="kind">trait</span>
       </span>
       <span class="symbol">
-        <a title="" href="IF1Predict.html"><span class="name">IF1Predict</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+        <a title="" href="IF1NuBTB.html"><span class="name">IF1NuBTB</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      
+      
+    </li><li name="rift2Core.frontend.IF1Predict" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="IF1PredictextendsIF1BasewithIF1uBTB"></a><a id="IF1Predict:IF1Predict"></a>
+      <span class="permalink">
+      <a href="../../rift2Core/frontend/IF1Predict.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="IF1Predict.html"><span class="name">IF1Predict</span></a><span class="result"> extends <a href="IF1Base.html" class="extype" name="rift2Core.frontend.IF1Base">IF1Base</a> with <a href="IF1uBTB.html" class="extype" name="rift2Core.frontend.IF1uBTB">IF1uBTB</a></span>
+      </span>
+      
+      
+    </li><li name="rift2Core.frontend.IF1uBTB" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="IF1uBTBextendsAnyRef"></a><a id="IF1uBTB:IF1uBTB"></a>
+      <span class="permalink">
+      <a href="../../rift2Core/frontend/IF1uBTB.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="IF1uBTB.html"><span class="name">IF1uBTB</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
       </span>
       
       
     </li><li name="rift2Core.frontend.IF2" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="IF2extendsIF2BasewithIF2MMUwithIF2FaultwithIF2FSMwithIF2ICachewithIF2LoadIBufwithIF2FencewithIF2PreFetch"></a><a id="IF2:IF2"></a>
+      <a id="IF2extendsIF2BasewithIF2MMUwithIF2FaultwithIF2FSMwithIF2ICachewithIF2BuswithIF2LoadIBufwithIF2FencewithIF2PreFetch"></a><a id="IF2:IF2"></a>
       <span class="permalink">
       <a href="../../rift2Core/frontend/IF2.html" title="Permalink">
         <i class="material-icons"></i>
@@ -505,7 +573,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="IF2.html"><span class="name">IF2</span></a><span class="result"> extends <a href="IF2Base.html" class="extype" name="rift2Core.frontend.IF2Base">IF2Base</a> with <a href="IF2MMU.html" class="extype" name="rift2Core.frontend.IF2MMU">IF2MMU</a> with <a href="IF2Fault.html" class="extype" name="rift2Core.frontend.IF2Fault">IF2Fault</a> with <a href="IF2FSM.html" class="extype" name="rift2Core.frontend.IF2FSM">IF2FSM</a> with <a href="IF2ICache.html" class="extype" name="rift2Core.frontend.IF2ICache">IF2ICache</a> with <a href="IF2LoadIBuf.html" class="extype" name="rift2Core.frontend.IF2LoadIBuf">IF2LoadIBuf</a> with <a href="IF2Fence.html" class="extype" name="rift2Core.frontend.IF2Fence">IF2Fence</a> with <a href="IF2PreFetch.html" class="extype" name="rift2Core.frontend.IF2PreFetch">IF2PreFetch</a></span>
+        <a title="" href="IF2.html"><span class="name">IF2</span></a><span class="result"> extends <a href="IF2Base.html" class="extype" name="rift2Core.frontend.IF2Base">IF2Base</a> with <a href="IF2MMU.html" class="extype" name="rift2Core.frontend.IF2MMU">IF2MMU</a> with <a href="IF2Fault.html" class="extype" name="rift2Core.frontend.IF2Fault">IF2Fault</a> with <a href="IF2FSM.html" class="extype" name="rift2Core.frontend.IF2FSM">IF2FSM</a> with <a href="IF2ICache.html" class="extype" name="rift2Core.frontend.IF2ICache">IF2ICache</a> with <a href="IF2Bus.html" class="extype" name="rift2Core.frontend.IF2Bus">IF2Bus</a> with <a href="IF2LoadIBuf.html" class="extype" name="rift2Core.frontend.IF2LoadIBuf">IF2LoadIBuf</a> with <a href="IF2Fence.html" class="extype" name="rift2Core.frontend.IF2Fence">IF2Fence</a> with <a href="IF2PreFetch.html" class="extype" name="rift2Core.frontend.IF2PreFetch">IF2PreFetch</a></span>
       </span>
       
       
@@ -521,7 +589,23 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="IF2Base.html"><span class="name">IF2Base</span></a><span class="result"> extends <a href="../../rift/IcacheModule.html" class="extype" name="rift.IcacheModule">IcacheModule</a></span>
+        <a title="" href="IF2Base.html"><span class="name">IF2Base</span></a><span class="result"> extends <a href="../../rift2Chip/IcacheModule.html" class="extype" name="rift2Chip.IcacheModule">IcacheModule</a></span>
+      </span>
+      
+      
+    </li><li name="rift2Core.frontend.IF2Bus" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="IF2BusextendsAnyRef"></a><a id="IF2Bus:IF2Bus"></a>
+      <span class="permalink">
+      <a href="../../rift2Core/frontend/IF2Bus.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="IF2Bus.html"><span class="name">IF2Bus</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
       </span>
       
       
@@ -618,6 +702,22 @@
       </span>
       <span class="symbol">
         <a title="" href="IF2MMU.html"><span class="name">IF2MMU</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      
+      
+    </li><li name="rift2Core.frontend.IF2NCache" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="IF2NCacheextendsAnyRef"></a><a id="IF2NCache:IF2NCache"></a>
+      <span class="permalink">
+      <a href="../../rift2Core/frontend/IF2NCache.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="IF2NCache.html"><span class="name">IF2NCache</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
       </span>
       
       

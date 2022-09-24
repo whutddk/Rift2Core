@@ -175,6 +175,14 @@
                         <a href="Dcache_ScoreBoard_Bundle.html" title="">Dcache_ScoreBoard_Bundle</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
+                        <a class="class" href="FakeProbeUnit.html" title=""></a>
+                        <a href="FakeProbeUnit.html" title="">FakeProbeUnit</a>
+                      </li><li class="current-entities indented3">
+                        <span class="separator"></span>
+                        <a class="class" href="GetUnit.html" title="The Queue of cache to request acquire and waiting for grant and ack grant Get-Mode"></a>
+                        <a href="GetUnit.html" title="The Queue of cache to request acquire and waiting for grant and ack grant Get-Mode">GetUnit</a>
+                      </li><li class="current-entities indented3">
+                        <span class="separator"></span>
                         <a class="class" href="IO_Lsu.html" title=""></a>
                         <a href="IO_Lsu.html" title="">IO_Lsu</a>
                       </li><li class="current-entities indented3">
@@ -247,6 +255,10 @@
                         <a href="ProbeUnit.html" title="ProbeUnit will accept probe request from l2cache and forward it to l1cache to resp data">ProbeUnit</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
+                        <a class="class" href="PutUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Put-Mode"></a>
+                        <a href="PutUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Put-Mode">PutUnit</a>
+                      </li><li class="current-entities indented3">
+                        <span class="separator"></span>
                         <a class="class" href="Store_queue.html" title="bound to every cache"></a>
                         <a href="Store_queue.html" title="bound to every cache">Store_queue</a>
                       </li><li class="current-entities indented3">
@@ -267,8 +279,8 @@
                         <a href="Strb2Mask$.html" title="">Strb2Mask</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
-                        <a class="class" href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache"></a>
-                        <a href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache">WriteBackUnit</a>
+                        <a class="class" href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Probe-Release-Mode"></a>
+                        <a href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Probe-Release-Mode">WriteBackUnit</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
                         <a class="object" href="get_loadRes$.html" title=""></a>
@@ -312,7 +324,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <span class="name">DcacheStageBase</span><span class="result"> extends <a href="../../../rift/DcacheModule.html" class="extype" name="rift.DcacheModule">DcacheModule</a></span>
+        <span class="name">DcacheStageBase</span><span class="result"> extends <a href="../../../rift2Chip/DcacheModule.html" class="extype" name="rift2Chip.DcacheModule">DcacheModule</a></span>
       </span>
       </h4>
 
@@ -321,7 +333,7 @@
           <span class="toggle">
             Linear Supertypes
           </span>
-          <div class="superTypes hiddenContent"><a href="../../../rift/DcacheModule.html" class="extype" name="rift.DcacheModule">DcacheModule</a>, <a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a>, <a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a>, <span class="extype" name="chisel3.Module">Module</span>, <span class="extype" name="chisel3.RawModule">RawModule</span>, <span class="extype" name="chisel3.experimental.BaseModule">BaseModule</span>, <span class="extype" name="chisel3.experimental.hierarchy.IsInstantiable">IsInstantiable</span>, <span class="extype" name="chisel3.internal.HasId">HasId</span>, <span class="extype" name="chisel3.internal.InstanceId">InstanceId</span>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><a href="../../../rift2Chip/DcacheModule.html" class="extype" name="rift2Chip.DcacheModule">DcacheModule</a>, <a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a>, <a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a>, <span class="extype" name="chisel3.Module">Module</span>, <span class="extype" name="chisel3.RawModule">RawModule</span>, <span class="extype" name="chisel3.experimental.BaseModule">BaseModule</span>, <span class="extype" name="chisel3.experimental.hierarchy.IsInstantiable">IsInstantiable</span>, <span class="extype" name="chisel3.internal.HasId">HasId</span>, <span class="extype" name="chisel3.internal.InstanceId">InstanceId</span>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div><div class="toggleContainer block">
             <span class="toggle">
               Known Subclasses
@@ -352,7 +364,7 @@
                   <span class="filtertype">Inherited<br />
                   </span>
                   <ol id="linearization">
-                    <li class="in" name="rift2Core.backend.lsu.DcacheStageBase"><span>DcacheStageBase</span></li><li class="in" name="rift.DcacheModule"><span>DcacheModule</span></li><li class="in" name="rift.HasDcacheParameters"><span>HasDcacheParameters</span></li><li class="in" name="rift.HasRiftParameters"><span>HasRiftParameters</span></li><li class="in" name="chisel3.Module"><span>Module</span></li><li class="in" name="chisel3.RawModule"><span>RawModule</span></li><li class="in" name="chisel3.experimental.BaseModule"><span>BaseModule</span></li><li class="in" name="chisel3.experimental.hierarchy.IsInstantiable"><span>IsInstantiable</span></li><li class="in" name="chisel3.internal.HasId"><span>HasId</span></li><li class="in" name="chisel3.internal.InstanceId"><span>InstanceId</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                    <li class="in" name="rift2Core.backend.lsu.DcacheStageBase"><span>DcacheStageBase</span></li><li class="in" name="rift2Chip.DcacheModule"><span>DcacheModule</span></li><li class="in" name="rift2Chip.HasDcacheParameters"><span>HasDcacheParameters</span></li><li class="in" name="rift2Chip.HasRiftParameters"><span>HasRiftParameters</span></li><li class="in" name="chisel3.Module"><span>Module</span></li><li class="in" name="chisel3.RawModule"><span>RawModule</span></li><li class="in" name="chisel3.experimental.BaseModule"><span>BaseModule</span></li><li class="in" name="chisel3.experimental.hierarchy.IsInstantiable"><span>IsInstantiable</span></li><li class="in" name="chisel3.internal.HasId"><span>HasId</span></li><li class="in" name="chisel3.internal.InstanceId"><span>InstanceId</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                   </ol>
                 </div><div class="ancestors">
               <span class="filtertype"></span>
@@ -542,7 +554,7 @@
       </span>
       
       
-    </li><li name="rift.HasDcacheParameters#addr_lsb" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasDcacheParameters#addr_lsb" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="addr_lsb:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#addr_lsb:Int" title="Permalink">
@@ -557,7 +569,7 @@
         <span class="name">addr_lsb</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
     </li><li name="scala.Any#asInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="asInstanceOf[T0]:T0"></a>
       <span class="permalink">
@@ -574,7 +586,7 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="rift.HasDcacheParameters#bk" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasDcacheParameters#bk" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="bk:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#bk:Int" title="Permalink">
@@ -589,8 +601,8 @@
         <span class="name">bk</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
-    </li><li name="rift.HasDcacheParameters#bk_w" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasDcacheParameters#bk_w" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="bk_w:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#bk_w:Int" title="Permalink">
@@ -605,8 +617,8 @@
         <span class="name">bk_w</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
-    </li><li name="rift.HasDcacheParameters#cb" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasDcacheParameters#cb" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="cb:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#cb:Int" title="Permalink">
@@ -621,7 +633,7 @@
         <span class="name">cb</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
     </li><li name="rift2Core.backend.lsu.DcacheStageBase#cbSel" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="cbSel:chisel3.UInt"></a><a id="cbSel:UInt"></a>
       <span class="permalink">
@@ -638,7 +650,7 @@
       </span>
       
       
-    </li><li name="rift.HasDcacheParameters#cb_w" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasDcacheParameters#cb_w" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="cb_w:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#cb_w:Int" title="Permalink">
@@ -653,7 +665,7 @@
         <span class="name">cb_w</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
     </li><li name="chisel3.internal.HasId#circuitName" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="circuitName:String"></a>
       <span class="permalink">
@@ -670,7 +682,7 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd><dt>Definition Classes</dt><dd>HasId</dd></dl></div>
-    </li><li name="rift.HasDcacheParameters#cl" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasDcacheParameters#cl" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="cl:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#cl:Int" title="Permalink">
@@ -685,7 +697,7 @@
         <span class="name">cl</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
     </li><li name="chisel3.Module#clock" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="clock:chisel3.Clock"></a><a id="clock:Clock"></a>
       <span class="permalink">
@@ -728,7 +740,7 @@
                 <span class="name">@HotSpotIntrinsicCandidate</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="rift.HasRiftParameters#cm_chn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasRiftParameters#cm_chn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="cm_chn:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#cm_chn:Int" title="Permalink">
@@ -743,7 +755,7 @@
         <span class="name">cm_chn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.RawModule#compileOptions" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="compileOptions:chisel3.CompileOptions"></a><a id="compileOptions:CompileOptions"></a>
       <span class="permalink">
@@ -840,10 +852,10 @@
       </span>
       
       
-    </li><li name="rift.HasRiftParameters#dcacheParams" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="dcacheParams:rift.DcacheParameters"></a><a id="dcacheParams:DcacheParameters"></a>
+    </li><li name="rift2Chip.HasRiftParameters#dcacheParams" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="dcacheParams:rift2Chip.DcacheParameters"></a><a id="dcacheParams:DcacheParameters"></a>
       <span class="permalink">
-      <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#dcacheParams:rift.DcacheParameters" title="Permalink">
+      <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#dcacheParams:rift2Chip.DcacheParameters" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -852,10 +864,10 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">dcacheParams</span><span class="result">: <a href="../../../rift/DcacheParameters.html" class="extype" name="rift.DcacheParameters">DcacheParameters</a></span>
+        <span class="name">dcacheParams</span><span class="result">: <a href="../../../rift2Chip/DcacheParameters.html" class="extype" name="rift2Chip.DcacheParameters">DcacheParameters</a></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.experimental.BaseModule#desiredName" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="desiredName:String"></a>
       <span class="permalink">
@@ -872,7 +884,7 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>BaseModule</dd></dl></div>
-    </li><li name="rift.HasDcacheParameters#dw" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasDcacheParameters#dw" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="dw:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#dw:Int" title="Permalink">
@@ -887,7 +899,7 @@
         <span class="name">dw</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
     </li><li name="scala.AnyRef#eq" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a><a id="eq(AnyRef):Boolean"></a>
       <span class="permalink">
@@ -920,6 +932,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>HasId → AnyRef → Any</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#ftChn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="ftChn:Int"></a>
+      <span class="permalink">
+      <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#ftChn:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">ftChn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="scala.AnyRef#getClass" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <span class="permalink">
@@ -973,7 +1001,7 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected[<span class="extype" name="chisel3">chisel3</span>] </dd><dt>Definition Classes</dt><dd>BaseModule</dd></dl></div>
-    </li><li name="rift.HasRiftParameters#hasDebugger" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasRiftParameters#hasDebugger" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="hasDebugger:Boolean"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#hasDebugger:Boolean" title="Permalink">
@@ -988,8 +1016,8 @@
         <span class="name">hasDebugger</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
-    </li><li name="rift.HasRiftParameters#hasFpu" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hasFpu" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="hasFpu:Boolean"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#hasFpu:Boolean" title="Permalink">
@@ -1004,8 +1032,40 @@
         <span class="name">hasFpu</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
-    </li><li name="rift.HasRiftParameters#hasPreFetch" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hasL2" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hasL2:Boolean"></a>
+      <span class="permalink">
+      <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#hasL2:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hasL2</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hasMulDiv" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hasMulDiv:Boolean"></a>
+      <span class="permalink">
+      <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#hasMulDiv:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hasMulDiv</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hasPreFetch" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="hasPreFetch:Boolean"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#hasPreFetch:Boolean" title="Permalink">
@@ -1020,7 +1080,7 @@
         <span class="name">hasPreFetch</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.internal.HasId#hasSeed" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="hasSeed:Boolean"></a>
       <span class="permalink">
@@ -1053,6 +1113,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>HasId → AnyRef → Any</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hasuBTB" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hasuBTB:Boolean"></a>
+      <span class="permalink">
+      <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#hasuBTB:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hasuBTB</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="rift2Core.backend.lsu.DcacheStageBase#hitSel" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="hitSel:chisel3.UInt"></a><a id="hitSel:UInt"></a>
       <span class="permalink">
@@ -1069,7 +1145,7 @@
       </span>
       
       <p class="shortcomment cmt">convert one hot hit to UInt</p>
-    </li><li name="rift.HasRiftParameters#hpmNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasRiftParameters#hpmNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="hpmNum:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#hpmNum:Int" title="Permalink">
@@ -1084,11 +1160,11 @@
         <span class="name">hpmNum</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
-    </li><li name="rift.HasRiftParameters#icacheParams" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="icacheParams:rift.IcacheParameters"></a><a id="icacheParams:IcacheParameters"></a>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#icacheParams" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="icacheParams:rift2Chip.IcacheParameters"></a><a id="icacheParams:IcacheParameters"></a>
       <span class="permalink">
-      <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#icacheParams:rift.IcacheParameters" title="Permalink">
+      <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#icacheParams:rift2Chip.IcacheParameters" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1097,10 +1173,10 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">icacheParams</span><span class="result">: <a href="../../../rift/IcacheParameters.html" class="extype" name="rift.IcacheParameters">IcacheParameters</a></span>
+        <span class="name">icacheParams</span><span class="result">: <a href="../../../rift2Chip/IcacheParameters.html" class="extype" name="rift2Chip.IcacheParameters">IcacheParameters</a></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="rift2Core.backend.lsu.DcacheStageBase#id" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="id:Int"></a>
       <span class="permalink">
@@ -1117,7 +1193,7 @@
       </span>
       
       
-    </li><li name="rift.HasRiftParameters#ifParams" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasRiftParameters#ifParams" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ifParams:rift2Core.define.IFParameters"></a><a id="ifParams:IFParameters"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#ifParams:rift2Core.define.IFParameters" title="Permalink">
@@ -1132,7 +1208,7 @@
         <span class="name">ifParams</span><span class="result">: <a href="../../define/IFParameters.html" class="extype" name="rift2Core.define.IFParameters">IFParameters</a></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.experimental.BaseModule#instanceName" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="instanceName:String"></a>
       <span class="permalink">
@@ -1164,7 +1240,7 @@
         <span class="name">io</span><span class="result">: <span class="extype" name="chisel3.Bundle">Bundle</span> { ... /* 7 definitions in type refinement */ }</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="rift2Core.backend.lsu.DcacheStageBase">DcacheStageBase</a> → <a href="../../../rift/DcacheModule.html" class="extype" name="rift.DcacheModule">DcacheModule</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="rift2Core.backend.lsu.DcacheStageBase">DcacheStageBase</a> → <a href="../../../rift2Chip/DcacheModule.html" class="extype" name="rift2Chip.DcacheModule">DcacheModule</a></dd></dl></div>
     </li><li name="rift2Core.backend.lsu.DcacheStageBase#isBusy" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="isBusy:chisel3.Bool"></a><a id="isBusy:Bool"></a>
       <span class="permalink">
@@ -1261,7 +1337,7 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="rift.HasRiftParameters#isLowPower" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasRiftParameters#isLowPower" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isLowPower:Boolean"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#isLowPower:Boolean" title="Permalink">
@@ -1276,8 +1352,8 @@
         <span class="name">isLowPower</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
-    </li><li name="rift.HasRiftParameters#isMinArea" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#isMinArea" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isMinArea:Boolean"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#isMinArea:Boolean" title="Permalink">
@@ -1292,7 +1368,7 @@
         <span class="name">isMinArea</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="rift2Core.backend.lsu.DcacheStageBase#is_sc_fail" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="is_sc_fail:chisel3.Bool"></a><a id="is_sc_fail:Bool"></a>
       <span class="permalink">
@@ -1309,7 +1385,7 @@
       </span>
       
       
-    </li><li name="rift.HasRiftParameters#l1BeatBits" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasRiftParameters#l1BeatBits" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="l1BeatBits:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#l1BeatBits:Int" title="Permalink">
@@ -1324,8 +1400,24 @@
         <span class="name">l1BeatBits</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
-    </li><li name="rift.HasDcacheParameters#line_w" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#l1DW" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="l1DW:Int"></a>
+      <span class="permalink">
+      <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#l1DW:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">l1DW</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasDcacheParameters#line_w" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="line_w:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#line_w:Int" title="Permalink">
@@ -1340,8 +1432,8 @@
         <span class="name">line_w</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
-    </li><li name="rift.HasRiftParameters#memBeatBits" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#memBeatBits" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="memBeatBits:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#memBeatBits:Int" title="Permalink">
@@ -1356,7 +1448,7 @@
         <span class="name">memBeatBits</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.experimental.BaseModule#name" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="name:String"></a>
       <span class="permalink">
@@ -1447,7 +1539,7 @@
                 <span class="name">@HotSpotIntrinsicCandidate</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="rift.HasRiftParameters#opChn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasRiftParameters#opChn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="opChn:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#opChn:Int" title="Permalink">
@@ -1462,8 +1554,8 @@
         <span class="name">opChn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
-    </li><li name="rift.DcacheModule#p" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.DcacheModule#p" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="p:chipsalliance.rocketchip.config.Parameters"></a><a id="p:Parameters"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#p:chipsalliance.rocketchip.config.Parameters" title="Permalink">
@@ -1478,7 +1570,7 @@
         <span class="name">p</span><span class="result">: <span class="extype" name="chipsalliance.rocketchip.config.Parameters">Parameters</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/DcacheModule.html" class="extype" name="rift.DcacheModule">DcacheModule</a> → <a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/DcacheModule.html" class="extype" name="rift2Chip.DcacheModule">DcacheModule</a> → <a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.internal.HasId#parentModName" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="parentModName:String"></a>
       <span class="permalink">
@@ -1559,7 +1651,7 @@
       </span>
       
       
-    </li><li name="rift.HasRiftParameters#plen" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasRiftParameters#plen" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="plen:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#plen:Int" title="Permalink">
@@ -1574,8 +1666,8 @@
         <span class="name">plen</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
-    </li><li name="rift.HasRiftParameters#pmpNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#pmpNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="pmpNum:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#pmpNum:Int" title="Permalink">
@@ -1590,7 +1682,7 @@
         <span class="name">pmpNum</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.experimental.BaseModule#portsContains" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="portsContains(elem:chisel3.Data):Boolean"></a><a id="portsContains(Data):Boolean"></a>
       <span class="permalink">
@@ -1623,7 +1715,7 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd><dt>Definition Classes</dt><dd>BaseModule</dd></dl></div>
-    </li><li name="rift.HasRiftParameters#regNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasRiftParameters#regNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="regNum:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#regNum:Int" title="Permalink">
@@ -1638,7 +1730,7 @@
         <span class="name">regNum</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.Module#reset" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="reset:chisel3.Reset"></a><a id="reset:Reset"></a>
       <span class="permalink">
@@ -1655,10 +1747,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Module</dd></dl></div>
-    </li><li name="rift.HasRiftParameters#riftSetting" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="riftSetting:rift.RiftSetting"></a><a id="riftSetting:RiftSetting"></a>
+    </li><li name="rift2Chip.HasRiftParameters#riftSetting" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="riftSetting:rift2Chip.RiftSetting"></a><a id="riftSetting:RiftSetting"></a>
       <span class="permalink">
-      <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#riftSetting:rift.RiftSetting" title="Permalink">
+      <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#riftSetting:rift2Chip.RiftSetting" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1667,11 +1759,11 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">riftSetting</span><span class="result">: <a href="../../../rift/RiftSetting.html" class="extype" name="rift.RiftSetting">RiftSetting</a></span>
+        <span class="name">riftSetting</span><span class="result">: <a href="../../../rift2Chip/RiftSetting.html" class="extype" name="rift2Chip.RiftSetting">RiftSetting</a></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
-    </li><li name="rift.HasRiftParameters#rn_chn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#rn_chn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="rn_chn:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#rn_chn:Int" title="Permalink">
@@ -1686,7 +1778,7 @@
         <span class="name">rn_chn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="rift2Core.backend.lsu.DcacheStageBase#rplSel" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="rplSel:chisel3.UInt"></a><a id="rplSel:UInt"></a>
       <span class="permalink">
@@ -1703,7 +1795,7 @@
       </span>
       
       <p class="shortcomment cmt">when no block is hit or a new grant req comes, we should 1) find out an empty block 2) evict a valid block</p>
-    </li><li name="rift.HasDcacheParameters#sbEntry" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasDcacheParameters#sbEntry" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="sbEntry:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#sbEntry:Int" title="Permalink">
@@ -1718,8 +1810,8 @@
         <span class="name">sbEntry</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
-    </li><li name="rift.HasDcacheParameters#stEntry" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasDcacheParameters#stEntry" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="stEntry:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#stEntry:Int" title="Permalink">
@@ -1734,7 +1826,7 @@
         <span class="name">stEntry</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
     </li><li name="chisel3.internal.HasId#suggestName" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="suggestName(seed:=&gt;String):HasId.this.type"></a><a id="suggestName(⇒String):DcacheStageBase.this.type"></a>
       <span class="permalink">
@@ -1831,7 +1923,7 @@
       </span>
       
       
-    </li><li name="rift.HasDcacheParameters#tag_w" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasDcacheParameters#tag_w" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="tag_w:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#tag_w:Int" title="Permalink">
@@ -1846,8 +1938,8 @@
         <span class="name">tag_w</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
-    </li><li name="rift.HasRiftParameters#tlbEntry" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#tlbEntry" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="tlbEntry:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#tlbEntry:Int" title="Permalink">
@@ -1862,7 +1954,7 @@
         <span class="name">tlbEntry</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.experimental.BaseModule#toAbsoluteTarget" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="toAbsoluteTarget:firrtl.annotations.IsModule"></a><a id="toAbsoluteTarget:IsModule"></a>
       <span class="permalink">
@@ -1927,7 +2019,7 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>BaseModule → InstanceId</dd></dl></div>
-    </li><li name="rift.HasRiftParameters#vlen" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasRiftParameters#vlen" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="vlen:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#vlen:Int" title="Permalink">
@@ -1942,7 +2034,7 @@
         <span class="name">vlen</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait(x$1:Long,x$2:Int):Unit"></a><a id="wait(Long,Int):Unit"></a>
       <span class="permalink">
@@ -2011,7 +2103,7 @@
     </span>)</span>
               
         </dd></dl></div>
-    </li><li name="rift.HasRiftParameters#wbChn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="rift2Chip.HasRiftParameters#wbChn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wbChn:Int"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/DcacheStageBase.html#wbChn:Int" title="Permalink">
@@ -2026,7 +2118,7 @@
         <span class="name">wbChn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li>
               </ol>
             </div>
@@ -2161,12 +2253,12 @@
         </div>
 
         <div id="inheritedMembers">
-        <div class="parent" name="rift.DcacheModule">
-              <h3>Inherited from <a href="../../../rift/DcacheModule.html" class="extype" name="rift.DcacheModule">DcacheModule</a></h3>
-            </div><div class="parent" name="rift.HasDcacheParameters">
-              <h3>Inherited from <a href="../../../rift/HasDcacheParameters.html" class="extype" name="rift.HasDcacheParameters">HasDcacheParameters</a></h3>
-            </div><div class="parent" name="rift.HasRiftParameters">
-              <h3>Inherited from <a href="../../../rift/HasRiftParameters.html" class="extype" name="rift.HasRiftParameters">HasRiftParameters</a></h3>
+        <div class="parent" name="rift2Chip.DcacheModule">
+              <h3>Inherited from <a href="../../../rift2Chip/DcacheModule.html" class="extype" name="rift2Chip.DcacheModule">DcacheModule</a></h3>
+            </div><div class="parent" name="rift2Chip.HasDcacheParameters">
+              <h3>Inherited from <a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></h3>
+            </div><div class="parent" name="rift2Chip.HasRiftParameters">
+              <h3>Inherited from <a href="../../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></h3>
             </div><div class="parent" name="chisel3.Module">
               <h3>Inherited from <span class="extype" name="chisel3.Module">Module</span></h3>
             </div><div class="parent" name="chisel3.RawModule">

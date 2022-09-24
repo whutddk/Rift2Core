@@ -99,6 +99,10 @@
                         <a href="Decoupled1toN.html" title="">Decoupled1toN</a>
                       </li><li class="current-entities indented1">
                         <span class="separator"></span>
+                        <a class="class" href="Generate_sram.html" title=""></a>
+                        <a href="Generate_sram.html" title="">Generate_sram</a>
+                      </li><li class="current-entities indented1">
+                        <span class="separator"></span>
                         <a class="object" href="HashHalf0$.html" title=""></a>
                         <a href="HashHalf0$.html" title="">HashHalf0</a>
                       </li><li class="current-entities indented1">
@@ -196,7 +200,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <span class="name">ZipQueue</span><span class="tparams">[<span name="T">T &lt;: <span class="extype" name="chisel3.Data">Data</span></span>]</span><span class="result"> extends <span class="extype" name="chisel3.Module">Module</span></span>
+        <span class="name">ZipQueue</span><span class="tparams">[<span name="T">T &lt;: <span class="extype" name="chisel3.Data">Data</span></span>]</span><span class="result"> extends <a href="../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></span>
       </span>
       </h4>
 
@@ -205,7 +209,7 @@
           <span class="toggle">
             Linear Supertypes
           </span>
-          <div class="superTypes hiddenContent"><span class="extype" name="chisel3.Module">Module</span>, <span class="extype" name="chisel3.RawModule">RawModule</span>, <span class="extype" name="chisel3.experimental.BaseModule">BaseModule</span>, <span class="extype" name="chisel3.experimental.hierarchy.IsInstantiable">IsInstantiable</span>, <span class="extype" name="chisel3.internal.HasId">HasId</span>, <span class="extype" name="chisel3.internal.InstanceId">InstanceId</span>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><a href="../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a>, <a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a>, <span class="extype" name="chisel3.Module">Module</span>, <span class="extype" name="chisel3.RawModule">RawModule</span>, <span class="extype" name="chisel3.experimental.BaseModule">BaseModule</span>, <span class="extype" name="chisel3.experimental.hierarchy.IsInstantiable">IsInstantiable</span>, <span class="extype" name="chisel3.internal.HasId">HasId</span>, <span class="extype" name="chisel3.internal.InstanceId">InstanceId</span>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -231,7 +235,7 @@
                   <span class="filtertype">Inherited<br />
                   </span>
                   <ol id="linearization">
-                    <li class="in" name="base.ZipQueue"><span>ZipQueue</span></li><li class="in" name="chisel3.Module"><span>Module</span></li><li class="in" name="chisel3.RawModule"><span>RawModule</span></li><li class="in" name="chisel3.experimental.BaseModule"><span>BaseModule</span></li><li class="in" name="chisel3.experimental.hierarchy.IsInstantiable"><span>IsInstantiable</span></li><li class="in" name="chisel3.internal.HasId"><span>HasId</span></li><li class="in" name="chisel3.internal.InstanceId"><span>InstanceId</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                    <li class="in" name="base.ZipQueue"><span>ZipQueue</span></li><li class="in" name="rift2Chip.RiftModule"><span>RiftModule</span></li><li class="in" name="rift2Chip.HasRiftParameters"><span>HasRiftParameters</span></li><li class="in" name="chisel3.Module"><span>Module</span></li><li class="in" name="chisel3.RawModule"><span>RawModule</span></li><li class="in" name="chisel3.experimental.BaseModule"><span>BaseModule</span></li><li class="in" name="chisel3.experimental.hierarchy.IsInstantiable"><span>IsInstantiable</span></li><li class="in" name="chisel3.internal.HasId"><span>HasId</span></li><li class="in" name="chisel3.internal.InstanceId"><span>InstanceId</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                   </ol>
                 </div><div class="ancestors">
               <span class="filtertype"></span>
@@ -252,9 +256,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="base.ZipQueue#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(dw:T,aw:Int,in:Int,out:Int,zip:Int):base.ZipQueue[T]"></a><a id="&lt;init&gt;:ZipQueue[T]"></a>
+      <a id="&lt;init&gt;(dw:T,aw:Int,in:Int,out:Int,zip:Int)(implicitp:chipsalliance.rocketchip.config.Parameters):base.ZipQueue[T]"></a><a id="&lt;init&gt;:ZipQueue[T]"></a>
       <span class="permalink">
-      <a href="../base/ZipQueue.html#&lt;init&gt;(dw:T,aw:Int,in:Int,out:Int,zip:Int):base.ZipQueue[T]" title="Permalink">
+      <a href="../base/ZipQueue.html#&lt;init&gt;(dw:T,aw:Int,in:Int,out:Int,zip:Int)(implicitp:chipsalliance.rocketchip.config.Parameters):base.ZipQueue[T]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -263,7 +267,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">ZipQueue</span><span class="params">(<span name="dw">dw: <span class="extype" name="base.ZipQueue.T">T</span></span>, <span name="aw">aw: <span class="extype" name="scala.Int">Int</span></span>, <span name="in">in: <span class="extype" name="scala.Int">Int</span></span>, <span name="out">out: <span class="extype" name="scala.Int">Int</span></span>, <span name="zip">zip: <span class="extype" name="scala.Int">Int</span></span>)</span>
+        <span class="name">ZipQueue</span><span class="params">(<span name="dw">dw: <span class="extype" name="base.ZipQueue.T">T</span></span>, <span name="aw">aw: <span class="extype" name="scala.Int">Int</span></span>, <span name="in">in: <span class="extype" name="scala.Int">Int</span></span>, <span name="out">out: <span class="extype" name="scala.Int">Int</span></span>, <span name="zip">zip: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="p">p: <span class="extype" name="chipsalliance.rocketchip.config.Parameters">Parameters</span></span>)</span>
       </span>
       
       
@@ -437,38 +441,6 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="base.ZipQueue#buff" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="buff:chisel3.Vec[T]"></a><a id="buff:Vec[T]"></a>
-      <span class="permalink">
-      <a href="../base/ZipQueue.html#buff:chisel3.Vec[T]" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">buff</span><span class="result">: <span class="extype" name="chisel3.Vec">Vec</span>[<span class="extype" name="base.ZipQueue.T">T</span>]</span>
-      </span>
-      
-      
-    </li><li name="base.ZipQueue#buff_next" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="buff_next:chisel3.Vec[chisel3.Vec[T]]"></a><a id="buff_next:Vec[Vec[T]]"></a>
-      <span class="permalink">
-      <a href="../base/ZipQueue.html#buff_next:chisel3.Vec[chisel3.Vec[T]]" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">buff_next</span><span class="result">: <span class="extype" name="chisel3.Vec">Vec</span>[<span class="extype" name="chisel3.Vec">Vec</span>[<span class="extype" name="base.ZipQueue.T">T</span>]]</span>
-      </span>
-      
-      
     </li><li name="chisel3.internal.HasId#circuitName" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="circuitName:String"></a>
       <span class="permalink">
@@ -527,6 +499,22 @@
                 <span class="name">@HotSpotIntrinsicCandidate</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#cm_chn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="cm_chn:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#cm_chn:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">cm_chn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.RawModule#compileOptions" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="compileOptions:chisel3.CompileOptions"></a><a id="compileOptions:CompileOptions"></a>
       <span class="permalink">
@@ -543,6 +531,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>RawModule</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#dcacheParams" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="dcacheParams:rift2Chip.DcacheParameters"></a><a id="dcacheParams:DcacheParameters"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#dcacheParams:rift2Chip.DcacheParameters" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">dcacheParams</span><span class="result">: <a href="../rift2Chip/DcacheParameters.html" class="extype" name="rift2Chip.DcacheParameters">DcacheParameters</a></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.experimental.BaseModule#desiredName" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="desiredName:String"></a>
       <span class="permalink">
@@ -572,22 +576,6 @@
       </span>
       <span class="symbol">
         <span class="name">dp</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
-      </span>
-      
-      
-    </li><li name="base.ZipQueue#enqIdx" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="enqIdx:chisel3.Vec[chisel3.UInt]"></a><a id="enqIdx:Vec[UInt]"></a>
-      <span class="permalink">
-      <a href="../base/ZipQueue.html#enqIdx:chisel3.Vec[chisel3.UInt]" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">enqIdx</span><span class="result">: <span class="extype" name="chisel3.Vec">Vec</span>[<span class="extype" name="chisel3.UInt">UInt</span>]</span>
       </span>
       
       
@@ -623,6 +611,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>HasId → AnyRef → Any</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#ftChn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="ftChn:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#ftChn:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">ftChn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="scala.AnyRef#getClass" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <span class="permalink">
@@ -676,6 +680,86 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected[<span class="extype" name="chisel3">chisel3</span>] </dd><dt>Definition Classes</dt><dd>BaseModule</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hasDebugger" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hasDebugger:Boolean"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#hasDebugger:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hasDebugger</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hasFpu" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hasFpu:Boolean"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#hasFpu:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hasFpu</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hasL2" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hasL2:Boolean"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#hasL2:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hasL2</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hasMulDiv" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hasMulDiv:Boolean"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#hasMulDiv:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hasMulDiv</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hasPreFetch" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hasPreFetch:Boolean"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#hasPreFetch:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hasPreFetch</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.internal.HasId#hasSeed" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="hasSeed:Boolean"></a>
       <span class="permalink">
@@ -708,6 +792,70 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>HasId → AnyRef → Any</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hasuBTB" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hasuBTB:Boolean"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#hasuBTB:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hasuBTB</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#hpmNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hpmNum:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#hpmNum:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hpmNum</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#icacheParams" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="icacheParams:rift2Chip.IcacheParameters"></a><a id="icacheParams:IcacheParameters"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#icacheParams:rift2Chip.IcacheParameters" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">icacheParams</span><span class="result">: <a href="../rift2Chip/IcacheParameters.html" class="extype" name="rift2Chip.IcacheParameters">IcacheParameters</a></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#ifParams" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="ifParams:rift2Core.define.IFParameters"></a><a id="ifParams:IFParameters"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#ifParams:rift2Core.define.IFParameters" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">ifParams</span><span class="result">: <a href="../rift2Core/define/IFParameters.html" class="extype" name="rift2Core.define.IFParameters">IFParameters</a></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.experimental.BaseModule#instanceName" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="instanceName:String"></a>
       <span class="permalink">
@@ -724,7 +872,7 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>BaseModule → HasId → InstanceId</dd></dl></div>
-    </li><li name="base.ZipQueue#io" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+    </li><li name="base.ZipQueue#io" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="io:chisel3.Bundle{valenq:chisel3.Vec[chisel3.util.DecoupledIO[T]];valdeq:chisel3.Vec[chisel3.util.DecoupledIO[T]]}"></a><a id="io:Bundle{.../*2definitionsintyperefinement*/}"></a>
       <span class="permalink">
       <a href="../base/ZipQueue.html#io:chisel3.Bundle{valenq:chisel3.Vec[chisel3.util.DecoupledIO[T]];valdeq:chisel3.Vec[chisel3.util.DecoupledIO[T]]}" title="Permalink">
@@ -739,23 +887,7 @@
         <span class="name">io</span><span class="result">: <span class="extype" name="chisel3.Bundle">Bundle</span> { ... /* 2 definitions in type refinement */ }</span>
       </span>
       
-      
-    </li><li name="base.ZipQueue#isAvailable" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="isAvailable:chisel3.Vec[chisel3.Bool]"></a><a id="isAvailable:Vec[Bool]"></a>
-      <span class="permalink">
-      <a href="../base/ZipQueue.html#isAvailable:chisel3.Vec[chisel3.Bool]" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">isAvailable</span><span class="result">: <span class="extype" name="chisel3.Vec">Vec</span>[<span class="extype" name="chisel3.Bool">Bool</span>]</span>
-      </span>
-      
-      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="base.ZipQueue">ZipQueue</a> → <a href="../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></dd></dl></div>
     </li><li name="scala.Any#isInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <span class="permalink">
@@ -772,6 +904,86 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#isLowPower" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="isLowPower:Boolean"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#isLowPower:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">isLowPower</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#isMinArea" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="isMinArea:Boolean"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#isMinArea:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">isMinArea</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#l1BeatBits" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="l1BeatBits:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#l1BeatBits:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">l1BeatBits</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#l1DW" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="l1DW:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#l1DW:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">l1DW</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#memBeatBits" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="memBeatBits:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#memBeatBits:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">memBeatBits</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.experimental.BaseModule#name" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="name:String"></a>
       <span class="permalink">
@@ -862,6 +1074,38 @@
                 <span class="name">@HotSpotIntrinsicCandidate</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#opChn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="opChn:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#opChn:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">opChn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.RiftModule#p" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="p:chipsalliance.rocketchip.config.Parameters"></a><a id="p:Parameters"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#p:chipsalliance.rocketchip.config.Parameters" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">p</span><span class="result">: <span class="extype" name="chipsalliance.rocketchip.config.Parameters">Parameters</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a> → <a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.internal.HasId#parentModName" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="parentModName:String"></a>
       <span class="permalink">
@@ -910,6 +1154,38 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>HasId → InstanceId</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#plen" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="plen:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#plen:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">plen</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#pmpNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="pmpNum:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#pmpNum:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">pmpNum</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.experimental.BaseModule#portsContains" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="portsContains(elem:chisel3.Data):Boolean"></a><a id="portsContains(Data):Boolean"></a>
       <span class="permalink">
@@ -942,6 +1218,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd><dt>Definition Classes</dt><dd>BaseModule</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#regNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="regNum:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#regNum:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">regNum</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.Module#reset" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="reset:chisel3.Reset"></a><a id="reset:Reset"></a>
       <span class="permalink">
@@ -958,6 +1250,38 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Module</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#riftSetting" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="riftSetting:rift2Chip.RiftSetting"></a><a id="riftSetting:RiftSetting"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#riftSetting:rift2Chip.RiftSetting" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">riftSetting</span><span class="result">: <a href="../rift2Chip/RiftSetting.html" class="extype" name="rift2Chip.RiftSetting">RiftSetting</a></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#rn_chn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="rn_chn:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#rn_chn:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">rn_chn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.internal.HasId#suggestName" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="suggestName(seed:=&gt;String):HasId.this.type"></a><a id="suggestName(⇒String):ZipQueue.this.type"></a>
       <span class="permalink">
@@ -990,6 +1314,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#tlbEntry" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="tlbEntry:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#tlbEntry:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">tlbEntry</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.experimental.BaseModule#toAbsoluteTarget" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="toAbsoluteTarget:firrtl.annotations.IsModule"></a><a id="toAbsoluteTarget:IsModule"></a>
       <span class="permalink">
@@ -1054,38 +1394,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>BaseModule → InstanceId</dd></dl></div>
-    </li><li name="base.ZipQueue#valid" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="valid:chisel3.Vec[chisel3.Bool]"></a><a id="valid:Vec[Bool]"></a>
+    </li><li name="rift2Chip.HasRiftParameters#vlen" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="vlen:Int"></a>
       <span class="permalink">
-      <a href="../base/ZipQueue.html#valid:chisel3.Vec[chisel3.Bool]" title="Permalink">
+      <a href="../base/ZipQueue.html#vlen:Int" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">val</span>
+        <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">valid</span><span class="result">: <span class="extype" name="chisel3.Vec">Vec</span>[<span class="extype" name="chisel3.Bool">Bool</span>]</span>
+        <span class="name">vlen</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      
-    </li><li name="base.ZipQueue#valid_next" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="valid_next:chisel3.Vec[chisel3.Vec[chisel3.Bool]]"></a><a id="valid_next:Vec[Vec[Bool]]"></a>
-      <span class="permalink">
-      <a href="../base/ZipQueue.html#valid_next:chisel3.Vec[chisel3.Vec[chisel3.Bool]]" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">valid_next</span><span class="result">: <span class="extype" name="chisel3.Vec">Vec</span>[<span class="extype" name="chisel3.Vec">Vec</span>[<span class="extype" name="chisel3.Bool">Bool</span>]]</span>
-      </span>
-      
-      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait(x$1:Long,x$2:Int):Unit"></a><a id="wait(Long,Int):Unit"></a>
       <span class="permalink">
@@ -1154,6 +1478,22 @@
     </span>)</span>
               
         </dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#wbChn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="wbChn:Int"></a>
+      <span class="permalink">
+      <a href="../base/ZipQueue.html#wbChn:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">wbChn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li>
               </ol>
             </div>
@@ -1288,7 +1628,11 @@
         </div>
 
         <div id="inheritedMembers">
-        <div class="parent" name="chisel3.Module">
+        <div class="parent" name="rift2Chip.RiftModule">
+              <h3>Inherited from <a href="../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></h3>
+            </div><div class="parent" name="rift2Chip.HasRiftParameters">
+              <h3>Inherited from <a href="../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></h3>
+            </div><div class="parent" name="chisel3.Module">
               <h3>Inherited from <span class="extype" name="chisel3.Module">Module</span></h3>
             </div><div class="parent" name="chisel3.RawModule">
               <h3>Inherited from <span class="extype" name="chisel3.RawModule">RawModule</span></h3>

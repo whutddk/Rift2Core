@@ -259,6 +259,10 @@
                         <a href="PTWCache.html" title="">PTWCache</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
+                        <a class="trait" href="PTWNCache.html" title=""></a>
+                        <a href="PTWNCache.html" title="">PTWNCache</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
                         <a class="object" href="PTWState$.html" title=""></a>
                         <a href="PTWState$.html" title="">PTWState</a>
                       </li><li class="current-entities indented2">
@@ -368,7 +372,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="CSR_Bundle.html"><span class="name">CSR_Bundle</span></a><span class="result"> extends <a href="../../rift/RiftBundle.html" class="extype" name="rift.RiftBundle">RiftBundle</a></span>
+        <a title="" href="CSR_Bundle.html"><span class="name">CSR_Bundle</span></a><span class="result"> extends <a href="../../rift2Chip/RiftBundle.html" class="extype" name="rift2Chip.RiftBundle">RiftBundle</a></span>
       </span>
       
       
@@ -496,7 +500,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Info_cmm_mmu.html"><span class="name">Info_cmm_mmu</span></a><span class="result"> extends <a href="../../rift/RiftBundle.html" class="extype" name="rift.RiftBundle">RiftBundle</a></span>
+        <a title="" href="Info_cmm_mmu.html"><span class="name">Info_cmm_mmu</span></a><span class="result"> extends <a href="../../rift2Chip/RiftBundle.html" class="extype" name="rift2Chip.RiftBundle">RiftBundle</a></span>
       </span>
       
       
@@ -512,7 +516,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Info_mmu_req.html"><span class="name">Info_mmu_req</span></a><span class="result"> extends <a href="../../rift/RiftBundle.html" class="extype" name="rift.RiftBundle">RiftBundle</a> with <a href="Info_access_lvl.html" class="extype" name="rift2Core.privilege.Info_access_lvl">Info_access_lvl</a></span>
+        <a title="" href="Info_mmu_req.html"><span class="name">Info_mmu_req</span></a><span class="result"> extends <a href="../../rift2Chip/RiftBundle.html" class="extype" name="rift2Chip.RiftBundle">RiftBundle</a> with <a href="Info_access_lvl.html" class="extype" name="rift2Core.privilege.Info_access_lvl">Info_access_lvl</a></span>
       </span>
       
       
@@ -528,7 +532,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Info_mmu_rsp.html"><span class="name">Info_mmu_rsp</span></a><span class="result"> extends <a href="../../rift/RiftBundle.html" class="extype" name="rift.RiftBundle">RiftBundle</a></span>
+        <a title="" href="Info_mmu_rsp.html"><span class="name">Info_mmu_rsp</span></a><span class="result"> extends <a href="../../rift2Chip/RiftBundle.html" class="extype" name="rift2Chip.RiftBundle">RiftBundle</a></span>
       </span>
       
       
@@ -608,7 +612,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="Top layer of Memory management unit" href="MMU.html"><span class="name">MMU</span></a><span class="result"> extends <a href="../../rift/RiftModule.html" class="extype" name="rift.RiftModule">RiftModule</a></span>
+        <a title="Top layer of Memory management unit" href="MMU.html"><span class="name">MMU</span></a><span class="result"> extends <a href="../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></span>
       </span>
       
       <p class="shortcomment cmt">Top layer of Memory management unit</p><div class="fullcomment"><div class="comment cmt"><p>Top layer of Memory management unit</p><p>including instruction-translation-lookaside-buffer with physical-memory-protection</p><p>including data-translation-lookaside-buffer with physical-memory-protection</p><p>including page-table-walker with physical-memory-protection</p></div></div>
@@ -656,14 +660,14 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="physical memory protection It asserts that only 8 pmp entry is implemented" href="PMP.html"><span class="name">PMP</span></a><span class="result"> extends <a href="../../rift/RiftModule.html" class="extype" name="rift.RiftModule">RiftModule</a></span>
+        <a title="physical memory protection It asserts that only 8 pmp entry is implemented" href="PMP.html"><span class="name">PMP</span></a><span class="result"> extends <a href="../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></span>
       </span>
       
       <p class="shortcomment cmt">physical memory protection
 It asserts that only <b>8</b> pmp entry is implemented
 </p>
     </li><li name="rift2Core.privilege.PTW" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="PTWextendsPTWBasewithPTWStateMachinewithPTWWALKwithPTWCachewithPTWBus"></a><a id="PTW:PTW"></a>
+      <a id="PTWextendsPTWBasewithPTWStateMachinewithPTWWALKwithPTWNCachewithPTWBus"></a><a id="PTW:PTW"></a>
       <span class="permalink">
       <a href="../../rift2Core/privilege/PTW.html" title="Permalink">
         <i class="material-icons"></i>
@@ -674,7 +678,7 @@ It asserts that only <b>8</b> pmp entry is implemented
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="page table walker" href="PTW.html"><span class="name">PTW</span></a><span class="result"> extends <a href="PTWBase.html" class="extype" name="rift2Core.privilege.PTWBase">PTWBase</a> with <a href="PTWStateMachine.html" class="extype" name="rift2Core.privilege.PTWStateMachine">PTWStateMachine</a> with <a href="PTWWALK.html" class="extype" name="rift2Core.privilege.PTWWALK">PTWWALK</a> with <a href="PTWCache.html" class="extype" name="rift2Core.privilege.PTWCache">PTWCache</a> with <a href="PTWBus.html" class="extype" name="rift2Core.privilege.PTWBus">PTWBus</a></span>
+        <a title="page table walker" href="PTW.html"><span class="name">PTW</span></a><span class="result"> extends <a href="PTWBase.html" class="extype" name="rift2Core.privilege.PTWBase">PTWBase</a> with <a href="PTWStateMachine.html" class="extype" name="rift2Core.privilege.PTWStateMachine">PTWStateMachine</a> with <a href="PTWWALK.html" class="extype" name="rift2Core.privilege.PTWWALK">PTWWALK</a> with <a href="PTWNCache.html" class="extype" name="rift2Core.privilege.PTWNCache">PTWNCache</a> with <a href="PTWBus.html" class="extype" name="rift2Core.privilege.PTWBus">PTWBus</a></span>
       </span>
       
       <p class="shortcomment cmt">page table walker
@@ -691,7 +695,7 @@ It asserts that only <b>8</b> pmp entry is implemented
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="PTWBase.html"><span class="name">PTWBase</span></a><span class="result"> extends <a href="../../rift/RiftModule.html" class="extype" name="rift.RiftModule">RiftModule</a></span>
+        <a title="" href="PTWBase.html"><span class="name">PTWBase</span></a><span class="result"> extends <a href="../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></span>
       </span>
       
       
@@ -724,6 +728,22 @@ It asserts that only <b>8</b> pmp entry is implemented
       </span>
       <span class="symbol">
         <a title="" href="PTWCache.html"><span class="name">PTWCache</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      
+      
+    </li><li name="rift2Core.privilege.PTWNCache" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="PTWNCacheextendsAnyRef"></a><a id="PTWNCache:PTWNCache"></a>
+      <span class="permalink">
+      <a href="../../rift2Core/privilege/PTWNCache.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="PTWNCache.html"><span class="name">PTWNCache</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
       </span>
       
       
@@ -803,7 +823,7 @@ It asserts that only <b>8</b> pmp entry is implemented
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="translation lookaside buffer for instance both itlb and dtlb" href="TLB.html"><span class="name">TLB</span></a><span class="result"> extends <a href="../../rift/RiftModule.html" class="extype" name="rift.RiftModule">RiftModule</a></span>
+        <a title="translation lookaside buffer for instance both itlb and dtlb" href="TLB.html"><span class="name">TLB</span></a><span class="result"> extends <a href="../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></span>
       </span>
       
       <p class="shortcomment cmt">translation lookaside buffer for instance both itlb and dtlb</p>
