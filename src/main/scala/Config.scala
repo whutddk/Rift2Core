@@ -347,7 +347,7 @@ class Rift2380 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     hasFpu = true,
     hasDebugger = true,
-    hasPreFetch = true,
+    hasPreFetch = false,
 
     opChn = 6,
     wbChn = 4,
@@ -387,7 +387,7 @@ class Rift2390 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     hasFpu = true,
     hasDebugger = true,
-    hasPreFetch = true,
+    hasPreFetch = false,
 
     opChn = 8,
     wbChn = 4,

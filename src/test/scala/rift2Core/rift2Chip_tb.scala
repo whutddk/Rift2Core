@@ -81,9 +81,9 @@ object tapeMain extends App {
 object testAll extends App {
 
   val config = Seq(
-    // (new Rift2300, "Rift2300" ),
-    // (new Rift2310, "Rift2310" ),
-    // (new Rift2320, "Rift2320" ),
+    (new Rift2300, "Rift2300" ),
+    (new Rift2310, "Rift2310" ),
+    (new Rift2320, "Rift2320" ),
     (new Rift2330, "Rift2330" ),
     (new Rift2340, "Rift2340" ),
     (new Rift2350, "Rift2350" ),

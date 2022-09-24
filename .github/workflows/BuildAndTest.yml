@@ -69,21 +69,27 @@ jobs:
           cp -R target/scala-2.12/api /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
 
           cd /Users/runner/work/Rift2Core/Rift2Core/generated/Release/
-          tar -cvf Rift2430-Release.tar Rift2430/*
-          tar -cvf Rift2440-Release.tar Rift2440/*
-          tar -cvf Rift2450-Release.tar Rift2450/*
-          tar -cvf Rift2460-Release.tar Rift2460/*
-          tar -cvf Rift2470-Release.tar Rift2470/*
-          tar -cvf Rift2480-Release.tar Rift2480/*
-          tar -cvf Rift2490-Release.tar Rift2490/*
+          tar -cvf Rift2300-Release.tar Rift2300/*
+          tar -cvf Rift2310-Release.tar Rift2310/*
+          tar -cvf Rift2320-Release.tar Rift2320/*
+          tar -cvf Rift2330-Release.tar Rift2330/*
+          tar -cvf Rift2340-Release.tar Rift2340/*
+          tar -cvf Rift2350-Release.tar Rift2350/*
+          tar -cvf Rift2360-Release.tar Rift2360/*
+          tar -cvf Rift2370-Release.tar Rift2370/*
+          tar -cvf Rift2380-Release.tar Rift2380/*
+          tar -cvf Rift2390-Release.tar Rift2390/*
           cd /Users/runner/work/Rift2Core/Rift2Core/generated/Debug/
-          tar -cvf Rift2430-Debug.tar  Rift2430/*
-          tar -cvf Rift2440-Debug.tar  Rift2440/*
-          tar -cvf Rift2450-Debug.tar  Rift2450/*
-          tar -cvf Rift2460-Debug.tar  Rift2460/*
-          tar -cvf Rift2470-Debug.tar  Rift2470/*
-          tar -cvf Rift2480-Debug.tar  Rift2480/*
-          tar -cvf Rift2490-Debug.tar  Rift2490/*
+          tar -cvf Rift2300-Debug.tar  Rift2300/*
+          tar -cvf Rift2310-Debug.tar  Rift2310/*
+          tar -cvf Rift2320-Debug.tar  Rift2320/*
+          tar -cvf Rift2330-Debug.tar  Rift2330/*
+          tar -cvf Rift2340-Debug.tar  Rift2340/*
+          tar -cvf Rift2350-Debug.tar  Rift2350/*
+          tar -cvf Rift2360-Debug.tar  Rift2360/*
+          tar -cvf Rift2370-Debug.tar  Rift2370/*
+          tar -cvf Rift2380-Debug.tar  Rift2380/*
+          tar -cvf Rift2390-Debug.tar  Rift2390/*
           cd /Users/runner/work/Rift2Core/Rift2Core/
 
 
@@ -143,20 +149,26 @@ jobs:
           prerelease: true
           target_commitish: ${{github.ref_name}}
           files: |
-            ./generated/Release/Rift2430-Release.tar
-            ./generated/Debug/Rift2430-Debug.tar
-            ./generated/Release/Rift2440-Release.tar
-            ./generated/Debug/Rift2440-Debug.tar
-            ./generated/Release/Rift2450-Release.tar
-            ./generated/Debug/Rift2450-Debug.tar
-            ./generated/Release/Rift2460-Release.tar
-            ./generated/Debug/Rift2460-Debug.tar
-            ./generated/Release/Rift2470-Release.tar
-            ./generated/Debug/Rift2470-Debug.tar
-            ./generated/Release/Rift2480-Release.tar
-            ./generated/Debug/Rift2480-Debug.tar
-            ./generated/Release/Rift2490-Release.tar
-            ./generated/Debug/Rift2490-Debug.tar
+            ./generated/Release/Rift2300-Release.tar
+            ./generated/Debug/Rift2300-Debug.tar
+            ./generated/Release/Rift2310-Release.tar
+            ./generated/Debug/Rift2310-Debug.tar
+            ./generated/Release/Rift2320-Release.tar
+            ./generated/Debug/Rift2320-Debug.tar
+            ./generated/Release/Rift2330-Release.tar
+            ./generated/Debug/Rift2330-Debug.tar
+            ./generated/Release/Rift2340-Release.tar
+            ./generated/Debug/Rift2340-Debug.tar
+            ./generated/Release/Rift2350-Release.tar
+            ./generated/Debug/Rift2350-Debug.tar
+            ./generated/Release/Rift2360-Release.tar
+            ./generated/Debug/Rift2360-Debug.tar
+            ./generated/Release/Rift2370-Release.tar
+            ./generated/Debug/Rift2370-Debug.tar
+            ./generated/Release/Rift2380-Release.tar
+            ./generated/Debug/Rift2380-Debug.tar
+            ./generated/Release/Rift2390-Release.tar
+            ./generated/Debug/Rift2390-Debug.tar
             ./LICENSE.Apache
             ./LICENSE.NPL
 
@@ -171,20 +183,26 @@ jobs:
           prerelease: false
           target_commitish: ${{github.ref_name}}
           files: |
-            ./generated/Release/Rift2430-Release.tar
-            ./generated/Debug/Rift2430-Debug.tar
-            ./generated/Release/Rift2440-Release.tar
-            ./generated/Debug/Rift2440-Debug.tar
-            ./generated/Release/Rift2450-Release.tar
-            ./generated/Debug/Rift2450-Debug.tar
-            ./generated/Release/Rift2460-Release.tar
-            ./generated/Debug/Rift2460-Debug.tar
-            ./generated/Release/Rift2470-Release.tar
-            ./generated/Debug/Rift2470-Debug.tar
-            ./generated/Release/Rift2480-Release.tar
-            ./generated/Debug/Rift2480-Debug.tar
-            ./generated/Release/Rift2490-Release.tar
-            ./generated/Debug/Rift2490-Debug.tar
+            ./generated/Release/Rift2300-Release.tar
+            ./generated/Debug/Rift2300-Debug.tar
+            ./generated/Release/Rift2310-Release.tar
+            ./generated/Debug/Rift2310-Debug.tar
+            ./generated/Release/Rift2320-Release.tar
+            ./generated/Debug/Rift2320-Debug.tar
+            ./generated/Release/Rift2330-Release.tar
+            ./generated/Debug/Rift2330-Debug.tar
+            ./generated/Release/Rift2340-Release.tar
+            ./generated/Debug/Rift2340-Debug.tar
+            ./generated/Release/Rift2350-Release.tar
+            ./generated/Debug/Rift2350-Debug.tar
+            ./generated/Release/Rift2360-Release.tar
+            ./generated/Debug/Rift2360-Debug.tar
+            ./generated/Release/Rift2370-Release.tar
+            ./generated/Debug/Rift2370-Debug.tar
+            ./generated/Release/Rift2380-Release.tar
+            ./generated/Debug/Rift2380-Debug.tar
+            ./generated/Release/Rift2390-Release.tar
+            ./generated/Debug/Rift2390-Debug.tar
             ./LICENSE.Apache
             ./LICENSE.NPL
 
@@ -199,14 +217,14 @@ jobs:
       #     echo test, and deploy your project.
 
 
-  rift24x0CI:
-    name: rift24x0 CI
+  rift23x0CI:
+    name: rift23x0 CI
     needs: chiselStage
       
     strategy:
       fail-fast: false
       matrix:
-        version: [Rift2430, Rift2440, Rift2450, Rift2460, Rift2470, Rift2480, Rift2490]
+        version: [Rift2330, Rift2340, Rift2350, Rift2360, Rift2370, Rift2380, Rift2390]
     runs-on: ubuntu-latest
     container:
       image: whutddk/rift2env:riscvtest
@@ -224,7 +242,7 @@ jobs:
       - name: set up apt
         run: |
           apt-get update
-          apt-get install -y wget git make g++ ccache
+          apt-get install -y wget git make g++ ccache zlib1g zlib1g-dev
 
 
           

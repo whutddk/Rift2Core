@@ -244,8 +244,8 @@ fpuisa += rv64uf-v-move
 fpuisa += rv64uf-p-recoding
 fpuisa += rv64uf-v-recoding
 
-# isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa) $(fpuisa) 
-isa ?= $(fpuisa)
+isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa) # $(fpuisa) 
+# isa ?= $(fpuisa)
 
 
 
@@ -301,7 +301,7 @@ VSimTop:
 	${R2}/tb/verilator/sim_main.cpp  \
 	${R2}/tb/verilator/diff.cpp \
 	-Mdir ./generated/build/$(CONFIG) \
-	-j 30
+	-j 1
 
 
 isa: VSimTop

@@ -2,9 +2,9 @@
 
 // See README.md for license details.
 
-ThisBuild / scalaVersion     := "2.12.15"
+ThisBuild / scalaVersion     := "2.12.9"
 
-ThisBuild / version          := "2.4.0"//-SNAPSHOT
+ThisBuild / version          := "2.3.4"//-SNAPSHOT
 ThisBuild / organization     := "io.github.whutddk"
 
 
