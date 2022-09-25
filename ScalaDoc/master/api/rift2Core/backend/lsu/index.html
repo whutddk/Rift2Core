@@ -191,6 +191,14 @@
                         <a href="Dcache_ScoreBoard_Bundle.html" title="">Dcache_ScoreBoard_Bundle</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
+                        <a class="class" href="FakeProbeUnit.html" title=""></a>
+                        <a href="FakeProbeUnit.html" title="">FakeProbeUnit</a>
+                      </li><li class="current-entities indented3">
+                        <span class="separator"></span>
+                        <a class="class" href="GetUnit.html" title="The Queue of cache to request acquire and waiting for grant and ack grant Get-Mode"></a>
+                        <a href="GetUnit.html" title="The Queue of cache to request acquire and waiting for grant and ack grant Get-Mode">GetUnit</a>
+                      </li><li class="current-entities indented3">
+                        <span class="separator"></span>
                         <a class="class" href="IO_Lsu.html" title=""></a>
                         <a href="IO_Lsu.html" title="">IO_Lsu</a>
                       </li><li class="current-entities indented3">
@@ -263,6 +271,10 @@
                         <a href="ProbeUnit.html" title="ProbeUnit will accept probe request from l2cache and forward it to l1cache to resp data">ProbeUnit</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
+                        <a class="class" href="PutUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Put-Mode"></a>
+                        <a href="PutUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Put-Mode">PutUnit</a>
+                      </li><li class="current-entities indented3">
+                        <span class="separator"></span>
                         <a class="class" href="Store_queue.html" title="bound to every cache"></a>
                         <a href="Store_queue.html" title="bound to every cache">Store_queue</a>
                       </li><li class="current-entities indented3">
@@ -283,8 +295,8 @@
                         <a href="Strb2Mask$.html" title="">Strb2Mask</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
-                        <a class="class" href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache"></a>
-                        <a href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache">WriteBackUnit</a>
+                        <a class="class" href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Probe-Release-Mode"></a>
+                        <a href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Probe-Release-Mode">WriteBackUnit</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
                         <a class="object" href="get_loadRes$.html" title=""></a>
@@ -412,7 +424,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="DcacheBase.html"><span class="name">DcacheBase</span></a><span class="result"> extends <a href="../../../rift/DcacheModule.html" class="extype" name="rift.DcacheModule">DcacheModule</a></span>
+        <a title="" href="DcacheBase.html"><span class="name">DcacheBase</span></a><span class="result"> extends <a href="../../../rift2Chip/DcacheModule.html" class="extype" name="rift2Chip.DcacheModule">DcacheModule</a></span>
       </span>
       
       
@@ -460,7 +472,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="DcacheStageBase.html"><span class="name">DcacheStageBase</span></a><span class="result"> extends <a href="../../../rift/DcacheModule.html" class="extype" name="rift.DcacheModule">DcacheModule</a></span>
+        <a title="" href="DcacheStageBase.html"><span class="name">DcacheStageBase</span></a><span class="result"> extends <a href="../../../rift2Chip/DcacheModule.html" class="extype" name="rift2Chip.DcacheModule">DcacheModule</a></span>
       </span>
       
       
@@ -588,10 +600,42 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Dcache_ScoreBoard_Bundle.html"><span class="name">Dcache_ScoreBoard_Bundle</span></a><span class="result"> extends <a href="../../../rift/DcacheBundle.html" class="extype" name="rift.DcacheBundle">DcacheBundle</a></span>
+        <a title="" href="Dcache_ScoreBoard_Bundle.html"><span class="name">Dcache_ScoreBoard_Bundle</span></a><span class="result"> extends <a href="../../../rift2Chip/DcacheBundle.html" class="extype" name="rift2Chip.DcacheBundle">DcacheBundle</a></span>
       </span>
       
       
+    </li><li name="rift2Core.backend.lsu.FakeProbeUnit" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="FakeProbeUnitextendsRiftModule"></a><a id="FakeProbeUnit:FakeProbeUnit"></a>
+      <span class="permalink">
+      <a href="../../../rift2Core/backend/lsu/FakeProbeUnit.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="FakeProbeUnit.html"><span class="name">FakeProbeUnit</span></a><span class="result"> extends <a href="../../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></span>
+      </span>
+      
+      
+    </li><li name="rift2Core.backend.lsu.GetUnit" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="GetUnitextendsRiftModulewithHasDcacheParameters"></a><a id="GetUnit:GetUnit"></a>
+      <span class="permalink">
+      <a href="../../../rift2Core/backend/lsu/GetUnit.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a title="The Queue of cache to request acquire and waiting for grant and ack grant Get-Mode" href="GetUnit.html"><span class="name">GetUnit</span></a><span class="result"> extends <a href="../../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a> with <a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></span>
+      </span>
+      
+      <p class="shortcomment cmt">The Queue of cache to request acquire and waiting for grant and ack grant Get-Mode</p>
     </li><li name="rift2Core.backend.lsu.IO_Lsu" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="IO_LsuextendsRiftModule"></a><a id="IO_Lsu:IO_Lsu"></a>
       <span class="permalink">
@@ -604,7 +648,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="IO_Lsu.html"><span class="name">IO_Lsu</span></a><span class="result"> extends <a href="../../../rift/RiftModule.html" class="extype" name="rift.RiftModule">RiftModule</a></span>
+        <a title="" href="IO_Lsu.html"><span class="name">IO_Lsu</span></a><span class="result"> extends <a href="../../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></span>
       </span>
       
       
@@ -620,12 +664,12 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Info_miss_req.html"><span class="name">Info_miss_req</span></a><span class="result"> extends <a href="../../../rift/RiftBundle.html" class="extype" name="rift.RiftBundle">RiftBundle</a></span>
+        <a title="" href="Info_miss_req.html"><span class="name">Info_miss_req</span></a><span class="result"> extends <a href="../../../rift2Chip/RiftBundle.html" class="extype" name="rift2Chip.RiftBundle">RiftBundle</a></span>
       </span>
       
       
     </li><li name="rift2Core.backend.lsu.Info_miss_rsp" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="Info_miss_rspextendsRiftBundle"></a><a id="Info_miss_rsp:Info_miss_rsp"></a>
+      <a id="Info_miss_rspextendsRiftBundlewithHasDcacheParameters"></a><a id="Info_miss_rsp:Info_miss_rsp"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/Info_miss_rsp.html" title="Permalink">
         <i class="material-icons"></i>
@@ -636,7 +680,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Info_miss_rsp.html"><span class="name">Info_miss_rsp</span></a><span class="result"> extends <a href="../../../rift/RiftBundle.html" class="extype" name="rift.RiftBundle">RiftBundle</a></span>
+        <a title="" href="Info_miss_rsp.html"><span class="name">Info_miss_rsp</span></a><span class="result"> extends <a href="../../../rift2Chip/RiftBundle.html" class="extype" name="rift2Chip.RiftBundle">RiftBundle</a> with <a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></span>
       </span>
       
       
@@ -652,12 +696,12 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Info_probe_req.html"><span class="name">Info_probe_req</span></a><span class="result"> extends <a href="../../../rift/RiftBundle.html" class="extype" name="rift.RiftBundle">RiftBundle</a></span>
+        <a title="" href="Info_probe_req.html"><span class="name">Info_probe_req</span></a><span class="result"> extends <a href="../../../rift2Chip/RiftBundle.html" class="extype" name="rift2Chip.RiftBundle">RiftBundle</a></span>
       </span>
       
       
     </li><li name="rift2Core.backend.lsu.Info_writeBack_req" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="Info_writeBack_reqextendsRiftBundle"></a><a id="Info_writeBack_req:Info_writeBack_req"></a>
+      <a id="Info_writeBack_reqextendsRiftBundlewithHasDcacheParameters"></a><a id="Info_writeBack_req:Info_writeBack_req"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/Info_writeBack_req.html" title="Permalink">
         <i class="material-icons"></i>
@@ -668,7 +712,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="the operation infomation of writeback Unit" href="Info_writeBack_req.html"><span class="name">Info_writeBack_req</span></a><span class="result"> extends <a href="../../../rift/RiftBundle.html" class="extype" name="rift.RiftBundle">RiftBundle</a></span>
+        <a title="the operation infomation of writeback Unit" href="Info_writeBack_req.html"><span class="name">Info_writeBack_req</span></a><span class="result"> extends <a href="../../../rift2Chip/RiftBundle.html" class="extype" name="rift2Chip.RiftBundle">RiftBundle</a> with <a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></span>
       </span>
       
       <p class="shortcomment cmt">the operation infomation of writeback Unit</p>
@@ -844,12 +888,12 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="LsuBase.html"><span class="name">LsuBase</span></a><span class="result"> extends <a href="../../../rift/DcacheModule.html" class="extype" name="rift.DcacheModule">DcacheModule</a> with <a href="../HasFPUParameters.html" class="extype" name="rift2Core.backend.HasFPUParameters">HasFPUParameters</a></span>
+        <a title="" href="LsuBase.html"><span class="name">LsuBase</span></a><span class="result"> extends <a href="../../../rift2Chip/DcacheModule.html" class="extype" name="rift2Chip.DcacheModule">DcacheModule</a> with <a href="../HasFPUParameters.html" class="extype" name="rift2Core.backend.HasFPUParameters">HasFPUParameters</a></span>
       </span>
       
       
     </li><li name="rift2Core.backend.lsu.MissUnit" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="MissUnitextendsRiftModule"></a><a id="MissUnit:MissUnit"></a>
+      <a id="MissUnitextendsRiftModulewithHasDcacheParameters"></a><a id="MissUnit:MissUnit"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/MissUnit.html" title="Permalink">
         <i class="material-icons"></i>
@@ -860,7 +904,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="The Queue of cache to request acquire and waiting for grant and ack grant" href="MissUnit.html"><span class="name">MissUnit</span></a><span class="result"> extends <a href="../../../rift/RiftModule.html" class="extype" name="rift.RiftModule">RiftModule</a></span>
+        <a title="The Queue of cache to request acquire and waiting for grant and ack grant" href="MissUnit.html"><span class="name">MissUnit</span></a><span class="result"> extends <a href="../../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a> with <a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></span>
       </span>
       
       <p class="shortcomment cmt">The Queue of cache to request acquire and waiting for grant and ack grant</p>
@@ -876,10 +920,27 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="ProbeUnit will accept probe request from l2cache and forward it to l1cache to resp data" href="ProbeUnit.html"><span class="name">ProbeUnit</span></a><span class="result"> extends <a href="../../../rift/RiftModule.html" class="extype" name="rift.RiftModule">RiftModule</a></span>
+        <a title="ProbeUnit will accept probe request from l2cache and forward it to l1cache to resp data" href="ProbeUnit.html"><span class="name">ProbeUnit</span></a><span class="result"> extends <a href="../../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a></span>
       </span>
       
       <p class="shortcomment cmt">ProbeUnit will accept probe request from l2cache and forward it to l1cache to resp data
+</p>
+    </li><li name="rift2Core.backend.lsu.PutUnit" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="PutUnitextendsRiftModulewithHasDcacheParameters"></a><a id="PutUnit:PutUnit"></a>
+      <span class="permalink">
+      <a href="../../../rift2Core/backend/lsu/PutUnit.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Put-Mode" href="PutUnit.html"><span class="name">PutUnit</span></a><span class="result"> extends <a href="../../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a> with <a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></span>
+      </span>
+      
+      <p class="shortcomment cmt">a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Put-Mode
 </p>
     </li><li name="rift2Core.backend.lsu.Store_queue" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="Store_queueextendsStq_BasewithStq_PtrwithStq_Overlap"></a><a id="Store_queue:Store_queue"></a>
@@ -910,7 +971,7 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Stq_Base.html"><span class="name">Stq_Base</span></a><span class="result"> extends <a href="../../../rift/DcacheModule.html" class="extype" name="rift.DcacheModule">DcacheModule</a></span>
+        <a title="" href="Stq_Base.html"><span class="name">Stq_Base</span></a><span class="result"> extends <a href="../../../rift2Chip/DcacheModule.html" class="extype" name="rift2Chip.DcacheModule">DcacheModule</a></span>
       </span>
       
       
@@ -947,7 +1008,7 @@
       
       
     </li><li name="rift2Core.backend.lsu.WriteBackUnit" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="WriteBackUnitextendsRiftModule"></a><a id="WriteBackUnit:WriteBackUnit"></a>
+      <a id="WriteBackUnitextendsRiftModulewithHasDcacheParameters"></a><a id="WriteBackUnit:WriteBackUnit"></a>
       <span class="permalink">
       <a href="../../../rift2Core/backend/lsu/WriteBackUnit.html" title="Permalink">
         <i class="material-icons"></i>
@@ -958,10 +1019,10 @@
         <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <a title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache" href="WriteBackUnit.html"><span class="name">WriteBackUnit</span></a><span class="result"> extends <a href="../../../rift/RiftModule.html" class="extype" name="rift.RiftModule">RiftModule</a></span>
+        <a title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Probe-Release-Mode" href="WriteBackUnit.html"><span class="name">WriteBackUnit</span></a><span class="result"> extends <a href="../../../rift2Chip/RiftModule.html" class="extype" name="rift2Chip.RiftModule">RiftModule</a> with <a href="../../../rift2Chip/HasDcacheParameters.html" class="extype" name="rift2Chip.HasDcacheParameters">HasDcacheParameters</a></span>
       </span>
       
-      <p class="shortcomment cmt">a writeBack Unit accept data and paddr from l1cache and write it back to l2cache
+      <p class="shortcomment cmt">a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Probe-Release-Mode
 </p>
     </li></ol>
             </div>

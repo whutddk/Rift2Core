@@ -195,6 +195,10 @@
                         <a href="PTWCache.html" title="">PTWCache</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
+                        <a class="trait" href="PTWNCache.html" title=""></a>
+                        <a href="PTWNCache.html" title="">PTWNCache</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
                         <a class="object" href="PTWState$.html" title=""></a>
                         <a href="PTWState$.html" title="">PTWState</a>
                       </li><li class="current-entities indented2">
@@ -833,7 +837,7 @@
       </span>
       
       <p class="shortcomment cmt">Machine Exception Program Counter</p><div class="fullcomment"><div class="comment cmt"><p>Machine Exception Program Counter</p></div><dl class="attributes block"> <dt>Note</dt><dd><span class="cmt"><p>hold all valid virtual addresses
-when a ***trap*** is taken into ***M-mode***, update to the ***virtual address*** that was interrupted or encountered the exception</p></span></dd></dl></div>
+when a ***trap*** is taken into ***M-mode***, update to the ***virtual address*** that was interrupted or encountered the exception</p></span>, <span class="cmt"><p>we are only considering 2 condition: 1) 1 trap outsize the DMode; 2) trap inside the DMode; we will not consider normal trap + step, for step-interrupt has one cycle latency</p></span></dd></dl></div>
     </li><li name="rift2Core.privilege.CsrFiles#update_mhartid" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="update_mhartid(in:rift2Core.backend.CMMState_Bundle):chisel3.UInt"></a><a id="update_mhartid(CMMState_Bundle):UInt"></a>
       <span class="permalink">

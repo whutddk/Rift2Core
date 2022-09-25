@@ -175,6 +175,14 @@
                         <a href="Dcache_ScoreBoard_Bundle.html" title="">Dcache_ScoreBoard_Bundle</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
+                        <a class="class" href="FakeProbeUnit.html" title=""></a>
+                        <a href="FakeProbeUnit.html" title="">FakeProbeUnit</a>
+                      </li><li class="current-entities indented3">
+                        <span class="separator"></span>
+                        <a class="class" href="GetUnit.html" title="The Queue of cache to request acquire and waiting for grant and ack grant Get-Mode"></a>
+                        <a href="GetUnit.html" title="The Queue of cache to request acquire and waiting for grant and ack grant Get-Mode">GetUnit</a>
+                      </li><li class="current-entities indented3">
+                        <span class="separator"></span>
                         <a class="class" href="IO_Lsu.html" title=""></a>
                         <a href="IO_Lsu.html" title="">IO_Lsu</a>
                       </li><li class="current-entities indented3">
@@ -247,6 +255,10 @@
                         <a href="ProbeUnit.html" title="ProbeUnit will accept probe request from l2cache and forward it to l1cache to resp data">ProbeUnit</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
+                        <a class="class" href="PutUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Put-Mode"></a>
+                        <a href="PutUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Put-Mode">PutUnit</a>
+                      </li><li class="current-entities indented3">
+                        <span class="separator"></span>
                         <a class="class" href="Store_queue.html" title="bound to every cache"></a>
                         <a href="Store_queue.html" title="bound to every cache">Store_queue</a>
                       </li><li class="current-entities indented3">
@@ -267,8 +279,8 @@
                         <a href="Strb2Mask$.html" title="">Strb2Mask</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
-                        <a class="class" href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache"></a>
-                        <a href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache">WriteBackUnit</a>
+                        <a class="class" href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Probe-Release-Mode"></a>
+                        <a href="WriteBackUnit.html" title="a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Probe-Release-Mode">WriteBackUnit</a>
                       </li><li class="current-entities indented3">
                         <span class="separator"></span>
                         <a class="object" href="get_loadRes$.html" title=""></a>
@@ -443,22 +455,6 @@
       </span>
       
       
-    </li><li name="rift2Core.backend.lsu.LSU_CacheMux#acquireArb" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="acquireArb:chisel3.util.Arbiter[freechips.rocketchip.tilelink.TLBundleA]"></a><a id="acquireArb:Arbiter[TLBundleA]"></a>
-      <span class="permalink">
-      <a href="../../../rift2Core/backend/lsu/LSU_CacheMux.html#acquireArb:chisel3.util.Arbiter[freechips.rocketchip.tilelink.TLBundleA]" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">acquireArb</span><span class="result">: <span class="extype" name="chisel3.util.Arbiter">Arbiter</span>[<span class="extype" name="freechips.rocketchip.tilelink.TLBundleA">TLBundleA</span>]</span>
-      </span>
-      
-      
     </li><li name="scala.Any#asInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="asInstanceOf[T0]:T0"></a>
       <span class="permalink">
@@ -570,22 +566,6 @@
                 <span class="name">@HotSpotIntrinsicCandidate</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="rift2Core.backend.lsu.LSU_CacheMux#grantAckArb" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="grantAckArb:chisel3.util.Arbiter[freechips.rocketchip.tilelink.TLBundleE]"></a><a id="grantAckArb:Arbiter[TLBundleE]"></a>
-      <span class="permalink">
-      <a href="../../../rift2Core/backend/lsu/LSU_CacheMux.html#grantAckArb:chisel3.util.Arbiter[freechips.rocketchip.tilelink.TLBundleE]" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">grantAckArb</span><span class="result">: <span class="extype" name="chisel3.util.Arbiter">Arbiter</span>[<span class="extype" name="freechips.rocketchip.tilelink.TLBundleE">TLBundleE</span>]</span>
-      </span>
-      
-      
     </li><li name="scala.AnyRef#hashCode" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="hashCode():Int"></a>
       <span class="permalink">
@@ -623,38 +603,6 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="rift2Core.backend.lsu.LSU_CacheMux#is_chnc_busy" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="is_chnc_busy:chisel3.Vec[chisel3.Bool]"></a><a id="is_chnc_busy:Vec[Bool]"></a>
-      <span class="permalink">
-      <a href="../../../rift2Core/backend/lsu/LSU_CacheMux.html#is_chnc_busy:chisel3.Vec[chisel3.Bool]" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">is_chnc_busy</span><span class="result">: <span class="extype" name="chisel3.Vec">Vec</span>[<span class="extype" name="chisel3.Bool">Bool</span>]</span>
-      </span>
-      
-      <p class="shortcomment cmt"></p><div class="fullcomment"><div class="comment cmt"></div><dl class="attributes block"> <dt>Note</dt><dd><span class="cmt"><p>chn-C will carry multi-beat data from client to manager, which is a N to 1 transation, and may be grabbed</p></span>, <span class="cmt"><p>however there will be one cycle latency for chn-c</p></span></dd></dl></div>
-    </li><li name="rift2Core.backend.lsu.LSU_CacheMux#is_release_done" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="is_release_done:scala.collection.immutable.IndexedSeq[Chisel.Bool]"></a><a id="is_release_done:IndexedSeq[Bool]"></a>
-      <span class="permalink">
-      <a href="../../../rift2Core/backend/lsu/LSU_CacheMux.html#is_release_done:scala.collection.immutable.IndexedSeq[Chisel.Bool]" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">is_release_done</span><span class="result">: <span class="extype" name="scala.collection.immutable.IndexedSeq">IndexedSeq</span>[<span class="extype" name="Chisel.Bool">Bool</span>]</span>
-      </span>
-      
-      
     </li><li name="scala.AnyRef#ne" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a><a id="ne(AnyRef):Boolean"></a>
       <span class="permalink">
@@ -713,22 +661,6 @@
                 <span class="name">@HotSpotIntrinsicCandidate</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="rift2Core.backend.lsu.LSU_CacheMux#releaseArb" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="releaseArb:chisel3.util.Arbiter[freechips.rocketchip.tilelink.TLBundleC]"></a><a id="releaseArb:Arbiter[TLBundleC]"></a>
-      <span class="permalink">
-      <a href="../../../rift2Core/backend/lsu/LSU_CacheMux.html#releaseArb:chisel3.util.Arbiter[freechips.rocketchip.tilelink.TLBundleC]" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">releaseArb</span><span class="result">: <span class="extype" name="chisel3.util.Arbiter">Arbiter</span>[<span class="extype" name="freechips.rocketchip.tilelink.TLBundleC">TLBundleC</span>]</span>
-      </span>
-      
-      
     </li><li name="scala.AnyRef#synchronized" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a><a id="synchronized[T0](⇒T0):T0"></a>
       <span class="permalink">

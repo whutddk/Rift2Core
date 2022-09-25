@@ -310,7 +310,92 @@
     </li></ol>
             </div>
 
-        
+        <div id="types" class="types members">
+              <h3>Type Members</h3>
+              <ol><li name="debug.DebugModule.DMAbstract" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="DMAbstractextendsAnyRef"></a><a id="DMAbstract:DMAbstract"></a>
+      <span class="permalink">
+      <a href="../debug/DebugModule$DMAbstract.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a title="Abstract Command instance," href="DebugModule$DMAbstract.html"><span class="name">DMAbstract</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">Abstract Command instance,
+</p>
+    </li><li name="debug.DebugModule.DMBase" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="DMBaseextendsLazyModuleImp"></a><a id="DMBase:DMBase"></a>
+      <span class="permalink">
+      <a href="../debug/DebugModule$DMBase.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="DebugModule$DMBase.html"><span class="name">DMBase</span></a><span class="result"> extends <span class="extype" name="freechips.rocketchip.diplomacy.LazyModuleImp">LazyModuleImp</span></span>
+      </span>
+      
+      
+    </li><li name="debug.DebugModule.DMStatus" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="DMStatusextendsAnyRef"></a><a id="DMStatus:DMStatus"></a>
+      <span class="permalink">
+      <a href="../debug/DebugModule$DMStatus.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a title="DMStatus control the halt and reset" href="DebugModule$DMStatus.html"><span class="name">DMStatus</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">DMStatus control the halt and reset
+</p>
+    </li><li name="debug.DebugModule.DebugModuleImp" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="DebugModuleImpextendsDebugModule.this.DMBasewithDebugModule.this.DMStatuswithDebugModule.this.DMAbstract"></a><a id="DebugModuleImp:DebugModuleImp"></a>
+      <span class="permalink">
+      <a href="../debug/DebugModule$DebugModuleImp.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="DebugModule$DebugModuleImp.html"><span class="name">DebugModuleImp</span></a><span class="result"> extends <a href="DebugModule$DMBase.html" class="extype" name="debug.DebugModule.DMBase">DMBase</a> with <a href="DebugModule$DMStatus.html" class="extype" name="debug.DebugModule.DMStatus">DMStatus</a> with <a href="DebugModule$DMAbstract.html" class="extype" name="debug.DebugModule.DMAbstract">DMAbstract</a></span>
+      </span>
+      
+      
+    </li><li name="debug.DebugModule.sba" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="sbaextendsAnyRef"></a><a id="sba:sba"></a>
+      <span class="permalink">
+      <a href="../debug/DebugModule$sba.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="DebugModule$sba.html"><span class="name">sba</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      
+      
+    </li></ol>
+            </div>
 
         
 
@@ -674,9 +759,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>LazyModule</dd></dl></div>
     </li><li name="debug.DebugModule#module" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="module:freechips.rocketchip.diplomacy.LazyModuleImp{valsba_bus:freechips.rocketchip.tilelink.TLBundle;valedgeOut:freechips.rocketchip.tilelink.TLEdgeOut;valio:chisel3.Bundle{valdmi:debug.DMIIO;valndreset:chisel3.Bool;valdm_cmm:chisel3.Vec[debug.Info_DM_cmm]};valdmstatus:debug.DMSTATUSFields;valdmactive:chisel3.Bool;valndmreset:chisel3.Bool;valhartsel:chisel3.UInt;valhavereset:chisel3.Vec[chisel3.Bool];valhartreset:chisel3.Vec[chisel3.Bool];valresumeack:chisel3.Vec[chisel3.Bool];valhaltreq:chisel3.Vec[chisel3.Bool];valresethaltreq:chisel3.Vec[chisel3.Bool];valis_halted:chisel3.Vec[chisel3.Bool];valbusy:chisel3.Bool;valcmderr:chisel3.UInt;valprogramBufferMem_qout:chisel3.Vec[chisel3.UInt];valprogramBufferMem_dnxt1:chisel3.Vec[chisel3.UInt];valprogramBufferMem_dnxt2:chisel3.Vec[chisel3.UInt];valprogramBufferMem_en1:chisel3.Vec[chisel3.Bool];valprogramBufferMem_en2:chisel3.Vec[chisel3.Bool];valabstractDataMem_qout:chisel3.Vec[chisel3.UInt];valabstractDataMem_dnxt1:chisel3.Vec[chisel3.UInt];valabstractDataMem_dnxt2:chisel3.Vec[chisel3.UInt];valabstractDataMem_en1:chisel3.Vec[chisel3.Bool];valabstractDataMem_en2:chisel3.Vec[chisel3.Bool];valhartHaltedId:chisel3.UInt;valhartHaltedWrEn:chisel3.Bool;valhartGoingId:chisel3.UInt;valhartGoingWrEn:chisel3.Bool;valhartResumingId:chisel3.UInt;valhartResumingWrEn:chisel3.Bool;valhartExceptionId:chisel3.UInt;valhartExceptionWrEn:chisel3.Bool;valabstract_hartId:chisel3.UInt;valcmdTpye:chisel3.UInt;valcontrol:chisel3.UInt;valflags:chisel3.Vec[chisel3.Bundle{valis_resume:chisel3.Bool;valis_going:chisel3.Bool}];valsetresethaltEn:chisel3.Bool;valclrresethaltEn:chisel3.Bool;valackhavereset_W1:chisel3.Bool;valresumeReq_W1:chisel3.Bool;valcommandVal:chisel3.UInt;valcommandEn:chisel3.Bool;valwhereTo:chisel3.UInt;valabstractGeneratedMem:chisel3.Vec[chisel3.UInt];valsberror:chisel3.UInt;valsbreadondata:chisel3.Bool;valsbautoincrement:chisel3.Bool;valsbaccess:chisel3.UInt;valsbreadonaddr:chisel3.Bool;valsbbusy:chisel3.Bool;valsbbusyerror:chisel3.Bool;valsbaddress:chisel3.Vec[chisel3.UInt];valsbdata:chisel3.Vec[chisel3.UInt];valsbaddressWrEn:chisel3.Bool;valsbaddressWrData:chisel3.UInt;valsbdataWrEn:chisel3.Bool;valsbdataWrData:chisel3.UInt;valsbdataRdEn:chisel3.Bool;valsba:debug.SBA;valreq:chisel3.util.DecoupledIO[debug.Info_sba_req];valrsp:chisel3.util.DecoupledIO[debug.Info_sba_rsp];valsba_req_valid:chisel3.Bool;valsba_op:chisel3.Bool;valdmi_req:chisel3.util.DecoupledIO[freechips.rocketchip.regmapper.RegMapperInput];valdmi_resp:chisel3.util.DecoupledIO[freechips.rocketchip.regmapper.RegMapperOutput]}"></a><a id="module:LazyModuleImp{.../*66definitionsintyperefinement*/}"></a>
+      <a id="module:DebugModule.this.DebugModuleImp"></a><a id="module:DebugModuleImp"></a>
       <span class="permalink">
-      <a href="../debug/DebugModule.html#module:freechips.rocketchip.diplomacy.LazyModuleImp{valsba_bus:freechips.rocketchip.tilelink.TLBundle;valedgeOut:freechips.rocketchip.tilelink.TLEdgeOut;valio:chisel3.Bundle{valdmi:debug.DMIIO;valndreset:chisel3.Bool;valdm_cmm:chisel3.Vec[debug.Info_DM_cmm]};valdmstatus:debug.DMSTATUSFields;valdmactive:chisel3.Bool;valndmreset:chisel3.Bool;valhartsel:chisel3.UInt;valhavereset:chisel3.Vec[chisel3.Bool];valhartreset:chisel3.Vec[chisel3.Bool];valresumeack:chisel3.Vec[chisel3.Bool];valhaltreq:chisel3.Vec[chisel3.Bool];valresethaltreq:chisel3.Vec[chisel3.Bool];valis_halted:chisel3.Vec[chisel3.Bool];valbusy:chisel3.Bool;valcmderr:chisel3.UInt;valprogramBufferMem_qout:chisel3.Vec[chisel3.UInt];valprogramBufferMem_dnxt1:chisel3.Vec[chisel3.UInt];valprogramBufferMem_dnxt2:chisel3.Vec[chisel3.UInt];valprogramBufferMem_en1:chisel3.Vec[chisel3.Bool];valprogramBufferMem_en2:chisel3.Vec[chisel3.Bool];valabstractDataMem_qout:chisel3.Vec[chisel3.UInt];valabstractDataMem_dnxt1:chisel3.Vec[chisel3.UInt];valabstractDataMem_dnxt2:chisel3.Vec[chisel3.UInt];valabstractDataMem_en1:chisel3.Vec[chisel3.Bool];valabstractDataMem_en2:chisel3.Vec[chisel3.Bool];valhartHaltedId:chisel3.UInt;valhartHaltedWrEn:chisel3.Bool;valhartGoingId:chisel3.UInt;valhartGoingWrEn:chisel3.Bool;valhartResumingId:chisel3.UInt;valhartResumingWrEn:chisel3.Bool;valhartExceptionId:chisel3.UInt;valhartExceptionWrEn:chisel3.Bool;valabstract_hartId:chisel3.UInt;valcmdTpye:chisel3.UInt;valcontrol:chisel3.UInt;valflags:chisel3.Vec[chisel3.Bundle{valis_resume:chisel3.Bool;valis_going:chisel3.Bool}];valsetresethaltEn:chisel3.Bool;valclrresethaltEn:chisel3.Bool;valackhavereset_W1:chisel3.Bool;valresumeReq_W1:chisel3.Bool;valcommandVal:chisel3.UInt;valcommandEn:chisel3.Bool;valwhereTo:chisel3.UInt;valabstractGeneratedMem:chisel3.Vec[chisel3.UInt];valsberror:chisel3.UInt;valsbreadondata:chisel3.Bool;valsbautoincrement:chisel3.Bool;valsbaccess:chisel3.UInt;valsbreadonaddr:chisel3.Bool;valsbbusy:chisel3.Bool;valsbbusyerror:chisel3.Bool;valsbaddress:chisel3.Vec[chisel3.UInt];valsbdata:chisel3.Vec[chisel3.UInt];valsbaddressWrEn:chisel3.Bool;valsbaddressWrData:chisel3.UInt;valsbdataWrEn:chisel3.Bool;valsbdataWrData:chisel3.UInt;valsbdataRdEn:chisel3.Bool;valsba:debug.SBA;valreq:chisel3.util.DecoupledIO[debug.Info_sba_req];valrsp:chisel3.util.DecoupledIO[debug.Info_sba_rsp];valsba_req_valid:chisel3.Bool;valsba_op:chisel3.Bool;valdmi_req:chisel3.util.DecoupledIO[freechips.rocketchip.regmapper.RegMapperInput];valdmi_resp:chisel3.util.DecoupledIO[freechips.rocketchip.regmapper.RegMapperOutput]}" title="Permalink">
+      <a href="../debug/DebugModule.html#module:DebugModule.this.DebugModuleImp" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -685,7 +770,7 @@
         <span class="kind">lazy val</span>
       </span>
       <span class="symbol">
-        <span class="name">module</span><span class="result">: <span class="extype" name="freechips.rocketchip.diplomacy.LazyModuleImp">LazyModuleImp</span> { ... /* 66 definitions in type refinement */ }</span>
+        <span class="name">module</span><span class="result">: <a href="DebugModule$DebugModuleImp.html" class="extype" name="debug.DebugModule.DebugModuleImp">DebugModuleImp</a></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="debug.DebugModule">DebugModule</a> → LazyModule</dd></dl></div>
@@ -904,22 +989,6 @@
       </span>
       <span class="symbol">
         <span class="name">peripNode</span><span class="result">: <span class="extype" name="freechips.rocketchip.tilelink.TLRegisterNode">TLRegisterNode</span></span>
-      </span>
-      
-      
-    </li><li name="debug.DebugModule#sbaClientNode" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="sbaClientNode:freechips.rocketchip.tilelink.TLClientNode"></a><a id="sbaClientNode:TLClientNode"></a>
-      <span class="permalink">
-      <a href="../debug/DebugModule.html#sbaClientNode:freechips.rocketchip.tilelink.TLClientNode" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">sbaClientNode</span><span class="result">: <span class="extype" name="freechips.rocketchip.tilelink.TLClientNode">TLClientNode</span></span>
       </span>
       
       
