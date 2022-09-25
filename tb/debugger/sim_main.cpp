@@ -20,14 +20,13 @@
 #include <memory>
 #include <iostream>
 #include <getopt.h>
-#include "diff.h"
 
 #include <sstream>
 
 
 
 #if VM_TRACE
-#include "verilated_vcd_c.h"
+#include "verilated_fst_c.h"
 #endif
 
 #include "remote_bitbang.h"
@@ -41,7 +40,6 @@ double sc_time_stamp () {
 
 
 uint8_t flag_waveEnable = 0;
-uint8_t flag_diffEnable = 0;
 uint8_t flag_limitEnable = 0;
 uint8_t flag_jtagMode = 0;
 
@@ -52,8 +50,6 @@ int prase_arg(int argc, char **argv) {
 			case 'l':
 			flag_limitEnable = 1;
 			break;
-			case 'd':
-			flag_diffEnable = 1;
 			break;
 			case 'w':
 				flag_waveEnable = 1;
@@ -97,12 +93,6 @@ int main(int argc, char **argv, char **env) {
 		return -1;
 	}
 
-	if ( flag_diffEnable ) {
-		if ( -1 == dromajo_init() ) {
-			return -1;
-		}		
-	}
-
 	jtag = new remote_bitbang_t(16666);
 
 	char * temp[2];
@@ -119,11 +109,11 @@ int main(int argc, char **argv, char **env) {
 	VSimTop *top = new VSimTop();
 
 #if VM_TRACE
-	VerilatedVcdC* tfp = new VerilatedVcdC;;
+	VerilatedFstC* tfp = new VerilatedFstC;
 	if (flag_waveEnable) {
 		Verilated::traceEverOn(true);
-		top->trace(tfp, 99); // Trace 99 levels of hierarchy
-		tfp->open("./build/wave.vcd");		
+		top->trace(tfp, 5); // Trace 99 levels of hierarchy
+		tfp->open("./generated/build/wave.fst");		
 	}
 
 #endif
@@ -147,47 +137,6 @@ int main(int argc, char **argv, char **env) {
 			top->CLK = 1;
 		} else if ( main_time % 10 == 6 ) {
 			top->CLK = 0;
-
-			if ( flag_diffEnable ) {
-				if ( flag_chk ) {
-					if ( -1 == diff_chk_reg(top) ) {
-						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-						break;
-					}
-					flag_chk = 0;
-				}
-			}
-
-			if ( top->trace_comfirm_0 && top->trace_comfirm_1) {
-				// printf("real pc = %lx, real t0 = %lx\n", top->trace_pc_1, top->trace_abi_t0);
-
-				if ( flag_diffEnable ) {
-					if ( -1 == diff_chk_pc(top) ) {
-						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-						break;
-					}
-
-					dromajo_step();
-					dromajo_step();
-					flag_chk = 1;					
-				}
-
-
-			} else if ( top->trace_comfirm_0 || top->trace_abort_0 ) {
-				// printf("real pc = %lx, real t0 = %lx\n", top->trace_pc_0, top->trace_abi_t0);
-				if ( flag_diffEnable ) {
-					if ( -1 == diff_chk_pc(top) ) {
-						printf("failed at dromajo pc = 0x%lx\n", diff.pc);
-						break;
-					}
-
-					dromajo_step();
-					flag_chk = 1;					
-				}
-
-			} else {
-				;
-			}
 
 		} 
 
@@ -233,10 +182,6 @@ int main(int argc, char **argv, char **env) {
 
 #endif
 	top->final();
-
-	if ( flag_diffEnable ) {
-		dromajo_deinit();		
-	}
 
 
 	delete top;

@@ -43,7 +43,7 @@ abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
 
 }
 
-trait IF1Predict { this: IF1Base => 
+trait IF1uBTB { this: IF1Base => 
   val uBTB = Module(new uBTB)
 
   uBTB.io.req.pc := pc_qout
@@ -70,8 +70,24 @@ trait IF1Predict { this: IF1Base =>
 
 }
 
+trait IF1NuBTB{ this: IF1Base =>
+  val uBTB = Module(new FakeuBTB)
 
-class IF1()(implicit p: Parameters) extends IF1Base with IF1Predict{
+  io.pc_gen.bits.isRedirect := uBTB.io.resp.isRedirect
+  io.pc_gen.bits.isActive := uBTB.io.resp.isActive
+  io.pc_gen.bits.target := uBTB.io.resp.target
+
+  uBTB.io.req.pc := 0.U
+  uBTB.io.update.valid := false.B
+  uBTB.io.update.bits.target := 0.U
+  uBTB.io.update.bits.pc     := 0.U
+  uBTB.io.update.bits.isTaken := false.B
+  uBTB.io.if4Redirect.valid := false.B
+  uBTB.io.if4Redirect.bits  := 0.U.asTypeOf(new IF4_Redirect_Bundle)
+}
+
+
+class IF1Predict()(implicit p: Parameters) extends IF1Base with IF1uBTB {
   val any_reset = reset.asBool
 
 
@@ -82,9 +98,23 @@ class IF1()(implicit p: Parameters) extends IF1Base with IF1Predict{
     when( uBTB.io.resp.isRedirect.reduce(_|_) ){
       pc_qout :=  extVaddr(uBTB.io.resp.target, vlen)
     } .otherwise {
-      pc_qout := (pc_qout + 16.U) >> 4 << 4        
+      pc_qout := (pc_qout + (1.U << log2Ceil(ftChn*16/8))   ) >> (log2Ceil(ftChn*16/8)) << (log2Ceil(ftChn*16/8))
     }
 
+  }
+  io.pc_gen.valid   := true.B
+  io.pc_gen.bits.pc := pc_qout
+}
+
+class IF1NPredict()(implicit p: Parameters) extends IF1Base with IF1NuBTB {
+  val any_reset = reset.asBool
+
+
+  when( any_reset ) { pc_qout := "h80000000".U }
+  .elsewhen( io.cmmRedirect.fire ) { pc_qout := io.cmmRedirect.bits.pc }
+  .elsewhen( io.if4Redirect.fire ) { pc_qout := extVaddr(io.if4Redirect.bits.target, vlen) }
+  .elsewhen( io.pc_gen.fire ) {
+    pc_qout := (pc_qout + (1.U << log2Ceil(ftChn*16/8))   ) >> (log2Ceil(ftChn*16/8)) << (log2Ceil(ftChn*16/8))
   }
   io.pc_gen.valid   := true.B
   io.pc_gen.bits.pc := pc_qout

@@ -23,7 +23,7 @@ import chisel3.util._
 import rift2Core.define._
 
 import base._
-import rift._
+import rift2Chip._
 
 import chipsalliance.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy._
@@ -85,16 +85,24 @@ trait Stq_Ptr { this: Stq_Base =>
   }
 
 
-  val is_st_commited = VecInit( io.cmm_lsu.is_store_commit(0), io.cmm_lsu.is_store_commit(1) )
+  val is_st_commited = io.cmm_lsu.is_store_commit
   io.enq.ready := ~full
   io.deq.valid := ~emty
 
   io.deq.bits := Mux( io.deq.valid, rd_buff, 0.U.asTypeOf(new Lsu_iss_info) )
 
   when( io.flush ) {
-    when( is_st_commited(1) & is_st_commited(0) ) { wr_ptr_reg := cm_ptr_reg + 2.U }
-    .elsewhen( is_st_commited(0) | (is_amo & ~io.is_empty) | is_st_commited(1) ) { wr_ptr_reg := cm_ptr_reg + 1.U } //amo only resolved at chn0
-    .otherwise{ wr_ptr_reg := cm_ptr_reg }
+    if( cm_chn ==2 ) {
+      when( is_st_commited(1) & is_st_commited(0) ) { wr_ptr_reg := cm_ptr_reg + 2.U }
+      .elsewhen( is_st_commited(0) | (is_amo & ~io.is_empty) | is_st_commited(1) ) { wr_ptr_reg := cm_ptr_reg + 1.U } //amo only resolved at chn0
+      .otherwise{ wr_ptr_reg := cm_ptr_reg }      
+    } else if ( cm_chn == 1 ) {
+      when( is_st_commited(0) | (is_amo & ~io.is_empty) ) { wr_ptr_reg := cm_ptr_reg + 1.U } //amo only resolved at chn0
+      .otherwise{ wr_ptr_reg := cm_ptr_reg }         
+    } else {
+      require(false)
+    }
+
   } .elsewhen( io.enq.fire ) {
     buff(wr_ptr) := io.enq.bits
     wr_ptr_reg := wr_ptr_reg + 1.U
@@ -105,16 +113,30 @@ trait Stq_Ptr { this: Stq_Base =>
     buff(rd_ptr) := 0.U.asTypeOf(new Lsu_iss_info)
   }
 
-
-  when( is_st_commited(1) & is_st_commited(0) ) {
-    cm_ptr_reg := cm_ptr_reg + 2.U
-    assert( ~is_amo )
-    assert( cm_ptr_reg =/= wr_ptr_reg & cm_ptr_reg =/= (wr_ptr_reg-1.U) )
-  } .elsewhen( is_st_commited(0) | (is_amo & ~io.is_empty) | is_st_commited(1) ) { //amo only resolved at chn0
-    cm_ptr_reg := cm_ptr_reg + 1.U
-    assert( ~((is_st_commited(0) | is_st_commited(1)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
-    assert( cm_ptr_reg =/= wr_ptr_reg )
+  if( cm_chn == 2 ) {
+    when( is_st_commited(1) & is_st_commited(0) ) {
+      cm_ptr_reg := cm_ptr_reg + 2.U
+      assert( ~is_amo )
+      assert( cm_ptr_reg =/= wr_ptr_reg & cm_ptr_reg =/= (wr_ptr_reg-1.U) )
+    } .elsewhen( is_st_commited(0) | (is_amo & ~io.is_empty) | is_st_commited(1) ) { //amo only resolved at chn0
+      cm_ptr_reg := cm_ptr_reg + 1.U
+      assert( ~((is_st_commited(0) | is_st_commited(1)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
+      assert( cm_ptr_reg =/= wr_ptr_reg )
+    }    
+  } else if( cm_chn == 1 ) {
+    when( is_st_commited(0) ) {
+      cm_ptr_reg := cm_ptr_reg + 1.U
+      assert( ~is_amo )
+      assert( cm_ptr_reg =/= wr_ptr_reg )
+    } .elsewhen( (is_amo & ~io.is_empty) ) { //amo only resolved at chn0
+      cm_ptr_reg := cm_ptr_reg + 1.U
+      assert( ~((is_st_commited(0)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
+      assert( cm_ptr_reg =/= wr_ptr_reg )
+    }
+  } else {
+    require(false)
   }
+
 
     io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
 }
@@ -155,11 +177,11 @@ trait Stq_Overlap{ this: Stq_Base =>
     val temp_wstrb = Wire(Vec(stEntry, UInt(8.W)))
     for ( i <- 0 until stEntry ) yield {
       if ( i == 0 ) {
-        val (wdata, wstrb) = overlap_wr( 0.U(64.W), 0.U(8.W), overlap_buff(0).wdata_align64, overlap_buff(0).wstrb_align64 )
+        val (wdata, wstrb) = overlap_wr( 0.U(64.W), 0.U(8.W), overlap_buff(0).wdata_align(64), overlap_buff(0).wstrb_align(64) )
         temp_wdata(0) := wdata
         temp_wstrb(0) := wstrb
       } else {
-        val (wdata, wstrb) = overlap_wr( temp_wdata(i-1), temp_wstrb(i-1), overlap_buff(i).wdata_align64, overlap_buff(i).wstrb_align64 )
+        val (wdata, wstrb) = overlap_wr( temp_wdata(i-1), temp_wstrb(i-1), overlap_buff(i).wdata_align(64), overlap_buff(i).wstrb_align(64) )
         temp_wdata(i) := wdata
         temp_wstrb(i) := wstrb
       }

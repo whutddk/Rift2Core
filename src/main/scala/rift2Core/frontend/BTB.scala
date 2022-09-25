@@ -50,18 +50,25 @@ class BTB()(implicit p: Parameters) extends IFetchModule {
   val wr_cl_sel  = HashTo0( in = io.update.bits.pc, len = log2Ceil(btb_cl) )
 
 
-  val btb_table = SyncReadMem( btb_cl, new BTBResp_Bundle )
+  val btb_table = if(btb_cl != 0) { Some(SyncReadMem( btb_cl, new BTBResp_Bundle ))} else { None }
 
-
-  io.resp.bits  := btb_table.read(rd_cl_sel)
-  io.resp.valid := RegNext(io.req.fire)
-  io.req.ready  := io.resp.ready
 
   when( por_reset | io.update.fire ) {
-    btb_table.write(
-      Mux(por_reset, reset_cl, wr_cl_sel),
-      Mux(por_reset, "h80000000".U.asTypeOf(new BTBResp_Bundle), io.update.bits.viewAsSupertype( new BTBResp_Bundle ) )
-    )
+    if( btb_cl != 0 ) {
+      btb_table.get.write(
+        Mux(por_reset, reset_cl, wr_cl_sel),
+        Mux(por_reset, "h80000000".U.asTypeOf(new BTBResp_Bundle), io.update.bits.viewAsSupertype( new BTBResp_Bundle ) )
+      )      
+    } else {
+
+    }
+
   }
+
+  val bypassFifo = Module( new Queue( new BTBResp_Bundle, entries = 1, pipe = false, flow = true) )
+
+  bypassFifo.io.enq.valid := RegNext(io.req.fire); bypassFifo.io.enq.bits := (if ( btb_cl != 0 ){btb_table.get.read(rd_cl_sel)} else { DontCare }); io.req.ready := bypassFifo.io.enq.ready
+  io.resp.valid := bypassFifo.io.deq.valid; io.resp.bits := (if ( btb_cl != 0 ){ bypassFifo.io.deq.bits} else { DontCare }); bypassFifo.io.deq.ready := io.resp.ready
+
 
 }

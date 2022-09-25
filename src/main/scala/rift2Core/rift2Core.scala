@@ -20,18 +20,20 @@ package rift2Core
 
 import chisel3._
 import chisel3.util._
-import rift._
+import rift2Chip._
 import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.diff._
 import rift2Core.privilege._
 import debug._
 
+import rift2Core.define._
+
 import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
-import chisel3.util.experimental.{FlattenInstance}
+import chisel3.util.experimental.{FlattenInstance, InlineInstance}
 
 
 class Rift2Core(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyModule with HasRiftParameters {
@@ -46,7 +48,7 @@ class Rift2Core(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
     Seq(TLMasterParameters.v1(
       name = "dcache",
       sourceId = IdRange(0, dcacheParams.bk),
-      supportsProbe = TransferSizes(32)
+      supportsProbe = if (hasL2) { TransferSizes((l1DW)/8) } else { TransferSizes.none }
     ))
   )
 
@@ -93,6 +95,8 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   val io = IO(new Bundle{
     val dm        = if (hasDebugger) {Some(Flipped(new Info_DM_cmm))} else {None}
     val rtc_clock = Input(Bool())
+    val aclint = Input(new AClint_Bundle)
+    val plic = Input(new Plic_Bundle)
   })
 
   val ( icache_bus, icache_edge ) = outer.icacheClientNode.out.head
@@ -105,7 +109,7 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
 
 
 
-  val if1 = Module(new IF1)
+  val if1 = (if (hasuBTB) {Module(new IF1Predict)} else {Module(new IF1NPredict)})
   val if2 = Module(new IF2(icache_edge))
   val if3 = Module(new IF3)
   val if4 = Module(new IF4)
@@ -137,9 +141,14 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   }
 
   val iss_stage = {
-    val mdl = Module(new Issue)
-    mdl.io.ooo_dpt_iss <> dpt_stage.io.ooo_dpt_iss
-    mdl.io.ito_dpt_iss <> dpt_stage.io.ito_dpt_iss
+    val mdl = if( opChn > 1 ) {Module(new Issue with IssueOoo with IssueIto)} else { Module(new Issue with IssueSig)}
+    if( opChn > 1 ) {
+      mdl.io.ooo_dpt_iss.get <> dpt_stage.io.ooo_dpt_iss.get
+      mdl.io.ito_dpt_iss.get <> dpt_stage.io.ito_dpt_iss.get      
+    } else if( opChn == 1 ) {
+       mdl.io.sig_dpt_iss.get <> dpt_stage.io.sig_dpt_iss.get
+    }
+
 
     mdl
   }
@@ -164,8 +173,13 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
     mdl.io.dpt_Xrename <> dpt_stage.io.dpt_Xrename
     mdl.io.dpt_Frename <> dpt_stage.io.dpt_Frename
 
-    mdl.io.ooo_readOp <> iss_stage.io.ooo_readOp
-    mdl.io.ito_readOp <> iss_stage.io.ito_readOp
+    if( opChn > 1 ) {
+      mdl.io.ooo_readOp.get <> iss_stage.io.ooo_readOp.get
+      mdl.io.ito_readOp.get <> iss_stage.io.ito_readOp.get
+    } else if( opChn == 1 ) {
+      mdl.io.sig_readOp.get <> iss_stage.io.sig_readOp.get
+    }
+
     mdl.io.frg_readOp <> iss_stage.io.frg_readOp
 
 
@@ -242,6 +256,8 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   cmm_stage.io.jctq <> exe_stage.io.jctq
   cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect
   cmm_stage.io.if_cmm := if2.io.if_cmm
+  cmm_stage.io.aclint := io.aclint
+  cmm_stage.io.plic := io.plic
   if2.io.ifence := cmm_stage.io.ifence
 
 
@@ -264,34 +280,49 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
 
 
 
+  if( hasL2 ) {
+    exe_stage.io.missUnit_dcache_grant.get.bits  := dcache_bus.d.bits
+    exe_stage.io.missUnit_dcache_grant.get.valid := dcache_bus.d.valid & ( dcache_bus.d.bits.opcode === TLMessages.Grant | dcache_bus.d.bits.opcode === TLMessages.GrantData )
 
-  exe_stage.io.missUnit_dcache_grant.bits  := dcache_bus.d.bits
-  exe_stage.io.missUnit_dcache_grant.valid := dcache_bus.d.valid & ( dcache_bus.d.bits.opcode === TLMessages.Grant | dcache_bus.d.bits.opcode === TLMessages.GrantData )
+    exe_stage.io.writeBackUnit_dcache_grant.get.bits  := dcache_bus.d.bits
+    exe_stage.io.writeBackUnit_dcache_grant.get.valid := dcache_bus.d.valid & ( dcache_bus.d.bits.opcode === TLMessages.ReleaseAck )
 
-  exe_stage.io.writeBackUnit_dcache_grant.bits  := dcache_bus.d.bits
-  exe_stage.io.writeBackUnit_dcache_grant.valid := dcache_bus.d.valid & ( dcache_bus.d.bits.opcode === TLMessages.ReleaseAck )
+    dcache_bus.d.ready := 
+      Mux1H(Seq(
+        ( dcache_bus.d.bits.opcode === TLMessages.Grant || dcache_bus.d.bits.opcode === TLMessages.GrantData ) -> exe_stage.io.missUnit_dcache_grant.get.ready,
+        ( dcache_bus.d.bits.opcode === TLMessages.ReleaseAck )                                                 -> exe_stage.io.writeBackUnit_dcache_grant.get.ready
+      ))
 
-  dcache_bus.d.ready := 
-    Mux1H(Seq(
-      ( dcache_bus.d.bits.opcode === TLMessages.Grant || dcache_bus.d.bits.opcode === TLMessages.GrantData ) -> exe_stage.io.missUnit_dcache_grant.ready,
-      ( dcache_bus.d.bits.opcode === TLMessages.ReleaseAck )                                                    -> exe_stage.io.writeBackUnit_dcache_grant.ready
-    ))
+    dcache_bus.a.valid := exe_stage.io.missUnit_dcache_acquire.get.valid
+    dcache_bus.a.bits  := exe_stage.io.missUnit_dcache_acquire.get.bits
+    exe_stage.io.missUnit_dcache_acquire.get.ready := dcache_bus.a.ready
 
-  dcache_bus.a.valid := exe_stage.io.missUnit_dcache_acquire.valid
-  dcache_bus.a.bits  := exe_stage.io.missUnit_dcache_acquire.bits
-  exe_stage.io.missUnit_dcache_acquire.ready := dcache_bus.a.ready
+    exe_stage.io.probeUnit_dcache_probe.get.valid := dcache_bus.b.valid
+    exe_stage.io.probeUnit_dcache_probe.get.bits  := dcache_bus.b.bits
+    dcache_bus.b.ready := exe_stage.io.probeUnit_dcache_probe.get.ready
+    
+    dcache_bus.c.valid := exe_stage.io.writeBackUnit_dcache_release.get.valid
+    dcache_bus.c.bits  := exe_stage.io.writeBackUnit_dcache_release.get.bits
+    exe_stage.io.writeBackUnit_dcache_release.get.ready := dcache_bus.c.ready
+    
+    dcache_bus.e.valid := exe_stage.io.missUnit_dcache_grantAck.get.valid
+    dcache_bus.e.bits  := exe_stage.io.missUnit_dcache_grantAck.get.bits
+    exe_stage.io.missUnit_dcache_grantAck.get.ready := dcache_bus.e.ready
+  } else {
+    // val dcache_getPut = if ( hasL2 ) { None } else { Some(        new DecoupledIO(new TLBundleA(dEdge(0).bundle)) ) }
+    // val dcache_access = if ( hasL2 ) { None } else { Some(Flipped(new DecoupledIO(new TLBundleD(dEdge(0).bundle)))) }
 
-  exe_stage.io.probeUnit_dcache_probe.valid := dcache_bus.b.valid
-  exe_stage.io.probeUnit_dcache_probe.bits  := dcache_bus.b.bits
-  dcache_bus.b.ready := exe_stage.io.probeUnit_dcache_probe.ready
+    dcache_bus.a.valid := exe_stage.io.dcache_getPut.get.valid
+    dcache_bus.a.bits  := exe_stage.io.dcache_getPut.get.bits
+    exe_stage.io.dcache_getPut.get.ready := dcache_bus.a.ready
+
+    exe_stage.io.dcache_access.get.bits  := dcache_bus.d.bits
+    exe_stage.io.dcache_access.get.valid := dcache_bus.d.valid
+    dcache_bus.d.ready := exe_stage.io.dcache_access.get.ready
+
+
+  }
   
-  dcache_bus.c.valid := exe_stage.io.writeBackUnit_dcache_release.valid
-  dcache_bus.c.bits  := exe_stage.io.writeBackUnit_dcache_release.bits
-  exe_stage.io.writeBackUnit_dcache_release.ready := dcache_bus.c.ready
-  
-  dcache_bus.e.valid := exe_stage.io.missUnit_dcache_grantAck.valid
-  dcache_bus.e.bits  := exe_stage.io.missUnit_dcache_grantAck.bits
-  exe_stage.io.missUnit_dcache_grantAck.ready := dcache_bus.e.ready     
 
 
   exe_stage.io.system_access.bits  := system_bus.d.bits

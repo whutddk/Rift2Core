@@ -110,7 +110,7 @@ class TAGE(param: TageParams = TageParams())(implicit p: Parameters) extends IFe
     val flush = Input(Bool())
   })
 
-  if (!isMinArea) {
+  if (false) {
     val tageTable = param.tableInfo.map{
       case ( nRows, len ) => {
         val mdl = Module(new TageTable(nRows = nRows, histlen = len))
@@ -121,7 +121,7 @@ class TAGE(param: TageParams = TageParams())(implicit p: Parameters) extends IFe
       }
     }
   
-    for ( i <- 0 until 6 ) yield { io.resp.bits(i) := tageTable(i).io.resp }
+    for ( i <- 0 until 6 ) yield { io.resp.bits(i) := tageTable(i).io.resp; printf("Warning, Bugs no de!")}
     io.resp.valid := RegNext(io.req.fire)
     io.req.ready  := io.resp.ready
 

@@ -24,7 +24,7 @@ import chisel3.util._
 import chisel3.util.random._
 import chisel3.experimental.dataview._
 
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config._
 
 class Info_tlb_tag extends Bundle {

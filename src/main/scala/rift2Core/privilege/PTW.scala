@@ -22,7 +22,7 @@ import chisel3._
 import chisel3.util._
 import chisel3.experimental.dataview._
 
-import rift._
+import rift2Chip._
 import base._
 
 import chipsalliance.rocketchip.config.Parameters
@@ -68,6 +68,9 @@ object PTWState {
 class PTWBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
   val mEdge = edge
   val mid   = id
+  def dw = l1DW
+  def cl = 256
+  
   val io = IO(new Bundle{
     val ptw_i = Flipped(DecoupledIO(new Info_mmu_req))
     val ptw_o = DecoupledIO(new Info_ptw_rsp)
@@ -211,31 +214,62 @@ trait PTWWALK { this: PTWBase =>
 
 }
 
+trait PTWNCache{ this: PTWBase => 
+  val ptw_access_data_lo = Reg( Vec( (dw/l1BeatBits-1), UInt(l1BeatBits.W) )  )
+  val ptw_access_data = Cat( Seq(io.ptw_access.bits.data) ++ ptw_access_data_lo.reverse )
+  is_hit := false.B
+
+  pte.value := {
+    val data = WireDefault(0.U(dw.W))
+    val data_sel = Wire(UInt(64.W))
+
+    when( is_trans_done ) {
+      data := ptw_access_data
+    }
+  
+    data_sel := data >> 
+                  ( (addr_qout( log2Ceil(dw/8)-1,3)) << 6 )
+
+
+    val value = RegInit(0.U(64.W))
+
+    when( is_trans_done ) {
+      value := data_sel
+    }
+
+    Mux( is_trans_done, data_sel, value )
+  }
+
+  when( io.ptw_access.fire & ~is_trans_done) {
+    ptw_access_data_lo(transCnt) := io.ptw_access.bits.data
+  }
+}
+
+
+
 trait PTWCache { this: PTWBase => 
+
+  require( log2Ceil(dw/8) + log2Ceil(cl) == 12 )
+
   val cl_sel = addr_qout(11,5)
   val tag_sel = addr_qout(plen-1,12) 
 
-  // val cache_dat = new Cache_dat( 256, plen, 1, 128, bk = 1 )
-  // val cache_tag = new Cache_tag( 256, plen, 1, 128, bk = 1 ){  }
 
-  val datRAM = Module(new DatRAM(256, 128))
-  val tagRAM = Module(new TagRAM(plen-12, 128))
+  val datRAM = Module(new DatRAM(dw, cl))
+  val tagRAM = Module(new TagRAM(plen-12, cl))
 
 
-  val is_cache_valid = RegInit( VecInit( Seq.fill(128)(false.B) ) )
+  val is_cache_valid = RegInit( VecInit( Seq.fill(cl)(false.B) ) )
 
 
-  val ptw_access_data_lo = Reg( Vec((256/l1BeatBits-1), UInt(l1BeatBits.W) ))
+  val ptw_access_data_lo = Reg( Vec( (dw/l1BeatBits-1), UInt(l1BeatBits.W) )  )
 
 
 
 
 
-  datRAM.io.addr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11,5), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,5) ) )
-  tagRAM.io.addr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11,5), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,5) ) )
-
-  // cache_dat.dat_addr_w := addr_qout
-  // cache_tag.tag_addr_w := addr_qout
+  datRAM.io.addr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
+  tagRAM.io.addr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
 
 
     tagRAM.io.enr := (currState === PTWState.Lvl1.U)
@@ -247,14 +281,14 @@ trait PTWCache { this: PTWBase =>
     when( tagRAM.io.enw ) {
       is_cache_valid(cl_sel) := true.B
     } .elsewhen( io.cmm_mmu.sfence_vma ) {
-      for ( c <- 0 until 128 ) yield { is_cache_valid(c) := false.B }
+      for ( c <- 0 until cl ) yield { is_cache_valid(c) := false.B }
     }
 
 
-  datRAM.io.datawm := VecInit(Seq.fill(256/8)(true.B))
+  datRAM.io.datawm := VecInit(Seq.fill(dw/8)(true.B))
 
   val ptw_access_data = Cat( Seq(io.ptw_access.bits.data) ++ ptw_access_data_lo.reverse )
-  datRAM.io.dataw := VecInit( for( t <- 0 until 256/8 ) yield ptw_access_data(8*t+7, 8*t) )
+  datRAM.io.dataw := VecInit( for( t <- 0 until dw/8 ) yield ptw_access_data(8*t+7, 8*t) )
 
   tagRAM.io.dataw := tag_sel
 
@@ -262,7 +296,7 @@ trait PTWCache { this: PTWBase =>
 
 
   pte.value := {
-    val data = WireDefault(0.U(256.W))
+    val data = WireDefault(0.U(dw.W))
     val data_sel = Wire(UInt(64.W))
 
     when( is_hit ) {
@@ -271,13 +305,11 @@ trait PTWCache { this: PTWBase =>
       data := ptw_access_data
     }
 
-    data_sel := Mux1H(Seq(
-      (addr_qout(4,3) === 0.U ) -> data(63,0),
-      (addr_qout(4,3) === 1.U ) -> data(127,64),
-      (addr_qout(4,3) === 2.U ) -> data(191,128),
-      (addr_qout(4,3) === 3.U ) -> data(255,192),
-    ))
+
     
+    data_sel := data >> 
+                  ( (addr_qout( log2Ceil(dw/8)-1,3)) << 6 )
+
     assert( PopCount( Seq(is_hit, is_trans_done) ) <= 1.U )
 
     val value = RegInit(0.U(64.W))
@@ -298,6 +330,9 @@ trait PTWCache { this: PTWBase =>
     ptw_access_data_lo(transCnt) := io.ptw_access.bits.data
   }
 }
+
+
+
 
 
 
@@ -325,7 +360,7 @@ trait PTWBus { this: PTWBase =>
     ptw_access_ready := false.B
   }
 
-  io.ptw_get.bits := mEdge.Get(fromSource = mid.U, toAddress = addr_qout & ("hFFFFFFFF".U << 5), lgSize = log2Ceil(256/8).U)._2
+  io.ptw_get.bits := mEdge.Get(fromSource = mid.U, toAddress = addr_qout & ("hFFFFFFFF".U << log2Ceil(dw/8)), lgSize = log2Ceil(dw/8).U)._2
 
 
 
@@ -338,7 +373,7 @@ trait PTWBus { this: PTWBase =>
 class PTW(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends PTWBase(edge, id) 
   with PTWStateMachine
   with PTWWALK
-  with PTWCache
+  with PTWNCache
   with PTWBus{
 
 

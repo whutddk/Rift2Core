@@ -8,7 +8,7 @@
 --------------------------------------------
 
 
-Based on Chisel3, Rift2Core is a 9-stage, dual-issue, out-of-order, 64-bits RISC-V Core, which supports RV64GC and M, S, U mode.
+Based on Chisel3, Rift2Core is a 9-stage, N-issue(Configurable), out-of-order, 64-bits RISC-V Core, which supports RV64GC and M, S, U mode.
 
 [RiftCore](https://github.com/whutddk/RiftCore) is the previous version of Rift2Core in Verilog.
 

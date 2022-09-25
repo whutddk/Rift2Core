@@ -21,7 +21,7 @@ import chisel3.util._
 import rift2Core.define._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
 class PreFetcher(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{

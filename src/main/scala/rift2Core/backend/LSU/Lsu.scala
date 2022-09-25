@@ -22,7 +22,7 @@ import chisel3._
 import chisel3.util._
 
 import rift2Core.define._
-import rift._
+import rift2Chip._
 
 import rift2Core.privilege._
 import rift2Core.backend._
@@ -46,12 +46,17 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     val lsu_mmu = DecoupledIO(new Info_mmu_req)
     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
 
-    val missUnit_dcache_acquire      = DecoupledIO(new TLBundleA(dEdge(0).bundle))
-    val missUnit_dcache_grant        = Flipped(DecoupledIO(new TLBundleD(dEdge(0).bundle)))
-    val missUnit_dcache_grantAck     = DecoupledIO(new TLBundleE(dEdge(0).bundle))
-    val probeUnit_dcache_probe       = Flipped(DecoupledIO(new TLBundleB(dEdge(0).bundle)))
-    val writeBackUnit_dcache_release = DecoupledIO(new TLBundleC(dEdge(0).bundle))
-    val writeBackUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(dEdge(0).bundle)))
+
+    val missUnit_dcache_acquire      = if( hasL2 ) Some(new DecoupledIO(new TLBundleA(dEdge(0).bundle)))          else {None}
+    val missUnit_dcache_grant        = if( hasL2 ) Some(Flipped(new DecoupledIO(new TLBundleD(dEdge(0).bundle)))) else {None}
+    val missUnit_dcache_grantAck     = if( hasL2 ) Some(DecoupledIO(new TLBundleE(dEdge(0).bundle)))              else {None}
+    val probeUnit_dcache_probe       = if( hasL2 ) Some(Flipped(new DecoupledIO(new TLBundleB(dEdge(0).bundle)))) else {None}
+    val writeBackUnit_dcache_release = if( hasL2 ) Some(new DecoupledIO(new TLBundleC(dEdge(0).bundle))         ) else {None}
+    val writeBackUnit_dcache_grant   = if( hasL2 ) Some(Flipped(new DecoupledIO(new TLBundleD(dEdge(0).bundle)))) else {None}
+
+    val dcache_getPut = if ( hasL2 ) { None } else { Some(        new DecoupledIO(new TLBundleA(dEdge(0).bundle)) ) }
+    val dcache_access = if ( hasL2 ) { None } else { Some(Flipped(new DecoupledIO(new TLBundleD(dEdge(0).bundle)))) }
+
 
     val system_getPut = new DecoupledIO(new TLBundleA(dEdge(1).bundle))
     val system_access = Flipped(new DecoupledIO(new TLBundleD(dEdge(1).bundle)))
@@ -251,9 +256,7 @@ trait LSU_RegionMux { this: LsuBase =>
 /** depending on the paddr, the cache request will be divided into 4 or 8 (nm) "bank" */
 trait LSU_CacheMux { this: LsuBase =>
   val CacheMuxBits = pkg_Dcache_Enq_Bundle(regionDCacheIO.bits, stQueue.io.overlapReq.bits, stQueue.io.overlapResp.bits)
-  val acquireArb  = Module(new Arbiter(new TLBundleA(dEdge(0).bundle), n = bk))
-  val grantAckArb = Module(new Arbiter(new TLBundleE(dEdge(0).bundle), n = bk))
-  val releaseArb  = Module(new Arbiter(new TLBundleC(dEdge(0).bundle), n = bk))
+
 
   val chn = if( bk > 1 ) { CacheMuxBits.paddr(addr_lsb+bk_w-1,addr_lsb) } else { 0.U }
 
@@ -270,71 +273,101 @@ trait LSU_CacheMux { this: LsuBase =>
     }
   }
 
-  io.missUnit_dcache_acquire.valid := false.B
-  io.missUnit_dcache_acquire.bits := 0.U.asTypeOf(new TLBundleA(dEdge(0).bundle))
-  io.missUnit_dcache_grant.ready := false.B
-  io.missUnit_dcache_grantAck.valid := false.B
-  io.missUnit_dcache_grantAck.bits := 0.U.asTypeOf(new TLBundleE(dEdge(0).bundle))
-  io.probeUnit_dcache_probe.ready := false.B
-  io.writeBackUnit_dcache_release.valid := false.B
-  io.writeBackUnit_dcache_release.bits := 0.U.asTypeOf(new TLBundleC(dEdge(0).bundle))
-  io.writeBackUnit_dcache_grant.ready := false.B
+  if( hasL2 ) {
+    val acquireArb  = Module(new Arbiter(new TLBundleA(dEdge(0).bundle), n = bk))
+    val grantAckArb = Module(new Arbiter(new TLBundleE(dEdge(0).bundle), n = bk))
+    val releaseArb  = Module(new Arbiter(new TLBundleC(dEdge(0).bundle), n = bk))
+    io.missUnit_dcache_acquire.get.valid := false.B
+    io.missUnit_dcache_acquire.get.bits := 0.U.asTypeOf(new TLBundleA(dEdge(0).bundle))
+    io.missUnit_dcache_grant.get.ready := false.B
+    io.missUnit_dcache_grantAck.get.valid := false.B
+    io.missUnit_dcache_grantAck.get.bits := 0.U.asTypeOf(new TLBundleE(dEdge(0).bundle))
+    io.probeUnit_dcache_probe.get.ready := false.B
+    io.writeBackUnit_dcache_release.get.valid := false.B
+    io.writeBackUnit_dcache_release.get.bits := 0.U.asTypeOf(new TLBundleC(dEdge(0).bundle))
+    io.writeBackUnit_dcache_grant.get.ready := false.B
 
-  for ( i <- 0 until bk ) yield {
-    cache(i).io.missUnit_dcache_acquire.ready  := false.B
-    cache(i).io.missUnit_dcache_grant.valid    := false.B
-    cache(i).io.missUnit_dcache_grant.bits     := 0.U.asTypeOf(new TLBundleD(dEdge(0).bundle))
-    cache(i).io.missUnit_dcache_grantAck.ready := false.B
-    cache(i).io.probeUnit_dcache_probe.valid   := false.B
-    cache(i).io.probeUnit_dcache_probe.bits    := 0.U.asTypeOf(new TLBundleB(dEdge(0).bundle))
-    cache(i).io.writeBackUnit_dcache_release.ready := false.B
-    cache(i).io.writeBackUnit_dcache_grant.valid   := false.B
-    cache(i).io.writeBackUnit_dcache_grant.bits    := 0.U.asTypeOf(new TLBundleD(dEdge(0).bundle))
-  }
-
-  io.missUnit_dcache_acquire  <>  acquireArb.io.out
-  io.missUnit_dcache_grantAck <> grantAckArb.io.out
-  for ( i <- 0 until bk ) {
-    acquireArb.io.in(i) <> cache(i).io.missUnit_dcache_acquire
-
-    when( io.missUnit_dcache_grant.bits.source === i.U ) {
-      cache(i).io.missUnit_dcache_grant <> io.missUnit_dcache_grant  
+    for ( i <- 0 until bk ) yield {
+      cache(i).io.missUnit_dcache_acquire.get.ready  := false.B
+      cache(i).io.missUnit_dcache_grant.get.valid    := false.B
+      cache(i).io.missUnit_dcache_grant.get.bits     := 0.U.asTypeOf(new TLBundleD(dEdge(0).bundle))
+      cache(i).io.missUnit_dcache_grantAck.get.ready := false.B
+      cache(i).io.probeUnit_dcache_probe.get.valid   := false.B
+      cache(i).io.probeUnit_dcache_probe.get.bits    := 0.U.asTypeOf(new TLBundleB(dEdge(0).bundle))
+      cache(i).io.writeBackUnit_dcache_release.get.ready := false.B
+      cache(i).io.writeBackUnit_dcache_grant.get.valid   := false.B
+      cache(i).io.writeBackUnit_dcache_grant.get.bits    := 0.U.asTypeOf(new TLBundleD(dEdge(0).bundle))
     }
 
-    grantAckArb.io.in(i) <> cache(i).io.missUnit_dcache_grantAck
-
-    when( (if( bk > 1 ) {io.probeUnit_dcache_probe.bits.address(addr_lsb+bk_w-1,addr_lsb)} else {0.U}) === i.U ) {
-      cache(i).io.probeUnit_dcache_probe <> io.probeUnit_dcache_probe   
-    }
-
-    when( io.writeBackUnit_dcache_grant.bits.source === i.U ) {
-      cache(i).io.writeBackUnit_dcache_grant <> io.writeBackUnit_dcache_grant    
-    }
-
-  }
-
-  /** @note chn-C will carry multi-beat data from client to manager, which is a N to 1 transation, and may be grabbed
-    * @note however there will be one cycle latency for chn-c
-    */
-  val is_chnc_busy = RegInit(VecInit(Seq.fill(bk)(false.B)))
-  val is_release_done = for ( i <- 0 until bk ) yield { dEdge(0).count(cache(i).io.writeBackUnit_dcache_release)._3 }
-  for( i <- 0 until bk ) yield {
-    when( cache(i).io.writeBackUnit_dcache_release.fire ) { is_chnc_busy(i) := Mux( is_release_done(i), false.B, true.B )}
-  }
-
-  
-  for ( i <- 0 until bk ) {
-    releaseArb.io.in(i) <> cache(i).io.writeBackUnit_dcache_release
-  }
-  when( is_chnc_busy.forall((x:Bool) => (x === false.B)) ) {
-    io.writeBackUnit_dcache_release <> releaseArb.io.out
-  } .otherwise {
-    releaseArb.io.out.ready := false.B
+    io.missUnit_dcache_acquire.get  <>  acquireArb.io.out
+    io.missUnit_dcache_grantAck.get <> grantAckArb.io.out
     for ( i <- 0 until bk ) {
-      when( is_chnc_busy(i) === true.B  ) { io.writeBackUnit_dcache_release <> cache(i).io.writeBackUnit_dcache_release }
+      acquireArb.io.in(i) <> cache(i).io.missUnit_dcache_acquire.get
+
+      when( io.missUnit_dcache_grant.get.bits.source === i.U ) {
+        cache(i).io.missUnit_dcache_grant.get <> io.missUnit_dcache_grant.get
+      }
+
+      grantAckArb.io.in(i) <> cache(i).io.missUnit_dcache_grantAck.get
+
+      when( (if( bk > 1 ) {io.probeUnit_dcache_probe.get.bits.address(addr_lsb+bk_w-1,addr_lsb)} else {0.U}) === i.U ) {
+        cache(i).io.probeUnit_dcache_probe.get <> io.probeUnit_dcache_probe.get  
+      }
+
+      when( io.writeBackUnit_dcache_grant.get.bits.source === i.U ) {
+        cache(i).io.writeBackUnit_dcache_grant.get <> io.writeBackUnit_dcache_grant.get
+      }
     }
+
+      /** @note chn-C will carry multi-beat data from client to manager, which is a N to 1 transation, and may be grabbed
+        * @note however there will be one cycle latency for chn-c
+        */
+      val is_chnc_busy = RegInit(VecInit(Seq.fill(bk)(false.B)))
+      val is_release_done = for ( i <- 0 until bk ) yield { dEdge(0).count(cache(i).io.writeBackUnit_dcache_release.get)._3 }
+      for( i <- 0 until bk ) yield {
+        when( cache(i).io.writeBackUnit_dcache_release.get.fire ) { is_chnc_busy(i) := Mux( is_release_done(i), false.B, true.B )}
+      }
+
+      for ( i <- 0 until bk ) {
+        releaseArb.io.in(i) <> cache(i).io.writeBackUnit_dcache_release.get
+      }
+      when( is_chnc_busy.forall((x:Bool) => (x === false.B)) ) {
+        io.writeBackUnit_dcache_release.get <> releaseArb.io.out
+      } .otherwise {
+        releaseArb.io.out.ready := false.B
+        for ( i <- 0 until bk ) {
+          when( is_chnc_busy(i) === true.B  ) { io.writeBackUnit_dcache_release.get <> cache(i).io.writeBackUnit_dcache_release.get }
+        }
+      }
+      assert( PopCount(is_chnc_busy) <= 1.U, "Assert Failed at dcache chn-c Mux, sel should be one-hot" )
+  } else {
+    // val dcache_getPut = if ( hasL2 ) { None } else { Some(        new DecoupledIO(new TLBundleA(edge.bundle)) ) }
+    // val dcache_access = if ( hasL2 ) { None } else { Some(Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))) }
+    val getPutArb  = Module(new Arbiter(new TLBundleA(dEdge(0).bundle), n = bk))
+
+    io.dcache_getPut.get.valid := false.B
+    io.dcache_getPut.get.bits := 0.U.asTypeOf(new TLBundleA(dEdge(0).bundle))
+    io.dcache_access.get.ready := false.B
+
+    for ( i <- 0 until bk ) yield {
+      cache(i).io.dcache_getPut.get.ready  := false.B
+      cache(i).io.dcache_access.get.valid  := false.B
+      cache(i).io.dcache_access.get.bits   := 0.U.asTypeOf(new TLBundleD(dEdge(0).bundle))
+    }
+
+    io.dcache_getPut.get  <>  getPutArb.io.out
+
+    for ( i <- 0 until bk ) {
+      getPutArb.io.in(i) <> cache(i).io.dcache_getPut.get
+
+      when( io.dcache_access.get.bits.source === i.U ) {
+        cache(i).io.dcache_access.get <> io.dcache_access.get
+      }
+    }    
   }
-  assert( PopCount(is_chnc_busy) <= 1.U, "Assert Failed at dcache chn-c Mux, sel should be one-hot" )
+
+
+
 
 
 }

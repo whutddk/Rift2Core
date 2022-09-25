@@ -21,7 +21,7 @@ package rift2Core.define
 import chisel3._
 import chisel3.util._
 
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
 
@@ -701,33 +701,18 @@ class Lsu_iss_info(implicit p: Parameters) extends RiftBundle {
 
   def paddr = param.dat.op1
 
-  def wdata_align64 = {
-      val res = Wire(UInt(64.W))
-      res := param.dat.op2 << ( paddr(2,0) << 3 )
+  def wdata_align(dw: Int) = {
+      val res = Wire(UInt(dw.W))
+      res := param.dat.op2 << ( paddr((log2Ceil(dw/8)-1),0) << 3 )
       res
     }
 
-  def wstrb_align64 = {
-    val wstrb = Wire(UInt(8.W))
+  def wstrb_align(dw: Int) = {
+    val wstrb = Wire(UInt((dw/8).W))
     wstrb := Mux1H(Seq(
         fun.is_byte -> "b00000001".U, fun.is_half -> "b00000011".U,
         fun.is_word -> "b00001111".U, fun.is_dubl -> "b11111111".U
-      )) << paddr(2,0)
-    wstrb
-  }
-
-  def wdata_align256 = {
-      val res = Wire(UInt(256.W))
-      res := param.dat.op2 << ( paddr(4,0) << 3 )
-      res
-    }
-
-  def wstrb_align256 = {
-    val wstrb = Wire(UInt(64.W))
-    wstrb := Mux1H(Seq(
-        fun.is_byte -> "b00000001".U, fun.is_half -> "b00000011".U,
-        fun.is_word -> "b00001111".U, fun.is_dubl -> "b11111111".U
-      )) << paddr(4,0)
+      )) << paddr((log2Ceil(dw/8)-1),0)
     wstrb
   }
 }
@@ -851,7 +836,7 @@ class Info_clint_csr(implicit p: Parameters) extends RiftBundle {
 
 class Info_cmm_lsu(implicit p: Parameters) extends RiftBundle {
   val is_amo_pending = Bool()
-  val is_store_commit = Vec(2, Bool())
+  val is_store_commit = Vec(cm_chn, Bool())
 }
 
 class Info_lsu_cmm(implicit p: Parameters) extends RiftBundle {
@@ -885,3 +870,15 @@ class Info_if_cmm(implicit p: Parameters) extends RiftBundle {
   val ill_vaddr = UInt(64.W)
 }
 
+class AClint_Bundle extends Bundle {
+  val msi = Bool()
+  val mti = Bool()
+
+  val ssi = Bool()
+  val sti = Bool()
+}
+
+class Plic_Bundle extends Bundle {
+  val mei = Bool()
+  val sei = Bool()
+}

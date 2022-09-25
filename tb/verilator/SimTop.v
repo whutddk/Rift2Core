@@ -29,6 +29,39 @@ module SimTop (
 	output success,
 	output fail,
 
+  input          io_interrupt_0,
+  input          io_interrupt_1,
+  input          io_interrupt_2,
+  input          io_interrupt_3,
+  input          io_interrupt_4,
+  input          io_interrupt_5,
+  input          io_interrupt_6,
+  input          io_interrupt_7,
+  input          io_interrupt_8,
+  input          io_interrupt_9,
+  input          io_interrupt_10,
+  input          io_interrupt_11,
+  input          io_interrupt_12,
+  input          io_interrupt_13,
+  input          io_interrupt_14,
+  input          io_interrupt_15,
+  input          io_interrupt_16,
+  input          io_interrupt_17,
+  input          io_interrupt_18,
+  input          io_interrupt_19,
+  input          io_interrupt_20,
+  input          io_interrupt_21,
+  input          io_interrupt_22,
+  input          io_interrupt_23,
+  input          io_interrupt_24,
+  input          io_interrupt_25,
+  input          io_interrupt_26,
+  input          io_interrupt_27,
+  input          io_interrupt_28,
+  input          io_interrupt_29,
+  input          io_interrupt_30,
+
+
   output [63:0] trace_abi_zero,
   output [63:0] trace_abi_ra  ,
   output [63:0] trace_abi_sp  ,
@@ -199,13 +232,15 @@ module SimTop (
   output [63:0] trace_misBPredict,
   output [63:0] trace_scsJPredict,
   output [63:0] trace_misJPredict,
+
 	input CLK,
+  input rtc_clock,
 
 	input RSTn
 	
+
 );
 
-	reg rtc_clock;
 
   wire         trstn = 1'b1;
   wire         tck = 1'b0;
@@ -387,13 +422,45 @@ Rift2Chip s_Rift2Chip(
   .io_JtagIO_TDO_driven(tdo_en),
   .io_ndreset(),
 
-	.io_rtc_clock            (rtc_clock)
+  .io_interrupt_0(io_interrupt_0),
+  .io_interrupt_1(io_interrupt_1),
+  .io_interrupt_2(io_interrupt_2),
+  .io_interrupt_3(io_interrupt_3),
+  .io_interrupt_4(io_interrupt_4),
+  .io_interrupt_5(io_interrupt_5),
+  .io_interrupt_6(io_interrupt_6),
+  .io_interrupt_7(io_interrupt_7),
+  .io_interrupt_8(io_interrupt_8),
+  .io_interrupt_9(io_interrupt_9),
+  .io_interrupt_10(io_interrupt_10),
+  .io_interrupt_11(io_interrupt_11),
+  .io_interrupt_12(io_interrupt_12),
+  .io_interrupt_13(io_interrupt_13),
+  .io_interrupt_14(io_interrupt_14),
+  .io_interrupt_15(io_interrupt_15),
+  .io_interrupt_16(io_interrupt_16),
+  .io_interrupt_17(io_interrupt_17),
+  .io_interrupt_18(io_interrupt_18),
+  .io_interrupt_19(io_interrupt_19),
+  .io_interrupt_20(io_interrupt_20),
+  .io_interrupt_21(io_interrupt_21),
+  .io_interrupt_22(io_interrupt_22),
+  .io_interrupt_23(io_interrupt_23),
+  .io_interrupt_24(io_interrupt_24),
+  .io_interrupt_25(io_interrupt_25),
+  .io_interrupt_26(io_interrupt_26),
+  .io_interrupt_27(io_interrupt_27),
+  .io_interrupt_28(io_interrupt_28),
+  .io_interrupt_29(io_interrupt_29),
+  .io_interrupt_30(io_interrupt_30),
+
+	.io_rtc_clock(rtc_clock)
 );
 
 
 
 
-axi_full_slv_sram # ( .DW(128), .AW(14) ) s_axi_full_slv_sram 
+axi_full_slv_sram # ( .DW(128), .AW(18) ) s_axi_full_slv_sram 
 (
 
 	.MEM_AWID   (io_mem_chn_aw_bits_id),
@@ -472,9 +539,10 @@ debuger i_debuger(
 	
 );
 
-initial begin
-	rtc_clock = 0;
-end
+
+
+
+
 
 
 
@@ -533,7 +601,7 @@ string testName;
 `define MEM s_axi_full_slv_sram.i_sram.ram
 reg [7:0] mem [0:200000];
 
-localparam DP = 2**14;
+localparam DP = 2**18;
 integer i, by;
 initial begin
 

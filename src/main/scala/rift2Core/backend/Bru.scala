@@ -23,7 +23,7 @@ import chisel3._
 import chisel3.util._
 import chisel3.experimental.dataview._
 import rift2Core.define._
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
 abstract class BruBase()(implicit p: Parameters) extends RiftModule {
@@ -44,8 +44,8 @@ abstract class BruBase()(implicit p: Parameters) extends RiftModule {
   })
 
   val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, true, false ) )
-  val bctq = Module(new Queue( new Branch_CTarget_Bundle, (if(!isMinArea) 4 else 2) ) )
-  val jctq = Module(new Queue( new Jump_CTarget_Bundle,   (if(!isMinArea) 4 else 2) ) )
+  val bctq = Module(new Queue( new Branch_CTarget_Bundle, (if(!isMinArea) 4 else 1) ) )
+  val jctq = Module(new Queue( new Jump_CTarget_Bundle,   (if(!isMinArea) 4 else 1) ) )
 
   val misPredict_locker = RegInit(false.B)
 

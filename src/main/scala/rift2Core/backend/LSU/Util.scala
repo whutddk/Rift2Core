@@ -24,7 +24,7 @@ import chisel3.util._
 
 import rift2Core.define._
 
-import rift._
+import rift2Chip._
 import base._
 
 import chipsalliance.rocketchip.config.Parameters
@@ -79,10 +79,11 @@ object pkg_Dcache_Enq_Bundle{
   def apply( ori: Lsu_iss_info, overlapReq: Stq_req_Bundle, overlapResp: Stq_resp_Bundle)(implicit p: Parameters) = {
 
     val res = Wire(new Dcache_Enq_Bundle)
+    val dw = res.wdata.getWidth
 
     res.paddr := ori.paddr
-    res.wdata := Mux( ori.fun.is_lu, reAlign_data( from = 64, to = 256, data = overlapResp.wdata, addr = overlapReq.paddr ), ori.wdata_align256)
-    res.wstrb := Mux( ori.fun.is_lu, reAlign_strb( from = 64, to = 256, strb = overlapResp.wstrb, addr = overlapReq.paddr ), ori.wstrb_align256)
+    res.wdata := Mux( ori.fun.is_lu, reAlign_data( from = 64, to = dw, data = overlapResp.wdata, addr = overlapReq.paddr ), ori.wdata_align(dw))
+    res.wstrb := Mux( ori.fun.is_lu, reAlign_strb( from = 64, to = dw, strb = overlapResp.wstrb, addr = overlapReq.paddr ), ori.wstrb_align(dw))
 
     {
       res.fun := 0.U.asTypeOf(new Cache_op)

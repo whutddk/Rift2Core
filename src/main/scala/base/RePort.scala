@@ -29,6 +29,8 @@ class RePort[T<:Data]( dw: T, port: Int) extends Module{
     val deq  = Vec(port, new DecoupledIO(dw) )
     } )
 
+    assert ( PopCount( io.enq.map(_.fire) ) === PopCount( io.deq.map(_.fire) ), "Assert Failed at RePort! enq-fire should equal to deq-fire!"  )
+
 
   for ( i <- 0 until port ) yield {
     io.deq(i).valid := false.B 
@@ -74,10 +76,67 @@ class RePort[T<:Data]( dw: T, port: Int) extends Module{
       io.deq(i).bits := io.enq(sel(i)).bits
     }
     // for decouple
-    io.deq(i).valid := (io.enq.count((x:DecoupledIO[T]) => (x.valid === true.B)) > i.U)
+    io.deq(i).valid := (io.enq.count((x:DecoupledIO[T]) => (x.fire === true.B)) > i.U)
     io.enq(i).ready := (for ( j <- 0 to i ) yield { io.deq(i).ready === true.B }).reduce(_&_)
 
   }
+
+  // println("Warning, This is a Temp imp for zip Port");
+
+  // val res_valid = Wire( Vec(port, Vec( port, Bool()) ) )
+  // val res_idx   = Wire( Vec(port, Vec( port, UInt( log2Ceil(port+1).W ) )) )
+
+  // //init
+  // for( i <- 0 until port ) {
+  //   res_valid(0)(i) := io.enq(i).valid
+  //   res_idx(0)(i)   := i.U
+  //   io.enq(i).ready := false.B
+  //   io.deq(i).valid := false.B
+  //   io.deq(i).bits  := DontCare
+  // }
+
+
+
+  // for( j <- 1 until port ) {
+  //   val (out_valid, out_idx) = ZipBuff( res_valid(j-1), res_idx(j-1) )
+  //   res_valid(j) := out_valid
+  //   res_idx(j)   := out_idx
+  // }
+
+  // for( i <- 0 until port ) {
+  //   val idx = res_idx(port-1)(i)
+  //   when( idx =/= port.U ) {
+  //     io.deq(i) <> io.enq(idx)
+  //   }
+  // }
+
+  // //assert check
+  // for ( i <- 1 until port ) {
+  //   when( io.deq(i).fire ) {
+  //     for ( j <- 0 until i ) {
+  //       assert( io.deq(j).fire, "Assert Failed at RePort-deq, the deq should following the fire sequence!" )
+  //     }
+  //   }
+  // }
+
+  // def ZipBuff( in_valid: Vec[Bool], in_idx: Vec[UInt] ): (Vec[Bool], Vec[UInt]) = {
+  //   val out_valid = WireDefault(in_valid)
+  //   val out_idx  = WireDefault(in_idx)
+  //   for ( i <- 0 until port-1 ) {
+  //     when( in_valid(i) === false.B ) {
+  //       out_valid(i)   := in_valid(i+1)
+  //       out_valid(i+1) := false.B
+
+  //       out_idx(i)    := in_idx(i+1)
+  //       out_idx(i+1)  := port.U
+  //     }
+  //   }
+  //   return (out_valid, out_idx)
+  // }
+
+
+
+
 
 }
 

@@ -20,10 +20,10 @@ package rift2Chip
 
 import chisel3._
 import chisel3.util._
-import rift._
 import rift2Core._
-import axi._
 import debug._
+
+import rift2Core.define._
 
 import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
@@ -71,12 +71,16 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
   val i_rift2Core = LazyModule( new Rift2Core(isFlatten) )
   val i_debugger = if ( hasDebugger) {Some(LazyModule(new Debugger(nComponents = 1)))} else {None}
-
+  val i_aclint = LazyModule( new AClint( nTiles = 1 ) )
+  val nDevices = 31
+  val i_plic = LazyModule( new Plic( nHarts = 1, nPriorities = 8, nDevices = nDevices ))
   val sifiveCache = LazyModule(new InclusiveCache(
-      cache = CacheParameters( level = 2, ways = 8, sets = 2048, blockBytes = 256/8, beatBytes = l1BeatBits/8 ),
+      cache = CacheParameters( level = 2, ways = 8, sets = 2048, blockBytes = l1DW/8, beatBytes = l1BeatBits/8 ),
       micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
       control = None
     ))
+
+
 
 
   val memRange = AddressSet(0x00000000L, 0xffffffffL).subtract(AddressSet(0x0L, 0x7fffffffL))
@@ -111,27 +115,13 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
     )
   ))
 
-  // val axiRam =
-  //   AXI4RAM(
-  //     address = AddressSet(0x80000000L, 0x0fffffffL),
-  //     cacheable = true,
-  //     parentLogicalTreeNode = None,
-  //     executable = true,
-  //     beatBytes = 128/8,
-  //     devName = Some("ddr"),
-  //     errors  = Nil,
-  //     wcorrupt = false
-  //   )
+
 
 
   val l2_xbarMem = TLXbar()
   val l2_xbar64 = TLXbar()
   val l1_xbarMem = TLXbar()
   val l1_xbar64 = TLXbar()
-  // val tlcork = TLCacheCork()
-
-
-
 
   memAXI4SlaveNode := 
     AXI4UserYanker() := 
@@ -149,7 +139,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
     l2_xbarMem :=* TLBuffer() :=* TLCacheCork() := sifiveCache.node := TLBuffer() := l1_xbarMem
     l2_xbarMem := TLBuffer() := TLWidthWidget(64 / 8) := l1_xbar64
-    l2_xbar64 :=  TLBuffer() := TLWidthWidget(l1BeatBits / 8) := TLBuffer()  :=l1_xbarMem    
+    l2_xbar64 :=  TLBuffer() := TLWidthWidget(l1BeatBits / 8) := TLBuffer()  := l1_xbarMem    
     l2_xbar64 :=  TLBuffer() :=  l1_xbar64
 
 
@@ -164,11 +154,12 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
     l1_xbar64 := TLBuffer() := i_rift2Core.periphClientNode
 
     if( hasDebugger ) {
-      l1_xbar64 := TLBuffer() := i_debugger.get.dm.sbaClientNode
-      i_debugger.get.dm.peripNode := TLBuffer():= TLFragmenter(8, 32) := TLBuffer() := l2_xbar64      
+      // l1_xbar64 := TLBuffer() := i_debugger.get.dm.sbaClientNode
+      i_debugger.get.dm.peripNode := TLBuffer():= TLFragmenter(8, 32) := TLBuffer() := l1_xbar64      
     }
 
-
+    i_aclint.node := TLBuffer() := l1_xbar64
+    i_plic.node   := TLBuffer() := l1_xbar64
 
 
 
@@ -181,31 +172,6 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
   }
   
 
-  // val managerParameters = TLSlavePortParameters.v1(
-  //     managers = Seq(TLSlaveParameters.v1(
-  //       address = Seq(AddressSet(0x1000, 0xfff)),
-  //       regionType = RegionType.CACHED,
-  //       supportsAcquireT = TransferSizes(32),
-  //       supportsAcquireB = TransferSizes(32),
-  //       alwaysGrantsT = true
-  //     )),
-  //     beatBytes = 256/8,
-  //     endSinkId = 1
-  // )
-
-  // val managerNode = TLManagerNode(portParams = Seq(managerParameters))
-
-  
-  // val memory1 = InModuleBody {
-  //   managerNode.makeIOs()
-  // }
-      
-
-
-
-  // managerNode := l2xbar := TLBuffer() := mdl.clientNode
-
-
 
   lazy val module = new LazyModuleImp(this) {
     val io = IO( new Bundle{
@@ -213,10 +179,10 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
       val ndreset = if (hasDebugger) {Some(Output(Bool()))}  else { None }
 
 
+      val interrupt = Input( Vec(nDevices, Bool()) )
       val rtc_clock = Input(Bool())
     })
   
-
     if( hasDebugger ) {
       i_debugger.get.module.io.JtagIO <> io.JtagIO.get
       io.ndreset.get := i_debugger.get.module.io.ndreset
@@ -224,8 +190,15 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
     }
 
 
-
     i_rift2Core.module.io.rtc_clock := io.rtc_clock
+
+
+    i_aclint.module.io.rtc_clock := io.rtc_clock
+    i_rift2Core.module.io.aclint := i_aclint.module.io.int(0)
+    i_rift2Core.module.io.plic.mei := i_plic.module.io.context(0)
+    i_rift2Core.module.io.plic.sei := false.B
+
+    i_plic.module.io.interrupt := io.interrupt
   }
 
 

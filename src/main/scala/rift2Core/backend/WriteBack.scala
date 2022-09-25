@@ -28,7 +28,7 @@ import base._
 import rift2Core.define._
 import rift2Core.diff._
 
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config._
 
 class WriteBack(implicit p: Parameters) extends RiftModule {
@@ -38,12 +38,14 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     val dpt_Xrename = Vec( rn_chn, Flipped(new dpt_rename_info) )
     val dpt_Frename = Vec( rn_chn, Flipped(new dpt_rename_info) )
 
+    
+      
+    val ooo_readOp  = ( if ( opChn > 1)  { Some(Vec( opChn/2, Flipped( new iss_readOp_info(dw = 64)) ) ) } else {None})
+    val ito_readOp  = ( if ( opChn > 1)  { Some(Vec( opChn/2, Flipped( new iss_readOp_info(dw = 64)) ) ) } else {None})
+    val sig_readOp  = ( if ( opChn == 1) { Some(Vec( 1,       Flipped( new iss_readOp_info(dw = 64)) ) ) } else {None})
 
-    val ooo_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 64)) )
-    val ito_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 64)) )
 
-
-    val frg_readOp  = Vec( opChn/2, Flipped( new iss_readOp_info(dw = 65)) )
+    val frg_readOp  = Vec( (if (opChn > 1) {opChn/2} else {1}) , Flipped( new iss_readOp_info(dw = 65)) )
 
 
     val alu_iWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 64)))
@@ -63,13 +65,13 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
   })
 
 
-  val iReg = Module(new XRegFiles(dw = 64, rn_chn, opChn, wbChn, cm_chn))
+  val iReg = Module(new XRegFiles(dw = 64, opChn, wbChn))
   val fRegIO = 
     if( hasFpu ) {
-      val mdl = Module(new FRegFiles(dw = 65, rn_chn, opChn/2, wb_chn=2, cm_chn))
+      val mdl = Module(new FRegFiles(dw = 65, (if ( opChn > 1 ) {opChn/2} else {1}), wb_chn=2))
       mdl.io
     } else {
-      val mdl = Module(new FakeFRegFiles(dw = 65, rn_chn, opChn/2, wb_chn=2, cm_chn) )
+      val mdl = Module(new FakeFRegFiles(dw = 65, (if ( opChn > 1 ) {opChn/2} else {1}), wb_chn=2) )
       mdl.io
     }
 
@@ -112,13 +114,18 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
   iReg.io.diffReg <> io.diffXReg
   fRegIO.diffReg <> io.diffFReg
 
+  if( opChn > 1 ) {
+    for ( i <- 0 until opChn/2 ) {
+      iReg.io.iss_readOp(2*i)   <> io.ooo_readOp.get(i)
+      iReg.io.iss_readOp(2*i+1) <> io.ito_readOp.get(i)
 
-  for ( i <- 0 until opChn/2 ) {
-    iReg.io.iss_readOp(2*i)   <> io.ooo_readOp(i)
-    iReg.io.iss_readOp(2*i+1) <> io.ito_readOp(i)
-
-    fRegIO.iss_readOp(i) <> io.frg_readOp(i)
+      fRegIO.iss_readOp(i) <> io.frg_readOp(i)
+    }    
+  } else if( opChn == 1 ) {
+    iReg.io.iss_readOp(0)   <> io.sig_readOp.get(0)
+    fRegIO.iss_readOp(0) <> io.frg_readOp(0)
   }
+
 
 
 

@@ -28,7 +28,7 @@ import rift2Core.backend._
 import rift2Core.backend.fpu._
 import rift2Core.backend.lsu._
 import rift2Core.privilege._
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
@@ -71,12 +71,15 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     val cmm_lsu = Input(new Info_cmm_lsu)
     val lsu_cmm = Output( new Info_lsu_cmm )
 
-    val missUnit_dcache_acquire = DecoupledIO(new TLBundleA(edge(0).bundle))
-    val missUnit_dcache_grant = Flipped(DecoupledIO(new TLBundleD(edge(0).bundle)))
-    val missUnit_dcache_grantAck  = DecoupledIO(new TLBundleE(edge(0).bundle))
-    val probeUnit_dcache_probe = Flipped(DecoupledIO(new TLBundleB(edge(0).bundle)))
-    val writeBackUnit_dcache_release = DecoupledIO(new TLBundleC(edge(0).bundle))
-    val writeBackUnit_dcache_grant   = Flipped(DecoupledIO(new TLBundleD(edge(0).bundle)))
+    val missUnit_dcache_acquire  = if( hasL2 ) Some(new DecoupledIO(new TLBundleA(edge(0).bundle)))               else {None}
+    val missUnit_dcache_grant    = if( hasL2 ) Some(Flipped(new DecoupledIO(new TLBundleD(edge(0).bundle))))      else {None}
+    val missUnit_dcache_grantAck = if( hasL2 ) Some(DecoupledIO(new TLBundleE(edge(0).bundle)))                   else {None}
+    val probeUnit_dcache_probe   = if( hasL2 )     Some(Flipped(new DecoupledIO(new TLBundleB(edge(0).bundle))))  else {None}
+    val writeBackUnit_dcache_release = if( hasL2 ) Some(new DecoupledIO(new TLBundleC(edge(0).bundle))         )  else {None}
+    val writeBackUnit_dcache_grant   = if( hasL2 ) Some(Flipped(new DecoupledIO(new TLBundleD(edge(0).bundle))))  else {None}
+
+    val dcache_getPut = if ( hasL2 ) { None } else { Some(        new DecoupledIO(new TLBundleA(edge(0).bundle)) ) }
+    val dcache_access = if ( hasL2 ) { None } else { Some(Flipped(new DecoupledIO(new TLBundleD(edge(0).bundle)))) }
 
     val system_getPut = new DecoupledIO(new TLBundleA(edge(1).bundle))
     val system_access = Flipped(new DecoupledIO(new TLBundleD(edge(1).bundle)))
@@ -105,29 +108,40 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     mdl.io.cmm_lsu <> io.cmm_lsu
     mdl.io.lsu_cmm <> io.lsu_cmm
 
-    io.missUnit_dcache_acquire.valid := mdl.io.missUnit_dcache_acquire.valid
-    io.missUnit_dcache_acquire.bits := mdl.io.missUnit_dcache_acquire.bits
-    mdl.io.missUnit_dcache_acquire.ready := io.missUnit_dcache_acquire.ready
+    if ( hasL2 ) {
+    io.missUnit_dcache_acquire.get.valid := mdl.io.missUnit_dcache_acquire.get.valid
+    io.missUnit_dcache_acquire.get.bits  := mdl.io.missUnit_dcache_acquire.get.bits
+    mdl.io.missUnit_dcache_acquire.get.ready := io.missUnit_dcache_acquire.get.ready
 
-    mdl.io.missUnit_dcache_grant.valid := io.missUnit_dcache_grant.valid
-    mdl.io.missUnit_dcache_grant.bits  := io.missUnit_dcache_grant.bits
-    io.missUnit_dcache_grant.ready := mdl.io.missUnit_dcache_grant.ready
+    mdl.io.missUnit_dcache_grant.get.valid := io.missUnit_dcache_grant.get.valid
+    mdl.io.missUnit_dcache_grant.get.bits  := io.missUnit_dcache_grant.get.bits
+    io.missUnit_dcache_grant.get.ready := mdl.io.missUnit_dcache_grant.get.ready
 
-    io.missUnit_dcache_grantAck.valid := mdl.io.missUnit_dcache_grantAck.valid
-    io.missUnit_dcache_grantAck.bits := mdl.io.missUnit_dcache_grantAck.bits
-    mdl.io.missUnit_dcache_grantAck.ready := io.missUnit_dcache_grantAck.ready
+    io.missUnit_dcache_grantAck.get.valid := mdl.io.missUnit_dcache_grantAck.get.valid
+    io.missUnit_dcache_grantAck.get.bits := mdl.io.missUnit_dcache_grantAck.get.bits
+    mdl.io.missUnit_dcache_grantAck.get.ready := io.missUnit_dcache_grantAck.get.ready
 
-    mdl.io.probeUnit_dcache_probe.valid := io.probeUnit_dcache_probe.valid
-    mdl.io.probeUnit_dcache_probe.bits := io.probeUnit_dcache_probe.bits
-    io.probeUnit_dcache_probe.ready := mdl.io.probeUnit_dcache_probe.ready
+    mdl.io.probeUnit_dcache_probe.get.valid := io.probeUnit_dcache_probe.get.valid
+    mdl.io.probeUnit_dcache_probe.get.bits := io.probeUnit_dcache_probe.get.bits
+    io.probeUnit_dcache_probe.get.ready := mdl.io.probeUnit_dcache_probe.get.ready
 
-    io.writeBackUnit_dcache_release.valid := mdl.io.writeBackUnit_dcache_release.valid
-    io.writeBackUnit_dcache_release.bits := mdl.io.writeBackUnit_dcache_release.bits
-    mdl.io.writeBackUnit_dcache_release.ready := io.writeBackUnit_dcache_release.ready
+    io.writeBackUnit_dcache_release.get.valid := mdl.io.writeBackUnit_dcache_release.get.valid
+    io.writeBackUnit_dcache_release.get.bits := mdl.io.writeBackUnit_dcache_release.get.bits
+    mdl.io.writeBackUnit_dcache_release.get.ready := io.writeBackUnit_dcache_release.get.ready
 
-    mdl.io.writeBackUnit_dcache_grant.valid := io.writeBackUnit_dcache_grant.valid
-    mdl.io.writeBackUnit_dcache_grant.bits := io.writeBackUnit_dcache_grant.bits
-    io.writeBackUnit_dcache_grant.ready := mdl.io.writeBackUnit_dcache_grant.ready
+    mdl.io.writeBackUnit_dcache_grant.get.valid := io.writeBackUnit_dcache_grant.get.valid
+    mdl.io.writeBackUnit_dcache_grant.get.bits := io.writeBackUnit_dcache_grant.get.bits
+    io.writeBackUnit_dcache_grant.get.ready := mdl.io.writeBackUnit_dcache_grant.get.ready      
+    } else {
+      io.dcache_getPut.get.valid := mdl.io.dcache_getPut.get.valid
+      io.dcache_getPut.get.bits  := mdl.io.dcache_getPut.get.bits
+      mdl.io.dcache_getPut.get.ready := io.dcache_getPut.get.ready
+
+      mdl.io.dcache_access.get.valid := io.dcache_access.get.valid
+      mdl.io.dcache_access.get.bits  := io.dcache_access.get.bits
+      io.dcache_access.get.ready := mdl.io.dcache_access.get.ready
+    }
+   
 
 
     io.system_getPut.valid := mdl.io.system_getPut.valid
@@ -151,7 +165,7 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
 
   }
   val csr = Module(new Csr)
-  val mulDiv = Module(new MulDiv)
+  val mulDiv = (if( hasMulDiv ) {Module(new MulDiv)} else { Module(new FakeMulDiv) })
 
   val fpu = {
     val mdl = 

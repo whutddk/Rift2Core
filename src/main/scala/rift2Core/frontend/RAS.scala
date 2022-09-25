@@ -77,7 +77,7 @@ class RAS()(implicit p: Parameters) extends IFetchModule {
 
 
 
-  assert ( ~(io.enq.fire & io.deq.fire), "Assert Fail at RSA, RSA will never pop and push at the same times" )
+  // assert ( ~(io.enq.fire & io.deq.fire), "Assert Fail at RSA, RSA will never pop and push at the same times" )
 
 
 }

@@ -84,10 +84,13 @@ class BIM()(implicit p: Parameters) extends IFetchModule {
     )
   }
 
+  val bypassFifo = Module( new Queue( Vec(2,Bool()), entries = 1, pipe = false, flow = true) )
 
-  io.resp.bits.bim_p := bim_P.read(rd_cl)
-  io.resp.bits.bim_h := bim_H.read(rd_cl)
-  io.resp.valid      := RegNext(io.req.fire)
-  io.req.ready       := io.resp.ready
+  bypassFifo.io.enq.valid := RegNext(io.req.fire); bypassFifo.io.enq.bits(0) := bim_P.read(rd_cl); bypassFifo.io.enq.bits(1) := bim_H.read(rd_cl); io.req.ready := bypassFifo.io.enq.ready
+  io.resp.valid := bypassFifo.io.deq.valid; io.resp.bits.bim_p := bypassFifo.io.deq.bits(0); io.resp.bits.bim_h := bypassFifo.io.deq.bits(1); bypassFifo.io.deq.ready := io.resp.ready
+  // io.resp.bits.bim_p := bim_P.read(rd_cl)
+  // io.resp.bits.bim_h := bim_H.read(rd_cl)
+  // io.resp.valid      := RegNext(io.req.fire)
+  // io.req.ready       := io.resp.ready
 }
 

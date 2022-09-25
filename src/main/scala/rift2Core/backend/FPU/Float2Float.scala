@@ -22,7 +22,7 @@ import rift2Core.define._
 import rift2Core.backend._
 import chisel3.experimental.dataview._
 
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config._
 
 class FPToFP(latency: Int)(implicit p: Parameters) extends RiftModule with HasFPUParameters{

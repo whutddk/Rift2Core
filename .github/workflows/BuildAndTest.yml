@@ -69,6 +69,10 @@ jobs:
           cp -R target/scala-2.12/api /Users/runner/work/Rift2Core/ScalaDoc/$GITHUB_REF_NAME
 
           cd /Users/runner/work/Rift2Core/Rift2Core/generated/Release/
+          
+          tar -cvf Rift2300-Release.tar Rift2300/*
+          tar -cvf Rift2310-Release.tar Rift2310/*
+          tar -cvf Rift2320-Release.tar Rift2320/*
           tar -cvf Rift2330-Release.tar Rift2330/*
           tar -cvf Rift2340-Release.tar Rift2340/*
           tar -cvf Rift2350-Release.tar Rift2350/*
@@ -77,6 +81,10 @@ jobs:
           tar -cvf Rift2380-Release.tar Rift2380/*
           tar -cvf Rift2390-Release.tar Rift2390/*
           cd /Users/runner/work/Rift2Core/Rift2Core/generated/Debug/
+
+          tar -cvf Rift2300-Debug.tar  Rift2300/*
+          tar -cvf Rift2310-Debug.tar  Rift2310/*
+          tar -cvf Rift2320-Debug.tar  Rift2320/*
           tar -cvf Rift2330-Debug.tar  Rift2330/*
           tar -cvf Rift2340-Debug.tar  Rift2340/*
           tar -cvf Rift2350-Debug.tar  Rift2350/*
@@ -143,6 +151,12 @@ jobs:
           prerelease: true
           target_commitish: ${{github.ref_name}}
           files: |
+            ./generated/Release/Rift2300-Release.tar
+            ./generated/Debug/Rift2300-Debug.tar
+            ./generated/Release/Rift2310-Release.tar
+            ./generated/Debug/Rift2310-Debug.tar
+            ./generated/Release/Rift2320-Release.tar
+            ./generated/Debug/Rift2320-Debug.tar
             ./generated/Release/Rift2330-Release.tar
             ./generated/Debug/Rift2330-Debug.tar
             ./generated/Release/Rift2340-Release.tar
@@ -171,6 +185,12 @@ jobs:
           prerelease: false
           target_commitish: ${{github.ref_name}}
           files: |
+            ./generated/Release/Rift2300-Release.tar
+            ./generated/Debug/Rift2300-Debug.tar
+            ./generated/Release/Rift2310-Release.tar
+            ./generated/Debug/Rift2310-Debug.tar
+            ./generated/Release/Rift2320-Release.tar
+            ./generated/Debug/Rift2320-Debug.tar
             ./generated/Release/Rift2330-Release.tar
             ./generated/Debug/Rift2330-Debug.tar
             ./generated/Release/Rift2340-Release.tar
@@ -224,8 +244,7 @@ jobs:
       - name: set up apt
         run: |
           apt-get update
-          apt-get install -y wget git make g++ ccache
-
+          apt-get install -y wget git make g++ ccache zlib1g zlib1g-dev
 
           
       - name: Checkout Github Page

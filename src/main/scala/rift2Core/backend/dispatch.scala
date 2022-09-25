@@ -21,7 +21,7 @@ import chisel3._
 import chisel3.util._
 import base._
 import rift2Core.define._
-import rift._
+import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
 
@@ -36,29 +36,41 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
     val dpt_Frename = Vec( rn_chn, new dpt_rename_info )
 
 
-    val ooo_dpt_iss = Vec(opChn/2, new DecoupledIO(new Dpt_info))
-    val ito_dpt_iss = Vec(opChn/2, new DecoupledIO(new Dpt_info))
+    val ooo_dpt_iss = (if (opChn >  1) {Some(Vec(opChn/2, new DecoupledIO(new Dpt_info)))} else {None})
+    val ito_dpt_iss = (if (opChn >  1) {Some(Vec(opChn/2, new DecoupledIO(new Dpt_info)))} else {None})
+
+    val sig_dpt_iss = (if (opChn == 1) {Some(Vec( 1, new DecoupledIO(new Dpt_info)))} else {None})
 
     val rod_i = Vec(cm_chn,new DecoupledIO(new Info_reorder_i))
  
   })
 
 
-  val ooo_dpt_rePort =  Module(new RePort( new Dpt_info, port = rn_chn))
-
-  val ooo_dpt_fifo = {
-    val mdl = Module(new ZipQueue( new Dpt_info, (if(!isMinArea) 4 else 3), in = rn_chn, out = opChn/2, zip = opChn/2) )
-    mdl.io.enq <> ooo_dpt_rePort.io.deq
-    mdl.io.deq <> io.ooo_dpt_iss
-    mdl
+  val ooo_dpt_rePort = (if (opChn > 1) { Some(Module(new RePort( new Dpt_info, port = rn_chn))) } else {None})
+  if (opChn > 1) {
+    val ooo_dpt_fifo = {
+      val mdl = Module(new ZipQueue( new Dpt_info, (if(!isMinArea) 4 else 2), in = rn_chn, out = opChn/2, zip = opChn/2) )
+      mdl.io.enq <> ooo_dpt_rePort.get.io.deq
+      mdl.io.deq <> io.ooo_dpt_iss.get
+      mdl
+    }    
   }
 
-  val ito_dpt_rePort =  Module(new RePort( new Dpt_info, port = rn_chn))
-  val ito_dpt_fifo = {
-    val mdl = Module(new ZipQueue( new Dpt_info, (if(!isMinArea) 4 else 3), in = rn_chn, out = opChn/2, zip = opChn/2) )
-    mdl.io.enq <> ito_dpt_rePort.io.deq
-    mdl.io.deq <> io.ito_dpt_iss
-    mdl
+
+  val ito_dpt_rePort = (if (opChn > 1) { Some(Module(new RePort( new Dpt_info, port = rn_chn)))} else {None})
+  if (opChn > 1) {
+    val ito_dpt_fifo = {
+      val mdl = Module(new ZipQueue( new Dpt_info, (if(!isMinArea) 4 else 2), in = rn_chn, out = opChn/2, zip = opChn/2) )
+      mdl.io.enq <> ito_dpt_rePort.get.io.deq
+      mdl.io.deq <> io.ito_dpt_iss.get
+      mdl
+    }
+  }
+
+  val sig_dpt_fifo = if(opChn == 1) { Some(Module(new MultiPortFifo( new Dpt_info, 2, in = rn_chn, out = opChn ) ) )} else {None}
+  if( opChn == 1 ) {
+    sig_dpt_fifo.get.io.deq(0) <> io.sig_dpt_iss.get(0)
+    sig_dpt_fifo.get.io.flush := false.B
   }
 
 
@@ -72,22 +84,29 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
   val reg_phy = Wire(Vec(rn_chn, new Reg_PHY ) )
 
   for ( i <- 0 until rn_chn ) yield {
-    ooo_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_ooo_dpt
-    ito_dpt_rePort.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_ito_dpt
 
-    ooo_dpt_rePort.io.enq(i).bits := Mux( ooo_dpt_rePort.io.enq(i).valid, Pkg_ooo_dpt(io.bd_dpt(i).bits, reg_phy(i)), 0.U.asTypeOf(new Dpt_info) )
-    ito_dpt_rePort.io.enq(i).bits := Mux( ito_dpt_rePort.io.enq(i).valid, Pkg_ito_dpt(io.bd_dpt(i).bits, reg_phy(i)), 0.U.asTypeOf(new Dpt_info) )
+    if( opChn > 1 ) {
+      ooo_dpt_rePort.get.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_ooo_dpt
+      ito_dpt_rePort.get.io.enq(i).valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_ito_dpt
 
-    io.dpt_Xrename(i).req.valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_iwb
-    io.dpt_Xrename(i).req.bits.rd0 := Mux( io.dpt_Xrename(i).req.valid, io.bd_dpt(i).bits.param.raw.rd0, 0.U )
+      ooo_dpt_rePort.get.io.enq(i).bits := Pkg_ooo_dpt(io.bd_dpt(i).bits, reg_phy(i))
+      ito_dpt_rePort.get.io.enq(i).bits := Pkg_ito_dpt(io.bd_dpt(i).bits, reg_phy(i))      
+    } else {
+      require( opChn == 1 )
+      sig_dpt_fifo.get.io.enq(i).valid  := io.bd_dpt(i).fire
+      sig_dpt_fifo.get.io.enq(i).bits   := Pkg_sig_dpt(io.bd_dpt(i).bits, reg_phy(i))      
+    }
+
+    io.dpt_Xrename(i).req.valid    := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_iwb
+    io.dpt_Xrename(i).req.bits.rd0 := io.bd_dpt(i).bits.param.raw.rd0
 
     io.dpt_Xlookup(i).req.rs1 := io.bd_dpt(i).bits.param.raw.rs1
     io.dpt_Xlookup(i).req.rs2 := io.bd_dpt(i).bits.param.raw.rs2
     io.dpt_Xlookup(i).req.rs3 := 0.U
 
   
-    io.dpt_Frename(i).req.valid := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_fwb
-    io.dpt_Frename(i).req.bits.rd0 :=  Mux( io.dpt_Frename(i).req.valid, io.bd_dpt(i).bits.param.raw.rd0, 0.U )
+    io.dpt_Frename(i).req.valid    := io.bd_dpt(i).fire & io.bd_dpt(i).bits.is_fwb
+    io.dpt_Frename(i).req.bits.rd0 := io.bd_dpt(i).bits.param.raw.rd0
 
     io.dpt_Flookup(i).req.rs1 := io.bd_dpt(i).bits.param.raw.rs1
     io.dpt_Flookup(i).req.rs2 := io.bd_dpt(i).bits.param.raw.rs2
@@ -104,8 +123,8 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
       ))
 
 
-    for ( i <- 0 until rn_chn ) {
-      assert( PopCount( Seq(io.dpt_Frename(i).req.fire, io.dpt_Xrename(i).req.fire)) <= 1.U, "Assert Failed, rename should be one-hot" )      
+    for ( j <- 0 until rn_chn ) {
+      assert( PopCount( Seq(io.dpt_Frename(j).req.fire, io.dpt_Xrename(j).req.fire)) <= 1.U, "Assert Failed, rename should be one-hot" )      
     }
 
 
@@ -115,9 +134,9 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
 
     io.bd_dpt(i).ready := (
       for ( j <- 0 to i by 1 ) yield {
-        ooo_dpt_rePort.io.enq(j).ready & io.dpt_Xrename(j).req.ready & io.dpt_Frename(j).req.ready & reOrder_fifo_i.io.enq(i).ready &
-        ito_dpt_rePort.io.enq(j).ready
-      }      
+        io.dpt_Xrename(j).req.ready & io.dpt_Frename(j).req.ready & reOrder_fifo_i.io.enq(i).ready &
+        (if( opChn > 1 ) {ito_dpt_rePort.get.io.enq(j).ready & ooo_dpt_rePort.get.io.enq(j).ready} else { sig_dpt_fifo.get.io.enq(j).ready })
+      }
     ).reduce(_&_)
 
      
@@ -157,12 +176,28 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
       when(~instr.fpu_isa.hasTwoRs) { res.phy.rs2 := (regNum-1).U }
       when(~instr.fpu_isa.hasThreeRs) { res.phy.rs3 := (regNum-1).U }      
     }
-
-
     return res
   }
 
+  def Pkg_sig_dpt( instr:Info_instruction, rename: Reg_PHY): Dpt_info = {
+    val res = Wire(new Dpt_info)
 
+    res.alu_isa    := instr.alu_isa
+    res.bru_isa    := instr.bru_isa
+    res.lsu_isa    := instr.lsu_isa
+    res.csr_isa    := instr.csr_isa
+    res.mul_isa    := instr.mul_isa
+    res.privil_isa := 0.U.asTypeOf( new Privil_isa )
+    res.fpu_isa    := instr.fpu_isa
+    res.param      := instr.param
+    res.phy        := rename
+
+    when( instr.fpu_isa.is_fpu ) {
+      when(~instr.fpu_isa.hasTwoRs) { res.phy.rs2 := (regNum-1).U }
+      when(~instr.fpu_isa.hasThreeRs) { res.phy.rs3 := (regNum-1).U }      
+    }
+    return res
+  }
 
   def Pkg_rod_i(instr:Info_instruction, rename: Reg_PHY): Info_reorder_i = {
     val res = Wire(new Info_reorder_i)
@@ -204,6 +239,16 @@ class Dispatch()(implicit p: Parameters) extends RiftModule {
       }
     }
   }
+  if( hasMulDiv ) {
+
+  } else {
+    for ( i <- 0 until rn_chn ) {
+      when( io.bd_dpt(i).fire ) {
+        assert(io.bd_dpt(i).bits.mul_isa.is_mulDiv === false.B)
+      }
+    }    
+  }
+
 }
 
 

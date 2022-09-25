@@ -23,7 +23,7 @@ import chisel3.util._
 import chisel3.util.random._
 import chisel3.experimental.dataview._
 
-import rift._
+import rift2Chip._
 
 import chipsalliance.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy._
@@ -81,8 +81,8 @@ class Info_mmu_rsp(implicit p: Parameters) extends RiftBundle {
 class Info_cmm_mmu(implicit p: Parameters) extends RiftBundle {
   val satp = UInt(64.W)
 
-	val pmpcfg = Vec(pmpNum, UInt(64.W))
-  val pmpaddr = Vec(8*pmpNum, UInt(64.W))
+	val pmpcfg  = (if( pmpNum == 0 ) { Vec(1,   UInt(64.W)) } else { Vec(pmpNum,   UInt(64.W)) })
+  val pmpaddr = (if( pmpNum == 0 ) { Vec(8*1, UInt(64.W)) } else { Vec(8*pmpNum, UInt(64.W)) })
 
   val priv_lvl_if = UInt(2.W)
   val priv_lvl_ls = UInt(2.W)
@@ -201,7 +201,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     io.mmu_if.bits.is_access_fault :=
       PMP( io.cmm_mmu, ipaddr, Cat( io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R) ) | 
       (iptw.io.ptw_o.bits.is_access_fault & iptw.io.ptw_o.bits.is_X & iptw.io.ptw_o.valid) |
-      ipaddr(63,32) =/= (0.U)
+      ipaddr(63,plen) =/= (0.U)
 
     io.mmu_if.bits.is_paging_fault := 
       ~is_bypass_if &
@@ -233,7 +233,7 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     io.mmu_lsu.bits.is_access_fault :=
       PMP( io.cmm_mmu, dpaddr, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R) ) | 
       (dptw.io.ptw_o.bits.is_access_fault & (~dptw.io.ptw_o.bits.is_X & dptw.io.ptw_o.valid)) |
-      dpaddr(63,32) =/= (0.U)
+      dpaddr(63,plen) =/= (0.U)
 
     io.mmu_lsu.bits.is_paging_fault :=
       ~is_bypass_ls & (
