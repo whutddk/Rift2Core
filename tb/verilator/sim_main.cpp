@@ -133,6 +133,7 @@ int main(int argc, char **argv, char **env) {
 	if (flag_waveEnable) {
 		Verilated::traceEverOn(true);
 		top->trace(tfp, 99); // Trace 99 levels of hierarchy
+
 		tfp->open("./generated/build/wave.fst");		
 	}
 

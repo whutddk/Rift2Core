@@ -391,6 +391,7 @@ trait CommitState { this: BaseCommit =>
 
 
 
+
   csrfiles.mcycle := csrfiles.mcycle + 1.U //may be override
   val rtc = ShiftRegisters( io.rtc_clock, 4, false.B, true.B ); when(rtc(3) ^ rtc(2)) { csrfiles.time := csrfiles.time + 1.U }
   

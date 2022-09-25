@@ -109,12 +109,14 @@ case object RiftParamsKey extends Field[RiftSetting]
 
 
 case class RiftSetting(
+
   hasL2: Boolean = true,
   hasFpu: Boolean = false,
   hasDebugger: Boolean = true,
   hasPreFetch: Boolean = false,
   hasuBTB: Boolean = true,
   hasMulDiv: Boolean = true,
+
 
   isMinArea: Boolean = false,
   isLowPower: Boolean = false,
@@ -180,7 +182,6 @@ case class RiftSetting(
   require( pmpNum >= 0 && pmpNum <= 8 )
   require( isPow2(dcacheParameters.stEntry) )
   require( isPow2(ftChn) )
-
 
 }
 

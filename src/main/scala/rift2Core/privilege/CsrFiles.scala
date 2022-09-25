@@ -1795,6 +1795,7 @@ trait CsrFiles { this: BaseCommit =>
       when(false.B) {}
       .elsewhen( in.is_debug_interrupt ){
         dcsr.prv := in.csrfiles.priv_lvl
+
         dcsr.cause := MuxCase( 0.U, Seq(
                   in.exint.is_trigger     -> 2.U,
         in.is_ebreak_dm         -> 1.U,
@@ -1802,6 +1803,7 @@ trait CsrFiles { this: BaseCommit =>
         in.exint.is_single_step -> 4.U,
 
         ))
+
       }
       .elsewhen(enable) {
         dcsr.ebreakm   := dnxt(15)
@@ -1821,6 +1823,7 @@ trait CsrFiles { this: BaseCommit =>
     if (hasDebugger) {
       val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.dpc, "h7B1".U, in.csrExe )
       when(enable) { dpc := dnxt }
+
       .elsewhen( (in.csrfiles.DMode === false.B) & (update_DMode(in) === true.B) ) {
         dpc := Mux1H(Seq(
           in.is_ebreak_dm            -> in.commit_pc,

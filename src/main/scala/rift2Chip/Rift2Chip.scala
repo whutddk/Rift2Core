@@ -152,6 +152,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
     l1_xbar64 := TLBuffer() := i_rift2Core.systemClientNode
     l1_xbar64 := TLBuffer() := i_rift2Core.periphClientNode
+
     if( hasDebugger ) {
       // l1_xbar64 := TLBuffer() := i_debugger.get.dm.sbaClientNode
       i_debugger.get.dm.peripNode := TLBuffer():= TLFragmenter(8, 32) := TLBuffer() := l1_xbar64      
@@ -159,6 +160,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
     i_aclint.node := TLBuffer() := l1_xbar64
     i_plic.node   := TLBuffer() := l1_xbar64
+
 
 
   val memory = InModuleBody {
@@ -176,6 +178,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
       val JtagIO  = if (hasDebugger) {Some(new JtagIO())} else { None }
       val ndreset = if (hasDebugger) {Some(Output(Bool()))}  else { None }
 
+
       val interrupt = Input( Vec(nDevices, Bool()) )
       val rtc_clock = Input(Bool())
     })
@@ -185,7 +188,6 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
       io.ndreset.get := i_debugger.get.module.io.ndreset
       i_debugger.get.module.io.dm_cmm(0) <> i_rift2Core.module.io.dm.get
     }
-
 
 
     i_rift2Core.module.io.rtc_clock := io.rtc_clock

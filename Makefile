@@ -266,6 +266,7 @@ compile:
 	sbt "test:runMain test.testMain \
 	-e verilog"
 
+
 #--gen-mem-verilog \
 # --inline \
 
@@ -302,6 +303,7 @@ VSimTop:
 	${R2}/tb/verilator/diff.cpp \
 	-Mdir ./generated/build/$(CONFIG) \
 	-j 1
+
 
 
 isa: VSimTop

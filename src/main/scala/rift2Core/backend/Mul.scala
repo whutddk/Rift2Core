@@ -23,7 +23,9 @@ import chisel3.util._
 import rift2Core.define._
 import base._
 
+
 import rift2Chip._
+
 import chipsalliance.rocketchip.config.Parameters
 
 
@@ -76,7 +78,9 @@ trait Mul { this: MulDivBase =>
   
 
   val multiplier = Module(new Multiplier(new Mul_iss_info, 65) )
+
   // val multiplier = Module(new NorMultiplier(new Mul_iss_info, 65) )
+
   multiplier.io.enq.valid := io.mul_iss_exe.valid & io.mul_iss_exe.bits.fun.isMul
   multiplier.io.op1 := mul_op1
   multiplier.io.op2 := mul_op2
@@ -400,6 +404,7 @@ class Multiplier[T<:Data]( pipeType: T, dw: Int ) extends Module {
   }
 }
 
+
 class NorMultiplier[T<:Data]( pipeType: T, dw: Int ) extends Module {
   val io = IO(new Bundle{
     val enq = Flipped(new DecoupledIO(pipeType))
@@ -500,6 +505,7 @@ class Dividor(implicit p: Parameters) extends RiftModule {
 
 
   val algDivider = Module(new NorDivider(new Mul_iss_info, 64))
+
     algDivider.io.enq.valid := io.enq.valid & ~divBypass
     algDivider.io.enq.bits  := io.enq.bits
     
@@ -640,8 +646,10 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
 
 
   def preProcess( preDividend: UInt, preDdivisor: UInt ): (UInt, UInt, UInt, UInt) = {
+
     require( preDividend.getWidth == dw )
     require( preDdivisor.getWidth == dw )
+
 
     val dividend = Wire( UInt((dw+4).W) )
     val divisor  = Wire( UInt((dw+4).W ) )
@@ -665,6 +673,7 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
 
     iterations := (quoBits + 1.U) >> 1
     // ( bShift + 1.U((log2Ceil(dw+1)).W) ) >> 1
+
     recovery   := dw.U((log2Ceil(dw+1)).W) - bShift
     return (dividend, divisor, iterations, recovery)
   }
@@ -674,7 +683,7 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
     
     require( dividendIdx.getWidth == 7 )
     require( divisorIdx.getWidth  == 4 )
-    
+
 
     val qSel = Wire(UInt(3.W))
 
@@ -816,6 +825,7 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
   dontTouch(dividendIdx)
   val divisorIdx  = d(dw, dw-3)
   when(isRecurrence) { assert( divisorIdx(3) === 1.U ) }
+
   val qSel = QDS( dividendIdx, divisorIdx )
   val (qmNext, qNext) = ontheFlyQuotientConversion(q, qm, qSel)
 
@@ -900,4 +910,5 @@ class FakeMulDiv(implicit p: Parameters) extends MulDivBase {
   assert( ~io.mul_iss_exe.valid, "Assert Failed at FakeMulDiv, un-support MulDiv!" )
 
 }
+
 
