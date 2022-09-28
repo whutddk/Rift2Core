@@ -24,15 +24,13 @@ import base._
 import rift2Chip._
 import chipsalliance.rocketchip.config._
 
-class ReadOp_Rsp_Bundle(dw: Int)(implicit p: Parameters) extends RiftBundle{
-  val phy = UInt((log2Ceil(regNum)).W)
-  val op  = UInt(dw.W)
-}
+
 
 
 
 abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPUParameters{
   def dptEntry = 16
+
   val io = IO(new Bundle{
 
     val dptReq = Vec(rnChn, Flipped(new DecoupledIO(new Dpt_info)))
@@ -47,19 +45,19 @@ abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPU
     val irgLog = Input( Vec(regNum, UInt(2.W)) )
     val frgLog = Input( Vec(regNum, UInt(2.W)) )
 
-    val irgReq = Valid( Vec( opChn, UInt((log2Ceil(regNum)).W) ) )
-    val frgReq = Valid( Vec( opChn, UInt((log2Ceil(regNum)).W) ) )    
+    val irgReq = Vec( opChn, Valid( UInt((log2Ceil(regNum)).W) ) )
+    val frgReq = Vec( opChn, Valid( UInt((log2Ceil(regNum)).W) ) )    
 
-    val irgRsp = Flipped( Vec( opChn, new ReadOp_Rsp_Bundle(64) ) )
-    val frgRsp = Flipped( Vec( opChn, new ReadOp_Rsp_Bundle(65) ) )
+    val irgRsp = Flipped( Vec( opChn, Valid(new ReadOp_Rsp_Bundle(64)) ) )
+    val frgRsp = Flipped( Vec( opChn, Valid(new ReadOp_Rsp_Bundle(65)) ) )
 
     val flush = Input(Bool())
-  }
+  })
 }
 
 
 abstract class DptBoard()(implicit p: Parameters) extends DptBase {
-  val bufValidDnxt = Wire( rnChn, Vec( dptEntry, Bool() ) )
+  val bufValidDnxt = Wire( Vec(rnChn, Vec( dptEntry, Bool() ) ))
   val bufValid     = RegInit( VecInit( Seq.fill(dptEntry){false.B} ))
   val bufInfo      = Reg( Vec( dptEntry, new Dpt_info              ))
   val bufReqNum    = Wire( Vec( dptEntry, Vec(3, UInt((log2Ceil(regNum)).W)) ))
@@ -79,21 +77,21 @@ abstract class DptBoard()(implicit p: Parameters) extends DptBase {
   for( i <- 0 until rnChn ) {
     io.dptReq(i).ready := PopCount( bufValid.map{ x => (x === false.B) } ) >= i.U
 
-    when( io.dptReq(i).fire ) {
-      if ( i == 0 ) {
-        bufValidDnxt(i) := bufValid
-      } else {
-        bufValidDnxt(i) := bufValidDnxt(i-1)
-      }
-      bufValidDnxt(i)(entrySel(i)) := true.B
-      bufInfo(entrySel(i)) := io.dptReq(i)
 
+    if ( i == 0 ) {
+      bufValidDnxt(i) := bufValid
+    } else {
+      bufValidDnxt(i) := bufValidDnxt(i-1)
+    }
+    when( io.dptReq(i).fire ) {
+      bufValidDnxt(i)(entrySel(i)) := true.B
+      bufInfo(entrySel(i)) := io.dptReq(i).bits
     }
   }
 
   for( i <- 0 until rnChn ) {
     when( io.dptReq(i).fire ) {
-      if ( hasFpu ) {
+      if ( fpuNum > 0 ) {
         when( io.dptReq(i).bits.lsu_isa.is_fst ) {
           isBufFop(entrySel(i))(0) := false.B
           isBufFop(entrySel(i))(1) := true.B
@@ -166,12 +164,12 @@ abstract class DptAgeMatrix()(implicit p: Parameters) extends DptBoard {
     }
   }
 
-  def MatrixMask( matrixIn: Seq[Seq[Bool]], maskCond: Seq[Bool] ): Seq[Seq[Bool]]= {
+  def MatrixMask( matrixIn: Vec[Vec[Bool]], maskCond: Vec[Bool] ): Vec[Vec[Bool]]= {
     require( matrixIn.length    == dptEntry )
     require( matrixIn(0).length == dptEntry )
     require( maskCond.length    == dptEntry )
 
-    val matrixOut = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )
+    val matrixOut = Wire( Vec( dptEntry, Vec(dptEntry, Bool()) ))
     for ( i <- 0 until dptEntry ){
       for ( j <- 0 until dptEntry ){
         matrixOut(i)(j) := (matrixIn(i)(j) & ~maskCond(j)) | maskCond(i)
@@ -182,33 +180,35 @@ abstract class DptAgeMatrix()(implicit p: Parameters) extends DptBoard {
 }
 
 trait DptReadIOp { this: DptAgeMatrix =>
-  val ropNum = Wire( rop_chn, UInt((log2Ceil(regNum)).W) )
+  val ropNum = Wire( Vec( opChn, UInt((log2Ceil(regNum)).W)) )
 
 
   /** Whether this rs can request operator reading */
-  val isIOpReqReady = Wire( Vec( dptEntry, Vec( 2, Bool() ))) )
+  val canIOpReq = Wire( Vec( dptEntry, Vec( 2, Bool() )))
 
   for( i <- 0 until dptEntry ) {
-    isIOpReqReady(i)(0) := 
+    canIOpReq(i)(0) := 
       io.irgLog(bufInfo(i).phy.rs1) === "b11".U & //reg-log is ready
+      ~isBufFop(i)(0) & //not a fop req
       ~isOpReady(i)(0) & ~io.irgRsp.map{x => {x.valid & (x.bits.phy === bufReqNum(i)(0))}}.reduce(_|_) //pending and non-rsp in same cycle
     
-    isIOpReqReady(i)(1) :=
+    canIOpReq(i)(1) :=
       io.irgLog(bufInfo(i).phy.rs2) === "b11".U & //reg-log is ready
+      ~isBufFop(i)(1) & //not a fop req
       ~isOpReady(i)(1) & ~io.irgRsp.map{x => {x.valid & (x.bits.phy === bufReqNum(i)(1))}}.reduce(_|_) //pending and non-rsp in same cycle
   }
 
   /** Who is the highest priority to read operator in each chn */
-  val selMatrixRS1 = Wire( Vec( rop_chn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
-  val selMatrixRS2 = Wire( Vec( rop_chn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
-  val maskCondSelRS1 = Wire( Vec( rop_chn, Vec( dptEntry, Bool() ) ) )
-  val maskCondSelRS2 = Wire( Vec( rop_chn, Vec( dptEntry, Bool() ) ) )
+  val selMatrixRS1 = Wire( Vec( opChn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
+  val selMatrixRS2 = Wire( Vec( opChn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
+  val maskCondSelRS1 = Wire( Vec( opChn, Vec( dptEntry, Bool() ) ) )
+  val maskCondSelRS2 = Wire( Vec( opChn, Vec( dptEntry, Bool() ) ) )
 
-  for( chn <- 0 until rop_chn ){
+  for( chn <- 0 until opChn ){
     if( chn == 0 ){
       for ( i <- 0 until dptEntry ){
-        maskCondSelRS1(chn)(i) := ~bufValid(i) | ~isIOpReqReady(i)(0)
-        maskCondSelRS2(chn)(i) := ~bufValid(i) | ~isIOpReqReady(i)(1)
+        maskCondSelRS1(chn)(i) := ~bufValid(i) | ~canIOpReq(i)(0)
+        maskCondSelRS2(chn)(i) := ~bufValid(i) | ~canIOpReq(i)(1)
       }
     } else {
       for ( i <- 0 until dptEntry ){
@@ -220,27 +220,27 @@ trait DptReadIOp { this: DptAgeMatrix =>
     selMatrixRS2(chn) := MatrixMask( ageMatrixR, maskCondSelRS2(chn) )
 
     assert(
-      selMatrixRS1(chn).forall( (x: Seq[Bool]) => x.forall( y => (y === true.B) ) ) |
-      PopCount( selMatrixRS1(chn).map{(x: Seq[Bool]) => x.forall(y => (y === false.B))} ) === 1.U
+      selMatrixRS1(chn).forall( (x: Vec[Bool]) => x.forall{(y: Bool) => (y === true.B)} ) |
+      PopCount( selMatrixRS1(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
     )
 
     assert(
-      selMatrixRS2(chn).forall( (x: Seq[Bool]) => x.forall( y => (y === true.B) ) ) |
-      PopCount( selMatrixRS2(chn).map{(x: Seq[Bool]) => x.forall(y => (y === false.B))} ) === 1.U
+      selMatrixRS2(chn).forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B)} ) |
+      PopCount( selMatrixRS2(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
     )
   }
 
 
 
 
-  for( chn <- 0 until rop_chn ){
-    val isRS1NoneReq = selMatrixRS1(chn).map{x => x.map{ y => y === true.B }.reduce(_&_)}.readuce(_&_) //all ture
-    val isRS2NoneReq = selMatrixRS2(chn).map{x => x.map{ y => y === true.B }.reduce(_&_)}.readuce(_&_) //all ture
+  for( chn <- 0 until opChn ){
+    val isRS1NoneReq = selMatrixRS1(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => y === true.B }} //all ture
+    val isRS2NoneReq = selMatrixRS2(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => y === true.B }} //all ture
 
     val selRS1 = 
-      Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixRS1(chn)(i).forall( y => (y === false.B) )) -> bufReqNum(i)(0) } }) //index a row which all zero
+      Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixRS1(chn)(i).forall( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(0) } }) //index a row which all zero
     val selRS2 = 
-      Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixRS2(chn)(i).forall( y => (y === false.B) )) -> bufReqNum(i)(1) } }) //index a row which all zero
+      Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixRS2(chn)(i).forall( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(1) } }) //index a row which all zero
 
     if( chn % 2 == 0 ){
       ropNum(chn) := Mux( ~isRS1NoneReq, selRS1, Mux( ~isRS2NoneReq, selRS2, (regNum-1).U ))
@@ -256,7 +256,10 @@ trait DptReadIOp { this: DptAgeMatrix =>
 }
 
 trait DptReadFOp { this: DptAgeMatrix =>
-
+  for( chn <- 0 until opChn ){
+    io.frgReq(chn).valid := false.B
+    io.frgReq(chn).bits  := DontCare
+  }
 }
 
 
@@ -266,14 +269,14 @@ abstract class IssueBase()(implicit p: Parameters) extends DptAgeMatrix with Dpt
 
 
 trait IssLoadIOp { this: IssueBase =>
-  for( chn <- 0 until rop_chn ){
+  for( chn <- 0 until opChn ){
     when( io.irgRsp(chn).valid ){
       for( i <- 0 until dptEntry ){
         for( rs <- 0 until 2 ){
-          when( bufValid(i) & (bufReqNum(i)(rs) === io.irgRsp(chn).bits.phy) & ~isBufFop(i) ){
+          when( bufValid(i) & (bufReqNum(i)(rs) === io.irgRsp(chn).bits.phy) & ~isBufFop(i)(rs) ){
             when( isOpReady(i)(rs) === true.B ) { printf(s"Warning, re-request op at chn $chn, Entry $i, rs( $rs )") }
             isOpReady(i)(rs)   := true.B
-            bufOperator(i)(rs) := io.irgRsp(chn).bits.op            
+            bufOperator(i)(rs) := io.irgRsp(chn).bits.op
           }
         }
       }
@@ -291,20 +294,20 @@ abstract class IssueSel()(implicit p: Parameters) extends IssueBase with IssLoad
   val postBufOperator = Wire( Vec( dptEntry, Vec(3, UInt(65.W))) )
 
   for( i <- 0 until dptEntry ){
-    postIsOpReady(i)(0)   := MuxCase( isOpReady,    io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(0))) -> true.B    } }  )
-    postIsOpReady(i)(1)   := MuxCase( isOpReady,    io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B    } }  )
-    postIsOpReady(i)(2)   := MuxCase( isOpReady,    io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B    } }  )
+    postIsOpReady(i)(0)   := MuxCase( isOpReady(i)(0),    io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(0))) -> true.B    } }  )
+    postIsOpReady(i)(1)   := MuxCase( isOpReady(i)(1),    io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B    } }  )
+    postIsOpReady(i)(2)   := MuxCase( isOpReady(i)(2),    io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B    } }  )
 
-    postBufOperator(i)(0) := MuxCase( bufOperator , io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(0))) -> x.bits.op } }  )
-    postBufOperator(i)(1) := MuxCase( bufOperator , io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op } }  )
-    postBufOperator(i)(2) := MuxCase( bufOperator , io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op } }  )
+    postBufOperator(i)(0) := MuxCase( bufOperator(i)(0) , io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(0))) -> x.bits.op } }  )
+    postBufOperator(i)(1) := MuxCase( bufOperator(i)(1) , io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op } }  )
+    postBufOperator(i)(2) := MuxCase( bufOperator(i)(2) , io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op } }  )
   }
 
 
 }
 
 trait IssSelAlu{ this: IssueSel =>
-  def aluNum = 1
+
 
   def Pkg_alu_iss(idx: Int): Alu_iss_info = {
 
@@ -366,7 +369,7 @@ trait IssSelAlu{ this: IssueSel =>
 
         bufInfo(idx).alu_isa.wfi    -> 0.U
     ))
-    res.param.dat.op3 := 0.U
+    res.param.dat.op3 := DontCare
     res.param.rd0 := bufInfo(idx).phy.rd0
     return res
   }
@@ -390,22 +393,22 @@ trait IssSelAlu{ this: IssueSel =>
       }
     } else {
       for( i <- 0 until dptEntry ) {
-        maskCondAluIss(iss)(i) := maskCond(iss-1)(i) | (i.U === aluIssIdx(iss-1))
+        maskCondAluIss(iss)(i) := maskCondAluIss(iss-1)(i) | (i.U === aluIssIdx(iss-1))
       }
     }
     aluIssMatrix(iss) := MatrixMask( ageMatrixR, maskCondAluIss(iss) )
     
     assert(
-      aluIssMatrix(iss).forall( (x: Seq[Bool]) => x.forall( y => (y === true.B) ) ) |
-      PopCount( aluIssMatrix(iss).map{(x: Seq[Bool]) => x.forall(y => (y === false.B))} ) === 1.U
+      aluIssMatrix(iss).forall( (x: Vec[Bool]) => x.forall{(y: Bool) => (y === true.B)}  ) |
+      PopCount( aluIssMatrix(iss).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
     )
   }
   
   for( iss <- 0 until aluNum ){
-    aluIssFifo.io.enq(iss).valid := ~aluIssMatrix(iss).map{x => x.map{ y => y === true.B }.reduce(_&_)}.readuce(_&_) //all ture
-    aluIssIdx(iss) := aluIssMatrix(iss).indexWhere( (x: Seq[Bool]) => x.forall( y => (y === false.B) ) ) //index a row which all zero
+    aluIssFifo.io.enq(iss).valid := ~aluIssMatrix(iss).forall{ (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
+    aluIssIdx(iss) := aluIssMatrix(iss).indexWhere( (x: Vec[Bool]) => x.forall( y => (y === false.B) ) ) //index a row which all zero
     aluIssFifo.io.enq(iss).bits  := 
-      Mux1H( ( 0 until dptEntry ).map{ i => { (aluIssMatrix(iss)(i).forall( y => ( y === false.B ) )) -> aluIssInfo(i) } } )
+      Mux1H( ( 0 until dptEntry ).map{ i => { (aluIssMatrix(iss)(i).forall( (y: Bool) => ( y === false.B ) )) -> aluIssInfo(i) } } )
 
     for( i <- 0 until dptEntry ) {
       when( aluIssFifo.io.enq(iss).fire & aluIssIdx(iss) === i.U ) {
@@ -418,11 +421,11 @@ trait IssSelAlu{ this: IssueSel =>
 
   }
   aluIssFifo.io.deq <> io.alu_iss_exe
+  aluIssFifo.io.flush := io.flush
 
 }
 
 trait IssSelMul{ this: IssueSel =>
-  def mulNum = 1
 
   def Pkg_mul_iss(idx: Int): Mul_iss_info = {
     val res = Wire(new Mul_iss_info)
@@ -430,6 +433,7 @@ trait IssSelMul{ this: IssueSel =>
  
     res.param.dat.op1 := bufOperator(idx)(0)
     res.param.dat.op2 := bufOperator(idx)(1)
+    res.param.dat.op3 := DontCare
     res.param.rd0     := bufInfo(idx).phy.rd0
     return res
   }
@@ -437,7 +441,7 @@ trait IssSelMul{ this: IssueSel =>
   if ( mulNum != 0 ) {
     val mulIssIdx  = Wire( Vec(mulNum, UInt((log2Ceil(dptEntry)).W) )  )
     val mulIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_mul_iss(i) }
-    val mulIssFifo = Module(new MultiPortFifo( new Mul_iss_info, aw = ( if(!isMinArea) 4 else log2Ceil(mulNum) ) ), in = mulNum, out = mulNum )
+    val mulIssFifo = Module(new MultiPortFifo( new Mul_iss_info, aw = ( if(!isMinArea) 4 else log2Ceil(mulNum) ), in = mulNum, out = mulNum ))
 
     val mulIssMatrix   = Wire( Vec(mulNum, Vec( dptEntry, Vec(dptEntry, Bool() ) )) )
     val maskCondMulIss = Wire( Vec(mulNum, Vec( dptEntry, Bool()) ))
@@ -447,27 +451,27 @@ trait IssSelMul{ this: IssueSel =>
         for( i <- 0 until dptEntry ) {
           maskCondMulIss(iss)(i) := 
             ~bufValid(i) |
-            ~bufInfo.mul_isa.is_mulDiv |
+            ~bufInfo(i).mul_isa.is_mulDiv |
             ~(postIsOpReady(i)(0) & postIsOpReady(i)(1))
         }
       } else {
         for( i <- 0 until dptEntry ) {
-          maskCondMulIss(iss)(i) := maskCond(iss-1)(i) | (i.U === mulIssIdx(iss-1))
+          maskCondMulIss(iss)(i) := maskCondMulIss(iss-1)(i) | (i.U === mulIssIdx(iss-1))
         }
       }
       mulIssMatrix(iss) := MatrixMask( ageMatrixR, maskCondMulIss(iss) )
       
       assert(
-        mulIssMatrix(iss).forall( (x: Seq[Bool]) => x.forall( y => (y === true.B) ) ) |
-        PopCount( mulIssMatrix(iss).map{(x: Seq[Bool]) => x.forall(y => (y === false.B))} ) === 1.U
+        mulIssMatrix(iss).forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) } ) |
+        PopCount( mulIssMatrix(iss).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
       )
     }
     
     for( iss <- 0 until mulNum ){
-      mulIssFifo.io.enq(iss).valid := ~mulIssMatrix(iss).map{x => x.map{ y => y === true.B }.reduce(_&_)}.readuce(_&_) //all ture
-      mulIssIdx(iss) := mulIssMatrix(iss).indexWhere( (x: Seq[Bool]) => x.forall( y => (y === false.B) ) ) //index a row which all zero
+      mulIssFifo.io.enq(iss).valid := ~mulIssMatrix(iss).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => y === true.B }} //all ture
+      mulIssIdx(iss) := mulIssMatrix(iss).indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
       mulIssFifo.io.enq(iss).bits  := 
-        Mux1H( ( 0 until dptEntry ).map{ i => { (mulIssMatrix(iss)(i).forall( y => ( y === false.B ) )) -> mulIssInfo(i) } } )
+        Mux1H( ( 0 until dptEntry ).map{ i => { (mulIssMatrix(iss)(i).forall( (y: Bool) => ( y === false.B ) )) -> mulIssInfo(i) } } )
 
       for( i <- 0 until dptEntry ) {
         when( mulIssFifo.io.enq(iss).fire & mulIssIdx(iss) === i.U ) {
@@ -479,6 +483,7 @@ trait IssSelMul{ this: IssueSel =>
       }
     }
     mulIssFifo.io.deq <> io.mul_iss_exe
+    mulIssFifo.io.flush := io.flush
   } else {
     io.mul_iss_exe(0).valid := false.B
     io.mul_iss_exe(0).bits  := DontCare
@@ -498,6 +503,7 @@ trait IssSelBru{ this: IssueSel =>
     res.param.imm     := bufInfo(idx).param.imm
     res.param.dat.op1 := bufOperator(idx)(0)
     res.param.dat.op2 := bufOperator(idx)(1)
+    res.param.dat.op3 := DontCare
     res.param.rd0     := bufInfo(idx).phy.rd0
 
     return res
@@ -514,23 +520,23 @@ trait IssSelBru{ this: IssueSel =>
   for( i <- 0 until dptEntry ) {
     maskCondBruIss(i) := 
       ~bufValid(i) |
-      ~bufInfo.bru_isa.is_bru
+      ~bufInfo(i).bru_isa.is_bru
   }
 
   bruIssMatrix := MatrixMask( ageMatrixR, maskCondBruIss )
   
   assert(
-    bruIssMatrix.forall( (x: Seq[Bool]) => x.forall( y => (y === true.B) ) ) |
-    PopCount( bruIssMatrix.map{(x: Seq[Bool]) => x.forall(y => (y === false.B))} ) === 1.U
+    bruIssMatrix.forall( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === true.B) ) ) |
+    PopCount( bruIssMatrix.map{(x: Vec[Bool]) => x.forall((y: Bool) => (y === false.B))} ) === 1.U
   )
 
-  bruIssIdx := bruIssMatrix.indexWhere( (x: Seq[Bool]) => x.forall( y => (y === false.B) ) ) //index a row which all zero
+  bruIssIdx := bruIssMatrix.indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
 
   bruIssFifo.io.enq.valid := 
-    ( 0 until dptEntry ).map{ i => { bruIssMatrix(i).forall( x => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) } }.reduce(_|_)
+    ( 0 until dptEntry ).map{ i => { bruIssMatrix(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) } }.reduce(_|_)
 
   bruIssFifo.io.enq.bits  := 
-    Mux1H( ( 0 until dptEntry ).map{ i => { (bruIssMatrix(i).forall( y => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) ) -> bruIssInfo(i) } } )
+    Mux1H( ( 0 until dptEntry ).map{ i => { (bruIssMatrix(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) ) -> bruIssInfo(i) } } )
 
   for( i <- 0 until dptEntry ) {
     when( bruIssFifo.io.enq.fire & bruIssIdx === i.U ) {
@@ -542,6 +548,7 @@ trait IssSelBru{ this: IssueSel =>
   }
 
   bruIssFifo.io.deq <> io.bru_iss_exe
+  bruIssFifo.reset := io.flush | reset.asBool
 
 }
 
@@ -562,7 +569,7 @@ trait IssSelCsr{ this: IssueSel =>
       ))
 
     res.param.dat.op2 := bufInfo(idx).param.imm
-    res.param.dat.op3 := 0.U
+    res.param.dat.op3 := DontCare
     res.param.rd0     := bufInfo(idx).phy.rd0
 
     return res
@@ -579,23 +586,23 @@ trait IssSelCsr{ this: IssueSel =>
   for( i <- 0 until dptEntry ) {
     maskCondCsrIss(i) := 
       ~bufValid(i) |
-      ~bufInfo.csr_isa.is_csr
+      ~bufInfo(i).csr_isa.is_csr
   }
 
   csrIssMatrix := MatrixMask( ageMatrixR, maskCondCsrIss )
   
   assert(
-    csrIssMatrix.forall( (x: Seq[Bool]) => x.forall( y => (y === true.B) ) ) |
-    PopCount( csrIssMatrix.map{(x: Seq[Bool]) => x.forall(y => (y === false.B))} ) === 1.U
+    csrIssMatrix.forall( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === true.B) ) ) |
+    PopCount( csrIssMatrix.map{(x: Vec[Bool]) => x.forall((y: Bool) => (y === false.B))} ) === 1.U
   )
 
-  csrIssIdx := csrIssMatrix.indexWhere( (x: Seq[Bool]) => x.forall( y => (y === false.B) ) ) //index a row which all zero
+  csrIssIdx := csrIssMatrix.indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
 
   csrIssFifo.io.enq.valid := 
-    ( 0 until dptEntry ).map{ i => { csrIssMatrix(i).forall( x => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) } }.reduce(_|_)
+    ( 0 until dptEntry ).map{ i => { csrIssMatrix(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) } }.reduce(_|_)
 
   csrIssFifo.io.enq.bits  := 
-    Mux1H( ( 0 until dptEntry ).map{ i => { (csrIssMatrix(i).forall( y => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) ) -> bruIssInfo(i) } } )
+    Mux1H( ( 0 until dptEntry ).map{ i => { (csrIssMatrix(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) ) -> csrIssInfo(i) } } )
 
   for( i <- 0 until dptEntry ) {
     when( csrIssFifo.io.enq.fire & csrIssIdx === i.U ) {
@@ -607,6 +614,7 @@ trait IssSelCsr{ this: IssueSel =>
   }
 
   csrIssFifo.io.deq <> io.csr_iss_exe
+  csrIssFifo.reset := io.flush | reset.asBool
 }
 
 trait IssSelLsu{ this: IssueSel =>
@@ -624,7 +632,7 @@ trait IssSelLsu{ this: IssueSel =>
         ieee(unbox(bufOperator(idx)(1), 1.U, None), t = FType.D),
         bufOperator(idx)(1)
       )
-    res.param.dat.op3 := 0.U
+    res.param.dat.op3 := DontCare
 
     res.param.rd0 := bufInfo(idx).phy.rd0
 
@@ -641,23 +649,23 @@ trait IssSelLsu{ this: IssueSel =>
   for( i <- 0 until dptEntry ) {
     maskCondLsuIss(i) := 
       ~bufValid(i) |
-      ~bufInfo.lsu_isa.is_lsu
+      ~bufInfo(i).lsu_isa.is_lsu
   }
 
   lsuIssMatrix := MatrixMask( ageMatrixR, maskCondLsuIss )
   
   assert(
-    lsuIssMatrix.forall( (x: Seq[Bool]) => x.forall( y => (y === true.B) ) ) |
-    PopCount( lsuIssMatrix.map{(x: Seq[Bool]) => x.forall(y => (y === false.B))} ) === 1.U
+    lsuIssMatrix.forall( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === true.B) ) ) |
+    PopCount( lsuIssMatrix.map{(x: Vec[Bool]) => x.forall((y: Bool) => (y === false.B))} ) === 1.U
   )
 
-  lsuIssIdx := lsuIssMatrix.indexWhere( (x: Seq[Bool]) => x.forall( y => (y === false.B) ) ) //index a row which all zero
+  lsuIssIdx := lsuIssMatrix.indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
 
   lsuIssFifo.io.enq.valid := 
-    ( 0 until dptEntry ).map{ i => { lsuIssMatrix(i).forall( x => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) } }.reduce(_|_)
+    ( 0 until dptEntry ).map{ i => { lsuIssMatrix(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) } }.reduce(_|_)
 
   lsuIssFifo.io.enq.bits  := 
-    Mux1H( ( 0 until dptEntry ).map{ i => { (lsuIssMatrix(i).forall( y => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) ) -> bruIssInfo(i) } } )
+    Mux1H( ( 0 until dptEntry ).map{ i => { (lsuIssMatrix(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) ) -> lsuIssInfo(i) } } )
 
   for( i <- 0 until dptEntry ) {
     when( lsuIssFifo.io.enq.fire & lsuIssIdx === i.U ) {
@@ -669,11 +677,38 @@ trait IssSelLsu{ this: IssueSel =>
   }
 
   lsuIssFifo.io.deq <> io.lsu_iss_exe
+  lsuIssFifo.reset := io.flush | reset.asBool
 }
 
 trait IssSelFpu{ this: IssueSel =>
-  def fpuNum = 1
+
   require( fpuNum <= 1, s"fpu is not support out-of-order in this Vesrion!" )
+
+  def Pkg_fpu_iss(idx: Int): Fpu_iss_info = {
+    val res = Wire(new Fpu_iss_info)
+
+    res.fun := bufInfo(idx).fpu_isa
+
+    res.param.dat.op1 :=
+      Mux(
+        bufInfo(idx).fpu_isa.is_fop,
+        bufOperator(idx)(0),
+        Mux( bufInfo(idx).fpu_isa.is_fun_fcsri, bufInfo(idx).param.raw.rs1, bufOperator(idx)(0) )
+      )
+
+    res.param.dat.op2 :=
+      Mux(
+        bufInfo(idx).fpu_isa.is_fop,
+        bufOperator(idx)(1),
+        Mux( bufInfo(idx).fpu_isa.is_fun_fcsr, bufInfo(idx).param.imm, bufOperator(idx)(1))
+      )
+    res.param.dat.op3 := bufOperator(idx)(2)
+    res.param.rd0 := bufInfo(idx).phy.rd0
+    res.param.rm := bufInfo(idx).param.rm
+
+    return res
+  }
+
 
   if( fpuNum != 0 ){
     val fpuIssIdx = Wire( Vec( fpuNum, UInt((log2Ceil(dptEntry)).W) ))
@@ -689,27 +724,27 @@ trait IssSelFpu{ this: IssueSel =>
         for( i <- 0 until dptEntry ) {
           maskCondFpuIss(iss)(i) := 
             ~bufValid(i) |
-            ~bufInfo.fpu_isa.is_fpu |
+            ~bufInfo(i).fpu_isa.is_fpu |
             ~(postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2))
         }
       } else {
         for( i <- 0 until dptEntry ) {
-          maskCondFpuIss(iss)(i) := maskCond(iss-1)(i) | (i.U === fpuIssIdx(iss-1))
+          maskCondFpuIss(iss)(i) := maskCondFpuIss(iss-1)(i) | (i.U === fpuIssIdx(iss-1))
         }
       }
       fpuIssMatrix(iss) := MatrixMask( ageMatrixR, maskCondFpuIss(iss) )
       
       assert(
-        fpuIssMatrix(iss).forall( (x: Seq[Bool]) => x.forall( y => (y === true.B) ) ) |
-        PopCount( fpuIssMatrix(iss).map{(x: Seq[Bool]) => x.forall(y => (y === false.B))} ) === 1.U
+        fpuIssMatrix(iss).forall( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === true.B) ) ) |
+        PopCount( fpuIssMatrix(iss).map{(x: Vec[Bool]) => x.forall((y: Bool) => (y === false.B))} ) === 1.U
       )
     }
     
     for( iss <- 0 until fpuNum ){
-      fpuIssFifo.io.enq(iss).valid := ~fpuIssMatrix(iss).map{x => x.map{ y => y === true.B }.reduce(_&_)}.readuce(_&_) //all ture
-      fpuIssIdx(iss) := fpuIssMatrix(iss).indexWhere( (x: Seq[Bool]) => x.forall( y => (y === false.B) ) ) //index a row which all zero
+      fpuIssFifo.io.enq(iss).valid := ~fpuIssMatrix(iss).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
+      fpuIssIdx(iss) := fpuIssMatrix(iss).indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
       fpuIssFifo.io.enq(iss).bits  := 
-        Mux1H( ( 0 until dptEntry ).map{ i => { (fpuIssMatrix(iss)(i).forall( y => ( y === false.B ) )) -> fpuIssInfo(i) } } )
+        Mux1H( ( 0 until dptEntry ).map{ i => { (fpuIssMatrix(iss)(i).forall( (y: Bool) => ( y === false.B ) )) -> fpuIssInfo(i) } } )
 
       for( i <- 0 until dptEntry ) {
         when( fpuIssFifo.io.enq(iss).fire & fpuIssIdx(iss) === i.U ) {
@@ -720,7 +755,8 @@ trait IssSelFpu{ this: IssueSel =>
         }
       }
     }
-    fpuIssFifo.io.deq <> io.fpu_iss_exe    
+    fpuIssFifo.io.deq <> io.fpu_iss_exe
+    fpuIssFifo.io.flush := io.flush
   } else {
     io.fpu_iss_exe(0).valid := false.B
     io.fpu_iss_exe(0).bits  := DontCare
