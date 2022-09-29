@@ -180,7 +180,7 @@ class Rift2320 extends Config((site, here, up) => {
 
 class Rift2330 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasDebugger = false,
+    hasDebugger = true,
     hasPreFetch = false,
 
     opChn = 4,
@@ -340,7 +340,7 @@ class Rift2360 extends Config((site, here, up) => {
 
 class Rift2370 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    fpuNum = 1,
+    fpuNum = 0,
   )
 })
 

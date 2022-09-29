@@ -83,7 +83,9 @@ abstract class DptBoard()(implicit p: Parameters) extends DptBase {
     } else {
       bufValidDnxt(i) := bufValidDnxt(i-1)
     }
-    when( io.dptReq(i).fire ) {
+    when( io.flush ) {
+      bufValidDnxt(i) := 0.U.asTypeOf(bufValidDnxt(i))
+    } .elsewhen( io.dptReq(i).fire ) {
       bufValidDnxt(i)(entrySel(i)) := true.B
       bufInfo(entrySel(i)) := io.dptReq(i).bits
     }
@@ -119,19 +121,26 @@ abstract class DptBoard()(implicit p: Parameters) extends DptBase {
       when( io.dptReq(i).bits.phy.rs1 === (regNum-1).U ) {
         isOpReady (entrySel(i))(0) := true.B
         bufOperator(entrySel(i))(0) := 0.U
+      } .otherwise {
+        isOpReady (entrySel(i))(0) := false.B
       }
       when( io.dptReq(i).bits.phy.rs2 === (regNum-1).U ) {
         isOpReady (entrySel(i))(1) := true.B
         bufOperator(entrySel(i))(1) := 0.U
+      } .otherwise{
+        isOpReady (entrySel(i))(1) := false.B
       }
       when( io.dptReq(i).bits.phy.rs3 === (regNum-1).U ) {
         isOpReady (entrySel(i))(2) := true.B
         bufOperator(entrySel(i))(2) := 0.U
+      } .otherwise {
+        isOpReady (entrySel(i))(2) := false.B
       }
     }
   }
 
   for( i <- 0 until dptEntry ){
+    dontTouch(bufReqNum)
     bufReqNum(i)(0) := bufInfo(i).phy.rs1
     bufReqNum(i)(1) := bufInfo(i).phy.rs2
     bufReqNum(i)(2) := bufInfo(i).phy.rs3
@@ -144,6 +153,7 @@ abstract class DptAgeMatrix()(implicit p: Parameters) extends DptBoard {
 
   val ageMatrixR = Wire( Vec( dptEntry, Vec(dptEntry, Bool()) ) )
   val ageMatrixW = Reg( Vec( dptEntry, Vec(dptEntry, Bool()) ) )
+  dontTouch(ageMatrixR)
 
 
 
@@ -203,6 +213,11 @@ trait DptReadIOp { this: DptAgeMatrix =>
   val selMatrixRS2 = Wire( Vec( opChn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
   val maskCondSelRS1 = Wire( Vec( opChn, Vec( dptEntry, Bool() ) ) )
   val maskCondSelRS2 = Wire( Vec( opChn, Vec( dptEntry, Bool() ) ) )
+  dontTouch(selMatrixRS1)
+  dontTouch(selMatrixRS2)
+  dontTouch(maskCondSelRS1)
+  dontTouch(maskCondSelRS2)
+
 
   for( chn <- 0 until opChn ){
     if( chn == 0 ){
@@ -232,23 +247,29 @@ trait DptReadIOp { this: DptAgeMatrix =>
 
 
 
+  val isRS1NoneReq = Wire( Vec(opChn, Bool()) )
+  val isRS2NoneReq = Wire( Vec(opChn, Bool()) )
+  dontTouch(isRS1NoneReq)
+  dontTouch(isRS2NoneReq)
+  val selRS1 = Wire( Vec(opChn,  UInt((log2Ceil(regNum)).W) ) )
+  val selRS2 = Wire( Vec(opChn,  UInt((log2Ceil(regNum)).W) ) )
 
   for( chn <- 0 until opChn ){
-    val isRS1NoneReq = selMatrixRS1(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => y === true.B }} //all ture
-    val isRS2NoneReq = selMatrixRS2(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => y === true.B }} //all ture
+    isRS1NoneReq(chn) := selMatrixRS1(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
+    isRS2NoneReq(chn) := selMatrixRS2(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
 
-    val selRS1 = 
+    selRS1(chn) :=
       Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixRS1(chn)(i).forall( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(0) } }) //index a row which all zero
-    val selRS2 = 
+    selRS2(chn) :=
       Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixRS2(chn)(i).forall( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(1) } }) //index a row which all zero
 
     if( chn % 2 == 0 ){
-      ropNum(chn) := Mux( ~isRS1NoneReq, selRS1, Mux( ~isRS2NoneReq, selRS2, (regNum-1).U ))
+      ropNum(chn) := Mux( ~isRS1NoneReq(chn), selRS1(chn), Mux( ~isRS2NoneReq(chn), selRS2(chn), (regNum-1).U ))
     } else {
-      ropNum(chn) := Mux( ~isRS2NoneReq, selRS2, Mux( ~isRS1NoneReq, selRS1, (regNum-1).U ))
+      ropNum(chn) := Mux( ~isRS2NoneReq(chn), selRS2(chn), Mux( ~isRS1NoneReq(chn), selRS1(chn), (regNum-1).U ))
     }
 
-    io.irgReq(chn).valid := ~isRS1NoneReq & ~isRS2NoneReq
+    io.irgReq(chn).valid := ~isRS1NoneReq(chn) | ~isRS2NoneReq(chn)
     io.irgReq(chn).bits  := ropNum(chn)
   }
 
@@ -274,7 +295,7 @@ trait IssLoadIOp { this: IssueBase =>
       for( i <- 0 until dptEntry ){
         for( rs <- 0 until 2 ){
           when( bufValid(i) & (bufReqNum(i)(rs) === io.irgRsp(chn).bits.phy) & ~isBufFop(i)(rs) ){
-            when( isOpReady(i)(rs) === true.B ) { printf(s"Warning, re-request op at chn $chn, Entry $i, rs( $rs )") }
+            when( isOpReady(i)(rs) === true.B ) { /*printf(s"Warning, re-request op at chn $chn, Entry $i, rs( $rs )")*/ }
             isOpReady(i)(rs)   := true.B
             bufOperator(i)(rs) := io.irgRsp(chn).bits.op
           }
@@ -312,8 +333,8 @@ trait IssSelAlu{ this: IssueSel =>
   def Pkg_alu_iss(idx: Int): Alu_iss_info = {
 
     val res = Wire(new Alu_iss_info)
-    val src1 = bufOperator(idx)(0)
-    val src2 = bufOperator(idx)(1)
+    val src1 = postBufOperator(idx)(0)
+    val src2 = postBufOperator(idx)(1)
     res.fun.add := bufInfo(idx).alu_isa.is_fun_add
     res.fun.slt := bufInfo(idx).alu_isa.is_fun_slt
     res.fun.xor := bufInfo(idx).alu_isa.is_fun_xor
@@ -431,8 +452,8 @@ trait IssSelMul{ this: IssueSel =>
     val res = Wire(new Mul_iss_info)
     res.fun := bufInfo(idx).mul_isa
  
-    res.param.dat.op1 := bufOperator(idx)(0)
-    res.param.dat.op2 := bufOperator(idx)(1)
+    res.param.dat.op1 := postBufOperator(idx)(0)
+    res.param.dat.op2 := postBufOperator(idx)(1)
     res.param.dat.op3 := DontCare
     res.param.rd0     := bufInfo(idx).phy.rd0
     return res
@@ -501,8 +522,8 @@ trait IssSelBru{ this: IssueSel =>
     res.param.is_rvc  := bufInfo(idx).param.is_rvc
     res.param.pc      := extVaddr(bufInfo(idx).param.pc, vlen)
     res.param.imm     := bufInfo(idx).param.imm
-    res.param.dat.op1 := bufOperator(idx)(0)
-    res.param.dat.op2 := bufOperator(idx)(1)
+    res.param.dat.op1 := postBufOperator(idx)(0)
+    res.param.dat.op2 := postBufOperator(idx)(1)
     res.param.dat.op3 := DontCare
     res.param.rd0     := bufInfo(idx).phy.rd0
 
@@ -563,9 +584,9 @@ trait IssSelCsr{ this: IssueSel =>
 
     res.param.dat.op1 := 
       Mux1H(Seq(
-        bufInfo(idx).csr_isa.rw  -> bufOperator(idx)(0), bufInfo(idx).csr_isa.rwi -> bufInfo(idx).param.raw.rs1,
-        bufInfo(idx).csr_isa.rs  -> bufOperator(idx)(0), bufInfo(idx).csr_isa.rsi -> bufInfo(idx).param.raw.rs1,
-        bufInfo(idx).csr_isa.rc  -> bufOperator(idx)(0), bufInfo(idx).csr_isa.rci -> bufInfo(idx).param.raw.rs1
+        bufInfo(idx).csr_isa.rw  -> postBufOperator(idx)(0), bufInfo(idx).csr_isa.rwi -> bufInfo(idx).param.raw.rs1,
+        bufInfo(idx).csr_isa.rs  -> postBufOperator(idx)(0), bufInfo(idx).csr_isa.rsi -> bufInfo(idx).param.raw.rs1,
+        bufInfo(idx).csr_isa.rc  -> postBufOperator(idx)(0), bufInfo(idx).csr_isa.rci -> bufInfo(idx).param.raw.rs1
       ))
 
     res.param.dat.op2 := bufInfo(idx).param.imm
@@ -625,12 +646,12 @@ trait IssSelLsu{ this: IssueSel =>
     res.fun := bufInfo(idx).lsu_isa
 
     res.param.dat.op1 := 
-      Mux( (bufInfo(idx).lsu_isa.is_lrsc | bufInfo(idx).lsu_isa.is_amo), bufOperator(idx)(0),  (bufOperator(idx)(0).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt() )
+      Mux( (bufInfo(idx).lsu_isa.is_lrsc | bufInfo(idx).lsu_isa.is_amo), postBufOperator(idx)(0),  (postBufOperator(idx)(0).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt() )
     res.param.dat.op2 :=
       Mux(
         bufInfo(idx).lsu_isa.is_fst,
-        ieee(unbox(bufOperator(idx)(1), 1.U, None), t = FType.D),
-        bufOperator(idx)(1)
+        ieee(unbox(postBufOperator(idx)(1), 1.U, None), t = FType.D),
+        postBufOperator(idx)(1)
       )
     res.param.dat.op3 := DontCare
 
@@ -692,17 +713,17 @@ trait IssSelFpu{ this: IssueSel =>
     res.param.dat.op1 :=
       Mux(
         bufInfo(idx).fpu_isa.is_fop,
-        bufOperator(idx)(0),
-        Mux( bufInfo(idx).fpu_isa.is_fun_fcsri, bufInfo(idx).param.raw.rs1, bufOperator(idx)(0) )
+        postBufOperator(idx)(0),
+        Mux( bufInfo(idx).fpu_isa.is_fun_fcsri, bufInfo(idx).param.raw.rs1, postBufOperator(idx)(0) )
       )
 
     res.param.dat.op2 :=
       Mux(
         bufInfo(idx).fpu_isa.is_fop,
-        bufOperator(idx)(1),
-        Mux( bufInfo(idx).fpu_isa.is_fun_fcsr, bufInfo(idx).param.imm, bufOperator(idx)(1))
+        postBufOperator(idx)(1),
+        Mux( bufInfo(idx).fpu_isa.is_fun_fcsr, bufInfo(idx).param.imm, postBufOperator(idx)(1))
       )
-    res.param.dat.op3 := bufOperator(idx)(2)
+    res.param.dat.op3 := postBufOperator(idx)(2)
     res.param.rd0 := bufInfo(idx).phy.rd0
     res.param.rm := bufInfo(idx).param.rm
 

@@ -121,7 +121,7 @@ case class RiftSetting(
   ftChn: Int = 8, //fetch width
   rnChn: Int = 2,
   cm_chn: Int = 2,
-  opChn: Int = 6,
+  opChn: Int = 8,
   wbChn: Int = 4,
 
   regNum: Int = 64,

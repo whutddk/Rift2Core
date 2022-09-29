@@ -39,7 +39,9 @@ class Rename()(implicit p: Parameters) extends RiftModule {
  
   })
 
+  val rnRspReport = Module( new RePort( new Dpt_info, port = rnChn) )
   val rnRspFifo = Module(new MultiPortFifo(new Dpt_info, aw = (if(!isMinArea) 4 else 2), rnChn, rnChn))
+  rnRspFifo.io.enq <> rnRspReport.io.deq
   rnRspFifo.io.deq <> io.rnRsp
 
   val reOrder_fifo_i = {
@@ -52,8 +54,8 @@ class Rename()(implicit p: Parameters) extends RiftModule {
 
   for ( i <- 0 until rnChn ) yield {
 
-    rnRspFifo.io.enq(i).valid := io.rnReq(i).fire & ~io.rnReq(i).bits.is_privil_dpt
-    rnRspFifo.io.enq(i).bits  := Pkg_Rename_Info(io.rnReq(i).bits, reg_phy(i))
+    rnRspReport.io.enq(i).valid := io.rnReq(i).fire & ~io.rnReq(i).bits.is_privil_dpt
+    rnRspReport.io.enq(i).bits  := Pkg_Rename_Info(io.rnReq(i).bits, reg_phy(i))
      
     io.xRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.is_iwb
     io.xRename(i).req.bits.rd0 := io.rnReq(i).bits.param.raw.rd0
