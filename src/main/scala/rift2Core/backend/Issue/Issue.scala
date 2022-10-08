@@ -190,7 +190,7 @@ abstract class DptAgeMatrix()(implicit p: Parameters) extends DptBoard {
 }
 
 trait DptReadIOp { this: DptAgeMatrix =>
-  val ropNum = Wire( Vec( opChn, UInt((log2Ceil(regNum)).W)) )
+  val rIOpNum = Wire( Vec( opChn, UInt((log2Ceil(regNum)).W)) )
 
 
   /** Whether this rs can request operator reading */
@@ -209,78 +209,178 @@ trait DptReadIOp { this: DptAgeMatrix =>
   }
 
   /** Who is the highest priority to read operator in each chn */
-  val selMatrixRS1 = Wire( Vec( opChn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
-  val selMatrixRS2 = Wire( Vec( opChn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
-  val maskCondSelRS1 = Wire( Vec( opChn, Vec( dptEntry, Bool() ) ) )
-  val maskCondSelRS2 = Wire( Vec( opChn, Vec( dptEntry, Bool() ) ) )
-  dontTouch(selMatrixRS1)
-  dontTouch(selMatrixRS2)
-  dontTouch(maskCondSelRS1)
-  dontTouch(maskCondSelRS2)
+  val selMatrixIRS1 = Wire( Vec( opChn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
+  val selMatrixIRS2 = Wire( Vec( opChn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
+  val maskCondSelIRS1 = Wire( Vec( opChn, Vec( dptEntry, Bool() ) ) )
+  val maskCondSelIRS2 = Wire( Vec( opChn, Vec( dptEntry, Bool() ) ) )
+  // dontTouch(selMatrixRS1)
+  // dontTouch(selMatrixRS2)
+  // dontTouch(maskCondSelRS1)
+  // dontTouch(maskCondSelRS2)
 
 
   for( chn <- 0 until opChn ){
     if( chn == 0 ){
       for ( i <- 0 until dptEntry ){
-        maskCondSelRS1(chn)(i) := ~bufValid(i) | ~canIOpReq(i)(0)
-        maskCondSelRS2(chn)(i) := ~bufValid(i) | ~canIOpReq(i)(1)
+        maskCondSelIRS1(chn)(i) := ~bufValid(i) | ~canIOpReq(i)(0)
+        maskCondSelIRS2(chn)(i) := ~bufValid(i) | ~canIOpReq(i)(1)
       }
     } else {
       for ( i <- 0 until dptEntry ){
-        maskCondSelRS1(chn)(i) := maskCondSelRS1(chn-1)(i) | (bufReqNum(i)(0) === ropNum(chn-1))
-        maskCondSelRS2(chn)(i) := maskCondSelRS2(chn-1)(i) | (bufReqNum(i)(1) === ropNum(chn-1))
+        maskCondSelIRS1(chn)(i) := maskCondSelIRS1(chn-1)(i) | (bufReqNum(i)(0) === rIOpNum(chn-1))
+        maskCondSelIRS2(chn)(i) := maskCondSelIRS2(chn-1)(i) | (bufReqNum(i)(1) === rIOpNum(chn-1))
       }
     }
-    selMatrixRS1(chn) := MatrixMask( ageMatrixR, maskCondSelRS1(chn) )
-    selMatrixRS2(chn) := MatrixMask( ageMatrixR, maskCondSelRS2(chn) )
+    selMatrixIRS1(chn) := MatrixMask( ageMatrixR, maskCondSelIRS1(chn) )
+    selMatrixIRS2(chn) := MatrixMask( ageMatrixR, maskCondSelIRS2(chn) )
 
     assert(
-      selMatrixRS1(chn).forall( (x: Vec[Bool]) => x.forall{(y: Bool) => (y === true.B)} ) |
-      PopCount( selMatrixRS1(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
+      selMatrixIRS1(chn).forall( (x: Vec[Bool]) => x.forall{(y: Bool) => (y === true.B)} ) |
+      PopCount( selMatrixIRS1(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
     )
 
     assert(
-      selMatrixRS2(chn).forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B)} ) |
-      PopCount( selMatrixRS2(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
+      selMatrixIRS2(chn).forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B)} ) |
+      PopCount( selMatrixIRS2(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
     )
   }
 
 
 
-  val isRS1NoneReq = Wire( Vec(opChn, Bool()) )
-  val isRS2NoneReq = Wire( Vec(opChn, Bool()) )
-  dontTouch(isRS1NoneReq)
-  dontTouch(isRS2NoneReq)
-  val selRS1 = Wire( Vec(opChn,  UInt((log2Ceil(regNum)).W) ) )
-  val selRS2 = Wire( Vec(opChn,  UInt((log2Ceil(regNum)).W) ) )
+  val isIRS1NoneReq = Wire( Vec(opChn, Bool()) )
+  val isIRS2NoneReq = Wire( Vec(opChn, Bool()) )
+  // dontTouch(isRS1NoneReq)
+  // dontTouch(isRS2NoneReq)
+  val selIRS1 = Wire( Vec(opChn, UInt((log2Ceil(regNum)).W) ) )
+  val selIRS2 = Wire( Vec(opChn, UInt((log2Ceil(regNum)).W) ) )
 
   for( chn <- 0 until opChn ){
-    isRS1NoneReq(chn) := selMatrixRS1(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
-    isRS2NoneReq(chn) := selMatrixRS2(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
+    isIRS1NoneReq(chn) := selMatrixIRS1(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
+    isIRS2NoneReq(chn) := selMatrixIRS2(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
 
-    selRS1(chn) :=
-      Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixRS1(chn)(i).forall( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(0) } }) //index a row which all zero
-    selRS2(chn) :=
-      Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixRS2(chn)(i).forall( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(1) } }) //index a row which all zero
+    selIRS1(chn) :=
+      Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixIRS1(chn)(i).forall( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(0) } }) //index a row which all zero
+    selIRS2(chn) :=
+      Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixIRS2(chn)(i).forall( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(1) } }) //index a row which all zero
 
     if( chn % 2 == 0 ){
-      ropNum(chn) := Mux( ~isRS1NoneReq(chn), selRS1(chn), Mux( ~isRS2NoneReq(chn), selRS2(chn), (regNum-1).U ))
+      rIOpNum(chn) := Mux( ~isIRS1NoneReq(chn), selIRS1(chn), Mux( ~isIRS2NoneReq(chn), selIRS2(chn), (regNum-1).U ))
     } else {
-      ropNum(chn) := Mux( ~isRS2NoneReq(chn), selRS2(chn), Mux( ~isRS1NoneReq(chn), selRS1(chn), (regNum-1).U ))
+      rIOpNum(chn) := Mux( ~isIRS2NoneReq(chn), selIRS2(chn), Mux( ~isIRS1NoneReq(chn), selIRS1(chn), (regNum-1).U ))
     }
 
-    io.irgReq(chn).valid := ~isRS1NoneReq(chn) | ~isRS2NoneReq(chn)
-    io.irgReq(chn).bits  := ropNum(chn)
+    io.irgReq(chn).valid := ~isIRS1NoneReq(chn) | ~isIRS2NoneReq(chn)
+    io.irgReq(chn).bits  := rIOpNum(chn)
   }
 
 
 }
 
 trait DptReadFOp { this: DptAgeMatrix =>
-  for( chn <- 0 until opChn ){
-    io.frgReq(chn).valid := false.B
-    io.frgReq(chn).bits  := DontCare
+  val rFOpNum = Wire( Vec( opChn, UInt((log2Ceil(regNum)).W)) )
+
+
+  /** Whether this rs can request operator reading */
+  val canFOpReq = Wire( Vec( dptEntry, Vec( 3, Bool() )))
+
+  for( i <- 0 until dptEntry ) {
+    canFOpReq(i)(0) := 
+      io.frgLog(bufInfo(i).phy.rs1) === "b11".U & //reg-log is ready
+      isBufFop(i)(0) & //is a fop req
+      ~isOpReady(i)(0) & ~io.frgRsp.map{x => {x.valid & (x.bits.phy === bufReqNum(i)(0))}}.reduce(_|_) //pending and non-rsp in same cycle
+    
+    canFOpReq(i)(1) :=
+      io.frgLog(bufInfo(i).phy.rs2) === "b11".U & //reg-log is ready
+      isBufFop(i)(1) & //is a fop req
+      ~isOpReady(i)(1) & ~io.frgRsp.map{x => {x.valid & (x.bits.phy === bufReqNum(i)(1))}}.reduce(_|_) //pending and non-rsp in same cycle
+
+    canFOpReq(i)(2) :=
+      io.frgLog(bufInfo(i).phy.rs3) === "b11".U & //reg-log is ready
+      isBufFop(i)(2) & //is a fop req
+      ~isOpReady(i)(2) & ~io.frgRsp.map{x => {x.valid & (x.bits.phy === bufReqNum(i)(2))}}.reduce(_|_) //pending and non-rsp in same cycle
   }
+
+  /** Who is the highest priority to read operator in each chn */
+  val selMatrixFRS1   = Wire( Vec( opChn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
+  val selMatrixFRS2   = Wire( Vec( opChn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
+  val selMatrixFRS3   = Wire( Vec( opChn, Vec( dptEntry, Vec(dptEntry, Bool() ) ) ) )
+  val maskCondSelFRS1 = Wire( Vec( opChn, Vec( dptEntry, Bool() ) ) )
+  val maskCondSelFRS2 = Wire( Vec( opChn, Vec( dptEntry, Bool() ) ) )
+  val maskCondSelFRS3 = Wire( Vec( opChn, Vec( dptEntry, Bool() ) ) )
+
+
+
+  for( chn <- 0 until opChn ){
+    if( chn == 0 ){
+      for ( i <- 0 until dptEntry ){
+        maskCondSelFRS1(chn)(i) := ~bufValid(i) | ~canFOpReq(i)(0)
+        maskCondSelFRS2(chn)(i) := ~bufValid(i) | ~canFOpReq(i)(1)
+        maskCondSelFRS3(chn)(i) := ~bufValid(i) | ~canFOpReq(i)(2)
+      }
+    } else {
+      for ( i <- 0 until dptEntry ){
+        maskCondSelFRS1(chn)(i) := maskCondSelFRS1(chn-1)(i) | (bufReqNum(i)(0) === rFOpNum(chn-1))
+        maskCondSelFRS2(chn)(i) := maskCondSelFRS2(chn-1)(i) | (bufReqNum(i)(1) === rFOpNum(chn-1))
+        maskCondSelFRS3(chn)(i) := maskCondSelFRS3(chn-1)(i) | (bufReqNum(i)(1) === rFOpNum(chn-1))
+      }
+    }
+    selMatrixFRS1(chn) := MatrixMask( ageMatrixR, maskCondSelFRS1(chn) )
+    selMatrixFRS2(chn) := MatrixMask( ageMatrixR, maskCondSelFRS2(chn) )
+    selMatrixFRS3(chn) := MatrixMask( ageMatrixR, maskCondSelFRS3(chn) )
+
+    assert(
+      selMatrixFRS1(chn).forall( (x: Vec[Bool]) => x.forall{(y: Bool) => (y === true.B)} ) |
+      PopCount( selMatrixFRS1(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
+    )
+
+    assert(
+      selMatrixFRS2(chn).forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B)} ) |
+      PopCount( selMatrixFRS2(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
+    )
+
+    assert(
+      selMatrixFRS3(chn).forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B)} ) |
+      PopCount( selMatrixFRS3(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
+    )
+  }
+
+
+
+  val isFRS1NoneReq = Wire( Vec(opChn, Bool()) )
+  val isFRS2NoneReq = Wire( Vec(opChn, Bool()) )
+  val isFRS3NoneReq = Wire( Vec(opChn, Bool()) )
+  // dontTouch(isFRS1NoneReq)
+  // dontTouch(isFRS2NoneReq)
+  val selFRS1 = Wire( Vec(opChn,  UInt((log2Ceil(regNum)).W) ) )
+  val selFRS2 = Wire( Vec(opChn,  UInt((log2Ceil(regNum)).W) ) )
+  val selFRS3 = Wire( Vec(opChn,  UInt((log2Ceil(regNum)).W) ) )
+
+  for( chn <- 0 until opChn ){
+    isFRS1NoneReq(chn) := selMatrixFRS1(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
+    isFRS2NoneReq(chn) := selMatrixFRS2(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
+    isFRS3NoneReq(chn) := selMatrixFRS3(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
+
+    selFRS1(chn) :=
+      Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixFRS1(chn)(i).forall( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(0) } }) //index a row which all zero
+    selFRS2(chn) :=
+      Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixFRS2(chn)(i).forall( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(1) } }) //index a row which all zero
+    selFRS3(chn) :=
+      Mux1H(( 0 until dptEntry ).map{ i => { (selMatrixFRS3(chn)(i).forall( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(2) } }) //index a row which all zero
+
+    if( chn % 3 == 0 ){
+      rFOpNum(chn) := Mux( ~isFRS1NoneReq(chn), selFRS1(chn), Mux( ~isFRS2NoneReq(chn), selFRS2(chn), Mux( ~isFRS3NoneReq(chn), selFRS3(chn), (regNum-1).U) ))
+    } else if( chn % 3 == 0 ){
+      rFOpNum(chn) := Mux( ~isFRS2NoneReq(chn), selFRS2(chn), Mux( ~isFRS3NoneReq(chn), selFRS3(chn), Mux( ~isFRS1NoneReq(chn), selFRS1(chn), (regNum-1).U) ))
+    } else {
+      rFOpNum(chn) := Mux( ~isFRS3NoneReq(chn), selFRS3(chn), Mux( ~isFRS1NoneReq(chn), selFRS1(chn), Mux( ~isFRS2NoneReq(chn), selFRS2(chn), (regNum-1).U) ))
+    }
+
+
+    io.frgReq(chn).valid := ~isFRS1NoneReq(chn) | ~isFRS2NoneReq(chn) | ~isFRS3NoneReq(chn)
+    io.frgReq(chn).bits  := rFOpNum(chn)
+  }
+
+
 }
 
 
@@ -307,7 +407,19 @@ trait IssLoadIOp { this: IssueBase =>
 }
 
 trait IssLoadFOp { this: IssueBase =>
-
+  for( chn <- 0 until opChn ){
+    when( io.frgRsp(chn).valid ){
+      for( i <- 0 until dptEntry ){
+        for( rs <- 0 until 3 ){
+          when( bufValid(i) & (bufReqNum(i)(rs) === io.frgRsp(chn).bits.phy) & isBufFop(i)(rs) ){
+            when( isOpReady(i)(rs) === true.B ) { /*printf(s"Warning, re-request op at chn $chn, Entry $i, rs( $rs )")*/ }
+            isOpReady(i)(rs)   := true.B
+            bufOperator(i)(rs) := io.frgRsp(chn).bits.op
+          }
+        }
+      }
+    }    
+  }
 }
 
 abstract class IssueSel()(implicit p: Parameters) extends IssueBase with IssLoadIOp with IssLoadFOp{
@@ -315,15 +427,14 @@ abstract class IssueSel()(implicit p: Parameters) extends IssueBase with IssLoad
   val postBufOperator = Wire( Vec( dptEntry, Vec(3, UInt(65.W))) )
 
   for( i <- 0 until dptEntry ){
-    postIsOpReady(i)(0)   := MuxCase( isOpReady(i)(0),    io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(0))) -> true.B    } }  )
-    postIsOpReady(i)(1)   := MuxCase( isOpReady(i)(1),    io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B    } }  )
-    postIsOpReady(i)(2)   := MuxCase( isOpReady(i)(2),    io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B    } }  )
+    postIsOpReady(i)(0)   := MuxCase( isOpReady(i)(0),    io.irgRsp.map{x => { ( ~isBufFop(i)(0) & x.valid & (x.bits.phy === bufReqNum(i)(0))) -> true.B }}    ++ io.frgRsp.map{x => { ( isBufFop(i)(0) & x.valid & (x.bits.phy === bufReqNum(i)(0))) -> true.B }}     )
+    postIsOpReady(i)(1)   := MuxCase( isOpReady(i)(1),    io.irgRsp.map{x => { ( ~isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }}    ++ io.frgRsp.map{x => { ( isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }}     )
+    postIsOpReady(i)(2)   := MuxCase( isOpReady(i)(2),    io.irgRsp.map{x => { ( ~isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }}    ++ io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }}     )
 
-    postBufOperator(i)(0) := MuxCase( bufOperator(i)(0) , io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(0))) -> x.bits.op } }  )
-    postBufOperator(i)(1) := MuxCase( bufOperator(i)(1) , io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op } }  )
-    postBufOperator(i)(2) := MuxCase( bufOperator(i)(2) , io.irgRsp.map{x => { (x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op } }  )
+    postBufOperator(i)(0) := MuxCase( bufOperator(i)(0) , io.irgRsp.map{x => { ( ~isBufFop(i)(0) & x.valid & (x.bits.phy === bufReqNum(i)(0))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(0) & x.valid & (x.bits.phy === bufReqNum(i)(0))) -> x.bits.op }}  )
+    postBufOperator(i)(1) := MuxCase( bufOperator(i)(1) , io.irgRsp.map{x => { ( ~isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }}   )
+    postBufOperator(i)(2) := MuxCase( bufOperator(i)(2) , io.irgRsp.map{x => { ( ~isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }}   )
   }
-
 
 }
 
@@ -734,50 +845,47 @@ trait IssSelFpu{ this: IssueSel =>
   if( fpuNum != 0 ){
     val fpuIssIdx = Wire( Vec( fpuNum, UInt((log2Ceil(dptEntry)).W) ))
     val fpuIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_fpu_iss(i) }
-    val fpuIssFifo = Module(new MultiPortFifo( new Fpu_iss_info, aw = ( if(!isMinArea) 4 else log2Ceil(fpuNum) ), in = fpuNum, out = fpuNum ))
+    val fpuIssFifo = Module(new Queue( new Fpu_iss_info, ( if(!isMinArea) 4 else log2Ceil(fpuNum) )))
 
     val fpuIssMatrix   = Wire( Vec(fpuNum, Vec( dptEntry, Vec(dptEntry, Bool() ) )) )
     val maskCondFpuIss = Wire( Vec(fpuNum, Vec( dptEntry, Bool()) ))
 
 
-    for( iss <- 0 until fpuNum ){
-      if( iss == 0 ) {  
-        for( i <- 0 until dptEntry ) {
-          maskCondFpuIss(iss)(i) := 
-            ~bufValid(i) |
-            ~bufInfo(i).fpu_isa.is_fpu |
-            ~(postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2))
-        }
-      } else {
-        for( i <- 0 until dptEntry ) {
-          maskCondFpuIss(iss)(i) := maskCondFpuIss(iss-1)(i) | (i.U === fpuIssIdx(iss-1))
-        }
-      }
-      fpuIssMatrix(iss) := MatrixMask( ageMatrixR, maskCondFpuIss(iss) )
-      
-      assert(
-        fpuIssMatrix(iss).forall( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === true.B) ) ) |
-        PopCount( fpuIssMatrix(iss).map{(x: Vec[Bool]) => x.forall((y: Bool) => (y === false.B))} ) === 1.U
-      )
-    }
-    
-    for( iss <- 0 until fpuNum ){
-      fpuIssFifo.io.enq(iss).valid := ~fpuIssMatrix(iss).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
-      fpuIssIdx(iss) := fpuIssMatrix(iss).indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
-      fpuIssFifo.io.enq(iss).bits  := 
-        Mux1H( ( 0 until dptEntry ).map{ i => { (fpuIssMatrix(iss)(i).forall( (y: Bool) => ( y === false.B ) )) -> fpuIssInfo(i) } } )
 
-      for( i <- 0 until dptEntry ) {
-        when( fpuIssFifo.io.enq(iss).fire & fpuIssIdx(iss) === i.U ) {
-          bufValid(i) := false.B
-          assert( postIsOpReady(i)(0) & postIsOpReady(i)(1) )
-          assert( bufValid(i) )
-          assert( bufInfo(i).fpu_isa.is_fpu )
-        }
+  
+    for( i <- 0 until dptEntry ) {
+      maskCondFpuIss(0)(i) := 
+        ~bufValid(i) |
+        ~bufInfo(i).fpu_isa.is_fpu
+    }
+
+    fpuIssMatrix(0) := MatrixMask( ageMatrixR, maskCondFpuIss(0) )
+    
+    assert(
+      fpuIssMatrix(0).forall( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === true.B) ) ) |
+      PopCount( fpuIssMatrix(0).map{(x: Vec[Bool]) => x.forall((y: Bool) => (y === false.B))} ) === 1.U
+    )
+
+    fpuIssFifo.io.enq.valid := 
+      ( 0 until dptEntry ).map{ i => { fpuIssMatrix(0)(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) } }.reduce(_|_)
+
+    fpuIssFifo.io.enq.bits  := 
+      Mux1H( ( 0 until dptEntry ).map{ i => { (fpuIssMatrix(0)(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) ) -> fpuIssInfo(i) } } )
+    
+
+    fpuIssIdx(0) := fpuIssMatrix(0).indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
+
+    for( i <- 0 until dptEntry ) {
+      when( fpuIssFifo.io.enq.fire & fpuIssIdx(0) === i.U ) {
+        bufValid(i) := false.B
+        assert( postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) )
+        assert( bufValid(i) )
+        assert( bufInfo(i).fpu_isa.is_fpu )
       }
     }
-    fpuIssFifo.io.deq <> io.fpu_iss_exe
-    fpuIssFifo.io.flush := io.flush
+
+    fpuIssFifo.io.deq <> io.fpu_iss_exe(0)
+    fpuIssFifo.reset := io.flush | reset.asBool
   } else {
     io.fpu_iss_exe(0).valid := false.B
     io.fpu_iss_exe(0).bits  := DontCare

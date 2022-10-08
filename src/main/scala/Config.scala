@@ -340,7 +340,7 @@ class Rift2360 extends Config((site, here, up) => {
 
 class Rift2370 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    fpuNum = 0,
+    fpuNum = 1,
   )
 })
 
