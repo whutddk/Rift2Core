@@ -111,20 +111,19 @@ case object RiftParamsKey extends Field[RiftSetting]
 case class RiftSetting(
 
   hasL2: Boolean = true,
-  hasFpu: Boolean = false,
   hasDebugger: Boolean = true,
   hasPreFetch: Boolean = false,
   hasuBTB: Boolean = true,
-  hasMulDiv: Boolean = true,
+
 
 
   isMinArea: Boolean = false,
   isLowPower: Boolean = false,
 
   ftChn: Int = 8, //fetch width
-  rn_chn: Int = 2,
+  rnChn: Int = 2,
   cm_chn: Int = 2,
-  opChn: Int = 6,
+  opChn: Int = 8,
   wbChn: Int = 4,
 
   regNum: Int = 64,
@@ -159,6 +158,11 @@ case class RiftSetting(
 
   l1DW: Int = 256,
 
+  aluNum: Int = 1,
+  mulNum: Int = 1,
+  fpuNum: Int = 0,
+
+
   icacheParameters: IcacheParameters = IcacheParameters(
     bk = 1,
     cb = 4,
@@ -182,6 +186,7 @@ case class RiftSetting(
   require( pmpNum >= 0 && pmpNum <= 8 )
   require( isPow2(dcacheParameters.stEntry) )
   require( isPow2(ftChn) )
+  require( aluNum > 0 )
 
 }
 
@@ -195,16 +200,15 @@ trait HasRiftParameters {
   val dcacheParams = riftSetting.dcacheParameters
 
   def hasL2  = riftSetting.hasL2
-  def hasFpu = riftSetting.hasFpu
   def hasDebugger = riftSetting.hasDebugger
   def hasPreFetch = riftSetting.hasPreFetch
   def hasuBTB  = riftSetting.hasuBTB
-  def hasMulDiv = riftSetting.hasMulDiv
+  // def hasMulDiv = riftSetting.hasMulDiv
   
   def ftChn = riftSetting.ftChn
 
   def cm_chn = riftSetting.cm_chn
-  def rn_chn = riftSetting.rn_chn
+  def rnChn = riftSetting.rnChn
   def opChn = riftSetting.opChn
   def wbChn = riftSetting.wbChn
 
@@ -220,6 +224,11 @@ trait HasRiftParameters {
   def plen = riftSetting.plen
 
   def tlbEntry = riftSetting.tlbEntry
+
+  def aluNum = riftSetting.aluNum
+  def mulNum = riftSetting.mulNum
+  def fpuNum = riftSetting.fpuNum
+
 
   def isMinArea = riftSetting.isMinArea
   def isLowPower = riftSetting.isLowPower

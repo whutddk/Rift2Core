@@ -13,15 +13,14 @@ import freechips.rocketchip.config._
 class Rift2300 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     hasL2  = false,
-    hasFpu = false,
     hasDebugger = false,
     hasPreFetch = false,
     hasuBTB = false,
-    hasMulDiv = false,
+
 
     ftChn = 4,
 
-    rn_chn = 1,
+    rnChn = 1,
     opChn = 1,
     wbChn = 1,
     cm_chn = 1,
@@ -59,6 +58,8 @@ class Rift2300 extends Config((site, here, up) => {
       
     ),
 
+    fpuNum = 0,
+    mulNum = 0,
 
     isMinArea = true,
     isLowPower = false,
@@ -71,15 +72,13 @@ class Rift2300 extends Config((site, here, up) => {
 class Rift2310 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     hasL2  = false,
-    hasFpu = false,
     hasDebugger = true,
     hasPreFetch = false,
     hasuBTB = false,
-    hasMulDiv = true,
 
     ftChn = 4,
 
-    rn_chn = 1,
+    rnChn = 1,
     opChn = 1,
     wbChn = 1,
     cm_chn = 1,
@@ -116,6 +115,8 @@ class Rift2310 extends Config((site, here, up) => {
       
     ),
 
+    fpuNum = 0,
+    mulNum = 1,
 
     isMinArea = true,
     isLowPower = false,
@@ -126,15 +127,13 @@ class Rift2310 extends Config((site, here, up) => {
 class Rift2320 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     hasL2  = true,
-    hasFpu = false,
     hasDebugger = true,
     hasPreFetch = false,
     hasuBTB = false,
-    hasMulDiv = true,
 
     ftChn = 4,
 
-    rn_chn = 1,
+    rnChn = 1,
     opChn = 1,
     wbChn = 1,
     cm_chn = 1,
@@ -170,6 +169,8 @@ class Rift2320 extends Config((site, here, up) => {
       
     ),
 
+    mulNum = 1,
+    fpuNum = 0,
 
     isMinArea = true,
     isLowPower = false,
@@ -179,7 +180,6 @@ class Rift2320 extends Config((site, here, up) => {
 
 class Rift2330 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasFpu = false,
     hasDebugger = true,
     hasPreFetch = false,
 
@@ -211,15 +211,15 @@ class Rift2330 extends Config((site, here, up) => {
       stEntry = 2,
     ),
 
+    fpuNum = 0,
 
-    isMinArea = true,
+    isMinArea = false,
     isLowPower = false,
   )
 })
 
 class Rift2340 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasFpu = true,
     hasDebugger = true,
     hasPreFetch = false,
 
@@ -251,6 +251,7 @@ class Rift2340 extends Config((site, here, up) => {
       stEntry = 8,
     ),
 
+    fpuNum = 1,
 
     isMinArea = true,
     isLowPower = false,
@@ -259,7 +260,6 @@ class Rift2340 extends Config((site, here, up) => {
 
 class Rift2350 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasFpu = false,
     hasDebugger = true,
     hasPreFetch = false,
 
@@ -291,6 +291,7 @@ class Rift2350 extends Config((site, here, up) => {
       stEntry = 8,
     ),
 
+    fpuNum = 0,
 
     isMinArea = true,
     isLowPower = false,
@@ -299,7 +300,6 @@ class Rift2350 extends Config((site, here, up) => {
 
 class Rift2360 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasFpu = false,
     hasDebugger = true,
     hasPreFetch = false,
 
@@ -331,6 +331,7 @@ class Rift2360 extends Config((site, here, up) => {
       stEntry = 16,
     ),
 
+    fpuNum = 0,
 
     isMinArea = false,
     isLowPower = true,
@@ -339,13 +340,12 @@ class Rift2360 extends Config((site, here, up) => {
 
 class Rift2370 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasFpu = true
+    fpuNum = 1,
   )
 })
 
 class Rift2380 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasFpu = true,
     hasDebugger = true,
     hasPreFetch = false,
 
@@ -377,7 +377,7 @@ class Rift2380 extends Config((site, here, up) => {
       stEntry = 32,
     ),
 
-
+    fpuNum = 1,
     isMinArea = false,
     isLowPower = true,
   )
@@ -385,7 +385,6 @@ class Rift2380 extends Config((site, here, up) => {
 
 class Rift2390 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasFpu = true,
     hasDebugger = true,
     hasPreFetch = false,
 
@@ -417,6 +416,8 @@ class Rift2390 extends Config((site, here, up) => {
       stEntry = 32,
     ),
 
+
+    fpuNum = 1,
 
     isMinArea = false,
     isLowPower = true,
