@@ -268,8 +268,10 @@ trait PTWCache { this: PTWBase =>
 
 
 
-  datRAM.io.addr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
-  tagRAM.io.addr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
+  datRAM.io.addrr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
+  datRAM.io.addrw := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
+  tagRAM.io.addrr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
+  tagRAM.io.addrw := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
 
 
     tagRAM.io.enr := (currState === PTWState.Lvl1.U)

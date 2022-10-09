@@ -66,8 +66,8 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
   val addrSelR = Wire(UInt(line_w.W))
   val tagInfoW = Wire(UInt(tag_w.W))
 
-  val isBusy = RegInit(false.B)
-  io.enq.ready := ~isBusy
+
+  io.enq.ready := true.B
   val pipeStage1Valid = RegNext(io.enq.fire, false.B)
   val pipeStage1Bits  = RegNext(io.enq.bits)
 
@@ -114,18 +114,28 @@ trait DcacheStageSRAM{ this: DcacheStageBase =>
 
   for( i <- 0 until cb ) {
 
-    tagRAM(i).io.addr  := Mux(tagEnW(i), addrSelW, addrSelR)
-    tagRAM(i).io.dataw := tagInfoW
-    tagInfoR(i) := tagRAM(i).io.datar
+    val isTagBypass   = RegEnable( tagEnW(i) & (addrSelR === addrSelW), io.enq.fire )
+    val tagBypassData = RegEnable( tagInfoW, io.enq.fire & tagEnW(i) & (addrSelR === addrSelW) )
+    val isDatBypass   = RegEnable( datEnW(i) & (addrSelR === addrSelW), io.enq.fire )
+    val datBypassData = RegEnable( datInfoW, io.enq.fire & datEnW(i) & (addrSelR === addrSelW) )
+    val datBypassWM   = RegEnable( datInfoWM, io.enq.fire & datEnW(i) & (addrSelR === addrSelW) )
+    
+
+    tagRAM(i).io.addrr  := addrSelR
+    tagRAM(i).io.addrw  := addrSelW
+    tagRAM(i).io.dataw  := tagInfoW
+    tagInfoR(i)         := Mux( isTagBypass, tagBypassData, tagRAM(i).io.datar ) 
     tagRAM(i).io.enw   := tagEnW(i)
     tagRAM(i).io.enr   := io.enq.fire
 
-    datRAM(i).io.enr    := io.enq.fire
-    datRAM(i).io.addr   := Mux(datEnW(i), addrSelW, addrSelR)
+
+    datRAM(i).io.addrr  := addrSelR
+    datRAM(i).io.addrw  := addrSelW
     datRAM(i).io.dataw  := datInfoW
     datRAM(i).io.datawm := datInfoWM
-    datInfoR(i) := datRAM(i).io.datar
+    datInfoR(i)         := (for( w <- 0 until dw/8 ) yield { Mux(isDatBypass & datBypassWM(w), datBypassData(w), datRAM(i).io.datar(w)) })
     datRAM(i).io.enw    := datEnW(i)
+    datRAM(i).io.enr    := io.enq.fire
 
   }
 
@@ -392,20 +402,6 @@ class DcacheStage(idx: Int)(implicit p: Parameters) extends DcacheStageBase((idx
   with DcacheStageWData
   with DcacheStageBlock
   with DcacheStageRTN {
-
-  when( isBusy /*& ( datEnW.reduce(_|_) | tagEnW.reduce(_|_) | io.reload.fire )*/ ) {
-    isBusy := false.B
-  } .elsewhen( io.enq.fire & (io.enq.bits.fun.is_dat_w | io.enq.bits.fun.is_tag_w) ) {
-    assert( ~isBusy )
-    isBusy := true.B
-  } 
-
-
-
-
-
-
-
 
 
 

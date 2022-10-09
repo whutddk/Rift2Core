@@ -216,8 +216,10 @@ trait IF2ICache { this: IF2Base =>
 
 
   for ( i <- 0 until cb ) {
-    datRAM(i).io.addr := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
-    tagRAM(i).io.addr := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
+    datRAM(i).io.addrr := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
+    datRAM(i).io.addrw := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
+    tagRAM(i).io.addrr := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
+    tagRAM(i).io.addrw := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
 
     datRAM(i).io.enr  := icache_state_qout === 0.U | icache_state_qout === 1.U
     tagRAM(i).io.enr  := icache_state_qout === 0.U | icache_state_qout === 1.U

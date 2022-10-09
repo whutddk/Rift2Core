@@ -302,7 +302,7 @@ VSimTop:
 	${R2}/tb/verilator/sim_main.cpp  \
 	${R2}/tb/verilator/diff.cpp \
 	-Mdir ./generated/build/$(CONFIG) \
-	-j 1
+	-j 30
 
 
 
