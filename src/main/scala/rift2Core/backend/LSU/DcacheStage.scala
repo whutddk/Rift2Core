@@ -232,7 +232,7 @@ trait DcacheStageBlock{ this: DcacheStageBase =>
       isCBDirty(addrSelW)(cbSel) := true.B
     }
 
-    when( pipeStage1Bits.fun.probe ) {
+    when( pipeStage1Bits.fun.probe & isHit ) {
       isCBValid(addrSelW)(cbSel) := false.B
     }
   }
@@ -258,7 +258,7 @@ trait DcacheStageBlock{ this: DcacheStageBase =>
     ))
 
   when( pipeStage1Valid ) {
-    when( pipeStage1Bits.fun.probe ) { assert(isHit) } //l2 will never request a empty probe
+    when( pipeStage1Bits.fun.probe ) { when( ~isHit ) { printf("Warning, l2 will never request a empty probe, is it in writeback unit?\n") } } //
     when( pipeStage1Bits.fun.grant ) {  } 
   }
 }
@@ -282,32 +282,19 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
   }
 
   val wbReqValid = RegInit(false.B)
-  // val pbReqValid = RegInit(false.B)
   val wbReqPaddr = Reg(UInt(plen.W))
-  // val pbReqPaddr = Reg(UInt(plen.W))
   val wbReqData  = Reg(UInt(dw.W))
-  // val pbReqData  = Reg(UInt(256.W))
   val wbReqisData = Reg(Bool())
   val isPb        = Reg(Bool())
 
   io.wb_req.valid := wbReqValid
-  // io.pb_req.valid := pbReqValid
-
   io.wb_req.bits.paddr := wbReqPaddr
-  // io.pb_req.bits.paddr := pbReqPaddr
-
   io.wb_req.bits.data := wbReqData
-  // io.pb_req.bits.data := pbReqData
 
   io.wb_req.bits.is_releaseData :=  wbReqisData & ~isPb
   io.wb_req.bits.is_release     := ~wbReqisData & ~isPb
   io.wb_req.bits.is_probeData   :=  wbReqisData &  isPb
   io.wb_req.bits.is_probe       := ~wbReqisData &  isPb
-
-  // io.pb_req.bits.is_releaseData := false.B
-  // io.pb_req.bits.is_release     := false.B
-  // io.pb_req.bits.is_probeData   :=  pbReqisData
-  // io.pb_req.bits.is_probe       := ~pbReqisData
 
   when( pipeStage1Valid & ( pipeStage1Bits.fun.grant & ~isCBValid(addrSelW).contains(false.B) ) ) {
     wbReqValid  := true.B
@@ -319,7 +306,7 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
     wbReqValid  := true.B
     wbReqPaddr  := pipeStage1Bits.paddr >> addr_lsb.U << addr_lsb.U 
     wbReqData   := Cat(datInfoR(cbSel).reverse)
-    wbReqisData := isCBDirty(addrSelW)(cbSel)
+    wbReqisData := isCBDirty(addrSelW)(cbSel) & isHit
     isPb        := true.B
   } .otherwise {
     wbReqValid  := false.B

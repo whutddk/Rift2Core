@@ -509,7 +509,7 @@ trait IssSelAlu{ this: IssueSel =>
 
   val aluIssIdx = Wire( Vec( aluNum, UInt((log2Ceil(dptEntry)).W) ) )
   val aluIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_alu_iss(i) }
-  val aluIssFifo = Module(new MultiPortFifo( new Alu_iss_info, aw = ( if(!isMinArea) 4 else log2Ceil(aluNum) ), in = aluNum, out = aluNum ))
+  val aluIssFifo = Module(new MultiPortFifo( new Alu_iss_info, aw = ( if(!isMinArea) 4 else aluNum ), in = aluNum, out = aluNum ))
 
   val aluIssMatrix   = Wire( Vec(aluNum, Vec( dptEntry, Vec(dptEntry, Bool() ) )) )
   val maskCondAluIss = Wire( Vec(aluNum, Vec( dptEntry, Bool()) ))
@@ -573,7 +573,7 @@ trait IssSelMul{ this: IssueSel =>
   if ( mulNum != 0 ) {
     val mulIssIdx  = Wire( Vec(mulNum, UInt((log2Ceil(dptEntry)).W) )  )
     val mulIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_mul_iss(i) }
-    val mulIssFifo = Module(new MultiPortFifo( new Mul_iss_info, aw = ( if(!isMinArea) 4 else log2Ceil(mulNum) ), in = mulNum, out = mulNum ))
+    val mulIssFifo = Module(new MultiPortFifo( new Mul_iss_info, aw = ( if(!isMinArea) 4 else mulNum ), in = mulNum, out = mulNum ))
 
     val mulIssMatrix   = Wire( Vec(mulNum, Vec( dptEntry, Vec(dptEntry, Bool() ) )) )
     val maskCondMulIss = Wire( Vec(mulNum, Vec( dptEntry, Bool()) ))
