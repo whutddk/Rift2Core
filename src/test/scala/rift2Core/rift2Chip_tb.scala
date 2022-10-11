@@ -55,14 +55,14 @@ object tapeMain extends App {
   // val cfg = new Rift2350
   // val cfg = new Rift2370
 
-  (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Main", "-E", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
+  (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Main", "-E", "verilog", "--gen-mem-verilog", "true") ++ args, Seq(//, "--gen-mem-verilog", "true"
       ChiselGeneratorAnnotation(() => {
     val soc = LazyModule(new Rift2Link()(cfg))
     soc.module
   })
   ))
 
-  (new chisel3.stage.ChiselStage).execute( Array(  "--target-dir", "generated/TapeMain", "-E", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
+  (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/TapeMain", "-E", "verilog", "--gen-mem-verilog", "true") ++ args, Seq(//, "--gen-mem-verilog", "true"
       ChiselGeneratorAnnotation(() => {
     val soc = LazyModule(new Rift2LinkA(isFlatten = false)(cfg))
     soc.module

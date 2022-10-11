@@ -509,7 +509,9 @@ trait IssSelAlu{ this: IssueSel =>
 
   val aluIssIdx = Wire( Vec( aluNum, UInt((log2Ceil(dptEntry)).W) ) )
   val aluIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_alu_iss(i) }
-  val aluIssFifo = Module(new MultiPortFifo( new Alu_iss_info, aw = ( if(!isMinArea) 4 else aluNum ), in = aluNum, out = aluNum ))
+  val aluIssFifo = for( i <- 0 until aluNum ) yield {
+    Module(new Queue( new Alu_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true ))
+  }
 
   val aluIssMatrix   = Wire( Vec(aluNum, Vec( dptEntry, Vec(dptEntry, Bool() ) )) )
   val maskCondAluIss = Wire( Vec(aluNum, Vec( dptEntry, Bool()) ))
@@ -537,23 +539,23 @@ trait IssSelAlu{ this: IssueSel =>
   }
   
   for( iss <- 0 until aluNum ){
-    aluIssFifo.io.enq(iss).valid := ~aluIssMatrix(iss).forall{ (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
+    aluIssFifo(iss).io.enq.valid := ~aluIssMatrix(iss).forall{ (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
     aluIssIdx(iss) := aluIssMatrix(iss).indexWhere( (x: Vec[Bool]) => x.forall( y => (y === false.B) ) ) //index a row which all zero
-    aluIssFifo.io.enq(iss).bits  := 
+    aluIssFifo(iss).io.enq.bits  := 
       Mux1H( ( 0 until dptEntry ).map{ i => { (aluIssMatrix(iss)(i).forall( (y: Bool) => ( y === false.B ) )) -> aluIssInfo(i) } } )
 
     for( i <- 0 until dptEntry ) {
-      when( aluIssFifo.io.enq(iss).fire & aluIssIdx(iss) === i.U ) {
+      when( aluIssFifo(iss).io.enq.fire & aluIssIdx(iss) === i.U ) {
         bufValid(i) := false.B
         assert( postIsOpReady(i)(0) & postIsOpReady(i)(1) )
         assert( bufValid(i) )
         assert( bufInfo(i).alu_isa.is_alu )
       }
     }
-
+    aluIssFifo(iss).io.deq <> io.alu_iss_exe(iss)
+    aluIssFifo(iss).reset := io.flush | reset.asBool
   }
-  aluIssFifo.io.deq <> io.alu_iss_exe
-  aluIssFifo.io.flush := io.flush
+
 
 }
 
@@ -573,7 +575,9 @@ trait IssSelMul{ this: IssueSel =>
   if ( mulNum != 0 ) {
     val mulIssIdx  = Wire( Vec(mulNum, UInt((log2Ceil(dptEntry)).W) )  )
     val mulIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_mul_iss(i) }
-    val mulIssFifo = Module(new MultiPortFifo( new Mul_iss_info, aw = ( if(!isMinArea) 4 else mulNum ), in = mulNum, out = mulNum ))
+    val mulIssFifo = for( i <- 0 until mulNum ) yield {
+      Module(new Queue( new Mul_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true ))
+    }
 
     val mulIssMatrix   = Wire( Vec(mulNum, Vec( dptEntry, Vec(dptEntry, Bool() ) )) )
     val maskCondMulIss = Wire( Vec(mulNum, Vec( dptEntry, Bool()) ))
@@ -600,22 +604,23 @@ trait IssSelMul{ this: IssueSel =>
     }
     
     for( iss <- 0 until mulNum ){
-      mulIssFifo.io.enq(iss).valid := ~mulIssMatrix(iss).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => y === true.B }} //all ture
+      mulIssFifo(iss).io.enq.valid := ~mulIssMatrix(iss).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => y === true.B }} //all ture
       mulIssIdx(iss) := mulIssMatrix(iss).indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
-      mulIssFifo.io.enq(iss).bits  := 
+      mulIssFifo(iss).io.enq.bits  := 
         Mux1H( ( 0 until dptEntry ).map{ i => { (mulIssMatrix(iss)(i).forall( (y: Bool) => ( y === false.B ) )) -> mulIssInfo(i) } } )
 
       for( i <- 0 until dptEntry ) {
-        when( mulIssFifo.io.enq(iss).fire & mulIssIdx(iss) === i.U ) {
+        when( mulIssFifo(iss).io.enq.fire & mulIssIdx(iss) === i.U ) {
           bufValid(i) := false.B
           assert( postIsOpReady(i)(0) & postIsOpReady(i)(1) )
           assert( bufValid(i) )
           assert( bufInfo(i).mul_isa.is_mulDiv )
         }
       }
+      mulIssFifo(iss).io.deq <> io.mul_iss_exe(iss)
+      mulIssFifo(iss).reset := io.flush | reset.asBool
     }
-    mulIssFifo.io.deq <> io.mul_iss_exe
-    mulIssFifo.io.flush := io.flush
+
   } else {
     io.mul_iss_exe(0).valid := false.B
     io.mul_iss_exe(0).bits  := DontCare
@@ -643,7 +648,7 @@ trait IssSelBru{ this: IssueSel =>
 
   val bruIssIdx = Wire( UInt((log2Ceil(dptEntry)).W) )
   val bruIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_bru_iss(i) }
-  val bruIssFifo = Module(new Queue( new Bru_iss_info, ( if(!isMinArea) 4 else 2 ) ) )
+  val bruIssFifo = Module(new Queue( new Bru_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true ) )
 
   val bruIssMatrix   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )) 
   val maskCondBruIss = Wire( Vec( dptEntry, Bool()) )
@@ -709,7 +714,7 @@ trait IssSelCsr{ this: IssueSel =>
 
   val csrIssIdx = Wire( UInt((log2Ceil(dptEntry)).W) )
   val csrIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_csr_iss(i) }
-  val csrIssFifo = Module(new Queue( new Csr_iss_info, ( if(!isMinArea) 4 else 2 ) ) )
+  val csrIssFifo = Module(new Queue( new Csr_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true ) )
 
   val csrIssMatrix   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )) 
   val maskCondCsrIss = Wire( Vec( dptEntry, Bool()) )
@@ -772,7 +777,7 @@ trait IssSelLsu{ this: IssueSel =>
   }
   val lsuIssIdx = Wire( UInt((log2Ceil(dptEntry)).W) )
   val lsuIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_lsu_iss(i) }
-  val lsuIssFifo = Module(new Queue( new Lsu_iss_info, ( if(!isMinArea) 4 else 2 ) ) )
+  val lsuIssFifo = Module(new Queue( new Lsu_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true ) )
 
   val lsuIssMatrix   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )) 
   val maskCondLsuIss = Wire( Vec( dptEntry, Bool()) )
@@ -845,7 +850,7 @@ trait IssSelFpu{ this: IssueSel =>
   if( fpuNum != 0 ){
     val fpuIssIdx = Wire( Vec( fpuNum, UInt((log2Ceil(dptEntry)).W) ))
     val fpuIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_fpu_iss(i) }
-    val fpuIssFifo = Module(new Queue( new Fpu_iss_info, ( if(!isMinArea) 4 else log2Ceil(fpuNum) )))
+    val fpuIssFifo = Module(new Queue( new Fpu_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true))
 
     val fpuIssMatrix   = Wire( Vec(fpuNum, Vec( dptEntry, Vec(dptEntry, Bool() ) )) )
     val maskCondFpuIss = Wire( Vec(fpuNum, Vec( dptEntry, Bool()) ))
