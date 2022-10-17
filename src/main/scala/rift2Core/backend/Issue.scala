@@ -361,7 +361,7 @@ trait DptReadFOp { this: DptAgeMatrix =>
       // io.dptReq(i).fire &
       io.frgLog(io.dptReq(i).bits.phy.rs2) === "b11".U & //reg-log is ready
       io.dptReq(i).bits.phy.rs2 =/= (regNum-1).U &
-      io.dptReq(i).bits.fpu_isa.is_fop | io.dptReq(i).bits.lsu_isa.is_fst
+      (io.dptReq(i).bits.fpu_isa.is_fop | io.dptReq(i).bits.lsu_isa.is_fst)
 
     canFOpPostReq(i)(2) :=
       // io.dptReq(i).fire &
@@ -602,7 +602,7 @@ trait IssSelAlu{ this: IssueSel =>
   val aluIssIdx = Wire( Vec( aluNum, UInt((log2Ceil(dptEntry)).W) ) )
   val aluIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_alu_iss(i) }
   val aluIssFifo = for( i <- 0 until aluNum ) yield {
-    Module(new Queue( new Alu_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true ))
+    Module(new Queue( new Alu_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true ))
   }
 
   val aluIssMatrix   = Wire( Vec(aluNum, Vec( dptEntry, Vec(dptEntry, Bool() ) )) )
@@ -668,7 +668,7 @@ trait IssSelMul{ this: IssueSel =>
     val mulIssIdx  = Wire( Vec(mulNum, UInt((log2Ceil(dptEntry)).W) )  )
     val mulIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_mul_iss(i) }
     val mulIssFifo = for( i <- 0 until mulNum ) yield {
-      Module(new Queue( new Mul_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true ))
+      Module(new Queue( new Mul_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true ))
     }
 
     val mulIssMatrix   = Wire( Vec(mulNum, Vec( dptEntry, Vec(dptEntry, Bool() ) )) )
@@ -740,7 +740,7 @@ trait IssSelBru{ this: IssueSel =>
 
   val bruIssIdx = Wire( UInt((log2Ceil(dptEntry)).W) )
   val bruIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_bru_iss(i) }
-  val bruIssFifo = Module(new Queue( new Bru_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true ) )
+  val bruIssFifo = Module(new Queue( new Bru_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true ) )
 
   val bruIssMatrix   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )) 
   val maskCondBruIss = Wire( Vec( dptEntry, Bool()) )
@@ -806,7 +806,7 @@ trait IssSelCsr{ this: IssueSel =>
 
   val csrIssIdx = Wire( UInt((log2Ceil(dptEntry)).W) )
   val csrIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_csr_iss(i) }
-  val csrIssFifo = Module(new Queue( new Csr_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true ) )
+  val csrIssFifo = Module(new Queue( new Csr_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true ) )
 
   val csrIssMatrix   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )) 
   val maskCondCsrIss = Wire( Vec( dptEntry, Bool()) )
@@ -869,7 +869,7 @@ trait IssSelLsu{ this: IssueSel =>
   }
   val lsuIssIdx = Wire( UInt((log2Ceil(dptEntry)).W) )
   val lsuIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_lsu_iss(i) }
-  val lsuIssFifo = Module(new Queue( new Lsu_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true ) )
+  val lsuIssFifo = Module(new Queue( new Lsu_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true ) )
 
   val lsuIssMatrix   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )) 
   val maskCondLsuIss = Wire( Vec( dptEntry, Bool()) )
@@ -942,7 +942,7 @@ trait IssSelFpu{ this: IssueSel =>
   if( fpuNum != 0 ){
     val fpuIssIdx = Wire( Vec( fpuNum, UInt((log2Ceil(dptEntry)).W) ))
     val fpuIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_fpu_iss(i) }
-    val fpuIssFifo = Module(new Queue( new Fpu_iss_info, ( if(!isMinArea) 4 else 1 ), pipe = true))
+    val fpuIssFifo = Module(new Queue( new Fpu_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true))
 
     val fpuIssMatrix   = Wire( Vec(fpuNum, Vec( dptEntry, Vec(dptEntry, Bool() ) )) )
     val maskCondFpuIss = Wire( Vec(fpuNum, Vec( dptEntry, Bool()) ))
