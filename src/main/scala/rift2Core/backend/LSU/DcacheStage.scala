@@ -76,10 +76,10 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
   /** flag that indicated that if there is a cache block hit */
   val isHit = isHitOH.asUInt.orR
   /** when no block is hit or a new grant req comes, we should 1) find out an empty block 2) evict a valid block */
-  val rplSel = Wire(UInt(cb_w.W))
+  val rplSel = Wire(UInt( (1 max cb_w).W))
   /** convert one hot hit to UInt */
   val hitSel = WireDefault(OHToUInt(isHitOH))
-  val cbSel = Wire(UInt(cb_w.W))
+  val cbSel = Wire(UInt( (1 max cb_w).W))
   /** flag that indicated that if a cache block is valid */
   val isCBValid = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
   /** flag that indicated that if a cache block is dirty */
@@ -243,25 +243,48 @@ trait DcacheStageBlock{ this: DcacheStageBase =>
     VecInit(res)
   }
 
-  rplSel := { 
-    val is_emptyBlock_exist = isCBValid(addrSelW).contains(false.B)
-    val emptyBlock_sel = isCBValid(addrSelW).indexWhere( (x:Bool) => (x === false.B) )
-    Mux( is_emptyBlock_exist, emptyBlock_sel, LFSR(16) )
-  }
+
   
-  cbSel := 
-    Mux1H(Seq(
-      pipeStage1Bits.fun.is_access -> hitSel,
-      pipeStage1Bits.fun.preft     -> hitSel,
-      pipeStage1Bits.fun.probe     -> hitSel,
-      pipeStage1Bits.fun.grant     -> rplSel
-    ))
+  cbSel := {
+    if ( cb != 1 ) {
+      Mux1H(Seq(
+        pipeStage1Bits.fun.is_access -> hitSel,
+        pipeStage1Bits.fun.preft     -> hitSel,
+        pipeStage1Bits.fun.probe     -> hitSel,
+        pipeStage1Bits.fun.grant     -> rplSel
+      ))
+    } else 0.U    
+  }
+
+
+
+  rplSel := {
+    if ( cb != 1 ) {
+      val is_emptyBlock_exist = isCBValid(addrSelW).contains(false.B)
+      val emptyBlock_sel = isCBValid(addrSelW).indexWhere( (x:Bool) => (x === false.B) )
+
+      val rpl = {
+        if( hasPLRU ) {
+          val lru = new LRU(cb, cl)
+          when( pipeStage1Valid & ((pipeStage1Bits.fun.is_access & isHit) | pipeStage1Bits.fun.grant) ) { lru.update(cbSel, pipeStage1Bits.clSel) }
+          lru.replace(pipeStage1Bits.clSel)
+        } else {
+          LFSR(16)
+        }        
+      }
+      Mux( is_emptyBlock_exist, emptyBlock_sel, rpl )
+
+    } else 0.U
+  }
+
+
 
   when( pipeStage1Valid ) {
     when( pipeStage1Bits.fun.probe ) { when( ~isHit ) { printf("Warning, l2 will never request a empty probe, is it in writeback unit?\n") } } //
     when( pipeStage1Bits.fun.grant ) {  } 
   }
 }
+
 
 trait DcacheStageRTN{ this: DcacheStageBase =>
 

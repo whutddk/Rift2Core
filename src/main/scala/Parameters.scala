@@ -114,7 +114,7 @@ case class RiftSetting(
   hasDebugger: Boolean = true,
   hasPreFetch: Boolean = false,
   hasuBTB: Boolean = true,
-
+  hasPLRU: Boolean = true,
 
 
   isMinArea: Boolean = false,
@@ -203,6 +203,7 @@ trait HasRiftParameters {
   def hasDebugger = riftSetting.hasDebugger
   def hasPreFetch = riftSetting.hasPreFetch
   def hasuBTB  = riftSetting.hasuBTB
+  def hasPLRU  = riftSetting.hasPLRU
   // def hasMulDiv = riftSetting.hasMulDiv
   
   def ftChn = riftSetting.ftChn
