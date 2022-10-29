@@ -58,6 +58,7 @@ class Rift2300 extends Config((site, here, up) => {
       
     ),
 
+    dptEntry = 2,
     fpuNum = 0,
     mulNum = 0,
 
@@ -115,6 +116,7 @@ class Rift2310 extends Config((site, here, up) => {
       
     ),
 
+    dptEntry = 2,
     fpuNum = 0,
     mulNum = 1,
 
@@ -169,6 +171,7 @@ class Rift2320 extends Config((site, here, up) => {
       
     ),
 
+    dptEntry = 4,
     mulNum = 1,
     fpuNum = 0,
 
@@ -211,6 +214,7 @@ class Rift2330 extends Config((site, here, up) => {
       stEntry = 2,
     ),
 
+    dptEntry = 4,
     fpuNum = 0,
 
     isMinArea = false,
@@ -251,6 +255,7 @@ class Rift2340 extends Config((site, here, up) => {
       stEntry = 8,
     ),
 
+    dptEntry = 6,
     fpuNum = 1,
 
     isMinArea = true,
@@ -291,6 +296,7 @@ class Rift2350 extends Config((site, here, up) => {
       stEntry = 8,
     ),
 
+    dptEntry = 8,
     fpuNum = 0,
 
     isMinArea = true,
@@ -331,6 +337,7 @@ class Rift2360 extends Config((site, here, up) => {
       stEntry = 16,
     ),
 
+    dptEntry = 12,
     fpuNum = 0,
 
     isMinArea = false,
@@ -341,6 +348,7 @@ class Rift2360 extends Config((site, here, up) => {
 class Rift2370 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     fpuNum = 1,
+    aluNum = 2,
   )
 })
 
@@ -377,6 +385,7 @@ class Rift2380 extends Config((site, here, up) => {
       stEntry = 32,
     ),
 
+    dptEntry = 24,
     fpuNum = 1,
     isMinArea = false,
     isLowPower = true,
@@ -416,7 +425,7 @@ class Rift2390 extends Config((site, here, up) => {
       stEntry = 32,
     ),
 
-
+    dptEntry = 32,
     fpuNum = 1,
 
     isMinArea = false,

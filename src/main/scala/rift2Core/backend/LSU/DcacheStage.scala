@@ -264,7 +264,7 @@ trait DcacheStageBlock{ this: DcacheStageBase =>
       val emptyBlock_sel = isCBValid(addrSelW).indexWhere( (x:Bool) => (x === false.B) )
 
       val rpl = {
-        if( hasPLRU ) {
+        if( hasLRU ) {
           val lru = new LRU(cb, cl)
           when( pipeStage1Valid & ((pipeStage1Bits.fun.is_access & isHit) | pipeStage1Bits.fun.grant) ) { lru.update(cbSel, pipeStage1Bits.clSel) }
           lru.replace(pipeStage1Bits.clSel)

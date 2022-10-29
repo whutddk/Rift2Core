@@ -217,7 +217,7 @@ trait IF2ICache { this: IF2Base =>
     if( cb != 1 ) {
       val res = Wire(UInt(cb_w.W))
       val rpl = {
-        if( hasPLRU ) {
+        if( hasLRU ) {
           val lru = new LRU(cb, cl)
           when( icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ~io.flush ) { lru.update(cb_sel, cl_sel) }
           lru.replace(cl_sel)

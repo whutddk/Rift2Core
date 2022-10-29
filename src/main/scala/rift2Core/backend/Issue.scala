@@ -29,7 +29,7 @@ import chipsalliance.rocketchip.config._
 
 
 abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPUParameters{
-  def dptEntry = 16
+  // def dptEntry = 16
 
   val io = IO(new Bundle{
 
