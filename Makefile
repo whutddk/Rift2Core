@@ -291,7 +291,7 @@ VSimTop:
 	--top-module SimTop \
 	--trace-fst \
 	-LDFLAGS -ldromajo_cosim \
-	--cc ${R2}/tb/verilator/SimTop.v  \
+	--cc ${R2}/tb/verilator/SimLink.v  \
 	+define+RANDOMIZE_GARBAGE_ASSIGN \
 	+define+RANDOMIZE_INVALID_ASSIGN \
 	+define+RANDOMIZE_REG_INIT \
