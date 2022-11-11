@@ -82,8 +82,8 @@ bruisa += rv64ui-v-jal
 bruisa += rv64ui-p-jalr
 bruisa += rv64ui-v-jalr
 
-lsuisa += rv64ui-p-fence_i
-lsuisa += rv64ui-v-fence_i
+# lsuisa += rv64ui-p-fence_i
+# lsuisa += rv64ui-v-fence_i
 lsuisa += rv64ui-p-lb
 lsuisa += rv64ui-v-lb
 lsuisa += rv64ui-p-lbu
@@ -244,7 +244,7 @@ fpuisa += rv64uf-v-move
 fpuisa += rv64uf-p-recoding
 fpuisa += rv64uf-v-recoding
 
-isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa) # $(fpuisa) 
+isa ?= $(lsuisa) $(privisa) $(mulisa) # $(fpuisa) $(aluisa) $(bruisa) 
 # isa ?= $(fpuisa)
 
 
@@ -271,6 +271,12 @@ compile:
 # --inline \
 
 # --list-clocks \
+
+noc:
+	rm -rf ./generated/Main/
+	sbt "test:runMain test.testNoC \
+	-e verilog"
+
 
 line: 
 	rm -rf generated/Debug/

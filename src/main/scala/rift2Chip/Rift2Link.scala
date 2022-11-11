@@ -43,7 +43,6 @@ import scala.collection.immutable.ListMap
 
 
 class Rift2LinkA(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyModule with HasRiftParameters{
-  def hasNoc = true
 
   val i_rift2Core = LazyModule( new Rift2Core(isFlatten) )
 
@@ -58,60 +57,9 @@ class Rift2LinkA(isFlatten: Boolean = false)(implicit p: Parameters) extends Laz
   val chipLinkMst = LazyModule( new ChipLinkMaster)
 
 
-  val noc = LazyModule(new TLNoC(
-    TLNoCParams(
-      nodeMappings = DiplomaticNetworkNodeMapping(
-        inNodeMapping  = ListMap( "TLFragmenter[0]" -> 0, "system[0]"-> 0, "periph[0]"-> 0 ),
-        outNodeMapping = ListMap( "chipLinkMst[0]"  -> 4 ),
-      ),
-      nocParams = NoCParams(
-        // Physical specifications
-        topology = UnidirectionalTorus2D(3,3),
-        channelParamGen = (_, _) => UserChannelParams(
-          virtualChannelParams = Seq.fill(2)(UserVirtualChannelParams(2)),
-          crossingType = NoCrossing,
-          srcSpeedup = 2,
-          destSpeedup = 2
-        ),
-        ingresses = Seq(
-          UserIngressParams( destId = 0, payloadBits = 8 ),
-          UserIngressParams( destId = 0, payloadBits = 8 ),
-          UserIngressParams( destId = 0, payloadBits = 8 ),
-          // UserIngressParams( destId = 4, payloadBits = 8 ),
-        ),
-        egresses = Seq(
-          // UserEgressParams( srcId = 0, payloadBits = 8 ),
-          UserEgressParams( srcId = 4, payloadBits = 8 ),
-        ),
-        routerParams = (i: Int) => UserRouterParams(// Payload width. Must match payload width on all channels attached to this routing node
-          payloadBits = 128,
-          combineSAST = false,// Combines SA and ST stages (removes pipeline register)
-          combineRCVA = false,// Combines RC and VA stages (removes pipeline register)
-          coupleSAVA = false,// Adds combinational path from SA to VA
-          vcAllocator = (vP) => (p) => new RotatingSingleVCAllocator(vP)(p)
-        ),
-        // Flow specification
-        // (blocker, blockee) => bool
-        // If true, then blocker must be able to proceed when blockee is blocked
-        vNetBlocking = (_, _) => true,
-        flows           = Seq.tabulate(9, 9) { (s, d) => FlowParams(s, d, 0) }.flatten,
-
-        // Routing specification
-        routingRelation = DimensionOrderedUnidirectionalTorus2DDatelineRouting(),
-
-        // other
-        nocName = "Noc",
-        skipValidationChecks = false,
-        hasCtrl = false,
-      )
-    ), name = "Nnoc"))
 
   val l1_xbarMem = TLXbar()
-  val linkMXbar = 
-    if( hasNoc ) { noc.node }
-    else {  TLXbar() }
-
-  // println(s"LinkXbar name is ${linkMXbar.name}")
+  val linkMXbar  = TLXbar()
 
 
 
@@ -180,7 +128,6 @@ class Rift2LinkA(isFlatten: Boolean = false)(implicit p: Parameters) extends Laz
 
 
 class Rift2LinkB(implicit p: Parameters) extends LazyModule with HasRiftParameters{
-  def hasNoc = true
 
   val chipLinkSlv = LazyModule( new ChiplinkSlave)
   val i_debugger = if ( hasDebugger) {Some(LazyModule(new Debugger(nComponents = 1)))} else {None}
@@ -297,7 +244,6 @@ class Rift2LinkB(implicit p: Parameters) extends LazyModule with HasRiftParamete
 
 
 class Rift2Link(implicit p: Parameters) extends LazyModule with HasRiftParameters{
-  def hasNoc = true
 
   val rift2LinkA = LazyModule( new Rift2LinkA )
   val rift2LinkB = LazyModule( new Rift2LinkB )

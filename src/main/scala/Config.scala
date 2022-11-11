@@ -12,7 +12,7 @@ import freechips.rocketchip.config._
 
 class Rift2300 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasL2  = true,
+    hasL2  = false,
     hasDebugger = true,
     hasPreFetch = false,
     hasuBTB = false,
@@ -22,7 +22,7 @@ class Rift2300 extends Config((site, here, up) => {
     ftChn = 4,
 
     rnChn = 1,
-    opChn = 2,
+    opChn = 1,
     wbChn = 1,
     cm_chn = 1,
 
@@ -60,9 +60,9 @@ class Rift2300 extends Config((site, here, up) => {
       
     ),
 
-    dptEntry = 4,
+    dptEntry = 2,
     fpuNum = 0,
-    mulNum = 1,
+    mulNum = 0,
 
     isMinArea = true,
     isLowPower = false,
@@ -74,7 +74,7 @@ class Rift2300 extends Config((site, here, up) => {
 
 class Rift2310 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-    hasL2  = true,
+       hasL2  = true,
     hasDebugger = true,
     hasPreFetch = false,
     hasuBTB = false,

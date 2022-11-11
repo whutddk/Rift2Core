@@ -48,10 +48,23 @@ object testMain extends App {
   ))
 }
 
+object testNoC extends App {
+
+  val cfg = new Rift2330
+
+  (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
+      ChiselGeneratorAnnotation(() => {
+    val soc = LazyModule(new Rift2NoC()(cfg))
+    soc.module
+  })
+  ))
+}
+
+
 object tapeMain extends App {
 
   // val cfg = new Rift2300
-  val cfg = new Rift2330
+  val cfg = new Rift2300
   // val cfg = new Rift2350
   // val cfg = new Rift2370
 
