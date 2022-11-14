@@ -747,11 +747,11 @@ end
   // for ( i <- 0 until 4 )  yield { FReg.ft(8+i) := io.diffFReg(28+i) }
 
   assign trace_pc_0 = s_Rift2Chip.rift2LinkA.i_rift2Core.diff.io_commit_pc_0;
-  assign trace_pc_1 = s_Rift2Chip.rift2LinkA.i_rift2Core.diff.io_commit_pc_1;
+  assign trace_pc_1 = 64'b0;//s_Rift2Chip.rift2LinkA.i_rift2Core.diff.io_commit_pc_1;
   assign trace_comfirm_0 = s_Rift2Chip.rift2LinkA.i_rift2Core.diff.io_commit_comfirm_0;
-  assign trace_comfirm_1 = s_Rift2Chip.rift2LinkA.i_rift2Core.diff.io_commit_comfirm_1;
+  assign trace_comfirm_1 = 1'b0;//s_Rift2Chip.rift2LinkA.i_rift2Core.diff.io_commit_comfirm_1;
   assign trace_abort_0 = s_Rift2Chip.rift2LinkA.i_rift2Core.diff.io_commit_abort_0;
-  assign trace_abort_1 = s_Rift2Chip.rift2LinkA.i_rift2Core.diff.io_commit_abort_1;
+  assign trace_abort_1 = 1'b0;//s_Rift2Chip.rift2LinkA.i_rift2Core.diff.io_commit_abort_1;
 
   assign trace_priv = s_Rift2Chip.rift2LinkA.i_rift2Core.diff.io_commit_priv_lvl;
 

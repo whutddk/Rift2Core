@@ -75,7 +75,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
   val nDevices = 31
   val i_plic = LazyModule( new Plic( nHarts = 1, nPriorities = 8, nDevices = nDevices ))
   val sifiveCache = LazyModule(new InclusiveCache(
-      cache = CacheParameters( level = 2, ways = 8, sets = 2048, blockBytes = l1DW/8, beatBytes = l1BeatBits/8 ),
+      cache = CacheParameters( level = 2, ways = 2, sets = 8, blockBytes = l1DW/8, beatBytes = l1BeatBits/8 ),
       micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
       control = None
     ))
@@ -155,7 +155,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
 
     if( hasDebugger ) {
       // l1_xbar64 := TLBuffer() := i_debugger.get.dm.sbaClientNode
-      i_debugger.get.dm.peripNode := TLBuffer():= TLFragmenter(8, 32) := TLBuffer() := l1_xbar64      
+      i_debugger.get.dm.peripNode := TLBuffer():= TLFragmenter(8, 32) := TLBuffer() := l2_xbar64      
     }
 
     i_aclint.node := TLBuffer() := l1_xbar64

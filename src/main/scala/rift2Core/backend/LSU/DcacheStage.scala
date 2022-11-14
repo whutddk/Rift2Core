@@ -66,8 +66,8 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
   val addrSelR = Wire(UInt(line_w.W))
   val tagInfoW = Wire(UInt(tag_w.W))
 
-  val isBusy = RegInit(false.B)
-  io.enq.ready := ~isBusy
+
+  io.enq.ready := true.B
   val pipeStage1Valid = RegNext(io.enq.fire, false.B)
   val pipeStage1Bits  = RegNext(io.enq.bits)
 
@@ -76,10 +76,10 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
   /** flag that indicated that if there is a cache block hit */
   val isHit = isHitOH.asUInt.orR
   /** when no block is hit or a new grant req comes, we should 1) find out an empty block 2) evict a valid block */
-  val rplSel = Wire(UInt(cb_w.W))
+  val rplSel = Wire(UInt( (1 max cb_w).W))
   /** convert one hot hit to UInt */
   val hitSel = WireDefault(OHToUInt(isHitOH))
-  val cbSel = Wire(UInt(cb_w.W))
+  val cbSel = Wire(UInt( (1 max cb_w).W))
   /** flag that indicated that if a cache block is valid */
   val isCBValid = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
   /** flag that indicated that if a cache block is dirty */
@@ -114,18 +114,28 @@ trait DcacheStageSRAM{ this: DcacheStageBase =>
 
   for( i <- 0 until cb ) {
 
-    tagRAM(i).io.addr  := Mux(tagEnW(i), addrSelW, addrSelR)
-    tagRAM(i).io.dataw := tagInfoW
-    tagInfoR(i) := tagRAM(i).io.datar
+    val isTagBypass   = RegEnable( tagEnW(i) & (addrSelR === addrSelW), io.enq.fire )
+    val tagBypassData = RegEnable( tagInfoW, io.enq.fire & tagEnW(i) & (addrSelR === addrSelW) )
+    val isDatBypass   = RegEnable( datEnW(i) & (addrSelR === addrSelW), io.enq.fire )
+    val datBypassData = RegEnable( datInfoW, io.enq.fire & datEnW(i) & (addrSelR === addrSelW) )
+    val datBypassWM   = RegEnable( datInfoWM, io.enq.fire & datEnW(i) & (addrSelR === addrSelW) )
+    
+
+    tagRAM(i).io.addrr  := addrSelR
+    tagRAM(i).io.addrw  := addrSelW
+    tagRAM(i).io.dataw  := tagInfoW
+    tagInfoR(i)         := Mux( isTagBypass, tagBypassData, tagRAM(i).io.datar ) 
     tagRAM(i).io.enw   := tagEnW(i)
     tagRAM(i).io.enr   := io.enq.fire
 
-    datRAM(i).io.enr    := io.enq.fire
-    datRAM(i).io.addr   := Mux(datEnW(i), addrSelW, addrSelR)
+
+    datRAM(i).io.addrr  := addrSelR
+    datRAM(i).io.addrw  := addrSelW
     datRAM(i).io.dataw  := datInfoW
     datRAM(i).io.datawm := datInfoWM
-    datInfoR(i) := datRAM(i).io.datar
+    datInfoR(i)         := (for( w <- 0 until dw/8 ) yield { Mux(isDatBypass & datBypassWM(w), datBypassData(w), datRAM(i).io.datar(w)) })
     datRAM(i).io.enw    := datEnW(i)
+    datRAM(i).io.enr    := io.enq.fire
 
   }
 
@@ -222,7 +232,7 @@ trait DcacheStageBlock{ this: DcacheStageBase =>
       isCBDirty(addrSelW)(cbSel) := true.B
     }
 
-    when( pipeStage1Bits.fun.probe ) {
+    when( pipeStage1Bits.fun.probe & isHit ) {
       isCBValid(addrSelW)(cbSel) := false.B
     }
   }
@@ -233,25 +243,48 @@ trait DcacheStageBlock{ this: DcacheStageBase =>
     VecInit(res)
   }
 
-  rplSel := { 
-    val is_emptyBlock_exist = isCBValid(addrSelW).contains(false.B)
-    val emptyBlock_sel = isCBValid(addrSelW).indexWhere( (x:Bool) => (x === false.B) )
-    Mux( is_emptyBlock_exist, emptyBlock_sel, LFSR(16) )
-  }
+
   
-  cbSel := 
-    Mux1H(Seq(
-      pipeStage1Bits.fun.is_access -> hitSel,
-      pipeStage1Bits.fun.preft     -> hitSel,
-      pipeStage1Bits.fun.probe     -> hitSel,
-      pipeStage1Bits.fun.grant     -> rplSel
-    ))
+  cbSel := {
+    if ( cb != 1 ) {
+      Mux1H(Seq(
+        pipeStage1Bits.fun.is_access -> hitSel,
+        pipeStage1Bits.fun.preft     -> hitSel,
+        pipeStage1Bits.fun.probe     -> hitSel,
+        pipeStage1Bits.fun.grant     -> rplSel
+      ))
+    } else 0.U    
+  }
+
+
+
+  rplSel := {
+    if ( cb != 1 ) {
+      val is_emptyBlock_exist = isCBValid(addrSelW).contains(false.B)
+      val emptyBlock_sel = isCBValid(addrSelW).indexWhere( (x:Bool) => (x === false.B) )
+
+      val rpl = {
+        if( hasLRU ) {
+          val lru = new LRU(cb, cl)
+          when( pipeStage1Valid & ((pipeStage1Bits.fun.is_access & isHit) | pipeStage1Bits.fun.grant) ) { lru.update(cbSel, pipeStage1Bits.clSel) }
+          lru.replace(pipeStage1Bits.clSel)
+        } else {
+          LFSR(16)
+        }        
+      }
+      Mux( is_emptyBlock_exist, emptyBlock_sel, rpl )
+
+    } else 0.U
+  }
+
+
 
   when( pipeStage1Valid ) {
-    when( pipeStage1Bits.fun.probe ) { assert(isHit) } //l2 will never request a empty probe
+    when( pipeStage1Bits.fun.probe ) { when( ~isHit ) { printf("Warning, l2 will never request a empty probe, is it in writeback unit?\n") } } //
     when( pipeStage1Bits.fun.grant ) {  } 
   }
 }
+
 
 trait DcacheStageRTN{ this: DcacheStageBase =>
 
@@ -272,32 +305,19 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
   }
 
   val wbReqValid = RegInit(false.B)
-  // val pbReqValid = RegInit(false.B)
   val wbReqPaddr = Reg(UInt(plen.W))
-  // val pbReqPaddr = Reg(UInt(plen.W))
   val wbReqData  = Reg(UInt(dw.W))
-  // val pbReqData  = Reg(UInt(256.W))
   val wbReqisData = Reg(Bool())
   val isPb        = Reg(Bool())
 
   io.wb_req.valid := wbReqValid
-  // io.pb_req.valid := pbReqValid
-
   io.wb_req.bits.paddr := wbReqPaddr
-  // io.pb_req.bits.paddr := pbReqPaddr
-
   io.wb_req.bits.data := wbReqData
-  // io.pb_req.bits.data := pbReqData
 
   io.wb_req.bits.is_releaseData :=  wbReqisData & ~isPb
   io.wb_req.bits.is_release     := ~wbReqisData & ~isPb
   io.wb_req.bits.is_probeData   :=  wbReqisData &  isPb
   io.wb_req.bits.is_probe       := ~wbReqisData &  isPb
-
-  // io.pb_req.bits.is_releaseData := false.B
-  // io.pb_req.bits.is_release     := false.B
-  // io.pb_req.bits.is_probeData   :=  pbReqisData
-  // io.pb_req.bits.is_probe       := ~pbReqisData
 
   when( pipeStage1Valid & ( pipeStage1Bits.fun.grant & ~isCBValid(addrSelW).contains(false.B) ) ) {
     wbReqValid  := true.B
@@ -309,7 +329,7 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
     wbReqValid  := true.B
     wbReqPaddr  := pipeStage1Bits.paddr >> addr_lsb.U << addr_lsb.U 
     wbReqData   := Cat(datInfoR(cbSel).reverse)
-    wbReqisData := isCBDirty(addrSelW)(cbSel)
+    wbReqisData := isCBDirty(addrSelW)(cbSel) & isHit
     isPb        := true.B
   } .otherwise {
     wbReqValid  := false.B
@@ -392,20 +412,6 @@ class DcacheStage(idx: Int)(implicit p: Parameters) extends DcacheStageBase((idx
   with DcacheStageWData
   with DcacheStageBlock
   with DcacheStageRTN {
-
-  when( isBusy /*& ( datEnW.reduce(_|_) | tagEnW.reduce(_|_) | io.reload.fire )*/ ) {
-    isBusy := false.B
-  } .elsewhen( io.enq.fire & (io.enq.bits.fun.is_dat_w | io.enq.bits.fun.is_tag_w) ) {
-    assert( ~isBusy )
-    isBusy := true.B
-  } 
-
-
-
-
-
-
-
 
 
 

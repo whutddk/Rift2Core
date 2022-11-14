@@ -82,8 +82,8 @@ bruisa += rv64ui-v-jal
 bruisa += rv64ui-p-jalr
 bruisa += rv64ui-v-jalr
 
-lsuisa += rv64ui-p-fence_i
-lsuisa += rv64ui-v-fence_i
+# lsuisa += rv64ui-p-fence_i
+# lsuisa += rv64ui-v-fence_i
 lsuisa += rv64ui-p-lb
 lsuisa += rv64ui-v-lb
 lsuisa += rv64ui-p-lbu
@@ -244,7 +244,7 @@ fpuisa += rv64uf-v-move
 fpuisa += rv64uf-p-recoding
 fpuisa += rv64uf-v-recoding
 
-isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa) # $(fpuisa) 
+isa ?= $(lsuisa) $(privisa) $(mulisa) # $(fpuisa) $(aluisa) $(bruisa) 
 # isa ?= $(fpuisa)
 
 
@@ -272,6 +272,12 @@ compile:
 
 # --list-clocks \
 
+noc:
+	rm -rf ./generated/Main/
+	sbt "test:runMain test.testNoC \
+	-e verilog"
+
+
 line: 
 	rm -rf generated/Debug/
 	rm -rf generated/Release/
@@ -291,7 +297,7 @@ VSimTop:
 	--top-module SimTop \
 	--trace-fst \
 	-LDFLAGS -ldromajo_cosim \
-	--cc ${R2}/tb/verilator/SimTop.v  \
+	--cc ${R2}/tb/verilator/SimLink.v  \
 	+define+RANDOMIZE_GARBAGE_ASSIGN \
 	+define+RANDOMIZE_INVALID_ASSIGN \
 	+define+RANDOMIZE_REG_INIT \
@@ -302,7 +308,7 @@ VSimTop:
 	${R2}/tb/verilator/sim_main.cpp  \
 	${R2}/tb/verilator/diff.cpp \
 	-Mdir ./generated/build/$(CONFIG) \
-	-j 1
+	-j 30
 
 
 

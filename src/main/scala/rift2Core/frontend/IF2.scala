@@ -199,25 +199,44 @@ trait IF2ICache { this: IF2Base =>
   val is_emptyBlock_exist_r = is_valid(cl_sel).contains(false.B)
 
   val cb_em = is_valid(cl_sel).indexWhere( (x:Bool) => (x === false.B) )
-  
-  /** when no block is hit or a new grant req comes, we should 1) find out an empty block 2) evict a valid block */
-  val rpl_sel = {
-    val res = Wire(UInt(cb_w.W))
-    res := Mux( is_emptyBlock_exist_r, cb_em, LFSR(16,icache_state_qout =/= 2.U) )
-    res
+
+  val cb_sel  = Wire(UInt((1 max log2Ceil(cb)).W))
+  val rpl_sel = Wire(UInt((1 max log2Ceil(cb)).W))
+
+  cb_sel := {
+    if ( cb != 1 ) {
+      Mux1H(Seq(
+        (icache_state_qout === 1.U) -> Mux( is_hit, hit_sel, rpl_sel ), // for fetch
+        (icache_state_qout === 2.U) -> rpl_sel, // for access
+      ))      
+    } else 0.U
   }
 
-  val cb_sel = Wire(UInt(cb_w.W))
-  cb_sel := 
-    Mux1H(Seq(
-      (icache_state_qout === 1.U) -> Mux( is_hit, hit_sel, rpl_sel ), // for fetch
-      (icache_state_qout === 2.U) -> rpl_sel, // for access
-    ))
+  /** when no block is hit or a new grant req comes, we should 1) find out an empty block 2) evict a valid block */
+  rpl_sel := {
+    if( cb != 1 ) {
+      val res = Wire(UInt(cb_w.W))
+      val rpl = {
+        if( hasLRU ) {
+          val lru = new LRU(cb, cl)
+          when( icache_state_qout =/= 0.U & icache_state_dnxt === 0.U & ~io.flush ) { lru.update(cb_sel, cl_sel) }
+          lru.replace(cl_sel)
+        } else {
+          LFSR(16,icache_state_qout =/= 2.U)
+        }   
+      }
+      res := Mux( is_emptyBlock_exist_r, cb_em, rpl )
+      res
+    } else 0.U
+
+  }
 
 
   for ( i <- 0 until cb ) {
-    datRAM(i).io.addr := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
-    tagRAM(i).io.addr := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
+    datRAM(i).io.addrr := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
+    datRAM(i).io.addrw := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
+    tagRAM(i).io.addrr := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
+    tagRAM(i).io.addrw := io.mmu_if.bits.paddr( addr_lsb+line_w-1, addr_lsb )
 
     datRAM(i).io.enr  := icache_state_qout === 0.U | icache_state_qout === 1.U
     tagRAM(i).io.enr  := icache_state_qout === 0.U | icache_state_qout === 1.U
@@ -375,7 +394,7 @@ class IF2(edge: TLEdgeOut)(implicit p: Parameters) extends IF2Base(edge)
   with IF2MMU
   with IF2Fault
   with IF2FSM
-  with IF2ICache
+  with IF2NCache
   with IF2Bus
   with IF2LoadIBuf
   with IF2Fence

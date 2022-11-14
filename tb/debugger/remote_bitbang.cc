@@ -71,7 +71,7 @@ remote_bitbang_t::remote_bitbang_t(uint16_t port) :
   quit = 0;
 
   fprintf(stderr, "This emulator compiled with JTAG Remote Bitbang client. To enable, use +jtag_rbb_enable=1.\n");
-  fprintf(stderr, "Listening on port %d\n",
+  fprintf(stderr, "Listening on port %d for OpenOCD, Not GDB!!!\n",
          ntohs(addr.sin_port));
 }
 

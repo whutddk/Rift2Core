@@ -114,7 +114,7 @@ case class RiftSetting(
   hasDebugger: Boolean = true,
   hasPreFetch: Boolean = false,
   hasuBTB: Boolean = true,
-
+  hasLRU: Boolean = false,
 
 
   isMinArea: Boolean = false,
@@ -123,7 +123,7 @@ case class RiftSetting(
   ftChn: Int = 8, //fetch width
   rnChn: Int = 2,
   cm_chn: Int = 2,
-  opChn: Int = 8,
+  opChn: Int = 4,
   wbChn: Int = 4,
 
   regNum: Int = 64,
@@ -158,6 +158,8 @@ case class RiftSetting(
 
   l1DW: Int = 256,
 
+  dptEntry: Int = 16,
+
   aluNum: Int = 1,
   mulNum: Int = 1,
   fpuNum: Int = 0,
@@ -187,6 +189,7 @@ case class RiftSetting(
   require( isPow2(dcacheParameters.stEntry) )
   require( isPow2(ftChn) )
   require( aluNum > 0 )
+  require( dptEntry >= 2 )
 
 }
 
@@ -203,6 +206,7 @@ trait HasRiftParameters {
   def hasDebugger = riftSetting.hasDebugger
   def hasPreFetch = riftSetting.hasPreFetch
   def hasuBTB  = riftSetting.hasuBTB
+  def hasLRU  = riftSetting.hasLRU
   // def hasMulDiv = riftSetting.hasMulDiv
   
   def ftChn = riftSetting.ftChn
@@ -224,6 +228,8 @@ trait HasRiftParameters {
   def plen = riftSetting.plen
 
   def tlbEntry = riftSetting.tlbEntry
+
+  def dptEntry = riftSetting.dptEntry
 
   def aluNum = riftSetting.aluNum
   def mulNum = riftSetting.mulNum

@@ -295,6 +295,9 @@ class FRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) ext
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx3) ) { io.lookup(i).rsp.rs3 := molloc_idx(j) }
       }
     }
+    assert( io.lookup(i).rsp.rs1 =/= (regNum-1).U )
+    assert( io.lookup(i).rsp.rs2 =/= (regNum-1).U )
+    assert( io.lookup(i).rsp.rs3 =/= (regNum-1).U )
   }
 
 
