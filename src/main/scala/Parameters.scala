@@ -49,23 +49,14 @@ trait HasIcacheParameters extends HasRiftParameters {
   def tag_w    = plen - addr_lsb - line_w
 }
 
-
-
-
-
 case class IcacheParameters(
   bk: Int = 1,
   cb: Int = 4,
   cl: Int = 128,
 )
 
-
-
 abstract class IcacheModule(implicit val p: Parameters) extends Module with HasIcacheParameters { def io: Record }
 abstract class IcacheBundle(implicit val p: Parameters) extends Bundle with HasIcacheParameters
-
-
-
 
 case class DcacheParameters(
   bk: Int = 8,
@@ -99,6 +90,20 @@ trait HasDcacheParameters extends HasRiftParameters {
 
 abstract class DcacheModule(implicit val p: Parameters) extends Module with HasDcacheParameters { def io: Record }
 abstract class DcacheBundle(implicit val p: Parameters) extends Bundle with HasDcacheParameters
+
+
+case class VectorParameters(
+  vlen: Int = 128,
+  elen: Int = 64,
+)
+
+trait HasVectorParameters extends HasRiftParameters{
+  val vectorParams: VectorParameters
+
+  def vlen = vectorParams.vlen
+  def elen = vectorParams.elen
+}
+
 
 
 
