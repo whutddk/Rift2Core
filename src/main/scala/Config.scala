@@ -39,11 +39,11 @@ class Rift2300 extends Config((site, here, up) => {
     l1DW = 128,
 
     ifetchParameters = IFParameters(
-      uBTB_entry = 4,
+      uBTB_entry = 2,
       // uBTB_tag_w = 16,
-      btb_cl = 4,
-      bim_cl = 8,
-      ras_dp = 4,
+      btb_cl = 0,
+      bim_cl = 2,
+      ras_dp = 0,
       // tage_table = 6, 
     ),
     icacheParameters = IcacheParameters(
@@ -55,12 +55,12 @@ class Rift2300 extends Config((site, here, up) => {
       bk = 1,
       cb = 1,
       cl = 2,
-      sbEntry = 2,
+      sbEntry = 1,
       stEntry = 2,
       
     ),
 
-    dptEntry = 2,
+    dptEntry = 1,
     fpuNum = 0,
     mulNum = 0,
 

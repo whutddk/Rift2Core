@@ -40,12 +40,12 @@ class Rename()(implicit p: Parameters) extends RiftModule {
   })
 
   val rnRspReport = Module( new RePort( new Dpt_info, port = rnChn) )
-  val rnRspFifo = Module(new MultiPortFifo(new Dpt_info, aw = (if(!isMinArea) 4 else 2), rnChn, rnChn))
+  val rnRspFifo = Module(new MultiPortFifo(new Dpt_info, aw = (if(!isMinArea) 4 else 1 ), rnChn, rnChn))
   rnRspFifo.io.enq <> rnRspReport.io.deq
   rnRspFifo.io.deq <> io.rnRsp
 
   val reOrder_fifo_i = {
-    val mdl = Module(new MultiPortFifo(new Info_reorder_i, aw = (if(!isMinArea) 4 else 2), rnChn, cm_chn))
+    val mdl = Module(new MultiPortFifo(new Info_reorder_i, aw = (if(!isMinArea) 4 else 1 ), rnChn, cm_chn))
     mdl.io.deq <> io.rod_i
     mdl
   }

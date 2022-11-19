@@ -711,7 +711,7 @@ class Vector_isa extends Bundle {
   val vfncvt_f_f_w      = Bool()
   val vfncvt_rod_f_f_w  = Bool()
   val vfncvt_rtz_xu_f_w = Bool()
-  val vfncvt_rtz_x_f_w  = B00l()
+  val vfncvt_rtz_x_f_w  = Bool()
 
   val vfsqrt_v   = Bool()
   val vfrsqrt7_v = Bool()

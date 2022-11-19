@@ -100,8 +100,8 @@ case class VectorParameters(
 trait HasVectorParameters extends HasRiftParameters{
   val vectorParams: VectorParameters
 
-  def vlen = vectorParams.vlen
-  def elen = vectorParams.elen
+  // def vlen = vectorParams.vlen
+  // def elen = vectorParams.elen
 }
 
 
@@ -189,12 +189,12 @@ case class RiftSetting(
   require( plen >=32 && plen <= 56 )
   require( memBeatBits <= l1BeatBits )
   //require( opChn % 2 == 0 )
-  require( regNum > 32 )
+  require( regNum > 33 )
   require( pmpNum >= 0 && pmpNum <= 8 )
   require( isPow2(dcacheParameters.stEntry) )
   require( isPow2(ftChn) )
   require( aluNum > 0 )
-  require( dptEntry >= 2 )
+  require( dptEntry >= 1 )
 
 }
 
