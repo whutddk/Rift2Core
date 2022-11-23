@@ -77,7 +77,7 @@ trait Mul { this: MulDivBase =>
 
   
 
-  val multiplier = Module(new Multiplier(new Mul_iss_info, 65) )
+  val multiplier = Module(new NorMultiplier(new Mul_iss_info, 65) )
 
   // val multiplier = Module(new NorMultiplier(new Mul_iss_info, 65) )
 
@@ -504,7 +504,7 @@ class Dividor(implicit p: Parameters) extends RiftModule {
                   ))
 
 
-  val algDivider = Module(new SRT4Divider(new Mul_iss_info, 64))
+  val algDivider = Module(new NorDivider(new Mul_iss_info, 64))
 
     algDivider.io.enq.valid := io.enq.valid & ~divBypass
     algDivider.io.enq.bits  := io.enq.bits

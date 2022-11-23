@@ -74,7 +74,7 @@ class Rift2300 extends Config((site, here, up) => {
 
 class Rift2310 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
-       hasL2  = true,
+    hasL2  = true,
     hasDebugger = true,
     hasPreFetch = false,
     hasuBTB = false,
@@ -84,7 +84,7 @@ class Rift2310 extends Config((site, here, up) => {
     ftChn = 4,
 
     rnChn = 1,
-    opChn = 2,
+    opChn = 1,
     wbChn = 1,
     cm_chn = 1,
 
@@ -122,7 +122,7 @@ class Rift2310 extends Config((site, here, up) => {
       
     ),
 
-    dptEntry = 4,
+    dptEntry = 2,
     fpuNum = 0,
     mulNum = 1,
 
@@ -142,19 +142,22 @@ class Rift2320 extends Config((site, here, up) => {
     ftChn = 4,
 
     rnChn = 1,
-    opChn = 1,
+    opChn = 2,
     wbChn = 1,
     cm_chn = 1,
 
     pmpNum = 0,
-    regNum = 36,
+    regNum = 34,
     hpmNum  = 0,
 
     l1BeatBits = 64,
     memBeatBits = 64,
 
     tlbEntry = 2,
+
+
     l1DW = 128,
+
     ifetchParameters = IFParameters(
       uBTB_entry = 4,
       // uBTB_tag_w = 16,
@@ -166,20 +169,20 @@ class Rift2320 extends Config((site, here, up) => {
     icacheParameters = IcacheParameters(
       bk = 1,
       cb = 2,
-      cl = 2,
+      cl = 4,
     ),
     dcacheParameters = DcacheParameters(
       bk = 1,
       cb = 2,
-      cl = 2,
+      cl = 4,
       sbEntry = 2,
       stEntry = 2,
       
     ),
 
     dptEntry = 4,
-    mulNum = 1,
     fpuNum = 0,
+    mulNum = 1,
 
     isMinArea = true,
     isLowPower = false,
@@ -194,7 +197,7 @@ class Rift2330 extends Config((site, here, up) => {
     hasuBTB = false,
     // hasLRU = false,
 
-      ftChn = 4,
+    ftChn = 4,
 
     opChn = 2,
     wbChn = 2,
