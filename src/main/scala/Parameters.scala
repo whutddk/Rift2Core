@@ -120,6 +120,7 @@ case class RiftSetting(
   hasPreFetch: Boolean = false,
   hasuBTB: Boolean = true,
   hasLRU: Boolean = false,
+  hasVector: Boolean = true.B,
 
 
   isMinArea: Boolean = false,
@@ -149,12 +150,12 @@ case class RiftSetting(
 
     // btb_tag_w = 8,
     // btb_cb  = 4,
-  uBTB_entry = 16,
-  uBTB_tag_w = 16,
-  btb_cl = 4096,
-  bim_cl = 4096,
-  ras_dp = 256,
-  tage_table = 6, 
+    uBTB_entry = 16,
+    uBTB_tag_w = 16,
+    btb_cl = 4096,
+    bim_cl = 4096,
+    ras_dp = 256,
+    tage_table = 6, 
 
 
 
@@ -212,7 +213,7 @@ trait HasRiftParameters {
   def hasPreFetch = riftSetting.hasPreFetch
   def hasuBTB  = riftSetting.hasuBTB
   def hasLRU  = riftSetting.hasLRU
-  // def hasMulDiv = riftSetting.hasMulDiv
+  def hasVector = riftSetting.hasVector
   
   def ftChn = riftSetting.ftChn
 
