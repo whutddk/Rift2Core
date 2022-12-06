@@ -35,10 +35,10 @@ class NormalCfg  extends Rift2370
 
 object testMain extends App {
 
-  // val cfg = new NormalCfg
+  val cfg = new NormalCfg
   // val cfg = new Rift2GoCfg
   // val cfg = new Rift2350
-  val cfg = new Rift2330D
+  // val cfg = new Rift2330D
 
   (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
       ChiselGeneratorAnnotation(() => {
@@ -64,11 +64,11 @@ object testNoC extends App {
 object tapeMain extends App {
 
   // val cfg = new Rift2300
-  val cfg = new Rift2300
+  val cfg = new Rift2320
   // val cfg = new Rift2350
   // val cfg = new Rift2370
 
-  (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Main", "-e", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
+  (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Main", "-E", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
       ChiselGeneratorAnnotation(() => {
     val soc = LazyModule(new Rift2Link()(cfg))
     soc.module

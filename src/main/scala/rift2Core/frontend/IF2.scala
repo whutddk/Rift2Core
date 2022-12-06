@@ -394,7 +394,7 @@ class IF2(edge: TLEdgeOut)(implicit p: Parameters) extends IF2Base(edge)
   with IF2MMU
   with IF2Fault
   with IF2FSM
-  with IF2NCache
+  with IF2ICache
   with IF2Bus
   with IF2LoadIBuf
   with IF2Fence

@@ -244,7 +244,7 @@ fpuisa += rv64uf-v-move
 fpuisa += rv64uf-p-recoding
 fpuisa += rv64uf-v-recoding
 
-isa ?= $(lsuisa) $(privisa) $(mulisa) # $(fpuisa) $(aluisa) $(bruisa) 
+isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa) # $(fpuisa) 
 # isa ?= $(fpuisa)
 
 
