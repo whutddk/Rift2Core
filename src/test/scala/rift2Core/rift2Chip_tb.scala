@@ -64,7 +64,7 @@ object testNoC extends App {
 object tapeMain extends App {
 
   // val cfg = new Rift2300
-  val cfg = new Rift2320
+  val cfg = new Rift2330
   // val cfg = new Rift2350
   // val cfg = new Rift2370
 
@@ -145,7 +145,7 @@ import rift2Core.backend._
 object testModule extends App {
   (new chisel3.stage.ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => {
-    new Multiplier( Bool(), 32 )
+    new SVPWM(4096)
   })
     ))
 }

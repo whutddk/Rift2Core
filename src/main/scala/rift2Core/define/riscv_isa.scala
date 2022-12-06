@@ -1037,12 +1037,15 @@ class Mul_iss_info(implicit p: Parameters) extends RiftBundle {
 
 
 
-case class WriteBack_info(dw:Int)(implicit p: Parameters) extends RD_PHY {
+class WriteBack_info(dw:Int)(implicit p: Parameters) extends RD_PHY {
   val res = UInt(dw.W)
-
 }
 
-
+class VWriteBack_info(implicit p: Parameters) extends RiftBundle {
+  val res = Vec( atNum, UInt(atw.W) )
+  val rd0 = UInt((log2Ceil(vRegNum)).W)
+  val v0  = Vec(atNum, Bool())
+}
 
 
 

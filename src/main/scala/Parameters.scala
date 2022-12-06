@@ -93,12 +93,57 @@ abstract class DcacheBundle(implicit val p: Parameters) extends Bundle with HasD
 
 
 case class VectorParameters(
-  vlen: Int = 128,
-  elen: Int = 64,
-)
+  vlen: Int = 512,    //The number of bits in a single vector register
+  elen: Int = 64,     //The maximum size in bits that can produce or consume 
+  isEEW8: Bool = true,
+  isEEW16: Bool = true,
+  isEEW32: Bool = true,
+  isEEW64: Bool = true,
+  maxMUL : Int  = 8,
+
+
+  vRegNum: Int  = 64,
+
+
+){
+
+  require( isPow2(elen) )
+  require( isPow2(vlen) )
+  require( elen >= 8 )
+  require( vlen >= elen )
+  require( vlen < 65536 )
+  if( isEEW64 ) { elen >= 64 }
+  if( isEEW32 ) { elen >= 32 }
+  if( isEEW16 ) { elen >= 16 }
+  if( isEEW8 )  { elen >= 8  }
+
+  //requirement of V for application Processors
+  require( vlen >= 128 )
+  require(isEEW8  == true)
+  require(isEEW16 == true)
+  require(isEEW32 == true)
+  require(isEEW64 == true)
+  require( isPow2(maxMUL) )
+  require(maxMUL >= 8)
+
+  require( vRegNum > 32+1+8 )
+
+  val atw: Int = {
+    if(isEEW8) {8}
+    else if(isEEW16) {16}
+    else if(isEEW32) {32}
+    else if(isEEW64) {64}
+  }
+
+  val atNum: Int = vRegNum * (vlen / atw)
+  val minLMUL: float = atw / elen
+
+}
+
+
 
 trait HasVectorParameters extends HasRiftParameters{
-  val vectorParams: VectorParameters
+  val vParams: VectorParameters
 
   // def vlen = vectorParams.vlen
   // def elen = vectorParams.elen

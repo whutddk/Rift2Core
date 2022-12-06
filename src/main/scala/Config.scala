@@ -192,18 +192,20 @@ class Rift2320 extends Config((site, here, up) => {
 
 class Rift2330 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
+    hasL2  = true,
     hasDebugger = true,
     hasPreFetch = false,
     hasuBTB = false,
-    // hasLRU = false,
 
     ftChn = 4,
 
+    rnChn = 2,
     opChn = 2,
     wbChn = 2,
+    cm_chn = 2,
 
-      pmpNum = 0,
-      hpmNum  = 0,
+    pmpNum = 0,
+    hpmNum  = 0,
 
     regNum = 34,
 
@@ -218,11 +220,6 @@ class Rift2330 extends Config((site, here, up) => {
       btb_cl = 4,
       bim_cl = 8,
       ras_dp = 4,
-      // uBTB_tag_w = 16,
-      // btb_cl = 4096,
-      // bim_cl = 4096,
-      // ras_dp = 256,
-      // tage_table = 6, 
     ),
 
     l1DW = 128,
