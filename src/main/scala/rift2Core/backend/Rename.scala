@@ -35,7 +35,7 @@ class Rename()(implicit p: Parameters) extends RiftModule {
     val xRename = Vec( rnChn, new Rename_Bundle )
     val fRename = Vec( rnChn, new Rename_Bundle )
 
-    val rod_i = Vec(cm_chn,new DecoupledIO(new Info_reorder_i))
+    val rod_i = Vec(cmChn,new DecoupledIO(new Info_reorder_i))
  
   })
 
@@ -45,7 +45,7 @@ class Rename()(implicit p: Parameters) extends RiftModule {
   rnRspFifo.io.deq <> io.rnRsp
 
   val reOrder_fifo_i = {
-    val mdl = Module(new MultiPortFifo(new Info_reorder_i, aw = (if(!isMinArea) 4 else 1 ), rnChn, cm_chn))
+    val mdl = Module(new MultiPortFifo(new Info_reorder_i, aw = (if(!isMinArea) 4 else 1 ), rnChn, cmChn))
     mdl.io.deq <> io.rod_i
     mdl
   }
@@ -74,7 +74,7 @@ class Rename()(implicit p: Parameters) extends RiftModule {
     
     reg_phy(i).rs1 := Mux(io.rnReq(i).bits.fpu_isa.is_fop, io.fLookup(i).rsp.rs1, io.xLookup(i).rsp.rs1)
     reg_phy(i).rs2 := Mux(io.rnReq(i).bits.fpu_isa.is_fop | io.rnReq(i).bits.lsu_isa.is_fst, io.fLookup(i).rsp.rs2, io.xLookup(i).rsp.rs2)
-    reg_phy(i).rs3 := Mux(io.rnReq(i).bits.fpu_isa.is_fop, io.fLookup(i).rsp.rs3, (regNum-1).U)
+    reg_phy(i).rs3 := Mux(io.rnReq(i).bits.fpu_isa.is_fop, io.fLookup(i).rsp.rs3, 0.U)
     reg_phy(i).rd0 := 
       Mux1H(Seq(
         io.fRename(i).req.fire -> io.fRename(i).rsp.rd0,
@@ -112,8 +112,8 @@ class Rename()(implicit p: Parameters) extends RiftModule {
     res.phy        := rename
 
     when( instr.fpu_isa.is_fpu ) {
-      when(~instr.fpu_isa.hasTwoRs) { res.phy.rs2 := (regNum-1).U }
-      when(~instr.fpu_isa.hasThreeRs) { res.phy.rs3 := (regNum-1).U }      
+      when(~instr.fpu_isa.hasTwoRs) { res.phy.rs2 := 0.U }
+      when(~instr.fpu_isa.hasThreeRs) { res.phy.rs3 := 0.U }      
     }
     return res
   }

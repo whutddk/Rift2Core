@@ -38,7 +38,7 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
     val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
     val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65))
     val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65))
-    val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
+    val fcsr_cmm_op = Vec(cmChn, DecoupledIO( new Exe_Port ))
     val fcsr = Input(UInt(24.W))
 
 
@@ -48,7 +48,7 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
 
 
   val cnt = RegInit(0.U((log2Ceil(infly)).W))
-  require( cm_chn == 2 )
+  require( cmChn == 2 )
   when( io.flush ) {
     cnt := 0.U
   } .elsewhen( io.fpu_iss_exe.fire & io.fcsr_cmm_op(0).fire & io.fcsr_cmm_op(1).fire) {
@@ -159,7 +159,7 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
     ))
 
   val fcsr_op_fifo = {
-    val mdl = Module( new MultiPortFifo( new Exe_Port, log2Ceil(infly), in = 1, out = cm_chn ))
+    val mdl = Module( new MultiPortFifo( new Exe_Port, log2Ceil(infly), in = 1, out = cmChn ))
 
     val rw = io.fpu_iss_exe.bits.fun.is_fun_frw
     val rs = 
@@ -259,7 +259,7 @@ class FakeFAlu(implicit p: Parameters) extends RiftModule with HasFPUParameters{
     val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
     val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65))
     val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65))
-    val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
+    val fcsr_cmm_op = Vec(cmChn, DecoupledIO( new Exe_Port ))
     val fcsr = Input(UInt(24.W))
 
 
@@ -274,7 +274,7 @@ class FakeFAlu(implicit p: Parameters) extends RiftModule with HasFPUParameters{
   io.fpu_exe_fwb.valid := false.B
   io.fpu_exe_fwb.bits  := 0.U.asTypeOf(new WriteBack_info(dw=65))
 
-  for ( i <- 0 until cm_chn ) {
+  for ( i <- 0 until cmChn ) {
     io.fcsr_cmm_op(i).valid := false.B
     io.fcsr_cmm_op(i).bits  := 0.U.asTypeOf(new Exe_Port)
   }

@@ -244,7 +244,7 @@ fpuisa += rv64uf-v-move
 fpuisa += rv64uf-p-recoding
 fpuisa += rv64uf-v-recoding
 
-isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa) # $(fpuisa) 
+isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa) $(fpuisa) 
 # isa ?= $(fpuisa)
 
 
@@ -297,7 +297,7 @@ VSimTop:
 	--top-module SimTop \
 	--trace-fst \
 	-LDFLAGS -ldromajo_cosim \
-	--cc ${R2}/tb/verilator/SimLink.v  \
+	--cc ${R2}/tb/verilator/SimTop.v  \
 	+define+RANDOMIZE_GARBAGE_ASSIGN \
 	+define+RANDOMIZE_INVALID_ASSIGN \
 	+define+RANDOMIZE_REG_INIT \

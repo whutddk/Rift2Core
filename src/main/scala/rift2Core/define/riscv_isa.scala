@@ -531,211 +531,209 @@ class Fpu_isa extends Bundle {
 
 
 
-class VectorIsa extends Bundle {
-  class OPI extends Bundle{
-    val vv = Bool()
-    val vx = Bool()
-    val vi = Bool()
-  }
+// class VectorIsa extends Bundle {
+//   class OPI extends Bundle{
+//     val vv = Bool()
+//     val vx = Bool()
+//     val vi = Bool()
+//   }
 
-  class OPM extends Bundle{
-    val vv = Bool()
-    val vx = Bool()
-  }
+//   class OPM extends Bundle{
+//     val vv = Bool()
+//     val vx = Bool()
+//   }
 
-  class OPF extends Bundle{
-    val vv = Bool()
-    val vf = Bool()
-  }
+//   class OPF extends Bundle{
+//     val vv = Bool()
+//     val vf = Bool()
+//   }
 
-  val vadd         = new OPI
-  val vsub         = new OPI
-  val vrsub        = new OPI
-  val vminu        = new OPI
-  val vmin         = new OPI
-  val vmaxu        = new OPI
-  val vmax         = new OPI
-  val vand         = new OPI
-  val vor          = new OPI
-  val vxor         = new OPI
-  val vrgather     = new OPI
-  val vslideup     = new OPI
-  val vrgatherei16 = new OPI
-  val vslidedown   = new OPI
-  val vredsum      = new OPM
-  val vredand      = new OPM
-  val vredor       = new OPM
-  val vredxor      = new OPM
-  val vredminu     = new OPM
-  val vredmin      = new OPM
-  val vredmaxu     = new OPM
-  val vredmax      = new OPM
-  val vaaddu       = new OPM
-  val vaadd        = new OPM
-  val vasubu       = new OPM
-  val vasub        = new OPM
-  val vslide1up    = new OPM
-  val vslide1down  = new OPM
-  val vfadd        = new OPF
-  val vfredusum    = new OPF
-  val vfsub        = new OPF
-  val vfredosum    = new OPF
-  val vfmin        = new OPF
-  val vfredmin     = new OPF
-  val vfmax        = new OPF
-  val vfredmax     = new OPF
-  val vfsgnj       = new OPF
-  val vfsgnjn      = new OPF
-  val vfsgnjx      = new OPF
-  val vfslide1up   = new OPF
-  val vfslide1down = new OPF
+//   val vadd         = new OPI
+//   val vsub         = new OPI
+//   val vrsub        = new OPI
+//   val vminu        = new OPI
+//   val vmin         = new OPI
+//   val vmaxu        = new OPI
+//   val vmax         = new OPI
+//   val vand         = new OPI
+//   val vor          = new OPI
+//   val vxor         = new OPI
+//   val vrgather     = new OPI
+//   val vslideup     = new OPI
+//   val vrgatherei16 = new OPI
+//   val vslidedown   = new OPI
+//   val vredsum      = new OPM
+//   val vredand      = new OPM
+//   val vredor       = new OPM
+//   val vredxor      = new OPM
+//   val vredminu     = new OPM
+//   val vredmin      = new OPM
+//   val vredmaxu     = new OPM
+//   val vredmax      = new OPM
+//   val vaaddu       = new OPM
+//   val vaadd        = new OPM
+//   val vasubu       = new OPM
+//   val vasub        = new OPM
+//   val vslide1up    = new OPM
+//   val vslide1down  = new OPM
+//   val vfadd        = new OPF
+//   val vfredusum    = new OPF
+//   val vfsub        = new OPF
+//   val vfredosum    = new OPF
+//   val vfmin        = new OPF
+//   val vfredmin     = new OPF
+//   val vfmax        = new OPF
+//   val vfredmax     = new OPF
+//   val vfsgnj       = new OPF
+//   val vfsgnjn      = new OPF
+//   val vfsgnjx      = new OPF
+//   val vfslide1up   = new OPF
+//   val vfslide1down = new OPF
 
-  val vadc      = new OPI
-  val vmadc     = new OPI
-  val vsbc      = new OPI
-  val vmsbc     = new OPI
-  val vmerge    = new OPI
-  val vmseq     = new OPI
-  val vmsne     = new OPI
-  val vmsltu    = new OPI
-  val vmslt     = new OPI
-  val vmsleu    = new OPI
-  val vmsle     = new OPI
-  val vmsgtu    = new OPI
-  val vmsgt     = new OPI
-  val vmv_x_s   = Bool()
-  val vpopc     = Bool()
-  val vfirst    = Bool()
-  val vmv_s_x   = Bool()
-  val vzext_vf8 = Bool()
-  val vsext_vf8 = Bool()
-  val vzext_vf4 = Bool()
-  val vsext_vf4 = Bool()
-  val vzext_vf2 = Bool()
-  val vsext_vf2 = Bool()
-  val vmsbf = Bool()
-  val vmsof = Bool()
-  val vmsif = Bool()
-  val viota = Bool()
-  val vid   = Bool()
-  val vcompress = new OPM
-  val vmandnot  = new OPM
-  val vmand     = new OPM
-  val vmor      = new OPM
-  val vmxor     = new OPM
-  val vmornot   = new OPM
-  val vmnand    = new OPM
-  val vmnor     = new OPM
-  val vmxnor    = new OPM
-  val vfmv_f_s  = Bool()
-  val vfmv_s_f  = Bool()
-  val vfcvt_xu_f_v     = Bool()
-  val vfcvt_x_f_v      = Bool()
-  val vfcvt_f_xu_v     = Bool()
-  val vfcvt_f_x_v      = Bool()
-  val vfcvt_rtz_xu_f_v = Bool()
-  val vfcvt_rtz_x_f_v  = Bool()
+//   val vadc      = new OPI
+//   val vmadc     = new OPI
+//   val vsbc      = new OPI
+//   val vmsbc     = new OPI
+//   val vmerge    = new OPI
+//   val vmseq     = new OPI
+//   val vmsne     = new OPI
+//   val vmsltu    = new OPI
+//   val vmslt     = new OPI
+//   val vmsleu    = new OPI
+//   val vmsle     = new OPI
+//   val vmsgtu    = new OPI
+//   val vmsgt     = new OPI
+//   val vmv_x_s   = Bool()
+//   val vpopc     = Bool()
+//   val vfirst    = Bool()
+//   val vmv_s_x   = Bool()
+//   val vzext_vf8 = Bool()
+//   val vsext_vf8 = Bool()
+//   val vzext_vf4 = Bool()
+//   val vsext_vf4 = Bool()
+//   val vzext_vf2 = Bool()
+//   val vsext_vf2 = Bool()
+//   val vmsbf = Bool()
+//   val vmsof = Bool()
+//   val vmsif = Bool()
+//   val viota = Bool()
+//   val vid   = Bool()
+//   val vcompress = new OPM
+//   val vmandnot  = new OPM
+//   val vmand     = new OPM
+//   val vmor      = new OPM
+//   val vmxor     = new OPM
+//   val vmornot   = new OPM
+//   val vmnand    = new OPM
+//   val vmnor     = new OPM
+//   val vmxnor    = new OPM
+//   val vfmv_f_s  = Bool()
+//   val vfmv_s_f  = Bool()
+//   val vfcvt_xu_f_v     = Bool()
+//   val vfcvt_x_f_v      = Bool()
+//   val vfcvt_f_xu_v     = Bool()
+//   val vfcvt_f_x_v      = Bool()
+//   val vfcvt_rtz_xu_f_v = Bool()
+//   val vfcvt_rtz_x_f_v  = Bool()
 
-  val vfwcvt_xu_f_v     = Bool()
-  val vfwcvt_x_f_v      = Bool()
-  val vfwcvt_f_xu_v     = Bool()
-  val vfwcvt_f_x_v      = Bool()
-  val vfwcvt_f_f_v      = Bool()
-  val vfwcvt_rtz_xu_f_v = Bool()
-  val vfwcvt_rtz_x_f_v  = Bool()
+//   val vfwcvt_xu_f_v     = Bool()
+//   val vfwcvt_x_f_v      = Bool()
+//   val vfwcvt_f_xu_v     = Bool()
+//   val vfwcvt_f_x_v      = Bool()
+//   val vfwcvt_f_f_v      = Bool()
+//   val vfwcvt_rtz_xu_f_v = Bool()
+//   val vfwcvt_rtz_x_f_v  = Bool()
 
-  val vfncvt_xu_f_w     = Bool()
-  val vfncvt_x_f_w      = Bool()
-  val vfncvt_f_xu_w     = Bool()
-  val vfncvt_f_x_w      = Bool()
-  val vfncvt_f_f_w      = Bool()
-  val vfncvt_rod_f_f_w  = Bool()
-  val vfncvt_rtz_xu_f_w = Bool()
-  val vfncvt_rtz_x_f_w  = Bool()
+//   val vfncvt_xu_f_w     = Bool()
+//   val vfncvt_x_f_w      = Bool()
+//   val vfncvt_f_xu_w     = Bool()
+//   val vfncvt_f_x_w      = Bool()
+//   val vfncvt_f_f_w      = Bool()
+//   val vfncvt_rod_f_f_w  = Bool()
+//   val vfncvt_rtz_xu_f_w = Bool()
+//   val vfncvt_rtz_x_f_w  = Bool()
 
-  val vfsqrt_v   = Bool()
-  val vfrsqrt7_v = Bool()
-  val vfrec7_v   = Bool()
-  val vfclass_v  = Bool()
+//   val vfsqrt_v   = Bool()
+//   val vfrsqrt7_v = Bool()
+//   val vfrec7_v   = Bool()
+//   val vfclass_v  = Bool()
 
-  val vfmrege   = new OPF
-  val vmfeq     = new OPF
-  val vmfle     = new OPF
-  val vmflt     = new OPF
-  val vmfne     = new OPF
-  val vmfgt     = new OPF
-  val vmfge     = new OPF
+//   val vfmrege   = new OPF
+//   val vmfeq     = new OPF
+//   val vmfle     = new OPF
+//   val vmflt     = new OPF
+//   val vmfne     = new OPF
+//   val vmfgt     = new OPF
+//   val vmfge     = new OPF
 
-  val vsaddu  = new OPI
-  val vsadd   = new OPI
-  val vssubu  = new OPI
-  val vssub   = new OPI
-  val vsll    = new OPI
-  val vsmul   = new OPI
-  val vmv     = new OPI
-  val vsrl    = new OPI
-  val vsra    = new OPI
-  val vssrl   = new OPI
-  val vssra   = new OPI
-  val vnsrl   = new OPI
-  val vnsra   = new OPI
-  val vnclipu = new OPI
-  val vnclip  = new OPI
-  val vdivu   = new OPM
-  val vdiv    = new OPM
-  val vremu   = new OPM
-  val vrem    = new OPM
-  val vmulhu  = new OPM
-  val vmul    = new OPM
-  val vmulhsu = new OPM
-  val vmulh   = new OPM
-  val vmadd   = new OPM
-  val vnmsub  = new OPM
-  val vmacc   = new OPM
-  val vnmsac  = new OPM
-  val vfdiv   = new OPF
-  val vfrdiv  = new OPF
-  val vfmul   = new OPF
-  val vfrsub  = new OPF
-  val vfmadd  = new OPF
-  val vfnmadd = new OPF
-  val vfmsub  = new OPF
-  val vfnmsub = new OPF
-  val vfmacc  = new OPF
-  val vfnmacc = new OPF
-  val vfmsac  = new OPF
-  val vfnmsac = new OPF
+//   val vsaddu  = new OPI
+//   val vsadd   = new OPI
+//   val vssubu  = new OPI
+//   val vssub   = new OPI
+//   val vsll    = new OPI
+//   val vsmul   = new OPI
+//   val vmv     = new OPI
+//   val vsrl    = new OPI
+//   val vsra    = new OPI
+//   val vssrl   = new OPI
+//   val vssra   = new OPI
+//   val vnsrl   = new OPI
+//   val vnsra   = new OPI
+//   val vnclipu = new OPI
+//   val vnclip  = new OPI
+//   val vdivu   = new OPM
+//   val vdiv    = new OPM
+//   val vremu   = new OPM
+//   val vrem    = new OPM
+//   val vmulhu  = new OPM
+//   val vmul    = new OPM
+//   val vmulhsu = new OPM
+//   val vmulh   = new OPM
+//   val vmadd   = new OPM
+//   val vnmsub  = new OPM
+//   val vmacc   = new OPM
+//   val vnmsac  = new OPM
+//   val vfdiv   = new OPF
+//   val vfrdiv  = new OPF
+//   val vfmul   = new OPF
+//   val vfrsub  = new OPF
+//   val vfmadd  = new OPF
+//   val vfnmadd = new OPF
+//   val vfmsub  = new OPF
+//   val vfnmsub = new OPF
+//   val vfmacc  = new OPF
+//   val vfnmacc = new OPF
+//   val vfmsac  = new OPF
+//   val vfnmsac = new OPF
 
-  val vwredsumu  = new OPI
-  val vwredsum   = new OPI
-  val vwaddu     = new OPM
-  val vwadd      = new OPM
-  val vwsubu     = new OPM
-  val vwsub      = new OPM
-  val vwaddu_w   = new OPM
-  val vwadd_w    = new OPM
-  val vwsubu_w   = new OPM
-  val vwsub_w    = new OPM
-  val vwmulu     = new OPM
-  val vwmulsu    = new OPM
-  val vwmul      = new OPM
-  val vwmaccu    = new OPM
-  val vwmacc     = new OPM
-  val vwmaccus   = new OPM
-  val vwmaccsu   = new OPM
-  val vfwadd     = new OPF
-  val vfwredusum = new OPF
-  val vfwsub     = new OPF
-  val vfwredosum = new OPF
-  val vfwadd_w   = new OPF
-  val vfwsub_w   = new OPF
-  val vfwmul     = new OPF
-  val vfwmacc    = new OPF
-  val vfwnmacc   = new OPF
-  val vfwmsac    = new OPF
-  val vfwnmsac   = new OPF
-
-
+//   val vwredsumu  = new OPI
+//   val vwredsum   = new OPI
+//   val vwaddu     = new OPM
+//   val vwadd      = new OPM
+//   val vwsubu     = new OPM
+//   val vwsub      = new OPM
+//   val vwaddu_w   = new OPM
+//   val vwadd_w    = new OPM
+//   val vwsubu_w   = new OPM
+//   val vwsub_w    = new OPM
+//   val vwmulu     = new OPM
+//   val vwmulsu    = new OPM
+//   val vwmul      = new OPM
+//   val vwmaccu    = new OPM
+//   val vwmacc     = new OPM
+//   val vwmaccus   = new OPM
+//   val vwmaccsu   = new OPM
+//   val vfwadd     = new OPF
+//   val vfwredusum = new OPF
+//   val vfwsub     = new OPF
+//   val vfwredosum = new OPF
+//   val vfwadd_w   = new OPF
+//   val vfwsub_w   = new OPF
+//   val vfwmul     = new OPF
+//   val vfwmacc    = new OPF
+//   val vfwnmacc   = new OPF
+//   val vfwmsac    = new OPF
+//   val vfwnmsac   = new OPF
 
 
 
@@ -750,28 +748,30 @@ class VectorIsa extends Bundle {
 
 
 
-  val vsetvli  = Bool()
-  val vsetivli = Bool()
-  val vsetvl   = Bool()
-
-  val vle    = Bool()
-  val vluxei = Bool()
-  val vlse   = Bool()
-  val vloxei = Bool()
-
-  val vse    = Bool()
-  val vsuxei = Bool()
-  val vsse   = Bool()
-  val vsoxei = Bool()
 
 
-  def isVLoad 
-  def isVStore
-  def isVArithm
-  def isVConfig
+//   val vsetvli  = Bool()
+//   val vsetivli = Bool()
+//   val vsetvl   = Bool()
 
-  def isVector = 
-}
+//   val vle    = Bool()
+//   val vluxei = Bool()
+//   val vlse   = Bool()
+//   val vloxei = Bool()
+
+//   val vse    = Bool()
+//   val vsuxei = Bool()
+//   val vsse   = Bool()
+//   val vsoxei = Bool()
+
+
+//   def isVLoad 
+//   def isVStore
+//   def isVArithm
+//   def isVConfig
+
+//   def isVector = 
+// }
 
 
 
@@ -782,9 +782,9 @@ class RS_RAW(implicit p: Parameters) extends RiftBundle {
 }
 
 class RS_PHY(implicit p: Parameters) extends RiftBundle {
-  val rs1 = UInt((log2Ceil(regNum)).W)
-  val rs2 = UInt((log2Ceil(regNum)).W)
-  val rs3 = UInt((log2Ceil(regNum)).W)
+  val rs1 = UInt((log2Ceil(log2Ceil(maxRegNum))).W)
+  val rs2 = UInt((log2Ceil(log2Ceil(maxRegNum))).W)
+  val rs3 = UInt((log2Ceil(log2Ceil(maxRegNum))).W)
 }
 
 class RD_RAW(implicit p: Parameters) extends RiftBundle {
@@ -792,7 +792,7 @@ class RD_RAW(implicit p: Parameters) extends RiftBundle {
 }
 
 class RD_PHY(implicit p: Parameters) extends RiftBundle {
-  val rd0 = UInt((log2Ceil(regNum)).W)
+  val rd0 = UInt((log2Ceil(maxRegNum)).W)
 }
 
 class Operation_source(dw: Int)(implicit p: Parameters) extends RiftBundle {
@@ -809,10 +809,10 @@ class Reg_RAW(implicit p: Parameters) extends RiftBundle {
 }
 
 class Reg_PHY(implicit p: Parameters) extends RiftBundle {
-  val rs1 = UInt((log2Ceil(regNum)).W)
-  val rs2 = UInt((log2Ceil(regNum)).W)
-  val rs3 = UInt((log2Ceil(regNum)).W)
-  val rd0 = UInt((log2Ceil(regNum)).W)
+  val rs1 = UInt((log2Ceil(maxRegNum)).W)
+  val rs2 = UInt((log2Ceil(maxRegNum)).W)
+  val rs3 = UInt((log2Ceil(maxRegNum)).W)
+  val rd0 = UInt((log2Ceil(maxRegNum)).W)
 }
 
 
@@ -825,7 +825,7 @@ class Instruction_set(implicit p: Parameters) extends RiftBundle{
   val mul_isa = new Mul_isa
   val privil_isa = new Privil_isa
   val fpu_isa = new Fpu_isa
-  val vectorIsa = new VectorIsa
+  // val vectorIsa = new VectorIsa
 
 
 
@@ -853,13 +853,13 @@ class Instruction_param(implicit p: Parameters) extends RiftBundle {
   val rm = UInt(3.W)
   val raw = new Reg_RAW
 
-  val vm = Bool()
-  def width = rm
-  val mew = Bool()
-  val mop = UInt(2.W)
-  val nf  = UInt(3.W)
-  def lumop = raw.rs2
-  def sumop = raw.rs2
+  // val vm = Bool()
+  // def width = rm
+  // val mew = Bool()
+  // val mop = UInt(2.W)
+  // val nf  = UInt(3.W)
+  // def lumop = raw.rs2
+  // def sumop = raw.rs2
 
 }
 
@@ -979,7 +979,7 @@ class Fpu_dpt_info(implicit p: Parameters) extends RiftBundle {
 class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val pc = UInt(vlen.W)
   val rd0_raw = UInt(5.W)
-  val rd0_phy = UInt((log2Ceil(regNum)).W)
+  val rd0_phy = UInt((log2Ceil(maxRegNum)).W)
 
   val is_branch = Bool()
   val is_jalr = Bool()
@@ -1041,11 +1041,11 @@ class WriteBack_info(dw:Int)(implicit p: Parameters) extends RD_PHY {
   val res = UInt(dw.W)
 }
 
-class VWriteBack_info(implicit p: Parameters) extends RiftBundle {
-  val res = Vec( atNum, UInt(atw.W) )
-  val rd0 = UInt((log2Ceil(vRegNum)).W)
-  val v0  = Vec(atNum, Bool())
-}
+// class VWriteBack_info(implicit p: Parameters) extends RiftBundle {
+//   val res = Vec( atNum, UInt(atw.W) )
+//   val rd0 = UInt((log2Ceil(vRegNum)).W)
+//   val v0  = Vec(atNum, Bool())
+// }
 
 
 
@@ -1081,7 +1081,7 @@ class Info_clint_csr(implicit p: Parameters) extends RiftBundle {
 
 class Info_cmm_lsu(implicit p: Parameters) extends RiftBundle {
   val is_amo_pending = Bool()
-  val is_store_commit = Vec(cm_chn, Bool())
+  val is_store_commit = Vec(cmChn, Bool())
 }
 
 class Info_lsu_cmm(implicit p: Parameters) extends RiftBundle {
@@ -1129,7 +1129,7 @@ class Plic_Bundle extends Bundle {
 }
 
 class ReadOp_Rsp_Bundle(dw: Int)(implicit p: Parameters) extends RiftBundle{
-  val phy = UInt((log2Ceil(regNum)).W)
+  val phy = UInt((log2Ceil(maxRegNum)).W)
   val op  = UInt(dw.W)
 }
 

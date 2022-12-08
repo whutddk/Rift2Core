@@ -26,4 +26,4 @@ import chipsalliance.rocketchip.config._
 
 
 
-    val v0     = Output( Vec( atNum, Bool() ) )
+    // val v0     = Output( Vec( atNum, Bool() ) )

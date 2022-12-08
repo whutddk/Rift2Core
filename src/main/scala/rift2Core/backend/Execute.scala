@@ -53,7 +53,7 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     val fpu_exe_iwb = Vec(fpuNum max 1, new DecoupledIO(new WriteBack_info(dw=64)))
     val fpu_exe_fwb = Vec(fpuNum max 1, new DecoupledIO(new WriteBack_info(dw=65)))
     val fcsr = Input(UInt(24.W))
-    val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
+    val fcsr_cmm_op = Vec(cmChn, DecoupledIO( new Exe_Port ))
 
     val bftq = Flipped(Decoupled(new Branch_FTarget_Bundle))
     val jftq = Flipped(Decoupled(new Jump_FTarget_Bundle))

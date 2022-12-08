@@ -40,11 +40,11 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     val fRename = Vec( rnChn, Flipped(new Rename_Bundle) )
 
 
-    val irgLog = Output( Vec(regNum, UInt(2.W)) )
-    val frgLog = Output( Vec(regNum, UInt(2.W)) )
+    val irgLog = Output( Vec(xRegNum, UInt(2.W)) )
+    val frgLog = Output( Vec(fRegNum, UInt(2.W)) )
 
-    val irgReq = Flipped(Vec( opChn, Valid( UInt((log2Ceil(regNum)).W) ) ))
-    val frgReq = Flipped(Vec( opChn, Valid( UInt((log2Ceil(regNum)).W) ) ))
+    val irgReq = Flipped(Vec( opChn, Valid( UInt((log2Ceil(xRegNum)).W) ) ))
+    val frgReq = Flipped(Vec( opChn, Valid( UInt((log2Ceil(fRegNum)).W) ) ))
 
     val irgRsp =  Vec( opChn, Valid(new ReadOp_Rsp_Bundle(64) ))
     val frgRsp =  Vec( opChn, Valid(new ReadOp_Rsp_Bundle(65) ))
@@ -60,15 +60,15 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     val mem_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65)))
     val fpu_fWriteBack = Vec(mulNum max 1, Flipped(new DecoupledIO(new WriteBack_info(dw = 65))))
 
-    val commit = Vec(cm_chn, Flipped((new Info_commit_op)))
+    val commit = Vec(cmChn, Flipped((new Info_commit_op)))
 
     val diffXReg = Output(Vec(32, UInt(64.W)))
     val diffFReg = Output(Vec(32, UInt(65.W)))
   })
 
 
-  val iReg = Module(new XRegFiles(dw = 64, opChn, wbChn))
-  val fReg = if( fpuNum > 0 ) { Module(new FRegFiles(dw = 65, opChn, wb_chn=2)) } else {  Module(new FakeFRegFiles(dw = 65, opChn, wb_chn=2) ) }
+  val iReg = Module(new XRegFiles(dw = 64, rnChn, opChn, wbChn, cmChn, xRegNum))
+  val fReg = if( fpuNum > 0 ) { Module(new FRegFiles(dw = 65, rnChn, opChn, 2, cmChn, fRegNum)) } else {  Module(new FakeFRegFiles(dw = 65, rnChn, opChn, 2, cmChn, fRegNum) ) }
 
 
 
@@ -80,7 +80,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
   }
 
 
-  for ( i <- 0 until cm_chn ) yield {
+  for ( i <- 0 until cmChn ) yield {
     iReg.io.commit(i).is_comfirm    := false.B
     iReg.io.commit(i).is_MisPredict := io.commit(i).is_MisPredict
     iReg.io.commit(i).is_abort      := io.commit(i).is_abort

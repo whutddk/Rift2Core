@@ -92,11 +92,11 @@ trait Stq_Ptr { this: Stq_Base =>
   io.deq.bits := Mux( io.deq.valid, rd_buff, 0.U.asTypeOf(new Lsu_iss_info) )
 
   when( io.flush ) {
-    if( cm_chn ==2 ) {
+    if( cmChn ==2 ) {
       when( is_st_commited(1) & is_st_commited(0) ) { wr_ptr_reg := cm_ptr_reg + 2.U }
       .elsewhen( is_st_commited(0) | (is_amo & ~io.is_empty) | is_st_commited(1) ) { wr_ptr_reg := cm_ptr_reg + 1.U } //amo only resolved at chn0
       .otherwise{ wr_ptr_reg := cm_ptr_reg }      
-    } else if ( cm_chn == 1 ) {
+    } else if ( cmChn == 1 ) {
       when( is_st_commited(0) | (is_amo & ~io.is_empty) ) { wr_ptr_reg := cm_ptr_reg + 1.U } //amo only resolved at chn0
       .otherwise{ wr_ptr_reg := cm_ptr_reg }         
     } else {
@@ -113,7 +113,7 @@ trait Stq_Ptr { this: Stq_Base =>
     buff(rd_ptr) := 0.U.asTypeOf(new Lsu_iss_info)
   }
 
-  if( cm_chn == 2 ) {
+  if( cmChn == 2 ) {
     when( is_st_commited(1) & is_st_commited(0) ) {
       cm_ptr_reg := cm_ptr_reg + 2.U
       assert( ~is_amo )
@@ -123,7 +123,7 @@ trait Stq_Ptr { this: Stq_Base =>
       assert( ~((is_st_commited(0) | is_st_commited(1)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
       assert( cm_ptr_reg =/= wr_ptr_reg )
     }    
-  } else if( cm_chn == 1 ) {
+  } else if( cmChn == 1 ) {
     when( is_st_commited(0) ) {
       cm_ptr_reg := cm_ptr_reg + 1.U
       assert( ~is_amo )

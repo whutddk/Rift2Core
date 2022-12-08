@@ -42,11 +42,11 @@ abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPU
     val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
     val fpu_iss_exe = Vec(fpuNum max 1, new DecoupledIO(new Fpu_iss_info))
 
-    val irgLog = Input( Vec(regNum, UInt(2.W)) )
-    val frgLog = Input( Vec(regNum, UInt(2.W)) )
+    val irgLog = Input( Vec(xRegNum, UInt(2.W)) )
+    val frgLog = Input( Vec(fRegNum, UInt(2.W)) )
 
-    val irgReq = Vec( opChn, Valid( UInt((log2Ceil(regNum)).W) ) )
-    val frgReq = Vec( opChn, Valid( UInt((log2Ceil(regNum)).W) ) )    
+    val irgReq = Vec( opChn, Valid( UInt((log2Ceil(xRegNum)).W) ) )
+    val frgReq = Vec( opChn, Valid( UInt((log2Ceil(fRegNum)).W) ) )    
 
     val irgRsp = Flipped( Vec( opChn, Valid(new ReadOp_Rsp_Bundle(64)) ) )
     val frgRsp = Flipped( Vec( opChn, Valid(new ReadOp_Rsp_Bundle(65)) ) )
@@ -60,7 +60,7 @@ abstract class DptBoard()(implicit p: Parameters) extends DptBase {
   val bufValidDnxt = Wire( Vec(rnChn, Vec( dptEntry, Bool() ) ))
   val bufValid     = RegInit( VecInit( Seq.fill(dptEntry){false.B} ))
   val bufInfo      = Reg( Vec( dptEntry, new Dpt_info              ))
-  val bufReqNum    = Wire( Vec( dptEntry, Vec(3, UInt((log2Ceil(regNum)).W)) ))
+  val bufReqNum    = Wire( Vec( dptEntry, Vec(3, UInt((log2Ceil(maxRegNum)).W)) ))
   val isBufFop     = Reg( Vec( dptEntry, Vec( 3, Bool()    )) )
   val isOpReady    = Reg( Vec( dptEntry, Vec( 3, Bool()    )) )
   val bufOperator  = Reg( Vec( dptEntry, Vec( 3, UInt(65.W))) )
@@ -118,19 +118,19 @@ abstract class DptBoard()(implicit p: Parameters) extends DptBase {
 
   for( i <- 0 until rnChn ) {
     when( io.dptReq(i).fire ) {
-      when( io.dptReq(i).bits.phy.rs1 === (regNum-1).U ) {
+      when( io.dptReq(i).bits.phy.rs1 === 0.U ) {
         isOpReady (entrySel(i))(0) := true.B
         bufOperator(entrySel(i))(0) := 0.U
       } .otherwise {
         isOpReady (entrySel(i))(0) := false.B
       }
-      when( io.dptReq(i).bits.phy.rs2 === (regNum-1).U ) {
+      when( io.dptReq(i).bits.phy.rs2 === 0.U ) {
         isOpReady (entrySel(i))(1) := true.B
         bufOperator(entrySel(i))(1) := 0.U
       } .otherwise{
         isOpReady (entrySel(i))(1) := false.B
       }
-      when( io.dptReq(i).bits.phy.rs3 === (regNum-1).U ) {
+      when( io.dptReq(i).bits.phy.rs3 === 0.U ) {
         isOpReady (entrySel(i))(2) := true.B
         bufOperator(entrySel(i))(2) := 0.U
       } .otherwise {
@@ -205,7 +205,7 @@ abstract class DptAgeMatrix()(implicit p: Parameters) extends DptBoard {
 }
 
 trait DptReadIOp { this: DptAgeMatrix =>
-  val rIOpNum = Wire( Vec( opChn, UInt((log2Ceil(regNum)).W)) )
+  val rIOpNum = Wire( Vec( opChn, UInt((log2Ceil(xRegNum)).W)) )
 
 
   /** Whether this rs can request operator reading */
@@ -230,13 +230,13 @@ trait DptReadIOp { this: DptAgeMatrix =>
     canIOpPostReq(i)(0) := 
       // io.dptReq(i).fire &
       io.irgLog(io.dptReq(i).bits.phy.rs1) === "b11".U & //reg-log is ready
-      io.dptReq(i).bits.phy.rs1 =/= (regNum-1).U &
+      io.dptReq(i).bits.phy.rs1 =/= 0.U &
       ~io.dptReq(i).bits.fpu_isa.is_fop
     
     canIOpPostReq(i)(1) :=
       // io.dptReq(i).fire &
       io.irgLog(io.dptReq(i).bits.phy.rs2) === "b11".U & //reg-log is ready
-      io.dptReq(i).bits.phy.rs2 =/= (regNum-1).U &
+      io.dptReq(i).bits.phy.rs2 =/= 0.U &
        ~io.dptReq(i).bits.fpu_isa.is_fop & ~io.dptReq(i).bits.lsu_isa.is_fst
   }
 
@@ -291,8 +291,8 @@ trait DptReadIOp { this: DptAgeMatrix =>
 
 
 
-  val selIRS1 = Wire( Vec(opChn, UInt((log2Ceil(regNum)).W) ) )
-  val selIRS2 = Wire( Vec(opChn, UInt((log2Ceil(regNum)).W) ) )
+  val selIRS1 = Wire( Vec(opChn, UInt((log2Ceil(xRegNum)).W) ) )
+  val selIRS2 = Wire( Vec(opChn, UInt((log2Ceil(xRegNum)).W) ) )
 
   for( chn <- 0 until opChn ){
     isIRS1NoneReq(chn) := selMatrixIRS1(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
@@ -310,9 +310,9 @@ trait DptReadIOp { this: DptAgeMatrix =>
       ) //index a row which all zero
 
     if( chn % 2 == 0 ){
-      rIOpNum(chn) := Mux( ~isIRS1NoneReq(chn), selIRS1(chn), Mux( ~isIRS2NoneReq(chn), selIRS2(chn), (regNum-1).U ))
+      rIOpNum(chn) := Mux( ~isIRS1NoneReq(chn), selIRS1(chn), Mux( ~isIRS2NoneReq(chn), selIRS2(chn), 0.U ))
     } else {
-      rIOpNum(chn) := Mux( ~isIRS2NoneReq(chn), selIRS2(chn), Mux( ~isIRS1NoneReq(chn), selIRS1(chn), (regNum-1).U ))
+      rIOpNum(chn) := Mux( ~isIRS2NoneReq(chn), selIRS2(chn), Mux( ~isIRS1NoneReq(chn), selIRS1(chn), 0.U ))
     }
 
     io.irgReq(chn).valid := ~isIRS1NoneReq(chn) | ~isIRS2NoneReq(chn)
@@ -325,7 +325,7 @@ trait DptReadIOp { this: DptAgeMatrix =>
 }
 
 trait DptReadFOp { this: DptAgeMatrix =>
-  val rFOpNum = Wire( Vec( opChn, UInt((log2Ceil(regNum)).W)) )
+  val rFOpNum = Wire( Vec( opChn, UInt((log2Ceil(fRegNum)).W)) )
 
 
   /** Whether this rs can request operator reading */
@@ -354,19 +354,19 @@ trait DptReadFOp { this: DptAgeMatrix =>
     canFOpPostReq(i)(0) := 
       // io.dptReq(i).fire &
       io.frgLog(io.dptReq(i).bits.phy.rs1) === "b11".U & //reg-log is ready
-      io.dptReq(i).bits.phy.rs1 =/= (regNum-1).U &
+      io.dptReq(i).bits.phy.rs1 =/= 0.U &
       io.dptReq(i).bits.fpu_isa.is_fop
     
     canFOpPostReq(i)(1) :=
       // io.dptReq(i).fire &
       io.frgLog(io.dptReq(i).bits.phy.rs2) === "b11".U & //reg-log is ready
-      io.dptReq(i).bits.phy.rs2 =/= (regNum-1).U &
+      io.dptReq(i).bits.phy.rs2 =/= 0.U &
       (io.dptReq(i).bits.fpu_isa.is_fop | io.dptReq(i).bits.lsu_isa.is_fst)
 
     canFOpPostReq(i)(2) :=
       // io.dptReq(i).fire &
       io.frgLog(io.dptReq(i).bits.phy.rs3) === "b11".U & //reg-log is ready
-      io.dptReq(i).bits.phy.rs3 =/= (regNum-1).U &
+      io.dptReq(i).bits.phy.rs3 =/= 0.U &
       io.dptReq(i).bits.fpu_isa.is_fop
   }
 
@@ -432,9 +432,9 @@ trait DptReadFOp { this: DptAgeMatrix =>
   val isFRS3NoneReq = Wire( Vec(opChn, Bool()) )
   // dontTouch(isFRS1NoneReq)
   // dontTouch(isFRS2NoneReq)
-  val selFRS1 = Wire( Vec(opChn,  UInt((log2Ceil(regNum)).W) ) )
-  val selFRS2 = Wire( Vec(opChn,  UInt((log2Ceil(regNum)).W) ) )
-  val selFRS3 = Wire( Vec(opChn,  UInt((log2Ceil(regNum)).W) ) )
+  val selFRS1 = Wire( Vec(opChn,  UInt((log2Ceil(fRegNum)).W) ) )
+  val selFRS2 = Wire( Vec(opChn,  UInt((log2Ceil(fRegNum)).W) ) )
+  val selFRS3 = Wire( Vec(opChn,  UInt((log2Ceil(fRegNum)).W) ) )
 
   for( chn <- 0 until opChn ){
     isFRS1NoneReq(chn) := selMatrixFRS1(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
@@ -459,11 +459,11 @@ trait DptReadFOp { this: DptAgeMatrix =>
       ) //index a row which all zero
 
     if( chn % 3 == 0 ){
-      rFOpNum(chn) := Mux( ~isFRS1NoneReq(chn), selFRS1(chn), Mux( ~isFRS2NoneReq(chn), selFRS2(chn), Mux( ~isFRS3NoneReq(chn), selFRS3(chn), (regNum-1).U) ))
+      rFOpNum(chn) := Mux( ~isFRS1NoneReq(chn), selFRS1(chn), Mux( ~isFRS2NoneReq(chn), selFRS2(chn), Mux( ~isFRS3NoneReq(chn), selFRS3(chn), 0.U) ))
     } else if( chn % 3 == 0 ){
-      rFOpNum(chn) := Mux( ~isFRS2NoneReq(chn), selFRS2(chn), Mux( ~isFRS3NoneReq(chn), selFRS3(chn), Mux( ~isFRS1NoneReq(chn), selFRS1(chn), (regNum-1).U) ))
+      rFOpNum(chn) := Mux( ~isFRS2NoneReq(chn), selFRS2(chn), Mux( ~isFRS3NoneReq(chn), selFRS3(chn), Mux( ~isFRS1NoneReq(chn), selFRS1(chn), 0.U) ))
     } else {
-      rFOpNum(chn) := Mux( ~isFRS3NoneReq(chn), selFRS3(chn), Mux( ~isFRS1NoneReq(chn), selFRS1(chn), Mux( ~isFRS2NoneReq(chn), selFRS2(chn), (regNum-1).U) ))
+      rFOpNum(chn) := Mux( ~isFRS3NoneReq(chn), selFRS3(chn), Mux( ~isFRS1NoneReq(chn), selFRS1(chn), Mux( ~isFRS2NoneReq(chn), selFRS2(chn), 0.U) ))
     }
 
 

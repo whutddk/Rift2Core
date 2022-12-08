@@ -30,9 +30,9 @@ import chipsalliance.rocketchip.config.Parameters
 
 
 class Info_cmm_diff(implicit p: Parameters) extends RiftBundle {
-  val pc = Vec(cm_chn, UInt(64.W))
-  val comfirm = Vec(cm_chn, Bool())
-  val abort = Vec(cm_chn, Bool())
+  val pc = Vec(cmChn, UInt(64.W))
+  val comfirm = Vec(cmChn, Bool())
+  val abort = Vec(cmChn, Bool())
   val priv_lvl = UInt(2.W)
   val is_ecall_M = Bool()
   val is_ecall_S = Bool()

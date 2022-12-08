@@ -95,14 +95,14 @@ abstract class DcacheBundle(implicit val p: Parameters) extends Bundle with HasD
 case class VectorParameters(
   vlen: Int = 512,    //The number of bits in a single vector register
   elen: Int = 64,     //The maximum size in bits that can produce or consume 
-  isEEW8: Bool = true,
-  isEEW16: Bool = true,
-  isEEW32: Bool = true,
-  isEEW64: Bool = true,
+  isEEW8: Boolean = true,
+  isEEW16: Boolean = true,
+  isEEW32: Boolean = true,
+  isEEW64: Boolean = true,
   maxMUL : Int  = 8,
 
 
-  vRegNum: Int  = 64,
+
 
 
 ){
@@ -126,17 +126,16 @@ case class VectorParameters(
   require( isPow2(maxMUL) )
   require(maxMUL >= 8)
 
-  require( vRegNum > 32+1+8 )
 
-  val atw: Int = {
-    if(isEEW8) {8}
-    else if(isEEW16) {16}
-    else if(isEEW32) {32}
-    else if(isEEW64) {64}
-  }
+  // val atw: Int = {
+  //   if(isEEW8) {8}
+  //   else if(isEEW16) {16}
+  //   else if(isEEW32) {32}
+  //   else if(isEEW64) {64}
+  // }
 
-  val atNum: Int = vRegNum * (vlen / atw)
-  val minLMUL: float = atw / elen
+  // val atNum: Int = vRegNum * (vlen / atw)
+  // val minLMUL: float = atw / elen
 
 }
 
@@ -165,7 +164,7 @@ case class RiftSetting(
   hasPreFetch: Boolean = false,
   hasuBTB: Boolean = true,
   hasLRU: Boolean = false,
-  hasVector: Boolean = true.B,
+  hasVector: Boolean = true,
 
 
   isMinArea: Boolean = false,
@@ -173,11 +172,14 @@ case class RiftSetting(
 
   ftChn: Int = 8, //fetch width
   rnChn: Int = 2,
-  cm_chn: Int = 2,
+  cmChn: Int = 2,
   opChn: Int = 4,
   wbChn: Int = 4,
 
-  regNum: Int = 64,
+  xRegNum: Int = 64,
+  fRegNum: Int = 64,
+  vRegNum: Int = 64,
+
   pmpNum: Int = 1,
   hpmNum: Int = 4,
 
@@ -235,7 +237,7 @@ case class RiftSetting(
   require( plen >=32 && plen <= 56 )
   require( memBeatBits <= l1BeatBits )
   //require( opChn % 2 == 0 )
-  require( regNum > 33 )
+  require( xRegNum > 33 & fRegNum > 33 && vRegNum > 33)
   require( pmpNum >= 0 && pmpNum <= 8 )
   require( isPow2(dcacheParameters.stEntry) )
   require( isPow2(ftChn) )
@@ -262,12 +264,16 @@ trait HasRiftParameters {
   
   def ftChn = riftSetting.ftChn
 
-  def cm_chn = riftSetting.cm_chn
+  def cmChn = riftSetting.cmChn
   def rnChn = riftSetting.rnChn
   def opChn = riftSetting.opChn
   def wbChn = riftSetting.wbChn
 
-  def regNum = riftSetting.regNum
+  def xRegNum = riftSetting.xRegNum
+  def fRegNum = riftSetting.fRegNum
+  def vRegNum = riftSetting.vRegNum
+  def maxRegNum = xRegNum max fRegNum max vRegNum
+
   def pmpNum = riftSetting.pmpNum
   def hpmNum = riftSetting.hpmNum
 
