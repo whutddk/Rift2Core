@@ -64,31 +64,28 @@ class Info_commit_op(implicit p: Parameters) extends RiftBundle{
   val is_writeback = Input(Bool())
 }
 
-abstract class RegFilesBase(dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RiftModule{
-  def opc = rop_chn
-  def wbc = wb_chn
+abstract class RegFilesBase(dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RiftModule{
   val io = IO( new Bundle{
 
-    val lookup = Vec( rnChn, Flipped(new Lookup_Bundle) )
-    val rename = Vec( rnChn, Flipped(new Rename_Bundle) )
+    val lookup = Vec( rnc, Flipped(new Lookup_Bundle) )
+    val rename = Vec( rnc, Flipped(new Rename_Bundle) )
 
     /** read operators based on idx, must success */
-    // val iss_readOp = Vec(opc, Flipped( new iss_readOp_info(dw)) )
     val rgLog = Output( Vec(regNum, UInt(2.W)) )
-    val rgReq = Flipped(Vec( opc, Valid( UInt((log2Ceil(regNum)).W) ) ))
-    val rgRsp =         Vec( opc, Valid(new ReadOp_Rsp_Bundle(dw) ))
+    val rgReq = Flipped(Vec( rop, Valid( UInt((log2Ceil(regNum)).W) ) ))
+    val rgRsp =         Vec( rop, Valid(new ReadOp_Rsp_Bundle(dw) ))
 
 
     /** writeBack request from exeUnit */
     val exe_writeBack = Vec(wbc, Flipped(new DecoupledIO(new WriteBack_info(dw))))
     /** Commit request from commitUnit */
-    val commit = Vec(cm_chn, Flipped(new Info_commit_op))
+    val commit = Vec(cmm, Flipped(new Info_commit_op))
 
     val diffReg = Output(Vec(32, UInt(dw.W)))
   })
 }
 
-abstract class RegFilesReal(dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RegFilesBase(dw, rop_chn, wb_chn){
+abstract class RegFilesReal(dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesBase(dw, rnc, rop, wbc, cmm, regNum){
 
   val raw = io.commit.map{ x => x.raw }
   val phy = io.commit.map{ x => x.phy }
@@ -143,32 +140,32 @@ trait RegFilesReName{ this: RegFilesReal =>
   /**
     * finding out the first Free-phy-register
     */ 
-  val molloc_idx = Wire(Vec(rnChn, UInt((log2Ceil(regNum)).W)))
-  for ( i <- 0 until rnChn ) {
-    molloc_idx(i) := 0.U
+  val mollocIdx = Wire(Vec(rnc, UInt((log2Ceil(regNum)).W)))
+  for ( i <- 0 until rnc ) {
+    mollocIdx(i) := 0.U
     for ( j <- (regNum-1) to 0 by -1 ) {
-      if ( i == 0 ) { when( log(j) === 0.U ) { molloc_idx(i) := j.U }  }
-      else { when( log(j) === 0.U && j.U > molloc_idx(i-1) ) { molloc_idx(i) := j.U } }
+      if ( i == 0 ) { when( log(j) === 0.U ) { mollocIdx(i) := j.U }  }
+      else { when( log(j) === 0.U && j.U > mollocIdx(i-1) ) { mollocIdx(i) := j.U } }
     }
   }
 
 
-  for ( i <- 0 until rnChn ) {
+  for ( i <- 0 until rnc ) {
 
     when( io.rename(i).req.fire ) {
       val idx = io.rename(i).req.bits.rd0
-      assert( log(molloc_idx(i)) === "b00".U )
-      log_reg(molloc_idx(i)) := "b01".U //may be override by flush
-      rename_ptr(idx) := molloc_idx(i) //may be override by flush
+      assert( log(mollocIdx(i)) === "b00".U )
+      log_reg(mollocIdx(i)) := "b01".U //may be override by flush
+      rename_ptr(idx) := mollocIdx(i) //may be override by flush
     }
 
     io.rename(i).req.ready := log.count( (x:UInt) => ( x === 0.U ) ) > i.U
-    io.rename(i).rsp.rd0 := molloc_idx(i)
+    io.rename(i).rsp.rd0 := mollocIdx(i)
 
   }
 
-  for ( i <- 0 until cm_chn ) {
-    def m = cm_chn-1-i
+  for ( i <- 0 until cmm ) {
+    def m = cmm-1-i
     when ( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
       for ( j <- 0 until 32 ) yield {
         rename_ptr(j) := archit_ptr(j)
@@ -187,7 +184,7 @@ trait RegFilesReadOP{ this:RegFilesReal =>
 
   io.rgLog := log
 
-  for( i <- 0 until opc ) {
+  for( i <- 0 until rop ) {
     io.rgRsp(i).valid    := RegNext( io.rgReq(i).valid, init = false.B )
     io.rgRsp(i).bits.phy := RegEnable( io.rgReq(i).bits,        io.rgReq(i).valid )
     io.rgRsp(i).bits.op  := RegEnable( files(io.rgReq(i).bits), io.rgReq(i).valid )
@@ -213,8 +210,8 @@ trait RegFilesCommit{ this: RegFilesReal =>
 
   val idx_pre = io.commit.map{ x => archit_ptr(x.raw) }
 
-  for ( i <- 0 until cm_chn ) {
-    def m = cm_chn-1-i
+  for ( i <- 0 until cmm ) {
+    def m = cmm-1-i
 
     io.commit(m).is_writeback := log(phy(m)) === "b11".U
 
@@ -248,9 +245,9 @@ trait RegFilesCommit{ this: RegFilesReal =>
 
 
 
-class XRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RegFilesReal(dw, rop_chn, wb_chn ) with RegFilesReName with RegFilesReadOP with RegFilesWriteBack with RegFilesCommit{
+class XRegFiles (dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesReal(dw, rnc, rop, wbc, cmm, regNum) with RegFilesReName with RegFilesReadOP with RegFilesWriteBack with RegFilesCommit{
 
-  for ( i <- 0 until rnChn ) {
+  for ( i <- 0 until rnc ) {
     val idx1 = io.lookup(i).req.rs1
     val idx2 = io.lookup(i).req.rs2
 
@@ -263,8 +260,8 @@ class XRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) ext
       io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, (regNum-1).U, rename_ptr(idx2) )
       io.lookup(i).rsp.rs3 := (regNum-1).U
       for ( j <- 0 until i ) {
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.lookup(i).rsp.rs1 := molloc_idx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.lookup(i).rsp.rs2 := molloc_idx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
       }
     }
   }
@@ -273,10 +270,10 @@ class XRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) ext
 
 }
 
-class FRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RegFilesReal(dw, rop_chn, wb_chn ) with RegFilesReName with RegFilesReadOP with RegFilesWriteBack with RegFilesCommit{
+class FRegFiles (dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesReal(dw, rnc, rop, wbc, cmm, regNum) with RegFilesReName with RegFilesReadOP with RegFilesWriteBack with RegFilesCommit{
 
 
-  for ( i <- 0 until rnChn ) {
+  for ( i <- 0 until rnc ) {
     val idx1 = io.lookup(i).req.rs1
     val idx2 = io.lookup(i).req.rs2
     val idx3 = io.lookup(i).req.rs3
@@ -290,9 +287,9 @@ class FRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) ext
       io.lookup(i).rsp.rs2 := rename_ptr(idx2)
       io.lookup(i).rsp.rs3 := rename_ptr(idx3) 
       for ( j <- 0 until i ) {
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) ) { io.lookup(i).rsp.rs1 := molloc_idx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) ) { io.lookup(i).rsp.rs2 := molloc_idx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx3) ) { io.lookup(i).rsp.rs3 := molloc_idx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx3) ) { io.lookup(i).rsp.rs3 := mollocIdx(j) }
       }
     }
     assert( io.lookup(i).rsp.rs1 =/= (regNum-1).U )
@@ -304,27 +301,27 @@ class FRegFiles (dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) ext
 }
 
 
-class FakeFRegFiles(dw: Int, rop_chn: Int=6, wb_chn: Int = 6)(implicit p: Parameters) extends RegFilesBase(dw, rop_chn, wb_chn ){
+class FakeFRegFiles(dw: Int, rnc: Int, rop = 6, wbc = 6, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesBase(dw, rnc, rop, wbc, cmm, regNum){
 
-  for( i <- 0 until rnChn ) {
+  for( i <- 0 until rnc ) {
     io.lookup(i).rsp := 0.U.asTypeOf(new RS_PHY)
     io.rename(i).rsp := 0.U.asTypeOf(new RD_PHY)
     io.rename(i).req.ready := true.B
   }
 
   for( i <- 0 until regNum ) io.rgLog(i) := "b11".U 
-  for( i <- 0 until rop_chn ) {
+  for( i <- 0 until rop ) {
     io.rgRsp(i).valid := false.B
     io.rgRsp(i).bits.phy := DontCare
     io.rgRsp(i).bits.op := DontCare
   }
 
-  for( i <- 0 until wb_chn ) {
+  for( i <- 0 until wbc ) {
     io.exe_writeBack(i).ready := true.B
     assert( ~io.exe_writeBack(i).valid )
   }
 
-  for( i <- 0 until cm_chn ) {
+  for( i <- 0 until cmm ) {
     io.commit(i).is_writeback := false.B
   }
 
