@@ -79,8 +79,8 @@ jobs:
           tar -cvf Rift2360-Release.tar Rift2360/*
           tar -cvf Rift2370-Release.tar Rift2370/*
           tar -cvf Rift2380-Release.tar Rift2380/*
-          tar -cvf Rift2390-Release.tar Rift2390/*
           cd /Users/runner/work/Rift2Core/Rift2Core/generated/Debug/
+          # tar -cvf Rift2390-Release.tar Rift2390/*
 
           tar -cvf Rift2300-Debug.tar  Rift2300/*
           tar -cvf Rift2310-Debug.tar  Rift2310/*
@@ -91,9 +91,8 @@ jobs:
           tar -cvf Rift2360-Debug.tar  Rift2360/*
           tar -cvf Rift2370-Debug.tar  Rift2370/*
           tar -cvf Rift2380-Debug.tar  Rift2380/*
-          tar -cvf Rift2390-Debug.tar  Rift2390/*
           cd /Users/runner/work/Rift2Core/Rift2Core/
-
+          # tar -cvf Rift2390-Debug.tar  Rift2390/*
 
       # mkdir /Users/runner/work/Rift2Core/Verilog/
       # mkdir /Users/runner/work/Rift2Core/Verilog/$GITHUB_REF_NAME/
@@ -169,10 +168,11 @@ jobs:
             ./generated/Debug/Rift2370-Debug.tar
             ./generated/Release/Rift2380-Release.tar
             ./generated/Debug/Rift2380-Debug.tar
-            ./generated/Release/Rift2390-Release.tar
-            ./generated/Debug/Rift2390-Debug.tar
             ./LICENSE.Apache
             ./LICENSE.NPL
+
+            # ./generated/Release/Rift2390-Release.tar
+            # ./generated/Debug/Rift2390-Debug.tar
 
       - name: Create Release and Upload Release Asset
         if: github.ref_name == 'master'
@@ -203,10 +203,10 @@ jobs:
             ./generated/Debug/Rift2370-Debug.tar
             ./generated/Release/Rift2380-Release.tar
             ./generated/Debug/Rift2380-Debug.tar
-            ./generated/Release/Rift2390-Release.tar
-            ./generated/Debug/Rift2390-Debug.tar
             ./LICENSE.Apache
             ./LICENSE.NPL
+            # ./generated/Release/Rift2390-Release.tar
+            # ./generated/Debug/Rift2390-Debug.tar
 
       # Runs a single command using the runners shell
       # - name: Run a one-line script
@@ -226,7 +226,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [Rift2330, Rift2340, Rift2350, Rift2360, Rift2370, Rift2380, Rift2390]
+        version: [Rift2330, Rift2340, Rift2350, Rift2360, Rift2370, Rift2380]
     runs-on: ubuntu-latest
     container:
       image: whutddk/rift2env:riscvtest

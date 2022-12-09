@@ -103,7 +103,7 @@ object testAll extends App {
     (new Rift2360, "Rift2360" ),
     (new Rift2370, "Rift2370" ),
     (new Rift2380, "Rift2380" ),
-    (new Rift2390, "Rift2390" ),
+    // (new Rift2390, "Rift2390" ),
   )
 
   

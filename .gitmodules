@@ -10,3 +10,6 @@
 [submodule "berkeley-hardfloat"]
 	path = berkeley-hardfloat
 	url = https://github.com/ucb-bar/berkeley-hardfloat.git
+[submodule "constellation"]
+	path = constellation
+	url = https://github.com/ucb-bar/constellation.git
