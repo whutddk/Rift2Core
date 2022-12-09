@@ -16,12 +16,14 @@ All available configurations can be found at [Parameter.scala](../src/main/scala
 * `isMinArea`: Try our best to reduce the area, the entries of most of the buff, queue, FIFO will reduce to minimal
 * `isLowPower`: If `isLowPower` is set to `true`, the `bits` of DecoupleIO will be forced to `0.U` instead of `DontCare` when `valid` is `false.B`
 
-* `rn_chn`: How many channels for renaming
-* `cm_chn`: How many channels for committing
+* `rnChn`: How many channels for renaming
+* `cmChn`: How many channels for committing
 * `opChn`: How many channels for reading operators
 * `wbChn`: How many channels for writing-back results
 
-* `regNum`: The number of physical register files, should be larger than 32 for renaming
+* `xRegNum`: The number of physical register files of XPU, should be larger than 32 for renaming
+* `fRegNum`: The number of physical register files of FPU, should be larger than 32 for renaming
+* `vRegNum`: The number of physical register files ov VPU, should be larger than 32 for renaming
 * `pmpNum`: The number of physical memory protection groups
 * `hpmNum`: The number of performance monitor registers
 

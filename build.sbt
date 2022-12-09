@@ -4,7 +4,7 @@
 
 ThisBuild / scalaVersion     := "2.12.9"
 
-ThisBuild / version          := "2.4.0"//-SNAPSHOT
+ThisBuild / version          := "2.3.5"//-SNAPSHOT
 ThisBuild / organization     := "io.github.whutddk"
 
 
