@@ -101,7 +101,8 @@ case class VectorParameters(
   isEEW64: Boolean = true,
   maxMUL : Int  = 8,
 
-
+  opChn: Int = 4,
+  wbChn: Int = 4,
 
 
 
@@ -141,12 +142,12 @@ case class VectorParameters(
 
 
 
-trait HasVectorParameters extends HasRiftParameters{
-  val vParams: VectorParameters
+// trait HasVectorParameters extends HasRiftParameters{
+//   val vParams: VectorParameters
 
-  // def vlen = vectorParams.vlen
-  // def elen = vectorParams.elen
-}
+//   // def vlen = vectorParams.vlen
+//   // def elen = vectorParams.elen
+// }
 
 
 
@@ -191,22 +192,12 @@ case class RiftSetting(
 
   tlbEntry: Int = 16, 
   ifetchParameters: IFParameters = IFParameters(
-    // GHR_length = 64,
-    // UBTB_entry = 16,
-    // fetch_w   = 64,
-
-    // btb_tag_w = 8,
-    // btb_cb  = 4,
     uBTB_entry = 16,
     uBTB_tag_w = 16,
     btb_cl = 4096,
     bim_cl = 4096,
     ras_dp = 256,
     tage_table = 6, 
-
-
-
-    // tage_tag_w = 8,
   ),
 
   l1DW: Int = 256,
@@ -216,6 +207,8 @@ case class RiftSetting(
   aluNum: Int = 1,
   mulNum: Int = 1,
   fpuNum: Int = 0,
+
+  vectorParameters: VectorParameters = VectorParameters()
 
 
   icacheParameters: IcacheParameters = IcacheParameters(
@@ -252,6 +245,7 @@ trait HasRiftParameters {
   val riftSetting = p(RiftParamsKey)
 
   val ifParams     = riftSetting.ifetchParameters
+  val vParams      = riftSetting.vectorParameters
   val icacheParams = riftSetting.icacheParameters
   val dcacheParams = riftSetting.dcacheParameters
 

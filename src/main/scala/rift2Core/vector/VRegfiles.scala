@@ -26,28 +26,28 @@ import chipsalliance.rocketchip.config._
 
 
 
-// class VRegFiles (rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesReal(vParams.vlen, rnc, rop, wbc, cmm, vRegNum) with RegFilesReName with RegFilesReadOP with RegFilesWriteBack with RegFilesCommit{
+class VRegFiles()(implicit p: Parameters) extends RegFilesReal(vParams.vlen, rnChn, vParams.opChn, vParams.wbChn, cmChn, vRegNum) with RegFilesReName with RegFilesReadOP with RegFilesWriteBack with RegFilesCommit{
 
-//   for ( i <- 0 until rnc ) {
-//     val idx1 = io.lookup(i).req.rs1
-//     val idx2 = io.lookup(i).req.rs2
+  for ( i <- 0 until rnc ) {
+    val idx1 = io.lookup(i).req.rs1
+    val idx2 = io.lookup(i).req.rs2
 
-//     if ( i == 0) {
-//       io.lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 0.U, rename_ptr(idx1) )
-//       io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
-//       io.lookup(i).rsp.rs3 := 0.U
-//     } else {
-//       io.lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 0.U, rename_ptr(idx1) )
-//       io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
-//       io.lookup(i).rsp.rs3 := 0.U
-//       for ( j <- 0 until i ) {
-//         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
-//         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
-//       }
-//     }
-//   }
+    if ( i == 0) {
+      io.lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 0.U, rename_ptr(idx1) )
+      io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
+      io.lookup(i).rsp.rs3 := 0.U
+    } else {
+      io.lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 0.U, rename_ptr(idx1) )
+      io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
+      io.lookup(i).rsp.rs3 := 0.U
+      for ( j <- 0 until i ) {
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
+      }
+    }
+  }
 
 
 
-// }
+}
 
