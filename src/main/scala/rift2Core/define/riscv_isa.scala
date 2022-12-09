@@ -782,9 +782,9 @@ class RS_RAW(implicit p: Parameters) extends RiftBundle {
 }
 
 class RS_PHY(implicit p: Parameters) extends RiftBundle {
-  val rs1 = UInt((log2Ceil(log2Ceil(maxRegNum))).W)
-  val rs2 = UInt((log2Ceil(log2Ceil(maxRegNum))).W)
-  val rs3 = UInt((log2Ceil(log2Ceil(maxRegNum))).W)
+  val rs1 = UInt((log2Ceil(maxRegNum)).W)
+  val rs2 = UInt((log2Ceil(maxRegNum)).W)
+  val rs3 = UInt((log2Ceil(maxRegNum)).W)
 }
 
 class RD_RAW(implicit p: Parameters) extends RiftBundle {
