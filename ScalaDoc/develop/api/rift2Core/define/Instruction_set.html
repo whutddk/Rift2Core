@@ -347,6 +347,10 @@
                         <a href="RS_RAW.html" title="">RS_RAW</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
+                        <a class="class" href="ReadOp_Rsp_Bundle.html" title=""></a>
+                        <a href="ReadOp_Rsp_Bundle.html" title="">ReadOp_Rsp_Bundle</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
                         <a class="class" href="Reg_PHY.html" title=""></a>
                         <a href="Reg_PHY.html" title="">Reg_PHY</a>
                       </li><li class="current-entities indented2">
@@ -385,6 +389,10 @@
                         <span class="separator"></span>
                         <a class="class" href="TageUpdate_Bundle.html" title=""></a>
                         <a href="TageUpdate_Bundle.html" title="">TageUpdate_Bundle</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="Vector_isa.html" title=""></a>
+                        <a href="Vector_isa.html" title="">Vector_isa</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="WriteBack_info.html" title=""></a>
@@ -638,6 +646,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd><dt>Definition Classes</dt><dd>Bundle</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#aluNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="aluNum:Int"></a>
+      <span class="permalink">
+      <a href="../../rift2Core/define/Instruction_set.html#aluNum:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">aluNum</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="rift2Core.define.Instruction_set#alu_isa" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="alu_isa:rift2Core.define.Alu_isa"></a><a id="alu_isa:Alu_isa"></a>
       <span class="permalink">
@@ -920,10 +944,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Aggregate → Data</dd></dl></div>
-    </li><li name="rift2Core.define.Instruction_set#dptRegion" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="dptRegion:chisel3.UInt"></a><a id="dptRegion:UInt"></a>
+    </li><li name="rift2Chip.HasRiftParameters#dptEntry" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="dptEntry:Int"></a>
       <span class="permalink">
-      <a href="../../rift2Core/define/Instruction_set.html#dptRegion:chisel3.UInt" title="Permalink">
+      <a href="../../rift2Core/define/Instruction_set.html#dptEntry:Int" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -932,10 +956,10 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">dptRegion</span><span class="result">: <span class="extype" name="chisel3.UInt">UInt</span></span>
+        <span class="name">dptEntry</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="chisel3.Bundle#elements" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="elements:collection.immutable.SeqMap[String,chisel3.Data]"></a><a id="elements:SeqMap[String,Data]"></a>
       <span class="permalink">
@@ -984,6 +1008,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>HasId → AnyRef → Any</dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#fpuNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="fpuNum:Int"></a>
+      <span class="permalink">
+      <a href="../../rift2Core/define/Instruction_set.html#fpuNum:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">fpuNum</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="rift2Core.define.Instruction_set#fpu_isa" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="fpu_isa:rift2Core.define.Fpu_isa"></a><a id="fpu_isa:Fpu_isa"></a>
       <span class="permalink">
@@ -1085,22 +1125,6 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
-    </li><li name="rift2Chip.HasRiftParameters#hasFpu" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="hasFpu:Boolean"></a>
-      <span class="permalink">
-      <a href="../../rift2Core/define/Instruction_set.html#hasFpu:Boolean" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">hasFpu</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
-      </span>
-      
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
     </li><li name="rift2Chip.HasRiftParameters#hasL2" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="hasL2:Boolean"></a>
       <span class="permalink">
@@ -1117,10 +1141,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
-    </li><li name="rift2Chip.HasRiftParameters#hasMulDiv" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="hasMulDiv:Boolean"></a>
+    </li><li name="rift2Chip.HasRiftParameters#hasLRU" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hasLRU:Boolean"></a>
       <span class="permalink">
-      <a href="../../rift2Core/define/Instruction_set.html#hasMulDiv:Boolean" title="Permalink">
+      <a href="../../rift2Core/define/Instruction_set.html#hasLRU:Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1129,7 +1153,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">hasMulDiv</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+        <span class="name">hasLRU</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
@@ -1405,22 +1429,6 @@
       </span>
       
       
-    </li><li name="rift2Core.define.Instruction_set#is_ito_dpt" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="is_ito_dpt:chisel3.Bool"></a><a id="is_ito_dpt:Bool"></a>
-      <span class="permalink">
-      <a href="../../rift2Core/define/Instruction_set.html#is_ito_dpt:chisel3.Bool" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">is_ito_dpt</span><span class="result">: <span class="extype" name="chisel3.Bool">Bool</span></span>
-      </span>
-      
-      
     </li><li name="rift2Core.define.Instruction_set#is_iwb" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="is_iwb:chisel3.Bool"></a><a id="is_iwb:Bool"></a>
       <span class="permalink">
@@ -1434,22 +1442,6 @@
       </span>
       <span class="symbol">
         <span class="name">is_iwb</span><span class="result">: <span class="extype" name="chisel3.Bool">Bool</span></span>
-      </span>
-      
-      
-    </li><li name="rift2Core.define.Instruction_set#is_ooo_dpt" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="is_ooo_dpt:chisel3.Bool"></a><a id="is_ooo_dpt:Bool"></a>
-      <span class="permalink">
-      <a href="../../rift2Core/define/Instruction_set.html#is_ooo_dpt:chisel3.Bool" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">is_ooo_dpt</span><span class="result">: <span class="extype" name="chisel3.Bool">Bool</span></span>
       </span>
       
       
@@ -1562,6 +1554,22 @@
       </span>
       <span class="symbol">
         <span class="name">memBeatBits</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
+    </li><li name="rift2Chip.HasRiftParameters#mulNum" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="mulNum:Int"></a>
+      <span class="permalink">
+      <a href="../../rift2Core/define/Instruction_set.html#mulNum:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">mulNum</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
@@ -1799,10 +1807,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
-    </li><li name="rift2Chip.HasRiftParameters#rn_chn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="rn_chn:Int"></a>
+    </li><li name="rift2Chip.HasRiftParameters#rnChn" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="rnChn:Int"></a>
       <span class="permalink">
-      <a href="../../rift2Core/define/Instruction_set.html#rn_chn:Int" title="Permalink">
+      <a href="../../rift2Core/define/Instruction_set.html#rnChn:Int" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1811,7 +1819,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">rn_chn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+        <span class="name">rnChn</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../rift2Chip/HasRiftParameters.html" class="extype" name="rift2Chip.HasRiftParameters">HasRiftParameters</a></dd></dl></div>
