@@ -27,23 +27,41 @@ import chipsalliance.rocketchip.config._
 
 
 class VRegFiles()(implicit p: Parameters) extends RegFilesReal(vParams.vlen, rnChn, vParams.opChn, vParams.wbChn, cmChn, vRegNum) with RegFilesReName with RegFilesReadOP with RegFilesWriteBack with RegFilesCommit{
+  val io2 = IO( new Bundle{
+    val lookup_v0_rsp = Output( Vec( rnc, UInt((log2Ceil(vRegNum)).W)) )
+  })
+
 
   for ( i <- 0 until rnc ) {
     val idx1 = io.lookup(i).req.rs1
     val idx2 = io.lookup(i).req.rs2
+    val idx3 = io.lookup(i).req.rs3
 
-    if ( i == 0) {
-      io.lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 0.U, rename_ptr(idx1) )
-      io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
-      io.lookup(i).rsp.rs3 := 0.U
+
+    if ( i == 0 ) {
+      io.lookup(i).rsp.rs1 := rename_ptr(idx1)
+      io.lookup(i).rsp.rs2 := rename_ptr(idx2)
+      io.lookup(i).rsp.rs3 := rename_ptr(idx3)
+      io_lookup_v0_rsp(i)  := rename_ptr(0)
     } else {
-      io.lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 0.U, rename_ptr(idx1) )
-      io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
-      io.lookup(i).rsp.rs3 := 0.U
+      io.lookup(i).rsp.rs1 := rename_ptr(idx1)
+      io.lookup(i).rsp.rs2 := rename_ptr(idx2)
+      io.lookup(i).rsp.rs3 := rename_ptr(idx3)
+      io_lookup_v0_rsp(i)  := rename_ptr(0)
+
       for ( j <- 0 until i ) {
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx3) ) { io.lookup(i).rsp.rs3 := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === 0.U ) ) { io_lookup_v0_rsp(i)  := mollocIdx(j) }
+      
       }
+    }
+    when( io.rename(i).req.fire ) {
+      assert( io.lookup(i).rsp.rs1 =/= 0.U )
+      assert( io.lookup(i).rsp.rs2 =/= 0.U )
+      assert( io.lookup(i).rsp.rs3 =/= 0.U )      
+      assert( io_lookup_v0_rsp(i)  =/= 0.U )      
     }
   }
 

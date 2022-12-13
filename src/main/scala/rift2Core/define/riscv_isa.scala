@@ -533,19 +533,29 @@ class Fpu_isa extends Bundle {
 
 class VectorIsa extends Bundle {
   class OPI extends Bundle{
-    val vv = Bool()
-    val vx = Bool()
-    val vi = Bool()
+    val ivv = Bool()
+    val ivx = Bool()
+    val ivi = Bool()
+
+    // def sel = ivv | ivx | ivi
   }
 
   class OPM extends Bundle{
-    val vv = Bool()
-    val vx = Bool()
+    val mvv = Bool()
+    val mvx = Bool()
+
+    // def sel = mvv | mvx 
+    def mrd = 
+    def mvd = 
   }
 
   class OPF extends Bundle{
-    val vv = Bool()
-    val vf = Bool()
+    val fvv = Bool()
+    val fvf = Bool()
+
+    // def sel = fvv | fvf
+    def fvd = 
+    def frd = 
   }
 
   val vadd         = new OPI
@@ -738,28 +748,27 @@ class VectorIsa extends Bundle {
   val vfwmsac    = new OPF
   val vfwnmsac   = new OPF
 
-
   val vsetvli  = Bool()
   val vsetivli = Bool()
   val vsetvl   = Bool()
 
-  val vle    = Bool()
-  val vluxei = Bool()
-  val vlse   = Bool()
-  val vloxei = Bool()
+  val vle       = Bool()
+  val vlm       = Bool()
+  val vlse      = Bool()
+  val vluxei    = Bool()
+  val vloxei    = Bool()
+  val vleNff    = Bool()
 
-  val vse    = Bool()
-  val vsuxei = Bool()
-  val vsse   = Bool()
-  val vsoxei = Bool()
+  val vlNreN    = Bool()
+
+  val vse       = Bool()
+  val vsm       = Bool()
+  val vsse      = Bool()
+  val vsuxei    = Bool()
+  val vsoxei    = Bool()
+  val vsNr      = Bool()
 
 
-
-  def isVLoad = 
-    vle | vlse | vluxei | vloxei
-
-  def isVStore = 
-    vse | vsse | vsuxei | vsoxei
 
 
   def isVAlu =
@@ -777,21 +786,21 @@ class VectorIsa extends Bundle {
     vslideup | vslidedown | vslide1up | vslide1down |
     vrgather | vrgatherei16 |
     vcompress |
-    vmvnr |
+    vmvnr
 
   def isVMul = 
     vdivu | vdiv  | vremu | vrem  |
     vmulhu | vmul | vmulhsu | vmulh |
     vmadd  | vnmsub | vmacc  | vnmsac |
     vwmulu  | vwmulsu | vwmul   |
-    vwmaccu  | vwmacc | vwmaccus | vwmaccsu |
+    vwmaccu  | vwmacc | vwmaccus | vwmaccsu
 
   def isVQpu = 
     vsaddu | vsadd | vssubu | vssub |
     vaaddu | vaadd | vasubu | vasub |
     vsmul |
     vssrl | vssra |
-    vnclipu | vnclip |
+    vnclipu | vnclip
 
   def isVFpu = 
     vfadd | vfsub | vfrsub |
@@ -808,19 +817,74 @@ class VectorIsa extends Bundle {
     vfredusum | vfredosum | vfredmin  | vfredmax  |
     vfwredusum | vfwredosum |
     vfmv_f_s | vfmv_s_f |
-    vfslide1up | vfslide1down |
+    vfslide1up | vfslide1down
+
+  def isVload = 
+    vle | vlm | vlse | vluxei | vloxei | vleNff | vlNreN
+
+  def isVstore = 
+    vse | vsm | vsse | vsuxei | vsoxei | vsNr
+
+  def isVMem = vload | vstore
+
+  def isVConfig = vsetvli | vsetivli | vsetvl
 
 
-  def isVConfig
 
-  def isVector = 
+
+
+
+
+
+  def isLookUpRS1 = _.ivx | _.mvx |
+
+
+
+  def isLookUpRS2 = _.fvf
+
+
+
+  def isLookUpFS1
+
+
+  def isLookUpVS1 = _.ivv | _.mvv | _.fvv
+
+
+  def isLookUpVS2 =
+    _.ivv | _.ivx | _.ivi | _.mvv | _.mvx | _.fvv | _.fvf |
+    vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
+
+
+
+  def isLookUpVS3 =
+    vmacc._ | vnmsac._ | vmadd._ | vnmsub._ | vwmaccu._ | vwmacc._ | vwmaccsu._ | vwmaccus._ |
+    vfmacc._ | vfnmacc._ | vfmsac._ | vfnmsac._ | vfmadd._ | vfnmadd._ | vfmsub._ | vfnmsub._ | vfwmacc._ | vfwnmacc._ | vfwmsac._ | vfwnmsac._ 
+
+
+
+  def isReNameRD = _.mrd | _.frd
+
+
+  def isReNameFD
+
+
+  def isReNameVD =
+    _.ivv | _.ivx | _.ivi | _.mvd | _.fvf | _.fvd |
+    vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
+
+
+
+
+
+
+
+
+  def isVector = isVAlu | isVMul | isVQpu | isVFpu | isVMem | isVConfig
+
+
+
+
 }
-
-
-
-//   val vsetvli  = Bool()
-//   val vsetivli = Bool()
-//   val vsetvl   = Bool()
 
 
 
