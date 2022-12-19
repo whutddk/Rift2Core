@@ -836,44 +836,65 @@ class VectorIsa extends Bundle {
 
 
 
-  def isLookUpRS1 = _.ivx | _.mvx |
+  def isLookUpRS1 = _.ivx | _.mvx | vsetvli | vsetvl | isVload | isVstore | vmv_s_x
+  def isLookUpRS2 = _.fvf | vsetvl | vlse | vsse
 
 
 
-  def isLookUpRS2 = _.fvf
-
-
-
-  def isLookUpFS1
+  def isLookUpFS1 = vfmv_s_f
 
 
   def isLookUpVS1 = _.ivv | _.mvv | _.fvv
-
-
   def isLookUpVS2 =
     _.ivv | _.ivx | _.ivi | _.mvv | _.mvx | _.fvv | _.fvf |
     vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
-
-
-
+    vluxei | vloxei | vsuxei | vsoxei |
+    vfsqrt_v | vfrsqrt7_v | vfrec7_v | vfclass_v |
+    vfcvt_xu_f_v | vfcvt_x_f_v | vfcvt_rtz_xu_f_v | vfcvt_rtz_x_f_v | vfcvt_f_xu_v | vfcvt_f_x_v |
+    vfwcvt_xu_f_v | vfwcvt_x_f_v | vfwcvt_rtz_xu_f_v | vfwcvt_rtz_x_f_v | vfwcvt_f_xu_v | vfwcvt_f_x_v | vfwcvt_f_f_v |
+    vfncvt_xu_f_w | vfncvt_x_f_w | vfncvt_rtz_xu_f_w | vfncvt_rtz_x_f_w | vfncvt_f_xu_w | vfncvt_f_x_w | vfncvt_f_f_w | vfncvt_rod_f_f_w |
+    vfirst | vmsbf | vmsif | vmsof | viota |
+    vmv_x_s | vfmv_f_s | vpopc
   def isLookUpVS3 =
     vmacc._ | vnmsac._ | vmadd._ | vnmsub._ | vwmaccu._ | vwmacc._ | vwmaccsu._ | vwmaccus._ |
-    vfmacc._ | vfnmacc._ | vfmsac._ | vfnmsac._ | vfmadd._ | vfnmadd._ | vfmsub._ | vfnmsub._ | vfwmacc._ | vfwnmacc._ | vfwmsac._ | vfwnmsac._ 
+    vfmacc._ | vfnmacc._ | vfmsac._ | vfnmsac._ | vfmadd._ | vfnmadd._ | vfmsub._ | vfnmsub._ | vfwmacc._ | vfwnmacc._ | vfwmsac._ | vfwnmsac._ |
+    isVstore
+
+  def isLookUpVS2P =
+    vwaddu_w | vwsubu_w | vwadd_w | vwsub_w |
+    vnclipu._ | vnclip._
+    vfwadd_w._ | vfwsub_w._ |
+    vfwmacc._ | vfwnmacc._ | vfwmsac._ | vfwnmsac._ | 
+    vfncvt_xu_f_w | vfncvt_x_f_w | vfncvt_rtz_xu_f_w | vfncvt_rtz_x_f_w | vfncvt_f_xu_w | vfncvt_f_x_w | vfncvt_f_f_w | vfncvt_rod_f_f_w |
 
 
+  def isLookUpVS3P =
+    vwmaccu._ | vwmacc._ | vwmaccsu._ | vwmaccus._ |
 
-  def isReNameRD = _.mrd | _.frd
+  def is2Malloc = 
+    vwaddu._ | vwsubu._ | vwadd._ | vwsub._ |
+    vwaddu_w | vwsubu_w | vwadd_w | vwsub_w |
+    vwmul._  | vwmulu._ | vwmulsu._ |
+    vwmaccu._ | vwmacc._ | vwmaccsu._ | vwmaccus._ |
+    vfwadd._ | vfwsub._ | vfwadd_w._ | vfwsub_w._ |
+    vfmul._ |
+    vfwmacc._ | vfwnmacc._ | vfwmsac._ | vfwnmsac._ | 
+    vfwcvt_xu_f_v | vfwcvt_x_f_v | vfwcvt_rtz_xu_f_v | vfwcvt_rtz_x_f_v | vfwcvt_f_xu_v | vfwcvt_f_x_v | vfwcvt_f_f_v |
+    vwredsumu._ | vwredsum._ | vfwredosum._
 
 
-  def isReNameFD
-
-
-  def isReNameVD =
+  def isXwb = _.mrd | vsetvli | vsetivli | vsetvl | vfirst | vpopc | vmv_x_s
+  def isFwb = _.frd | vfmv_f_s
+  def isVwb =
     _.ivv | _.ivx | _.ivi | _.mvd | _.fvf | _.fvd |
     vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
-
-
-
+    isVload |
+    vfsqrt_v | vfrsqrt7_v | vfrec7_v | vfclass_v | 
+    vfcvt_xu_f_v | vfcvt_x_f_v | vfcvt_rtz_xu_f_v | vfcvt_rtz_x_f_v | vfcvt_f_xu_v | vfcvt_f_x_v |
+    vfwcvt_xu_f_v | vfwcvt_x_f_v | vfwcvt_rtz_xu_f_v | vfwcvt_rtz_x_f_v | vfwcvt_f_xu_v | vfwcvt_f_x_v | vfwcvt_f_f_v |
+    vfncvt_xu_f_w | vfncvt_x_f_w | vfncvt_rtz_xu_f_w | vfncvt_rtz_x_f_w | vfncvt_f_xu_w | vfncvt_f_x_w | vfncvt_f_f_w | vfncvt_rod_f_f_w |
+    vmsbf | vmsif | vmsof | viota | vid |
+    vmv_s_x | vfmv_s_f
 
 
 
@@ -885,6 +906,7 @@ class VectorIsa extends Bundle {
 
 
 }
+
 
 
 
@@ -925,6 +947,8 @@ class Reg_RAW(implicit p: Parameters) extends RiftBundle {
   val rs1 = UInt((log2Ceil(32)).W)
   val rs2 = UInt((log2Ceil(32)).W)
   val rs3 = UInt((log2Ceil(32)).W)
+  val rs4 = UInt((log2Ceil(32)).W)
+  val rs5 = UInt((log2Ceil(32)).W)
   val rd0 = UInt((log2Ceil(32)).W)
 }
 
@@ -932,7 +956,10 @@ class Reg_PHY(implicit p: Parameters) extends RiftBundle {
   val rs1 = UInt((log2Ceil(maxRegNum)).W)
   val rs2 = UInt((log2Ceil(maxRegNum)).W)
   val rs3 = UInt((log2Ceil(maxRegNum)).W)
+  val rs4 = UInt((log2Ceil(maxRegNum)).W)
+  val rs5 = UInt((log2Ceil(maxRegNum)).W)
   val rd0 = UInt((log2Ceil(maxRegNum)).W)
+  val rd1 = UInt((log2Ceil(maxRegNum)).W)
 }
 
 
@@ -945,20 +972,34 @@ class Instruction_set(implicit p: Parameters) extends RiftBundle{
   val mul_isa = new Mul_isa
   val privil_isa = new Privil_isa
   val fpu_isa = new Fpu_isa
-  // val vectorIsa = new VectorIsa
+  val vectorIsa = new VectorIsa
 
 
 
   def is_fwb =
-    lsu_isa.is_fwb | fpu_isa.is_fwb
+    lsu_isa.is_fwb | fpu_isa.is_fwb | vectorIsa.isFwb
 
+  def is_iwb = 
+    alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_iwb | csr_isa.is_csr | mul_isa.is_mulDiv | fpu_isa.is_iwb | vectorIsa.isXwb
+  // ~is_fwb
 
-
+  def isVwb = vectorIsa.isVwb
 
   def is_privil_dpt = privil_isa.is_privil
   def is_fpu_dpt = fpu_isa.is_fpu
-  def is_iwb = ~is_fwb
+
   def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mulDiv | privil_isa.is_privil | fpu_isa.is_fpu) 
+
+  def isRS1 = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu             | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isLookUpRS1
+  def isRS2 = alu_isa.is_alu | bru_isa.is_bru | (lsu_isa.is_lsu & ~is_fst) | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isLookUpRS2
+  def isFS1 = fpu_isa.is_fop | vectorIsa.isLookUpFS1
+  def isFS2 = fpu_isa.is_fop
+  def isFS3 = fpu_isa.is_fop
+  def isVS1 = vectorIsa.isLookUpVS1
+  def isVS2 = vectorIsa.isLookUpVS2
+  def isVS3 = vectorIsa.isLookUpVS3
+  def isVS4 = vectorIsa.isLookUpVS2P | vectorIsa.isLookUpVS3P
+  def isVMS = vectorIsa.isVector
 
 
 }
@@ -1099,7 +1140,9 @@ class Fpu_dpt_info(implicit p: Parameters) extends RiftBundle {
 class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val pc = UInt(vlen.W)
   val rd0_raw = UInt(5.W)
+  val rd1_raw = UInt(5.W)
   val rd0_phy = UInt((log2Ceil(maxRegNum)).W)
+  val rd1_phy = UInt((log2Ceil(maxRegNum)).W)
 
   val is_branch = Bool()
   val is_jalr = Bool()
@@ -1115,8 +1158,9 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val is_fcsr = Bool()
   val is_rvc = Bool()
 
-  val is_xcmm = Bool()
-  val is_fcmm = Bool()
+  val isXcmm = Bool()
+  val isFcmm = Bool()
+  val isVcmm = Bool()
 
   val privil = new Privil_isa
   val is_illeage = Bool()

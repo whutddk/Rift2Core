@@ -49,6 +49,7 @@ class Info_commit_op(implicit p: Parameters) extends RiftBundle{
   val phy        = Output(UInt(( log2Ceil(maxRegNum) ).W))
   val toX        = Output(Bool())
   val toF        = Output(Bool())
+  val toV        = Output(Bool())
   val is_writeback = Input(Bool())
 }
 
@@ -165,6 +166,61 @@ trait RegFilesReName{ this: RegFilesReal =>
   }
 }
 
+trait XRegFilesLookup{ this: RegFilesReal =>
+  for ( i <- 0 until rnc ) {
+    val idx1 = io.lookup(i).req.rs1
+    val idx2 = io.lookup(i).req.rs2
+
+    if ( i == 0) {
+      io.lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 0.U, rename_ptr(idx1) )
+      io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
+      io.lookup(i).rsp.rs3 := 0.U
+      io.lookup(i).rsp.rs4 := 0.U
+    } else {
+      io.lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 0.U, rename_ptr(idx1) )
+      io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
+      io.lookup(i).rsp.rs3 := 0.U
+      io.lookup(i).rsp.rs4 := 0.U
+      for ( j <- 0 until i ) {
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
+      }
+    }
+  }
+}
+
+trait FRegFilesLookup{ this: RegFilesReal =>
+  for ( i <- 0 until rnc ) {
+    val idx1 = io.lookup(i).req.rs1
+    val idx2 = io.lookup(i).req.rs2
+    val idx3 = io.lookup(i).req.rs3
+
+    if ( i == 0) {
+      io.lookup(i).rsp.rs1 := rename_ptr(idx1)
+      io.lookup(i).rsp.rs2 := rename_ptr(idx2)
+      io.lookup(i).rsp.rs3 := rename_ptr(idx3)
+      io.lookup(i).rsp.rs4 := 0.U
+    } else {
+      io.lookup(i).rsp.rs1 := rename_ptr(idx1)
+      io.lookup(i).rsp.rs2 := rename_ptr(idx2)
+      io.lookup(i).rsp.rs3 := rename_ptr(idx3) 
+      io.lookup(i).rsp.rs4 := 0.U
+      for ( j <- 0 until i ) {
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx3) ) { io.lookup(i).rsp.rs3 := mollocIdx(j) }
+      }
+    }
+    when( io.rename(i).req.fire ) {
+      assert( io.lookup(i).rsp.rs1 =/= 0.U )
+      assert( io.lookup(i).rsp.rs2 =/= 0.U )
+      assert( io.lookup(i).rsp.rs3 =/= 0.U )      
+    }
+
+  }
+}
+
+
 trait RegFilesReadOP{ this:RegFilesReal =>
 
   io.rgLog := log
@@ -230,60 +286,21 @@ trait RegFilesCommit{ this: RegFilesReal =>
 
 
 
-class XRegFiles (dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesReal(dw, rnc, rop, wbc, cmm, regNum) with RegFilesReName with RegFilesReadOP with RegFilesWriteBack with RegFilesCommit{
-
-  for ( i <- 0 until rnc ) {
-    val idx1 = io.lookup(i).req.rs1
-    val idx2 = io.lookup(i).req.rs2
-
-    if ( i == 0) {
-      io.lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 0.U, rename_ptr(idx1) )
-      io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
-      io.lookup(i).rsp.rs3 := 0.U
-    } else {
-      io.lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 0.U, rename_ptr(idx1) )
-      io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
-      io.lookup(i).rsp.rs3 := 0.U
-      for ( j <- 0 until i ) {
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
-      }
-    }
-  }
-
-
+class XRegFiles (dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesReal(dw, rnc, rop, wbc, cmm, regNum)
+  with RegFilesReName
+  with XRegFilesLookup
+  with RegFilesReadOP
+  with RegFilesWriteBack
+  with RegFilesCommit{
 
 }
 
-class FRegFiles (dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesReal(dw, rnc, rop, wbc, cmm, regNum) with RegFilesReName with RegFilesReadOP with RegFilesWriteBack with RegFilesCommit{
-
-
-  for ( i <- 0 until rnc ) {
-    val idx1 = io.lookup(i).req.rs1
-    val idx2 = io.lookup(i).req.rs2
-    val idx3 = io.lookup(i).req.rs3
-
-    if ( i == 0) {
-      io.lookup(i).rsp.rs1 := rename_ptr(idx1)
-      io.lookup(i).rsp.rs2 := rename_ptr(idx2)
-      io.lookup(i).rsp.rs3 := rename_ptr(idx3)
-    } else {
-      io.lookup(i).rsp.rs1 := rename_ptr(idx1)
-      io.lookup(i).rsp.rs2 := rename_ptr(idx2)
-      io.lookup(i).rsp.rs3 := rename_ptr(idx3) 
-      for ( j <- 0 until i ) {
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx3) ) { io.lookup(i).rsp.rs3 := mollocIdx(j) }
-      }
-    }
-    when( io.rename(i).req.fire ) {
-      assert( io.lookup(i).rsp.rs1 =/= 0.U )
-      assert( io.lookup(i).rsp.rs2 =/= 0.U )
-      assert( io.lookup(i).rsp.rs3 =/= 0.U )      
-    }
-
-  }
+class FRegFiles (dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesReal(dw, rnc, rop, wbc, cmm, regNum)
+  with RegFilesReName
+  with FRegFilesLookup
+  with RegFilesReadOP
+  with RegFilesWriteBack
+  with RegFilesCommit{
 
 
 }

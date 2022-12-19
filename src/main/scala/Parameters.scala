@@ -237,6 +237,11 @@ case class RiftSetting(
   require( aluNum > 0 )
   require( dptEntry >= 1 )
 
+
+  if(hasVector){
+    // require( rnChn >= 2 )
+    require( fpuNum > 0 )
+  }
 }
 
 trait HasRiftParameters {
