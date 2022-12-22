@@ -86,7 +86,7 @@ trait VRegFilesReName{ this: RegFilesReal =>
 }
 
 trait VRegFilesLookup{ this: RegFilesReal => 
-  val io2 = IO( new Bundle{
+  val vio = IO( new Bundle{
     val lookup_v0_rsp = Output( Vec( rnc, UInt((log2Ceil(vRegNum)).W)) )
   })
 

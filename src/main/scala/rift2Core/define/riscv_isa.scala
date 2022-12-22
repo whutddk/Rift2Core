@@ -953,13 +953,9 @@ class Reg_RAW(implicit p: Parameters) extends RiftBundle {
 }
 
 class Reg_PHY(implicit p: Parameters) extends RiftBundle {
-  val rs1 = UInt((log2Ceil(maxRegNum)).W)
-  val rs2 = UInt((log2Ceil(maxRegNum)).W)
-  val rs3 = UInt((log2Ceil(maxRegNum)).W)
-  val rs4 = UInt((log2Ceil(maxRegNum)).W)
-  val rs5 = UInt((log2Ceil(maxRegNum)).W)
-  val rd0 = UInt((log2Ceil(maxRegNum)).W)
-  val rd1 = UInt((log2Ceil(maxRegNum)).W)
+  val rs = Vec( 5,  UInt((log2Ceil(maxRegNum)).W) )
+  val rd = Vec( 16, UInt((log2Ceil(maxRegNum)).W) )
+
 }
 
 
