@@ -136,14 +136,12 @@ trait VRegFilesLookup{ this: RegFilesReal =>
 }
 
 
-class VRegFiles()(implicit p: Parameters) extends RegFilesReal(vParams.vlen, rnChn, vParams.opChn, vParams.wbChn, cmChn, vRegNum)
+class VRegFiles()(implicit p: Parameters) extends RegFilesReal(vParams.vlen, vRegNum, arc = 32, rnChn, vParams.opChn, vParams.wbChn, cmChn)
 with VRegFilesReName
 with VRegFilesLookup
 with RegFilesReadOP
 with RegFilesWriteBack
 with RegFilesCommit{
-
-
 
 
 }

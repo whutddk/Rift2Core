@@ -41,7 +41,7 @@ class Rename_Bundle()(implicit p: Parameters) extends RiftBundle{
 }
 
 
-class Info_commit_op(implicit p: Parameters) extends RiftBundle{
+class Info_commit_op(dp: Int)(implicit p: Parameters) extends RiftBundle{
   val is_comfirm = Output(Bool())
   val is_MisPredict = Output(Bool())
   val is_abort   = Output(Bool())
@@ -53,66 +53,66 @@ class Info_commit_op(implicit p: Parameters) extends RiftBundle{
   val is_writeback = Input(Bool())
 }
 
-abstract class RegFilesBase(dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RiftModule{
+abstract class RegFilesBase(dw: Int, dp: Int, arc: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, )(implicit p: Parameters) extends RiftModule{
   val io = IO( new Bundle{
 
     val lookup = Vec( rnc, Flipped(new Lookup_Bundle) )
     val rename = Vec( rnc, Flipped(new Rename_Bundle) )
 
     /** read operators based on idx, must success */
-    val rgLog = Output( Vec(regNum, UInt(2.W)) )
-    val rgReq = Flipped(Vec( rop, Valid( UInt((log2Ceil(regNum)).W) ) ))
+    val rgLog = Output( Vec(dp, UInt(2.W)) )
+    val rgReq = Flipped(Vec( rop, Valid( UInt((log2Ceil(dp)).W) ) ))
     val rgRsp =         Vec( rop, Valid(new ReadOp_Rsp_Bundle(dw) ))
 
 
     /** writeBack request from exeUnit */
     val exe_writeBack = Vec(wbc, Flipped(new DecoupledIO(new WriteBack_info(dw))))
     /** Commit request from commitUnit */
-    val commit = Vec(cmm, Flipped(new Info_commit_op))
+    val commit = Vec(cmm, Flipped(new Info_commit_op(dp)))
 
-    val diffReg = Output(Vec(32, UInt(dw.W)))
+    val diffReg = Output(Vec(arc, UInt(dw.W)))
   })
 }
 
-abstract class RegFilesReal(val dw: Int, val rnc: Int, val rop: Int, val wbc: Int, val cmm: Int, val regNum: Int)(implicit p: Parameters) extends RegFilesBase(dw, rnc, rop, wbc, cmm, regNum){
+abstract class RegFilesReal(val dw: Int, val dp: Int, val arc: Int, val rnc: Int, val rop: Int, val wbc: Int, val cmm: Int)(implicit p: Parameters) extends RegFilesBase(dw, dp, arc, rnc, rop, wbc, cmm){
 
   val raw = io.commit.map{ x => x.raw }
   val phy = io.commit.map{ x => x.phy }
 
   /**
-    * there are regNum-1 log,
-    * @note the log(regNum) is assert to be "b11".U
+    * there are dp-1 log,
+    * @note the log(dp) is assert to be "b11".U
     */ 
   val log_reg = 
-    RegInit( VecInit( Seq.fill(32+1)("b11".U(2.W) ) ++ Seq.fill(regNum-32)(0.U(2.W) )))
+    RegInit( VecInit( Seq.fill(arc+1)("b11".U(2.W) ) ++ Seq.fill(dp-arc)(0.U(2.W) )))
 
   val log = {
-    val res = Wire( Vec(regNum, UInt(2.W)) )
-    for ( i <- 1 until regNum ) yield { res(i) := log_reg(i) }
+    val res = Wire( Vec(dp, UInt(2.W)) )
+    for ( i <- 1 until dp ) yield { res(i) := log_reg(i) }
     res(0) := "b11".U
     res
   }
   assert( log(0) === "b11".U )
 
   /**
-    * there are regNum-1 files,
-    * @note the file(regNum) is assert to be Zero
+    * there are dp-1 files,
+    * @note the file(dp) is assert to be Zero
     */
-  val files_reg = RegInit( VecInit( Seq.fill(regNum)(0.U(dw.W)) ))
+  val files_reg = RegInit( VecInit( Seq.fill(dp)(0.U(dw.W)) ))
   val files = {
-    val res = Wire( Vec(regNum, UInt(dw.W)) )
-    for ( i <- 1 until regNum ) yield { res(i) := files_reg(i) }
+    val res = Wire( Vec(dp, UInt(dw.W)) )
+    for ( i <- 1 until dp ) yield { res(i) := files_reg(i) }
     res(0) := 0.U
     res
   }
 
-  /** index that 32 renamed register-sources point to, Avoid pointing to file-0*/
-  val rename_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {(i+1).U(log2Ceil(regNum).W)} ) )
+  /** index that arc(32) renamed register-sources point to, Avoid pointing to file-0*/
+  val rename_ptr = RegInit( VecInit( for( i <- 0 until arc ) yield {(i+1).U(log2Ceil(dp).W)} ) )
 
-  /** index that 32 commited register-sources point to, Avoid pointing to file-0 */  
-  val archit_ptr = RegInit( VecInit( for( i <- 0 until 32 ) yield {(i+1).U(log2Ceil(regNum).W)} ) )
+  /** index that arc(32) commited register-sources point to, Avoid pointing to file-0 */  
+  val archit_ptr = RegInit( VecInit( for( i <- 0 until arc ) yield {(i+1).U(log2Ceil(dp).W)} ) )
 
-  for ( i <- 0 until 32 ) yield {
+  for ( i <- 0 until arc ) yield {
     io.diffReg(i) := files(archit_ptr(i))
   }
 
@@ -126,10 +126,10 @@ trait RegFilesReName{ this: RegFilesReal =>
   /**
     * finding out the first Free-phy-register
     */ 
-  val mollocIdx = Wire(Vec(rnc, UInt((log2Ceil(regNum)).W)))
+  val mollocIdx = Wire(Vec(rnc, UInt((log2Ceil(dp)).W)))
   for ( i <- 0 until rnc ) {
     mollocIdx(i) := 0.U
-    for ( j <- (regNum-1) to 1 by -1 ) {
+    for ( j <- (dp-1) to 1 by -1 ) {
       if ( i == 0 ) { when( log(j) === 0.U ) { mollocIdx(i) := j.U }  }
       else { when( log(j) === 0.U && j.U > mollocIdx(i-1) ) { mollocIdx(i) := j.U } }
     }
@@ -153,7 +153,7 @@ trait RegFilesReName{ this: RegFilesReal =>
   for ( i <- 0 until cmm ) {
     def m = cmm-1-i
     when ( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
-      for ( j <- 0 until 32 ) yield {
+      for ( j <- 0 until arc ) yield {
         rename_ptr(j) := archit_ptr(j)
         for ( n <- 0 until m ) {
           when( j.U === raw(n) & io.commit(n).is_comfirm ) {
@@ -258,12 +258,12 @@ trait RegFilesCommit{ this: RegFilesReal =>
 
     when( io.commit(m).is_MisPredict | io.commit(m).is_abort ) {
       /** clear all log to 0, except that archit_ptr point to, may be override */
-      for ( j <- 1 until regNum ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
+      for ( j <- 1 until dp ) yield {log_reg(j) := Mux( archit_ptr.exists( (x:UInt) => (x === j.U) ), log(j), "b00".U )}
     }
     when( io.commit(m).is_MisPredict | io.commit(m).is_comfirm ) {
       /** override the log(clear) */
       assert( io.commit(m).is_writeback )
-      for ( j <- 1 until regNum ) yield {
+      for ( j <- 1 until dp ) yield {
         when(j.U === idx_pre(m) ) {log_reg(j) := 0.U} // the log, that used before commit, will be clear to 0
       }
       assert( log_reg(phy(m)) === "b11".U, "log_reg which going to commit to will be overrided to \"b11\" if there is an abort in-front." )
@@ -286,7 +286,7 @@ trait RegFilesCommit{ this: RegFilesReal =>
 
 
 
-class XRegFiles (dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesReal(dw, rnc, rop, wbc, cmm, regNum)
+class XRegFiles (dw: Int, dp: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int)(implicit p: Parameters) extends RegFilesReal(dw, dp, arc = 32, rnc, rop, wbc, cmm)
   with RegFilesReName
   with XRegFilesLookup
   with RegFilesReadOP
@@ -295,7 +295,7 @@ class XRegFiles (dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(i
 
 }
 
-class FRegFiles (dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesReal(dw, rnc, rop, wbc, cmm, regNum)
+class FRegFiles (dw: Int, dp: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int)(implicit p: Parameters) extends RegFilesReal(dw, dp, arc = 32, rnc, rop, wbc, cmm)
   with RegFilesReName
   with FRegFilesLookup
   with RegFilesReadOP
@@ -306,7 +306,7 @@ class FRegFiles (dw: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, regNum: Int)(i
 }
 
 
-class FakeFRegFiles(dw: Int, rnc: Int, rop: Int = 6, wbc: Int = 6, cmm: Int, regNum: Int)(implicit p: Parameters) extends RegFilesBase(dw, rnc, rop, wbc, cmm, regNum){
+class FakeFRegFiles(dw: Int, dp: Int, rnc: Int, rop: Int = 6, wbc: Int = 6, cmm: Int)(implicit p: Parameters) extends RegFilesBase(dw, dp, arc = 32, rnc, rop, wbc, cmm){
 
   for( i <- 0 until rnc ) {
     io.lookup(i).rsp := 0.U.asTypeOf(new RS_PHY)
@@ -314,7 +314,7 @@ class FakeFRegFiles(dw: Int, rnc: Int, rop: Int = 6, wbc: Int = 6, cmm: Int, reg
     io.rename(i).req.ready := true.B
   }
 
-  for( i <- 0 until regNum ) io.rgLog(i) := "b11".U 
+  for( i <- 0 until dp ) io.rgLog(i) := "b11".U 
   for( i <- 0 until rop ) {
     io.rgRsp(i).valid := false.B
     io.rgRsp(i).bits.phy := DontCare

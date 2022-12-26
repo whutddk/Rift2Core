@@ -67,8 +67,8 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
   })
 
 
-  val iReg = Module(new XRegFiles(dw = 64, rnChn, opChn, wbChn, cmChn, xRegNum))
-  val fReg = if( fpuNum > 0 ) { Module(new FRegFiles(dw = 65, rnChn, opChn, 2, cmChn, fRegNum)) } else {  Module(new FakeFRegFiles(dw = 65, rnChn, opChn, 2, cmChn, fRegNum) ) }
+  val iReg = Module(new XRegFiles(dw = 64, dp = xRegNum, rnChn, opChn, wbChn, cmChn))
+  val fReg = if( fpuNum > 0 ) { Module(new FRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn)) } else {  Module(new FakeFRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn) ) }
 
 
 
