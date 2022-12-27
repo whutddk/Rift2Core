@@ -67,6 +67,7 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     val csr_addr = ValidIO(UInt(12.W))
     val csr_data = Flipped(ValidIO(UInt(64.W)))
     val csr_cmm_op = DecoupledIO( new Exe_Port ) 
+    val csr_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, 4))
 
     val lsu_mmu = DecoupledIO(new Info_mmu_req)
     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
@@ -207,6 +208,8 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   csr.io.csr_data <> io.csr_data
   csr.io.csr_cmm_op <> io.csr_cmm_op
   csr.io.flush <> io.flush
+  csr.io.csr_cWriteBack <> io.csr_cWriteBack
+
 
   for( i <- 0 until (mulNum max 1) ) {
     mulDiv(i).io.mul_iss_exe <> io.mul_iss_exe(i)

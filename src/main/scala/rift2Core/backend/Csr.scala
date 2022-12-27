@@ -32,6 +32,9 @@ class Csr(implicit p: Parameters) extends RiftModule {
     val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
     val csr_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
 
+    val csr_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, 4))
+
+
     val csr_addr = ValidIO(UInt(12.W))
     val csr_data = Flipped(ValidIO(UInt(64.W)))
 
@@ -55,7 +58,7 @@ class Csr(implicit p: Parameters) extends RiftModule {
   val rc = io.csr_iss_exe.bits.fun.rc
   
   val dat = io.csr_iss_exe.bits.param.dat.op1
-  val addr = io.csr_iss_exe.bits.param.dat.op2
+  val addr = io.csr_iss_exe.bits.csrw( log2Ceil(4)+11, log2Ceil(4)+0 )
 
   val dontWrite = (dat === 0.U) & ( rs | rc )
 
@@ -65,15 +68,61 @@ class Csr(implicit p: Parameters) extends RiftModule {
   csr_op_fifo.io.enq.bits.op_rs := rs & ~dontWrite
   csr_op_fifo.io.enq.bits.op_rc := rc & ~dontWrite
 
-  io.csr_addr.bits  := addr
-  io.csr_addr.valid := io.csr_iss_exe.valid
 
-  io.csr_iss_exe.ready     := csr_exe_iwb_fifo.io.enq.fire
-  csr_op_fifo.io.enq.valid := csr_exe_iwb_fifo.io.enq.fire
+  when( addr =/= "b300".U ) {
+    csr_op_fifo.io.enq.bits.addr := addr
+    csr_op_fifo.io.enq.bits.dat_i := dat
+    csr_op_fifo.io.enq.bits.op_rw := rw & ~dontWrite
+    csr_op_fifo.io.enq.bits.op_rs := rs & ~dontWrite
+    csr_op_fifo.io.enq.bits.op_rc := rc & ~dontWrite
 
-  csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready & io.csr_data.valid
-  csr_exe_iwb_fifo.io.enq.bits.res := io.csr_data.bits
-  csr_exe_iwb_fifo.io.enq.bits.rd0 := io.csr_iss_exe.bits.param.rd0
+    io.csr_addr.bits  := addr
+    io.csr_addr.valid := io.csr_iss_exe.valid
+
+    io.csr_iss_exe.ready     := csr_exe_iwb_fifo.io.enq.fire
+    csr_op_fifo.io.enq.valid := csr_exe_iwb_fifo.io.enq.fire
+
+    csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready & io.csr_data.valid
+    csr_exe_iwb_fifo.io.enq.bits.res := io.csr_data.bits
+    csr_exe_iwb_fifo.io.enq.bits.rd0 := io.csr_iss_exe.bits.param.rd0
+
+    io.csr_cWriteBack.valid := false.B
+
+    io.csr_cWriteBack.bits.addr  := DontCare
+    io.csr_cWriteBack.bits.dati  := DontCare
+    io.csr_cWriteBack.bits.op_rw := DontCare
+    io.csr_cWriteBack.bits.op_rs := DontCare
+    io.csr_cWriteBack.bits.op_rc := DontCare
+    io.csr_cWriteBack.bits.idx   := DontCare
+  } .otherwise {
+    csr_op_fifo.io.enq.bits.addr  := DontCare
+    csr_op_fifo.io.enq.bits.dat_i := DontCare
+    csr_op_fifo.io.enq.bits.op_rw := DontCare
+    csr_op_fifo.io.enq.bits.op_rs := DontCare
+    csr_op_fifo.io.enq.bits.op_rc := DontCare
+
+    io.csr_addr.bits  := DontCare
+    io.csr_addr.valid := false.B
+
+    io.csr_iss_exe.ready     := csr_exe_iwb_fifo.io.enq.fire
+    csr_op_fifo.io.enq.valid := false.B
+
+
+    csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready
+    csr_exe_iwb_fifo.io.enq.bits.res := io.csr_iss_exe.bits.param.dat.op2
+    csr_exe_iwb_fifo.io.enq.bits.rd0 := io.csr_iss_exe.bits.param.rd0
+
+
+    io.csr_cWriteBack.valid := csr_exe_iwb_fifo.io.enq.fire
+
+    io.csr_cWriteBack.bits.addr  := addr
+    io.csr_cWriteBack.bits.dati  := dat
+    io.csr_cWriteBack.bits.op_rw := rw & ~dontWrite
+    io.csr_cWriteBack.bits.op_rs := rs & ~dontWrite
+    io.csr_cWriteBack.bits.op_rc := rc & ~dontWrite
+    io.csr_cWriteBack.bits.idx   := io.csr_iss_exe.bits.csrw(log2Ceil(4)-1, 0 )
+  }
+
 
 
 }

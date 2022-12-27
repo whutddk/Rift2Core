@@ -185,9 +185,19 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
     mdl.io.fpu_iWriteBack <> exe_stage.io.fpu_exe_iwb
     mdl.io.fpu_fWriteBack <> exe_stage.io.fpu_exe_fwb
 
+    mdl.io.csr_cWriteBack <> exe_stage.io.csr_cWriteBack
+    mdl.io.csrIsReady <> iss_stage.io.csrIsReady
+
+    mdl.io.cLookup <> rnm_stage.io.cLookup
+    mdl.io.cRename <> rnm_stage.io.cRename
+
+
+
+
 
     mdl
   }
+
 
 
 
@@ -248,6 +258,11 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   cmm_stage.io.aclint := io.aclint
   cmm_stage.io.plic := io.plic
   if2.io.ifence := cmm_stage.io.ifence
+
+
+  iss_stage.csrfiles := cmm_stage.io.csrfiles
+  iwb_stage.io.cCommit <> cmm_stage.io.csrCmm
+  cmm_stage.io.csrOp := iwb_stage.io.csrOp
 
 
   cmm_stage.io.rtc_clock := io.rtc_clock

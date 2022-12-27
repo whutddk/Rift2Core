@@ -30,14 +30,14 @@ import chipsalliance.rocketchip.config.Parameters
 
 abstract class CRegfilesBase(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
-    val lookup = Vec( rnc, new SeqReg_Lookup_Bundle(dp))
-    val rename = Vec( rnc, new SeqReg_Rename_Bundle(dp))
+    val lookup = Vec( rnc, new SeqReg_Lookup_Bundle(4))
+    val rename = Vec( rnc, new SeqReg_Rename_Bundle(4))
 
-    val writeBack = Vec(wbc, Flipped(Valid(new SeqReg_WriteBack_Bundle(dw, dp))))
+    val writeBack = Vec(wbc, Flipped(Valid(new SeqReg_WriteBack_Bundle(64, 4))))
 
-    val commit = Vec(cmm, Flipped(new SeqReg_Commit_Bundle(dp)))
+    val commit = Vec(cmm, Flipped(new SeqReg_Commit_Bundle(4)))
 
-    val csrOp= Vec(cmm, new Exe_Port) 
+    val csrOp= Output(Vec(cmm, new Exe_Port) )
   })
 
   for( i <- 0 until rnc ){
@@ -60,37 +60,31 @@ abstract class CRegfilesBase(implicit p: Parameters) extends RiftModule {
 
 
 trait MSTATUS_Reg{ this: CRegfilesBase =>
-  val mstatusLog = IO(Output( Vec( dp, UInt(2.W)) ))
+  
 
   val mstatusReg = Module( SeqCsr(dw = 64, 4, 0.U, rnChn, wbChn, cmChn) )
+
+  
 
   for( i <- 0 until rnc ){
     mstatusReg.io.lookup(i).req := DontCare
     mstatusReg.io.rename(i).req.valid := false.B
     mstatusReg.io.rename(i).req.bits  := DontCare
 
-    when( io.lookup(i).req === "h300".U ){
-      io.lookup(i).rsp := mstatusReg.io.lookup(i).rsp
-    }
-
-    when( io.rename(i).req.bits === "h300".U ){
-      io.rename(i) <> mstatusReg.io.rename(i)
-    }
+    when( io.lookup(i).req === "h300".U ){ io.lookup(i).rsp := mstatusReg.io.lookup(i).rsp }
+    when( io.rename(i).req.bits === "h300".U ){ io.rename(i) <> mstatusReg.io.rename(i) }
   }
 
   for( i <- 0 until wbc ){
-      mstatusReg.io.dati               := DontCare
+      mstatusReg.io.writeBack(i).dati  := DontCare
+      mstatusReg.io.writeBack(i).addr  := DontCare
       mstatusReg.io.writeBack(i).op_rw := false.B
       mstatusReg.io.writeBack(i).op_rs := false.B
       mstatusReg.io.writeBack(i).op_rc := false.B
       mstatusReg.io.writeBack(i).idx   := DontCare
 
     when( io.writeBack(i).addr === "h300".U ){
-      mstatusReg.io.dati               := io.writeBack(i).dati
-      mstatusReg.io.writeBack(i).op_rw := io.writeBack(i).op_rw
-      mstatusReg.io.writeBack(i).op_rs := io.writeBack(i).op_rs
-      mstatusReg.io.writeBack(i).op_rc := io.writeBack(i).op_rc
-      mstatusReg.io.writeBack(i).idx   := io.writeBack(i).idx
+      mstatusReg.io.writeBack(i) := io.writeBack(i)
     }
   }
 
@@ -100,19 +94,24 @@ trait MSTATUS_Reg{ this: CRegfilesBase =>
     mstatusReg.io.commit(i).isAbort := false.B
     mstatusReg.io.commit(i).idx := DontCare
 
-
     when( io.commit(i).addr === "h300".U ){
       mstatusReg.io.commit(i) := io.commit(i)
-      io.csrOp(i) <> mstatusReg.io.csrOp(i)      
+      io.csrOp(i) := mstatusReg.io.csrOp(i)      
     }
-
-
   }
 }
 
+class CSR_LOG_Bundle(dp: Int = 4) extends Bundle{
+  val mstatus = Vec( dp, Bool() )
+}
 
 class CRegfiles extends CRegfilesBase
 with MSTATUS_Reg{
+  val isReady = IO(Output(new CSR_LOG_Bundle))
+
+  isReady.mstatus := mstatusReg.io.isReady
+
+
 
 
 }

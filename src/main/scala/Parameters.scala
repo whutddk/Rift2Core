@@ -165,7 +165,7 @@ case class RiftSetting(
   hasPreFetch: Boolean = false,
   hasuBTB: Boolean = true,
   hasLRU: Boolean = false,
-  hasVector: Boolean = true,
+  hasVector: Boolean = false,
 
 
   isMinArea: Boolean = false,
@@ -208,7 +208,7 @@ case class RiftSetting(
   mulNum: Int = 1,
   fpuNum: Int = 0,
 
-  vectorParameters: VectorParameters = VectorParameters()
+  vectorParameters: VectorParameters = VectorParameters(),
 
 
   icacheParameters: IcacheParameters = IcacheParameters(

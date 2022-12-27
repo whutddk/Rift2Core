@@ -282,6 +282,8 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
 abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val cm_op = Vec(cmChn, new Info_commit_op)
+    val csrCmm = Vec(cmChn, new SeqReg_Commit_Bundle(4))
+    val csrOp = Input(Vec(cmm, new Exe_Port))
     val rod = Vec(cmChn, Flipped(new DecoupledIO( new Info_reorder_i ) ))
 
     val cmm_lsu = Output(new Info_cmm_lsu)
@@ -312,6 +314,8 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
     val aclint = Input(new AClint_Bundle)
     val plic   = Input(new Plic_Bundle)
 
+    val csrfiles = Output(new CSR_Bundle)
+
     val diff_commit = Output(new Info_cmm_diff)
     val diff_csr = Output(new Info_csr_reg)
 
@@ -319,7 +323,7 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   })
 
 
-  val csrfiles = Reg(new CSR_Bundle)
+  val csrfiles = Reg(new CSR_Bundle); io.csrfiles := csrfiles
   val commit_state = Wire( Vec( cmChn, UInt(2.W)) )
   val commit_state_is_comfirm     = for ( i <- 0 until cmChn ) yield commit_state(i) === 3.U
   val commit_state_is_misPredict  = for ( i <- 0 until cmChn ) yield commit_state(i) === 2.U
@@ -357,7 +361,7 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   val bctq = ReDirect( emptyBCTQ, VecInit( io.rod.map{_.bits.is_branch} ) )
   val jctq = ReDirect( emptyJCTQ, VecInit( io.rod.map{_.bits.is_jalr} ) )
 
-  val csrExe  = ReDirect( emptyExePort, VecInit( io.rod.map{_.bits.is_csr} ) )
+  val csrExe  = ReDirect( emptyExePort, VecInit( io.rod.map{_.bits.is_csr & _.bits.csrw === 0.U} ) )
   val fcsrExe = ReDirect( io.fcsr_cmm_op, VecInit( io.rod.map{_.bits.is_fcsr} ) )
 
   val emu_reset = RegInit( false.B )
@@ -432,7 +436,13 @@ trait CommitState { this: BaseCommit =>
           commit_state(i) := 2.U //mis-predict
           for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
       } .elsewhen( cmm_state(i).is_wb ) { //when writeback and no-step, 1st-step will cause an interrupt
-        when( (io.rod(i).bits.is_csr & ~csrExe(i).valid) || (io.rod(i).bits.is_fcsr & ~fcsrExe(i).valid) || (io.rod(i).bits.is_branch & ~bctq(i).valid) || (io.rod(i).bits.is_jalr & ~jctq(i).valid) ) {
+        when(
+          (io.rod(i).bits.is_csr & (
+            Mux(io.rod(i).bits.csrw === 0.U, ~csrExe(i).valid, ~io.csrCmm(i).isWroteback) ) 
+          )||
+          (io.rod(i).bits.is_fcsr & ~fcsrExe(i).valid) ||
+          (io.rod(i).bits.is_branch & ~bctq(i).valid) ||
+          (io.rod(i).bits.is_jalr & ~jctq(i).valid) ) {
           commit_state(i) := 0.U
         } .otherwise {
           commit_state(i) := 3.U //confirm
@@ -556,6 +566,15 @@ trait CommitRegFiles { this: BaseCommit =>
 
 }
 
+trait CommitCsr { this: BaseCommit =>
+  for ( i <- 0 until cmChn ) yield {
+    io.csrCmm(i).isComfirm := commit_state_is_comfirm(i)
+    io.csrCmm(i).isAbort   := commit_state_is_abort(i) | commit_state_is_misPredict(i)
+    io.csrCmm(i).phy       := io.rod(i).bits.csrw( log2Ceil(4)-1,  0 )
+    io.csrCmm(i).addr      := io.rod(i).bits.csrw( log2Ceil(4)+11, log2Ceil(4)+0 )
+  }
+}
+
 trait CommitIFRedirect { this: BaseCommit =>
 
 }
@@ -639,7 +658,7 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
     if ( i == 0 ) { cmm_state(i).csrfiles := csrfiles } else { cmm_state(i).csrfiles := csr_state(i-1) }
     
     cmm_state(i).lsu_cmm := io.lsu_cmm
-    cmm_state(i).csrExe  := csrExe(i).bits
+    cmm_state(i).csrExe  := Mux( io.rod(i).bits.csrw === 0.U, io.csrOp(i), csrExe(i).bits)
     cmm_state(i).fcsrExe := fcsrExe(i).bits
     cmm_state(i).is_wb   := io.cm_op(i).is_writeback
     cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
@@ -799,7 +818,7 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
   
   
   ( 0 until cmChn ).map{ i =>
-    csrExe(i).ready := commit_state_is_comfirm(i) & io.rod(i).bits.is_csr
+    csrExe(i).ready := commit_state_is_comfirm(i) & io.rod(i).bits.is_csr & ( io.rod(i).bits.csrw === 0.U )
     assert( ~(csrExe(i).ready & ~csrExe(i).valid) )
   }
 

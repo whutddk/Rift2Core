@@ -53,7 +53,7 @@ class Info_commit_op(dp: Int)(implicit p: Parameters) extends RiftBundle{
   val is_writeback = Input(Bool())
 }
 
-abstract class RegFilesBase(dw: Int, dp: Int, arc: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int, )(implicit p: Parameters) extends RiftModule{
+abstract class RegFilesBase(dw: Int, dp: Int, arc: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int )(implicit p: Parameters) extends RiftModule{
   val io = IO( new Bundle{
 
     val lookup = Vec( rnc, Flipped(new Lookup_Bundle) )

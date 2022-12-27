@@ -56,6 +56,9 @@ abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPU
     val frgRsp = Flipped( Vec( opChn, Valid(new ReadOp_Rsp_Bundle(65)) ) )
     val vrgRsp = Flipped( Vec( vParam.opChn, Valid(new ReadOp_Rsp_Bundle(vParams.vlen)) ) )
 
+    val csrfiles = Input(new CSR_Bundle)
+    val csrIsReady = Input(new CSR_LOG_Bundle)
+
     val flush = Input(Bool())
   })
 }
@@ -1122,9 +1125,14 @@ trait IssSelCsr{ this: IssueSel =>
         bufInfo(idx).csr_isa.rc  -> postBufOperator(idx)(0), bufInfo(idx).csr_isa.rci -> bufInfo(idx).param.raw.rs1
       ))
 
-    res.param.dat.op2 := bufInfo(idx).param.imm
+    res.param.dat.op2 := 
+      MuxCase( bufInfo(idx).param.imm, Seq(
+        (bufInfo(idx).param.imm === "b300".U) -> io.csrfiles.mstatus.asUInt,
+      ))
+      
     res.param.dat.op3 := DontCare
     res.param.rd0     := bufInfo(idx).phy.rd0
+    res.param.csrw    := bufInfo(idx).csrw
 
     return res
   }
@@ -1140,7 +1148,11 @@ trait IssSelCsr{ this: IssueSel =>
   for( i <- 0 until dptEntry ) {
     maskCondCsrIss(i) := 
       ~bufValid(i) |
-      ~bufInfo(i).csr_isa.is_csr
+      ~bufInfo(i).csr_isa.is_csr |
+      ( Mux1H(Seq(
+          (bufInfo(i).param.imm === "b300".U) -> (io.csrIsReady.mstatus(bufInfo(i).csrrw( log2Ceil(4)-1, 0 )) === true.B),
+        ))
+      ) 
   }
 
   csrIssMatrix := MatrixMask( ageMatrixR, maskCondCsrIss )

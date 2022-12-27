@@ -56,7 +56,7 @@ class SeqReg_Commit_Bundle(dp: Int)(implicit p: Parameters) extends RiftBundle{
   val isAbort   = Output(Bool())
   val idx        = Output(UInt(( log2Ceil(dp) ).W))
   val addr = Output(UInt(12.W))
-  // val isWroteback = Input(Bool())
+  val isWroteback = Input(Bool())
 }
 
 
@@ -106,18 +106,20 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
 
     val writeBack = Vec(wbc, Flipped(Valid(new SeqReg_WriteBack_Bundle(dw, dp))))
 
-    val log = Output( Vec( dp, UInt(2.W)) )
 
     val commit = Vec(cmm, Flipped(new SeqReg_Commit_Bundle(dp)))
 
-    val csrOp= Vec(cmm, Valid(new Exe_Port))
+    val csrOp= Vec(cmm, new Exe_Port)
 
+    val isReady = Output(Vec(dp, Bool()))
   })
 
 
   
   val mdl = Module(new SRegFiles(3+dw, dp, rnc, 1, wbc, cmm)){
     val csrOp = IO(Vec(cmm, Valid(new Exe_Port)))
+    val isReady = IO(Output(Vec(dp, Bool())))
+
     for( i <- 0 until cmm ) {
       when( io.commit(i).isComfirm ){
         csrOp(i).valid := true.B
@@ -131,10 +133,16 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
         csrOp(i).bits  := DontCare
       }
     }
+
+    for( i <- 0 until dp ) {
+      isReady(i) := (archit_ptr(0) === i.U)
+    }
+
   }
 
   io.csrOp  := mdl.csrOp
-
+  io.isReady := mdl.isReady
+  assert( PopCount(io.isReady) === 1.U )
 
 
   for( i <- 0 until rnc ){
@@ -179,7 +187,7 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
     mdl.io.commit(i).toX           := DontCare
     mdl.io.commit(i).toF           := DontCare
     mdl.io.commit(i).toV           := DontCare
-    // io.commit(i).isWroteback       := mdl.io.commit(i).is_writeback
+    io.commit(i).isWroteback       := mdl.io.commit(i).is_writeback
   }
 
 

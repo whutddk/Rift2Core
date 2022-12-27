@@ -36,8 +36,13 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
     val fLookup = Vec( rnChn, new Lookup_Bundle )
     val fRename = Vec( rnChn, new Rename_Bundle )
 
+    val cLookup = Vec( rnChn, Flipped(new SeqReg_Lookup_Bundle(4) ) )
+    val cRename = Vec( rnChn, Flipped(new SeqReg_Rename_Bundle(4) ) )
+
     val vLookup = Vec( rnChn, new VLookup_Bundle )
     val vRename = Vec( rnChn, new VRename_Bundle )
+
+
 
     val rod_i = Vec(cmChn,new DecoupledIO(new Info_reorder_i))
 
@@ -56,7 +61,7 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
 
   val reg_phy = Wire(Vec(rnChn, new Reg_PHY ) )
 
-  def Pkg_Rename_Info( instr: Info_instruction, rename: Reg_PHY): Dpt_info = {
+  def Pkg_Rename_Info( instr: Info_instruction, rename: Reg_PHY, csrr: UInt, csrw: UInt ): Dpt_info = {
     val res = Wire(new Dpt_info)
 
     res.alu_isa    := instr.alu_isa
@@ -74,11 +79,23 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
                       when(~instr.fpu_isa.hasTwoRs) { res.phy.rs2 := 0.U }
                       when(~instr.fpu_isa.hasThreeRs) { res.phy.rs3 := 0.U }      
                     }
+    res.csrr :=
+      Mux(
+        instr.csr_isa.is_csr & instr.param.imm === "b300".U,
+        Cat( instr.param.imm(11,0), csrr( (log2Ceil(4)-1), 0 ) ),
+        0.U
+      )
+    res.csrw :=
+      Mux(
+        instr.csr_isa.is_csr & instr.param.imm === "b300".U,
+        Cat( instr.param.imm(11,0), csrw( (log2Ceil(4)-1), 0 ) ),
+        0.U
+      )
     return res
   }
 
 
-  def Pkg_rod_i(instr:Info_instruction, rename: Reg_PHY): Info_reorder_i = {
+  def Pkg_rod_i(instr:Info_instruction, rename: Reg_PHY, csrw: UInt): Info_reorder_i = {
     val res = Wire(new Info_reorder_i)
 
       res.pc             := instr.param.pc
@@ -106,6 +123,14 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
       res.isFcmm := instr.is_fwb
       res.isVcmm := instr.isVwb
 
+      res.csrw   := 
+        Mux(
+          instr.csr_isa.is_csr & instr.param.imm === "b300".U,
+          Cat( instr.param.imm(11,0), csrw( (log2Ceil(4)-1), 0 ) ),
+          0.U
+        )
+
+
     return res
   }
 }
@@ -114,7 +139,7 @@ trait RenameMalloc { this: RenameBase =>
   for ( i <- 0 until rnChn ) yield {
 
     rnRspReport.io.enq(i).valid := io.rnReq(i).fire & ~io.rnReq(i).bits.is_privil_dpt
-    rnRspReport.io.enq(i).bits  := Pkg_Rename_Info(io.rnReq(i).bits, reg_phy(i))
+    rnRspReport.io.enq(i).bits  := Pkg_Rename_Info(io.rnReq(i).bits, reg_phy(i), io.cLookup.rsp, io.cRename(i).rsp )
 
 
     io.xRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.is_iwb
@@ -139,20 +164,14 @@ trait RenameMalloc { this: RenameBase =>
 
 
     reg_phy(i).rd0 := 
-      Mux1H(Seq(
-        io.xRename(i).req.fire -> io.xRename(i).rsp.rd0,
-        if(fpuNum > 0) {
-          io.fRename(i).req.fire -> io.fRename(i).rsp.rd0,          
-        }
-        if(hasVector){
-           io.vRename(i).req.fire -> io.vRename(i).rsp.rd0,
-        }
-      ))
+      Mux1H(
+        io.xRename(i).req.fire -> io.xRename(i).rsp.rd0 :+
+        (if(fpuNum > 0) { io.fRename(i).req.fire -> io.fRename(i).rsp.rd0 } ) ++
+        (if(hasVector)  { io.vRename(i).req.fire -> io.vRename(i).rsp.rd0 } )
+      )
 
     reg_phy(i).rd1 := 
-      if(hasVector){
-        Mux(io.vRename(i).req.fire, io.vRename(i).rsp.rd1, 0.U)
-      } else { 0.U }
+      (if(hasVector){ Mux(io.vRename(i).req.fire, io.vRename(i).rsp.rd1, 0.U) } else { 0.U })
 
   }
 }
@@ -160,7 +179,7 @@ trait RenameMalloc { this: RenameBase =>
 
 
 
-trait WriteBackLookup { 
+trait WriteBackLookup {  this: RenameBase =>
   for ( i <- 0 until rnChn ) yield {
     io.xLookup(i).req.rs1 := io.rnReq(i).bits.param.raw.rs1
     io.xLookup(i).req.rs2 := io.rnReq(i).bits.param.raw.rs2
@@ -197,50 +216,37 @@ trait WriteBackLookup {
 
 
     reg_phy(i).rs1 :=
-      MuxCase( io.xLookup(i).rsp.rs1, Seq(
-        if( fpuNum > 0 ) { 
-          io.rnReq(i).bits.fpu_isa.is_fop -> io.fLookup(i).rsp.rs1,
-        } 
-        if( hasVector ) { 
+      MuxCase( io.xLookup(i).rsp.rs1, 
+        (if( fpuNum > 0 ) {  io.rnReq(i).bits.fpu_isa.is_fop -> io.fLookup(i).rsp.rs1}) :+ 
+        (if( hasVector ) { Seq(
           io.rnReq(i).bits.vectorIsa.isLookUpRS1 -> io.xLookup(i).rsp.rs1,
           io.rnReq(i).bits.vectorIsa.isLookUpFS1 -> io.fLookup(i).rsp.rs1,
-          io.rnReq(i).bits.vectorIsa.isLookUpVS1 -> io.vLookup(i).rsp.vs1,
-        }
-
-      ))
+          io.rnReq(i).bits.vectorIsa.isLookUpVS1 -> io.vLookup(i).rsp.vs1,          
+        )
+        })
+      )
     reg_phy(i).rs2 :=
       MuxCase( io.xLookup(i).rsp.rs2, Seq(
-        if( fpuNum > 0 ){
-          (io.rnReq(i).bits.fpu_isa.is_fop | io.rnReq(i).bits.lsu_isa.is_fst) -> io.fLookup(i).rsp.rs2,
-        }
-        if( hasVector ){
-          io.rnReq(i).bits.vectorIsa.isLookUpVS2 -> io.vLookup(i).rsp.vs2,
-        }
+        (if( fpuNum > 0 ){ (io.rnReq(i).bits.fpu_isa.is_fop | io.rnReq(i).bits.lsu_isa.is_fst) -> io.fLookup(i).rsp.rs2 }),
+        (if( hasVector ){ io.rnReq(i).bits.vectorIsa.isLookUpVS2 -> io.vLookup(i).rsp.vs2 })
       ))
 
     reg_phy(i).rs3 :=
       MuxCase(0.U, Seq(
-        if( fpuNum > 0 ) {
-          io.rnReq(i).bits.fpu_isa.is_fop -> io.fLookup(i).rsp.rs3,
-        }
-        if( hasVector ) { 
-          io.rnReq(i).bits.vectorIsa.isLookUpVS3 -> io.vLookup(i).rsp.vs3,
-        }
+        (if( fpuNum > 0 ) { io.rnReq(i).bits.fpu_isa.is_fop -> io.fLookup(i).rsp.rs3 }),
+        (if( hasVector ) {  io.rnReq(i).bits.vectorIsa.isLookUpVS3 -> io.vLookup(i).rsp.vs3 })
       ))
 
     reg_phy(i).rs4 :=
-      MuxCase(0.U, Seq(
-        if( hasVector ) { 
+      MuxCase(0.U, 
+        (if( hasVector ) { Seq(
           io.rnReq(i).bits.vectorIsa.isLookUpVS2P -> io.vLookup(i).rsp.vs4,
           io.rnReq(i).bits.vectorIsa.isLookUpVS3P -> io.vLookup(i).rsp.vs4,
-        }
-      ))
+        )})
+      )
     reg_phy(i).rs5 :=
-        if( hasVector ) { 
-          io.vLookup(i).rsp.vs5
-        } else {
-          0.U
-        }
+        (if( hasVector ) { io.vLookup(i).rsp.vs5 }
+        else { 0.U })
 
 
   }
@@ -251,7 +257,33 @@ trait WriteBackLookup {
 trait LoadRob{ this: RenameBase =>
   reOrder_fifo_i.io.flush := false.B
   reOrder_fifo_i.io.enq(i).valid := io.rnReq(i).fire
-  reOrder_fifo_i.io.enq(i).bits  := Pkg_rod_i(io.rnReq(i).bits, reg_phy(i))
+  reOrder_fifo_i.io.enq(i).bits  := Pkg_rod_i(io.rnReq(i).bits, reg_phy(i), io.cRename(i).rsp)
+}
+
+
+trait CSRLoopup{ this: RenameBase =>
+  for ( i <- 0 until rnChn ) {
+    io.cLookup(i).req := 
+      Mux1H(Seq(
+        (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "b300".U ) -> "b300".U,
+      ))
+  }
+}
+
+trait CSRMalloc{ this: RenameBase =>
+  for ( i <- 0 until rnChn ) {
+    io.cRename(i).req.bits := 
+      Mux1H(Seq(
+        (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "b300".U ) -> "b300".U,
+      ))
+
+    io.cRename(i).req.valid :=
+      (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "b300".U )
+  }
+
+
+
+
 }
 
 
@@ -288,7 +320,13 @@ trait RenameFeatureCheck { this: RenameBase =>
 
 
 
-class Rename()(implicit p: Parameters) extends RenameBase with RenameMalloc with WriteBackLookup with LoadRob with RenameFeatureCheck {
+class Rename()(implicit p: Parameters) extends RenameBase
+with RenameMalloc
+with WriteBackLookup
+with CSRLoopup
+with CSRMalloc
+with LoadRob
+with RenameFeatureCheck {
 
   rnRspFifo.io.flush := false.B
 
@@ -296,7 +334,7 @@ class Rename()(implicit p: Parameters) extends RenameBase with RenameMalloc with
   for (i <- 0 until rnChn ) yield {
     io.rnReq(i).ready := (
       for ( j <- 0 to i by 1 ) yield {
-        io.xRename(j).req.ready & io.fRename(j).req.ready & reOrder_fifo_i.io.enq(i).ready &
+        io.xRename(j).req.ready & io.fRename(j).req.ready & io.cRename(i).req.ready & reOrder_fifo_i.io.enq(i).ready
         rnRspFifo.io.enq(j).ready
       }
     ).reduce(_&_)

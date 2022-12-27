@@ -1028,6 +1028,8 @@ class Info_instruction(implicit p: Parameters) extends Instruction_set {
 
 class Dpt_info(implicit p: Parameters) extends Info_instruction {
   val phy = new Reg_PHY
+  val csrr = UInt( (12+log2Ceil(4)).w )
+  val csrw = UInt( (12+log2Ceil(4)).w )
 }
 
 
@@ -1161,6 +1163,8 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val privil = new Privil_isa
   val is_illeage = Bool()
 
+  val csrw = UInt((12+log2Ceil(4)).W)
+
 }
 
 
@@ -1175,6 +1179,7 @@ class Csr_function(implicit p: Parameters) extends RiftBundle {
 
 class Csr_param(implicit p: Parameters) extends RD_PHY {
   val dat = new Operation_source(dw=64)
+  val csrw = UInt( (12+log2Ceil(4)).W)
 
   // override def cloneType = ( new Csr_param ).asInstanceOf[this.type]
 }
