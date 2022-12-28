@@ -21,6 +21,8 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 import base._
+
+import rift2Core.privilege._
 import rift2Chip._
 import chipsalliance.rocketchip.config._
 
@@ -42,7 +44,7 @@ abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPU
     val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
     val fpu_iss_exe = Vec(fpuNum max 1, new DecoupledIO(new Fpu_iss_info))
 
-    val vpu_iss_exe = new DecoupledIO(new Vpu_iss_info)
+    // val vpu_iss_exe = new DecoupledIO(new Vpu_iss_info)
 
     val irgLog = Input( Vec(xRegNum, UInt(2.W)) )
     val frgLog = Input( Vec(fRegNum, UInt(2.W)) )
@@ -50,11 +52,11 @@ abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPU
 
     val irgReq = Vec( opChn, Valid( UInt((log2Ceil(xRegNum)).W) ) )
     val frgReq = Vec( opChn, Valid( UInt((log2Ceil(fRegNum)).W) ) )    
-    val vrgReq = Vec( vParam.opChn, Valid( UInt((log2Ceil(vRegNum)).W) ) )    
+    val vrgReq = Vec( vParams.opChn, Valid( UInt((log2Ceil(vRegNum)).W) ) )    
 
     val irgRsp = Flipped( Vec( opChn, Valid(new ReadOp_Rsp_Bundle(64)) ) )
     val frgRsp = Flipped( Vec( opChn, Valid(new ReadOp_Rsp_Bundle(65)) ) )
-    val vrgRsp = Flipped( Vec( vParam.opChn, Valid(new ReadOp_Rsp_Bundle(vParams.vlen)) ) )
+    val vrgRsp = Flipped( Vec( vParams.opChn, Valid(new ReadOp_Rsp_Bundle(vParams.vlen)) ) )
 
     val csrfiles = Input(new CSR_Bundle)
     val csrIsReady = Input(new CSR_LOG_Bundle)
@@ -571,7 +573,7 @@ trait DptReadFOp { this: DptAgeMatrix =>
 }
 
 trait DptReadVOp { this: DptAgeMatrix =>
-  val rVOpNum = Wire( Vec( vParam.opChn, UInt((log2Ceil(vRegNum)).W)) )
+  val rVOpNum = Wire( Vec( vParams.opChn, UInt((log2Ceil(vRegNum)).W)) )
 
 
   /** Whether this vs can request operator reading */
@@ -654,7 +656,7 @@ trait DptReadVOp { this: DptAgeMatrix =>
 
 
 
-  for( chn <- 0 until vParam.opChn ){
+  for( chn <- 0 until vParams.opChn ){
     if( chn == 0 ){
       for ( i <- 0 until dptEntry ){
         maskCondSelVRS1(chn)(i) := ~bufValid(i) | ~canVOpReq(i)(0)
@@ -719,19 +721,19 @@ trait DptReadVOp { this: DptAgeMatrix =>
   }
 
 
-  val isVRS1NoneReq = Wire( Vec( vParam.opChn, Bool()) )
-  val isVRS2NoneReq = Wire( Vec( vParam.opChn, Bool()) )
-  val isVRS3NoneReq = Wire( Vec( vParam.opChn, Bool()) )
-  val isVRS4NoneReq = Wire( Vec( vParam.opChn, Bool()) )
-  val isVRS5NoneReq = Wire( Vec( vParam.opChn, Bool()) )
+  val isVRS1NoneReq = Wire( Vec( vParams.opChn, Bool()) )
+  val isVRS2NoneReq = Wire( Vec( vParams.opChn, Bool()) )
+  val isVRS3NoneReq = Wire( Vec( vParams.opChn, Bool()) )
+  val isVRS4NoneReq = Wire( Vec( vParams.opChn, Bool()) )
+  val isVRS5NoneReq = Wire( Vec( vParams.opChn, Bool()) )
 
-  val selVRS1 = Wire( Vec(vParam.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
-  val selVRS2 = Wire( Vec(vParam.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
-  val selVRS3 = Wire( Vec(vParam.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
-  val selVRS4 = Wire( Vec(vParam.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
-  val selVRS5 = Wire( Vec(vParam.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
+  val selVRS1 = Wire( Vec(vParams.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
+  val selVRS2 = Wire( Vec(vParams.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
+  val selVRS3 = Wire( Vec(vParams.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
+  val selVRS4 = Wire( Vec(vParams.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
+  val selVRS5 = Wire( Vec(vParams.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
 
-  for( chn <- 0 until vParam.opChn ){
+  for( chn <- 0 until vParams.opChn ){
     isVRS1NoneReq(chn) := selMatrixVRS1(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
     isVRS2NoneReq(chn) := selMatrixVRS2(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
     isVRS3NoneReq(chn) := selMatrixVRS3(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
@@ -823,7 +825,7 @@ trait IssLoadFOp { this: IssueBase =>
 }
 
 trait IssLoadVOp { this: IssueBase =>
-  for( chn <- 0 until vParam.opChn ){
+  for( chn <- 0 until vParams.opChn ){
     when( io.vrgRsp(chn).valid ){
       for( i <- 0 until dptEntry ){
         for( rs <- 0 until 5 ){
@@ -840,7 +842,7 @@ trait IssLoadVOp { this: IssueBase =>
 
 abstract class IssueSel()(implicit p: Parameters) extends IssueBase with IssLoadIOp with IssLoadFOp with IssLoadVOp{
   val postIsOpReady = Wire( Vec( dptEntry, Vec(5, Bool())) )
-  val postBufOperator = Wire( Vec( dptEntry, Vec(5, UInt(vParam.vlen.W))) )
+  val postBufOperator = Wire( Vec( dptEntry, Vec(5, UInt(vParams.vlen.W))) )
 
   for( i <- 0 until dptEntry ){
     postIsOpReady(i)(0)   := MuxCase( isOpReady(i)(0),    io.irgRsp.map{x => { ( isBufXop(i)(0) & x.valid & (x.bits.phy === bufReqNum(i)(0))) -> true.B }} ++ io.frgRsp.map{x => { ( isBufFop(i)(0) & x.valid & (x.bits.phy === bufReqNum(i)(0))) -> true.B }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(0) & x.valid & (x.bits.phy === bufReqNum(i)(0))) -> true.B }}    )
@@ -1332,7 +1334,13 @@ trait IssSelVpu{ this: IssueSel =>
 }
 
 
-class Issue()(implicit p: Parameters) extends IssueSel with IssSelAlu with IssSelMul with IssSelBru with IssSelCsr with IssSelLsu with IssSelFpu{
+class Issue()(implicit p: Parameters) extends IssueSel
+with IssSelAlu
+with IssSelMul
+with IssSelBru
+with IssSelCsr
+with IssSelLsu
+with IssSelFpu{
   
 }
 

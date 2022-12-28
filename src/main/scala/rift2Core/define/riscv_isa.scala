@@ -537,25 +537,21 @@ class VectorIsa extends Bundle {
     val ivx = Bool()
     val ivi = Bool()
 
-    // def sel = ivv | ivx | ivi
+    def sel = ivv | ivx | ivi
   }
 
   class OPM extends Bundle{
     val mvv = Bool()
     val mvx = Bool()
 
-    // def sel = mvv | mvx 
-    def mrd = 
-    def mvd = 
+    def sel = mvv | mvx
   }
 
   class OPF extends Bundle{
     val fvv = Bool()
     val fvf = Bool()
 
-    // def sel = fvv | fvf
-    def fvd = 
-    def frd = 
+    def sel = fvv | fvf
   }
 
   val vadd         = new OPI
@@ -771,53 +767,93 @@ class VectorIsa extends Bundle {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+  def isOPI = vadd | vsub | vrsub | vminu | vmin | vmaxu | vmax | vand | vor | vxor | vrgather | vslideup | vrgatherei16 | vslidedown | vadc | vmadc | vsbc | vmsbc | vmerge | vmv | vmseq | vmsne | vmsltu | vmslt | vmsleu | vmsle | vmsgtu | vmsgt | vsaddu | vsadd | vssubu  | vssub | vsll | vsmul | vmvnr | vsrl | vsra | vssrl | vssra  | vnsrl | vnsra | vnclipu | vnclip  | vwredsumu | vwredsum
+  def isOPM = vredsum | vredand | vredor | vredxor | vredminu | vredmin | vredmaxu | vredmax | vaaddu | vaadd | vasubu | vasub | vslide1up | vslide1down | vcompress | vmandnot | vmand | vmor | vmxor | vmornot | vmnand | vmnor | vmxnor | vdivu | vdiv | vremu | vrem | vmulhu | vmul | vmulhsu | vmulh | vmadd | vnmsub | vmacc | vnmsac | vwaddu | vwadd | vwsubu | vwsub | vwaddu_w | vwadd_w | vwsubu_w | vwsub_w | vwmulu | vwmulsu | vwmul | vwmaccu  | vwmacc | vwmaccus | vwmaccsu
+  def isOPF = vfadd | vfredusum | vfsub | vfredosum | vfmin | vfredmin | vfmax | vfredmax | vfsgnj | vfsgnjn | vfsgnjx | vfslide1up | vfslide1down | vfmerge | vfmv | vmfeq | vmfle | vmflt | vmfne | vmfgt | vmfge | vfdiv | vfrdiv | vfmul | vfrsub | vfmadd | vfnmadd | vfmsub | vfnmsub | vfmacc | vfnmacc | vfmsac | vfnmsac | vfwadd | vfwredusum | vfwsub | vfwredosum | vfwadd_w | vfwsub_w | vfwmul | vfwmacc | vfwnmacc | vfwmsac | vfwnmsac
+
+
+
+  def isIVV = 
+    vadd.ivv | vsub.ivv | vrsub.ivv | vminu.ivv | vmin.ivv | vmaxu.ivv | vmax.ivv | vand.ivv | vor.ivv | vxor.ivv | vrgather.ivv | vslideup.ivv | vrgatherei16.ivv | vslidedown.ivv | vadc.ivv | vmadc.ivv | vsbc.ivv | vmsbc.ivv | vmerge.ivv | vmv.ivv | vmseq.ivv | vmsne.ivv | vmsltu.ivv | vmslt.ivv | vmsleu.ivv | vmsle.ivv | vmsgtu.ivv | vmsgt.ivv | vsaddu.ivv | vsadd.ivv | vssubu .ivv | vssub.ivv | vsll.ivv | vsmul.ivv | vmvnr.ivv | vsrl.ivv | vsra.ivv | vssrl.ivv | vssra .ivv | vnsrl.ivv | vnsra.ivv | vnclipu.ivv | vnclip .ivv | vwredsumu.ivv | vwredsum.ivv
+  def isIVX = 
+    vadd.ivx | vsub.ivx | vrsub.ivx | vminu.ivx | vmin.ivx | vmaxu.ivx | vmax.ivx | vand.ivx | vor.ivx | vxor.ivx | vrgather.ivx | vslideup.ivx | vrgatherei16.ivx | vslidedown.ivx | vadc.ivx | vmadc.ivx | vsbc.ivx | vmsbc.ivx | vmerge.ivx | vmv.ivx | vmseq.ivx | vmsne.ivx | vmsltu.ivx | vmslt.ivx | vmsleu.ivx | vmsle.ivx | vmsgtu.ivx | vmsgt.ivx | vsaddu.ivx | vsadd.ivx | vssubu .ivx | vssub.ivx | vsll.ivx | vsmul.ivx | vmvnr.ivx | vsrl.ivx | vsra.ivx | vssrl.ivx | vssra .ivx | vnsrl.ivx | vnsra.ivx | vnclipu.ivx | vnclip .ivx | vwredsumu.ivx | vwredsum.ivx
+  def isIVI = 
+    vadd.ivi | vsub.ivi | vrsub.ivi | vminu.ivi | vmin.ivi | vmaxu.ivi | vmax.ivi | vand.ivi | vor.ivi | vxor.ivi | vrgather.ivi | vslideup.ivi | vrgatherei16.ivi | vslidedown.ivi | vadc.ivi | vmadc.ivi | vsbc.ivi | vmsbc.ivi | vmerge.ivi | vmv.ivi | vmseq.ivi | vmsne.ivi | vmsltu.ivi | vmslt.ivi | vmsleu.ivi | vmsle.ivi | vmsgtu.ivi | vmsgt.ivi | vsaddu.ivi | vsadd.ivi | vssubu .ivi | vssub.ivi | vsll.ivi | vsmul.ivi | vmvnr.ivi | vsrl.ivi | vsra.ivi | vssrl.ivi | vssra .ivi | vnsrl.ivi | vnsra.ivi | vnclipu.ivi | vnclip .ivi | vwredsumu.ivi | vwredsum.ivi
+
+  def isMVV = 
+    vredsum.mvv | vredand.mvv | vredor.mvv | vredxor.mvv | vredminu.mvv | vredmin.mvv | vredmaxu.mvv | vredmax.mvv | vaaddu.mvv | vaadd.mvv | vasubu.mvv | vasub.mvv | vslide1up.mvv | vslide1down.mvv | vcompress.mvv | vmandnot.mvv | vmand.mvv | vmor.mvv | vmxor.mvv | vmornot.mvv | vmnand.mvv | vmnor.mvv | vmxnor.mvv | vdivu.mvv | vdiv.mvv | vremu.mvv | vrem.mvv | vmulhu.mvv | vmul.mvv | vmulhsu.mvv | vmulh.mvv | vmadd.mvv | vnmsub.mvv | vmacc.mvv | vnmsac.mvv | vwaddu.mvv | vwadd.mvv | vwsubu.mvv | vwsub.mvv | vwaddu_w.mvv | vwadd_w.mvv | vwsubu_w.mvv | vwsub_w.mvv | vwmulu.mvv | vwmulsu.mvv | vwmul.mvv | vwmaccu .mvv | vwmacc.mvv | vwmaccus.mvv | vwmaccsu.mvv
+  def isMVX = 
+    vredsum.mvx | vredand.mvx | vredor.mvx | vredxor.mvx | vredminu.mvx | vredmin.mvx | vredmaxu.mvx | vredmax.mvx | vaaddu.mvx | vaadd.mvx | vasubu.mvx | vasub.mvx | vslide1up.mvx | vslide1down.mvx | vcompress.mvx | vmandnot.mvx | vmand.mvx | vmor.mvx | vmxor.mvx | vmornot.mvx | vmnand.mvx | vmnor.mvx | vmxnor.mvx | vdivu.mvx | vdiv.mvx | vremu.mvx | vrem.mvx | vmulhu.mvx | vmul.mvx | vmulhsu.mvx | vmulh.mvx | vmadd.mvx | vnmsub.mvx | vmacc.mvx | vnmsac.mvx | vwaddu.mvx | vwadd.mvx | vwsubu.mvx | vwsub.mvx | vwaddu_w.mvx | vwadd_w.mvx | vwsubu_w.mvx | vwsub_w.mvx | vwmulu.mvx | vwmulsu.mvx | vwmul.mvx | vwmaccu .mvx | vwmacc.mvx | vwmaccus.mvx | vwmaccsu.mvx
+
+  def isFVV = 
+    vfadd.fvv | vfredusum.fvv | vfsub.fvv | vfredosum.fvv | vfmin.fvv | vfredmin.fvv | vfmax.fvv | vfredmax.fvv | vfsgnj.fvv | vfsgnjn.fvv | vfsgnjx.fvv | vfslide1up.fvv | vfslide1down.fvv | vfmerge.fvv | vfmv.fvv | vmfeq.fvv | vmfle.fvv | vmflt.fvv | vmfne.fvv | vmfgt.fvv | vmfge.fvv | vfdiv.fvv | vfrdiv.fvv | vfmul.fvv | vfrsub.fvv | vfmadd.fvv | vfnmadd.fvv | vfmsub.fvv | vfnmsub.fvv | vfmacc.fvv | vfnmacc.fvv | vfmsac.fvv | vfnmsac.fvv | vfwadd.fvv | vfwredusum.fvv | vfwsub.fvv | vfwredosum.fvv | vfwadd_w.fvv | vfwsub_w.fvv | vfwmul.fvv | vfwmacc.fvv | vfwnmacc.fvv | vfwmsac.fvv | vfwnmsac.fvv
+  def isFVF = 
+    vfadd.fvf | vfredusum.fvf | vfsub.fvf | vfredosum.fvf | vfmin.fvf | vfredmin.fvf | vfmax.fvf | vfredmax.fvf | vfsgnj.fvf | vfsgnjn.fvf | vfsgnjx.fvf | vfslide1up.fvf | vfslide1down.fvf | vfmerge.fvf | vfmv.fvf | vmfeq.fvf | vmfle.fvf | vmflt.fvf | vmfne.fvf | vmfgt.fvf | vmfge.fvf | vfdiv.fvf | vfrdiv.fvf | vfmul.fvf | vfrsub.fvf | vfmadd.fvf | vfnmadd.fvf | vfmsub.fvf | vfnmsub.fvf | vfmacc.fvf | vfnmacc.fvf | vfmsac.fvf | vfnmsac.fvf | vfwadd.fvf | vfwredusum.fvf | vfwsub.fvf | vfwredosum.fvf | vfwadd_w.fvf | vfwsub_w.fvf | vfwmul.fvf | vfwmacc.fvf | vfwnmacc.fvf | vfwmsac.fvf | vfwnmsac.fvf
+
+
+
+
+
+
   def isVAlu =
-    vadd | vsub | vrsub | vminu | vmin | vmaxu | vmax | vand | vor | vxor | 
-    vwaddu | vwadd | vwsubu | vwsub | vwaddu_w | vwadd_w  | vwsubu_w | vwsub_w | vadc | vmadc | vsbc | vmsbc |
+    vadd.sel | vsub.sel | vrsub.sel | vminu.sel | vmin.sel | vmaxu.sel | vmax.sel | vand.sel | vor.sel | vxor.sel | 
+    vwaddu.sel | vwadd.sel | vwsubu.sel | vwsub.sel | vwaddu_w.sel | vwadd_w.sel  | vwsubu_w.sel | vwsub_w.sel | vadc.sel | vmadc.sel | vsbc.sel | vmsbc.sel |
     vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
-    vsll  | vsrl  | vsra  | vnsrl | vnsra |
-    vmseq  | vmsne  | vmsltu | vmslt  | vmsleu | vmsle  | vmsgtu | vmsgt  |
-    vmerge | vmv |
-    vredsum | vredand | vredor | vredxor | vredminu | vredmin | vredmaxu | vredmax |
-    vwredsumu | vwredsum |
-    vmand | vmnand | vmandnot | vmxor | vmor | vmnor | vmornot | vmxnor |
+    vsll.sel  | vsrl.sel  | vsra.sel  | vnsrl.sel | vnsra.sel |
+    vmseq.sel  | vmsne.sel  | vmsltu.sel | vmslt.sel  | vmsleu.sel | vmsle.sel  | vmsgtu.sel | vmsgt.sel  |
+    vmerge.sel | vmv.sel |
+    vredsum.sel | vredand.sel | vredor.sel | vredxor.sel | vredminu.sel | vredmin.sel | vredmaxu.sel | vredmax.sel |
+    vwredsumu.sel | vwredsum.sel |
+    vmand.sel | vmnand.sel | vmandnot.sel | vmxor.sel | vmor.sel | vmnor.sel | vmornot.sel | vmxnor.sel |
     vpopc | vfirst | vmsbf | vmsif | vmsof | viota | vid |
     vmv_x_s | vmv_s_x |
-    vslideup | vslidedown | vslide1up | vslide1down |
-    vrgather | vrgatherei16 |
-    vcompress |
-    vmvnr
+    vslideup.sel | vslidedown.sel | vslide1up.sel | vslide1down.sel |
+    vrgather.sel | vrgatherei16.sel |
+    vcompress.sel |
+    vmvnr.sel
 
   def isVMul = 
-    vdivu | vdiv  | vremu | vrem  |
-    vmulhu | vmul | vmulhsu | vmulh |
-    vmadd  | vnmsub | vmacc  | vnmsac |
-    vwmulu  | vwmulsu | vwmul   |
-    vwmaccu  | vwmacc | vwmaccus | vwmaccsu
+    vdivu.sel | vdiv.sel  | vremu.sel | vrem.sel  |
+    vmulhu.sel | vmul.sel | vmulhsu.sel | vmulh.sel |
+    vmadd.sel  | vnmsub.sel | vmacc.sel  | vnmsac.sel |
+    vwmulu.sel  | vwmulsu.sel | vwmul.sel   |
+    vwmaccu.sel  | vwmacc.sel | vwmaccus.sel | vwmaccsu.sel
 
   def isVQpu = 
-    vsaddu | vsadd | vssubu | vssub |
-    vaaddu | vaadd | vasubu | vasub |
-    vsmul |
-    vssrl | vssra |
-    vnclipu | vnclip
+    vsaddu.sel | vsadd.sel | vssubu.sel | vssub.sel |
+    vaaddu.sel | vaadd.sel | vasubu.sel | vasub.sel |
+    vsmul.sel |
+    vssrl.sel | vssra.sel |
+    vnclipu.sel | vnclip.sel
 
   def isVFpu = 
-    vfadd | vfsub | vfrsub |
-    vfwadd | vfwsub | vfwadd_w | vfwsub_w |
-    vfdiv | vfrdiv | vfmul | vfwmul |
-    vfmacc | vfnmacc | vfmsac  | vfnmsac | vfmadd  | vfnmadd | vfmsub  | vfnmsub |
-    vfwmacc | vfwnmacc | vfwmsac  | vfwnmsac |
+    vfadd.sel | vfsub.sel | vfrsub.sel |
+    vfwadd.sel | vfwsub.sel | vfwadd_w.sel | vfwsub_w.sel |
+    vfdiv.sel | vfrdiv.sel | vfmul.sel | vfwmul.sel |
+    vfmacc.sel | vfnmacc.sel | vfmsac.sel  | vfnmsac.sel | vfmadd.sel  | vfnmadd.sel | vfmsub.sel  | vfnmsub.sel |
+    vfwmacc.sel | vfwnmacc.sel | vfwmsac.sel  | vfwnmsac.sel |
     vfsqrt_v | vfrsqrt7_v | vfrec7_v |
-    vfmin   | vfmax   | vfsgnj  | vfsgnjn | vfsgnjx |
-    vmfeq | vmfle | vmflt | vmfne | vmfgt | vmfge |
+    vfmin.sel   | vfmax.sel   | vfsgnj.sel  | vfsgnjn.sel | vfsgnjx.sel |
+    vmfeq.sel | vmfle.sel | vmflt.sel | vmfne.sel | vmfgt.sel | vmfge.sel |
     vfclass_v |
-    vfmerge | vfmv |
+    vfmerge.sel | vfmv.sel |
     vfcvt_xu_f_v | vfcvt_x_f_v | vfcvt_f_xu_v | vfcvt_f_x_v | vfcvt_rtz_xu_f_v | vfcvt_rtz_x_f_v | vfwcvt_xu_f_v | vfwcvt_x_f_v | vfwcvt_f_xu_v | vfwcvt_f_x_v | vfwcvt_f_f_v | vfwcvt_rtz_xu_f_v | vfwcvt_rtz_x_f_v | vfncvt_xu_f_w | vfncvt_x_f_w | vfncvt_f_xu_w | vfncvt_f_x_w | vfncvt_f_f_w | vfncvt_rod_f_f_w | vfncvt_rtz_xu_f_w | vfncvt_rtz_x_f_w |
-    vfredusum | vfredosum | vfredmin  | vfredmax  |
-    vfwredusum | vfwredosum |
+    vfredusum.sel | vfredosum.sel | vfredmin.sel  | vfredmax.sel  |
+    vfwredusum.sel | vfwredosum.sel |
     vfmv_f_s | vfmv_s_f |
-    vfslide1up | vfslide1down
+    vfslide1up.sel | vfslide1down.sel
 
   def isVload = 
     vle | vlm | vlse | vluxei | vloxei | vleNff | vlNreN
@@ -825,7 +861,7 @@ class VectorIsa extends Bundle {
   def isVstore = 
     vse | vsm | vsse | vsuxei | vsoxei | vsNr
 
-  def isVMem = vload | vstore
+  def isVMem = isVload | isVstore
 
   def isVConfig = vsetvli | vsetivli | vsetvl
 
@@ -836,17 +872,17 @@ class VectorIsa extends Bundle {
 
 
 
-  def isLookUpRS1 = _.ivx | _.mvx | vsetvli | vsetvl | isVload | isVstore | vmv_s_x
-  def isLookUpRS2 = _.fvf | vsetvl | vlse | vsse
+  def isLookUpRS1 = isIVX | isMVX | vsetvli | vsetvl | isVload | isVstore | vmv_s_x
+  def isLookUpRS2 = isFVF | vsetvl | vlse | vsse
 
 
 
   def isLookUpFS1 = vfmv_s_f
 
 
-  def isLookUpVS1 = _.ivv | _.mvv | _.fvv
+  def isLookUpVS1 = isIVV | isMVV | isFVV
   def isLookUpVS2 =
-    _.ivv | _.ivx | _.ivi | _.mvv | _.mvx | _.fvv | _.fvf |
+    isIVV |isIVX | isIVI | isMVV | isMVX | isFVV | isFVF |
     vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
     vluxei | vloxei | vsuxei | vsoxei |
     vfsqrt_v | vfrsqrt7_v | vfrec7_v | vfclass_v |
@@ -855,36 +891,38 @@ class VectorIsa extends Bundle {
     vfncvt_xu_f_w | vfncvt_x_f_w | vfncvt_rtz_xu_f_w | vfncvt_rtz_x_f_w | vfncvt_f_xu_w | vfncvt_f_x_w | vfncvt_f_f_w | vfncvt_rod_f_f_w |
     vfirst | vmsbf | vmsif | vmsof | viota |
     vmv_x_s | vfmv_f_s | vpopc
+
   def isLookUpVS3 =
-    vmacc._ | vnmsac._ | vmadd._ | vnmsub._ | vwmaccu._ | vwmacc._ | vwmaccsu._ | vwmaccus._ |
-    vfmacc._ | vfnmacc._ | vfmsac._ | vfnmsac._ | vfmadd._ | vfnmadd._ | vfmsub._ | vfnmsub._ | vfwmacc._ | vfwnmacc._ | vfwmsac._ | vfwnmsac._ |
+    vmacc.sel | vnmsac.sel | vmadd.sel | vnmsub.sel | vwmaccu.sel | vwmacc.sel | vwmaccsu.sel | vwmaccus.sel |
+    vfmacc.sel | vfnmacc.sel | vfmsac.sel | vfnmsac.sel | vfmadd.sel | vfnmadd.sel | vfmsub.sel | vfnmsub.sel | vfwmacc.sel | vfwnmacc.sel | vfwmsac.sel | vfwnmsac.sel |
     isVstore
 
   def isLookUpVS2P =
-    vwaddu_w | vwsubu_w | vwadd_w | vwsub_w |
-    vnclipu._ | vnclip._
-    vfwadd_w._ | vfwsub_w._ |
-    vfwmacc._ | vfwnmacc._ | vfwmsac._ | vfwnmsac._ | 
-    vfncvt_xu_f_w | vfncvt_x_f_w | vfncvt_rtz_xu_f_w | vfncvt_rtz_x_f_w | vfncvt_f_xu_w | vfncvt_f_x_w | vfncvt_f_f_w | vfncvt_rod_f_f_w |
+    vwaddu_w.sel | vwsubu_w.sel | vwadd_w.sel | vwsub_w.sel |
+    vnclipu.sel | vnclip.sel |
+    vfwadd_w.sel | vfwsub_w.sel |
+    vfwmacc.sel | vfwnmacc.sel | vfwmsac.sel | vfwnmsac.sel | 
+    vfncvt_xu_f_w | vfncvt_x_f_w | vfncvt_rtz_xu_f_w | vfncvt_rtz_x_f_w | vfncvt_f_xu_w | vfncvt_f_x_w | vfncvt_f_f_w | vfncvt_rod_f_f_w
 
 
   def isLookUpVS3P =
-    vwmaccu._ | vwmacc._ | vwmaccsu._ | vwmaccus._ |
+    vwmaccu.sel | vwmacc.sel | vwmaccsu.sel | vwmaccus.sel
 
   def is2Malloc = 
-    vwaddu._ | vwsubu._ | vwadd._ | vwsub._ |
-    vwaddu_w | vwsubu_w | vwadd_w | vwsub_w |
-    vwmul._  | vwmulu._ | vwmulsu._ |
-    vwmaccu._ | vwmacc._ | vwmaccsu._ | vwmaccus._ |
-    vfwadd._ | vfwsub._ | vfwadd_w._ | vfwsub_w._ |
-    vfmul._ |
-    vfwmacc._ | vfwnmacc._ | vfwmsac._ | vfwnmsac._ | 
-    vfwcvt_xu_f_v | vfwcvt_x_f_v | vfwcvt_rtz_xu_f_v | vfwcvt_rtz_x_f_v | vfwcvt_f_xu_v | vfwcvt_f_x_v | vfwcvt_f_f_v |
-    vwredsumu._ | vwredsum._ | vfwredosum._
+    vwaddu.sel | vwsubu.sel | vwadd.sel | vwsub.sel |
+    vwaddu_w.sel | vwsubu_w.sel | vwadd_w.sel | vwsub_w.sel |
+    vwmul.sel | vwmulu.sel | vwmulsu.sel |
+    vwmaccu.sel | vwmacc.sel | vwmaccsu.sel | vwmaccus.sel |
+    vfwadd.sel | vfwsub.sel | vfwadd_w.sel | vfwsub_w.sel |
+    vfmul.sel |
+    vfwmacc.sel | vfwnmacc.sel | vfwmsac.sel | vfwnmsac.sel | 
+    vwredsumu.sel | vwredsum.sel | vfwredosum.sel |
+    vfwcvt_xu_f_v | vfwcvt_x_f_v | vfwcvt_rtz_xu_f_v | vfwcvt_rtz_x_f_v | vfwcvt_f_xu_v | vfwcvt_f_x_v | vfwcvt_f_f_v
 
 
-  def isXwb = _.mrd | vsetvli | vsetivli | vsetvl | vfirst | vpopc | vmv_x_s
-  def isFwb = _.frd | vfmv_f_s
+
+  def isXwb =  vsetvli | vsetivli | vsetvl | vfirst | vpopc | vmv_x_s
+  def isFwb =  vfmv_f_s
   def isVwb =
     _.ivv | _.ivx | _.ivi | _.mvd | _.fvf | _.fvd |
     vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
@@ -986,8 +1024,8 @@ class Instruction_set(implicit p: Parameters) extends RiftBundle{
 
   def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mulDiv | privil_isa.is_privil | fpu_isa.is_fpu) 
 
-  def isRS1 = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu             | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isLookUpRS1
-  def isRS2 = alu_isa.is_alu | bru_isa.is_bru | (lsu_isa.is_lsu & ~is_fst) | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isLookUpRS2
+  def isRS1 = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu                     | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isLookUpRS1
+  def isRS2 = alu_isa.is_alu | bru_isa.is_bru | (lsu_isa.is_lsu & ~lsu_isa.is_fst) | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isLookUpRS2
   def isFS1 = fpu_isa.is_fop | vectorIsa.isLookUpFS1
   def isFS2 = fpu_isa.is_fop
   def isFS3 = fpu_isa.is_fop

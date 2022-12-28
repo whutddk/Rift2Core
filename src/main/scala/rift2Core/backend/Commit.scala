@@ -281,9 +281,9 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
 
 abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
-    val cm_op = Vec(cmChn, new Info_commit_op)
+    val cm_op = Vec(cmChn, new Info_commit_op(32, maxRegNum))
     val csrCmm = Vec(cmChn, new SeqReg_Commit_Bundle(4))
-    val csrOp = Input(Vec(cmm, new Exe_Port))
+    val csrOp = Input(Vec(cmChn, new Exe_Port))
     val rod = Vec(cmChn, Flipped(new DecoupledIO( new Info_reorder_i ) ))
 
     val cmm_lsu = Output(new Info_cmm_lsu)
@@ -361,7 +361,7 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   val bctq = ReDirect( emptyBCTQ, VecInit( io.rod.map{_.bits.is_branch} ) )
   val jctq = ReDirect( emptyJCTQ, VecInit( io.rod.map{_.bits.is_jalr} ) )
 
-  val csrExe  = ReDirect( emptyExePort, VecInit( io.rod.map{_.bits.is_csr & _.bits.csrw === 0.U} ) )
+  val csrExe  = ReDirect( emptyExePort, VecInit( io.rod.map{ x => x.bits.is_csr & x.bits.csrw === 0.U} ) )
   val fcsrExe = ReDirect( io.fcsr_cmm_op, VecInit( io.rod.map{_.bits.is_fcsr} ) )
 
   val emu_reset = RegInit( false.B )
@@ -549,8 +549,8 @@ trait CommitRegFiles { this: BaseCommit =>
   for ( i <- 0 until cmChn ) yield {
     io.cm_op(i).phy := io.rod(i).bits.rd0_phy
     io.cm_op(i).raw := io.rod(i).bits.rd0_raw
-    io.cm_op(i).toX := io.rod(i).bits.is_xcmm
-    io.cm_op(i).toF := io.rod(i).bits.is_fcmm 
+    io.cm_op(i).toX := io.rod(i).bits.isXcmm
+    io.cm_op(i).toF := io.rod(i).bits.isFcmm 
   }
 
     io.cmm_lsu.is_amo_pending := {
@@ -570,7 +570,7 @@ trait CommitCsr { this: BaseCommit =>
   for ( i <- 0 until cmChn ) yield {
     io.csrCmm(i).isComfirm := commit_state_is_comfirm(i)
     io.csrCmm(i).isAbort   := commit_state_is_abort(i) | commit_state_is_misPredict(i)
-    io.csrCmm(i).phy       := io.rod(i).bits.csrw( log2Ceil(4)-1,  0 )
+    io.csrCmm(i).idx       := io.rod(i).bits.csrw( log2Ceil(4)-1,  0 )
     io.csrCmm(i).addr      := io.rod(i).bits.csrw( log2Ceil(4)+11, log2Ceil(4)+0 )
   }
 }

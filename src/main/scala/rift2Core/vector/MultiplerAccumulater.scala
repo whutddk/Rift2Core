@@ -78,6 +78,7 @@ class MultiplerAccumulater() extends Module{
   }
 
   val sew64Res = 
+    (
       res(0) +
       res(1) << 8 +
       res(2) << 16 +
@@ -86,7 +87,7 @@ class MultiplerAccumulater() extends Module{
       res(5) << 40 +
       res(6) << 48 +
       res(7) << 56 +
-    )(127,0)
+    ).apply(127,0)
 
   io.resh := 
     Mux1H(

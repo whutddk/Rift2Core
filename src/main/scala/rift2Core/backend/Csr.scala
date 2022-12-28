@@ -58,7 +58,7 @@ class Csr(implicit p: Parameters) extends RiftModule {
   val rc = io.csr_iss_exe.bits.fun.rc
   
   val dat = io.csr_iss_exe.bits.param.dat.op1
-  val addr = io.csr_iss_exe.bits.csrw( log2Ceil(4)+11, log2Ceil(4)+0 )
+  val addr = io.csr_iss_exe.bits.param.csrw( log2Ceil(4)+11, log2Ceil(4)+0 )
 
   val dontWrite = (dat === 0.U) & ( rs | rc )
 
@@ -120,7 +120,7 @@ class Csr(implicit p: Parameters) extends RiftModule {
     io.csr_cWriteBack.bits.op_rw := rw & ~dontWrite
     io.csr_cWriteBack.bits.op_rs := rs & ~dontWrite
     io.csr_cWriteBack.bits.op_rc := rc & ~dontWrite
-    io.csr_cWriteBack.bits.idx   := io.csr_iss_exe.bits.csrw(log2Ceil(4)-1, 0 )
+    io.csr_cWriteBack.bits.idx   := io.csr_iss_exe.bits.param.csrw(log2Ceil(4)-1, 0 )
   }
 
 

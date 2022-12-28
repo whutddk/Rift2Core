@@ -66,7 +66,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
 
     
-    val commit = Vec(cmChn, Flipped((new Info_commit_op)))
+    val commit  = Vec(cmChn, Flipped((new Info_commit_op(32, maxRegNum))))
     val cCommit = Vec(cmChn, Flipped(new SeqReg_Commit_Bundle(4)))
 
     val csrIsReady = Output(new CSR_LOG_Bundle)
@@ -79,7 +79,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
   val iReg = Module(new XRegFiles(dw = 64, dp = xRegNum, rnChn, opChn, wbChn, cmChn))
   val fReg = if( fpuNum > 0 ) { Module(new FRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn)) } else {  Module(new FakeFRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn) ) }
-  val cReg = Module(new CRegfiles)
+  val cReg = Module(new CRegfiles( rnChn, wbc = 4, cmChn ))
 
   io.cLookup <> cReg.io.lookup
   io.cRename <> cReg.io.rename

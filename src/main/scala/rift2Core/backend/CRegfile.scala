@@ -28,7 +28,7 @@ import rift2Core.privilege._
 import rift2Chip._
 import chipsalliance.rocketchip.config.Parameters
 
-abstract class CRegfilesBase(implicit p: Parameters) extends RiftModule {
+abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val lookup = Vec( rnc, new SeqReg_Lookup_Bundle(4))
     val rename = Vec( rnc, new SeqReg_Rename_Bundle(4))
@@ -62,7 +62,7 @@ abstract class CRegfilesBase(implicit p: Parameters) extends RiftModule {
 trait MSTATUS_Reg{ this: CRegfilesBase =>
   
 
-  val mstatusReg = Module( SeqCsr(dw = 64, 4, 0.U, rnChn, wbChn, cmChn) )
+  val mstatusReg = Module( new SeqCsr(dw = 64, 4, 0.U, 0x300, rnc, wbc, cmm) )
 
   
 
@@ -76,20 +76,20 @@ trait MSTATUS_Reg{ this: CRegfilesBase =>
   }
 
   for( i <- 0 until wbc ){
-      mstatusReg.io.writeBack(i).dati  := DontCare
-      mstatusReg.io.writeBack(i).addr  := DontCare
-      mstatusReg.io.writeBack(i).op_rw := false.B
-      mstatusReg.io.writeBack(i).op_rs := false.B
-      mstatusReg.io.writeBack(i).op_rc := false.B
-      mstatusReg.io.writeBack(i).idx   := DontCare
+      mstatusReg.io.writeBack(i).bits.dati  := DontCare
+      mstatusReg.io.writeBack(i).bits.addr  := DontCare
+      mstatusReg.io.writeBack(i).bits.op_rw := false.B
+      mstatusReg.io.writeBack(i).bits.op_rs := false.B
+      mstatusReg.io.writeBack(i).bits.op_rc := false.B
+      mstatusReg.io.writeBack(i).bits.idx   := DontCare
 
-    when( io.writeBack(i).addr === "h300".U ){
+    when( io.writeBack(i).bits.addr === "h300".U ){
       mstatusReg.io.writeBack(i) := io.writeBack(i)
     }
   }
 
 
-  for( i <- 0 unitl cmm ){
+  for( i <- 0 until cmm ){
     mstatusReg.io.commit(i).isComfirm := false.B
     mstatusReg.io.commit(i).isAbort := false.B
     mstatusReg.io.commit(i).idx := DontCare
@@ -105,7 +105,7 @@ class CSR_LOG_Bundle(dp: Int = 4) extends Bundle{
   val mstatus = Vec( dp, Bool() )
 }
 
-class CRegfiles extends CRegfilesBase
+class CRegfiles( val rnc: Int, val wbc: Int, val cmm: Int )(implicit p: Parameters) extends CRegfilesBase( rnc, wbc, cmm )
 with MSTATUS_Reg{
   val isReady = IO(Output(new CSR_LOG_Bundle))
 

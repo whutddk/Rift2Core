@@ -20,9 +20,12 @@ package rift2Core.backend
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
+import rift2Core.privilege._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config._
+import chipsalliance.rocketchip.config.Parameters
+
+
 
 class SeqReg_Lookup_Bundle(dp: Int)(implicit p: Parameters) extends RiftBundle{
   val rsp = Output(UInt(log2Ceil(dp).W))

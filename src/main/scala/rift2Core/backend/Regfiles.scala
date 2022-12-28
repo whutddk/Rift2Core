@@ -41,11 +41,11 @@ class Rename_Bundle()(implicit p: Parameters) extends RiftBundle{
 }
 
 
-class Info_commit_op(dp: Int)(implicit p: Parameters) extends RiftBundle{
+class Info_commit_op(arc: Int, dp: Int)(implicit p: Parameters) extends RiftBundle{
   val is_comfirm = Output(Bool())
   val is_MisPredict = Output(Bool())
   val is_abort   = Output(Bool())
-  val raw        = Output(UInt(5.W)  )
+  val raw        = Output(UInt(( log2Ceil(arc)       ).W))
   val phy        = Output(UInt(( log2Ceil(maxRegNum) ).W))
   val toX        = Output(Bool())
   val toF        = Output(Bool())
@@ -68,7 +68,7 @@ abstract class RegFilesBase(dw: Int, dp: Int, arc: Int, rnc: Int, rop: Int, wbc:
     /** writeBack request from exeUnit */
     val exe_writeBack = Vec(wbc, Flipped(new DecoupledIO(new WriteBack_info(dw))))
     /** Commit request from commitUnit */
-    val commit = Vec(cmm, Flipped(new Info_commit_op(dp)))
+    val commit = Vec(cmm, Flipped(new Info_commit_op(arc, dp)))
 
     val diffReg = Output(Vec(arc, UInt(dw.W)))
   })
