@@ -260,7 +260,7 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   if2.io.ifence := cmm_stage.io.ifence
 
 
-  iss_stage.csrfiles := cmm_stage.io.csrfiles
+  iss_stage.io.csrfiles := cmm_stage.io.csrfiles
   iwb_stage.io.cCommit <> cmm_stage.io.csrCmm
   cmm_stage.io.csrOp := iwb_stage.io.csrOp
 

@@ -30,11 +30,11 @@ trait VRegFilesReName{ this: RegFilesReal =>
 
 
   /** finding out the first Free-phy-register */ 
-  val mollocIdx = Wire(Vec( 2*rnc, UInt((log2Ceil(regNum)).W)))
+  val mollocIdx = Wire(Vec( 2*rnc, UInt((log2Ceil(dp)).W)))
 
   for ( i <- 0 until 2*rnc ) {
     mollocIdx(i) := 0.U
-    for ( j <- (regNum-1) to 1 by -1 ) {
+    for ( j <- (dp-1) to 1 by -1 ) {
       if ( i == 0 ) { when( log(j) === 0.U ) { mollocIdx(i) := j.U }  }
       else { when( log(j) === 0.U && j.U > mollocIdx(i-1) ) { mollocIdx(i) := j.U } }
     }
@@ -103,26 +103,26 @@ trait VRegFilesLookup{ this: RegFilesReal =>
       io.lookup(i).rsp.rs2 := rename_ptr(idx2)
       io.lookup(i).rsp.rs3 := rename_ptr(idx3)
       io.lookup(i).rsp.rs4 := rename_ptr(idx4)
-      io_lookup_v0_rsp(i)  := rename_ptr(0)
+      vio.lookup_v0_rsp(i)  := rename_ptr(0)
     } else {
       io.lookup(i).rsp.rs1 := rename_ptr(idx1)
       io.lookup(i).rsp.rs2 := rename_ptr(idx2)
       io.lookup(i).rsp.rs3 := rename_ptr(idx3)
       io.lookup(i).rsp.rs4 := rename_ptr(idx4)
-      io_lookup_v0_rsp(i)  := rename_ptr(0)
+      vio.lookup_v0_rsp(i)  := rename_ptr(0)
 
       for ( j <- 0 until i ) {
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx3) ) { io.lookup(i).rsp.rs3 := mollocIdx(j) }
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx4) ) { io.lookup(i).rsp.rs4 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === 0.U ) ) { io_lookup_v0_rsp(i)  := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === 0.U ) ) { vio.lookup_v0_rsp(i)  := mollocIdx(j) }
 
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdxP(j) }
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdxP(j) }
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx3) ) { io.lookup(i).rsp.rs3 := mollocIdxP(j) }
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx4) ) { io.lookup(i).rsp.rs4 := mollocIdxP(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === 0.U ) ) { io_lookup_v0_rsp(i)  := mollocIdxP(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === 0.U ) ) { vio.lookup_v0_rsp(i)  := mollocIdxP(j) }
       }
     }
     when( io.rename(i).req.fire ) {
@@ -130,13 +130,13 @@ trait VRegFilesLookup{ this: RegFilesReal =>
       assert( io.lookup(i).rsp.rs2 =/= 0.U )
       assert( io.lookup(i).rsp.rs3 =/= 0.U )
       assert( io.lookup(i).rsp.rs4 =/= 0.U )
-      assert( io_lookup_v0_rsp(i)  =/= 0.U )      
+      assert( vio.lookup_v0_rsp(i)  =/= 0.U )      
     }
   }
 }
 
 
-class VRegFiles()(implicit p: Parameters) extends RegFilesReal(vParams.vlen, vRegNum, arc = 32, rnChn, vParams.opChn, vParams.wbChn, cmChn)
+class VRegFiles(dw: Int, dp: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int)(implicit p: Parameters) extends RegFilesReal(dw, dp, arc = 32, rnc, rop, wbc, cmm)
 with VRegFilesReName
 with VRegFilesLookup
 with RegFilesReadOP

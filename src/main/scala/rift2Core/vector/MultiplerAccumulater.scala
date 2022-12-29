@@ -25,15 +25,15 @@ import chipsalliance.rocketchip.config._
 
 
 class MultiplerAccumulater() extends Module{
-  require( elen <= 64 )
+  // require( vParams.elen <= 64 )
 
   val io = IO(new Bundle{
-    val req = Flipped(Decoupled(  ))
-    val rsp = Decoupled(  )
+    // val req = Flipped(Decoupled(  ))
+    // val rsp = Decoupled(  )
     val a   = Input(UInt(128.W))
     val b   = Input(UInt(64.W))
     val c   = Input(UInt(128.W))
-    val vm  = Input(  )
+    // val vm  = Input(  )
     val resh = Output(UInt(64.W))
     val resl = Output(UInt(64.W))
 
@@ -41,13 +41,9 @@ class MultiplerAccumulater() extends Module{
     val op  = Input( UInt(2.W) )
   })
 
-    // val op = 
-    //   Mux1H(Seq(
-    //     ( fmadd_s | fmadd_d | fadd_s | fadd_d | fmul_s | fmul_d ) -> "b00".U,
-    //     ( fmsub_s | fmsub_d | fsub_s | fsub_d                   ) -> "b01".U,
-    //     ( fnmsub_s | fnmsub_d                                   ) -> "b10".U,
-    //     ( fnmadd_s | fnmadd_d                                   ) -> "b11".U,
-    //   ))
+  val op  = io.op
+  val sew = io.sew
+
   val a   = Wire(Vec(8, UInt(64.W)))
   val b   = Wire(Vec(8, UInt(8.W)))
   val c   = Wire(Vec(8, UInt(8.W)))
@@ -70,38 +66,38 @@ class MultiplerAccumulater() extends Module{
 
   val sew32Res = ( 0 until 2 ).map{ i => 
     (
-      res(4*i) +
-      res(4*i+1) << 8 +
-      res(4*i+2) << 16 +
-      res(4*i+3) << 24 +
-    )(63,0)
+      (res(4*i)   << 0 ) +
+      (res(4*i+1) << 8 ) +
+      (res(4*i+2) << 16) +
+      (res(4*i+3) << 24)
+    ).apply(63,0)
   }
 
   val sew64Res = 
     (
-      res(0) +
-      res(1) << 8 +
-      res(2) << 16 +
-      res(3) << 24 +
-      res(4) << 32 +
-      res(5) << 40 +
-      res(6) << 48 +
-      res(7) << 56 +
+      (res(0) << 0 ) +
+      (res(1) << 8 ) +
+      (res(2) << 16) +
+      (res(3) << 24) +
+      (res(4) << 32) +
+      (res(5) << 40) +
+      (res(6) << 48) +
+      (res(7) << 56)
     ).apply(127,0)
 
   io.resh := 
     Mux1H(
-      ( sew === "b000".U ) -> Cat( (0 until 8).map{   sew8Res(i)(15,8) }.reserve ),
-      ( sew === "b001".U ) -> Cat( (0 until 4).map{ sew16Res(i)(31,16) }.reserve ),
-      ( sew === "b010".U ) -> Cat( (0 until 2).map{ sew32Res(i)(63,32) }.reserve ),
+      ( sew === "b000".U ) -> Cat( (0 until 8).map{ i =>  sew8Res(i)(15,8)  }.reserve ),
+      ( sew === "b001".U ) -> Cat( (0 until 4).map{ i => sew16Res(i)(31,16) }.reserve ),
+      ( sew === "b010".U ) -> Cat( (0 until 2).map{ i => sew32Res(i)(63,32) }.reserve ),
       ( sew === "b011".U ) -> sew64Res(127, 64),
     )
 
   io.resl := 
     Mux1H(
-      ( sew === "b000".U ) -> Cat( (0 until 8).map{   sew8Res(i)(7,0) }.reserve ),
-      ( sew === "b001".U ) -> Cat( (0 until 4).map{ sew16Res(i)(15,0) }.reserve ),
-      ( sew === "b010".U ) -> Cat( (0 until 2).map{ sew32Res(i)(31,0) }.reserve ),
+      ( sew === "b000".U ) -> Cat( (0 until 8).map{ i =>  sew8Res(i)(7,0)  }.reserve ),
+      ( sew === "b001".U ) -> Cat( (0 until 4).map{ i => sew16Res(i)(15,0) }.reserve ),
+      ( sew === "b010".U ) -> Cat( (0 until 2).map{ i => sew32Res(i)(31,0) }.reserve ),
       ( sew === "b011".U ) -> sew64Res(63, 0),
     )
 }

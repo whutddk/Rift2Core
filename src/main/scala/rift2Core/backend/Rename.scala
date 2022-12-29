@@ -39,8 +39,8 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
     val cLookup = Vec( rnChn, Flipped(new SeqReg_Lookup_Bundle(4) ) )
     val cRename = Vec( rnChn, Flipped(new SeqReg_Rename_Bundle(4) ) )
 
-    val vLookup = Vec( rnChn, new VLookup_Bundle )
-    val vRename = Vec( rnChn, new VRename_Bundle )
+    val vLookup = Vec( rnChn, new Lookup_Bundle )
+    val vRename = Vec( rnChn, new Rename_Bundle )
 
 
 
@@ -139,7 +139,7 @@ trait RenameMalloc { this: RenameBase =>
   for ( i <- 0 until rnChn ) yield {
 
     rnRspReport.io.enq(i).valid := io.rnReq(i).fire & ~io.rnReq(i).bits.is_privil_dpt
-    rnRspReport.io.enq(i).bits  := Pkg_Rename_Info(io.rnReq(i).bits, reg_phy(i), io.cLookup.rsp, io.cRename(i).rsp )
+    rnRspReport.io.enq(i).bits  := Pkg_Rename_Info(io.rnReq(i).bits, reg_phy(i), io.cLookup(i).rsp, io.cRename(i).rsp )
 
 
     io.xRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.is_iwb
@@ -165,9 +165,9 @@ trait RenameMalloc { this: RenameBase =>
 
     reg_phy(i).rd0 := 
       Mux1H(
-        io.xRename(i).req.fire -> io.xRename(i).rsp.rd0 :+
-        (if(fpuNum > 0) { io.fRename(i).req.fire -> io.fRename(i).rsp.rd0 } ) ++
-        (if(hasVector)  { io.vRename(i).req.fire -> io.vRename(i).rsp.rd0 } )
+        Seq(io.xRename(i).req.fire -> io.xRename(i).rsp.rd0) ++
+        (if(fpuNum > 0) { Seq(io.fRename(i).req.fire -> io.fRename(i).rsp.rd0) } else { Seq() } ) ++
+        (if(hasVector)  { Seq(io.vRename(i).req.fire -> io.vRename(i).rsp.rd0) } else { Seq() } )
       )
 
     reg_phy(i).rd1 := 
@@ -180,7 +180,7 @@ trait RenameMalloc { this: RenameBase =>
 
 
 trait WriteBackLookup {  this: RenameBase =>
-  for ( i <- 0 until rnChn ) yield {
+  for ( i <- 0 until rnChn ) {
     io.xLookup(i).req.rs1 := io.rnReq(i).bits.param.raw.rs1
     io.xLookup(i).req.rs2 := io.rnReq(i).bits.param.raw.rs2
     io.xLookup(i).req.rs3 := 0.U
@@ -206,7 +206,7 @@ trait WriteBackLookup {  this: RenameBase =>
         ))
       io.vLookup(i).req.rs5 := 0.U //always request v0
 
-      when( io.vLookup(i).req.fire ) {
+      when( io.rnReq(i).fire ) {
         when( io.rnReq(i).bits.vectorIsa.isLookUpVS2P ) { assert( io.rnReq(i).bits.param.raw.rs2 =/= 31.U ) }
         when( io.rnReq(i).bits.vectorIsa.isLookUpVS3P ) { assert( io.rnReq(i).bits.param.raw.rd0 =/= 31.U ) }
       }    
@@ -216,36 +216,36 @@ trait WriteBackLookup {  this: RenameBase =>
 
 
     reg_phy(i).rs1 :=
-      MuxCase( io.xLookup(i).rsp.rs1, 
-        (if( fpuNum > 0 ) {  io.rnReq(i).bits.fpu_isa.is_fop -> io.fLookup(i).rsp.rs1}) :+ 
-        (if( hasVector ) { Seq(
-          io.rnReq(i).bits.vectorIsa.isLookUpRS1 -> io.xLookup(i).rsp.rs1,
-          io.rnReq(i).bits.vectorIsa.isLookUpFS1 -> io.fLookup(i).rsp.rs1,
-          io.rnReq(i).bits.vectorIsa.isLookUpVS1 -> io.vLookup(i).rsp.vs1,          
+      MuxCase( io.xLookup(i).rsp.rs1, Seq() ++
+        ( if( fpuNum > 0 ) { Seq(io.rnReq(i).bits.fpu_isa.is_fop -> io.fLookup(i).rsp.rs1) } else Seq() ) ++ 
+        ( if( hasVector ) { Seq(
+            io.rnReq(i).bits.vectorIsa.isLookUpRS1 -> io.xLookup(i).rsp.rs1,
+            io.rnReq(i).bits.vectorIsa.isLookUpFS1 -> io.fLookup(i).rsp.rs1,
+            io.rnReq(i).bits.vectorIsa.isLookUpVS1 -> io.vLookup(i).rsp.rs1,          
+          )} else { Seq() }
         )
-        })
       )
     reg_phy(i).rs2 :=
-      MuxCase( io.xLookup(i).rsp.rs2, Seq(
-        (if( fpuNum > 0 ){ (io.rnReq(i).bits.fpu_isa.is_fop | io.rnReq(i).bits.lsu_isa.is_fst) -> io.fLookup(i).rsp.rs2 }),
-        (if( hasVector ){ io.rnReq(i).bits.vectorIsa.isLookUpVS2 -> io.vLookup(i).rsp.vs2 })
-      ))
+      MuxCase( io.xLookup(i).rsp.rs2, Seq() ++ 
+        ( if( fpuNum > 0 ) { Seq((io.rnReq(i).bits.fpu_isa.is_fop | io.rnReq(i).bits.lsu_isa.is_fst) -> io.fLookup(i).rsp.rs2) } else {Seq()} ) ++
+        ( if( hasVector )  { Seq( io.rnReq(i).bits.vectorIsa.isLookUpVS2 -> io.vLookup(i).rsp.rs2) } else { Seq() } )
+      )
 
     reg_phy(i).rs3 :=
-      MuxCase(0.U, Seq(
-        (if( fpuNum > 0 ) { io.rnReq(i).bits.fpu_isa.is_fop -> io.fLookup(i).rsp.rs3 }),
-        (if( hasVector ) {  io.rnReq(i).bits.vectorIsa.isLookUpVS3 -> io.vLookup(i).rsp.vs3 })
-      ))
+      MuxCase(0.U, Seq() ++ 
+        (if( fpuNum > 0 ) { Seq(io.rnReq(i).bits.fpu_isa.is_fop -> io.fLookup(i).rsp.rs3)}        else {Seq()} ) ++
+        (if( hasVector )  { Seq(io.rnReq(i).bits.vectorIsa.isLookUpVS3 -> io.vLookup(i).rsp.rs3)} else {Seq()} )
+      )
 
     reg_phy(i).rs4 :=
-      MuxCase(0.U, 
+      MuxCase(0.U, Seq() ++
         (if( hasVector ) { Seq(
-          io.rnReq(i).bits.vectorIsa.isLookUpVS2P -> io.vLookup(i).rsp.vs4,
-          io.rnReq(i).bits.vectorIsa.isLookUpVS3P -> io.vLookup(i).rsp.vs4,
-        )})
+          io.rnReq(i).bits.vectorIsa.isLookUpVS2P -> io.vLookup(i).rsp.rs4,
+          io.rnReq(i).bits.vectorIsa.isLookUpVS3P -> io.vLookup(i).rsp.rs4,
+        )} else {Seq()} )
       )
     reg_phy(i).rs5 :=
-        (if( hasVector ) { io.vLookup(i).rsp.vs5 }
+        (if( hasVector ) { io.vLookup(i).rsp.rs5 }
         else { 0.U })
 
 
@@ -256,8 +256,11 @@ trait WriteBackLookup {  this: RenameBase =>
 
 trait LoadRob{ this: RenameBase =>
   reOrder_fifo_i.io.flush := false.B
-  reOrder_fifo_i.io.enq(i).valid := io.rnReq(i).fire
-  reOrder_fifo_i.io.enq(i).bits  := Pkg_rod_i(io.rnReq(i).bits, reg_phy(i), io.cRename(i).rsp)
+  for ( i <- 0 until rnChn ){
+    reOrder_fifo_i.io.enq(i).valid := io.rnReq(i).fire
+    reOrder_fifo_i.io.enq(i).bits  := Pkg_rod_i(io.rnReq(i).bits, reg_phy(i), io.cRename(i).rsp)    
+  }
+
 }
 
 

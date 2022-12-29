@@ -31,6 +31,9 @@ import rift2Core.diff._
 import rift2Chip._
 import chipsalliance.rocketchip.config._
 
+import rift2Core.privilege._
+
+
 class WriteBack(implicit p: Parameters) extends RiftModule {
 
   val io = IO(new Bundle{

@@ -25,22 +25,22 @@ import rift2Chip._
 
 import rift2Core.backend._
 
-class VscoreBoard_Enq_Bundle extends RiftBundle{
-  val rd   = Vec(16, UInt((log2Ceil(vRegNum)).W))
-  val mask = Vec(16, Vec( vParams.vlen/8, Bool() ))
-  val eew  = Vec(4, Bool())
-}
+// class VscoreBoard_Enq_Bundle extends RiftBundle{
+//   val rd   = Vec(16, UInt((log2Ceil(vRegNum)).W))
+//   val mask = Vec(16, Vec( vParams.vlen/8, Bool() ))
+//   val eew  = Vec(4, Bool())
+// }
 
-class VscoreBoard_Deq_Bundle extends RiftBundle{
+// class VscoreBoard_Deq_Bundle extends RiftBundle{
   
-}
+// }
 
-abstract class VScoreBoardBase( entry: Int )(implicit p: Parameters) extends RiftModule{
-  val io = IO(new Bundle{
-    val enq = Flipped(Decoupled())
-    val ewb = Flipped(Decoupled())
-    val deq = Decoupled()
-  })
-}
+// abstract class VScoreBoardBase( entry: Int )(implicit p: Parameters) extends RiftModule{
+//   val io = IO(new Bundle{
+//     val enq = Flipped(Decoupled())
+//     val ewb = Flipped(Decoupled())
+//     val deq = Decoupled()
+//   })
+// }
 
 

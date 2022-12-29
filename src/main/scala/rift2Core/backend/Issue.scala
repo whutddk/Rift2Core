@@ -1152,7 +1152,7 @@ trait IssSelCsr{ this: IssueSel =>
       ~bufValid(i) |
       ~bufInfo(i).csr_isa.is_csr |
       ( Mux1H(Seq(
-          (bufInfo(i).param.imm === "b300".U) -> (io.csrIsReady.mstatus(bufInfo(i).csrrw( log2Ceil(4)-1, 0 )) === true.B),
+          (bufInfo(i).param.imm === "b300".U) -> (io.csrIsReady.mstatus(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === true.B),
         ))
       ) 
   }

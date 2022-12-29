@@ -80,6 +80,11 @@ abstract class RegFilesReal(val dw: Int, val dp: Int, val arc: Int, val rnc: Int
   val phy = io.commit.map{ x => x.phy }
 
   /**
+    * finding out the first Free-phy-register
+    */ 
+  val mollocIdx = Wire(Vec(rnc, UInt((log2Ceil(dp)).W)))
+
+  /**
     * there are dp-1 log,
     * @note the log(dp) is assert to be "b11".U
     */ 
@@ -123,10 +128,7 @@ abstract class RegFilesReal(val dw: Int, val dp: Int, val arc: Int, val rnc: Int
 trait RegFilesReName{ this: RegFilesReal => 
 
 
-  /**
-    * finding out the first Free-phy-register
-    */ 
-  val mollocIdx = Wire(Vec(rnc, UInt((log2Ceil(dp)).W)))
+
   for ( i <- 0 until rnc ) {
     mollocIdx(i) := 0.U
     for ( j <- (dp-1) to 1 by -1 ) {

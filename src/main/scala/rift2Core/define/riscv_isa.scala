@@ -538,6 +538,7 @@ class VectorIsa extends Bundle {
     val ivi = Bool()
 
     def sel = ivv | ivx | ivi
+
   }
 
   class OPM extends Bundle{
@@ -779,9 +780,9 @@ class VectorIsa extends Bundle {
 
 
 
-  def isOPI = vadd | vsub | vrsub | vminu | vmin | vmaxu | vmax | vand | vor | vxor | vrgather | vslideup | vrgatherei16 | vslidedown | vadc | vmadc | vsbc | vmsbc | vmerge | vmv | vmseq | vmsne | vmsltu | vmslt | vmsleu | vmsle | vmsgtu | vmsgt | vsaddu | vsadd | vssubu  | vssub | vsll | vsmul | vmvnr | vsrl | vsra | vssrl | vssra  | vnsrl | vnsra | vnclipu | vnclip  | vwredsumu | vwredsum
-  def isOPM = vredsum | vredand | vredor | vredxor | vredminu | vredmin | vredmaxu | vredmax | vaaddu | vaadd | vasubu | vasub | vslide1up | vslide1down | vcompress | vmandnot | vmand | vmor | vmxor | vmornot | vmnand | vmnor | vmxnor | vdivu | vdiv | vremu | vrem | vmulhu | vmul | vmulhsu | vmulh | vmadd | vnmsub | vmacc | vnmsac | vwaddu | vwadd | vwsubu | vwsub | vwaddu_w | vwadd_w | vwsubu_w | vwsub_w | vwmulu | vwmulsu | vwmul | vwmaccu  | vwmacc | vwmaccus | vwmaccsu
-  def isOPF = vfadd | vfredusum | vfsub | vfredosum | vfmin | vfredmin | vfmax | vfredmax | vfsgnj | vfsgnjn | vfsgnjx | vfslide1up | vfslide1down | vfmerge | vfmv | vmfeq | vmfle | vmflt | vmfne | vmfgt | vmfge | vfdiv | vfrdiv | vfmul | vfrsub | vfmadd | vfnmadd | vfmsub | vfnmsub | vfmacc | vfnmacc | vfmsac | vfnmsac | vfwadd | vfwredusum | vfwsub | vfwredosum | vfwadd_w | vfwsub_w | vfwmul | vfwmacc | vfwnmacc | vfwmsac | vfwnmsac
+  def isOPI = vadd.sel | vsub.sel | vrsub.sel | vminu.sel | vmin.sel | vmaxu.sel | vmax.sel | vand.sel | vor.sel | vxor.sel | vrgather.sel | vslideup.sel | vrgatherei16.sel | vslidedown.sel | vadc.sel | vmadc.sel | vsbc.sel | vmsbc.sel | vmerge.sel | vmv.sel | vmseq.sel | vmsne.sel | vmsltu.sel | vmslt.sel | vmsleu.sel | vmsle.sel | vmsgtu.sel | vmsgt.sel | vsaddu.sel | vsadd.sel | vssubu.sel  | vssub.sel | vsll.sel | vsmul.sel | vmvnr.sel | vsrl.sel | vsra.sel | vssrl.sel | vssra.sel  | vnsrl.sel | vnsra.sel | vnclipu.sel | vnclip.sel  | vwredsumu.sel | vwredsum.sel
+  def isOPM = vredsum.sel | vredand.sel | vredor.sel | vredxor.sel | vredminu.sel | vredmin.sel | vredmaxu.sel | vredmax.sel | vaaddu.sel | vaadd.sel | vasubu.sel | vasub.sel | vslide1up.sel | vslide1down.sel | vcompress.sel | vmandnot.sel | vmand.sel | vmor.sel | vmxor.sel | vmornot.sel | vmnand.sel | vmnor.sel | vmxnor.sel | vdivu.sel | vdiv.sel | vremu.sel | vrem.sel | vmulhu.sel | vmul.sel | vmulhsu.sel | vmulh.sel | vmadd.sel | vnmsub.sel | vmacc.sel | vnmsac.sel | vwaddu.sel | vwadd.sel | vwsubu.sel | vwsub.sel | vwaddu_w.sel | vwadd_w.sel | vwsubu_w.sel | vwsub_w.sel | vwmulu.sel | vwmulsu.sel | vwmul.sel | vwmaccu.sel  | vwmacc.sel | vwmaccus.sel | vwmaccsu.sel
+  def isOPF = vfadd.sel | vfredusum.sel | vfsub.sel | vfredosum.sel | vfmin.sel | vfredmin.sel | vfmax.sel | vfredmax.sel | vfsgnj.sel | vfsgnjn.sel | vfsgnjx.sel | vfslide1up.sel | vfslide1down.sel | vfmerge.sel | vfmv.sel | vmfeq.sel | vmfle.sel | vmflt.sel | vmfne.sel | vmfgt.sel | vmfge.sel | vfdiv.sel | vfrdiv.sel | vfmul.sel | vfrsub.sel | vfmadd.sel | vfnmadd.sel | vfmsub.sel | vfnmsub.sel | vfmacc.sel | vfnmacc.sel | vfmsac.sel | vfnmsac.sel | vfwadd.sel | vfwredusum.sel | vfwsub.sel | vfwredosum.sel | vfwadd_w.sel | vfwsub_w.sel | vfwmul.sel | vfwmacc.sel | vfwnmacc.sel | vfwmsac.sel | vfwnmsac.sel
 
 
 
@@ -882,7 +883,7 @@ class VectorIsa extends Bundle {
 
   def isLookUpVS1 = isIVV | isMVV | isFVV
   def isLookUpVS2 =
-    isIVV |isIVX | isIVI | isMVV | isMVX | isFVV | isFVF |
+    isOPI | isOPM | isOPF |
     vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
     vluxei | vloxei | vsuxei | vsoxei |
     vfsqrt_v | vfrsqrt7_v | vfrec7_v | vfclass_v |
@@ -924,7 +925,7 @@ class VectorIsa extends Bundle {
   def isXwb =  vsetvli | vsetivli | vsetvl | vfirst | vpopc | vmv_x_s
   def isFwb =  vfmv_f_s
   def isVwb =
-    _.ivv | _.ivx | _.ivi | _.mvd | _.fvf | _.fvd |
+    isOPI | isOPM | isOPF |
     vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
     isVload |
     vfsqrt_v | vfrsqrt7_v | vfrec7_v | vfclass_v | 
@@ -959,26 +960,34 @@ class RS_RAW(implicit p: Parameters) extends RiftBundle {
   val rs1 = UInt((log2Ceil(32)).W)
   val rs2 = UInt((log2Ceil(32)).W)
   val rs3 = UInt((log2Ceil(32)).W)
+  val rs4 = UInt((log2Ceil(32)).W)
+  val rs5 = UInt((log2Ceil(32)).W)
 }
 
 class RS_PHY(implicit p: Parameters) extends RiftBundle {
   val rs1 = UInt((log2Ceil(maxRegNum)).W)
   val rs2 = UInt((log2Ceil(maxRegNum)).W)
   val rs3 = UInt((log2Ceil(maxRegNum)).W)
+  val rs4 = UInt((log2Ceil(maxRegNum)).W)
+  val rs5 = UInt((log2Ceil(maxRegNum)).W)
 }
 
 class RD_RAW(implicit p: Parameters) extends RiftBundle {
   val rd0 = UInt((log2Ceil(32)).W)
+  val rd1 = UInt((log2Ceil(32)).W)
 }
 
 class RD_PHY(implicit p: Parameters) extends RiftBundle {
   val rd0 = UInt((log2Ceil(maxRegNum)).W)
+  val rd1 = UInt((log2Ceil(maxRegNum)).W)
 }
 
 class Operation_source(dw: Int)(implicit p: Parameters) extends RiftBundle {
   val op1 = UInt(dw.W)
   val op2 = UInt(dw.W)
   val op3 = UInt(dw.W)
+  val op4 = UInt(dw.W)
+  val op5 = UInt(dw.W)
 }
 
 class Reg_RAW(implicit p: Parameters) extends RiftBundle {
@@ -988,11 +997,17 @@ class Reg_RAW(implicit p: Parameters) extends RiftBundle {
   val rs4 = UInt((log2Ceil(32)).W)
   val rs5 = UInt((log2Ceil(32)).W)
   val rd0 = UInt((log2Ceil(32)).W)
+  val rd1 = UInt((log2Ceil(32)).W)
 }
 
 class Reg_PHY(implicit p: Parameters) extends RiftBundle {
-  val rs = Vec( 5,  UInt((log2Ceil(maxRegNum)).W) )
-  val rd = Vec( 16, UInt((log2Ceil(maxRegNum)).W) )
+  val rs1 = UInt((log2Ceil(maxRegNum)).W)
+  val rs2 = UInt((log2Ceil(maxRegNum)).W)
+  val rs3 = UInt((log2Ceil(maxRegNum)).W)
+  val rs4 = UInt((log2Ceil(maxRegNum)).W)
+  val rs5 = UInt((log2Ceil(maxRegNum)).W)
+  val rd0 = UInt((log2Ceil(maxRegNum)).W)
+  val rd1 = UInt((log2Ceil(maxRegNum)).W)
 
 }
 
@@ -1048,11 +1063,11 @@ class Instruction_param(implicit p: Parameters) extends RiftBundle {
   val rm = UInt(3.W)
   val raw = new Reg_RAW
 
-  // val vm = Bool()
+  val vm = Bool()
   // def width = rm
   // val mew = Bool()
   // val mop = UInt(2.W)
-  // val nf  = UInt(3.W)
+  val nf  = UInt(3.W)
   // def lumop = raw.rs2
   // def sumop = raw.rs2
 
@@ -1066,8 +1081,8 @@ class Info_instruction(implicit p: Parameters) extends Instruction_set {
 
 class Dpt_info(implicit p: Parameters) extends Info_instruction {
   val phy = new Reg_PHY
-  val csrr = UInt( (12+log2Ceil(4)).w )
-  val csrw = UInt( (12+log2Ceil(4)).w )
+  val csrr = UInt( (12+log2Ceil(4)).W )
+  val csrw = UInt( (12+log2Ceil(4)).W )
 }
 
 

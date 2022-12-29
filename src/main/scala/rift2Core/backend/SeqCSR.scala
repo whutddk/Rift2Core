@@ -119,15 +119,15 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
 
 
   
-  val mdl = Module(new SRegFiles(3+dw, dp, rnc, 1, wbc, cmm)){
+  val mdl = Module(new SRegFiles(3+dw, dp, rnc, 1, wbc, cmm){
     val csrOp = IO(Vec(cmm, Valid(new Exe_Port)))
     val isReady = IO(Output(Vec(dp, Bool())))
 
     for( i <- 0 until cmm ) {
-      when( io.commit(i).isComfirm ){
+      when( io.commit(i).is_comfirm ){
         csrOp(i).valid := true.B
         csrOp(i).bits.addr  := addr.U
-        csrOp(i).bits.dat_i := files_reg(phy(i)).extract(dw-1, 0)
+        csrOp(i).bits.dat_i := files_reg(phy(i)).apply(  dw-1, 0)
         csrOp(i).bits.op_rw := files_reg(phy(i)).extract(dw+2)
         csrOp(i).bits.op_rs := files_reg(phy(i)).extract(dw+1)
         csrOp(i).bits.op_rc := files_reg(phy(i)).extract(dw+0)
@@ -136,12 +136,10 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
         csrOp(i).bits  := DontCare
       }
     }
-
     for( i <- 0 until dp ) {
       isReady(i) := (archit_ptr(0) === i.U)
     }
-
-  }
+  })
 
   io.csrOp  := mdl.csrOp
   io.isReady := mdl.isReady
@@ -166,19 +164,21 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
   }
 
   for( i <- 0 until 1 ){
-    mdl.io.readOp(i).rgReq := DontCare
+    mdl.io.rgReq(i).valid := false.B
+    mdl.io.rgReq(i).bits := DontCare
   }
 
   for( i <- 0 until wbc ){
     mdl.io.exe_writeBack(i).valid := io.writeBack(i).valid
-    mdl.io.exe_writeBack(i).res   :=
+    mdl.io.exe_writeBack(i).bits.res   :=
       Cat(
         io.writeBack(i).bits.op_rw,
         io.writeBack(i).bits.op_rs,
         io.writeBack(i).bits.op_rc,
         io.writeBack(i).bits.dati
       )
-    mdl.io.exe_writeBack(i).idx   := io.writeBack(i).idx
+    mdl.io.exe_writeBack(i).bits.rd0   := io.writeBack(i).bits.idx
+    mdl.io.exe_writeBack(i).bits.rd1   := DontCare
   }
 
   for( i <- 0 until cmm ){
@@ -336,14 +336,14 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
 
 
 
-class SeqFRM(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 3, dp, 0.U, rnc, wbc, cmm)
+// class SeqFRM(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 3, dp, 0.U, rnc, wbc, cmm)
 
-class SeqFFLAG(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 5, dp, 0.U, rnc, wbc, cmm)
+// class SeqFFLAG(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 5, dp, 0.U, rnc, wbc, cmm)
 
-class SeqVXRM(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 2, dp, 0.U, rnc, wbc, cmm)
+// class SeqVXRM(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 2, dp, 0.U, rnc, wbc, cmm)
 
-class SeqVXSAT(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 1, dp, 0.U, rnc, wbc, cmm)
+// class SeqVXSAT(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 1, dp, 0.U, rnc, wbc, cmm)
 
-class Seqvstart(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 1, dp, 0.U, rnc, wbc, cmm)
+// class Seqvstart(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 1, dp, 0.U, rnc, wbc, cmm)
 
 
