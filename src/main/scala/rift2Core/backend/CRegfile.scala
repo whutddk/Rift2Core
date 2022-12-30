@@ -82,20 +82,22 @@ trait MSTATUS_Reg{ this: CRegfilesBase =>
       mstatusReg.io.writeBack(i).bits.op_rs := false.B
       mstatusReg.io.writeBack(i).bits.op_rc := false.B
       mstatusReg.io.writeBack(i).bits.idx   := DontCare
+      mstatusReg.io.writeBack(i).valid      := false.B
 
     when( io.writeBack(i).bits.addr === "h300".U ){
       mstatusReg.io.writeBack(i) := io.writeBack(i)
     }
   }
 
-
   for( i <- 0 until cmm ){
     mstatusReg.io.commit(i).isComfirm := false.B
     mstatusReg.io.commit(i).isAbort := false.B
     mstatusReg.io.commit(i).idx := DontCare
+    mstatusReg.io.commit(i).addr := DontCare
+    io.commit(i).isWroteback := false.B
 
     when( io.commit(i).addr === "h300".U ){
-      mstatusReg.io.commit(i) := io.commit(i)
+      mstatusReg.io.commit(i) <> io.commit(i)
       io.csrOp(i) := mstatusReg.io.csrOp(i)      
     }
   }
@@ -105,7 +107,7 @@ class CSR_LOG_Bundle(dp: Int = 4) extends Bundle{
   val mstatus = Vec( dp, Bool() )
 }
 
-class CRegfiles( val rnc: Int, val wbc: Int, val cmm: Int )(implicit p: Parameters) extends CRegfilesBase( rnc, wbc, cmm )
+class CRegfiles( rnc: Int, wbc: Int, cmm: Int )(implicit p: Parameters) extends CRegfilesBase( rnc, wbc, cmm )
 with MSTATUS_Reg{
   val isReady = IO(Output(new CSR_LOG_Bundle))
 

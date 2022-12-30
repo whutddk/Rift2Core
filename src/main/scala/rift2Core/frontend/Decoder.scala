@@ -237,7 +237,9 @@ class Decode16(implicit p: Parameters) extends RiftModule {
     )
   
   info.param.raw.rs3       := 0.U
-
+  info.param.raw.rs4       := 0.U
+  info.param.raw.rs5       := 0.U
+  info.param.raw.rd1       := 0.U
 
   info.param.imm        :=
     Mux1H( Seq(
@@ -473,6 +475,11 @@ class Decode16(implicit p: Parameters) extends RiftModule {
   info.privil_isa.is_access_fault := ( x === BitPat("b1001110001000001") )
   info.privil_isa.is_paging_fault := ( x === BitPat("b1001110001000101") )
 
+  info.vectorIsa := 0.U.asTypeOf( new VectorIsa )
+  info.param.vm  := false.B
+  info.param.nf  := 0.U
+
+
 } 
 
 object Decode16 {
@@ -689,6 +696,10 @@ trait Decode32G { this: Decode32Base =>
       info.fpu_isa.fnmsub_d -> x(31,27),
       info.fpu_isa.fnmadd_d -> x(31,27),
     ))
+
+    info.param.raw.rs4       := 0.U
+    info.param.raw.rs5       := 0.U
+    info.param.raw.rd1       := 0.U
 
     info.param.rm := x(14,12)
 
@@ -919,7 +930,7 @@ trait Decode32FD{ this: Decode32Base =>
 
 
 
-class Decode32(implicit p: Parameters) extends Decode32Base with Decode32G with Decode32FD{
+class Decode32(implicit p: Parameters) extends Decode32Base with Decode32G with Decode32FD with VDecode32{
 
 
 } 

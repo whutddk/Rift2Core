@@ -375,10 +375,14 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   }
 
 
-
+  rnm_stage.io.vLookup.map{x=>x.rsp := DontCare}
+  iss_stage.io.vrgRsp.map{ x => {x.valid := false.B; x.bits := DontCare} }
+  iss_stage.io.vrgLog      := DontCare
+  rnm_stage.io.vRename.map{x=>x.req.ready := true.B; x.rsp := DontCare}
 
 
 }
+
 
 
 

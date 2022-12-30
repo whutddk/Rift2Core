@@ -436,12 +436,14 @@ trait LSU_WriteBack { this: LsuBase =>
 
   lu_wb_fifo.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.is_iwb &  ~trans_kill 
   lu_wb_fifo.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
+  lu_wb_fifo.io.enq.bits.rd1 := 0.U
   lu_wb_fifo.io.enq.bits.res := lu_wb_arb.io.out.bits.wb.res
   lu_wb_fifo.reset := reset.asBool | io.flush
 
 
   flu_wb_fifo.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.is_fwb & ~trans_kill 
   flu_wb_fifo.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
+  flu_wb_fifo.io.enq.bits.rd1 := 0.U
   flu_wb_fifo.io.enq.bits.res := 
       Mux1H(Seq(
         lu_wb_arb.io.out.bits.is_flw -> box(recode(lu_wb_arb.io.out.bits.wb.res, 0), FType.D),
@@ -456,6 +458,7 @@ trait LSU_WriteBack { this: LsuBase =>
 
   su_wb_fifo.io.enq.valid    := opStIO.fire
   su_wb_fifo.io.enq.bits.rd0 := opStIO.bits.param.rd0
+  su_wb_fifo.io.enq.bits.rd1 := 0.U
   su_wb_fifo.io.enq.bits.res := 0.U
   su_wb_fifo.reset := reset.asBool | io.flush
 
@@ -466,6 +469,7 @@ trait LSU_WriteBack { this: LsuBase =>
   fe_wb_fifo.reset := reset.asBool | io.flush
   fe_wb_fifo.io.enq.valid := is_empty & io.lsu_iss_exe.bits.fun.is_fence & io.lsu_iss_exe.valid
   fe_wb_fifo.io.enq.bits.rd0 := io.lsu_iss_exe.bits.param.rd0
+  fe_wb_fifo.io.enq.bits.rd1 := 0.U
   fe_wb_fifo.io.enq.bits.res := 0.U
   fe_wb_fifo.reset := reset.asBool | io.flush
 

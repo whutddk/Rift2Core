@@ -68,8 +68,9 @@ class Csr(implicit p: Parameters) extends RiftModule {
   csr_op_fifo.io.enq.bits.op_rs := rs & ~dontWrite
   csr_op_fifo.io.enq.bits.op_rc := rc & ~dontWrite
 
-
-  when( addr =/= "b300".U ) {
+  csr_exe_iwb_fifo.io.enq.bits.rd1 := 0.U
+  
+  when( addr =/= "h300".U ) {
     csr_op_fifo.io.enq.bits.addr := addr
     csr_op_fifo.io.enq.bits.dat_i := dat
     csr_op_fifo.io.enq.bits.op_rw := rw & ~dontWrite
@@ -85,6 +86,7 @@ class Csr(implicit p: Parameters) extends RiftModule {
     csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid & csr_op_fifo.io.enq.ready & io.csr_data.valid
     csr_exe_iwb_fifo.io.enq.bits.res := io.csr_data.bits
     csr_exe_iwb_fifo.io.enq.bits.rd0 := io.csr_iss_exe.bits.param.rd0
+    
 
     io.csr_cWriteBack.valid := false.B
 

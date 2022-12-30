@@ -79,10 +79,6 @@ abstract class RegFilesReal(val dw: Int, val dp: Int, val arc: Int, val rnc: Int
   val raw = io.commit.map{ x => x.raw }
   val phy = io.commit.map{ x => x.phy }
 
-  /**
-    * finding out the first Free-phy-register
-    */ 
-  val mollocIdx = Wire(Vec(rnc, UInt((log2Ceil(dp)).W)))
 
   /**
     * there are dp-1 log,
@@ -127,7 +123,10 @@ abstract class RegFilesReal(val dw: Int, val dp: Int, val arc: Int, val rnc: Int
 
 trait RegFilesReName{ this: RegFilesReal => 
 
-
+  /**
+    * finding out the first Free-phy-register
+    */ 
+  val mollocIdx = Wire(Vec(rnc, UInt((log2Ceil(dp)).W)))
 
   for ( i <- 0 until rnc ) {
     mollocIdx(i) := 0.U
@@ -149,6 +148,7 @@ trait RegFilesReName{ this: RegFilesReal =>
 
     io.rename(i).req.ready := log.count( (x:UInt) => ( x === 0.U ) ) > i.U
     io.rename(i).rsp.rd0 := mollocIdx(i)
+    io.rename(i).rsp.rd1 := 0.U
 
   }
 
@@ -169,6 +169,9 @@ trait RegFilesReName{ this: RegFilesReal =>
 }
 
 trait XRegFilesLookup{ this: RegFilesReal =>
+
+  val mollocIdx: Vec[UInt]
+
   for ( i <- 0 until rnc ) {
     val idx1 = io.lookup(i).req.rs1
     val idx2 = io.lookup(i).req.rs2
@@ -178,11 +181,13 @@ trait XRegFilesLookup{ this: RegFilesReal =>
       io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
       io.lookup(i).rsp.rs3 := 0.U
       io.lookup(i).rsp.rs4 := 0.U
+      io.lookup(i).rsp.rs5 := 0.U
     } else {
       io.lookup(i).rsp.rs1 := Mux( idx1 === 0.U, 0.U, rename_ptr(idx1) )
       io.lookup(i).rsp.rs2 := Mux( idx2 === 0.U, 0.U, rename_ptr(idx2) )
       io.lookup(i).rsp.rs3 := 0.U
       io.lookup(i).rsp.rs4 := 0.U
+      io.lookup(i).rsp.rs5 := 0.U
       for ( j <- 0 until i ) {
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) && (idx1 =/= 0.U) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) && (idx2 =/= 0.U) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
@@ -192,6 +197,8 @@ trait XRegFilesLookup{ this: RegFilesReal =>
 }
 
 trait FRegFilesLookup{ this: RegFilesReal =>
+  val mollocIdx: Vec[UInt]
+
   for ( i <- 0 until rnc ) {
     val idx1 = io.lookup(i).req.rs1
     val idx2 = io.lookup(i).req.rs2
@@ -202,11 +209,13 @@ trait FRegFilesLookup{ this: RegFilesReal =>
       io.lookup(i).rsp.rs2 := rename_ptr(idx2)
       io.lookup(i).rsp.rs3 := rename_ptr(idx3)
       io.lookup(i).rsp.rs4 := 0.U
+      io.lookup(i).rsp.rs5 := 0.U
     } else {
       io.lookup(i).rsp.rs1 := rename_ptr(idx1)
       io.lookup(i).rsp.rs2 := rename_ptr(idx2)
       io.lookup(i).rsp.rs3 := rename_ptr(idx3) 
       io.lookup(i).rsp.rs4 := 0.U
+      io.lookup(i).rsp.rs5 := 0.U
       for ( j <- 0 until i ) {
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
         when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }

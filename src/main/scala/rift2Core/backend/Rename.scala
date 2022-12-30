@@ -81,13 +81,13 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
                     }
     res.csrr :=
       Mux(
-        instr.csr_isa.is_csr & instr.param.imm === "b300".U,
+        instr.csr_isa.is_csr & instr.param.imm === "h300".U,
         Cat( instr.param.imm(11,0), csrr( (log2Ceil(4)-1), 0 ) ),
         0.U
       )
     res.csrw :=
       Mux(
-        instr.csr_isa.is_csr & instr.param.imm === "b300".U,
+        instr.csr_isa.is_csr & instr.param.imm === "h300".U,
         Cat( instr.param.imm(11,0), csrw( (log2Ceil(4)-1), 0 ) ),
         0.U
       )
@@ -125,7 +125,7 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
 
       res.csrw   := 
         Mux(
-          instr.csr_isa.is_csr & instr.param.imm === "b300".U,
+          instr.csr_isa.is_csr & instr.param.imm === "h300".U,
           Cat( instr.param.imm(11,0), csrw( (log2Ceil(4)-1), 0 ) ),
           0.U
         )
@@ -144,9 +144,11 @@ trait RenameMalloc { this: RenameBase =>
 
     io.xRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.is_iwb
     io.xRename(i).req.bits.rd0 := io.rnReq(i).bits.param.raw.rd0
+    io.xRename(i).req.bits.rd1 := 0.U
 
     io.fRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.is_fwb
     io.fRename(i).req.bits.rd0 := io.rnReq(i).bits.param.raw.rd0
+    io.fRename(i).req.bits.rd1 := 0.U
 
     if(hasVector){
       io.vRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.isVwb
@@ -193,6 +195,12 @@ trait WriteBackLookup {  this: RenameBase =>
       io.fLookup(i).req.rs3 := io.rnReq(i).bits.param.raw.rs3      
       io.fLookup(i).req.rs4 := 0.U
       io.fLookup(i).req.rs5 := 0.U
+    } else {
+      io.fLookup(i).req.rs1 := 0.U
+      io.fLookup(i).req.rs2 := 0.U
+      io.fLookup(i).req.rs3 := 0.U
+      io.fLookup(i).req.rs4 := 0.U
+      io.fLookup(i).req.rs5 := 0.U      
     }
 
     if(hasVector){
@@ -210,6 +218,12 @@ trait WriteBackLookup {  this: RenameBase =>
         when( io.rnReq(i).bits.vectorIsa.isLookUpVS2P ) { assert( io.rnReq(i).bits.param.raw.rs2 =/= 31.U ) }
         when( io.rnReq(i).bits.vectorIsa.isLookUpVS3P ) { assert( io.rnReq(i).bits.param.raw.rd0 =/= 31.U ) }
       }    
+    } else {
+      io.vLookup(i).req.rs1 := 0.U
+      io.vLookup(i).req.rs2 := 0.U
+      io.vLookup(i).req.rs3 := 0.U
+      io.vLookup(i).req.rs4 := 0.U
+      io.vLookup(i).req.rs5 := 0.U
     }
 
 
@@ -268,7 +282,7 @@ trait CSRLoopup{ this: RenameBase =>
   for ( i <- 0 until rnChn ) {
     io.cLookup(i).req := 
       Mux1H(Seq(
-        (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "b300".U ) -> "b300".U,
+        (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "h300".U ) -> "h300".U,
       ))
   }
 }
@@ -277,11 +291,11 @@ trait CSRMalloc{ this: RenameBase =>
   for ( i <- 0 until rnChn ) {
     io.cRename(i).req.bits := 
       Mux1H(Seq(
-        (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "b300".U ) -> "b300".U,
+        (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "h300".U ) -> "h300".U,
       ))
 
     io.cRename(i).req.valid :=
-      (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "b300".U )
+      (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "h300".U )
   }
 
 

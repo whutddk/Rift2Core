@@ -118,6 +118,7 @@ class Bru()(implicit p: Parameters) extends BruBase with BranchExe with JumpExe 
 
   bru_exe_iwb_fifo.io.enq.bits.res := pc + Mux( isRVC, 2.U, 4.U)
   bru_exe_iwb_fifo.io.enq.bits.rd0 := io.bru_iss_exe.bits.param.rd0
+  bru_exe_iwb_fifo.io.enq.bits.rd1 := 0.U
 
 
 

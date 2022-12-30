@@ -102,6 +102,7 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
   io.deq.valid    := io.access.valid
 
   io.deq.bits.wb.rd0 := pending.param.rd0
+  io.deq.bits.wb.rd1 := 0.U
   io.deq.bits.wb.res := 
   {
     val rdata = io.access.bits.data

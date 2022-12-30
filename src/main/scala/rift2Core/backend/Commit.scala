@@ -550,7 +550,8 @@ trait CommitRegFiles { this: BaseCommit =>
     io.cm_op(i).phy := io.rod(i).bits.rd0_phy
     io.cm_op(i).raw := io.rod(i).bits.rd0_raw
     io.cm_op(i).toX := io.rod(i).bits.isXcmm
-    io.cm_op(i).toF := io.rod(i).bits.isFcmm 
+    io.cm_op(i).toF := io.rod(i).bits.isFcmm
+    io.cm_op(i).toV := false.B
   }
 
     io.cmm_lsu.is_amo_pending := {
@@ -651,7 +652,13 @@ trait CommitDiff { this: BaseCommit =>
   * 2. branch/jalr can resolve at any chn but only one of every
   * 3. branch misPredict will redirect at cmm
   */
-class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with CommitState with CommitRegFiles with CommitIFRedirect with CommitDiff{
+class Commit()(implicit p: Parameters) extends BaseCommit
+with CsrFiles
+with CommitState
+with CommitCsr
+with CommitRegFiles
+with CommitIFRedirect
+with CommitDiff{
 
   ( 0 until cmChn ).map{ i => {
     cmm_state(i).rod      := io.rod(i).bits

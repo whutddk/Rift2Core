@@ -119,6 +119,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     iReg.io.commit(i).phy           := 0.U
     iReg.io.commit(i).toX           := false.B
     iReg.io.commit(i).toF           := false.B
+    iReg.io.commit(i).toV           := false.B
 
     fReg.io.commit(i).is_comfirm    := false.B
     fReg.io.commit(i).is_MisPredict := false.B
@@ -127,6 +128,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     fReg.io.commit(i).phy           := 0.U
     fReg.io.commit(i).toX           := false.B
     fReg.io.commit(i).toF           := false.B
+    fReg.io.commit(i).toV           := false.B
 
     io.commit(i).is_writeback := false.B
 

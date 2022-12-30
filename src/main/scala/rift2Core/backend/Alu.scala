@@ -90,5 +90,6 @@ class Alu(implicit p: Parameters) extends RiftModule {
   alu_exe_iwb_fifo.io.enq.valid := io.alu_iss_exe.valid 
   alu_exe_iwb_fifo.io.enq.bits.res := res
   alu_exe_iwb_fifo.io.enq.bits.rd0 := io.alu_iss_exe.bits.param.rd0
+  alu_exe_iwb_fifo.io.enq.bits.rd1 := 0.U
 
 }

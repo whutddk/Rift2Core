@@ -86,19 +86,19 @@ class MultiplerAccumulater() extends Module{
     ).apply(127,0)
 
   io.resh := 
-    Mux1H(
-      ( sew === "b000".U ) -> Cat( (0 until 8).map{ i =>  sew8Res(i)(15,8)  }.reserve ),
-      ( sew === "b001".U ) -> Cat( (0 until 4).map{ i => sew16Res(i)(31,16) }.reserve ),
-      ( sew === "b010".U ) -> Cat( (0 until 2).map{ i => sew32Res(i)(63,32) }.reserve ),
-      ( sew === "b011".U ) -> sew64Res(127, 64),
-    )
+    Mux1H(Seq(
+      ( sew === "b000".U ) -> Cat( (0 until 8).map{ i =>  sew8Res(i)(15,8)  }.reverse ),
+      ( sew === "b001".U ) -> Cat( (0 until 4).map{ i => sew16Res(i)(31,16) }.reverse ),
+      ( sew === "b010".U ) -> Cat( (0 until 2).map{ i => sew32Res(i)(63,32) }.reverse ),
+      ( sew === "b011".U ) -> sew64Res(127, 64),      
+    ))
 
   io.resl := 
-    Mux1H(
-      ( sew === "b000".U ) -> Cat( (0 until 8).map{ i =>  sew8Res(i)(7,0)  }.reserve ),
-      ( sew === "b001".U ) -> Cat( (0 until 4).map{ i => sew16Res(i)(15,0) }.reserve ),
-      ( sew === "b010".U ) -> Cat( (0 until 2).map{ i => sew32Res(i)(31,0) }.reserve ),
-      ( sew === "b011".U ) -> sew64Res(63, 0),
-    )
+    Mux1H(Seq(
+      ( sew === "b000".U ) -> Cat( (0 until 8).map{ i =>  sew8Res(i)(7,0)  }.reverse ),
+      ( sew === "b001".U ) -> Cat( (0 until 4).map{ i => sew16Res(i)(15,0) }.reverse ),
+      ( sew === "b010".U ) -> Cat( (0 until 2).map{ i => sew32Res(i)(31,0) }.reverse ),
+      ( sew === "b011".U ) -> sew64Res(63, 0),      
+    ))
 }
 

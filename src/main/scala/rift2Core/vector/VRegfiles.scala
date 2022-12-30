@@ -90,6 +90,7 @@ trait VRegFilesLookup{ this: RegFilesReal =>
     val lookup_v0_rsp = Output( Vec( rnc, UInt((log2Ceil(vRegNum)).W)) )
   })
 
+  val mollocIdx: Vec[UInt]
 
   for ( i <- 0 until rnc ) {
     val idx1 = io.lookup(i).req.rs1
@@ -112,17 +113,17 @@ trait VRegFilesLookup{ this: RegFilesReal =>
       vio.lookup_v0_rsp(i)  := rename_ptr(0)
 
       for ( j <- 0 until i ) {
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx3) ) { io.lookup(i).rsp.rs3 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx4) ) { io.lookup(i).rsp.rs4 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === 0.U ) ) { vio.lookup_v0_rsp(i)  := mollocIdx(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdx(2*j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdx(2*j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx3) ) { io.lookup(i).rsp.rs3 := mollocIdx(2*j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx4) ) { io.lookup(i).rsp.rs4 := mollocIdx(2*j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === 0.U ) ) { vio.lookup_v0_rsp(i) := mollocIdx(2*j) }
 
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdxP(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdxP(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx3) ) { io.lookup(i).rsp.rs3 := mollocIdxP(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx4) ) { io.lookup(i).rsp.rs4 := mollocIdxP(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === 0.U ) ) { vio.lookup_v0_rsp(i)  := mollocIdxP(j) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdx(2*j+1) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdx(2*j+1) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx3) ) { io.lookup(i).rsp.rs3 := mollocIdx(2*j+1) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === idx4) ) { io.lookup(i).rsp.rs4 := mollocIdx(2*j+1) }
+        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd1 === 0.U ) ) { vio.lookup_v0_rsp(i) := mollocIdx(2*j+1) }
       }
     }
     when( io.rename(i).req.fire ) {

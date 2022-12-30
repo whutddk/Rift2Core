@@ -91,6 +91,7 @@ object pkg_Dcache_Enq_Bundle{
 
     }
     res.rd.rd0 := ori.param.rd0
+    res.rd.rd1 := 0.U
 
     res.chkIdx := 0.U
     res

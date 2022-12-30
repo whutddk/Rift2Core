@@ -241,7 +241,7 @@ abstract class DptBoard()(implicit p: Parameters) extends DptBase {
     bufReqNum(i)(1) := bufInfo(i).phy.rs2
     bufReqNum(i)(2) := bufInfo(i).phy.rs3
     bufReqNum(i)(3) := bufInfo(i).phy.rs4
-    bufReqNum(i)(5) := bufInfo(i).phy.rs5
+    bufReqNum(i)(4) := bufInfo(i).phy.rs5
   }
 
 }
@@ -577,7 +577,7 @@ trait DptReadVOp { this: DptAgeMatrix =>
 
 
   /** Whether this vs can request operator reading */
-  val canVOpReq = Wire( Vec( dptEntry, Vec( 4, Bool() )))
+  val canVOpReq = Wire( Vec( dptEntry, Vec( 5, Bool() )))
 
   for( i <- 0 until dptEntry ) {
     canVOpReq(i)(0) := 
@@ -643,16 +643,16 @@ trait DptReadVOp { this: DptAgeMatrix =>
 
 
   /** Who is the highest priority to read operator in each chn */
-  val selMatrixVRS1   = Wire( Vec( opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
-  val selMatrixVRS2   = Wire( Vec( opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
-  val selMatrixVRS3   = Wire( Vec( opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
-  val selMatrixVRS4   = Wire( Vec( opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
-  val selMatrixVRS5   = Wire( Vec( opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
-  val maskCondSelVRS1 = Wire( Vec( opChn, Vec( dptEntry+rnChn, Bool() ) ) )
-  val maskCondSelVRS2 = Wire( Vec( opChn, Vec( dptEntry+rnChn, Bool() ) ) )
-  val maskCondSelVRS3 = Wire( Vec( opChn, Vec( dptEntry+rnChn, Bool() ) ) )
-  val maskCondSelVRS4 = Wire( Vec( opChn, Vec( dptEntry+rnChn, Bool() ) ) )
-  val maskCondSelVRS5 = Wire( Vec( opChn, Vec( dptEntry+rnChn, Bool() ) ) )
+  val selMatrixVRS1   = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
+  val selMatrixVRS2   = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
+  val selMatrixVRS3   = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
+  val selMatrixVRS4   = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
+  val selMatrixVRS5   = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
+  val maskCondSelVRS1 = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Bool() ) ) )
+  val maskCondSelVRS2 = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Bool() ) ) )
+  val maskCondSelVRS3 = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Bool() ) ) )
+  val maskCondSelVRS4 = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Bool() ) ) )
+  val maskCondSelVRS5 = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Bool() ) ) )
 
 
 
@@ -923,8 +923,12 @@ trait IssSelAlu{ this: IssueSel =>
 
         bufInfo(idx).alu_isa.wfi    -> 0.U
     ))
-    res.param.dat.op3 := DontCare
+    res.param.dat.op3 := 0.U
+    res.param.dat.op4 := 0.U
+    res.param.dat.op5 := 0.U
+
     res.param.rd0 := bufInfo(idx).phy.rd0
+    res.param.rd1 := 0.U
     return res
   }
 
@@ -989,8 +993,11 @@ trait IssSelMul{ this: IssueSel =>
  
     res.param.dat.op1 := postBufOperator(idx)(0)
     res.param.dat.op2 := postBufOperator(idx)(1)
-    res.param.dat.op3 := DontCare
+    res.param.dat.op3 := 0.U
+    res.param.dat.op4 := 0.U
+    res.param.dat.op5 := 0.U
     res.param.rd0     := bufInfo(idx).phy.rd0
+    res.param.rd1     := 0.U
     return res
   }
 
@@ -1062,8 +1069,11 @@ trait IssSelBru{ this: IssueSel =>
     res.param.imm     := bufInfo(idx).param.imm
     res.param.dat.op1 := postBufOperator(idx)(0)
     res.param.dat.op2 := postBufOperator(idx)(1)
-    res.param.dat.op3 := DontCare
+    res.param.dat.op3 := 0.U
+    res.param.dat.op4 := 0.U
+    res.param.dat.op5 := 0.U
     res.param.rd0     := bufInfo(idx).phy.rd0
+    res.param.rd1     := 0.U
 
     return res
   }
@@ -1129,11 +1139,15 @@ trait IssSelCsr{ this: IssueSel =>
 
     res.param.dat.op2 := 
       MuxCase( bufInfo(idx).param.imm, Seq(
-        (bufInfo(idx).param.imm === "b300".U) -> io.csrfiles.mstatus.asUInt,
+        (bufInfo(idx).param.imm === "h300".U) -> io.csrfiles.mstatus.asUInt,
       ))
       
-    res.param.dat.op3 := DontCare
+    res.param.dat.op3 := 0.U
+    res.param.dat.op4 := 0.U
+    res.param.dat.op5 := 0.U
+
     res.param.rd0     := bufInfo(idx).phy.rd0
+    res.param.rd1     := 0.U
     res.param.csrw    := bufInfo(idx).csrw
 
     return res
@@ -1152,7 +1166,7 @@ trait IssSelCsr{ this: IssueSel =>
       ~bufValid(i) |
       ~bufInfo(i).csr_isa.is_csr |
       ( Mux1H(Seq(
-          (bufInfo(i).param.imm === "b300".U) -> (io.csrIsReady.mstatus(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === true.B),
+          (bufInfo(i).param.imm === "h300".U) -> (io.csrIsReady.mstatus(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === true.B),
         ))
       ) 
   }
@@ -1200,9 +1214,12 @@ trait IssSelLsu{ this: IssueSel =>
         ieee(unbox(postBufOperator(idx)(1), 1.U, None), t = FType.D),
         postBufOperator(idx)(1)
       )
-    res.param.dat.op3 := DontCare
+    res.param.dat.op3 := 0.U
+    res.param.dat.op4 := 0.U
+    res.param.dat.op5 := 0.U
 
     res.param.rd0 := bufInfo(idx).phy.rd0
+    res.param.rd1 := 0.U
 
     return res
   }
@@ -1271,7 +1288,11 @@ trait IssSelFpu{ this: IssueSel =>
         Mux( bufInfo(idx).fpu_isa.is_fun_fcsr, bufInfo(idx).param.imm, postBufOperator(idx)(1))
       )
     res.param.dat.op3 := postBufOperator(idx)(2)
+    res.param.dat.op4 := 0.U
+    res.param.dat.op5 := 0.U
+    
     res.param.rd0 := bufInfo(idx).phy.rd0
+    res.param.rd1 := 0.U
     res.param.rm := bufInfo(idx).param.rm
 
     return res

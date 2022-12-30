@@ -64,6 +64,8 @@ class SeqReg_Commit_Bundle(dp: Int)(implicit p: Parameters) extends RiftBundle{
 
 
 trait SRegFilesLookup{ this: RegFilesReal =>
+  val mollocIdx: Vec[UInt]
+
   for ( i <- 0 until rnc ) {
 
     if ( i == 0 ) {
@@ -71,11 +73,13 @@ trait SRegFilesLookup{ this: RegFilesReal =>
       io.lookup(i).rsp.rs2 := 0.U
       io.lookup(i).rsp.rs3 := 0.U
       io.lookup(i).rsp.rs4 := 0.U
+      io.lookup(i).rsp.rs5 := 0.U
     } else {
       io.lookup(i).rsp.rs1 := rename_ptr(0)
       io.lookup(i).rsp.rs2 := 0.U
       io.lookup(i).rsp.rs3 := 0.U
       io.lookup(i).rsp.rs4 := 0.U
+      io.lookup(i).rsp.rs5 := 0.U
       for ( j <- 0 until i ) {
         when( io.rename(j).req.valid ) { io.lookup(i).rsp.rs1 := mollocIdx(i-1) }
       }
@@ -112,29 +116,32 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
 
     val commit = Vec(cmm, Flipped(new SeqReg_Commit_Bundle(dp)))
 
-    val csrOp= Vec(cmm, new Exe_Port)
+    val csrOp = Output(Vec(cmm, new Exe_Port))
 
     val isReady = Output(Vec(dp, Bool()))
   })
 
 
-  
+  def dwi = dw
   val mdl = Module(new SRegFiles(3+dw, dp, rnc, 1, wbc, cmm){
-    val csrOp = IO(Vec(cmm, Valid(new Exe_Port)))
+
+    val csrOp = IO(Output(Vec(cmm, new Exe_Port)))
     val isReady = IO(Output(Vec(dp, Bool())))
 
     for( i <- 0 until cmm ) {
-      when( io.commit(i).is_comfirm ){
-        csrOp(i).valid := true.B
-        csrOp(i).bits.addr  := addr.U
-        csrOp(i).bits.dat_i := files_reg(phy(i)).apply(  dw-1, 0)
-        csrOp(i).bits.op_rw := files_reg(phy(i)).extract(dw+2)
-        csrOp(i).bits.op_rs := files_reg(phy(i)).extract(dw+1)
-        csrOp(i).bits.op_rc := files_reg(phy(i)).extract(dw+0)
-      } .otherwise{
-        csrOp(i).valid := false.B
-        csrOp(i).bits  := DontCare
-      }
+      // when( io.commit(i).is_comfirm ){
+        csrOp(i).addr  := addr.U
+        csrOp(i).dat_i := files_reg(phy(i)).apply(  dwi-1, 0)
+        csrOp(i).op_rw := files_reg(phy(i)).extract(dwi+2)
+        csrOp(i).op_rs := files_reg(phy(i)).extract(dwi+1)
+        csrOp(i).op_rc := files_reg(phy(i)).extract(dwi+0)
+      // } .otherwise{
+      //   csrOp(i).addr  := DontCare
+      //   csrOp(i).dat_i := DontCare
+      //   csrOp(i).op_rw := false.B
+      //   csrOp(i).op_rs := false.B
+      //   csrOp(i).op_rc := false.B
+      // }
     }
     for( i <- 0 until dp ) {
       isReady(i) := (archit_ptr(0) === i.U)
@@ -151,6 +158,7 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
     mdl.io.lookup(i).req.rs2 := 0.U
     mdl.io.lookup(i).req.rs3 := 0.U
     mdl.io.lookup(i).req.rs4 := 0.U
+    mdl.io.lookup(i).req.rs5 := 0.U
 
     io.lookup(i).rsp := mdl.io.lookup(i).rsp.rs1
   }
@@ -159,6 +167,7 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
     mdl.io.rename(i).req.valid := io.rename(i).req.valid
     io.rename(i).req.ready := mdl.io.rename(i).req.ready
     mdl.io.rename(i).req.bits.rd0 := 0.U
+    mdl.io.rename(i).req.bits.rd1 := DontCare //XRegBase will not accept rd1, So Dontcare
 
     io.rename(i).rsp := mdl.io.rename(i).rsp.rd0
   }

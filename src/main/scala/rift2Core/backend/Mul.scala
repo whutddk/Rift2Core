@@ -130,6 +130,7 @@ class MulDiv(implicit p: Parameters) extends MulDivBase with Mul with Div {
   multiplier.io.deq.ready := iwbArb.io.in(0).ready
   iwbArb.io.in(0).valid := multiplier.io.deq.valid
   iwbArb.io.in(0).bits.rd0 := multiplier.io.deq.bits.param.rd0
+  iwbArb.io.in(0).bits.rd1 := 0.U
   iwbArb.io.in(0).bits.res := mulRes
 
   iwbArb.io.in(1) <> dividor.io.deq
@@ -549,11 +550,14 @@ class Dividor(implicit p: Parameters) extends RiftModule {
   divRtnArb.io.in(1).valid := io.enq.valid & divBypass
   divRtnArb.io.in(1).bits.res := byPassRes
   divRtnArb.io.in(1).bits.rd0 := io.enq.bits.param.rd0
+  divRtnArb.io.in(1).bits.rd1 := 0.U
 
 
   divRtnArb.io.in(0).valid := algDivider.io.deq.valid
   divRtnArb.io.in(0).bits.res := divRes
   divRtnArb.io.in(0).bits.rd0 := algDivider.io.deq.bits.param.rd0
+  divRtnArb.io.in(0).bits.rd1 := 0.U
+
   algDivider.io.deq.ready  := divRtnArb.io.in(0).ready
 
   io.enq.ready := Mux(divBypass, divRtnArb.io.in(1).ready, algDivider.io.enq.ready)
