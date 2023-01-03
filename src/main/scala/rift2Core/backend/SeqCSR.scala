@@ -102,9 +102,6 @@ class SRegFiles (dw: Int, dp: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int)(impli
 }
 
 
-
-
-
 class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: Int)(implicit p: Parameters) extends RiftModule{
   val io = IO(new Bundle{
 
@@ -129,19 +126,11 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
     val isReady = IO(Output(Vec(dp, Bool())))
 
     for( i <- 0 until cmm ) {
-      // when( io.commit(i).is_comfirm ){
-        csrOp(i).addr  := addr.U
-        csrOp(i).dat_i := files_reg(phy(i)).apply(  dwi-1, 0)
-        csrOp(i).op_rw := files_reg(phy(i)).extract(dwi+2)
-        csrOp(i).op_rs := files_reg(phy(i)).extract(dwi+1)
-        csrOp(i).op_rc := files_reg(phy(i)).extract(dwi+0)
-      // } .otherwise{
-      //   csrOp(i).addr  := DontCare
-      //   csrOp(i).dat_i := DontCare
-      //   csrOp(i).op_rw := false.B
-      //   csrOp(i).op_rs := false.B
-      //   csrOp(i).op_rc := false.B
-      // }
+      csrOp(i).addr  := addr.U
+      csrOp(i).dat_i := files_reg(phy(i)).apply(  dwi-1, 0)
+      csrOp(i).op_rw := files_reg(phy(i)).extract(dwi+2)
+      csrOp(i).op_rs := files_reg(phy(i)).extract(dwi+1)
+      csrOp(i).op_rc := files_reg(phy(i)).extract(dwi+0)
     }
     for( i <- 0 until dp ) {
       isReady(i) := (archit_ptr(0) === i.U)
@@ -206,153 +195,237 @@ class SeqCsr(dw: Int, dp: Int, init: UInt, addr: Int, rnc: Int, wbc: Int, cmm: I
 }
 
 
+abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implicit p: Parameters) extends RiftModule {
+  val io = IO(new Bundle{
+    val lookup = Vec( rnc, new SeqReg_Lookup_Bundle(4))
+    val rename = Vec( rnc, new SeqReg_Rename_Bundle(4))
+
+    val writeBack = Vec(wbc, Flipped(Valid(new SeqReg_WriteBack_Bundle(64, 4))))
+
+    val commit = Vec(cmm, Flipped(new SeqReg_Commit_Bundle(4)))
+
+    val csrOp= Output(Vec(cmm, new Exe_Port) )
+
+    val isReady = Output(new CSR_LOG_Bundle)
+  })
+
+  for( i <- 0 until rnc ){
+    io.lookup(i).rsp := DontCare
+    io.rename(i).req.ready := false.B
+    io.rename(i).rsp := DontCare    
+  }
+
+  for( i <- 0 until cmm ){
+    io.commit(i).isWroteback := false.B
+
+    io.csrOp(i).addr  := DontCare
+    io.csrOp(i).dat_i := DontCare
+    io.csrOp(i).op_rw := false.B
+    io.csrOp(i).op_rs := false.B
+    io.csrOp(i).op_rc := false.B
+  }
+
+          
+
+  object CreateRWCSRRegfiles{
+    def apply(name: String, dw: Int, dp: Int, addr: Int, rnc: Int, wbc: Int, cmm: Int) = {
+      val mdl = Module( new SeqCsr(dw = dw, dp = dp, init = 0.U, addr = addr, rnc, wbc, cmm){
+        // override def desiredName = s"${name}-regfiles"
+      } )
+
+      for( i <- 0 until rnc ){
+        mdl.io.lookup(i).req := DontCare
+        mdl.io.rename(i).req.valid := false.B
+        mdl.io.rename(i).req.bits  := DontCare
+
+        when( io.lookup(i).req === addr.U ){ io.lookup(i).rsp  := mdl.io.lookup(i).rsp }
+        when( io.rename(i).req.bits === addr.U ){ io.rename(i) <> mdl.io.rename(i) }
+      }
+
+      for( i <- 0 until wbc ){
+          mdl.io.writeBack(i).bits.dati  := DontCare
+          mdl.io.writeBack(i).bits.addr  := DontCare
+          mdl.io.writeBack(i).bits.op_rw := false.B
+          mdl.io.writeBack(i).bits.op_rs := false.B
+          mdl.io.writeBack(i).bits.op_rc := false.B
+          mdl.io.writeBack(i).bits.idx   := DontCare
+          mdl.io.writeBack(i).valid      := false.B
+
+        when( io.writeBack(i).bits.addr === addr.U ){
+          mdl.io.writeBack(i) := io.writeBack(i)
+        }
+      }
+
+      for( i <- 0 until cmm ){
+        mdl.io.commit(i).isComfirm := false.B
+        mdl.io.commit(i).isAbort := false.B
+        mdl.io.commit(i).idx := DontCare
+        mdl.io.commit(i).addr := DontCare
+
+        when( io.commit(i).addr === addr.U ){
+          mdl.io.commit(i) <> io.commit(i)
+          io.csrOp(i) := mdl.io.csrOp(i)      
+        }
+      }
+
+      io.isReady.elements.map{ ele => 
+        ele._1 match{
+          case `name` => ele._2 := mdl.io.isReady
+          case _      => require(false)          
+        }
+      }
+
+    }
+  }
 
 
-// abstract class SeqRegReal(val dw: Int, val dp: Int, val init: UInt, val rnc: Int, val rop: Int, val wbc: Int, val cmm: Int)(implicit p: Parameters) extends SeqRegBase(dw, rnc, rop, wbc, cmm, regNum){
+  object CreateROCSRRegfiles{
+    def apply(name: String, dw: Int, dp: Int, addr: Int, rnc: Int, wbc: Int, cmm: Int) = {
+      for( i <- 0 until rnc ){
+        when( io.lookup(i).req === addr.U ){ io.lookup(i).rsp  := 1.U }
+        when( io.rename(i).req.bits === addr.U ){
+          io.rename(i).req.ready := true.B
+          io.rename(i).rsp := 1.U
+        }
+      }
 
-//   val log = 
-//     for( i <- 0 until dp ) yield {
-//       if ( i == 0) RegInit("b11".U(2.W))
-//       else RegInit("b00".U(2.W))
-//     }
+      io.isReady.elements.map{ ele => 
+        ele._1 match{
+          case `name` => ele._2 := VecInit(Seq.fill(dp){true.B})
+          case _      => require(false)
+        }
+      }
 
-//   val file =
-//     for( i <- 0 until dp ) yield {
-//       RegInit(init(dw.W))
-//     }
-
-//   val renamePtr = RegInit( 0.U(log2Ceil(dp).W) )
-//   val architPtr = RegInit( 0.U(log2Ceil(dp).W) )
-
-
-//   regr := file(architPtr)
-
-// }
-
-
-
-// trait SeqRegReName{ this: SeqRegReal => 
-
-//   /**
-//     * finding out the first Free-phy-register
-//     */ 
-//   val mollocIdx = Wire(Vec(rnc, UInt((log2Ceil(dp)).W)))
-//   for ( i <- 0 until rnc ) {
-//     mollocIdx(i) := 0.U
-//     for ( j <- (dp-1) to 1 by -1 ) {
-//       if ( i == 0 ) { when( log(j) === 0.U ) { mollocIdx(i) := j.U }  }
-//       else { when( log(j) === 0.U && j.U > mollocIdx(i-1) ) { mollocIdx(i) := j.U } }
-//     }
-//   }
-
-
-//   for ( i <- 0 until rnc ) {
-//     when( io.rename(i).req === true.B ) {
-//       assert( log(mollocIdx(i)) === "b00".U )
-//       log(mollocIdx(i)) := "b01".U //may be override by flush
-//       renamePtr := mollocIdx(i) //may be override by flush
-//     }
-
-//     io.rename(i).req.ready := log.count( (x:UInt) => ( x === 0.U ) ) > i.U
-//     io.rename(i).rsp.bits  := mollocIdx(i)
-//   }
-
-//   for ( i <- 0 until cmm ) {
-//     def m = cmm-1-i
-//     when ( io.commit(m).isMisPredict | io.commit(m).isAbort ) {
-//       renamePtr := architPtr
-//       for ( n <- 0 until m ) { //for all preivious commit-chn
-//         when( io.commit(n).isComfirm ) { renamePtr(j) := io.commit(n).idx }//override renmePtr when the perivious chn comfirm
-//       }
-//       when( io.commit(m).isMisPredict ) { renamePtr(j) := io.commit(m).idx } //override renmePtr when the this chn is mispredict
-//     }
-//   }
-// }
-
-// trait SeqRegLookup{ this: SeqRegReal =>
-//   for ( i <- 0 until rnc ) {
-//     if ( i == 0) {
-//       io.lookup(i) := renamePtr
-//     } else {
-//       io.lookup(i) := mollocIdx(i-1)
-//     }
-//   }
-// }
+    }
+  }
+}
 
 
 
+class CSR_LOG_Bundle(dp: Int = 4) extends Bundle{
+  val mstatus = Vec( dp, Bool() )
 
-// trait SeqRegReadOP{ this:SeqRegReal =>
+  val fcsr    = new FCSRBundle
 
-//   io.log := log
+  val sstatus     = UInt(64.W)
+  val sedeleg     = UInt(64.W)
+  val sideleg     = UInt(64.W)
+  val stvec       = new TVecBundle
+  val scounteren  = new CounterenBundle
+  val sscratch    = UInt(64.W)
+  val sepc        = UInt(64.W)
+  val scause      = new CauseBundle
+  val stval       = UInt(64.W)
+  val satp        = new SatpBundle
 
-//   for( i <- 0 until rop ) {
-//     io.rdRsp(i).valid    := RegNext  ( io.rdReq(i).valid, init = false.B )
-//     io.rdRsp(i).bits     := RegEnable( files(io.rdReq(i).bits), io.rdReq(i).valid )
+  val mvendorid   = UInt(64.W)
+  val marchid     = UInt(64.W)
+  val mimpid      = UInt(64.W)
+  val mhartid     = UInt(64.W)
+  val mstatus     = new MStatusBundle
+  val misa        = UInt(64.W)
+  val medeleg     = UInt(64.W)
+  val mideleg     = UInt(64.W)
+  val mie         = new MSIntBundle
+  val mtvec       = new TVecBundle
+  val mcounteren  = new CounterenBundle
+  val mscratch    = UInt(64.W)
+  val mepc        = UInt(64.W)
+  val mcause      = new CauseBundle
+  val mtval       = UInt(64.W)
+  val mip         = new MSIntBundle
+  val mtinst      = UInt(64.W)
+  val mtval2      = UInt(64.W)
+  val mcycle      = UInt(64.W)
+  val minstret    = UInt(64.W)
+  val mcountinhibit = UInt(64.W)
+  val tselect     = UInt(64.W)
+  val tdata1      = UInt(64.W)
+  val tdata2      = UInt(64.W)
+  val tdata3      = UInt(64.W)
+  val dcsr        = new DcsrBundle
+  val dpc         = UInt(64.W)
+  val dscratch0   = UInt(64.W)
+  val dscratch1   = UInt(64.W)
+  val dscratch2   = UInt(64.W)
 
-//     when( io.rdRsp(i).valid ) {  assert( log(io.rdReq(i).bits) === "b11".U, "Assert Failed while reading operator, log is not ready!" ) }
-//   }
-// }
+
+  val pmpcfg  = (if(pmpNum==0) { Vec( 1, Vec(8, new PmpcfgBundle) ) } else {Vec( pmpNum, Vec(8, new PmpcfgBundle) )})
+  val pmpaddr = (if(pmpNum==0) { Vec( 8, UInt(64.W)) }      else {Vec( 8*pmpNum, UInt(64.W))})
 
 
-// trait SeqRegWriteBack{ this: SeqRegReal =>
-//   for ( i <- 0 until wbc ) {
-//     when( io.writeBack(i).fire ) {
-//       val idx = io.exe_writeBack(i).bits.idx
-//       assert( log(idx) === "b01".U, "Assert Failed when writeback at chn" + i + ", log(" + idx + ")" )
-//       log(idx) := "b11".U
-//       files(idx) := io.writeBack(i).bits.res
-//     }
-//   }
-// }
 
-// trait SeqRegCommit{ this: SeqRegReal =>
+  val mhpmcounter = Vec( 32, UInt(64.W))
+  val mhpmevent   = Vec( 32, UInt(64.W))
 
 
-//   val idx = io.commit.map{ x => x.idx }
 
-//   for ( i <- 0 until cmm ) {
-//     def m = cmm-1-i
 
-//     io.commit(m).isWriteback := log(phy(m)) === "b11".U
 
-//     when( io.commit(m).isMisPredict | io.commit(m).isAbort ) {
-//       /** clear all log to 0, except that archit_ptr point to, may be override */
-//       for ( j <- 0 until dp ) { log(j) := Mux( architPtr === j.U, log(j), "b00".U ) }
-//     }
-//     when( io.commit(m).isMisPredict | io.commit(m).isComfirm ) {
-//       /** override the log(clear) */
-//       assert( io.commit(m).isWriteback )
-//       for ( j <- 0 until dp ) {
-//         when(j.U === architPtr ) {log(j) := 0.U} // the log, that used before commit, will be clear to 0
-//       }
-//       assert( log(idx) === "b11".U, "log which going to commit to will be overrided to \"b11\" if there is an abort in-front." )
-//       log(idx) := "b11".U //the log, that going to use after commit should keep to be "b11"
-//     }
+}
 
-//     when( io.commit(i).isMisPredict | io.commit(i).isComfirm ) {
-//       architPtr := io.commit(i).idx
-//     }
-//   }
+class CRegfiles( rnc: Int, wbc: Int, cmm: Int )(implicit p: Parameters) extends CRegfilesBase( rnc, wbc, cmm ){
+
+  CreateROCSRRegfiles( "mvendorid", dw = 64, dp = 4, 0xf11, rnc, wbc, cmm)
+  CreateROCSRRegfiles( "marchid",   dw = 64, dp = 4, 0xf12, rnc, wbc, cmm)
+  CreateROCSRRegfiles( "mimpid",    dw = 64, dp = 4, 0xf13, rnc, wbc, cmm)
+  CreateROCSRRegfiles( "mhartid",   dw = 64, dp = 4, 0xf14, rnc, wbc, cmm)
+
+  CreateRWCSRRegfiles( "mstatus",   dw = 64, dp = 4, 0x300, rnc, wbc, cmm)
+  CreateROCSRRegfiles( "misa",      dw = 64, dp = 4, 0x301, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "medeleg",   dw = 64, dp = 4, 0x302, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "mideleg",   dw = 64, dp = 4, 0x303, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "mie",       dw = 64, dp = 4, 0x304, rnc, wbc, cmm)
   
 
-//   assert( log(architPtr) === "b11".U, "Assert Failed, archit point to should be b11.U!\n")
+  val mtvec       = new TVecBundle
+  val mcounteren  = new CounterenBundle
+  val mscratch    = UInt(64.W)
+  val mepc        = UInt(64.W)
+  val mcause      = new CauseBundle
+  val mtval       = UInt(64.W)
+  val mip         = new MSIntBundle
+  val mtinst      = UInt(64.W)
+  val mtval2      = UInt(64.W)
+  val mcycle      = UInt(64.W)
+  val minstret    = UInt(64.W)
+  val mcountinhibit = UInt(64.W)
+
+  CreateRWCSRRegfiles( "sstatus", dw = 64, dp = 4, 0.U, 0x100, rnc, wbc, cmm)
 
 
 
-// }
+
+  val fcsr    = new FCSRBundle
+
+  val sedeleg     = UInt(64.W)
+  val sideleg     = UInt(64.W)
+  val stvec       = new TVecBundle
+  val scounteren  = new CounterenBundle
+  val sscratch    = UInt(64.W)
+  val sepc        = UInt(64.W)
+  val scause      = new CauseBundle
+  val stval       = UInt(64.W)
+  val satp        = new SatpBundle
+
+
+  val tselect     = UInt(64.W)
+  val tdata1      = UInt(64.W)
+  val tdata2      = UInt(64.W)
+  val tdata3      = UInt(64.W)
+  val dcsr        = new DcsrBundle
+  val dpc         = UInt(64.W)
+  val dscratch0   = UInt(64.W)
+  val dscratch1   = UInt(64.W)
+  val dscratch2   = UInt(64.W)
+
+
+  val pmpcfg  = (if(pmpNum==0) { Vec( 1, Vec(8, new PmpcfgBundle) ) } else {Vec( pmpNum, Vec(8, new PmpcfgBundle) )})
+  val pmpaddr = (if(pmpNum==0) { Vec( 8, UInt(64.W)) }      else {Vec( 8*pmpNum, UInt(64.W))})
 
 
 
+  val mhpmcounter = Vec( 32, UInt(64.W))
+  val mhpmevent   = Vec( 32, UInt(64.W))
 
-// class SeqFRM(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 3, dp, 0.U, rnc, wbc, cmm)
-
-// class SeqFFLAG(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 5, dp, 0.U, rnc, wbc, cmm)
-
-// class SeqVXRM(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 2, dp, 0.U, rnc, wbc, cmm)
-
-// class SeqVXSAT(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 1, dp, 0.U, rnc, wbc, cmm)
-
-// class Seqvstart(dp: Int, rnc: Int, wbc: Int, cmm: Int) extends SeqCsr(dw = 1, dp, 0.U, rnc, wbc, cmm)
-
-
+}

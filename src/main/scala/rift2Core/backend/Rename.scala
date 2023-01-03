@@ -81,13 +81,13 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
                     }
     res.csrr :=
       Mux(
-        instr.csr_isa.is_csr & instr.param.imm === "h300".U,
+        instr.csr_isa.is_csr,
         Cat( instr.param.imm(11,0), csrr( (log2Ceil(4)-1), 0 ) ),
         0.U
       )
     res.csrw :=
       Mux(
-        instr.csr_isa.is_csr & instr.param.imm === "h300".U,
+        instr.csr_isa.is_csr,
         Cat( instr.param.imm(11,0), csrw( (log2Ceil(4)-1), 0 ) ),
         0.U
       )
@@ -295,7 +295,7 @@ trait CSRMalloc{ this: RenameBase =>
       ))
 
     io.cRename(i).req.valid :=
-      (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "h300".U )
+      io.rnReq(i).fire & (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "h300".U )
   }
 
 
@@ -351,7 +351,7 @@ with RenameFeatureCheck {
   for (i <- 0 until rnChn ) yield {
     io.rnReq(i).ready := (
       for ( j <- 0 to i by 1 ) yield {
-        io.xRename(j).req.ready & io.fRename(j).req.ready & io.cRename(i).req.ready & reOrder_fifo_i.io.enq(i).ready
+        io.xRename(j).req.ready & io.fRename(j).req.ready & io.cRename(j).req.ready & reOrder_fifo_i.io.enq(j).ready &
         rnRspFifo.io.enq(j).ready
       }
     ).reduce(_&_)

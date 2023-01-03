@@ -665,7 +665,7 @@ with CommitDiff{
     if ( i == 0 ) { cmm_state(i).csrfiles := csrfiles } else { cmm_state(i).csrfiles := csr_state(i-1) }
     
     cmm_state(i).lsu_cmm := io.lsu_cmm
-    cmm_state(i).csrExe  := Mux( io.rod(i).bits.csrw === 0.U, io.csrOp(i), csrExe(i).bits)
+    cmm_state(i).csrExe  := Mux( io.rod(i).bits.csrw === 0.U, csrExe(i).bits, io.csrOp(i))
     cmm_state(i).fcsrExe := fcsrExe(i).bits
     cmm_state(i).is_wb   := io.cm_op(i).is_writeback
     cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr

@@ -100,7 +100,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
   io.cCommit    <> cReg.io.commit
   io.csrOp      <> cReg.io.csrOp
-  io.csrIsReady := cReg.isReady
+  io.csrIsReady := cReg.io.isReady
 
 
   for ( i <- 0 until rnChn ) yield {

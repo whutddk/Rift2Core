@@ -249,7 +249,7 @@ trait RegFilesWriteBack{ this: RegFilesReal =>
   for ( i <- 0 until wbc ) {
     when( io.exe_writeBack(i).fire ) {
       val idx = io.exe_writeBack(i).bits.rd0
-      assert( log(idx) === "b01".U, "Assert Failed when writeback at chn" + i + ", log(" + idx + ")" )
+      assert( log(idx) === "b01".U, "Assert Failed when writeback at chn " + i + ", log(0x%x) === b%b", idx, log(idx) )
       log_reg(idx) := "b11".U
       files_reg(idx) := io.exe_writeBack(i).bits.res
     }
