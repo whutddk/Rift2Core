@@ -1138,9 +1138,73 @@ trait IssSelCsr{ this: IssueSel =>
       ))
 
     res.param.dat.op2 := 
-      MuxCase( bufInfo(idx).param.imm, Seq(
+      Mux1H( Seq(
+        (bufInfo(idx).param.imm === "hf11".U) -> io.csrfiles.mvendorid,
+        (bufInfo(idx).param.imm === "hf12".U) -> io.csrfiles.marchid,
+        (bufInfo(idx).param.imm === "hf13".U) -> io.csrfiles.mimpid,
+        (bufInfo(idx).param.imm === "hf14".U) -> io.csrfiles.mhartid,
+
         (bufInfo(idx).param.imm === "h300".U) -> io.csrfiles.mstatus.asUInt,
-      ))
+        (bufInfo(idx).param.imm === "h301".U) -> io.csrfiles.misa,
+        (bufInfo(idx).param.imm === "h302".U) -> io.csrfiles.medeleg,
+        (bufInfo(idx).param.imm === "h303".U) -> io.csrfiles.mideleg,
+        (bufInfo(idx).param.imm === "h304".U) -> io.csrfiles.mie,
+        (bufInfo(idx).param.imm === "h305".U) -> io.csrfiles.mtvec,
+        (bufInfo(idx).param.imm === "h306".U) -> io.csrfiles.mcounteren,
+
+        (bufInfo(idx).param.imm === "h340".U) -> io.csrfiles.mscratch,
+        (bufInfo(idx).param.imm === "h341".U) -> io.csrfiles.mepc,
+        (bufInfo(idx).param.imm === "h342".U) -> io.csrfiles.mcause,
+        (bufInfo(idx).param.imm === "h343".U) -> io.csrfiles.mtval,
+        (bufInfo(idx).param.imm === "h344".U) -> io.csrfiles.mip,
+        (bufInfo(idx).param.imm === "h34A".U) -> io.csrfiles.mtinst,
+        (bufInfo(idx).param.imm === "h34B".U) -> io.csrfiles.mtval2,
+
+        (bufInfo(idx).param.imm === "hB00".U) -> io.csrfiles.mcycle,
+        (bufInfo(idx).param.imm === "hB02".U) -> io.csrfiles.minstret,
+        (bufInfo(idx).param.imm === "h100".U) -> io.csrfiles.sstatus,
+        (bufInfo(idx).param.imm === "h102".U) -> io.csrfiles.sedeleg,
+        (bufInfo(idx).param.imm === "h103".U) -> io.csrfiles.sideleg,
+        (bufInfo(idx).param.imm === "h104".U) -> io.csrfiles.sie,
+        (bufInfo(idx).param.imm === "h105".U) -> io.csrfiles.stvec,
+        (bufInfo(idx).param.imm === "h106".U) -> io.csrfiles.scounteren,
+        (bufInfo(idx).param.imm === "h140".U) -> io.csrfiles.sscratch,
+        (bufInfo(idx).param.imm === "h141".U) -> io.csrfiles.sepc,
+        (bufInfo(idx).param.imm === "h142".U) -> io.csrfiles.scause,
+        (bufInfo(idx).param.imm === "h143".U) -> io.csrfiles.stval,
+        (bufInfo(idx).param.imm === "h144".U) -> io.csrfiles.sip,
+        (bufInfo(idx).param.imm === "h180".U) -> io.csrfiles.satp,
+        (bufInfo(idx).param.imm === "h7A0".U) -> io.csrfiles.tselect,
+        (bufInfo(idx).param.imm === "h7A1".U) -> io.csrfiles.tdata1,
+        (bufInfo(idx).param.imm === "h7A2".U) -> io.csrfiles.tdata2,
+        (bufInfo(idx).param.imm === "h7A3".U) -> io.csrfiles.tdata3,
+        (bufInfo(idx).param.imm === "h7B0".U) -> io.csrfiles.dcsr,
+        (bufInfo(idx).param.imm === "h7B1".U) -> io.csrfiles.dpc,
+        (bufInfo(idx).param.imm === "h7B2".U) -> io.csrfiles.dscratch0,
+        (bufInfo(idx).param.imm === "h7B3".U) -> io.csrfiles.dscratch1,
+        (bufInfo(idx).param.imm === "h7B4".U) -> io.csrfiles.dscratch2,
+        (bufInfo(idx).param.imm === "h001".U) -> io.csrfiles.fflag,
+        (bufInfo(idx).param.imm === "h002".U) -> io.csrfiles.frm,
+        (bufInfo(idx).param.imm === "h003".U) -> io.csrfiles.fcsr,
+        (bufInfo(idx).param.imm === "h320".U) -> io.csrfiles.mcountinhibit,
+        ) ++
+
+        for( i <- 0 until pmpNum by 2 ) yield{
+          (bufInfo(idx).param.imm === ("h3A0".U + i.U) -> io.csrfiles.pmpcfg(i).asUInt)
+        } ++
+
+        for( i <- 0 until pmpNum*8 ) yield{
+          (bufInfo(idx).param.imm === ("h3B0".U + i.U) -> io.csrfiles.pmpaddr(i).asUInt)
+        } ++
+
+        for( i <- 3 until 32 ) yield{
+          (bufInfo(idx).param.imm === ("hB00".U + i.U) -> io.csrfiles.mhpmcounter(i))
+        } ++
+
+        for( i <- 3 until 32 ) yield{
+          (bufInfo(idx).param.imm === ("h320".U + i.U) -> io.csrfiles.mhpmevent(i))
+        }
+      )
       
     res.param.dat.op3 := 0.U
     res.param.dat.op4 := 0.U
@@ -1163,12 +1227,74 @@ trait IssSelCsr{ this: IssueSel =>
   //only oldest instr will be selected
   for( i <- 0 until dptEntry ) {
     maskCondCsrIss(i) := 
-      ~bufValid(i) |
-      ~bufInfo(i).csr_isa.is_csr |
-      ( Mux1H(Seq(
-          (bufInfo(i).param.imm === "h300".U) -> (io.csrIsReady.mstatus(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === true.B),
-        ))
-      ) 
+      (
+        ~bufValid(i) |
+        ~bufInfo(i).csr_isa.is_csr) |
+        MuxCase( true.B, Seq(
+            (bufInfo(idx).param.imm === "hf11".U) -> ( io.csrIsReady.mvendorid(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))      === false.B),
+            (bufInfo(idx).param.imm === "hf12".U) -> ( io.csrIsReady.marchid(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
+            (bufInfo(idx).param.imm === "hf13".U) -> ( io.csrIsReady.mimpid(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
+            (bufInfo(idx).param.imm === "hf14".U) -> ( io.csrIsReady.mhartid(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
+            (bufInfo(idx).param.imm === "h300".U) -> ( io.csrIsReady.mstatus.asUInt(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B),
+            (bufInfo(idx).param.imm === "h301".U) -> ( io.csrIsReady.misa(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
+            (bufInfo(idx).param.imm === "h302".U) -> ( io.csrIsReady.medeleg(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
+            (bufInfo(idx).param.imm === "h303".U) -> ( io.csrIsReady.mideleg(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
+            (bufInfo(idx).param.imm === "h304".U) -> ( io.csrIsReady.mie(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
+            (bufInfo(idx).param.imm === "h305".U) -> ( io.csrIsReady.mtvec(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))          === false.B),
+            (bufInfo(idx).param.imm === "h306".U) -> ( io.csrIsReady.mcounteren(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))     === false.B),
+            (bufInfo(idx).param.imm === "h340".U) -> ( io.csrIsReady.mscratch(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))       === false.B),
+            (bufInfo(idx).param.imm === "h341".U) -> ( io.csrIsReady.mepc(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
+            (bufInfo(idx).param.imm === "h342".U) -> ( io.csrIsReady.mcause(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
+            (bufInfo(idx).param.imm === "h343".U) -> ( io.csrIsReady.mtval(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))          === false.B),
+            (bufInfo(idx).param.imm === "h344".U) -> ( io.csrIsReady.mip(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
+            (bufInfo(idx).param.imm === "h34A".U) -> ( io.csrIsReady.mtinst(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
+            (bufInfo(idx).param.imm === "h34B".U) -> ( io.csrIsReady.mtval2(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
+            (bufInfo(idx).param.imm === "hB00".U) -> ( io.csrIsReady.mcycle(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
+            (bufInfo(idx).param.imm === "hB02".U) -> ( io.csrIsReady.minstret(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))       === false.B),
+            (bufInfo(idx).param.imm === "h100".U) -> ( io.csrIsReady.sstatus(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
+            (bufInfo(idx).param.imm === "h102".U) -> ( io.csrIsReady.sedeleg(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
+            (bufInfo(idx).param.imm === "h103".U) -> ( io.csrIsReady.sideleg(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
+            (bufInfo(idx).param.imm === "h104".U) -> ( io.csrIsReady.sie(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
+            (bufInfo(idx).param.imm === "h105".U) -> ( io.csrIsReady.stvec(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))          === false.B),
+            (bufInfo(idx).param.imm === "h106".U) -> ( io.csrIsReady.scounteren(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))     === false.B),
+            (bufInfo(idx).param.imm === "h140".U) -> ( io.csrIsReady.sscratch(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))       === false.B),
+            (bufInfo(idx).param.imm === "h141".U) -> ( io.csrIsReady.sepc(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
+            (bufInfo(idx).param.imm === "h142".U) -> ( io.csrIsReady.scause(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
+            (bufInfo(idx).param.imm === "h143".U) -> ( io.csrIsReady.stval(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))          === false.B),
+            (bufInfo(idx).param.imm === "h144".U) -> ( io.csrIsReady.sip(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
+            (bufInfo(idx).param.imm === "h180".U) -> ( io.csrIsReady.satp(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
+            (bufInfo(idx).param.imm === "h7A0".U) -> ( io.csrIsReady.tselect(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
+            (bufInfo(idx).param.imm === "h7A1".U) -> ( io.csrIsReady.tdata1(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
+            (bufInfo(idx).param.imm === "h7A2".U) -> ( io.csrIsReady.tdata2(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
+            (bufInfo(idx).param.imm === "h7A3".U) -> ( io.csrIsReady.tdata3(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
+            (bufInfo(idx).param.imm === "h7B0".U) -> ( io.csrIsReady.dcsr(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
+            (bufInfo(idx).param.imm === "h7B1".U) -> ( io.csrIsReady.dpc(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
+            (bufInfo(idx).param.imm === "h7B2".U) -> ( io.csrIsReady.dscratch0(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))      === false.B),
+            (bufInfo(idx).param.imm === "h7B3".U) -> ( io.csrIsReady.dscratch1(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))      === false.B),
+            (bufInfo(idx).param.imm === "h7B4".U) -> ( io.csrIsReady.dscratch2(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))      === false.B),
+            (bufInfo(idx).param.imm === "h001".U) -> ( io.csrIsReady.fflag(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))          === false.B),
+            (bufInfo(idx).param.imm === "h002".U) -> ( io.csrIsReady.frm(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
+            (bufInfo(idx).param.imm === "h003".U) -> ( io.csrIsReady.fcsr(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
+            (bufInfo(idx).param.imm === "h320".U) -> ( io.csrIsReady.mcountinhibit(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))  === false.B),
+          ) ++
+
+          for( i <- 0 until pmpNum by 2 ) yield{
+            (bufInfo(idx).param.imm === ("h3A0".U + i.U) -> (io.csrIsReady.pmpcfg(i)(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B) )
+          } ++
+
+          for( i <- 0 until pmpNum*8 ) yield{
+            (bufInfo(idx).param.imm === ("h3B0".U + i.U) -> (io.csrIsReady.pmpaddr(i)(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B) )
+          } ++
+
+          for( i <- 3 until 32 ) yield{
+            (bufInfo(idx).param.imm === ("hB00".U + i.U) -> (io.csrIsReady.mhpmcounter(i)(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B) )
+          } ++
+
+          for( i <- 3 until 32 ) yield{
+            (bufInfo(idx).param.imm === ("h320".U + i.U) -> (io.csrIsReady.mhpmevent(i)(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B) )
+          }
+      )
+
   }
 
   csrIssMatrix := MatrixMask( ageMatrixR, maskCondCsrIss )
@@ -1274,26 +1400,16 @@ trait IssSelFpu{ this: IssueSel =>
 
     res.fun := bufInfo(idx).fpu_isa
 
-    res.param.dat.op1 :=
-      Mux(
-        bufInfo(idx).fpu_isa.is_fop,
-        postBufOperator(idx)(0),
-        Mux( bufInfo(idx).fpu_isa.is_fun_fcsri, bufInfo(idx).param.raw.rs1, postBufOperator(idx)(0) )
-      )
-
-    res.param.dat.op2 :=
-      Mux(
-        bufInfo(idx).fpu_isa.is_fop,
-        postBufOperator(idx)(1),
-        Mux( bufInfo(idx).fpu_isa.is_fun_fcsr, bufInfo(idx).param.imm, postBufOperator(idx)(1))
-      )
+    res.param.dat.op1 := postBufOperator(idx)(0)
+    res.param.dat.op2 := postBufOperator(idx)(1)
     res.param.dat.op3 := postBufOperator(idx)(2)
-    res.param.dat.op4 := 0.U
+    res.param.dat.op4 := io.csrfiles.frm
     res.param.dat.op5 := 0.U
     
     res.param.rd0 := bufInfo(idx).phy.rd0
     res.param.rd1 := 0.U
     res.param.rm := bufInfo(idx).param.rm
+    res.param.csrw    := bufInfo(idx).csrw
 
     return res
   }
@@ -1313,7 +1429,8 @@ trait IssSelFpu{ this: IssueSel =>
     for( i <- 0 until dptEntry ) {
       maskCondFpuIss(0)(i) := 
         ~bufValid(i) |
-        ~bufInfo(i).fpu_isa.is_fpu
+        ~bufInfo(i).fpu_isa.is_fpu |
+        io.csrIsReady.frm(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B
     }
 
     fpuIssMatrix(0) := MatrixMask( ageMatrixR, maskCondFpuIss(0) )

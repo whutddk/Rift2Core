@@ -376,56 +376,71 @@ class CRegfiles( rnc: Int, wbc: Int, cmm: Int )(implicit p: Parameters) extends 
   CreateRWCSRRegfiles( "medeleg",   dw = 64, dp = 4, 0x302, rnc, wbc, cmm)
   CreateRWCSRRegfiles( "mideleg",   dw = 64, dp = 4, 0x303, rnc, wbc, cmm)
   CreateRWCSRRegfiles( "mie",       dw = 64, dp = 4, 0x304, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "mtvec",     dw = 64, dp = 4, 0x305, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "mcounteren",dw = 64, dp = 4, 0x306, rnc, wbc, cmm)
   
+  CreateRWCSRRegfiles( "mscratch",  dw = 64, dp = 4, 0x340, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "mepc",      dw = 64, dp = 4, 0x341, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "mcause",    dw = 64, dp = 4, 0x342, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "mtval",     dw = 64, dp = 4, 0x343, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "mip",       dw = 64, dp = 4, 0x344, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "mtinst",    dw = 64, dp = 4, 0x34A, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "mtval2",    dw = 64, dp = 4, 0x34B, rnc, wbc, cmm)
 
-  val mtvec       = new TVecBundle
-  val mcounteren  = new CounterenBundle
-  val mscratch    = UInt(64.W)
-  val mepc        = UInt(64.W)
-  val mcause      = new CauseBundle
-  val mtval       = UInt(64.W)
-  val mip         = new MSIntBundle
-  val mtinst      = UInt(64.W)
-  val mtval2      = UInt(64.W)
-  val mcycle      = UInt(64.W)
-  val minstret    = UInt(64.W)
-  val mcountinhibit = UInt(64.W)
+  for( i <- 0 until pmpNum by 2 ){
+    CreateRWCSRRegfiles( s"pmpcfg$i",   dw = 64, dp = 4, (0x3A0 + i), rnc, wbc, cmm)
+  }
 
-  CreateRWCSRRegfiles( "sstatus", dw = 64, dp = 4, 0.U, 0x100, rnc, wbc, cmm)
+  for( i <- 0 until pmpNum*8 ){
+    CreateRWCSRRegfiles( s"pmpaddr$i",  dw = 64, dp = 4, (0x3B0 + i), rnc, wbc, cmm)
+  }
 
+  CreateRWCSRRegfiles( "mcycle",    dw = 64, dp = 4, 0xB00, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "minstret",  dw = 64, dp = 4, 0xB02, rnc, wbc, cmm)
 
+  for( i <- 3 until 32 ){
+    CreateRWCSRRegfiles( s"mhpmcounter$i",  dw = 64, dp = 4, 0xB00+i, rnc, wbc, cmm)
+  }
 
+  CreateRWCSRRegfiles( "mcountinhibit",  dw = 64, dp = 4, 0x320, rnc, wbc, cmm)
 
-  val fcsr    = new FCSRBundle
-
-  val sedeleg     = UInt(64.W)
-  val sideleg     = UInt(64.W)
-  val stvec       = new TVecBundle
-  val scounteren  = new CounterenBundle
-  val sscratch    = UInt(64.W)
-  val sepc        = UInt(64.W)
-  val scause      = new CauseBundle
-  val stval       = UInt(64.W)
-  val satp        = new SatpBundle
+  for( i <- 3 until 32 ){
+    CreateRWCSRRegfiles( s"mhpmevent$i",    dw = 64, dp = 4, 0x320+i, rnc, wbc, cmm)
+  }
 
 
-  val tselect     = UInt(64.W)
-  val tdata1      = UInt(64.W)
-  val tdata2      = UInt(64.W)
-  val tdata3      = UInt(64.W)
-  val dcsr        = new DcsrBundle
-  val dpc         = UInt(64.W)
-  val dscratch0   = UInt(64.W)
-  val dscratch1   = UInt(64.W)
-  val dscratch2   = UInt(64.W)
+  CreateRWCSRRegfiles( "sstatus",    dw = 64, dp = 4, 0.U, 0x100, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "sedeleg",    dw = 64, dp = 4, 0.U, 0x102, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "sideleg",    dw = 64, dp = 4, 0.U, 0x103, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "sie",        dw = 64, dp = 4, 0.U, 0x104, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "stvec",      dw = 64, dp = 4, 0.U, 0x105, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "scounteren", dw = 64, dp = 4, 0.U, 0x106, rnc, wbc, cmm)
+
+  CreateRWCSRRegfiles( "sscratch",   dw = 64, dp = 4, 0.U, 0x140, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "sepc",       dw = 64, dp = 4, 0.U, 0x141, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "scause",     dw = 64, dp = 4, 0.U, 0x142, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "stval",      dw = 64, dp = 4, 0.U, 0x143, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "sip",        dw = 64, dp = 4, 0.U, 0x144, rnc, wbc, cmm)
+
+  CreateRWCSRRegfiles( "satp",       dw = 64, dp = 4, 0.U, 0x180, rnc, wbc, cmm)
 
 
-  val pmpcfg  = (if(pmpNum==0) { Vec( 1, Vec(8, new PmpcfgBundle) ) } else {Vec( pmpNum, Vec(8, new PmpcfgBundle) )})
-  val pmpaddr = (if(pmpNum==0) { Vec( 8, UInt(64.W)) }      else {Vec( 8*pmpNum, UInt(64.W))})
+
+  CreateRWCSRRegfiles( "tselect",    dw = 64, dp = 4, 0.U, 0x7A0, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "tdata1",     dw = 64, dp = 4, 0.U, 0x7A1, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "tdata2",     dw = 64, dp = 4, 0.U, 0x7A2, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "tdata3",     dw = 64, dp = 4, 0.U, 0x7A3, rnc, wbc, cmm)
+
+  CreateRWCSRRegfiles( "dcsr",       dw = 64, dp = 4, 0.U, 0x7B0, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "dpc",        dw = 64, dp = 4, 0.U, 0x7B1, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "dscratch0",  dw = 64, dp = 4, 0.U, 0x7B2, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "dscratch1",  dw = 64, dp = 4, 0.U, 0x7B3, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "dscratch2",  dw = 64, dp = 4, 0.U, 0x7B4, rnc, wbc, cmm)
+
+  CreateRWCSRRegfiles( "fflag",      dw = 64, dp = 4, 0.U, 0x001, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "frm",        dw = 64, dp = 4, 0.U, 0x002, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "fcsr",       dw = 64, dp = 4, 0.U, 0x003, rnc, wbc, cmm)
 
 
-
-  val mhpmcounter = Vec( 32, UInt(64.W))
-  val mhpmevent   = Vec( 32, UInt(64.W))
 
 }

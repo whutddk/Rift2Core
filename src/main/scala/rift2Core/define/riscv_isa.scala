@@ -317,22 +317,22 @@ class Fpu_isa extends Bundle {
   val fcvt_d_lu = Bool()
   val fmv_d_x = Bool()
 
-  val fcsr_rw = Bool()
-  val fcsr_rs = Bool()
-  val fcsr_rc = Bool()
+  // val fcsr_rw = Bool()
+  // val fcsr_rs = Bool()
+  // val fcsr_rc = Bool()
 
-  val fcsr_rwi = Bool()
-  val fcsr_rsi = Bool()
-  val fcsr_rci = Bool()
+  // val fcsr_rwi = Bool()
+  // val fcsr_rsi = Bool()
+  // val fcsr_rci = Bool()
 
-  def is_fun_frw = fcsr_rw | fcsr_rwi
-  def is_fun_frs = fcsr_rs | fcsr_rsi
-  def is_fun_frc = fcsr_rc | fcsr_rci
+  // def is_fun_frw = fcsr_rw | fcsr_rwi
+  // def is_fun_frs = fcsr_rs | fcsr_rsi
+  // def is_fun_frc = fcsr_rc | fcsr_rci
 
-  def is_fun_fcsri = fcsr_rwi | fcsr_rsi | fcsr_rci
+  // def is_fun_fcsri = fcsr_rwi | fcsr_rsi | fcsr_rci
 
-  def is_fun_fcsr =   
-    is_fun_frw | is_fun_frs | is_fun_frc
+  // def is_fun_fcsr =   
+  //   is_fun_frw | is_fun_frs | is_fun_frc
 
 
   def is_fun_class = fclass_s | fclass_d
@@ -370,8 +370,8 @@ class Fpu_isa extends Bundle {
   fsgnj_s | fsgnjn_s | fsgnjx_s | fsgnj_d | fsgnjn_d | fsgnjx_d |
   fmin_s | fmax_s | fmin_d | fmax_d |
   feq_s | flt_s |fle_s | feq_d | flt_d | fle_d |
-  fadd_d | fsub_d | fmul_d | fdiv_d | fsqrt_d |
-  fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
+  fadd_d | fsub_d | fmul_d | fdiv_d | fsqrt_d 
+  //| fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
 
   def hasOneRs = hasTwoRs |
   fcvt_w_s | fcvt_wu_s |
@@ -407,8 +407,8 @@ class Fpu_isa extends Bundle {
     feq_s | flt_s | fle_s | feq_d | flt_d | fle_d |
     fmv_x_w | fmv_x_d | fclass_s | fclass_d |
     fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |
-    fmv_x_w | fmv_x_d |
-    fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
+    fmv_x_w | fmv_x_d 
+    //| fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
 
   def is_fwb =
     fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s | fdiv_s | fsqrt_s |
@@ -521,8 +521,8 @@ class Fpu_isa extends Bundle {
   fcvt_s_w  | fcvt_s_wu | fcvt_l_s  | fcvt_lu_s |
   fcvt_s_l  | fcvt_s_lu | fcvt_s_d  | fcvt_d_s  |
   fcvt_w_d  | fcvt_wu_d | fcvt_d_w  | fcvt_d_wu | fcvt_l_d  | fcvt_lu_d |
-  fcvt_d_l  | fcvt_d_lu | fcvt_w_s  | fcvt_wu_s |
-  fcsr_rw   | fcsr_rs   | fcsr_rc   | fcsr_rwi  | fcsr_rsi  | fcsr_rci
+  fcvt_d_l  | fcvt_d_lu | fcvt_w_s  | fcvt_wu_s 
+  //| fcsr_rw   | fcsr_rs   | fcsr_rc   | fcsr_rwi  | fcsr_rsi  | fcsr_rci
 
 
 }
@@ -1206,7 +1206,7 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val is_wfi = Bool()
   val is_csr = Bool()
   val is_fpu = Bool()
-  val is_fcsr = Bool()
+  // val is_fcsr = Bool()
   val is_rvc = Bool()
 
   val isXcmm = Bool()

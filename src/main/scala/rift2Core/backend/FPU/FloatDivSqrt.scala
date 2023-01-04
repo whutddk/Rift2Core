@@ -28,13 +28,13 @@ import chipsalliance.rocketchip.config._
 class FDivSqrt()(implicit p: Parameters) extends RiftModule with HasFPUParameters {
   val io = IO(new Bundle {
     val in = Flipped(ValidIO(new Fpu_iss_info))
-    val frm = Input(UInt(3.W))
     val out = ValidIO(new Fres_Info)
     val pending = Output(Bool())
   })
 
   val op1 = unbox(io.in.bits.param.dat.op1, io.in.bits.fun.FtypeTagIn, None)
   val op2 = unbox(io.in.bits.param.dat.op2, io.in.bits.fun.FtypeTagIn, None)
+  val frm = io.in.bits.param.dat.op4
 
   io.pending := false.B
   io.out.valid := false.B
@@ -50,7 +50,7 @@ class FDivSqrt()(implicit p: Parameters) extends RiftModule with HasFPUParameter
       mdl.io.sqrtOp := io.in.bits.fun.fsqrt_s | io.in.bits.fun.fsqrt_d
       mdl.io.a := maxType.unsafeConvert(op1, t)
       mdl.io.b := maxType.unsafeConvert(op2, t)
-      mdl.io.roundingMode :=  Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+      mdl.io.roundingMode :=  Mux(io.in.bits.param.rm === "b111".U, frm, io.in.bits.param.rm)
       mdl.io.detectTininess := hardfloat.consts.tininess_afterRounding
 
       when (mdl.io.outValid_div | mdl.io.outValid_sqrt) {

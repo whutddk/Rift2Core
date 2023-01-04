@@ -65,7 +65,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     val mem_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65)))
     val fpu_fWriteBack = Vec(mulNum max 1, Flipped(new DecoupledIO(new WriteBack_info(dw = 65))))
 
-    val csr_cWriteBack = Flipped(Valid(new SeqReg_WriteBack_Bundle(64, 4)))
+    val cWriteBack     = Vec(2, Flipped(Valid(new SeqReg_WriteBack_Bundle(64, 4))))
 
 
     
@@ -82,12 +82,12 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
   val iReg = Module(new XRegFiles(dw = 64, dp = xRegNum, rnChn, opChn, wbChn, cmChn))
   val fReg = if( fpuNum > 0 ) { Module(new FRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn)) } else {  Module(new FakeFRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn) ) }
-  val cReg = Module(new CRegfiles( rnChn, wbc = 4, cmChn ))
+  val cReg = Module(new CRegfiles( rnChn, wbc = 2, cmChn ))
 
   io.cLookup <> cReg.io.lookup
   io.cRename <> cReg.io.rename
 
-  cReg.io.writeBack(0) := io.csr_cWriteBack
+  cReg.io.writeBack := io.cWriteBack
 
   cReg.io.writeBack(1).valid := false.B
   cReg.io.writeBack(1).bits  := DontCare

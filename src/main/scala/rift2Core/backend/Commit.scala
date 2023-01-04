@@ -53,8 +53,8 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   val csrfiles = new CSR_Bundle
   val lsu_cmm = new Info_lsu_cmm
 
-  val csrExe = new Exe_Port
-  val fcsrExe = new Exe_Port
+          // val csrExe = new Exe_Port
+          // val fcsrExe = new Exe_Port
   val is_wb = Bool()
   val ill_ivaddr = UInt(64.W)
 	val ill_dvaddr = UInt(64.W)
@@ -131,23 +131,24 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
     return is_instr_paging_fault
   }
 
+
   def is_csrw_illegal: Bool = {
     val is_csrw_illegal = ( csrExe.op_rc | csrExe.op_rs | csrExe.op_rw ) & ( csrfiles.csr_write_denied(csrExe.addr) | csrfiles.csr_read_prilvl(csrExe.addr) )
     return is_csrw_illegal
   }
 
-  def is_fcsrw_illegal: Bool = {
-    val is_fcsrw_illegal = ( fcsrExe.op_rc | fcsrExe.op_rs | fcsrExe.op_rw ) & (csrfiles.mstatus.fs === 0.U)
-    return is_fcsrw_illegal
-  }
+  // def is_fcsrw_illegal: Bool = {
+  //   val is_fcsrw_illegal = ( fcsrExe.op_rc | fcsrExe.op_rs | fcsrExe.op_rw ) & (csrfiles.mstatus.fs === 0.U)
+  //   return is_fcsrw_illegal
+  // }
 
       
 
   def is_illeage: Bool = {
     val is_csr_illegal = 
       (is_csrr_illegal  & rod.is_csr & ~is_wb) |
-      (is_csrw_illegal  & rod.is_csr &  is_wb) |
-      (is_fcsrw_illegal & rod.is_fcsr &  is_wb)
+      (is_csrw_illegal  & rod.is_csr &  is_wb)
+      //  |(is_fcsrw_illegal & rod.is_fcsr &  is_wb)
 
     val is_ill_sfence = is_wb & rod.is_sfence_vma & ( (csrfiles.mstatus.tvm & csrfiles.priv_lvl === "b01".U) | csrfiles.priv_lvl === "b00".U)
     val is_ill_wfi  = is_wb & rod.is_wfi        & (  csrfiles.mstatus.tw & csrfiles.priv_lvl < "b11".U )
@@ -283,15 +284,17 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   val io = IO(new Bundle{
     val cm_op = Vec(cmChn, new Info_commit_op(32, maxRegNum))
     val csrCmm = Vec(cmChn, new SeqReg_Commit_Bundle(4))
+
     val csrOp = Input(Vec(cmChn, new Exe_Port))
+
     val rod = Vec(cmChn, Flipped(new DecoupledIO( new Info_reorder_i ) ))
 
     val cmm_lsu = Output(new Info_cmm_lsu)
     val lsu_cmm = Input( new Info_lsu_cmm )
 
-    val csr_addr = Flipped(ValidIO(UInt(12.W)))
-    val csr_data = ValidIO(UInt(64.W))
-    val csr_cmm_op = Flipped(DecoupledIO( new Exe_Port ) )
+                                  // val csr_addr = Flipped(ValidIO(UInt(12.W)))
+                                  // val csr_data = ValidIO(UInt(64.W))
+                                  // val csr_cmm_op = Flipped(DecoupledIO( new Exe_Port ) )
 
     val bctq = Flipped(Decoupled(new Branch_CTarget_Bundle))
     val jctq = Flipped(Decoupled(new Jump_CTarget_Bundle))
@@ -304,8 +307,8 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
     val cmm_mmu = Output( new Info_cmm_mmu )
 
 
-    val fcsr = Output(UInt(24.W))
-    val fcsr_cmm_op = Vec(cmChn, Flipped(DecoupledIO( new Exe_Port ) ))
+                                  // val fcsr = Output(UInt(24.W))
+                                  // val fcsr_cmm_op = Vec(cmChn, Flipped(DecoupledIO( new Exe_Port ) ))
 
     val dm = Flipped(new Info_DM_cmm)
 
@@ -337,12 +340,12 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   val is_retired = ( 0 until cmChn ).map{ i => {commit_state_is_comfirm(i) | commit_state_is_misPredict(i) } }
 
 
-  val emptyExePort = {
-    val res = Wire(Vec(cmChn, Flipped(DecoupledIO( new Exe_Port ) )))
-    res := 0.U.asTypeOf(Vec(cmChn, Flipped(DecoupledIO( new Exe_Port ) )))
-    res(0) <> io.csr_cmm_op
-    res
-  }
+            // val emptyExePort = {
+            //   val res = Wire(Vec(cmChn, Flipped(DecoupledIO( new Exe_Port ) )))
+            //   res := 0.U.asTypeOf(Vec(cmChn, Flipped(DecoupledIO( new Exe_Port ) )))
+            //   res(0) <> io.csr_cmm_op
+            //   res
+            // }
 
   val emptyBCTQ = {
     val res = Wire(Vec(cmChn, Flipped(DecoupledIO( new Branch_CTarget_Bundle ) )))
@@ -361,8 +364,8 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
   val bctq = ReDirect( emptyBCTQ, VecInit( io.rod.map{_.bits.is_branch} ) )
   val jctq = ReDirect( emptyJCTQ, VecInit( io.rod.map{_.bits.is_jalr} ) )
 
-  val csrExe  = ReDirect( emptyExePort, VecInit( io.rod.map{ x => x.bits.is_csr & x.bits.csrw === 0.U} ) )
-  val fcsrExe = ReDirect( io.fcsr_cmm_op, VecInit( io.rod.map{_.bits.is_fcsr} ) )
+              // val csrExe  = ReDirect( emptyExePort, VecInit( io.rod.map{ x => x.bits.is_csr & x.bits.csrw === 0.U} ) )
+              // val fcsrExe = ReDirect( io.fcsr_cmm_op, VecInit( io.rod.map{_.bits.is_fcsr} ) )
 
   val emu_reset = RegInit( false.B )
   when( io.dm.hartResetReq ) { emu_reset := true.B }
@@ -419,28 +422,24 @@ trait CommitState { this: BaseCommit =>
   val abort_chn = Wire(UInt(log2Ceil(cmChn).W)); abort_chn := DontCare
   ( 1 until cmChn ).map{ i => assert( commit_state(i) <= commit_state(i-1) ) }
   
-  for ( i <- 0 until cmChn ) yield {
+  for ( i <- 0 until cmChn ) {
     when( (~io.rod(i).valid)  ) {
       commit_state(i) := 0.U //IDLE
     }
     .otherwise {
       when(
-          // (io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & cmm_state(i).is_wb) |
-          // (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & cmm_state(i).is_wb) |
           cmm_state(i).is_xRet | cmm_state(i).is_trap | cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma
         ) {
         commit_state(i) := 1.U //abort
-        for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
+        for ( j <- 0 until i ) { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
         abort_chn := i.U
       } .elsewhen( ((io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & bctq(i).valid ) | (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & jctq(i).valid)) & cmm_state(i).is_wb & ~cmm_state(i).is_step) { //1st-step will cause an interrupt
           commit_state(i) := 2.U //mis-predict
-          for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
+          for ( j <- 0 until i ) { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
       } .elsewhen( cmm_state(i).is_wb ) { //when writeback and no-step, 1st-step will cause an interrupt
         when(
-          (io.rod(i).bits.is_csr & (
-            Mux(io.rod(i).bits.csrw === 0.U, ~csrExe(i).valid, ~io.csrCmm(i).isWroteback) ) 
-          )||
-          (io.rod(i).bits.is_fcsr & ~fcsrExe(i).valid) ||
+          (io.rod(i).bits.is_csr & ~io.csrCmm(i).isWroteback ) || //Mux(io.rod(i).bits.csrw === 0.U, ~csrExe(i).valid, ~io.csrCmm(i).isWroteback) ) 
+          // (io.rod(i).bits.is_fcsr & ~fcsrExe(i).valid) ||
           (io.rod(i).bits.is_branch & ~bctq(i).valid) ||
           (io.rod(i).bits.is_jalr & ~jctq(i).valid) ) {
           commit_state(i) := 0.U
@@ -665,12 +664,12 @@ with CommitDiff{
     if ( i == 0 ) { cmm_state(i).csrfiles := csrfiles } else { cmm_state(i).csrfiles := csr_state(i-1) }
     
     cmm_state(i).lsu_cmm := io.lsu_cmm
-    cmm_state(i).csrExe  := Mux( io.rod(i).bits.csrw === 0.U, csrExe(i).bits, io.csrOp(i))
-    cmm_state(i).fcsrExe := fcsrExe(i).bits
+    cmm_state(i).csrExe  := io.csrOp(i) //Mux( io.rod(i).bits.csrw === 0.U, csrExe(i).bits, io.csrOp(i))
+    // cmm_state(i).fcsrExe := fcsrExe(i).bits
     cmm_state(i).is_wb   := io.cm_op(i).is_writeback
     cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
     cmm_state(i).ill_dvaddr               := io.lsu_cmm.trap_addr
-    cmm_state(i).is_csrr_illegal         := cmm_state(i).csrfiles.csr_read_prilvl(io.csr_addr.bits) & io.csr_addr.valid
+    cmm_state(i).is_csrr_illegal          := cmm_state(i).csrfiles.csr_read_prilvl(io.csrOp(i).addr)// & io.csr_addr.valid
 
     cmm_state(i).exint.is_single_step := is_single_step
     cmm_state(i).exint.is_trigger := false.B
@@ -820,29 +819,29 @@ with CommitDiff{
 
 
 
-  io.csr_data.bits := csrfiles.csr_read_res(io.csr_addr.bits)
-  io.csr_data.valid := io.csr_addr.valid & ~csrfiles.csr_read_prilvl(io.csr_addr.bits)
+  // io.csr_data.bits := csrfiles.csr_read_res(io.csr_addr.bits)
+  // io.csr_data.valid := io.csr_addr.valid & ~csrfiles.csr_read_prilvl(io.csr_addr.bits)
   
   
-  ( 0 until cmChn ).map{ i =>
-    csrExe(i).ready := commit_state_is_comfirm(i) & io.rod(i).bits.is_csr & ( io.rod(i).bits.csrw === 0.U )
-    assert( ~(csrExe(i).ready & ~csrExe(i).valid) )
-  }
+  // ( 0 until cmChn ).map{ i =>
+  //   csrExe(i).ready := commit_state_is_comfirm(i) & io.rod(i).bits.is_csr & ( io.rod(i).bits.csrw === 0.U )
+  //   assert( ~(csrExe(i).ready & ~csrExe(i).valid) )
+  // }
 
   
-  println("Warning, csr can only execute one by one")
+  // println("Warning, csr can only execute one by one")
 
 
-  ( 0 until cmChn ).map{ i => {
-    fcsrExe(i).ready :=
-      commit_state_is_comfirm(i) & io.rod(i).bits.is_fcsr
+  // ( 0 until cmChn ).map{ i => {
+  //   fcsrExe(i).ready :=
+  //     commit_state_is_comfirm(i) & io.rod(i).bits.is_fcsr
 
-    assert( ~(fcsrExe(i).ready & ~fcsrExe(i).valid) )
-  }}
-  println("Warning, fcsr can only execute one by one")
+  //   assert( ~(fcsrExe(i).ready & ~fcsrExe(i).valid) )
+  // }}
+  // println("Warning, fcsr can only execute one by one")
 
-  /** @note fcsr-read will request after cmm_op_fifo clear, frm will never change until fcsr-write */
-  io.fcsr := csrfiles.fcsr.asUInt
+  // /** @note fcsr-read will request after cmm_op_fifo clear, frm will never change until fcsr-write */
+  // io.fcsr := csrfiles.fcsr.asUInt
 
 
 

@@ -129,7 +129,6 @@ import chipsalliance.rocketchip.config._
 class FPUFMAPipe(latency: Int, val t: FType)(implicit p: Parameters) extends RiftModule with HasFPUParameters {
   val io = IO(new Bundle {
     val in = Flipped(ValidIO(new Fpu_iss_info))
-    val frm = Input(UInt(3.W))
     val out = ValidIO(new Fres_Info)
   })
 
@@ -139,6 +138,7 @@ class FPUFMAPipe(latency: Int, val t: FType)(implicit p: Parameters) extends Rif
   val op1 = unbox(io.in.bits.param.dat.op1, 0.U, Some(t))
   val op2 = unbox(io.in.bits.param.dat.op2, 0.U, Some(t))
   val op3 = unbox(io.in.bits.param.dat.op3, 0.U, Some(t))
+  val frm = io.in.bits.param.dat.op4
 
 
 
@@ -182,7 +182,7 @@ class FPUFMAPipe(latency: Int, val t: FType)(implicit p: Parameters) extends Rif
   val fma = {
     val mdl = Module(new hardfloat.MulAddRecFN(t.exp, t.sig))
     mdl.io.op := op
-    mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+    mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, frm, io.in.bits.param.rm)
     mdl.io.detectTininess := hardfloat.consts.tininess_afterRounding
     mdl.io.a := in1
     mdl.io.b := in2

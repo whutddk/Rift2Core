@@ -29,7 +29,7 @@ import chipsalliance.rocketchip.config._
 class FPToInt(latency: Int)(implicit p: Parameters) extends RiftModule with HasFPUParameters{
   val io = IO(new Bundle {
     val in = Flipped(ValidIO(new Fpu_iss_info))
-    val frm = Input(UInt(3.W))
+    // val frm = Input(UInt(3.W))
     val out = ValidIO(new Xres_Info)
 
   })
@@ -41,7 +41,7 @@ class FPToInt(latency: Int)(implicit p: Parameters) extends RiftModule with HasF
 
   val op1 = unbox(io.in.bits.param.dat.op1, io.in.bits.fun.FtypeTagIn, None)
   val op2 = unbox(io.in.bits.param.dat.op2, io.in.bits.fun.FtypeTagIn, None)
- 
+  val frm = io.in.bits.param.dat.op4
 
   val store = 
     Mux1H(Seq(
@@ -80,7 +80,7 @@ class FPToInt(latency: Int)(implicit p: Parameters) extends RiftModule with HasF
     val conv =  {
       val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 64))
       mdl.io.in := op1
-      mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+      mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, frm, io.in.bits.param.rm)
       mdl.io.signedOut := ~io.in.bits.fun.is_usi
       mdl
     }
@@ -91,7 +91,7 @@ class FPToInt(latency: Int)(implicit p: Parameters) extends RiftModule with HasF
       val narrow = {
         val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 32)) 
         mdl.io.in := op1
-        mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+        mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, frm, io.in.bits.param.rm)
         mdl.io.signedOut := ~io.in.bits.fun.is_usi
         mdl
       }

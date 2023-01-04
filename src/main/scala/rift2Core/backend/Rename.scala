@@ -80,17 +80,17 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
                       when(~instr.fpu_isa.hasThreeRs) { res.phy.rs3 := 0.U }      
                     }
     res.csrr :=
-      Mux(
-        instr.csr_isa.is_csr,
-        Cat( instr.param.imm(11,0), csrr( (log2Ceil(4)-1), 0 ) ),
-        0.U
-      )
+      Mux1H(Seq(
+        instr.csr_isa.is_csr -> Cat( instr.param.imm(11,0), csrr( (log2Ceil(4)-1), 0 ) ),
+        instr.fpu_isa.is_fpu -> Cat( "h002".U, csrr( (log2Ceil(4)-1), 0 ) ),
+      ))
+
     res.csrw :=
-      Mux(
-        instr.csr_isa.is_csr,
-        Cat( instr.param.imm(11,0), csrw( (log2Ceil(4)-1), 0 ) ),
-        0.U
-      )
+      Mux1H(Seq(
+        instr.csr_isa.is_csr -> Cat( instr.param.imm(11,0), csrw( (log2Ceil(4)-1), 0 ) ),
+        instr.fpu_isa.is_fpu -> Cat( "h001".U, csrr( (log2Ceil(4)-1), 0 ) ),
+      ))
+      
     return res
   }
 
@@ -112,8 +112,8 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
       res.is_fence_i     := instr.lsu_isa.fence_i
       res.is_sfence_vma  := instr.lsu_isa.sfence_vma
       res.is_wfi         := instr.alu_isa.wfi
-      res.is_csr         := instr.csr_isa.is_csr
-      res.is_fcsr        := instr.fpu_isa.is_fpu
+      res.is_csr         := instr.csr_isa.is_csr | instr.fpu_isa.is_fpu
+      // res.is_fcsr        := instr.fpu_isa.is_fpu
       res.is_fpu         := instr.fpu_isa.is_fpu | instr.lsu_isa.is_fpu
       res.privil         := instr.privil_isa
       res.is_illeage     := instr.is_illeage
@@ -124,11 +124,10 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
       res.isVcmm := instr.isVwb
 
       res.csrw   := 
-        Mux(
-          instr.csr_isa.is_csr & instr.param.imm === "h300".U,
-          Cat( instr.param.imm(11,0), csrw( (log2Ceil(4)-1), 0 ) ),
-          0.U
-        )
+        Mux1H( Seq(
+          instr.csr_isa.is_csr -> Cat( instr.param.imm(11,0), csrw( (log2Ceil(4)-1), 0 ) ),
+          instr.fpu_isa.is_fpu -> Cat( "h001".U, csrw( (log2Ceil(4)-1), 0 ) ),
+        ))
 
 
     return res
@@ -235,7 +234,7 @@ trait WriteBackLookup {  this: RenameBase =>
         ( if( hasVector ) { Seq(
             io.rnReq(i).bits.vectorIsa.isLookUpRS1 -> io.xLookup(i).rsp.rs1,
             io.rnReq(i).bits.vectorIsa.isLookUpFS1 -> io.fLookup(i).rsp.rs1,
-            io.rnReq(i).bits.vectorIsa.isLookUpVS1 -> io.vLookup(i).rsp.rs1,          
+            io.rnReq(i).bits.vectorIsa.isLookUpVS1 -> io.vLookup(i).rsp.rs1,
           )} else { Seq() }
         )
       )
@@ -282,7 +281,8 @@ trait CSRLoopup{ this: RenameBase =>
   for ( i <- 0 until rnChn ) {
     io.cLookup(i).req := 
       Mux1H(Seq(
-        (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "h300".U ) -> "h300".U,
+        io.rnReq(i).bits.csr_isa.is_csr -> io.rnReq(i).bits.param.imm,
+        io.rnReq(i).bits.fpu_isa.is_fpu -> "h002".U,
       ))
   }
 }
@@ -291,11 +291,15 @@ trait CSRMalloc{ this: RenameBase =>
   for ( i <- 0 until rnChn ) {
     io.cRename(i).req.bits := 
       Mux1H(Seq(
-        (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "h300".U ) -> "h300".U,
+        io.rnReq(i).bits.csr_isa.is_csr -> io.rnReq(i).bits.param.imm,
+        io.rnReq(i).bits.csr_isa.is_csr -> "h001".U,
       ))
 
     io.cRename(i).req.valid :=
-      io.rnReq(i).fire & (io.rnReq(i).bits.csr_isa.is_csr & io.rnReq(i).bits.param.imm === "h300".U )
+      io.rnReq(i).fire & (
+        io.rnReq(i).bits.csr_isa.is_csr |
+        io.rnReq(i).bits.csr_isa.is_fpu
+      )
   }
 
 
