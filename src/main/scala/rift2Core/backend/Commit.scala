@@ -53,7 +53,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   val csrfiles = new CSR_Bundle
   val lsu_cmm = new Info_lsu_cmm
 
-          // val csrExe = new Exe_Port
+  val csrExe = new Exe_Port
           // val fcsrExe = new Exe_Port
   val is_wb = Bool()
   val ill_ivaddr = UInt(64.W)

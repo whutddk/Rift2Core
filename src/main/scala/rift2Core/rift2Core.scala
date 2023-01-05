@@ -243,11 +243,6 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   cmm_stage.io.rod <> rnm_stage.io.rod_i
   cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
   cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
-  cmm_stage.io.csr_addr <> exe_stage.io.csr_addr
-  cmm_stage.io.csr_data <> exe_stage.io.csr_data
-  cmm_stage.io.csr_cmm_op <> exe_stage.io.csr_cmm_op
-  cmm_stage.io.fcsr <> exe_stage.io.fcsr
-  cmm_stage.io.fcsr_cmm_op <> exe_stage.io.fcsr_cmm_op
   cmm_stage.io.bctq <> exe_stage.io.bctq
   cmm_stage.io.jctq <> exe_stage.io.jctq
   cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect

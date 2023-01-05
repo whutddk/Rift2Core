@@ -275,6 +275,7 @@ class Fpu_float2int_iss_info extends Bundle {
 class Fpu_param(implicit p: Parameters) extends RD_PHY{
   val dat = new Operation_source(dw=65)
   val rm = UInt(3.W)
+  val csrw = UInt( (12+log2Ceil(4)).W)
 
 }
 

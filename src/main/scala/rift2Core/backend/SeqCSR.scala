@@ -211,7 +211,7 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
 
   for( i <- 0 until rnc ){
     io.lookup(i).rsp := DontCare
-    io.rename(i).req.ready := false.B
+    io.rename(i).req.ready := true.B
     io.rename(i).rsp := DontCare    
   }
 
@@ -269,12 +269,10 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
       }
 
       io.isReady.elements.map{ ele => 
-        ele._1 match{
-          case `name` => ele._2 := mdl.io.isReady
-          case _      => require(false)          
+        if(ele._1.matches(`name`)){
+          ele._2 := mdl.io.isReady
         }
       }
-
     }
   }
 
@@ -290,9 +288,8 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
       }
 
       io.isReady.elements.map{ ele => 
-        ele._1 match{
-          case `name` => ele._2 := VecInit(Seq.fill(dp){true.B})
-          case _      => require(false)
+        if(ele._1.matches(`name`)){
+          ele._2 := VecInit(Seq.fill(dp){true.B})
         }
       }
 
@@ -303,60 +300,191 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
 
 
 class CSR_LOG_Bundle(dp: Int = 4) extends Bundle{
-  val mstatus = Vec( dp, Bool() )
+  // val mstatus = Vec( dp, Bool() )
 
-  val fcsr    = new FCSRBundle
+  val mvendorid  = Vec( dp, Bool() )
+  val marchid    = Vec( dp, Bool() )
+  val mimpid     = Vec( dp, Bool() )
+  val mhartid    = Vec( dp, Bool() )
+  val mstatus    = Vec( dp, Bool() )
+  val misa       = Vec( dp, Bool() )
+  val medeleg    = Vec( dp, Bool() )
+  val mideleg    = Vec( dp, Bool() )
+  val mie        = Vec( dp, Bool() )
+  val mtvec      = Vec( dp, Bool() )
+  val mcounteren = Vec( dp, Bool() )
+  val mscratch   = Vec( dp, Bool() )
+  val mepc       = Vec( dp, Bool() )
+  val mcause     = Vec( dp, Bool() )
+  val mtval      = Vec( dp, Bool() )
+  val mip        = Vec( dp, Bool() )
+  val mtinst     = Vec( dp, Bool() )
+  val mtval2     = Vec( dp, Bool() )
 
-  val sstatus     = UInt(64.W)
-  val sedeleg     = UInt(64.W)
-  val sideleg     = UInt(64.W)
-  val stvec       = new TVecBundle
-  val scounteren  = new CounterenBundle
-  val sscratch    = UInt(64.W)
-  val sepc        = UInt(64.W)
-  val scause      = new CauseBundle
-  val stval       = UInt(64.W)
-  val satp        = new SatpBundle
+  val pmpcfg0    = Vec( dp, Bool() )
+  val pmpcfg2    = Vec( dp, Bool() )
+  val pmpcfg4    = Vec( dp, Bool() )
+  val pmpcfg6    = Vec( dp, Bool() )
+  val pmpcfg8    = Vec( dp, Bool() )
+  val pmpcfg10   = Vec( dp, Bool() )
+  val pmpcfg12   = Vec( dp, Bool() )
+  val pmpcfg14   = Vec( dp, Bool() )
 
-  val mvendorid   = UInt(64.W)
-  val marchid     = UInt(64.W)
-  val mimpid      = UInt(64.W)
-  val mhartid     = UInt(64.W)
-  val mstatus     = new MStatusBundle
-  val misa        = UInt(64.W)
-  val medeleg     = UInt(64.W)
-  val mideleg     = UInt(64.W)
-  val mie         = new MSIntBundle
-  val mtvec       = new TVecBundle
-  val mcounteren  = new CounterenBundle
-  val mscratch    = UInt(64.W)
-  val mepc        = UInt(64.W)
-  val mcause      = new CauseBundle
-  val mtval       = UInt(64.W)
-  val mip         = new MSIntBundle
-  val mtinst      = UInt(64.W)
-  val mtval2      = UInt(64.W)
-  val mcycle      = UInt(64.W)
-  val minstret    = UInt(64.W)
-  val mcountinhibit = UInt(64.W)
-  val tselect     = UInt(64.W)
-  val tdata1      = UInt(64.W)
-  val tdata2      = UInt(64.W)
-  val tdata3      = UInt(64.W)
-  val dcsr        = new DcsrBundle
-  val dpc         = UInt(64.W)
-  val dscratch0   = UInt(64.W)
-  val dscratch1   = UInt(64.W)
-  val dscratch2   = UInt(64.W)
+  val pmpaddr0   = Vec( dp, Bool() )
+  val pmpaddr1   = Vec( dp, Bool() )
+  val pmpaddr2   = Vec( dp, Bool() )
+  val pmpaddr3   = Vec( dp, Bool() )
+  val pmpaddr4   = Vec( dp, Bool() )
+  val pmpaddr5   = Vec( dp, Bool() )
+  val pmpaddr6   = Vec( dp, Bool() )
+  val pmpaddr7   = Vec( dp, Bool() )
+  val pmpaddr8   = Vec( dp, Bool() )
+  val pmpaddr9   = Vec( dp, Bool() )
+  val pmpaddr10   = Vec( dp, Bool() )
+  val pmpaddr11   = Vec( dp, Bool() )
+  val pmpaddr12   = Vec( dp, Bool() )
+  val pmpaddr13   = Vec( dp, Bool() )
+  val pmpaddr14   = Vec( dp, Bool() )
+  val pmpaddr15   = Vec( dp, Bool() )
+  val pmpaddr16   = Vec( dp, Bool() )
+  val pmpaddr17   = Vec( dp, Bool() )
+  val pmpaddr18   = Vec( dp, Bool() )
+  val pmpaddr19   = Vec( dp, Bool() )
+  val pmpaddr20   = Vec( dp, Bool() )
+  val pmpaddr21   = Vec( dp, Bool() )
+  val pmpaddr22   = Vec( dp, Bool() )
+  val pmpaddr23   = Vec( dp, Bool() )
+  val pmpaddr24   = Vec( dp, Bool() )
+  val pmpaddr25   = Vec( dp, Bool() )
+  val pmpaddr26   = Vec( dp, Bool() )
+  val pmpaddr27   = Vec( dp, Bool() )
+  val pmpaddr28   = Vec( dp, Bool() )
+  val pmpaddr29   = Vec( dp, Bool() )
+  val pmpaddr30   = Vec( dp, Bool() )
+  val pmpaddr31   = Vec( dp, Bool() )
+  val pmpaddr32   = Vec( dp, Bool() )
+  val pmpaddr33   = Vec( dp, Bool() )
+  val pmpaddr34   = Vec( dp, Bool() )
+  val pmpaddr35   = Vec( dp, Bool() )
+  val pmpaddr36   = Vec( dp, Bool() )
+  val pmpaddr37   = Vec( dp, Bool() )
+  val pmpaddr38   = Vec( dp, Bool() )
+  val pmpaddr39   = Vec( dp, Bool() )
+  val pmpaddr40   = Vec( dp, Bool() )
+  val pmpaddr41   = Vec( dp, Bool() )
+  val pmpaddr42   = Vec( dp, Bool() )
+  val pmpaddr43   = Vec( dp, Bool() )
+  val pmpaddr44   = Vec( dp, Bool() )
+  val pmpaddr45   = Vec( dp, Bool() )
+  val pmpaddr46   = Vec( dp, Bool() )
+  val pmpaddr47   = Vec( dp, Bool() )
+  val pmpaddr48   = Vec( dp, Bool() )
+  val pmpaddr49   = Vec( dp, Bool() )
+  val pmpaddr50   = Vec( dp, Bool() )
+  val pmpaddr51   = Vec( dp, Bool() )
+  val pmpaddr52   = Vec( dp, Bool() )
+  val pmpaddr53   = Vec( dp, Bool() )
+  val pmpaddr54   = Vec( dp, Bool() )
+  val pmpaddr55   = Vec( dp, Bool() )
+  val pmpaddr56   = Vec( dp, Bool() )
+  val pmpaddr57   = Vec( dp, Bool() )
+  val pmpaddr58   = Vec( dp, Bool() )
+  val pmpaddr59   = Vec( dp, Bool() )
+  val pmpaddr60   = Vec( dp, Bool() )
+  val pmpaddr61   = Vec( dp, Bool() )
+  val pmpaddr62   = Vec( dp, Bool() )
+  val pmpaddr63   = Vec( dp, Bool() )
+
+  val mcycle     = Vec( dp, Bool() )
+  val minstret   = Vec( dp, Bool() )
+
+  val mhpmcounter3  = Vec( dp, Bool() )
+  val mhpmcounter4  = Vec( dp, Bool() )
+  val mhpmcounter5  = Vec( dp, Bool() )
+  val mhpmcounter6  = Vec( dp, Bool() )
+  val mhpmcounter7  = Vec( dp, Bool() )
+  val mhpmcounter8  = Vec( dp, Bool() )
+  val mhpmcounter9  = Vec( dp, Bool() )
+  val mhpmcounter10 = Vec( dp, Bool() )
+  val mhpmcounter11 = Vec( dp, Bool() )
+  val mhpmcounter12 = Vec( dp, Bool() )
+  val mhpmcounter13 = Vec( dp, Bool() )
+  val mhpmcounter14 = Vec( dp, Bool() )
+  val mhpmcounter15 = Vec( dp, Bool() )
+  val mhpmcounter16 = Vec( dp, Bool() )
+  val mhpmcounter17 = Vec( dp, Bool() )
+  val mhpmcounter18 = Vec( dp, Bool() )
+  val mhpmcounter19 = Vec( dp, Bool() )
+  val mhpmcounter20 = Vec( dp, Bool() )
+  val mhpmcounter21 = Vec( dp, Bool() )
+  val mhpmcounter22 = Vec( dp, Bool() )
+  val mhpmcounter23 = Vec( dp, Bool() )
+  val mhpmcounter24 = Vec( dp, Bool() )
+  val mhpmcounter25 = Vec( dp, Bool() )
+  val mhpmcounter26 = Vec( dp, Bool() )
+  val mhpmcounter27 = Vec( dp, Bool() )
+  val mhpmcounter28 = Vec( dp, Bool() )
+  val mhpmcounter29 = Vec( dp, Bool() )
+  val mhpmcounter30 = Vec( dp, Bool() )
+  val mhpmcounter31 = Vec( dp, Bool() )
+
+  val mcountinhibit = Vec( dp, Bool() )
+
+  val mhpmevent3  = Vec( dp, Bool() )
+  val mhpmevent4  = Vec( dp, Bool() )
+  val mhpmevent5  = Vec( dp, Bool() )
+  val mhpmevent6  = Vec( dp, Bool() )
+  val mhpmevent7  = Vec( dp, Bool() )
+  val mhpmevent8  = Vec( dp, Bool() )
+  val mhpmevent9  = Vec( dp, Bool() )
+  val mhpmevent10 = Vec( dp, Bool() )
+  val mhpmevent11 = Vec( dp, Bool() )
+  val mhpmevent12 = Vec( dp, Bool() )
+  val mhpmevent13 = Vec( dp, Bool() )
+  val mhpmevent14 = Vec( dp, Bool() )
+  val mhpmevent15 = Vec( dp, Bool() )
+  val mhpmevent16 = Vec( dp, Bool() )
+  val mhpmevent17 = Vec( dp, Bool() )
+  val mhpmevent18 = Vec( dp, Bool() )
+  val mhpmevent19 = Vec( dp, Bool() )
+  val mhpmevent20 = Vec( dp, Bool() )
+  val mhpmevent21 = Vec( dp, Bool() )
+  val mhpmevent22 = Vec( dp, Bool() )
+  val mhpmevent23 = Vec( dp, Bool() )
+  val mhpmevent24 = Vec( dp, Bool() )
+  val mhpmevent25 = Vec( dp, Bool() )
+  val mhpmevent26 = Vec( dp, Bool() )
+  val mhpmevent27 = Vec( dp, Bool() )
+  val mhpmevent28 = Vec( dp, Bool() )
+  val mhpmevent29 = Vec( dp, Bool() )
+  val mhpmevent30 = Vec( dp, Bool() )
+  val mhpmevent31 = Vec( dp, Bool() )
 
 
-  val pmpcfg  = (if(pmpNum==0) { Vec( 1, Vec(8, new PmpcfgBundle) ) } else {Vec( pmpNum, Vec(8, new PmpcfgBundle) )})
-  val pmpaddr = (if(pmpNum==0) { Vec( 8, UInt(64.W)) }      else {Vec( 8*pmpNum, UInt(64.W))})
-
-
-
-  val mhpmcounter = Vec( 32, UInt(64.W))
-  val mhpmevent   = Vec( 32, UInt(64.W))
+  val sstatus     = Vec( dp, Bool() )
+  // val sedeleg     = Vec( dp, Bool() )
+  // val sideleg     = Vec( dp, Bool() )
+  val sie         = Vec( dp, Bool() )
+  val stvec       = Vec( dp, Bool() )
+  val scounteren  = Vec( dp, Bool() )
+  val sscratch    = Vec( dp, Bool() )
+  val sepc        = Vec( dp, Bool() )
+  val scause      = Vec( dp, Bool() )
+  val stval       = Vec( dp, Bool() )
+  val sip         = Vec( dp, Bool() )
+  val satp        = Vec( dp, Bool() )
+  val tselect     = Vec( dp, Bool() )
+  val tdata1      = Vec( dp, Bool() )
+  val tdata2      = Vec( dp, Bool() )
+  val tdata3      = Vec( dp, Bool() )
+  val dcsr        = Vec( dp, Bool() )
+  val dpc         = Vec( dp, Bool() )
+  val dscratch0   = Vec( dp, Bool() )
+  val dscratch1   = Vec( dp, Bool() )
+  val dscratch2   = Vec( dp, Bool() )
+  val fflags      = Vec( dp, Bool() )
+  val frm         = Vec( dp, Bool() )
+  val fcsr        = Vec( dp, Bool() )
 
 
 
@@ -387,11 +515,11 @@ class CRegfiles( rnc: Int, wbc: Int, cmm: Int )(implicit p: Parameters) extends 
   CreateRWCSRRegfiles( "mtinst",    dw = 64, dp = 4, 0x34A, rnc, wbc, cmm)
   CreateRWCSRRegfiles( "mtval2",    dw = 64, dp = 4, 0x34B, rnc, wbc, cmm)
 
-  for( i <- 0 until pmpNum by 2 ){
+  for( i <- 0 until 16 by 2 ){
     CreateRWCSRRegfiles( s"pmpcfg$i",   dw = 64, dp = 4, (0x3A0 + i), rnc, wbc, cmm)
   }
 
-  for( i <- 0 until pmpNum*8 ){
+  for( i <- 0 until 16*8 ){
     CreateRWCSRRegfiles( s"pmpaddr$i",  dw = 64, dp = 4, (0x3B0 + i), rnc, wbc, cmm)
   }
 
@@ -409,37 +537,37 @@ class CRegfiles( rnc: Int, wbc: Int, cmm: Int )(implicit p: Parameters) extends 
   }
 
 
-  CreateRWCSRRegfiles( "sstatus",    dw = 64, dp = 4, 0.U, 0x100, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "sedeleg",    dw = 64, dp = 4, 0.U, 0x102, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "sideleg",    dw = 64, dp = 4, 0.U, 0x103, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "sie",        dw = 64, dp = 4, 0.U, 0x104, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "stvec",      dw = 64, dp = 4, 0.U, 0x105, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "scounteren", dw = 64, dp = 4, 0.U, 0x106, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "sstatus",    dw = 64, dp = 4, 0x100, rnc, wbc, cmm)
+  // CreateRWCSRRegfiles( "sedeleg",    dw = 64, dp = 4, 0x102, rnc, wbc, cmm)
+  // CreateRWCSRRegfiles( "sideleg",    dw = 64, dp = 4, 0x103, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "sie",        dw = 64, dp = 4, 0x104, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "stvec",      dw = 64, dp = 4, 0x105, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "scounteren", dw = 64, dp = 4, 0x106, rnc, wbc, cmm)
 
-  CreateRWCSRRegfiles( "sscratch",   dw = 64, dp = 4, 0.U, 0x140, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "sepc",       dw = 64, dp = 4, 0.U, 0x141, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "scause",     dw = 64, dp = 4, 0.U, 0x142, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "stval",      dw = 64, dp = 4, 0.U, 0x143, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "sip",        dw = 64, dp = 4, 0.U, 0x144, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "sscratch",   dw = 64, dp = 4, 0x140, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "sepc",       dw = 64, dp = 4, 0x141, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "scause",     dw = 64, dp = 4, 0x142, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "stval",      dw = 64, dp = 4, 0x143, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "sip",        dw = 64, dp = 4, 0x144, rnc, wbc, cmm)
 
-  CreateRWCSRRegfiles( "satp",       dw = 64, dp = 4, 0.U, 0x180, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "satp",       dw = 64, dp = 4, 0x180, rnc, wbc, cmm)
 
 
 
-  CreateRWCSRRegfiles( "tselect",    dw = 64, dp = 4, 0.U, 0x7A0, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "tdata1",     dw = 64, dp = 4, 0.U, 0x7A1, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "tdata2",     dw = 64, dp = 4, 0.U, 0x7A2, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "tdata3",     dw = 64, dp = 4, 0.U, 0x7A3, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "tselect",    dw = 64, dp = 4, 0x7A0, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "tdata1",     dw = 64, dp = 4, 0x7A1, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "tdata2",     dw = 64, dp = 4, 0x7A2, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "tdata3",     dw = 64, dp = 4, 0x7A3, rnc, wbc, cmm)
 
-  CreateRWCSRRegfiles( "dcsr",       dw = 64, dp = 4, 0.U, 0x7B0, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "dpc",        dw = 64, dp = 4, 0.U, 0x7B1, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "dscratch0",  dw = 64, dp = 4, 0.U, 0x7B2, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "dscratch1",  dw = 64, dp = 4, 0.U, 0x7B3, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "dscratch2",  dw = 64, dp = 4, 0.U, 0x7B4, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "dcsr",       dw = 64, dp = 4, 0x7B0, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "dpc",        dw = 64, dp = 4, 0x7B1, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "dscratch0",  dw = 64, dp = 4, 0x7B2, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "dscratch1",  dw = 64, dp = 4, 0x7B3, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "dscratch2",  dw = 64, dp = 4, 0x7B4, rnc, wbc, cmm)
 
-  CreateRWCSRRegfiles( "fflag",      dw = 64, dp = 4, 0.U, 0x001, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "frm",        dw = 64, dp = 4, 0.U, 0x002, rnc, wbc, cmm)
-  CreateRWCSRRegfiles( "fcsr",       dw = 64, dp = 4, 0.U, 0x003, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "fflags",     dw = 64, dp = 4, 0x001, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "frm",        dw = 64, dp = 4, 0x002, rnc, wbc, cmm)
+  CreateRWCSRRegfiles( "fcsr",       dw = 64, dp = 4, 0x003, rnc, wbc, cmm)
 
 
 

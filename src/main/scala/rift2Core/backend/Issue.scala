@@ -840,7 +840,198 @@ trait IssLoadVOp { this: IssueBase =>
   }
 }
 
-abstract class IssueSel()(implicit p: Parameters) extends IssueBase with IssLoadIOp with IssLoadFOp with IssLoadVOp{
+trait IssLoadCsr { this: IssueBase =>
+  val isCSRRReady = 
+    for( i <- 0 until dptEntry ) yield {
+      ((bufInfo(i).param.imm === "hf11".U) & ( io.csrIsReady.mvendorid(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))      === true.B)) |
+      ((bufInfo(i).param.imm === "hf12".U) & ( io.csrIsReady.marchid(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "hf13".U) & ( io.csrIsReady.mimpid(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))         === true.B)) |
+      ((bufInfo(i).param.imm === "hf14".U) & ( io.csrIsReady.mhartid(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h300".U) & ( io.csrIsReady.mstatus.asUInt(bufInfo(i).csrr( log2Ceil(4)-1, 0 )) === true.B)) |
+      ((bufInfo(i).param.imm === "h301".U) & ( io.csrIsReady.misa(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))           === true.B)) |
+      ((bufInfo(i).param.imm === "h302".U) & ( io.csrIsReady.medeleg(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h303".U) & ( io.csrIsReady.mideleg(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h304".U) & ( io.csrIsReady.mie(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))            === true.B)) |
+      ((bufInfo(i).param.imm === "h305".U) & ( io.csrIsReady.mtvec(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))          === true.B)) |
+      ((bufInfo(i).param.imm === "h306".U) & ( io.csrIsReady.mcounteren(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))     === true.B)) |
+      ((bufInfo(i).param.imm === "h340".U) & ( io.csrIsReady.mscratch(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h341".U) & ( io.csrIsReady.mepc(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))           === true.B)) |
+      ((bufInfo(i).param.imm === "h342".U) & ( io.csrIsReady.mcause(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))         === true.B)) |
+      ((bufInfo(i).param.imm === "h343".U) & ( io.csrIsReady.mtval(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))          === true.B)) |
+      ((bufInfo(i).param.imm === "h344".U) & ( io.csrIsReady.mip(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))            === true.B)) |
+      ((bufInfo(i).param.imm === "h34A".U) & ( io.csrIsReady.mtinst(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))         === true.B)) |
+      ((bufInfo(i).param.imm === "h34B".U) & ( io.csrIsReady.mtval2(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))         === true.B)) |
+      ((bufInfo(i).param.imm === "hB00".U) & ( io.csrIsReady.mcycle(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))         === true.B)) |
+      ((bufInfo(i).param.imm === "hB02".U) & ( io.csrIsReady.minstret(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h100".U) & ( io.csrIsReady.sstatus(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      // ((bufInfo(i).param.imm === "h102".U) & ( io.csrIsReady.sedeleg(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      // ((bufInfo(i).param.imm === "h103".U) & ( io.csrIsReady.sideleg(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h104".U) & ( io.csrIsReady.sie(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))            === true.B)) |
+      ((bufInfo(i).param.imm === "h105".U) & ( io.csrIsReady.stvec(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))          === true.B)) |
+      ((bufInfo(i).param.imm === "h106".U) & ( io.csrIsReady.scounteren(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))     === true.B)) |
+      ((bufInfo(i).param.imm === "h140".U) & ( io.csrIsReady.sscratch(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h141".U) & ( io.csrIsReady.sepc(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))           === true.B)) |
+      ((bufInfo(i).param.imm === "h142".U) & ( io.csrIsReady.scause(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))         === true.B)) |
+      ((bufInfo(i).param.imm === "h143".U) & ( io.csrIsReady.stval(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))          === true.B)) |
+      ((bufInfo(i).param.imm === "h144".U) & ( io.csrIsReady.sip(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))            === true.B)) |
+      ((bufInfo(i).param.imm === "h180".U) & ( io.csrIsReady.satp(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))           === true.B)) |
+      ((bufInfo(i).param.imm === "h7A0".U) & ( io.csrIsReady.tselect(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h7A1".U) & ( io.csrIsReady.tdata1(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))         === true.B)) |
+      ((bufInfo(i).param.imm === "h7A2".U) & ( io.csrIsReady.tdata2(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))         === true.B)) |
+      ((bufInfo(i).param.imm === "h7A3".U) & ( io.csrIsReady.tdata3(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))         === true.B)) |
+      ((bufInfo(i).param.imm === "h7B0".U) & ( io.csrIsReady.dcsr(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))           === true.B)) |
+      ((bufInfo(i).param.imm === "h7B1".U) & ( io.csrIsReady.dpc(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))            === true.B)) |
+      ((bufInfo(i).param.imm === "h7B2".U) & ( io.csrIsReady.dscratch0(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))      === true.B)) |
+      ((bufInfo(i).param.imm === "h7B3".U) & ( io.csrIsReady.dscratch1(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))      === true.B)) |
+      ((bufInfo(i).param.imm === "h7B4".U) & ( io.csrIsReady.dscratch2(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))      === true.B)) |
+      ((bufInfo(i).param.imm === "h001".U) & ( io.csrIsReady.fflags(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))         === true.B)) |
+      ((bufInfo(i).param.imm === "h002".U) & ( io.csrIsReady.frm(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))            === true.B)) |
+      ((bufInfo(i).param.imm === "h003".U) & ( io.csrIsReady.fcsr(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))           === true.B)) |
+      ((bufInfo(i).param.imm === "h320".U) & ( io.csrIsReady.mcountinhibit(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))  === true.B)) |
+      ((bufInfo(i).param.imm === "h3A0".U) & ( io.csrIsReady.pmpcfg0(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3A2".U) & ( io.csrIsReady.pmpcfg2(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3A4".U) & ( io.csrIsReady.pmpcfg4(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3A6".U) & ( io.csrIsReady.pmpcfg6(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3A8".U) & ( io.csrIsReady.pmpcfg8(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3AA".U) & ( io.csrIsReady.pmpcfg10(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3AC".U) & ( io.csrIsReady.pmpcfg12(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3AE".U) & ( io.csrIsReady.pmpcfg14(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3B0".U) & (io.csrIsReady.pmpaddr0(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3B1".U) & (io.csrIsReady.pmpaddr1(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3B2".U) & (io.csrIsReady.pmpaddr2(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3B3".U) & (io.csrIsReady.pmpaddr3(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3B4".U) & (io.csrIsReady.pmpaddr4(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3B5".U) & (io.csrIsReady.pmpaddr5(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3B6".U) & (io.csrIsReady.pmpaddr6(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3B7".U) & (io.csrIsReady.pmpaddr7(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3B8".U) & (io.csrIsReady.pmpaddr8(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3B9".U) & (io.csrIsReady.pmpaddr9(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))        === true.B)) |
+      ((bufInfo(i).param.imm === "h3BA".U) & (io.csrIsReady.pmpaddr10(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3BB".U) & (io.csrIsReady.pmpaddr11(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3BC".U) & (io.csrIsReady.pmpaddr12(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3BD".U) & (io.csrIsReady.pmpaddr13(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3BE".U) & (io.csrIsReady.pmpaddr14(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3BF".U) & (io.csrIsReady.pmpaddr15(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3C0".U) & (io.csrIsReady.pmpaddr16(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3C1".U) & (io.csrIsReady.pmpaddr17(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3C2".U) & (io.csrIsReady.pmpaddr18(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3C3".U) & (io.csrIsReady.pmpaddr19(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3C4".U) & (io.csrIsReady.pmpaddr20(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3C5".U) & (io.csrIsReady.pmpaddr21(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3C6".U) & (io.csrIsReady.pmpaddr22(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3C7".U) & (io.csrIsReady.pmpaddr23(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3C8".U) & (io.csrIsReady.pmpaddr24(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3C9".U) & (io.csrIsReady.pmpaddr25(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3CA".U) & (io.csrIsReady.pmpaddr26(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3CB".U) & (io.csrIsReady.pmpaddr27(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3CC".U) & (io.csrIsReady.pmpaddr28(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3CD".U) & (io.csrIsReady.pmpaddr29(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3CE".U) & (io.csrIsReady.pmpaddr30(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3CF".U) & (io.csrIsReady.pmpaddr31(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3D0".U) & (io.csrIsReady.pmpaddr32(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3D1".U) & (io.csrIsReady.pmpaddr33(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3D2".U) & (io.csrIsReady.pmpaddr34(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3D3".U) & (io.csrIsReady.pmpaddr35(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3D4".U) & (io.csrIsReady.pmpaddr36(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3D5".U) & (io.csrIsReady.pmpaddr37(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3D6".U) & (io.csrIsReady.pmpaddr38(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3D7".U) & (io.csrIsReady.pmpaddr39(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3D8".U) & (io.csrIsReady.pmpaddr40(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3D9".U) & (io.csrIsReady.pmpaddr41(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3DA".U) & (io.csrIsReady.pmpaddr42(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3DB".U) & (io.csrIsReady.pmpaddr43(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3DC".U) & (io.csrIsReady.pmpaddr44(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3DD".U) & (io.csrIsReady.pmpaddr45(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3DE".U) & (io.csrIsReady.pmpaddr46(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3DF".U) & (io.csrIsReady.pmpaddr47(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3E0".U) & (io.csrIsReady.pmpaddr48(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3E1".U) & (io.csrIsReady.pmpaddr49(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3E2".U) & (io.csrIsReady.pmpaddr50(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3E3".U) & (io.csrIsReady.pmpaddr51(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3E4".U) & (io.csrIsReady.pmpaddr52(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3E5".U) & (io.csrIsReady.pmpaddr53(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3E6".U) & (io.csrIsReady.pmpaddr54(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3E7".U) & (io.csrIsReady.pmpaddr55(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3E8".U) & (io.csrIsReady.pmpaddr56(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3E9".U) & (io.csrIsReady.pmpaddr57(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3EA".U) & (io.csrIsReady.pmpaddr58(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3EB".U) & (io.csrIsReady.pmpaddr59(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3EC".U) & (io.csrIsReady.pmpaddr60(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3ED".U) & (io.csrIsReady.pmpaddr61(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3EE".U) & (io.csrIsReady.pmpaddr62(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "h3EF".U) & (io.csrIsReady.pmpaddr63(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))       === true.B)) |
+      ((bufInfo(i).param.imm === "hB03".U) & (io.csrIsReady.mhpmcounter3(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "hB04".U) & (io.csrIsReady.mhpmcounter4(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "hB05".U) & (io.csrIsReady.mhpmcounter5(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "hB06".U) & (io.csrIsReady.mhpmcounter6(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "hB07".U) & (io.csrIsReady.mhpmcounter7(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "hB08".U) & (io.csrIsReady.mhpmcounter8(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "hB09".U) & (io.csrIsReady.mhpmcounter9(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "hB0A".U) & (io.csrIsReady.mhpmcounter10(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB0B".U) & (io.csrIsReady.mhpmcounter11(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB0C".U) & (io.csrIsReady.mhpmcounter12(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB0D".U) & (io.csrIsReady.mhpmcounter13(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB0E".U) & (io.csrIsReady.mhpmcounter14(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB0F".U) & (io.csrIsReady.mhpmcounter15(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB10".U) & (io.csrIsReady.mhpmcounter16(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB11".U) & (io.csrIsReady.mhpmcounter17(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB12".U) & (io.csrIsReady.mhpmcounter18(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB13".U) & (io.csrIsReady.mhpmcounter19(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB14".U) & (io.csrIsReady.mhpmcounter20(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB15".U) & (io.csrIsReady.mhpmcounter21(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB16".U) & (io.csrIsReady.mhpmcounter22(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB17".U) & (io.csrIsReady.mhpmcounter23(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB18".U) & (io.csrIsReady.mhpmcounter24(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB19".U) & (io.csrIsReady.mhpmcounter25(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB1A".U) & (io.csrIsReady.mhpmcounter26(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB1B".U) & (io.csrIsReady.mhpmcounter27(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB1C".U) & (io.csrIsReady.mhpmcounter28(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB1D".U) & (io.csrIsReady.mhpmcounter29(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB1E".U) & (io.csrIsReady.mhpmcounter30(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "hB1F".U) & (io.csrIsReady.mhpmcounter31(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h323".U) & (io.csrIsReady.mhpmevent3(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "h324".U) & (io.csrIsReady.mhpmevent4(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "h325".U) & (io.csrIsReady.mhpmevent5(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "h326".U) & (io.csrIsReady.mhpmevent6(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "h327".U) & (io.csrIsReady.mhpmevent7(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "h328".U) & (io.csrIsReady.mhpmevent8(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "h329".U) & (io.csrIsReady.mhpmevent9(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))    === true.B)) |
+      ((bufInfo(i).param.imm === "h32A".U) & (io.csrIsReady.mhpmevent10(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h32B".U) & (io.csrIsReady.mhpmevent11(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h32C".U) & (io.csrIsReady.mhpmevent12(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h32D".U) & (io.csrIsReady.mhpmevent13(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h32E".U) & (io.csrIsReady.mhpmevent14(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h32F".U) & (io.csrIsReady.mhpmevent15(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h330".U) & (io.csrIsReady.mhpmevent16(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h331".U) & (io.csrIsReady.mhpmevent17(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h332".U) & (io.csrIsReady.mhpmevent18(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h333".U) & (io.csrIsReady.mhpmevent19(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h334".U) & (io.csrIsReady.mhpmevent20(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h335".U) & (io.csrIsReady.mhpmevent21(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h336".U) & (io.csrIsReady.mhpmevent22(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h337".U) & (io.csrIsReady.mhpmevent23(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h338".U) & (io.csrIsReady.mhpmevent24(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h339".U) & (io.csrIsReady.mhpmevent25(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h33A".U) & (io.csrIsReady.mhpmevent26(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h33B".U) & (io.csrIsReady.mhpmevent27(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h33C".U) & (io.csrIsReady.mhpmevent28(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h33D".U) & (io.csrIsReady.mhpmevent29(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h33E".U) & (io.csrIsReady.mhpmevent30(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B)) |
+      ((bufInfo(i).param.imm === "h33F".U) & (io.csrIsReady.mhpmevent31(bufInfo(i).csrr( log2Ceil(4)-1, 0 ))   === true.B))
+    }
+
+  val isFRMRReady =
+    for( i <- 0 until dptEntry ) yield {
+      io.csrIsReady.frm(bufInfo(i).csrr( log2Ceil(4)-1, 0 )) === false.B
+    }
+}
+
+
+abstract class IssueSel()(implicit p: Parameters) extends IssueBase
+with IssLoadIOp
+with IssLoadFOp
+with IssLoadVOp
+with IssLoadCsr{
   val postIsOpReady = Wire( Vec( dptEntry, Vec(5, Bool())) )
   val postBufOperator = Wire( Vec( dptEntry, Vec(5, UInt(vParams.vlen.W))) )
 
@@ -856,6 +1047,8 @@ abstract class IssueSel()(implicit p: Parameters) extends IssueBase with IssLoad
     postBufOperator(i)(2) := MuxCase( bufOperator(i)(2) , io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }}  )
     postBufOperator(i)(3) := MuxCase( bufOperator(i)(3) , io.vrgRsp.map{x => { ( isBufVop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> x.bits.op }}  )
     postBufOperator(i)(4) := MuxCase( bufOperator(i)(4) , io.vrgRsp.map{x => { ( isBufVop(i)(4) & x.valid & (x.bits.phy === bufReqNum(i)(4))) -> x.bits.op }}  )
+  
+
   }
 
 }
@@ -1148,62 +1341,62 @@ trait IssSelCsr{ this: IssueSel =>
         (bufInfo(idx).param.imm === "h301".U) -> io.csrfiles.misa,
         (bufInfo(idx).param.imm === "h302".U) -> io.csrfiles.medeleg,
         (bufInfo(idx).param.imm === "h303".U) -> io.csrfiles.mideleg,
-        (bufInfo(idx).param.imm === "h304".U) -> io.csrfiles.mie,
-        (bufInfo(idx).param.imm === "h305".U) -> io.csrfiles.mtvec,
-        (bufInfo(idx).param.imm === "h306".U) -> io.csrfiles.mcounteren,
+        (bufInfo(idx).param.imm === "h304".U) -> io.csrfiles.mie.asUInt,
+        (bufInfo(idx).param.imm === "h305".U) -> io.csrfiles.mtvec.asUInt,
+        (bufInfo(idx).param.imm === "h306".U) -> io.csrfiles.mcounteren.asUInt,
 
         (bufInfo(idx).param.imm === "h340".U) -> io.csrfiles.mscratch,
         (bufInfo(idx).param.imm === "h341".U) -> io.csrfiles.mepc,
-        (bufInfo(idx).param.imm === "h342".U) -> io.csrfiles.mcause,
+        (bufInfo(idx).param.imm === "h342".U) -> io.csrfiles.mcause.asUInt,
         (bufInfo(idx).param.imm === "h343".U) -> io.csrfiles.mtval,
-        (bufInfo(idx).param.imm === "h344".U) -> io.csrfiles.mip,
+        (bufInfo(idx).param.imm === "h344".U) -> io.csrfiles.mip.asUInt,
         (bufInfo(idx).param.imm === "h34A".U) -> io.csrfiles.mtinst,
         (bufInfo(idx).param.imm === "h34B".U) -> io.csrfiles.mtval2,
 
         (bufInfo(idx).param.imm === "hB00".U) -> io.csrfiles.mcycle,
         (bufInfo(idx).param.imm === "hB02".U) -> io.csrfiles.minstret,
-        (bufInfo(idx).param.imm === "h100".U) -> io.csrfiles.sstatus,
-        (bufInfo(idx).param.imm === "h102".U) -> io.csrfiles.sedeleg,
-        (bufInfo(idx).param.imm === "h103".U) -> io.csrfiles.sideleg,
-        (bufInfo(idx).param.imm === "h104".U) -> io.csrfiles.sie,
-        (bufInfo(idx).param.imm === "h105".U) -> io.csrfiles.stvec,
-        (bufInfo(idx).param.imm === "h106".U) -> io.csrfiles.scounteren,
+        (bufInfo(idx).param.imm === "h100".U) -> io.csrfiles.sstatus.asUInt,
+        // (bufInfo(idx).param.imm === "h102".U) -> io.csrfiles.sedeleg,
+        // (bufInfo(idx).param.imm === "h103".U) -> io.csrfiles.sideleg,
+        (bufInfo(idx).param.imm === "h104".U) -> io.csrfiles.sie.asUInt,
+        (bufInfo(idx).param.imm === "h105".U) -> io.csrfiles.stvec.asUInt,
+        (bufInfo(idx).param.imm === "h106".U) -> io.csrfiles.scounteren.asUInt,
         (bufInfo(idx).param.imm === "h140".U) -> io.csrfiles.sscratch,
         (bufInfo(idx).param.imm === "h141".U) -> io.csrfiles.sepc,
-        (bufInfo(idx).param.imm === "h142".U) -> io.csrfiles.scause,
+        (bufInfo(idx).param.imm === "h142".U) -> io.csrfiles.scause.asUInt,
         (bufInfo(idx).param.imm === "h143".U) -> io.csrfiles.stval,
-        (bufInfo(idx).param.imm === "h144".U) -> io.csrfiles.sip,
-        (bufInfo(idx).param.imm === "h180".U) -> io.csrfiles.satp,
+        (bufInfo(idx).param.imm === "h144".U) -> io.csrfiles.sip.asUInt,
+        (bufInfo(idx).param.imm === "h180".U) -> io.csrfiles.satp.asUInt,
         (bufInfo(idx).param.imm === "h7A0".U) -> io.csrfiles.tselect,
         (bufInfo(idx).param.imm === "h7A1".U) -> io.csrfiles.tdata1,
         (bufInfo(idx).param.imm === "h7A2".U) -> io.csrfiles.tdata2,
         (bufInfo(idx).param.imm === "h7A3".U) -> io.csrfiles.tdata3,
-        (bufInfo(idx).param.imm === "h7B0".U) -> io.csrfiles.dcsr,
+        (bufInfo(idx).param.imm === "h7B0".U) -> io.csrfiles.dcsr.asUInt,
         (bufInfo(idx).param.imm === "h7B1".U) -> io.csrfiles.dpc,
         (bufInfo(idx).param.imm === "h7B2".U) -> io.csrfiles.dscratch0,
         (bufInfo(idx).param.imm === "h7B3".U) -> io.csrfiles.dscratch1,
         (bufInfo(idx).param.imm === "h7B4".U) -> io.csrfiles.dscratch2,
-        (bufInfo(idx).param.imm === "h001".U) -> io.csrfiles.fflag,
-        (bufInfo(idx).param.imm === "h002".U) -> io.csrfiles.frm,
-        (bufInfo(idx).param.imm === "h003".U) -> io.csrfiles.fcsr,
+        (bufInfo(idx).param.imm === "h001".U) -> io.csrfiles.fcsr.fflags,
+        (bufInfo(idx).param.imm === "h002".U) -> io.csrfiles.fcsr.frm,
+        (bufInfo(idx).param.imm === "h003".U) -> io.csrfiles.fcsr.asUInt,
         (bufInfo(idx).param.imm === "h320".U) -> io.csrfiles.mcountinhibit,
         ) ++
 
-        for( i <- 0 until pmpNum by 2 ) yield{
-          (bufInfo(idx).param.imm === ("h3A0".U + i.U) -> io.csrfiles.pmpcfg(i).asUInt)
-        } ++
+        (for( i <- 0 until pmpNum by 2 ) yield{
+          ((bufInfo(idx).param.imm === ("h3A0".U + i.U)) -> io.csrfiles.pmpcfg(i).asUInt)
+        }) ++
 
-        for( i <- 0 until pmpNum*8 ) yield{
-          (bufInfo(idx).param.imm === ("h3B0".U + i.U) -> io.csrfiles.pmpaddr(i).asUInt)
-        } ++
+        (for( i <- 0 until pmpNum*8 ) yield{
+          ((bufInfo(idx).param.imm === ("h3B0".U + i.U)) -> io.csrfiles.pmpaddr(i).asUInt)
+        }) ++
 
-        for( i <- 3 until 32 ) yield{
-          (bufInfo(idx).param.imm === ("hB00".U + i.U) -> io.csrfiles.mhpmcounter(i))
-        } ++
+        (for( i <- 3 until 32 ) yield{
+          ((bufInfo(idx).param.imm === ("hB00".U + i.U)) -> io.csrfiles.mhpmcounter(i))
+        }) ++
 
-        for( i <- 3 until 32 ) yield{
-          (bufInfo(idx).param.imm === ("h320".U + i.U) -> io.csrfiles.mhpmevent(i))
-        }
+        (for( i <- 3 until 32 ) yield{
+          ((bufInfo(idx).param.imm === ("h320".U + i.U)) -> io.csrfiles.mhpmevent(i))
+        })
       )
       
     res.param.dat.op3 := 0.U
@@ -1227,74 +1420,8 @@ trait IssSelCsr{ this: IssueSel =>
   //only oldest instr will be selected
   for( i <- 0 until dptEntry ) {
     maskCondCsrIss(i) := 
-      (
-        ~bufValid(i) |
-        ~bufInfo(i).csr_isa.is_csr) |
-        MuxCase( true.B, Seq(
-            (bufInfo(idx).param.imm === "hf11".U) -> ( io.csrIsReady.mvendorid(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))      === false.B),
-            (bufInfo(idx).param.imm === "hf12".U) -> ( io.csrIsReady.marchid(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
-            (bufInfo(idx).param.imm === "hf13".U) -> ( io.csrIsReady.mimpid(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
-            (bufInfo(idx).param.imm === "hf14".U) -> ( io.csrIsReady.mhartid(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
-            (bufInfo(idx).param.imm === "h300".U) -> ( io.csrIsReady.mstatus.asUInt(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B),
-            (bufInfo(idx).param.imm === "h301".U) -> ( io.csrIsReady.misa(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
-            (bufInfo(idx).param.imm === "h302".U) -> ( io.csrIsReady.medeleg(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
-            (bufInfo(idx).param.imm === "h303".U) -> ( io.csrIsReady.mideleg(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
-            (bufInfo(idx).param.imm === "h304".U) -> ( io.csrIsReady.mie(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
-            (bufInfo(idx).param.imm === "h305".U) -> ( io.csrIsReady.mtvec(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))          === false.B),
-            (bufInfo(idx).param.imm === "h306".U) -> ( io.csrIsReady.mcounteren(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))     === false.B),
-            (bufInfo(idx).param.imm === "h340".U) -> ( io.csrIsReady.mscratch(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))       === false.B),
-            (bufInfo(idx).param.imm === "h341".U) -> ( io.csrIsReady.mepc(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
-            (bufInfo(idx).param.imm === "h342".U) -> ( io.csrIsReady.mcause(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
-            (bufInfo(idx).param.imm === "h343".U) -> ( io.csrIsReady.mtval(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))          === false.B),
-            (bufInfo(idx).param.imm === "h344".U) -> ( io.csrIsReady.mip(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
-            (bufInfo(idx).param.imm === "h34A".U) -> ( io.csrIsReady.mtinst(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
-            (bufInfo(idx).param.imm === "h34B".U) -> ( io.csrIsReady.mtval2(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
-            (bufInfo(idx).param.imm === "hB00".U) -> ( io.csrIsReady.mcycle(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
-            (bufInfo(idx).param.imm === "hB02".U) -> ( io.csrIsReady.minstret(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))       === false.B),
-            (bufInfo(idx).param.imm === "h100".U) -> ( io.csrIsReady.sstatus(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
-            (bufInfo(idx).param.imm === "h102".U) -> ( io.csrIsReady.sedeleg(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
-            (bufInfo(idx).param.imm === "h103".U) -> ( io.csrIsReady.sideleg(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
-            (bufInfo(idx).param.imm === "h104".U) -> ( io.csrIsReady.sie(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
-            (bufInfo(idx).param.imm === "h105".U) -> ( io.csrIsReady.stvec(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))          === false.B),
-            (bufInfo(idx).param.imm === "h106".U) -> ( io.csrIsReady.scounteren(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))     === false.B),
-            (bufInfo(idx).param.imm === "h140".U) -> ( io.csrIsReady.sscratch(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))       === false.B),
-            (bufInfo(idx).param.imm === "h141".U) -> ( io.csrIsReady.sepc(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
-            (bufInfo(idx).param.imm === "h142".U) -> ( io.csrIsReady.scause(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
-            (bufInfo(idx).param.imm === "h143".U) -> ( io.csrIsReady.stval(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))          === false.B),
-            (bufInfo(idx).param.imm === "h144".U) -> ( io.csrIsReady.sip(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
-            (bufInfo(idx).param.imm === "h180".U) -> ( io.csrIsReady.satp(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
-            (bufInfo(idx).param.imm === "h7A0".U) -> ( io.csrIsReady.tselect(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))        === false.B),
-            (bufInfo(idx).param.imm === "h7A1".U) -> ( io.csrIsReady.tdata1(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
-            (bufInfo(idx).param.imm === "h7A2".U) -> ( io.csrIsReady.tdata2(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
-            (bufInfo(idx).param.imm === "h7A3".U) -> ( io.csrIsReady.tdata3(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))         === false.B),
-            (bufInfo(idx).param.imm === "h7B0".U) -> ( io.csrIsReady.dcsr(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
-            (bufInfo(idx).param.imm === "h7B1".U) -> ( io.csrIsReady.dpc(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
-            (bufInfo(idx).param.imm === "h7B2".U) -> ( io.csrIsReady.dscratch0(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))      === false.B),
-            (bufInfo(idx).param.imm === "h7B3".U) -> ( io.csrIsReady.dscratch1(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))      === false.B),
-            (bufInfo(idx).param.imm === "h7B4".U) -> ( io.csrIsReady.dscratch2(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))      === false.B),
-            (bufInfo(idx).param.imm === "h001".U) -> ( io.csrIsReady.fflag(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))          === false.B),
-            (bufInfo(idx).param.imm === "h002".U) -> ( io.csrIsReady.frm(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))            === false.B),
-            (bufInfo(idx).param.imm === "h003".U) -> ( io.csrIsReady.fcsr(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))           === false.B),
-            (bufInfo(idx).param.imm === "h320".U) -> ( io.csrIsReady.mcountinhibit(bufInfo(i).csrw( log2Ceil(4)-1, 0 ))  === false.B),
-          ) ++
-
-          for( i <- 0 until pmpNum by 2 ) yield{
-            (bufInfo(idx).param.imm === ("h3A0".U + i.U) -> (io.csrIsReady.pmpcfg(i)(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B) )
-          } ++
-
-          for( i <- 0 until pmpNum*8 ) yield{
-            (bufInfo(idx).param.imm === ("h3B0".U + i.U) -> (io.csrIsReady.pmpaddr(i)(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B) )
-          } ++
-
-          for( i <- 3 until 32 ) yield{
-            (bufInfo(idx).param.imm === ("hB00".U + i.U) -> (io.csrIsReady.mhpmcounter(i)(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B) )
-          } ++
-
-          for( i <- 3 until 32 ) yield{
-            (bufInfo(idx).param.imm === ("h320".U + i.U) -> (io.csrIsReady.mhpmevent(i)(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B) )
-          }
-      )
-
+      ~bufValid(i) |
+      ~bufInfo(i).csr_isa.is_csr
   }
 
   csrIssMatrix := MatrixMask( ageMatrixR, maskCondCsrIss )
@@ -1307,10 +1434,10 @@ trait IssSelCsr{ this: IssueSel =>
   csrIssIdx := csrIssMatrix.indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
 
   csrIssFifo.io.enq.valid := 
-    ( 0 until dptEntry ).map{ i => { csrIssMatrix(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) } }.reduce(_|_)
+    ( 0 until dptEntry ).map{ i => { csrIssMatrix(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & isCSRRReady(i) } }.reduce(_|_)
 
   csrIssFifo.io.enq.bits  := 
-    Mux1H( ( 0 until dptEntry ).map{ i => { (csrIssMatrix(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) ) -> csrIssInfo(i) } } )
+    Mux1H( ( 0 until dptEntry ).map{ i => { (csrIssMatrix(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & isCSRRReady(i) ) -> csrIssInfo(i) } } )
 
   for( i <- 0 until dptEntry ) {
     when( csrIssFifo.io.enq.fire & csrIssIdx === i.U ) {
@@ -1403,7 +1530,7 @@ trait IssSelFpu{ this: IssueSel =>
     res.param.dat.op1 := postBufOperator(idx)(0)
     res.param.dat.op2 := postBufOperator(idx)(1)
     res.param.dat.op3 := postBufOperator(idx)(2)
-    res.param.dat.op4 := io.csrfiles.frm
+    res.param.dat.op4 := io.csrfiles.fcsr.frm
     res.param.dat.op5 := 0.U
     
     res.param.rd0 := bufInfo(idx).phy.rd0
@@ -1429,8 +1556,7 @@ trait IssSelFpu{ this: IssueSel =>
     for( i <- 0 until dptEntry ) {
       maskCondFpuIss(0)(i) := 
         ~bufValid(i) |
-        ~bufInfo(i).fpu_isa.is_fpu |
-        io.csrIsReady.frm(bufInfo(i).csrw( log2Ceil(4)-1, 0 )) === false.B
+        ~bufInfo(i).fpu_isa.is_fpu
     }
 
     fpuIssMatrix(0) := MatrixMask( ageMatrixR, maskCondFpuIss(0) )
@@ -1441,10 +1567,10 @@ trait IssSelFpu{ this: IssueSel =>
     )
 
     fpuIssFifo.io.enq.valid := 
-      ( 0 until dptEntry ).map{ i => { fpuIssMatrix(0)(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) } }.reduce(_|_)
+      ( 0 until dptEntry ).map{ i => { fpuIssMatrix(0)(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & isFRMRReady(i) } }.reduce(_|_)
 
     fpuIssFifo.io.enq.bits  := 
-      Mux1H( ( 0 until dptEntry ).map{ i => { (fpuIssMatrix(0)(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) ) -> fpuIssInfo(i) } } )
+      Mux1H( ( 0 until dptEntry ).map{ i => { (fpuIssMatrix(0)(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & isFRMRReady(i) ) -> fpuIssInfo(i) } } )
     
 
     fpuIssIdx(0) := fpuIssMatrix(0).indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero

@@ -28,9 +28,9 @@ import rift2Chip._
 import chipsalliance.rocketchip.config._
 
 
-// class Exc_Info(implicit p: Parameters) extends Fpu_iss_info { val exc = UInt(5.W) }
-// class Fres_Info(implicit p: Parameters) extends Exc_Info { val toFloat = UInt(65.W) }
-// class Xres_Info(implicit p: Parameters) extends Exc_Info { val toInt = UInt(64.W) }
+class Exc_Info(implicit p: Parameters) extends Fpu_iss_info { val exc = UInt(5.W) }
+class Fres_Info(implicit p: Parameters) extends Exc_Info { val toFloat = UInt(65.W) }
+class Xres_Info(implicit p: Parameters) extends Exc_Info { val toInt = UInt(64.W) }
 
 
 class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends RiftModule with HasFPUParameters{
@@ -62,7 +62,7 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
   }
 
 
-  val exc = Wire(UInt(5.W))
+  // val exc = Wire(UInt(5.W))
 
   val divSqrt = {
     val mdl = Module(new FDivSqrt())
@@ -113,7 +113,7 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
     mdl
   }
 
-  exc := 
+  // exc := 
 
 
   fpu_exe_iwb_fifo.io.enq.valid := f2i.io.out.valid

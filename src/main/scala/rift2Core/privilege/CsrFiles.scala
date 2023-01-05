@@ -670,9 +670,9 @@ trait CsrFiles { this: BaseCommit =>
   def update_fcsr( in: CMMState_Bundle): FCSRBundle = {
     val fcsr = WireDefault( in.csrfiles.fcsr )
 
-    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.fcsr.fflags, "h001".U, in.fcsrExe )
-    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.fcsr.frm,    "h002".U, in.fcsrExe )
-    val (enable2, dnxt2) = Reg_Exe_Port( in.csrfiles.fcsr.asUInt, "h003".U, in.fcsrExe )  
+    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.fcsr.fflags, "h001".U, in.csrExe )
+    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.fcsr.frm,    "h002".U, in.csrExe )
+    val (enable2, dnxt2) = Reg_Exe_Port( in.csrfiles.fcsr.asUInt, "h003".U, in.csrExe )  
         
 
     when(enable0) { fcsr.fflags := dnxt0 }

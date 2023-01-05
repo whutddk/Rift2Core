@@ -87,16 +87,10 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
   io.cLookup <> cReg.io.lookup
   io.cRename <> cReg.io.rename
 
-  cReg.io.writeBack := io.cWriteBack
+  cReg.io.writeBack <> io.cWriteBack
 
-  cReg.io.writeBack(1).valid := false.B
-  cReg.io.writeBack(1).bits  := DontCare
 
-  cReg.io.writeBack(2).valid := false.B
-  cReg.io.writeBack(2).bits  := DontCare
 
-  cReg.io.writeBack(3).valid := false.B
-  cReg.io.writeBack(3).bits  := DontCare
 
   io.cCommit    <> cReg.io.commit
   io.csrOp      <> cReg.io.csrOp

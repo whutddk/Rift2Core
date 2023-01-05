@@ -88,7 +88,7 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
     res.csrw :=
       Mux1H(Seq(
         instr.csr_isa.is_csr -> Cat( instr.param.imm(11,0), csrw( (log2Ceil(4)-1), 0 ) ),
-        instr.fpu_isa.is_fpu -> Cat( "h001".U, csrr( (log2Ceil(4)-1), 0 ) ),
+        instr.fpu_isa.is_fpu -> Cat( "h001".U, csrw( (log2Ceil(4)-1), 0 ) ),
       ))
       
     return res
@@ -298,7 +298,7 @@ trait CSRMalloc{ this: RenameBase =>
     io.cRename(i).req.valid :=
       io.rnReq(i).fire & (
         io.rnReq(i).bits.csr_isa.is_csr |
-        io.rnReq(i).bits.csr_isa.is_fpu
+        io.rnReq(i).bits.fpu_isa.is_fpu
       )
   }
 
