@@ -109,6 +109,7 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
   val dfma = {
     val mdl = Module(new FPUFMAPipe(latency, FType.D))
     mdl.io.in.valid := io.fpu_iss_exe.valid & io.fpu_iss_exe.bits.fun.FtypeTagIn === 1.U
+    mdl.io.in.bits := io.fpu_iss_exe.bits
     mdl.reset := io.flush | reset.asBool
     mdl
   }
@@ -128,7 +129,7 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
       f2i.io.out.valid -> f2i.io.out.bits.param.rd0,
     ))
 
-
+  fpu_exe_iwb_fifo.io.enq.bits.rd1 := 0.U
 
   fpu_exe_fwb_fifo.io.enq.valid := i2f.io.out.valid | f2f.io.out.valid | sfma.io.out.valid | dfma.io.out.valid | divSqrt.io.out.valid
   io.fpu_cWriteBack.valid       := i2f.io.out.valid | f2f.io.out.valid | sfma.io.out.valid | dfma.io.out.valid | divSqrt.io.out.valid
@@ -150,6 +151,7 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
       dfma.io.out.valid -> dfma.io.out.bits.param.rd0,
       divSqrt.io.out.valid -> divSqrt.io.out.bits.param.rd0,
     ))
+  fpu_exe_fwb_fifo.io.enq.bits.rd1 := 0.U
 
   io.fpu_iss_exe.ready := ~(io.fpu_iss_exe.bits.fun.is_fun_divSqrt & divSqrt.io.pending)
 

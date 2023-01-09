@@ -35,8 +35,8 @@ class NormalCfg  extends Rift2370
 
 object testMain extends App {
 
-  // val cfg = new NormalCfg
-  val cfg = new Rift2GoCfg
+  val cfg = new NormalCfg
+  // val cfg = new Rift2GoCfg
   // val cfg = new Rift2350
   // val cfg = new Rift2330D
 

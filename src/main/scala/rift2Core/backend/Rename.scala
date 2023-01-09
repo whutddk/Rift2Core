@@ -292,7 +292,7 @@ trait CSRMalloc{ this: RenameBase =>
     io.cRename(i).req.bits := 
       Mux1H(Seq(
         io.rnReq(i).bits.csr_isa.is_csr -> io.rnReq(i).bits.param.imm,
-        io.rnReq(i).bits.csr_isa.is_csr -> "h001".U,
+        io.rnReq(i).bits.fpu_isa.is_fpu -> "h001".U,
       ))
 
     io.cRename(i).req.valid :=

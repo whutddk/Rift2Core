@@ -258,12 +258,16 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
 
       for( i <- 0 until cmm ){
         mdl.io.commit(i).isComfirm := false.B
-        mdl.io.commit(i).isAbort := false.B
+        mdl.io.commit(i).isAbort := io.commit(i).isAbort
         mdl.io.commit(i).idx := DontCare
         mdl.io.commit(i).addr := DontCare
 
         when( io.commit(i).addr === addr.U ){
-          mdl.io.commit(i) <> io.commit(i)
+          mdl.io.commit(i).isComfirm := io.commit(i).isComfirm
+          mdl.io.commit(i).idx       := io.commit(i).idx
+          mdl.io.commit(i).addr      := io.commit(i).addr
+          io.commit(i).isWroteback   := mdl.io.commit(i).isWroteback
+
           io.csrOp(i) := mdl.io.csrOp(i)      
         }
       }
@@ -279,21 +283,70 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
 
   object CreateROCSRRegfiles{
     def apply(name: String, dw: Int, dp: Int, addr: Int, rnc: Int, wbc: Int, cmm: Int) = {
+      val mdl = Module( new SeqCsr(dw = dw, dp = dp, init = 0.U, addr = addr, rnc, wbc, cmm){
+        // override def desiredName = s"${name}-regfiles"
+      } )
+
       for( i <- 0 until rnc ){
-        when( io.lookup(i).req === addr.U ){ io.lookup(i).rsp  := 1.U }
-        when( io.rename(i).req.bits === addr.U ){
-          io.rename(i).req.ready := true.B
-          io.rename(i).rsp := 1.U
+        mdl.io.lookup(i).req := DontCare
+        mdl.io.rename(i).req.valid := false.B
+        mdl.io.rename(i).req.bits  := DontCare
+
+        when( io.lookup(i).req === addr.U ){ io.lookup(i).rsp  := mdl.io.lookup(i).rsp }
+        when( io.rename(i).req.bits === addr.U ){ io.rename(i) <> mdl.io.rename(i) }
+      }
+
+      for( i <- 0 until wbc ){
+          mdl.io.writeBack(i).bits.dati  := DontCare
+          mdl.io.writeBack(i).bits.addr  := DontCare
+          mdl.io.writeBack(i).bits.op_rw := false.B
+          mdl.io.writeBack(i).bits.op_rs := false.B
+          mdl.io.writeBack(i).bits.op_rc := false.B
+          mdl.io.writeBack(i).bits.idx   := DontCare
+          mdl.io.writeBack(i).valid      := false.B
+
+        when( io.writeBack(i).bits.addr === addr.U ){
+          // mdl.io.writeBack(i) := io.writeBack(i)
+
+          mdl.io.writeBack(i).bits.dati  := DontCare
+          mdl.io.writeBack(i).bits.addr  := addr.U
+          mdl.io.writeBack(i).bits.op_rw := io.writeBack(i).bits.op_rw
+          mdl.io.writeBack(i).bits.op_rs := io.writeBack(i).bits.op_rs
+          mdl.io.writeBack(i).bits.op_rc := io.writeBack(i).bits.op_rc
+          mdl.io.writeBack(i).bits.idx   := io.writeBack(i).bits.idx
+          mdl.io.writeBack(i).valid      := io.writeBack(i).valid
+
+        }
+      }
+
+      for( i <- 0 until cmm ){
+        mdl.io.commit(i).isComfirm := false.B
+        mdl.io.commit(i).isAbort := io.commit(i).isAbort
+        mdl.io.commit(i).idx := DontCare
+        mdl.io.commit(i).addr := DontCare
+
+        when( io.commit(i).addr === addr.U ){
+          mdl.io.commit(i).isComfirm := io.commit(i).isComfirm
+          mdl.io.commit(i).idx       := io.commit(i).idx
+          mdl.io.commit(i).addr      := io.commit(i).addr
+          io.commit(i).isWroteback   := mdl.io.commit(i).isWroteback
+
+          io.csrOp(i).addr  := addr.U
+          io.csrOp(i).dat_i := DontCare
+          io.csrOp(i).op_rw := mdl.io.csrOp(i).op_rw
+          io.csrOp(i).op_rs := mdl.io.csrOp(i).op_rs
+          io.csrOp(i).op_rc := mdl.io.csrOp(i).op_rc
+          // io.csrOp(i) := mdl.io.csrOp(i)
         }
       }
 
       io.isReady.elements.map{ ele => 
         if(ele._1.matches(`name`)){
-          ele._2 := VecInit(Seq.fill(dp){true.B})
+          ele._2 := mdl.io.isReady
         }
       }
-
     }
+
   }
 }
 
@@ -486,13 +539,45 @@ class CSR_LOG_Bundle(dp: Int = 4) extends Bundle{
   val frm         = Vec( dp, Bool() )
   val fcsr        = Vec( dp, Bool() )
 
+  val cycle   = Vec( dp, Bool() )
+  val time    = Vec( dp, Bool() )
+  val instret = Vec( dp, Bool() )
 
-
-
+  val hpmcounter3  = Vec( dp, Bool() )
+  val hpmcounter4  = Vec( dp, Bool() )
+  val hpmcounter5  = Vec( dp, Bool() )
+  val hpmcounter6  = Vec( dp, Bool() )
+  val hpmcounter7  = Vec( dp, Bool() )
+  val hpmcounter8  = Vec( dp, Bool() )
+  val hpmcounter9  = Vec( dp, Bool() )
+  val hpmcounter10  = Vec( dp, Bool() )
+  val hpmcounter11  = Vec( dp, Bool() )
+  val hpmcounter12  = Vec( dp, Bool() )
+  val hpmcounter13  = Vec( dp, Bool() )
+  val hpmcounter14  = Vec( dp, Bool() )
+  val hpmcounter15  = Vec( dp, Bool() )
+  val hpmcounter16  = Vec( dp, Bool() )
+  val hpmcounter17  = Vec( dp, Bool() )
+  val hpmcounter18  = Vec( dp, Bool() )
+  val hpmcounter19  = Vec( dp, Bool() )
+  val hpmcounter20  = Vec( dp, Bool() )
+  val hpmcounter21  = Vec( dp, Bool() )
+  val hpmcounter22  = Vec( dp, Bool() )
+  val hpmcounter23  = Vec( dp, Bool() )
+  val hpmcounter24  = Vec( dp, Bool() )
+  val hpmcounter25  = Vec( dp, Bool() )
+  val hpmcounter26  = Vec( dp, Bool() )
+  val hpmcounter27  = Vec( dp, Bool() )
+  val hpmcounter28  = Vec( dp, Bool() )
+  val hpmcounter29  = Vec( dp, Bool() )
+  val hpmcounter30  = Vec( dp, Bool() )
+  val hpmcounter31  = Vec( dp, Bool() )
 
 }
 
 class CRegfiles( rnc: Int, wbc: Int, cmm: Int )(implicit p: Parameters) extends CRegfilesBase( rnc, wbc, cmm ){
+
+  // println("Warning, writing to the read-only csr will take no effort. And No illegal exception will be caused!\n")
 
   CreateROCSRRegfiles( "mvendorid", dw = 64, dp = 4, 0xf11, rnc, wbc, cmm)
   CreateROCSRRegfiles( "marchid",   dw = 64, dp = 4, 0xf12, rnc, wbc, cmm)
@@ -571,4 +656,12 @@ class CRegfiles( rnc: Int, wbc: Int, cmm: Int )(implicit p: Parameters) extends 
 
 
 
+
+  CreateROCSRRegfiles( "cycle",      dw = 64, dp = 4, 0xC00, rnc, wbc, cmm)
+  CreateROCSRRegfiles( "time",       dw = 64, dp = 4, 0xC01, rnc, wbc, cmm)
+  CreateROCSRRegfiles( "instret",    dw = 64, dp = 4, 0xC02, rnc, wbc, cmm)
+
+  for( i <- 3 until 32 ){
+    CreateROCSRRegfiles( s"hpmcounter$i",  dw = 64, dp = 4, 0xC00+i, rnc, wbc, cmm)
+  }
 }
