@@ -61,6 +61,14 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
     mdl
   }
 
+  val fpu_exe_csr_fifo = {
+    val mdl = Module( new Queue( new SeqReg_WriteBack_Bundle(64, 4), infly ) )
+    io.fpu_cWriteBack.valid := mdl.io.deq.valid
+    io.fpu_cWriteBack.bits  := mdl.io.deq.bits
+    mdl.io.deq.ready        := true.B
+    mdl.reset := io.flush | reset.asBool
+    mdl
+  }
 
   // val exc = Wire(UInt(5.W))
 
@@ -132,7 +140,7 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
   fpu_exe_iwb_fifo.io.enq.bits.rd1 := 0.U
 
   fpu_exe_fwb_fifo.io.enq.valid := i2f.io.out.valid | f2f.io.out.valid | sfma.io.out.valid | dfma.io.out.valid | divSqrt.io.out.valid
-  io.fpu_cWriteBack.valid       := i2f.io.out.valid | f2f.io.out.valid | sfma.io.out.valid | dfma.io.out.valid | divSqrt.io.out.valid
+
 
   fpu_exe_fwb_fifo.io.enq.bits.res := 
     Mux1H(Seq(
@@ -156,8 +164,9 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
   io.fpu_iss_exe.ready := ~(io.fpu_iss_exe.bits.fun.is_fun_divSqrt & divSqrt.io.pending)
 
 
-  io.fpu_cWriteBack.bits.addr  := "h001".U
-  io.fpu_cWriteBack.bits.dati  := 
+  fpu_exe_csr_fifo.io.enq.valid       := i2f.io.out.valid | f2f.io.out.valid | sfma.io.out.valid | dfma.io.out.valid | divSqrt.io.out.valid | f2i.io.out.valid
+  fpu_exe_csr_fifo.io.enq.bits.addr  := "h001".U
+  fpu_exe_csr_fifo.io.enq.bits.dati  := 
     Mux1H(Seq(
       f2i.io.out.valid      -> f2i.io.out.bits.exc,
       i2f.io.out.valid      -> i2f.io.out.bits.exc,
@@ -167,14 +176,24 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
       divSqrt.io.out.valid  -> divSqrt.io.out.bits.exc,
     ))
 
-  io.fpu_cWriteBack.bits.op_rw := false.B
-  io.fpu_cWriteBack.bits.op_rs := true.B
-  io.fpu_cWriteBack.bits.op_rc := false.B
-  io.fpu_cWriteBack.bits.idx   := dfma.io.out.bits.param.csrw(log2Ceil(4)-1, 0)
+  fpu_exe_csr_fifo.io.enq.bits.op_rw := false.B
+  fpu_exe_csr_fifo.io.enq.bits.op_rs := true.B
+  fpu_exe_csr_fifo.io.enq.bits.op_rc := false.B
+  fpu_exe_csr_fifo.io.enq.bits.idx   :=
+    Mux1H(Seq(
+      f2i.io.out.valid      -> f2i.io.out.bits.param.csrw(log2Ceil(4)-1, 0),
+      i2f.io.out.valid      -> i2f.io.out.bits.param.csrw(log2Ceil(4)-1, 0),
+      f2f.io.out.valid      -> f2f.io.out.bits.param.csrw(log2Ceil(4)-1, 0),
+      sfma.io.out.valid     -> sfma.io.out.bits.param.csrw(log2Ceil(4)-1, 0),
+      dfma.io.out.valid     -> dfma.io.out.bits.param.csrw(log2Ceil(4)-1, 0),
+      divSqrt.io.out.valid  -> divSqrt.io.out.bits.param.csrw(log2Ceil(4)-1, 0),
+    ))
+
 
 
   assert( ~(fpu_exe_iwb_fifo.io.enq.valid & ~fpu_exe_iwb_fifo.io.enq.ready), "Assert Failed, the pipeline assert all fifo enq will success" )
   assert( ~(fpu_exe_fwb_fifo.io.enq.valid & ~fpu_exe_fwb_fifo.io.enq.ready), "Assert Failed, the pipeline assert all fifo enq will success" )
+  assert( ~(fpu_exe_csr_fifo.io.enq.valid & ~fpu_exe_csr_fifo.io.enq.ready), "Assert Failed, the pipeline assert all fifo enq will success" )
 
 }
 

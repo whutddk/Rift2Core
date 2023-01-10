@@ -107,94 +107,17 @@ abstract class DptBoard()(implicit p: Parameters) extends DptBase {
 
   for( i <- 0 until rnChn ) {
     when( io.dptReq(i).fire ) {
+      isBufXop(entrySel(i))(0) := io.dptReq(i).bits.isRS1
+      isBufXop(entrySel(i))(1) := io.dptReq(i).bits.isRS2
+      isBufFop(entrySel(i))(0) := io.dptReq(i).bits.isFS1
+      isBufFop(entrySel(i))(1) := io.dptReq(i).bits.isFS2
+      isBufFop(entrySel(i))(2) := io.dptReq(i).bits.isFS3
+      isBufVop(entrySel(i))(0) := io.dptReq(i).bits.isVS1
+      isBufVop(entrySel(i))(1) := io.dptReq(i).bits.isVS2
+      isBufVop(entrySel(i))(2) := io.dptReq(i).bits.isVS3
+      isBufVop(entrySel(i))(3) := io.dptReq(i).bits.isVS4
+      isBufVop(entrySel(i))(4) := io.dptReq(i).bits.isVMS
 
-      when( io.dptReq(i).bits.isRS1 ) { isBufXop(entrySel(i))(0) := true.B }
-      .otherwise{ isBufXop(entrySel(i))(0) := false.B }
-      when( io.dptReq(i).bits.isRS2 ) { isBufXop(entrySel(i))(1) := true.B }
-      .otherwise{ isBufXop(entrySel(i))(1) := false.B }
-      when( io.dptReq(i).bits.isFS1 ) { isBufFop(entrySel(i))(0) := true.B }
-      .otherwise{ isBufFop(entrySel(i))(0) := false.B }
-      when( io.dptReq(i).bits.isFS2 ) { isBufFop(entrySel(i))(1) := true.B }
-      .otherwise{ isBufFop(entrySel(i))(1) := false.B }
-      when( io.dptReq(i).bits.isFS3 ) { isBufFop(entrySel(i))(2) := true.B }
-      .otherwise{ isBufFop(entrySel(i))(2) := false.B }
-      when( io.dptReq(i).bits.isVS1 ) { isBufVop(entrySel(i))(0) := true.B }
-      .otherwise{ isBufVop(entrySel(i))(0) := false.B }
-      when( io.dptReq(i).bits.isVS2 ) { isBufVop(entrySel(i))(1) := true.B }
-      .otherwise{ isBufVop(entrySel(i))(1) := false.B }
-      when( io.dptReq(i).bits.isVS3 ) { isBufVop(entrySel(i))(2) := true.B }
-      .otherwise{ isBufVop(entrySel(i))(2) := false.B }
-      when( io.dptReq(i).bits.isVS4 ) { isBufVop(entrySel(i))(3) := true.B }
-      .otherwise{ isBufVop(entrySel(i))(3) := false.B }
-      when( io.dptReq(i).bits.isVMS ) { isBufVop(entrySel(i))(4) := true.B }
-      .otherwise{ isBufVop(entrySel(i))(4) := false.B }      
-
-                        // //default status
-                        // isBufXop(entrySel(i))(0) := true.B
-                        // isBufXop(entrySel(i))(1) := true.B
-
-                        // isBufFop(entrySel(i))(0) := false.B
-                        // isBufFop(entrySel(i))(1) := false.B
-                        // isBufFop(entrySel(i))(2) := false.B
-
-                        // isBufVop(entrySel(i))(0) := false.B
-                        // isBufVop(entrySel(i))(1) := false.B
-                        // isBufVop(entrySel(i))(2) := false.B
-                        // isBufVop(entrySel(i))(3) := false.B
-
-                        // //override
-                        // if( hasVector ){
-                        //   when(io.dptReq(i).bits.vectorIsa.isLookUpFS1){
-                        //     isBufXop(entrySel(i))(0) := false.B
-                        //     isBufFop(entrySel(i))(0) := true.B
-                        //     isBufVop(entrySel(i))(0) := false.B
-                        //   }
-                        //   when( io.dptReq(i).bits.vectorIsa.isLookUpVS1 ){
-                        //     isBufXop(entrySel(i))(0) := false.B
-                        //     isBufFop(entrySel(i))(0) := false.B
-                        //     isBufVop(entrySel(i))(0) := true.B
-                        //   }
-                        //   when( io.dptReq(i).bits.vectorIsa.isLookUpVS2 ){
-                        //     isBufXop(entrySel(i))(1) := false.B
-                        //     isBufFop(entrySel(i))(1) := false.B
-                        //     isBufVop(entrySel(i))(1) := true.B
-                        //   }
-                        //   when( io.dptReq(i).bits.vectorIsa.isLookUpVS3 ){
-                        //     isBufFop(entrySel(i))(2) := false.B
-                        //     isBufVop(entrySel(i))(2) := true.B
-                        //   }
-                        //   when( io.dptReq(i).bits.vectorIsa.isLookUpVS2P | io.dptReq(i).bits.vectorIsa.isLookUpVS3P ){
-                        //     isBufVop(entrySel(i))(3) := true.B
-                        //   }
-                        // } 
-                        // if ( fpuNum > 0 ) {
-                        //   when( io.dptReq(i).bits.lsu_isa.is_fst ) {
-                        //     isBufXop(entrySel(i))(0) := true.B
-                        //     isBufXop(entrySel(i))(1) := false.B
-
-                        //     isBufFop(entrySel(i))(0) := false.B
-                        //     isBufFop(entrySel(i))(1) := true.B
-                        //     isBufFop(entrySel(i))(2) := false.B
-
-                        //     isBufVop(entrySel(i))(0) := false.B
-                        //     isBufVop(entrySel(i))(1) := false.B
-                        //     isBufVop(entrySel(i))(2) := false.B
-                        //     isBufVop(entrySel(i))(3) := false.B
-                        //   }
-                        //   when( io.dptReq(i).bits.fpu_isa.is_fop ) {
-                        //     isBufXop(entrySel(i))(0) := false.B
-                        //     isBufXop(entrySel(i))(1) := false.B
-
-                        //     isBufFop(entrySel(i))(0) := true.B
-                        //     isBufFop(entrySel(i))(1) := true.B
-                        //     isBufFop(entrySel(i))(2) := true.B
-
-                        //     isBufVop(entrySel(i))(0) := false.B
-                        //     isBufVop(entrySel(i))(1) := false.B
-                        //     isBufVop(entrySel(i))(2) := false.B
-                        //     isBufVop(entrySel(i))(3) := false.B
-                        //   }
-                        // }
     }
   }
 

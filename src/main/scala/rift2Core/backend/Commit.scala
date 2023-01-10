@@ -146,7 +146,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
 
   def is_illeage: Bool = {
     val is_csr_illegal = 
-      (is_csrr_illegal  & rod.is_csr & ~is_wb) |
+      (is_csrr_illegal  & rod.is_csr &  is_wb) |
       (is_csrw_illegal  & rod.is_csr &  is_wb)
       //  |(is_fcsrw_illegal & rod.is_fcsr &  is_wb)
 
@@ -156,7 +156,11 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
     val is_ill_mRet = rod.privil.mret & csrfiles.priv_lvl =/= "b11".U
     val is_ill_sRet = rod.privil.sret & ( csrfiles.priv_lvl === "b00".U | ( csrfiles.priv_lvl === "b01".U & csrfiles.mstatus.tsr) )
     val is_ill_dRet = rod.privil.dret & ~csrfiles.DMode
-    val is_ill_fpus = (is_wb & (rod.is_fpu) & csrfiles.mstatus.fs === 0.U)
+    val is_ill_fpus =
+      (is_wb &
+      ( rod.is_fpu |
+        (rod.is_csr & (rod.csrw(log2Ceil(4)+11, log2Ceil(4)+0) === "h001".U | rod.csrw(log2Ceil(4)+11, log2Ceil(4)+0) === "h002".U | rod.csrw(log2Ceil(4)+11, log2Ceil(4)+0) === "h003".U))
+      ) & csrfiles.mstatus.fs === 0.U)
 
     val is_illeage = rod.is_illeage | is_csr_illegal | is_ill_sfence | is_ill_wfi | is_ill_mRet | is_ill_sRet | is_ill_dRet | is_ill_fpus
     return is_illeage.asBool
@@ -220,7 +224,12 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   }
 
   def is_fpu_state_change: Bool = {
-    val is_fpu_state_change = ~is_trap & (rod.is_fpu)
+    val is_fpu_state_change =
+      ~is_trap &
+      (
+        (rod.is_fpu) |
+        (rod.is_csr & (rod.csrw(log2Ceil(4)+11, log2Ceil(4)+0) === "h001".U | rod.csrw(log2Ceil(4)+11, log2Ceil(4)+0) === "h002".U | rod.csrw(log2Ceil(4)+11, log2Ceil(4)+0) === "h003".U))
+      )
     return is_fpu_state_change
   }
 

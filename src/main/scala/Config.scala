@@ -443,6 +443,69 @@ class Rift2370 extends Config((site, here, up) => {
   )
 })
 
+class Rift2370D extends Config((site, here, up) => {
+  case RiftParamsKey => RiftSetting(
+
+    ftChn = 8, //fetch width
+    rnChn = 2,
+    cmChn = 2,
+    opChn = 4,
+    wbChn = 4,
+
+    xRegNum = 40,
+    fRegNum = 40,
+    vRegNum = 40,
+
+    pmpNum = 1,
+    hpmNum = 4,
+
+    l1BeatBits  = 128,
+    memBeatBits = 128,
+
+    vlen = 39,
+    plen = 32,
+
+    tlbEntry = 8, 
+    ifetchParameters = IFParameters(
+      uBTB_entry = 8,
+      uBTB_tag_w = 8,
+      btb_cl = 512,
+      bim_cl = 128,
+      ras_dp = 32,
+      tage_table = 6, 
+    ),
+
+    l1DW = 256,
+
+    dptEntry = 8,
+
+    aluNum = 1,
+    mulNum = 1,
+    fpuNum = 1,
+
+    vectorParameters = VectorParameters(),
+
+    icacheParameters = IcacheParameters(
+      bk = 1,
+      cb = 2,
+      cl = 32
+    ),
+    dcacheParameters = DcacheParameters(
+      bk = 2,
+      cb = 2,
+      cl = 32,
+      stEntry = 4,
+      sbEntry = 4,
+    ),
+
+  )
+})
+  
+
+
+
+
+
 class Rift2380 extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,

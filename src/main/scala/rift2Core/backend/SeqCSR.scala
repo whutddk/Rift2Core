@@ -229,30 +229,39 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
 
   object CreateRWCSRRegfiles{
     def apply(name: String, dw: Int, dp: Int, addr: Int, rnc: Int, wbc: Int, cmm: Int) = {
-      val mdl = Module( new SeqCsr(dw = dw, dp = dp, init = 0.U, addr = addr, rnc, wbc, cmm){
+      val mdl = Module( new SeqCsr(dw = dw, dp = dp, init = 0.U, addr = addr, 1, 1, cmm){
         // override def desiredName = s"${name}-regfiles"
       } )
 
-      for( i <- 0 until rnc ){
-        mdl.io.lookup(i).req := DontCare
-        mdl.io.rename(i).req.valid := false.B
-        mdl.io.rename(i).req.bits  := DontCare
+      mdl.io.lookup(0).req := DontCare
+      mdl.io.rename(0).req.valid := false.B
+      mdl.io.rename(0).req.bits  := DontCare
 
-        when( io.lookup(i).req === addr.U ){ io.lookup(i).rsp  := mdl.io.lookup(i).rsp }
-        when( io.rename(i).req.bits === addr.U ){ io.rename(i) <> mdl.io.rename(i) }
+      mdl.io.writeBack(0).bits.dati  := DontCare
+      mdl.io.writeBack(0).bits.addr  := DontCare
+      mdl.io.writeBack(0).bits.op_rw := false.B
+      mdl.io.writeBack(0).bits.op_rs := false.B
+      mdl.io.writeBack(0).bits.op_rc := false.B
+      mdl.io.writeBack(0).bits.idx   := DontCare
+      mdl.io.writeBack(0).valid      := false.B
+
+
+
+      for( i <- 0 until rnc ){
+        if( i == 0 ){
+          when( io.lookup(0).req      === addr.U ){ io.lookup(0).rsp  := mdl.io.lookup(0).rsp }
+          when( io.rename(0).req.bits === addr.U ){ io.rename(0) <> mdl.io.rename(0) }
+        } else {
+          when( io.lookup(i).req      === addr.U & (( 0 until i ).map{ j => io.lookup(j).req      =/= addr.U }.reduce(_&_)) ){ io.lookup(i).rsp  := mdl.io.lookup(0).rsp }
+          when( io.rename(i).req.bits === addr.U & (( 0 until i ).map{ j => io.rename(j).req.bits =/= addr.U }.reduce(_&_)) ){ io.rename(i) <> mdl.io.rename(0) }
+        }
       }
 
       for( i <- 0 until wbc ){
-          mdl.io.writeBack(i).bits.dati  := DontCare
-          mdl.io.writeBack(i).bits.addr  := DontCare
-          mdl.io.writeBack(i).bits.op_rw := false.B
-          mdl.io.writeBack(i).bits.op_rs := false.B
-          mdl.io.writeBack(i).bits.op_rc := false.B
-          mdl.io.writeBack(i).bits.idx   := DontCare
-          mdl.io.writeBack(i).valid      := false.B
-
-        when( io.writeBack(i).bits.addr === addr.U ){
-          mdl.io.writeBack(i) := io.writeBack(i)
+        if( i == 0 ){
+          when( io.writeBack(0).bits.addr === addr.U ){ mdl.io.writeBack(0) := io.writeBack(0) }
+        } else {
+          when( io.writeBack(i).bits.addr === addr.U & ( (0 until i).map{ j => io.writeBack(j).bits.addr =/= addr.U}.reduce(_&_) ) ){ mdl.io.writeBack(0) := io.writeBack(i) }
         }
       }
 
@@ -261,6 +270,7 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
         mdl.io.commit(i).isAbort := io.commit(i).isAbort
         mdl.io.commit(i).idx := DontCare
         mdl.io.commit(i).addr := DontCare
+
 
         when( io.commit(i).addr === addr.U ){
           mdl.io.commit(i).isComfirm := io.commit(i).isComfirm
@@ -283,47 +293,63 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
 
   object CreateROCSRRegfiles{
     def apply(name: String, dw: Int, dp: Int, addr: Int, rnc: Int, wbc: Int, cmm: Int) = {
-      val mdl = Module( new SeqCsr(dw = dw, dp = dp, init = 0.U, addr = addr, rnc, wbc, cmm){
+      val mdl = Module( new SeqCsr(dw = dw, dp = dp, init = 0.U, addr = addr, 1, 1, cmm){
         // override def desiredName = s"${name}-regfiles"
       } )
 
-      for( i <- 0 until rnc ){
-        mdl.io.lookup(i).req := DontCare
-        mdl.io.rename(i).req.valid := false.B
-        mdl.io.rename(i).req.bits  := DontCare
+      mdl.io.lookup(0).req := DontCare
+      mdl.io.rename(0).req.valid := false.B
+      mdl.io.rename(0).req.bits  := DontCare
 
-        when( io.lookup(i).req === addr.U ){ io.lookup(i).rsp  := mdl.io.lookup(i).rsp }
-        when( io.rename(i).req.bits === addr.U ){ io.rename(i) <> mdl.io.rename(i) }
+      mdl.io.writeBack(0).bits.dati  := DontCare
+      mdl.io.writeBack(0).bits.addr  := DontCare
+      mdl.io.writeBack(0).bits.op_rw := false.B
+      mdl.io.writeBack(0).bits.op_rs := false.B
+      mdl.io.writeBack(0).bits.op_rc := false.B
+      mdl.io.writeBack(0).bits.idx   := DontCare
+      mdl.io.writeBack(0).valid      := false.B
+
+      for( i <- 0 until rnc ){
+        if( i == 0 ){
+          when( io.lookup(0).req      === addr.U ){ io.lookup(0).rsp  := mdl.io.lookup(0).rsp }
+          when( io.rename(0).req.bits === addr.U ){ io.rename(0) <> mdl.io.rename(0) }
+        } else {
+          when( io.lookup(i).req      === addr.U & (( 0 until i ).map{ j => io.lookup(j).req      =/= addr.U }.reduce(_&_)) ){ io.lookup(i).rsp  := mdl.io.lookup(0).rsp }
+          when( io.rename(i).req.bits === addr.U & (( 0 until i ).map{ j => io.rename(j).req.bits =/= addr.U }.reduce(_&_)) ){ io.rename(i) <> mdl.io.rename(0) }
+        }       
       }
 
       for( i <- 0 until wbc ){
-          mdl.io.writeBack(i).bits.dati  := DontCare
-          mdl.io.writeBack(i).bits.addr  := DontCare
-          mdl.io.writeBack(i).bits.op_rw := false.B
-          mdl.io.writeBack(i).bits.op_rs := false.B
-          mdl.io.writeBack(i).bits.op_rc := false.B
-          mdl.io.writeBack(i).bits.idx   := DontCare
-          mdl.io.writeBack(i).valid      := false.B
-
-        when( io.writeBack(i).bits.addr === addr.U ){
-          // mdl.io.writeBack(i) := io.writeBack(i)
-
-          mdl.io.writeBack(i).bits.dati  := DontCare
-          mdl.io.writeBack(i).bits.addr  := addr.U
-          mdl.io.writeBack(i).bits.op_rw := io.writeBack(i).bits.op_rw
-          mdl.io.writeBack(i).bits.op_rs := io.writeBack(i).bits.op_rs
-          mdl.io.writeBack(i).bits.op_rc := io.writeBack(i).bits.op_rc
-          mdl.io.writeBack(i).bits.idx   := io.writeBack(i).bits.idx
-          mdl.io.writeBack(i).valid      := io.writeBack(i).valid
-
+        if( i == 0 ){
+          when( io.writeBack(0).bits.addr === addr.U ){
+            mdl.io.writeBack(0).bits.dati  := DontCare
+            mdl.io.writeBack(0).bits.addr  := addr.U
+            mdl.io.writeBack(0).bits.op_rw := io.writeBack(0).bits.op_rw
+            mdl.io.writeBack(0).bits.op_rs := io.writeBack(0).bits.op_rs
+            mdl.io.writeBack(0).bits.op_rc := io.writeBack(0).bits.op_rc
+            mdl.io.writeBack(0).bits.idx   := io.writeBack(0).bits.idx
+            mdl.io.writeBack(0).valid      := io.writeBack(0).valid
+          }
+        } else {
+          when( io.writeBack(i).bits.addr === addr.U & ( (0 until i).map{ j => io.writeBack(j).bits.addr =/= addr.U}.reduce(_&_) ) ){
+            mdl.io.writeBack(0).bits.dati  := DontCare
+            mdl.io.writeBack(0).bits.addr  := addr.U
+            mdl.io.writeBack(0).bits.op_rw := io.writeBack(i).bits.op_rw
+            mdl.io.writeBack(0).bits.op_rs := io.writeBack(i).bits.op_rs
+            mdl.io.writeBack(0).bits.op_rc := io.writeBack(i).bits.op_rc
+            mdl.io.writeBack(0).bits.idx   := io.writeBack(i).bits.idx
+            mdl.io.writeBack(0).valid      := io.writeBack(i).valid
+          }
         }
       }
+
 
       for( i <- 0 until cmm ){
         mdl.io.commit(i).isComfirm := false.B
         mdl.io.commit(i).isAbort := io.commit(i).isAbort
         mdl.io.commit(i).idx := DontCare
         mdl.io.commit(i).addr := DontCare
+
 
         when( io.commit(i).addr === addr.U ){
           mdl.io.commit(i).isComfirm := io.commit(i).isComfirm
@@ -336,8 +362,8 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
           io.csrOp(i).op_rw := mdl.io.csrOp(i).op_rw
           io.csrOp(i).op_rs := mdl.io.csrOp(i).op_rs
           io.csrOp(i).op_rc := mdl.io.csrOp(i).op_rc
-          // io.csrOp(i) := mdl.io.csrOp(i)
         }
+
       }
 
       io.isReady.elements.map{ ele => 

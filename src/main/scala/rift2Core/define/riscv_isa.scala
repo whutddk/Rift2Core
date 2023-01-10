@@ -162,10 +162,19 @@ class Lsu_isa extends Bundle {
   def is_W = is_su | is_sc | is_amo
 
   def is_fst = fsw | fsd
-  def is_ist = ~is_fst
+
+
+  def is_iwb =
+    lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd |
+    fence | fence_i | sfence_vma | lr_w | sc_w |
+    amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w |
+    lr_d |sc_d | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d |
+    fsw | fsd
+
   def is_fwb = flw | fld
-  def is_iwb = ~is_fwb
+
   def is_fpu = flw | fsw | fld | fsd
+
 }
 
 class Csr_isa extends Bundle {
@@ -511,17 +520,17 @@ class Fpu_isa extends Bundle {
 
 
   def is_fpu =
-  fmadd_s   | fmsub_s   | fnmsub_s  | fnmadd_s  | fadd_s    | fsub_s    | fmul_s    | fdiv_s    | fsqrt_s   |
-  fmadd_d   | fmsub_d   | fnmsub_d  | fnmadd_d  | fadd_d    | fsub_d    | fmul_d    | fdiv_d    | fsqrt_d   |
-  fsgnj_s   | fsgnjn_s  | fsgnjx_s  | fsgnj_d   | fsgnjn_d  | fsgnjx_d  |
-  fmin_s    | fmax_s    | fmin_d    | fmax_d    |
-  feq_s     | flt_s     | fle_s     | feq_d     | flt_d     | fle_d     |
-  fclass_s  | fclass_d  |
-  fmv_x_w   | fmv_w_x   | fmv_x_d   | fmv_d_x   |  
-  fcvt_s_w  | fcvt_s_wu | fcvt_l_s  | fcvt_lu_s |
-  fcvt_s_l  | fcvt_s_lu | fcvt_s_d  | fcvt_d_s  |
-  fcvt_w_d  | fcvt_wu_d | fcvt_d_w  | fcvt_d_wu | fcvt_l_d  | fcvt_lu_d |
-  fcvt_d_l  | fcvt_d_lu | fcvt_w_s  | fcvt_wu_s 
+    fmadd_s   | fmsub_s   | fnmsub_s  | fnmadd_s  | fadd_s    | fsub_s    | fmul_s    | fdiv_s    | fsqrt_s   |
+    fmadd_d   | fmsub_d   | fnmsub_d  | fnmadd_d  | fadd_d    | fsub_d    | fmul_d    | fdiv_d    | fsqrt_d   |
+    fsgnj_s   | fsgnjn_s  | fsgnjx_s  | fsgnj_d   | fsgnjn_d  | fsgnjx_d  |
+    fmin_s    | fmax_s    | fmin_d    | fmax_d    |
+    feq_s     | flt_s     | fle_s     | feq_d     | flt_d     | fle_d     |
+    fclass_s  | fclass_d  |
+    fmv_x_w   | fmv_w_x   | fmv_x_d   | fmv_d_x   |  
+    fcvt_s_w  | fcvt_s_wu | fcvt_l_s  | fcvt_lu_s |
+    fcvt_s_l  | fcvt_s_lu | fcvt_s_d  | fcvt_d_s  |
+    fcvt_w_d  | fcvt_wu_d | fcvt_d_w  | fcvt_d_wu | fcvt_l_d  | fcvt_lu_d |
+    fcvt_d_l  | fcvt_d_lu | fcvt_w_s  | fcvt_wu_s 
   //| fcsr_rw   | fcsr_rs   | fcsr_rc   | fcsr_rwi  | fcsr_rsi  | fcsr_rci
 
 
@@ -1042,7 +1051,7 @@ class Instruction_set(implicit p: Parameters) extends RiftBundle{
   def isRS1 = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu                     | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isLookUpRS1
   def isRS2 = alu_isa.is_alu | bru_isa.is_bru | (lsu_isa.is_lsu & ~lsu_isa.is_fst) | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isLookUpRS2
   def isFS1 = fpu_isa.is_fop | vectorIsa.isLookUpFS1
-  def isFS2 = fpu_isa.is_fop
+  def isFS2 = fpu_isa.is_fop | lsu_isa.is_fst
   def isFS3 = fpu_isa.is_fop
   def isVS1 = vectorIsa.isLookUpVS1
   def isVS2 = vectorIsa.isLookUpVS2
