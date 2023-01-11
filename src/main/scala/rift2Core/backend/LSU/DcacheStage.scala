@@ -56,8 +56,6 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
 
   val tagEnW = Wire( Vec(cb, Bool()) )
   val datEnW = Wire( Vec(cb, Bool()) )
-  // val tagEnR = Wire( Vec(cb, Bool()) )
-  // val datEnR = Wire( Vec(cb, Bool()) )
 
   val datRAM = for ( i <- 0 until cb ) yield { Module(new DatRAM(dw, cl)) }
   val tagRAM = for ( i <- 0 until cb ) yield { Module(new TagRAM(tag_w, cl)) }
@@ -217,8 +215,8 @@ trait DcacheStageWData { this: DcacheStageBase =>
       (pipeStage1Bits.fun.amomaxu_d) -> reAlign_data( from = 64, to = dw, Mux(amo_reAlign_64_a        < amo_reAlign_64_b,        amo_reAlign_64_b, amo_reAlign_64_a), pipeStage1Bits.paddr),
             
     ))
-      
-      
+
+
   datInfoW := VecInit(for ( k <- 0 until dw/8 ) yield dataW(8*k+7, 8*k))
 }
 

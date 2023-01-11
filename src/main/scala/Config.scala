@@ -445,6 +445,7 @@ class Rift2370 extends Config((site, here, up) => {
 
 class Rift2370D extends Config((site, here, up) => {
   case RiftParamsKey => RiftSetting(
+    hasVector = true,
 
     ftChn = 8, //fetch width
     rnChn = 2,
@@ -452,9 +453,9 @@ class Rift2370D extends Config((site, here, up) => {
     opChn = 4,
     wbChn = 4,
 
-    xRegNum = 40,
-    fRegNum = 40,
-    vRegNum = 40,
+    xRegNum = 64,
+    fRegNum = 64,
+    vRegNum = 64,
 
     pmpNum = 1,
     hpmNum = 4,

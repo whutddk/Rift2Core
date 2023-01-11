@@ -64,11 +64,11 @@ abstract class Dcache_ScoreBoard_Bundle(implicit p: Parameters) extends DcacheBu
 
 class Dcache_Enq_Bundle(implicit p: Parameters) extends Dcache_ScoreBoard_Bundle {
   val paddr = UInt(plen.W)
-  val wdata  = UInt(dw.W)
-  val wstrb  = UInt((dw/8).W)
+  val wdata = UInt(dw.W)
+  val wstrb = UInt((dw/8).W)
 
-  val fun    = new Cache_op
-  val rd = new RD_PHY
+  val fun   = new Cache_op
+  val rd    = new RD_PHY
 
   def tagSel = paddr(plen-1,plen-tag_w)
   def clSel  = paddr(addr_lsb+bk_w + line_w-1, addr_lsb+bk_w)
@@ -132,53 +132,11 @@ abstract class DcacheBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) exte
   val stage = Module(new DcacheStage(id))
 }
 
-trait DcacheScoreBoard { this: DcacheBase =>
-  // val cache_buffer = Module(new Cache_buffer)
 
-  val sbBuff = RegInit(VecInit(Seq.fill(sbEntry)(0.U.asTypeOf(new Dcache_Enq_Bundle))))
-  val sbValid = RegInit(VecInit(Seq.fill(sbEntry)(false.B)))
-
-
-  val isHazard = VecInit(sbBuff.map( x => (x.paddr(plen-1,3) === io.enq.bits.paddr(plen-1,3)) )).reduce(_|_)
-  val sbIdx = sbValid.indexWhere( (x:Bool) => (x === false.B) )
-
-
-  val sbEnqReady =
-    sbValid.exists( (x:Bool) => (x === false.B) ) &
-    ~isHazard
-
-  when( io.enq.fire ) {
-    sbBuff(sbIdx)  := io.enq.bits
-    sbValid(sbIdx) := true.B
-  }
-
-  when( io.deq.fire ) {
-    sbBuff (io.deq.bits.chkIdx) := 0.U.asTypeOf( new Dcache_Enq_Bundle )
-    sbValid(io.deq.bits.chkIdx) := false.B
-  }
-
-  val isSBEmpty = sbValid.forall((x:Bool) => (x === false.B))
-  when( io.deq.fire ) { assert(~isSBEmpty) }
-  // io.buf_deq.ready := ~isSBEmpty
-
-
-
-  for ( i <- 0 until sbEntry ) yield {
-    when( sbValid(i) === true.B ) {
-      assert( sbBuff.count( (x: Dcache_Enq_Bundle) => (x.paddr === sbBuff(i).paddr) ) === 1.U )
-    }
-  }
-
-}
 
 
 
 class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBase(edge, id) with DcacheScoreBoard{
-
-
-
-
-
 
   if ( hasL2 ) {
     io.missUnit_dcache_acquire.get  <> missUnit.get.io.cache_acquire
@@ -187,12 +145,6 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
     probeUnit.get.io.cache_probe <> io.probeUnit_dcache_probe.get
     io.writeBackUnit_dcache_release.get <> writeBackUnit.get.io.cache_release
     writeBackUnit.get.io.cache_grant <> io.writeBackUnit_dcache_grant.get  
-
-
-
-
-
-
 
   } else {
     val getPutArb = Module(new Arbiter(new TLBundleA(edge.bundle), 2) )
@@ -217,14 +169,14 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
     stage.io.wb_req <> writeBackUnit.get.io.wb_req
   
     probeUnit.get.io.probeBan := writeBackUnit.get.io.miss_ban
-    missUnit.get.io.miss_ban := writeBackUnit.get.io.miss_ban
+    missUnit.get.io.miss_ban  := writeBackUnit.get.io.miss_ban
     writeBackUnit.get.io.release_ban := missUnit.get.io.release_ban
 
-    rd_arb.io.in(0).bits := pkg_Dcache_Enq_Bundle( missUnit.get.io.rsp.bits )
+    rd_arb.io.in(0).bits  := pkg_Dcache_Enq_Bundle( missUnit.get.io.rsp.bits )
     rd_arb.io.in(0).valid := missUnit.get.io.rsp.valid
     missUnit.get.io.rsp.ready := rd_arb.io.in(0).ready
 
-    rd_arb.io.in(1).bits := pkg_Dcache_Enq_Bundle(probeUnit.get.io.req.bits) 
+    rd_arb.io.in(1).bits  := pkg_Dcache_Enq_Bundle(probeUnit.get.io.req.bits) 
     rd_arb.io.in(1).valid := probeUnit.get.io.req.valid
     probeUnit.get.io.req.ready := rd_arb.io.in(1).ready
 
@@ -232,10 +184,10 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
     stage.io.missUnit_req      <> getUnit.get.io.req
     stage.io.wb_req <> putUnit.get.io.wb_req
   
-    getUnit.get.io.miss_ban := putUnit.get.io.miss_ban
+    getUnit.get.io.miss_ban    := putUnit.get.io.miss_ban
     putUnit.get.io.release_ban := getUnit.get.io.release_ban
 
-    rd_arb.io.in(0).bits := pkg_Dcache_Enq_Bundle( getUnit.get.io.rsp.bits )
+    rd_arb.io.in(0).bits  := pkg_Dcache_Enq_Bundle( getUnit.get.io.rsp.bits )
     rd_arb.io.in(0).valid := getUnit.get.io.rsp.valid
     getUnit.get.io.rsp.ready := rd_arb.io.in(0).ready
 
@@ -271,15 +223,12 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
   rtn_fifo.io.enq.bits  := stage.io.deq.bits
  
   rtn_fifo.io.deq <> io.deq
-  // rtn_fifo.io.deq <> Decoupled1toN( VecInit( io.deq, cache_buffer.io.buf_deq ) )
-
-
 
   io.is_empty := isSBEmpty
   stage.io.isCacheEmpty := isSBEmpty
 
   when(reload_fifo.io.enq.valid) {assert(reload_fifo.io.enq.ready, "Assert Failed at Dcache, Pipeline stuck!")}
-  when(rtn_fifo.io.enq.valid) {assert(rtn_fifo.io.enq.ready, "Assert Failed at Dcache, Pipeline stuck!")}
+  when(rtn_fifo.io.enq.valid)    {assert(rtn_fifo.io.enq.ready, "Assert Failed at Dcache, Pipeline stuck!")}
 
 }
 

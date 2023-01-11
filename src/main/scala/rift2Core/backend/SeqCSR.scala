@@ -253,7 +253,13 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
           when( io.rename(0).req.bits === addr.U ){ io.rename(0) <> mdl.io.rename(0) }
         } else {
           when( io.lookup(i).req      === addr.U & (( 0 until i ).map{ j => io.lookup(j).req      =/= addr.U }.reduce(_&_)) ){ io.lookup(i).rsp  := mdl.io.lookup(0).rsp }
-          when( io.rename(i).req.bits === addr.U & (( 0 until i ).map{ j => io.rename(j).req.bits =/= addr.U }.reduce(_&_)) ){ io.rename(i) <> mdl.io.rename(0) }
+          when( io.rename(i).req.bits === addr.U ){
+            when(( 0 until i ).map{ j => io.rename(j).req.bits =/= addr.U }.reduce(_&_)){
+              io.rename(i) <> mdl.io.rename(0)
+            } .otherwise{
+              io.rename(i).req.ready := false.B
+            }
+          }
         }
       }
 
@@ -315,7 +321,13 @@ abstract class CRegfilesBase( val rnc: Int, val wbc: Int, val cmm: Int )(implici
           when( io.rename(0).req.bits === addr.U ){ io.rename(0) <> mdl.io.rename(0) }
         } else {
           when( io.lookup(i).req      === addr.U & (( 0 until i ).map{ j => io.lookup(j).req      =/= addr.U }.reduce(_&_)) ){ io.lookup(i).rsp  := mdl.io.lookup(0).rsp }
-          when( io.rename(i).req.bits === addr.U & (( 0 until i ).map{ j => io.rename(j).req.bits =/= addr.U }.reduce(_&_)) ){ io.rename(i) <> mdl.io.rename(0) }
+          when( io.rename(i).req.bits === addr.U ){
+            when(( 0 until i ).map{ j => io.rename(j).req.bits =/= addr.U }.reduce(_&_)){
+              io.rename(i) <> mdl.io.rename(0)
+            } .otherwise{
+              io.rename(i).req.ready := false.B
+            }
+          }
         }       
       }
 
