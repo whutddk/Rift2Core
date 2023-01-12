@@ -255,6 +255,7 @@ trait LSU_RegionMux { this: LsuBase =>
 
 /** depending on the paddr, the cache request will be divided into 4 or 8 (nm) "bank" */
 trait LSU_CacheMux { this: LsuBase =>
+  println("Warning, different Cache Bank is requesting one by one!")
   val CacheMuxBits = pkg_Dcache_Enq_Bundle(regionDCacheIO.bits, stQueue.io.overlapReq.bits, stQueue.io.overlapResp.bits)
 
 

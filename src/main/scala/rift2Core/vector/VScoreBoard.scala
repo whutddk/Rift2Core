@@ -43,4 +43,6 @@ import rift2Core.backend._
 //   })
 // }
 
+abstract class VScoreBoardBase( entry: Int )(implicit p: Parameters) extends RiftModule{
 
+}
