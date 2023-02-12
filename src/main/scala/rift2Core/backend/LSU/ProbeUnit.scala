@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -39,6 +39,8 @@ class ProbeUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftMo
   val io = IO(new Bundle {
     val cache_probe = Flipped(new DecoupledIO(new TLBundleB(edge.bundle)))
     val req = new DecoupledIO(new Info_probe_req)
+
+    val probeBan = Input(Bool())
   })
 
   /** a tiny fifo that buffer the probe request from l2cache */
@@ -49,8 +51,8 @@ class ProbeUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftMo
   probe_fifo.io.enq.bits := io.cache_probe.bits.address
   io.cache_probe.ready := probe_fifo.io.enq.ready
 
-  io.req.valid := probe_fifo.io.deq.valid
-  probe_fifo.io.deq.ready := io.req.ready
+  io.req.valid := probe_fifo.io.deq.valid & ~io.probeBan
+  probe_fifo.io.deq.ready := io.req.ready & ~io.probeBan
   io.req.bits.paddr := probe_fifo.io.deq.bits
 
 }
@@ -59,6 +61,8 @@ class FakeProbeUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends Ri
   val io = IO(new Bundle {
     val cache_probe = Flipped(new DecoupledIO(new TLBundleB(edge.bundle)))
     val req = new DecoupledIO(new Info_probe_req)
+
+    val probeBan = Input(Bool())
   })
 
   assert( ~io.cache_probe.valid ) 

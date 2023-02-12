@@ -3,7 +3,7 @@ package test
 
 
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ object testMain extends App {
   val cfg = new NormalCfg
   // val cfg = new Rift2GoCfg
   // val cfg = new Rift2350
-  // val cfg = new Rift2370
+  // val cfg = new Rift2330D
 
   (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
       ChiselGeneratorAnnotation(() => {
@@ -48,10 +48,23 @@ object testMain extends App {
   ))
 }
 
-object tapeMain extends App {
+object testNoC extends App {
 
   val cfg = new Rift2330
-  // val cfg = new Rift2330
+
+  (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
+      ChiselGeneratorAnnotation(() => {
+    val soc = LazyModule(new Rift2NoC()(cfg))
+    soc.module
+  })
+  ))
+}
+
+
+object tapeMain extends App {
+
+  // val cfg = new Rift2300
+  val cfg = new Rift2320
   // val cfg = new Rift2350
   // val cfg = new Rift2370
 
@@ -62,9 +75,9 @@ object tapeMain extends App {
   })
   ))
 
-  (new chisel3.stage.ChiselStage).execute( Array(  "--target-dir", "generated/TapeMain", "-E", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
+  (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/TapeMain", "-E", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
       ChiselGeneratorAnnotation(() => {
-    val soc = LazyModule(new Rift2LinkA(isFlatten = false)(cfg))
+    val soc = LazyModule(new Rift2LinkA(isFlatten = true)(cfg))
     soc.module
   })
   ))

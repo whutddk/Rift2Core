@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -29,16 +29,16 @@ import base._
 abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val io = IO(new Bundle{
     val if3_req = Vec(4, Flipped(new DecoupledIO(new IF2_Bundle) ))
-    val if3_resp = Vec(rn_chn, Decoupled(new IF3_Bundle))
+    val if3_resp = Vec(rnChn, Decoupled(new IF3_Bundle))
 
-    val btbResp  = Vec(rn_chn, Decoupled(new BTBResp_Bundle))
-    val bimResp  = Vec(rn_chn, Decoupled(new BIMResp_Bundle))
-    val tageResp = Vec(rn_chn, Decoupled(Vec(6, new TageTableResp_Bundle )))
+    val btbResp  = Vec(rnChn, Decoupled(new BTBResp_Bundle))
+    val bimResp  = Vec(rnChn, Decoupled(new BIMResp_Bundle))
+    val tageResp = Vec(rnChn, Decoupled(Vec(6, new TageTableResp_Bundle )))
 
     val jcmm_update = Flipped(Valid(new Jump_CTarget_Bundle))
     val bcmm_update = Flipped(Valid(new Branch_CTarget_Bundle))
 
-    val if4_update_ghist = Vec(rn_chn, Flipped(Valid(new Ghist_reflash_Bundle)))
+    val if4_update_ghist = Vec(rnChn, Flipped(Valid(new Ghist_reflash_Bundle)))
     val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
 
     val flush = Input(Bool())
@@ -57,14 +57,14 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
   val bim = Module(new BIM)
   val tage = Module(new TAGE)
 
-  val btbFifo =  Module(new MultiPortFifo( new BTBResp_Bundle, aw = (if(!isMinArea) 4 else 1), in = 1, out = rn_chn, flow = true ) )
-  val bimFifo =  Module(new MultiPortFifo( new BIMResp_Bundle, aw = (if(!isMinArea) 4 else 1), in = 1, out = rn_chn, flow = true ) )
-  val tageFifo = Module(new MultiPortFifo( Vec(6, new TageTableResp_Bundle ), aw = (if(!isMinArea) 4 else 1), in = 1, out = rn_chn, flow = true ) )
+  val btbFifo =  Module(new MultiPortFifo( new BTBResp_Bundle, aw = (if(!isMinArea) 4 else 1), in = 1, out = rnChn, flow = true ) )
+  val bimFifo =  Module(new MultiPortFifo( new BIMResp_Bundle, aw = (if(!isMinArea) 4 else 1), in = 1, out = rnChn, flow = true ) )
+  val tageFifo = Module(new MultiPortFifo( Vec(6, new TageTableResp_Bundle ), aw = (if(!isMinArea) 4 else 1), in = 1, out = rnChn, flow = true ) )
 
 
   val predictor_ready = btb.io.isReady & bim.io.isReady & (if (!isMinArea) { tage.io.isReady } else {true.B})
 
-  val if3_resp_fifo = Module(new MultiPortFifo( new IF3_Bundle, (if(!isMinArea) 4 else 2), 4, rn_chn ))
+  val if3_resp_fifo = Module(new MultiPortFifo( new IF3_Bundle, (if(!isMinArea) 4 else 2), 4, rnChn ))
 
   if3_resp_fifo.io.flush := io.if4Redirect.fire | io.flush
   if3_resp_fifo.io.enq <> combPDT.io.deq

@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -504,7 +504,7 @@ class Dividor(implicit p: Parameters) extends RiftModule {
                   ))
 
 
-  val algDivider = Module(new NorDivider(new Mul_iss_info, 64))
+  val algDivider = Module(new SRT4Divider(new Mul_iss_info, 64))
 
     algDivider.io.enq.valid := io.enq.valid & ~divBypass
     algDivider.io.enq.bits  := io.enq.bits

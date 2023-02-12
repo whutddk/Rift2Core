@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -823,7 +823,7 @@ trait CsrFiles { this: BaseCommit =>
   def update_misa( in: CMMState_Bundle ) = {
     val mxl = WireDefault(2.U(2.W))
     val extensions = {
-      if (hasFpu) { //fpu
+      if ( fpuNum > 0 ) { //fpu
         WireDefault("b00000101000001000100101101".U(26.W))  
       } else if (true) { //none fpu, has S-mode U-mode
         WireDefault("b00000101000001000100000101".U(26.W))

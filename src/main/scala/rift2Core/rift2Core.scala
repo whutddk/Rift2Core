@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -134,22 +134,17 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   if3.io.if4Redirect := if4.io.if4Redirect
 
 
-  val dpt_stage = {
-    val mdl = Module(new Dispatch)
-    mdl.io.bd_dpt <> if4.io.if4_resp
+  val rnm_stage = {
+    val mdl = Module(new Rename)
+    mdl.io.rnReq <> if4.io.if4_resp
     mdl
   }
 
+
+
   val iss_stage = {
-    val mdl = if( opChn > 1 ) {Module(new Issue with IssueOoo with IssueIto)} else { Module(new Issue with IssueSig)}
-    if( opChn > 1 ) {
-      mdl.io.ooo_dpt_iss.get <> dpt_stage.io.ooo_dpt_iss.get
-      mdl.io.ito_dpt_iss.get <> dpt_stage.io.ito_dpt_iss.get      
-    } else if( opChn == 1 ) {
-       mdl.io.sig_dpt_iss.get <> dpt_stage.io.sig_dpt_iss.get
-    }
-
-
+    val mdl = Module(new Issue)
+    mdl.io.dptReq <> rnm_stage.io.rnRsp
     mdl
   }
 
@@ -168,19 +163,17 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
 
   val iwb_stage = { 
     val mdl = Module(new WriteBack)
-    mdl.io.dpt_Xlookup <> dpt_stage.io.dpt_Xlookup
-    mdl.io.dpt_Flookup <> dpt_stage.io.dpt_Flookup
-    mdl.io.dpt_Xrename <> dpt_stage.io.dpt_Xrename
-    mdl.io.dpt_Frename <> dpt_stage.io.dpt_Frename
+    mdl.io.xLookup <> rnm_stage.io.xLookup
+    mdl.io.fLookup <> rnm_stage.io.fLookup
+    mdl.io.xRename <> rnm_stage.io.xRename
+    mdl.io.fRename <> rnm_stage.io.fRename
 
-    if( opChn > 1 ) {
-      mdl.io.ooo_readOp.get <> iss_stage.io.ooo_readOp.get
-      mdl.io.ito_readOp.get <> iss_stage.io.ito_readOp.get
-    } else if( opChn == 1 ) {
-      mdl.io.sig_readOp.get <> iss_stage.io.sig_readOp.get
-    }
-
-    mdl.io.frg_readOp <> iss_stage.io.frg_readOp
+    iss_stage.io.irgLog := mdl.io.irgLog
+    iss_stage.io.frgLog := mdl.io.frgLog
+    mdl.io.irgReq := iss_stage.io.irgReq
+    mdl.io.frgReq := iss_stage.io.frgReq
+    iss_stage.io.irgRsp := mdl.io.irgRsp
+    iss_stage.io.frgRsp := mdl.io.frgRsp
 
 
     mdl.io.alu_iWriteBack <> exe_stage.io.alu_exe_iwb
@@ -211,10 +204,6 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   }
 
 
-
-
-
-
     if1.io.jcmm_update := exe_stage.io.jcmm_update
     if1.io.bcmm_update := exe_stage.io.bcmm_update
     if3.io.jcmm_update := exe_stage.io.jcmm_update
@@ -237,14 +226,14 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   if3.io.flush := cmm_stage.io.cmmRedirect.fire
   if4.io.flush := cmm_stage.io.cmmRedirect.fire
 
-  dpt_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
+  rnm_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
   iss_stage.io.flush := cmm_stage.io.cmmRedirect.fire
   exe_stage.io.flush := cmm_stage.io.cmmRedirect.fire
 
 
 
   cmm_stage.io.cm_op <> iwb_stage.io.commit
-  cmm_stage.io.rod <> dpt_stage.io.rod_i
+  cmm_stage.io.rod <> rnm_stage.io.rod_i
   cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
   cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
   cmm_stage.io.csr_addr <> exe_stage.io.csr_addr

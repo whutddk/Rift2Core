@@ -3,7 +3,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -35,9 +35,11 @@ import freechips.rocketchip.tilelink._
 
 
 class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
+
+
   val io = IO(new Bundle{
-    val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
-    val alu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
+    val alu_iss_exe = Vec(aluNum, Flipped(new DecoupledIO(new Alu_iss_info)))
+    val alu_exe_iwb = Vec(aluNum, new DecoupledIO(new WriteBack_info(dw=64)))
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
     val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
     val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
@@ -45,11 +47,11 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
     val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
     val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
-    val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
-    val mul_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
-    val fpu_iss_exe = Flipped(new DecoupledIO(new Fpu_iss_info))
-    val fpu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
-    val fpu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
+    val mul_iss_exe = Vec(mulNum max 1, Flipped(new DecoupledIO(new Mul_iss_info)))
+    val mul_exe_iwb = Vec(mulNum max 1, new DecoupledIO(new WriteBack_info(dw=64)))
+    val fpu_iss_exe = Vec(fpuNum max 1, Flipped(new DecoupledIO(new Fpu_iss_info)))
+    val fpu_exe_iwb = Vec(fpuNum max 1, new DecoupledIO(new WriteBack_info(dw=64)))
+    val fpu_exe_fwb = Vec(fpuNum max 1, new DecoupledIO(new WriteBack_info(dw=65)))
     val fcsr = Input(UInt(24.W))
     val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
 
@@ -93,7 +95,7 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
 
   })
 
-  val alu = Module(new Alu)
+  val alu = for( i <- 0 until aluNum ) yield Module(new Alu)
   val bru = Module(new Bru)
   val lsu = {
     val mdl = Module(new Lsu((edge)))
@@ -165,34 +167,26 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
 
   }
   val csr = Module(new Csr)
-  val mulDiv = (if( hasMulDiv ) {Module(new MulDiv)} else { Module(new FakeMulDiv) })
+  val mulDiv = (if( mulNum > 0 ) { for ( i <- 0 until mulNum ) yield Module(new MulDiv) } else { Seq(Module(new FakeMulDiv)) })
 
-  val fpu = {
-    val mdl = 
-      if( hasFpu ) {
-        Module(new FAlu())        
-      } else {
-        Module(new FakeFAlu()) 
-      }
+  val fpu = if( fpuNum > 0 ) { for( i <- 0 until fpuNum ) yield Module(new FAlu()) } else { Seq(Module(new FakeFAlu())) }
 
 
-    mdl.io.fpu_iss_exe <> io.fpu_iss_exe
-    mdl.io.fpu_exe_iwb <> io.fpu_exe_iwb
-    mdl.io.fpu_exe_fwb <> io.fpu_exe_fwb
-    mdl.io.flush := io.flush
-    mdl.io.fcsr := io.fcsr
-    mdl.io.fcsr_cmm_op <> io.fcsr_cmm_op
-
-    mdl
+  for( i <- 0 until (fpuNum max 1) ) {
+    fpu(i).io.fpu_iss_exe <> io.fpu_iss_exe(i)
+    fpu(i).io.fpu_exe_iwb <> io.fpu_exe_iwb(i)
+    fpu(i).io.fpu_exe_fwb <> io.fpu_exe_fwb(i)
+    fpu(i).io.flush := io.flush
+    fpu(i).io.fcsr  := io.fcsr
+    fpu(i).io.fcsr_cmm_op <> io.fcsr_cmm_op; require( fpuNum <= 1 )
   }
 
+  for( i <- 0 until aluNum ) {
+    alu(i).io.alu_iss_exe <> io.alu_iss_exe(i)
+    alu(i).io.alu_exe_iwb <> io.alu_exe_iwb(i)
+    alu(i).io.flush <> io.flush    
+  }
 
-
-
-
-  alu.io.alu_iss_exe <> io.alu_iss_exe
-  alu.io.alu_exe_iwb <> io.alu_exe_iwb
-  alu.io.flush <> io.flush
 
   bru.io.bru_iss_exe <> io.bru_iss_exe
   bru.io.bru_exe_iwb <> io.bru_exe_iwb
@@ -214,9 +208,12 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   csr.io.csr_cmm_op <> io.csr_cmm_op
   csr.io.flush <> io.flush
 
-  mulDiv.io.mul_iss_exe <> io.mul_iss_exe
-  mulDiv.io.mul_exe_iwb <> io.mul_exe_iwb
-  mulDiv.io.flush := io.flush
+  for( i <- 0 until (mulNum max 1) ) {
+    mulDiv(i).io.mul_iss_exe <> io.mul_iss_exe(i)
+    mulDiv(i).io.mul_exe_iwb <> io.mul_exe_iwb(i)
+    mulDiv(i).io.flush := io.flush    
+  }
+
 
 
 

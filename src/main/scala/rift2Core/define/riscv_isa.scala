@@ -1,7 +1,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -527,6 +527,207 @@ class Fpu_isa extends Bundle {
 
 }
 
+class Vector_isa extends Bundle {
+  val vadd         = Bool()
+  val vsub         = Bool()
+  val vrsub        = Bool()
+  val vminu        = Bool()
+  val vmin         = Bool()
+  val vmaxu        = Bool()
+  val vmax         = Bool()
+  val vand         = Bool()
+  val vor          = Bool()
+  val vxor         = Bool()
+  val vrgather     = Bool()
+  val vslideup     = Bool()
+  val vrgatherei16 = Bool()
+  val vslidedown   = Bool()
+  val vredsum      = Bool()
+  val vredand      = Bool()
+  val vredor       = Bool()
+  val vredxor      = Bool()
+  val vredminu     = Bool()
+  val vredmin      = Bool()
+  val vredmaxu     = Bool()
+  val vredmax      = Bool()
+  val vaaddu       = Bool()
+  val vaadd        = Bool()
+  val vasubu       = Bool()
+  val vasub        = Bool()
+  val vslide1up    = Bool()
+  val vslide1down  = Bool()
+  val vfadd        = Bool()
+  val vfredusum    = Bool()
+  val vfsub        = Bool()
+  val vfredosum    = Bool()
+  val vfmin        = Bool()
+  val vfredmin     = Bool()
+  val vfmax        = Bool()
+  val vfredmax     = Bool()
+  val vfsgnj       = Bool()
+  val vfsgnjn      = Bool()
+  val vfsgnjx      = Bool()
+  val vfslide1up   = Bool()
+  val vfslide1down = Bool()
+
+  val vadc      = Bool()
+  val vmadc     = Bool()
+  val vsbc      = Bool()
+  val vmsbc     = Bool()
+  val vmerge    = Bool()
+  val vmseq     = Bool()
+  val vmsne     = Bool()
+  val vmsltu    = Bool()
+  val vmslt     = Bool()
+  val vmsleu    = Bool()
+  val vmsle     = Bool()
+  val vmsgtu    = Bool()
+  val vmsgt     = Bool()
+  val VWXUNARY0 = Bool()
+  val VRXUNARY0 = Bool()
+  val VXUNARY0  = Bool()
+  val VMUNARY0  = Bool()
+  val vcompress = Bool()
+  val vmandnot  = Bool()
+  val vmand     = Bool()
+  val vmor      = Bool()
+  val vmxor     = Bool()
+  val vmornot   = Bool()
+  val vmnand    = Bool()
+  val vmnor     = Bool()
+  val vmxnor    = Bool()
+  val VWFUNARY0 = Bool()
+  val VRFUNARY0 = Bool()
+  val VFUNARY0  = Bool()
+  val VFUNARY1  = Bool()
+  val vfmrege   = Bool()
+  val vmfeq     = Bool()
+  val vmfle     = Bool()
+  val vmflt     = Bool()
+  val vmfgt     = Bool()
+  val vmfge     = Bool()
+
+  val vsaddu  = Bool()
+  val vsadd   = Bool()
+  val vssubu  = Bool()
+  val vssub   = Bool()
+  val vsll    = Bool()
+  val vsmul   = Bool()
+  val vmv     = Bool()
+  val vsrl    = Bool()
+  val vsra    = Bool()
+  val vssrl   = Bool()
+  val vssra   = Bool()
+  val vnsrl   = Bool()
+  val vnsra   = Bool()
+  val vnclipu = Bool()
+  val vnclip  = Bool()
+  val vdivu   = Bool()
+  val vdiv    = Bool()
+  val vremu   = Bool()
+  val vrem    = Bool()
+  val vmulhu  = Bool()
+  val vmul    = Bool()
+  val vmulhsu = Bool()
+  val vmulh   = Bool()
+  val vmadd   = Bool()
+  val vnmsub  = Bool()
+  val vmacc   = Bool()
+  val vnmsac  = Bool()
+  val vfdiv   = Bool()
+  val vfrdiv  = Bool()
+  val vfmul   = Bool()
+  val vfrsub  = Bool()
+  val vfmadd  = Bool()
+  val vfnmadd = Bool()
+  val vfmsub  = Bool()
+  val vfnmsub = Bool()
+  val vfmacc  = Bool()
+  val vfnmacc = Bool()
+  val vfmsac  = Bool()
+  val vfnmsac = Bool()
+
+  val vwredsumu  = Bool()
+  val vwredsum   = Bool()
+  val vwaddu     = Bool()
+  val vwadd      = Bool()
+  val vwsubu     = Bool()
+  val vwsub      = Bool()
+  val vwaddu_w   = Bool()
+  val vwadd_w    = Bool()
+  val vwsubu_w   = Bool()
+  val vwsub_w    = Bool()
+  val vwmulu     = Bool()
+  val vwmulsu    = Bool()
+  val vwmul      = Bool()
+  val vwmaccu    = Bool()
+  val vwmacc     = Bool()
+  val vwmaccus   = Bool()
+  val vwmaccsu   = Bool()
+  val vfwadd     = Bool()
+  val vfwredusum = Bool()
+  val vfwsub     = Bool()
+  val vfwredosum = Bool()
+  val vfwadd_w   = Bool()
+  val vfwsub_w   = Bool()
+  val vfwmul     = Bool()
+  val vfwmacc    = Bool()
+  val vfwnmacc   = Bool()
+  val vfwmsac    = Bool()
+  val vfwnmsac   = Bool()
+
+  val vmv_s_x   = Bool()
+  val vmv_x_s   = Bool()
+  val vpopc     = Bool()
+  val vfirst    = Bool()
+  val vzext_vf8 = Bool()
+  val vsext_vf8 = Bool()
+  val vzext_vf4 = Bool()
+  val vsext_vf4 = Bool()
+  val vzext_vf2 = Bool()
+  val vsext_vf2 = Bool()
+  val vfmv_s_f  = Bool()
+  val vfmv_f_s  = Bool()
+
+  val vfcvt_xu_f_v     = Bool()
+  val vfcvt_x_f_v      = Bool()
+  val vfcvt_f_xu_v     = Bool()
+  val vfcvt_f_x_v      = Bool()
+  val vfcvt_rtz_xu_f_v = Bool()
+  val vfcvt_rtz_x_f_v  = Bool()
+
+  val vfwcvt_xu_f_v     = Bool()
+  val vfwcvt_x_f_v      = Bool()
+  val vfwcvt_f_xu_v     = Bool()
+  val vfwcvt_f_x_v      = Bool()
+  val vfwcvt_f_f_v      = Bool()
+  val vfwcvt_rtz_xu_f_v = Bool()
+  val vfwcvt_rtz_x_f_v  = Bool()
+
+  val vfncvt_xu_f_w     = Bool()
+  val vfncvt_x_f_w      = Bool()
+  val vfncvt_f_xu_w     = Bool()
+  val vfncvt_f_x_w      = Bool()
+  val vfncvt_f_f_w      = Bool()
+  val vfncvt_rod_f_f_w  = Bool()
+  val vfncvt_rtz_xu_f_w = Bool()
+  val vfncvt_rtz_x_f_w  = Bool()
+
+  val vfsqrt_v   = Bool()
+  val vfrsqrt7_v = Bool()
+  val vfrec7_v   = Bool()
+  val vfclass_v  = Bool()
+
+  val vmsbf = Bool()
+  val vmsof = Bool()
+  val vmsif = Bool()
+  val viota = Bool()
+  val vid   = Bool()
+
+
+}
+
+
 
 // class Register_source(dp:Int)(implicit p: Parameters) extends RiftBundle {
 //   val rs1 = UInt((log2Ceil(dp)).W)
@@ -592,21 +793,21 @@ class Instruction_set(implicit p: Parameters) extends RiftBundle{
   def is_fwb =
     lsu_isa.is_fwb | fpu_isa.is_fwb
 
-  def is_ooo_dpt = alu_isa.is_alu | mul_isa.is_mulDiv
-  def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr | lsu_isa.is_lsu | fpu_isa.is_fpu
+  // def is_ooo_dpt = alu_isa.is_alu | mul_isa.is_mulDiv
+  // def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr | lsu_isa.is_lsu | fpu_isa.is_fpu
   def is_privil_dpt = privil_isa.is_privil
   def is_fpu_dpt = fpu_isa.is_fpu
   def is_iwb = ~is_fwb
   def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mulDiv | privil_isa.is_privil | fpu_isa.is_fpu) 
 
-  def dptRegion = MuxCase( 0.U, Array(
-    alu_isa.is_alu    -> 1.U,
-    mul_isa.is_mulDiv -> 2.U,
-    bru_isa.is_bru    -> 3.U,
-    csr_isa.is_csr    -> 4.U,
-    lsu_isa.is_lsu    -> 5.U,
-    fpu_isa.is_fpu    -> 6.U,
-  ))
+  // def dptRegion = MuxCase( 0.U, Array(
+  //   alu_isa.is_alu    -> 1.U,
+  //   mul_isa.is_mulDiv -> 2.U,
+  //   bru_isa.is_bru    -> 3.U,
+  //   csr_isa.is_csr    -> 4.U,
+  //   lsu_isa.is_lsu    -> 5.U,
+  //   fpu_isa.is_fpu    -> 6.U,
+  // ))
 }
 
 
@@ -882,3 +1083,9 @@ class Plic_Bundle extends Bundle {
   val mei = Bool()
   val sei = Bool()
 }
+
+class ReadOp_Rsp_Bundle(dw: Int)(implicit p: Parameters) extends RiftBundle{
+  val phy = UInt((log2Ceil(regNum)).W)
+  val op  = UInt(dw.W)
+}
+

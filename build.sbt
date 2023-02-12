@@ -4,13 +4,16 @@
 
 ThisBuild / scalaVersion     := "2.12.9"
 
-ThisBuild / version          := "2.3.4"//-SNAPSHOT
+ThisBuild / version          := "2.3.5-SNAPSHOT"//
 ThisBuild / organization     := "io.github.whutddk"
+
+
 
 
 lazy val rocketchip = (project in file("./rocket-chip"))
   .settings(
     name := "rocketchip",
+    organization := "edu.berkeley.cs",
     libraryDependencies ++= Seq(
       "edu.berkeley.cs" %% "chisel3" % "3.5.4",
     ),
@@ -22,10 +25,32 @@ lazy val rocketchip = (project in file("./rocket-chip"))
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
 )
 
+lazy val constellation = (project in file("./constellation"))
+  .dependsOn(rocketchip)
+  .settings(
+    name := "constellation",
+    organization := "edu.berkeley.cs",
+    libraryDependencies ++= Seq(
+      "edu.berkeley.cs" %% "chisel3" % "3.5.4",
+      "edu.berkeley.cs" %% "chiseltest" % "0.5.4" % "test"
+    ),
+    scalacOptions ++= Seq(
+      // "-organization:\"edu.berkeley.cs\"",
+      "-Xsource:2.11",
+      "-language:reflectiveCalls",
+      "-deprecation",
+      "-feature"
+    ),
+    addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.5.4" cross CrossVersion.full),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
+)
+
+
 lazy val inclusiveCache = (project in file("./block-inclusivecache-sifive"))
   .dependsOn(rocketchip)
   .settings(
     name := "inclusiveCache",
+    organization := "com.sifive",
     libraryDependencies ++= Seq(
       "edu.berkeley.cs" %% "chisel3" % "3.5.4",
     ),
@@ -43,6 +68,7 @@ lazy val sifiveBlocks = (project in file("./sifive-blocks"))
   .dependsOn(rocketchip)
   .settings(
     name := "sifive-blocks",
+    organization := "com.sifive",
     libraryDependencies ++= Seq(
       "edu.berkeley.cs" %% "chisel3" % "3.5.4",
     ),
@@ -59,6 +85,7 @@ lazy val hardfloat = (project in file("./berkeley-hardfloat"))
   .dependsOn(rocketchip)
   .settings(
     name := "berkeley-hardfloat",
+    organization := "edu.berkeley.cs",
     libraryDependencies ++= Seq(
       "edu.berkeley.cs" %% "chisel3" % "3.5.4",
     ),
@@ -75,6 +102,7 @@ lazy val root = (project in file("."))
   .dependsOn(rocketchip)
   .dependsOn(sifiveBlocks)
   .dependsOn(hardfloat)
+  .dependsOn(constellation)
   .settings(
     name := "%NAME%",
     libraryDependencies ++= Seq(

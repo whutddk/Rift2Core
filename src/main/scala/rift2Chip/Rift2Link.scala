@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -33,8 +33,13 @@ import freechips.rocketchip.amba.axi4._
 import sifive.blocks.inclusivecache._
 
 
-
-
+import constellation.noc._
+import constellation.channel._
+import constellation.protocol._
+import constellation.router._
+import constellation.topology._
+import constellation.routing._
+import scala.collection.immutable.ListMap
 
 
 class Rift2LinkA(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyModule with HasRiftParameters{
@@ -42,7 +47,7 @@ class Rift2LinkA(isFlatten: Boolean = false)(implicit p: Parameters) extends Laz
   val i_rift2Core = LazyModule( new Rift2Core(isFlatten) )
 
   val sifiveCache = if( hasL2 ) { Some(    LazyModule(new InclusiveCache(
-      cache = CacheParameters( level = 2, ways = 2, sets = 8, blockBytes = l1DW/8, beatBytes = l1BeatBits/8 ),
+      cache = CacheParameters( level = 2, ways = 2, sets = 2*icacheParams.cl, blockBytes = l1DW/8, beatBytes = l1BeatBits/8 ),
       micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
       control = None
     )))
@@ -50,8 +55,11 @@ class Rift2LinkA(isFlatten: Boolean = false)(implicit p: Parameters) extends Laz
 
 
   val chipLinkMst = LazyModule( new ChipLinkMaster)
+
+
+
   val l1_xbarMem = TLXbar()
-  val linkMXbar = TLXbar()
+  val linkMXbar  = TLXbar()
 
 
 
@@ -236,7 +244,7 @@ class Rift2LinkB(implicit p: Parameters) extends LazyModule with HasRiftParamete
 
 
 class Rift2Link(implicit p: Parameters) extends LazyModule with HasRiftParameters{
-  
+
   val rift2LinkA = LazyModule( new Rift2LinkA )
   val rift2LinkB = LazyModule( new Rift2LinkB )
   val nDevices = 31
@@ -255,7 +263,8 @@ class Rift2Link(implicit p: Parameters) extends LazyModule with HasRiftParameter
 
   
     })
-
+    dontTouch(rift2LinkA.module.io)
+    dontTouch(rift2LinkB.module.io)
 
 
     val memory = IO(chiselTypeOf(rift2LinkB.module.memory))

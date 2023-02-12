@@ -1,5 +1,9 @@
 # Rift2Core
 
+<a href="https://opensea.io/zh-CN/assets/ethereum/0x495f947276749ce646f68ac8c248420045cb7b5e/43473949287519253838889858564581990056411131273310467024990426327764908965888" target="_blank">
+  <img src='https://dl.openseauserdata.com/cache/originImage/files/d2f3860245aaa4b22de702b762cbea6c.png' align='right' alt='NFT' style='width:250px;height:250px'/>
+</a>
+
 ![License](https://img.shields.io/badge/license-Apache-blue.svg)
 
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)

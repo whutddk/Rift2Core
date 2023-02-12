@@ -1,7 +1,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -216,6 +216,7 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
     stage.io.missUnit_req      <> missUnit.get.io.req
     stage.io.wb_req <> writeBackUnit.get.io.wb_req
   
+    probeUnit.get.io.probeBan := writeBackUnit.get.io.miss_ban
     missUnit.get.io.miss_ban := writeBackUnit.get.io.miss_ban
     writeBackUnit.get.io.release_ban := missUnit.get.io.release_ban
 
@@ -226,6 +227,7 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
     rd_arb.io.in(1).bits := pkg_Dcache_Enq_Bundle(probeUnit.get.io.req.bits) 
     rd_arb.io.in(1).valid := probeUnit.get.io.req.valid
     probeUnit.get.io.req.ready := rd_arb.io.in(1).ready
+
   } else {
     stage.io.missUnit_req      <> getUnit.get.io.req
     stage.io.wb_req <> putUnit.get.io.wb_req

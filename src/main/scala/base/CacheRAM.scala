@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -32,7 +32,8 @@ class DatRAM(dw: Int, cl: Int) extends Module {
   // require( cl <= 256 )
   def line_w   = log2Ceil(cl)
   val io = IO(new Bundle{
-    val addr  = Input(UInt(line_w.W))
+    val addrr  = Input(UInt(line_w.W))
+    val addrw  = Input(UInt(line_w.W))
 
     val dataw  = Input( Vec( dw/8, UInt(8.W) ) )
     val datawm = Input( Vec( dw/8, Bool()) )
@@ -45,19 +46,20 @@ class DatRAM(dw: Int, cl: Int) extends Module {
   val datMem = SyncReadMem( cl, Vec( dw/8, UInt(8.W) ) )
   io.datar := DontCare
   when( io.enr ) {
-    io.datar := datMem.read( io.addr )
-  } .elsewhen( io.enw & ~io.enr ) {
-    datMem.write( io.addr, io.dataw, io.datawm )
+    io.datar := datMem.read( io.addrr )
+  } 
+  when( io.enw ) {
+    datMem.write( io.addrw, io.dataw, io.datawm )
   }
 
   // val datMem = Module(new Generate_sram)
 
   //   datMem.io.data_w  := Cat(io.dataw.reverse)
-  //   datMem.io.addr_w  := io.addr
+  //   datMem.io.addr_w  := io.addrw
   //   datMem.io.data_wstrb := Cat(io.datawm.reverse)
   //   datMem.io.en_w   := io.enw
 
-  //   datMem.io.addr_r := io.addr
+  //   datMem.io.addr_r := io.addrr
   //   for ( i <- 0 until 16 ) io.datar(i) := datMem.io.data_r( 8*i+7, 8*i )
   //   datMem.io.en_r   := io.enr
 
@@ -138,7 +140,8 @@ module Generate_sram(
 class TagRAM(tag_w: Int,  cl: Int) extends Module {
   def line_w   = log2Ceil(cl)
   val io = IO(new Bundle{
-    val addr  = Input(UInt(line_w.W))
+    val addrr  = Input(UInt(line_w.W))
+    val addrw  = Input(UInt(line_w.W))
 
     val dataw = Input( UInt(tag_w.W) )
     val datar = Output( UInt(tag_w.W) )
@@ -159,9 +162,10 @@ class TagRAM(tag_w: Int,  cl: Int) extends Module {
 
   io.datar := DontCare
   when( io.enr ) {
-    io.datar := tagMem.read( io.addr )
-  } .elsewhen( io.enw & ~io.enr ) {
-    tagMem.write( io.addr, io.dataw )
+    io.datar := tagMem.read( io.addrr )
+  } 
+  when( io.enw ) {
+    tagMem.write( io.addrw, io.dataw )
   }
 
 

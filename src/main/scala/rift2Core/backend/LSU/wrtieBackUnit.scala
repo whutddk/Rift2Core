@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -168,7 +168,7 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
   wb_fifo.io.deq.ready := 
     wb_state_qout =/= 0.U & wb_state_dnxt === 0.U
 
-  io.miss_ban := wb_state_qout === 1.U | wb_state_qout === 2.U | ~wb_fifo.io.enq.ready
+  io.miss_ban := wb_state_qout === 1.U | wb_state_qout === 2.U | wb_fifo.io.deq.valid
 
 
 

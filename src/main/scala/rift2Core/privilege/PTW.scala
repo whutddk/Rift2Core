@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2022 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -268,8 +268,10 @@ trait PTWCache { this: PTWBase =>
 
 
 
-  datRAM.io.addr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
-  tagRAM.io.addr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
+  datRAM.io.addrr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
+  datRAM.io.addrw := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
+  tagRAM.io.addrr := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
+  tagRAM.io.addrw := Mux1H(Seq( (currState === PTWState.Lvl0.U) -> addr_qout(11, log2Ceil(dw/8) ), ( currState === PTWState.Lvl1.U ) -> addr_dnxt(11,log2Ceil(dw/8)) ) )
 
 
     tagRAM.io.enr := (currState === PTWState.Lvl1.U)
