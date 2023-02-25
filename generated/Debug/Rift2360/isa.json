@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1, 
   "label": "", 
-  "message": "Failed", 
-  "color": "red" 
+  "message": "Pass", 
+  "color": "f6bf94" 
 }
