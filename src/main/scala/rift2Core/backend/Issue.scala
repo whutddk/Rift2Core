@@ -75,7 +75,7 @@ abstract class DptBoard()(implicit p: Parameters) extends DptBase {
   bufValid := bufValidDnxt( rnChn-1 )
 
   for( i <- 0 until rnChn ) {
-    io.dptReq(i).ready := PopCount( bufValid.map{ x => (x === false.B) } ) >= i.U
+    io.dptReq(i).ready := PopCount( bufValid.map{ x => (x === false.B) } ) > i.U
 
 
     if ( i == 0 ) {
