@@ -399,7 +399,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
     when( is_access_register ) {
 
-      whereTo := Cat(((ABSTRACT-WHERETO).U)(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U)(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx (debug_abstarct)
+      whereTo := Cat(((ABSTRACT-WHERETO).U).extract(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U).extract(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx (debug_abstarct)
 
       when( is_access_CSR ) {
         val reg_sel = regno(11,0)
@@ -426,7 +426,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         // csrr s0 dscratch1   
         abstractGeneratedMem(4) := Cat("h7b3".U(12.W), 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
         abstractGeneratedMem(5) := Mux( postexec, 
-        Cat(((PROGBUF-ABSTRACT-5*4).U)(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U)(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
+        Cat(((PROGBUF-ABSTRACT-5*4).U).extract(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U).extract(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
         "b0010011".U(32.W) ) //nop
         abstractGeneratedMem(6) := "b0010011".U(32.W)  //nop
         abstractGeneratedMem(7) := "b000000000000100000000000001110011".U
@@ -448,7 +448,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         abstractGeneratedMem(3) := "b0010011".U(32.W)
         abstractGeneratedMem(4) := "b0010011".U(32.W)
         abstractGeneratedMem(5) := Mux( postexec, 
-          Cat(((PROGBUF-ABSTRACT-5*4).U)(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U)(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
+          Cat(((PROGBUF-ABSTRACT-5*4).U).extract(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U).extract(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
           "b0010011".U(32.W) ) //nop
         abstractGeneratedMem(6) := "b0010011".U(32.W)
         abstractGeneratedMem(7) := "b000000000000100000000000001110011".U  //ebreak
@@ -472,17 +472,17 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         abstractGeneratedMem(3) := "b0010011".U(32.W)
         abstractGeneratedMem(4) := "b0010011".U(32.W)
         abstractGeneratedMem(5) := Mux( postexec, 
-          Cat(((PROGBUF-ABSTRACT-5*4).U)(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U)(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
+          Cat(((PROGBUF-ABSTRACT-5*4).U).extract(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U).extract(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
           "b0010011".U(32.W) ) //nop
         abstractGeneratedMem(6) := "b0010011".U(32.W)
         abstractGeneratedMem(7) := "b000000000000100000000000001110011".U  //ebreak
 
       }
     } .elsewhen( is_quick_access ) {
-      whereTo := Cat(((ABSTRACT-WHERETO).U)(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U)(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx
+      whereTo := Cat(((ABSTRACT-WHERETO).U).extract(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U).extract(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx
     } .elsewhen( is_access_memory ) {
 
-      whereTo := Cat(((PROGBUF-WHERETO).U)(20), ((PROGBUF-WHERETO).U)(10,1), ((PROGBUF-WHERETO).U)(11), ((PROGBUF-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to PROGBUF (WHERETO+hxxx) jal hxxx
+      whereTo := Cat(((PROGBUF-WHERETO).U).extract(20), ((PROGBUF-WHERETO).U)(10,1), ((PROGBUF-WHERETO).U).extract(11), ((PROGBUF-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to PROGBUF (WHERETO+hxxx) jal hxxx
 
       // csrw s0 dscratch1,
       abstractGeneratedMem(0) := Cat("h7b3".U(12.W), 8.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W))
