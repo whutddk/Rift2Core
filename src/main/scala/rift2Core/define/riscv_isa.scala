@@ -1005,14 +1005,14 @@ case class WriteBack_info(dw:Int)(implicit p: Parameters) extends RD_PHY {
 
 
 
-class Info_cmm_csr(implicit p: Parameters) extends RiftBundle {
-  val is_trap = Bool()
-  val is_xRet = Bool()
-  val privil_mstatus = UInt(64.W)
-  val privil_mepc = UInt(64.W)
-  val privil_mcause = UInt(64.W)
-  val privil_mtval = UInt(64.W)
-}
+// class Info_cmm_csr(implicit p: Parameters) extends RiftBundle {
+//   val is_trap = Bool()
+//   val is_xRet = Bool()
+//   val privil_mstatus = UInt(64.W)
+//   val privil_mepc = UInt(64.W)
+//   val privil_mcause = UInt(64.W)
+//   val privil_mtval = UInt(64.W)
+// }
 
 class Info_clint_csr(implicit p: Parameters) extends RiftBundle {
   val is_externInterrupt = Bool()

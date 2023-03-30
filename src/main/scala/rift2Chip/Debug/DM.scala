@@ -479,10 +479,11 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
       }
     } .elsewhen( is_quick_access ) {
-      whereTo := Cat(((ABSTRACT-WHERETO).U).extract(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U).extract(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx
-    } .elsewhen( is_access_memory ) {
-
+      printf("Warning, arriving unsupport region!")
       whereTo := Cat(((PROGBUF-WHERETO).U).extract(20), ((PROGBUF-WHERETO).U)(10,1), ((PROGBUF-WHERETO).U).extract(11), ((PROGBUF-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to PROGBUF (WHERETO+hxxx) jal hxxx
+    } .elsewhen( is_access_memory ) {
+      printf("Warning, arriving unsupport region!")
+      whereTo := Cat(((ABSTRACT-WHERETO).U).extract(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U).extract(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT (WHERETO+hxxx) jal hxxx
 
       // csrw s0 dscratch1,
       abstractGeneratedMem(0) := Cat("h7b3".U(12.W), 8.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W))

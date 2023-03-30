@@ -254,10 +254,17 @@ class Rift2330D extends Config((site, here, up) => {
     hasuBTB = false,
     // hasLRU = false,
 
+    ftChn = 4,
+
+    rnChn = 1,
     opChn = 1,
     wbChn = 1,
+    cm_chn = 1,
 
     regNum = 34,
+
+    pmpNum = 0,
+    hpmNum  = 0,
 
     l1BeatBits = 64,
     memBeatBits = 64,
@@ -267,14 +274,9 @@ class Rift2330D extends Config((site, here, up) => {
     ifetchParameters = IFParameters(
       uBTB_entry = 8,
 
-      btb_cl = 2,
+      btb_cl = 0,
       bim_cl = 2,
-      ras_dp = 4,
-      // uBTB_tag_w = 16,
-      // btb_cl = 4096,
-      // bim_cl = 4096,
-      // ras_dp = 256,
-      // tage_table = 6, 
+      ras_dp = 0,
     ),
 
     l1DW = 128,
@@ -287,12 +289,13 @@ class Rift2330D extends Config((site, here, up) => {
       bk = 1,
       cb = 1,
       cl = 2,
-      sbEntry = 2,
+      sbEntry = 1,
       stEntry = 2,
     ),
 
-    dptEntry = 2,
+    dptEntry = 1,
     fpuNum = 0,
+    mulNum = 0,
 
     isMinArea = true,
     isLowPower = false,
