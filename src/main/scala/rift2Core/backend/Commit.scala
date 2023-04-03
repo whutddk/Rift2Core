@@ -187,8 +187,8 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   }
 
 
-  def is_exception: Bool = {
-    val is_exception = 
+  def isException: Bool = {
+    val isException = 
       is_ecall                 |
       is_ebreak_exc            |
       is_instr_access_fault    |
@@ -200,18 +200,13 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
       is_store_misAlign        |
       is_load_pagingFault      |
       is_store_pagingFault
-    return is_exception
+    return isException
   }
 
-  def is_interrupt: Bool = {
-    val is_interrupt = (((csrfiles.is_m_interrupt | csrfiles.is_s_interrupt) & ~is_step_int_block) | is_nomask_interrupt) & ~csrfiles.DMode
-    return is_interrupt
+  def isInterrupt: Bool = {
+    val isInterrupt = (((csrfiles.is_m_interrupt | csrfiles.is_s_interrupt) & ~is_step_int_block) ) & ~csrfiles.DMode
+    return isInterrupt
   }
-
-	def is_trap: Bool = {
-    val is_trap = is_interrupt | is_exception
-    return is_trap
-  } 
 
   def is_xRet: Bool = {
     val is_xRet = is_mRet | is_sRet | is_dRet
@@ -219,9 +214,11 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   }
 
   def is_fpu_state_change: Bool = {
-    val is_fpu_state_change = ~is_trap & (rod.is_fpu)
+    val is_fpu_state_change = (~isInterrupt & ~isException & ~isNomaskInterrupt & ~isEbreakDM) & (rod.is_fpu)
     return is_fpu_state_change
   }
+
+
 
 
   def is_ebreak_breakpointn: Bool = {
@@ -249,24 +246,21 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
     return commit_pc
   } 
   
-  def is_ebreak_dm: Bool = {
-    val is_ebreak_dm = rod.privil.ebreak & is_ebreak_breakpointn
-    return is_ebreak_dm
+  def isEbreakDM: Bool = {
+    val isEbreakDM = rod.privil.ebreak & is_ebreak_breakpointn
+    return isEbreakDM
   }
 
-  def is_debug_interrupt: Bool = {
-    val is_debug_interrupt = ~csrfiles.DMode & (
-      exint.is_single_step |
-      exint.is_trigger |
-      exint.hartHaltReq |
-      is_ebreak_dm      
-    )    
-    return is_debug_interrupt
+  def isDebugInterrupt: Bool = {
+    val isDebugInterrupt = 
+      exint.is_single_step | exint.is_trigger | exint.hartHaltReq 
+
+    return isDebugInterrupt
   }
 
-  def is_nomask_interrupt: Bool = {
-    val is_nomask_interrupt = is_debug_interrupt | exint.emu_reset
-    return is_nomask_interrupt
+  def isNomaskInterrupt: Bool = {
+    val isNomaskInterrupt =  ~csrfiles.DMode & (isDebugInterrupt | exint.emu_reset)
+    return isNomaskInterrupt
   }
 
 
@@ -415,29 +409,25 @@ trait CommitState { this: BaseCommit =>
   val abort_chn = Wire(UInt(log2Ceil(cm_chn).W)); abort_chn := DontCare
   ( 1 until cm_chn ).map{ i => assert( commit_state(i) <= commit_state(i-1) ) }
   
-  for ( i <- 0 until cm_chn ) yield {
+  for ( i <- 0 until cm_chn ) {
     when( (~io.rod(i).valid)  ) {
       commit_state(i) := 0.U //IDLE
     }
     .otherwise {
-      when(
-          // (io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & cmm_state(i).is_wb) |
-          // (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & cmm_state(i).is_wb) |
-          cmm_state(i).is_xRet | cmm_state(i).is_trap | cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma
-        ) {
+      when( cmm_state(i).is_xRet | cmm_state(i).isException | cmm_state(i).isEbreakDM | cmm_state(i).isInterrupt | cmm_state(i).isNomaskInterrupt | cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
         commit_state(i) := 1.U //abort
-        for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
+        for ( j <- 0 until i ) { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
         abort_chn := i.U
-      } .elsewhen( ((io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & bctq(i).valid ) | (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & jctq(i).valid)) & cmm_state(i).is_wb & ~cmm_state(i).is_step) { //1st-step will cause an interrupt
+      } .elsewhen( ((io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & bctq(i).valid ) | (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & jctq(i).valid)) & cmm_state(i).is_wb ) { //1st-step will cause an interrupt
           commit_state(i) := 2.U //mis-predict
-          for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
+          for ( j <- 0 until i ) { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
       } .elsewhen( cmm_state(i).is_wb ) { //when writeback and no-step, 1st-step will cause an interrupt
         when( (io.rod(i).bits.is_csr & ~csrExe(i).valid) || (io.rod(i).bits.is_fcsr & ~fcsrExe(i).valid) || (io.rod(i).bits.is_branch & ~bctq(i).valid) || (io.rod(i).bits.is_jalr & ~jctq(i).valid) ) {
           commit_state(i) := 0.U
         } .otherwise {
           commit_state(i) := 3.U //confirm
         }
-        for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
+        for ( j <- 0 until i ) { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
       } .otherwise {
         commit_state(i) := 0.U //idle
       }
@@ -709,12 +699,12 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
   io.cmmRedirect.bits.pc := 0.U
 
   for ( i <- 0 until cm_chn ) yield {
-    when(io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & is_retired(i) & ~cmm_state(i).is_step) {
+    when(io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & is_retired(i)) {
       io.cmmRedirect.valid := true.B
       io.cmmRedirect.bits.pc := bctq(i).bits.finalTarget
     }
-    
-    when(io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & is_retired(i) & ~cmm_state(i).is_step) {
+
+    when(io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & is_retired(i)) {
       io.cmmRedirect.valid := true.B
       io.cmmRedirect.bits.pc := jctq(i).bits.finalTarget
     }
@@ -726,10 +716,10 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
         }
-        when( cmm_state(i).is_interrupt ) { 
+        when( cmm_state(i).isInterrupt | cmm_state(i).isNomaskInterrupt ) {
           assert(false.B, "Assert Failed, All interrupts (including NMI) are masked in Dmode! Page-39")
         }
-        when( cmm_state(i).is_exception ) {
+        when( cmm_state(i).isException ) {
           when( cmm_state(i).is_ebreak_exc ) {
             io.cmmRedirect.valid := true.B
             io.cmmRedirect.bits.pc := "h00000800".U //for ebreak, jump to rom to halt again
@@ -743,29 +733,48 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
           io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.dpc
         } 
       } .otherwise {
-        when( cmm_state(i).is_mRet ) {
+
+
+        when(cmm_state(i).isNomaskInterrupt){
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := Mux1H(Seq(
+              cmm_state(i).exint.emu_reset              -> "h80000000".U,
+              cmm_state(i).isDebugInterrupt             -> "h00000800".U,
+            )),          
+        }
+        .elsewhen(cmm_state(i).isEbreakDM) {
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := "h00000800".U
+        }
+        .elsewhen( cmm_state(i).is_mRet ) {
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.mepc
         } 
-        when( cmm_state(i).is_sRet ) {
+        .elsewhen( cmm_state(i).is_sRet ) {
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.sepc
         } 
-        when( cmm_state(i).is_trap ) {
+        .elsewhen( cmm_state(i).isException ) { //exception has higher priority than interrupt
           io.cmmRedirect.valid := true.B
-          io.cmmRedirect.bits.pc := MuxCase("h80000000".U, Seq(
-              emu_reset                                   -> "h80000000".U,
-              cmm_state(i).is_debug_interrupt             -> "h00000800".U,
+          io.cmmRedirect.bits.pc := Mux1H(Seq(
               (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
               (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
             )),
-        } 
+        }
+        .elsewhen( cmm_state(i).isInterrupt ) {
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := Mux1H(Seq(
+              (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
+              (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
+            )),
+        }
+
         when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
         }
 
-        assert( PopCount(Seq( cmm_state(i).is_xRet, cmm_state(i).is_trap, cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U )
+        // assert( PopCount(Seq( cmm_state(i).is_xRet, (cmm_state(i).isInterrupt | cmm_state(i).isException), cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U, "Assert Failed, only one situation will be trigger ecah time!" )
       }
 
     }
