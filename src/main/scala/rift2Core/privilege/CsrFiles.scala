@@ -755,7 +755,7 @@ trait CsrFiles { this: BaseCommit =>
     val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.mstatus.asUInt, "h100".U, in.csrExe )
     val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.mstatus.asUInt, "h300".U, in.csrExe )
 
-    when( (in.isInterrupt | in.isException) & ~in.csrfiles.DMode ) {
+    when( (in.isInterrupt | in.isException) & ~in.csrfiles.DMode & ~in.isNomaskInterrupt ) {
       when( update_priv_lvl(in) === "b11".U ) {
         mstatus.mpie := in.csrfiles.mstatus.mie
         mstatus.mie  := 0.U
@@ -767,14 +767,14 @@ trait CsrFiles { this: BaseCommit =>
         mstatus.sie  := 0.U
       }
     }
-    .elsewhen( in.is_mRet & ~in.csrfiles.DMode ) {
+    .elsewhen( in.is_mRet & ~in.csrfiles.DMode & ~in.isNomaskInterrupt ) {
       mstatus.mie  := in.csrfiles.mstatus.mpie
       mstatus.mpie := 1.U
       mstatus.mpp  := "b00".U
 
       mstatus.mprv := Mux( update_priv_lvl(in) =/= "b11".U, 0.U, in.csrfiles.mstatus.mprv )
     }
-    .elsewhen( in.is_sRet & ~in.csrfiles.DMode  ) {
+    .elsewhen( in.is_sRet & ~in.csrfiles.DMode & ~in.isNomaskInterrupt  ) {
       mstatus.spie := 1.U
       mstatus.sie  := in.csrfiles.mstatus.spie
 
@@ -959,7 +959,7 @@ trait CsrFiles { this: BaseCommit =>
     val mepc = WireDefault( in.csrfiles.mepc )
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mepc, "h341".U, in.csrExe )
 
-    when( (in.isInterrupt | in.isException) & update_priv_lvl(in) === "b11".U & ~in.csrfiles.DMode ){ mepc := in.commit_pc }
+    when( (in.isInterrupt | in.isException) & update_priv_lvl(in) === "b11".U & ~in.csrfiles.DMode & ~in.isNomaskInterrupt  ){ mepc := in.commit_pc }
     .elsewhen(enable) { mepc := dnxt }
     return mepc
   }
@@ -975,7 +975,7 @@ trait CsrFiles { this: BaseCommit =>
     val mcause = WireDefault( in.csrfiles.mcause )
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mcause.asUInt, "h342".U, in.csrExe )
 
-    when( in.csrfiles.is_m_interrupt & update_priv_lvl(in) === "b11".U & ~in.csrfiles.DMode ) {
+    when( in.csrfiles.is_m_interrupt & update_priv_lvl(in) === "b11".U & ~in.csrfiles.DMode & ~in.isNomaskInterrupt ) {
       mcause.interrupt := 1.U
       mcause.exception_code := Mux1H( Seq(
         // is_ssi -> 1.U,
@@ -986,7 +986,7 @@ trait CsrFiles { this: BaseCommit =>
         in.csrfiles.is_mei -> 11.U
       ))
     }
-    .elsewhen( in.isException & update_priv_lvl(in) === "b11".U & ~in.csrfiles.DMode ) {
+    .elsewhen( in.isException & update_priv_lvl(in) === "b11".U & ~in.csrfiles.DMode & ~in.isNomaskInterrupt ) {
       mcause.interrupt := 0.U
       mcause.exception_code := Mux1H( Seq(
         in.is_instr_misAlign        -> 0.U,
@@ -1024,7 +1024,7 @@ trait CsrFiles { this: BaseCommit =>
 
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.mtval, "h343".U, in.csrExe )
 
-    when( (in.isInterrupt | in.isException) & update_priv_lvl(in) === "b11".U & ~in.csrfiles.DMode ) {
+    when( (in.isInterrupt | in.isException) & update_priv_lvl(in) === "b11".U & ~in.csrfiles.DMode & ~in.isNomaskInterrupt ) {
       mtval := Mux1H( Seq(
         in.is_instr_access_fault    -> in.ill_ivaddr,
         in.is_instr_paging_fault    -> in.ill_ivaddr,
@@ -1370,7 +1370,7 @@ trait CsrFiles { this: BaseCommit =>
     val sepc = WireDefault( in.csrfiles.sepc )
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.sepc, "h141".U, in.csrExe )
 
-    when( (in.isInterrupt | in.isException) & update_priv_lvl(in) === "b01".U & ~in.csrfiles.DMode ) { sepc := in.commit_pc }
+    when( (in.isInterrupt | in.isException) & update_priv_lvl(in) === "b01".U & ~in.csrfiles.DMode & ~in.isNomaskInterrupt ) { sepc := in.commit_pc }
     .elsewhen(enable) { sepc := dnxt }
     return sepc
   }
@@ -1385,7 +1385,7 @@ trait CsrFiles { this: BaseCommit =>
     val scause = WireDefault( in.csrfiles.scause )
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.scause.asUInt, "h142".U, in.csrExe )
 
-    when( ( in.csrfiles.is_m_interrupt | in.csrfiles.is_s_interrupt ) & update_priv_lvl(in) === "b01".U & ~in.csrfiles.DMode ) {
+    when( ( in.csrfiles.is_m_interrupt | in.csrfiles.is_s_interrupt ) & update_priv_lvl(in) === "b01".U & ~in.csrfiles.DMode & ~in.isNomaskInterrupt ) {
       scause.interrupt := 1.U
       scause.exception_code := Mux1H( Seq(
         in.csrfiles.is_ssi -> 1.U,
@@ -1396,7 +1396,7 @@ trait CsrFiles { this: BaseCommit =>
         in.csrfiles.is_mei -> 11.U
       ))
     }
-    .elsewhen( in.isException & update_priv_lvl(in) === "b01".U & ~in.csrfiles.DMode ) {
+    .elsewhen( in.isException & update_priv_lvl(in) === "b01".U & ~in.csrfiles.DMode & ~in.isNomaskInterrupt ) {
       scause.interrupt := 0.U
       scause.exception_code := Mux1H( Seq(
         in.is_instr_misAlign        -> 0.U,
@@ -1433,7 +1433,7 @@ trait CsrFiles { this: BaseCommit =>
     val stval = WireDefault( in.csrfiles.stval )
     val (enable, dnxt) = Reg_Exe_Port( in.csrfiles.stval, "h143".U, in.csrExe )
 
-    when( (in.isInterrupt | in.isException) & update_priv_lvl(in) === "b01".U & ~in.csrfiles.DMode ) {
+    when( (in.isInterrupt | in.isException) & update_priv_lvl(in) === "b01".U & ~in.csrfiles.DMode & ~in.isNomaskInterrupt ) {
       stval := Mux1H( Seq(
         in.is_instr_access_fault    -> in.ill_ivaddr,
         in.is_instr_paging_fault    -> in.ill_ivaddr,

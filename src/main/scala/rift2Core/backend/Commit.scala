@@ -409,31 +409,25 @@ trait CommitState { this: BaseCommit =>
   val abort_chn = Wire(UInt(log2Ceil(cm_chn).W)); abort_chn := DontCare
   ( 1 until cm_chn ).map{ i => assert( commit_state(i) <= commit_state(i-1) ) }
   
-  for ( i <- 0 until cm_chn ) yield {
+  for ( i <- 0 until cm_chn ) {
     when( (~io.rod(i).valid)  ) {
       commit_state(i) := 0.U //IDLE
     }
     .otherwise {
-      when( cmm_state(i).is_xRet | cmm_state(i).isException | cmm_state(i).isEbreakDM | cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
+      when( cmm_state(i).is_xRet | cmm_state(i).isException | cmm_state(i).isEbreakDM | cmm_state(i).isInterrupt | cmm_state(i).isNomaskInterrupt | cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
         commit_state(i) := 1.U //abort
-        for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
+        for ( j <- 0 until i ) { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
         abort_chn := i.U
-      } .elsewhen( ((io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & bctq(i).valid ) | (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & jctq(i).valid)) & cmm_state(i).is_wb & ~cmm_state(i).is_step) { //1st-step will cause an interrupt
+      } .elsewhen( ((io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & bctq(i).valid ) | (io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & jctq(i).valid)) & cmm_state(i).is_wb ) { //1st-step will cause an interrupt
           commit_state(i) := 2.U //mis-predict
-          for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
+          for ( j <- 0 until i ) { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
       } .elsewhen( cmm_state(i).is_wb ) { //when writeback and no-step, 1st-step will cause an interrupt
         when( (io.rod(i).bits.is_csr & ~csrExe(i).valid) || (io.rod(i).bits.is_fcsr & ~fcsrExe(i).valid) || (io.rod(i).bits.is_branch & ~bctq(i).valid) || (io.rod(i).bits.is_jalr & ~jctq(i).valid) ) {
           commit_state(i) := 0.U
         } .otherwise {
-          when( cmm_state(i).isInterrupt | cmm_state(i).isNomaskInterrupt ){ //interrupt will trigger only at comfirm chn
-            commit_state(i) := 1.U //abort
-            for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
-            abort_chn := i.U
-          } .otherwise{
-            commit_state(i) := 3.U //confirm            
-          }
+          commit_state(i) := 3.U //confirm
         }
-        for ( j <- 0 until i ) yield { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
+        for ( j <- 0 until i ) { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U} } //override to idle }
       } .otherwise {
         commit_state(i) := 0.U //idle
       }
@@ -705,12 +699,12 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
   io.cmmRedirect.bits.pc := 0.U
 
   for ( i <- 0 until cm_chn ) yield {
-    when(io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & is_retired(i) & ~cmm_state(i).is_step) {
+    when(io.rod(i).bits.is_branch & bctq(i).bits.isMisPredict & is_retired(i)) {
       io.cmmRedirect.valid := true.B
       io.cmmRedirect.bits.pc := bctq(i).bits.finalTarget
     }
 
-    when(io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & is_retired(i) & ~cmm_state(i).is_step) {
+    when(io.rod(i).bits.is_jalr   & jctq(i).bits.isMisPredict & is_retired(i)) {
       io.cmmRedirect.valid := true.B
       io.cmmRedirect.bits.pc := jctq(i).bits.finalTarget
     }
@@ -739,32 +733,33 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
           io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.dpc
         } 
       } .otherwise {
-        when( cmm_state(i).is_mRet ) {
-          io.cmmRedirect.valid := true.B
-          io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.mepc
-        } 
-        when( cmm_state(i).is_sRet ) {
-          io.cmmRedirect.valid := true.B
-          io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.sepc
-        } 
 
-        when( cmm_state(i).isException ) { //exception has higher priority than interrupt
-          io.cmmRedirect.valid := true.B
-          io.cmmRedirect.bits.pc := Mux1H(Seq(
-              (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
-              (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
-            )),
-        }
-        .elsewhen(cmm_state(i).isEbreakDM) {
-          io.cmmRedirect.valid := true.B
-          io.cmmRedirect.bits.pc := "h00000800".U
-        }
-        .elsewhen(cmm_state(i).isNomaskInterrupt){
+
+        when(cmm_state(i).isNomaskInterrupt){
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := Mux1H(Seq(
               cmm_state(i).exint.emu_reset              -> "h80000000".U,
               cmm_state(i).isDebugInterrupt             -> "h00000800".U,
             )),          
+        }
+        .elsewhen(cmm_state(i).isEbreakDM) {
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := "h00000800".U
+        }
+        .elsewhen( cmm_state(i).is_mRet ) {
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.mepc
+        } 
+        .elsewhen( cmm_state(i).is_sRet ) {
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.sepc
+        } 
+        .elsewhen( cmm_state(i).isException ) { //exception has higher priority than interrupt
+          io.cmmRedirect.valid := true.B
+          io.cmmRedirect.bits.pc := Mux1H(Seq(
+              (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
+              (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
+            )),
         }
         .elsewhen( cmm_state(i).isInterrupt ) {
           io.cmmRedirect.valid := true.B
