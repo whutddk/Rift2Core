@@ -19,14 +19,13 @@ package rift2Core
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
-import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 class PreFetcher(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
-  val io = IO(new Bundle{
 
+  class PreFetcherIO extends Bundle{
     val stqReq          = Flipped(Valid( new PreFetch_Req_Bundle))
     val icacheRefillReq = Flipped(Valid( new PreFetch_Req_Bundle))
     // val bruReq          = Flipped(Valid( new PreFetch_Req_Bundle))
@@ -34,7 +33,9 @@ class PreFetcher(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
 
     val intent    = new DecoupledIO(new TLBundleA(edge.bundle))
     val hintAck = Flipped(new DecoupledIO(new TLBundleD(edge.bundle))) 
-  })
+  }
+
+  val io = IO(new PreFetcherIO)
 
   // val prefetchFifo = Module(new Queue( new PreFetch_Req_Bundle, 16 ))
 

@@ -20,10 +20,9 @@ package rift2Core.backend
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
-import rift2Core.backend.fpu._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 case class FType(exp: Int, sig: Int) {
   def ieeeWidth = exp + sig

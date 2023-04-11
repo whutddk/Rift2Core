@@ -23,27 +23,29 @@ import base._
 import rift2Core.define._
 import rift2Core.backend._
 import rift2Core.privilege._
-import chisel3.experimental.dataview._
 import rift2Chip._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 
 
 class Exc_Info(implicit p: Parameters) extends Fpu_iss_info { val exc = UInt(5.W) }
 class Fres_Info(implicit p: Parameters) extends Exc_Info { val toFloat = UInt(65.W) }
 class Xres_Info(implicit p: Parameters) extends Exc_Info { val toInt = UInt(64.W) }
 
+class FAluIO(implicit p: Parameters) extends RiftBundle{
+  val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
+  val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65))
+  val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65))
+  val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
+  val fcsr = Input(UInt(24.W))
+
+  val flush = Input(Bool())
+}
 
 class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends RiftModule with HasFPUParameters{
-  val io = IO(new Bundle{
-    val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
-    val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65))
-    val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65))
-    val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
-    val fcsr = Input(UInt(24.W))
 
 
-    val flush = Input(Bool())
-  })
+
+  val io: FAluIO = IO(new FAluIO)
 
 
 
@@ -255,16 +257,7 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
 
 
 class FakeFAlu(implicit p: Parameters) extends RiftModule with HasFPUParameters{
-  val io = IO(new Bundle{
-    val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
-    val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65))
-    val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65))
-    val fcsr_cmm_op = Vec(cm_chn, DecoupledIO( new Exe_Port ))
-    val fcsr = Input(UInt(24.W))
-
-
-    val flush = Input(Bool())
-  })
+  val io: FAluIO = IO(new FAluIO)
 
   io.fpu_iss_exe.ready := true.B
 

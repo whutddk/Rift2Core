@@ -131,10 +131,13 @@ class JtagOutput(irLength: Int = 5) extends Bundle {
 }
 
 class JtagStateMachine() extends Module{
-  val io = IO(new Bundle{
+
+  class JtagStateMachineIO extends Bundle{
     val tms = Input(Bool())
-    val currState = Output(JtagState.State.chiselType)
-  })
+    val currState = Output(JtagState.State.chiselType())
+  }
+
+  val io = IO(new JtagStateMachineIO)
 
   //work with TCK and jtag_reset
   val nextState = WireDefault(JtagState.TestLogicReset.U)
@@ -259,7 +262,7 @@ class CaptureChain[+T <: Data](gen: T) extends Chain {
     case _ => require(false, s"can't generate chain for unknown width data type $gen"); -1
   }
 
-  val regs = (0 until n).map(x => Reg(Bool()))
+  val regs = (0 until n).map( _ => Reg(Bool()))
 
   io.chainOut.data := regs(0)
   
@@ -291,7 +294,7 @@ class CaptureUpdateChain[+T <: Data](gen: T) extends Chain {
       case _ => require(false, s"can't generate chain for unknown width data type $gen"); -1
     }
 
-    val regs = (0 until n).map(x => Reg(Bool()))
+    val regs = (0 until n).map( _ => Reg(Bool()))
     io.chainOut.data := regs(0)
     io.chainOut.chainControlFrom(io.chainIn)
     io.update.bits := (Cat(regs.reverse)).asTypeOf(io.update.bits)
@@ -342,7 +345,7 @@ class JtagTapController() extends Module {
 
   val tapIsInTestLogicReset = Wire(Bool())
 
-  val currState = Wire(JtagState.State.chiselType)
+  val currState = Wire(JtagState.State.chiselType())
 
   io.out.state := currState
 

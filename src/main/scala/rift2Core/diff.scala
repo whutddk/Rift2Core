@@ -17,16 +17,12 @@
 package rift2Core.diff
 
 import chisel3._
-import chisel3.util._
 import base._
 
-import rift2Core.define._
-
-import rift2Core.frontend._
 import rift2Core.backend._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 
 class Info_cmm_diff(implicit p: Parameters) extends RiftBundle {
@@ -89,13 +85,15 @@ class Info_csr_reg(implicit p: Parameters) extends RiftBundle {
 }
 
 class diff(implicit p: Parameters) extends RiftModule with HasFPUParameters{
-  val io = IO(new Bundle{
+
+  class DiffIO extends Bundle{
     val diffXReg = Input(Vec(32, UInt(64.W)))
     val diffFReg = Input(Vec(32, UInt(65.W)))
 
     val commit = Input(new Info_cmm_diff)
-    val csr = Input(new Info_csr_reg)
-  })
+    val csr = Input(new Info_csr_reg)    
+  }
+  val io = IO(new DiffIO)
 
 
   dontTouch(io)

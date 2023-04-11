@@ -25,7 +25,7 @@ import chisel3.util.random._
 import chisel3.experimental.dataview._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 
 class Info_tlb_tag extends Bundle {
   val is_valid = Bool()
@@ -42,8 +42,8 @@ class Info_tlb_tag extends Bundle {
   * 
   */ 
 class TLB()(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
 
+  class TLBIO extends Bundle{
     val req = Flipped(ValidIO( new Info_mmu_req ))
     val pte_o = Output(new Info_pte_sv39)
     val is_hit = Output(Bool())
@@ -52,8 +52,10 @@ class TLB()(implicit p: Parameters) extends RiftModule {
 
     val tlb_renew = Flipped(ValidIO(new TLB_Renew_Bundle))
 
-    val sfence_vma = Input(Bool())
-  })
+    val sfence_vma = Input(Bool())    
+  }
+
+  val io: TLBIO = IO(new TLBIO)
 
   /** The tag including *is_valid*, *asid*, and *vpn[8:0]* X 3 */
   val tag = RegInit( VecInit( Seq.fill(tlbEntry)(0.U.asTypeOf( new Info_tlb_tag  ))))

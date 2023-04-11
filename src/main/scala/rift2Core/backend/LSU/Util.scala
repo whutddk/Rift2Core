@@ -24,10 +24,7 @@ import chisel3.util._
 
 import rift2Core.define._
 
-import rift2Chip._
-import base._
-
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 import chisel3.experimental.dataview._
 
 

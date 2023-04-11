@@ -23,7 +23,7 @@ import chisel3.util._
 import freechips.rocketchip.regmapper._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.diplomacy._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 
 // class GatewayPLICIO extends Bundle{
 //   val valid = Output(Bool())
@@ -65,10 +65,13 @@ class Plic( nHarts: Int = 1, nPriorities: Int = 8, nDevices: Int = 1023 )(implic
 
 
   abstract class PlicBase extends LazyModuleImp(this){
-    val io = IO(new Bundle{
+
+    class PlicIO extends Bundle{
       val interrupt = Input( Vec(nDevices, Bool()) )
-      val context = Output( Vec( nHarts, Bool()) )
-    })
+      val context = Output( Vec( nHarts, Bool()) )      
+    }
+    
+    val io: PlicIO = IO(new PlicIO)
 
     // val gateWaysReady    = Wire( (Vec(nDevices, Bool())) )
     // val gateWaysValid    = Wire( (Vec(nDevices, Bool())) )

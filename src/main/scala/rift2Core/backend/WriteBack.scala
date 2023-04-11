@@ -26,14 +26,13 @@ import chisel3.util._
 import base._
 
 import rift2Core.define._
-import rift2Core.diff._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 
 class WriteBack(implicit p: Parameters) extends RiftModule {
 
-  val io = IO(new Bundle{
+  class WriteBackIO extends Bundle{
     val xLookup = Vec( rnChn, Flipped(new Lookup_Bundle) )
     val fLookup = Vec( rnChn, Flipped(new Lookup_Bundle) )
     val xRename = Vec( rnChn, Flipped(new Rename_Bundle) )
@@ -63,8 +62,10 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     val commit = Vec(cm_chn, Flipped((new Info_commit_op)))
 
     val diffXReg = Output(Vec(32, UInt(64.W)))
-    val diffFReg = Output(Vec(32, UInt(65.W)))
-  })
+    val diffFReg = Output(Vec(32, UInt(65.W)))    
+  }
+
+  val io: WriteBackIO = IO(new WriteBackIO)
 
 
   val iReg = Module(new XRegFiles(dw = 64, opChn, wbChn))

@@ -19,7 +19,7 @@ package rift2Core.frontend
 import chisel3._
 import chisel3.util._
 import chisel3.experimental.dataview._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 import rift2Core.define._
 import base._
@@ -27,7 +27,8 @@ import base._
   * instract fetch stage 3, instr pre-decode, realign, predict-state 1
   */
 abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
-  val io = IO(new Bundle{
+
+  class IF3IO extends Bundle{
     val if3_req = Vec(4, Flipped(new DecoupledIO(new IF2_Bundle) ))
     val if3_resp = Vec(rnChn, Decoupled(new IF3_Bundle))
 
@@ -41,8 +42,10 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
     val if4_update_ghist = Vec(rnChn, Flipped(Valid(new Ghist_reflash_Bundle)))
     val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
 
-    val flush = Input(Bool())
-  })
+    val flush = Input(Bool())    
+  }
+
+  val io: IF3IO = IO(new IF3IO)
 
   val ghist_snap   = RegInit( 0.U(64.W) )
   val ghist_active = RegInit( 0.U(64.W) )

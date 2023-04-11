@@ -21,7 +21,7 @@ import chisel3._
 import chisel3.util._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 class Info_pmpcfg extends Bundle {
   val value = UInt(8.W)
@@ -42,16 +42,15 @@ class Info_pmpcfg extends Bundle {
   */ 
 class PMP(implicit p: Parameters) extends RiftModule {
   require(pmpNum == 1 || pmpNum == 0)
-  val io = IO(new Bundle{
 
+  class PMPIO extends Bundle{
     val cmm_mmu = Input( new Info_cmm_mmu )
-
     val chk_addr = Input(UInt(64.W))
-
     val chk_type = Input(UInt(3.W))
-
     val is_fault = Output(Bool())
-  })
+  }
+
+  val io: PMPIO = IO(new PMPIO)
 
   if ( pmpNum == 0 ) { io.is_fault := false.B } 
   else {

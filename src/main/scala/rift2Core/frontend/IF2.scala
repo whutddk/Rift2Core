@@ -29,8 +29,7 @@ import base._
 import rift2Core.define._
 import rift2Core.privilege._
 
-import chipsalliance.rocketchip.config.Parameters
-import freechips.rocketchip.diplomacy._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 
@@ -41,8 +40,7 @@ import freechips.rocketchip.tilelink._
 abstract class IF2Base(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val iEdge = edge
 
-  val io = IO(new Bundle {
-
+  class IF2IO extends Bundle{
     val if2_req  = Flipped(new DecoupledIO( new IF1_Bundle ))
     val if2_resp = Vec( 4, new DecoupledIO(new IF2_Bundle) )
 
@@ -60,8 +58,10 @@ abstract class IF2Base(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheMo
     val ifence = Input(Bool())
 
     /** prefetch is not guarantee to be accepted by cache*/
-    val preFetch = ValidIO( new PreFetch_Req_Bundle )
-  })
+    val preFetch = ValidIO( new PreFetch_Req_Bundle )    
+  }
+
+  val io: IF2IO = IO(new IF2IO)
 
 
   val (_, _, is_trans_done, transCnt) = iEdge.count(io.icache_access)
@@ -179,8 +179,8 @@ trait IF2ICache { this: IF2Base =>
   /** flag that indicated that if a cache block is valid */
   val is_valid = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
 
-  val datRAM = for ( i <- 0 until cb ) yield { Module(new DatRAM(dw, cl)) }
-  val tagRAM = for ( i <- 0 until cb ) yield { Module(new TagRAM(tag_w, cl)) }
+  val datRAM = for ( _ <- 0 until cb ) yield { Module(new DatRAM(dw, cl)) }
+  val tagRAM = for ( _ <- 0 until cb ) yield { Module(new TagRAM(tag_w, cl)) }
 
 
   is_hit_oh := {

@@ -19,16 +19,15 @@ package rift2Core.frontend
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 import base._
 
 /**
   * instract fetch stage 1, generate pc
   */
 abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
-  val io = IO(new Bundle{
 
-
+  class IF1IO extends Bundle{
     val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
     val cmmRedirect = Flipped(Valid(new Commit_Redirect_Bundle))
 
@@ -36,8 +35,10 @@ abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
     val pc_gen = Decoupled(new IF1_Bundle)
 
     val jcmm_update = Flipped(Valid(new Jump_CTarget_Bundle))
-    val bcmm_update = Flipped(Valid(new Branch_CTarget_Bundle))
-  })
+    val bcmm_update = Flipped(Valid(new Branch_CTarget_Bundle))    
+  }
+
+  val io: IF1IO = IO(new IF1IO)
 
   val pc_qout = RegInit("h80000000".U(64.W))
 

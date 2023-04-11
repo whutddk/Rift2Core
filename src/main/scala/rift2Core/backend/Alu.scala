@@ -24,16 +24,19 @@ import chisel3.util._
 import rift2Core.define._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 
 class Alu(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
+
+  class AluIO extends Bundle{
     val alu_iss_exe = Flipped(new DecoupledIO(new Alu_iss_info))
     val alu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
 
-    val flush = Input(Bool())
-  })
+    val flush = Input(Bool())    
+  }
+  
+  val io = IO(new AluIO)
 
   val alu_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, true, false ) )
   io.alu_exe_iwb <> alu_exe_iwb_fifo.io.deq
@@ -74,7 +77,7 @@ class Alu(implicit p: Parameters) extends RiftModule {
   val alu_sra_res  = Mux( is_32w, cutTo32(sra_op1_128w >> shift_op2), sra_op1_128w >> shift_op2 )
 
 
-  val res = MuxCase(DontCare, Array(
+  val res = Mux1H(Seq(
     io.alu_iss_exe.bits.fun.add -> alu_add_res,
     io.alu_iss_exe.bits.fun.slt -> alu_slt_res,
     io.alu_iss_exe.bits.fun.xor -> alu_xor_res,
@@ -82,7 +85,7 @@ class Alu(implicit p: Parameters) extends RiftModule {
     io.alu_iss_exe.bits.fun.and -> alu_and_res,
     io.alu_iss_exe.bits.fun.sll -> alu_sll_res,
     io.alu_iss_exe.bits.fun.srl -> alu_srl_res,
-    io.alu_iss_exe.bits.fun.sra -> alu_sra_res
+    io.alu_iss_exe.bits.fun.sra -> alu_sra_res,
   ))
 
   io.alu_iss_exe.ready := alu_exe_iwb_fifo.io.enq.fire

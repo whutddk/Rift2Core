@@ -26,16 +26,19 @@ import chisel3.util._
 import rift2Core.define._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 
 
 
 class Decode16(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
+
+  class Decode16IO extends Bundle{
     val x  = Input(UInt(16.W))
     val pc = Input(UInt(64.W))
-    val info = Output( new Info_instruction )
-  })
+    val info = Output( new Info_instruction )    
+  }
+
+  val io: Decode16IO = IO(new Decode16IO)
 
   val x  = WireDefault(io.x)
   val pc = WireDefault(io.pc)
@@ -487,11 +490,14 @@ object Decode16 {
 
 
 class Decode32(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
+
+  class Decode32IO extends Bundle{
     val x  = Input(UInt(32.W))
     val pc = Input(UInt(64.W))
-    val info = Output( new Info_instruction )
-  })
+    val info = Output( new Info_instruction )    
+  }
+  
+  val io: Decode32IO = IO(new Decode32IO)
 
     val x  = WireDefault(io.x)
     val pc = WireDefault(io.pc)
@@ -522,7 +528,7 @@ class Decode32(implicit p: Parameters) extends RiftModule {
 
 
 
-    info.param.imm := MuxCase( 0.U, Array(
+    info.param.imm := Mux1H( Seq(
         is_iType -> iType_imm,
         is_sType -> sType_imm,
         is_bType -> bType_imm,
@@ -538,7 +544,7 @@ class Decode32(implicit p: Parameters) extends RiftModule {
 
 
 
-    info.param.raw.rd0 := MuxCase( x(11,7), Array(
+    info.param.raw.rd0 := MuxCase( x(11,7), Seq(
       info.alu_isa.wfi         -> 0.U,
       info.bru_isa.beq         -> 0.U,
       info.bru_isa.bne         -> 0.U,
@@ -572,7 +578,7 @@ class Decode32(implicit p: Parameters) extends RiftModule {
 
 
 
-    info.param.raw.rs1 := MuxCase( x(19,15), Array(
+    info.param.raw.rs1 := MuxCase( x(19,15), Seq(
       info.alu_isa.lui       -> 0.U,
       info.alu_isa.auipc     -> 0.U,
       info.alu_isa.wfi       -> 0.U,
@@ -586,7 +592,7 @@ class Decode32(implicit p: Parameters) extends RiftModule {
     ))
       
 
-    info.param.raw.rs2 := MuxCase( x(24,20), Array(
+    info.param.raw.rs2 := MuxCase( x(24,20), Seq(
       info.alu_isa.lui   -> 0.U,
       info.alu_isa.auipc -> 0.U,
       info.alu_isa.addi  -> 0.U,
@@ -676,7 +682,7 @@ class Decode32(implicit p: Parameters) extends RiftModule {
 
 
 
-    info.param.raw.rs3 := MuxCase( 0.U, Array(
+    info.param.raw.rs3 := Mux1H( Seq(
       info.fpu_isa.fmadd_s  -> x(31,27),
       info.fpu_isa.fmsub_s  -> x(31,27),
       info.fpu_isa.fnmsub_s -> x(31,27),

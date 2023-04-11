@@ -18,19 +18,21 @@ package rift2Core.backend.fpu
 
 import chisel3._
 import chisel3.util._
-import rift2Core.define._
 import rift2Core.backend._
 import chisel3.experimental.dataview._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 
 class FPToFP(latency: Int)(implicit p: Parameters) extends RiftModule with HasFPUParameters{
-  val io = IO(new Bundle {
+
+  class FPToFPIO extends Bundle{
     val in = Flipped(ValidIO(new Fpu_iss_info))
     val frm = Input(UInt(3.W))
     val out = ValidIO(new Fres_Info)
-  })
+  }
+
+  val io: FPToFPIO = IO(new FPToFPIO)
 
   val out = Wire(new Fres_Info)
   out.viewAsSupertype(new Fpu_iss_info) := io.in.bits

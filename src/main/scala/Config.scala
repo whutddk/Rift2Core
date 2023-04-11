@@ -1,16 +1,15 @@
 package rift2Chip
 
-import chisel3._
-import chisel3.util._
+
+
 
 import rift2Core.define.{IFParameters}
-import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.config._
+import org.chipsalliance.cde.config._
+
+ 
 
 
-
-
-class Rift2300 extends Config((site, here, up) => {
+class Rift2300 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasL2  = false,
     hasDebugger = true,
@@ -72,7 +71,7 @@ class Rift2300 extends Config((site, here, up) => {
 
 
 
-class Rift2310 extends Config((site, here, up) => {
+class Rift2310 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasL2  = true,
     hasDebugger = true,
@@ -132,7 +131,7 @@ class Rift2310 extends Config((site, here, up) => {
   )
 })
 
-class Rift2320 extends Config((site, here, up) => {
+class Rift2320 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasL2  = true,
     hasDebugger = true,
@@ -190,7 +189,7 @@ class Rift2320 extends Config((site, here, up) => {
   )
 })
 
-class Rift2330 extends Config((site, here, up) => {
+class Rift2330 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
@@ -247,7 +246,7 @@ class Rift2330 extends Config((site, here, up) => {
   )
 })
 
-class Rift2330D extends Config((site, here, up) => {
+class Rift2330D extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
@@ -303,7 +302,7 @@ class Rift2330D extends Config((site, here, up) => {
 })
 
 
-class Rift2340 extends Config((site, here, up) => {
+class Rift2340 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
@@ -344,7 +343,7 @@ class Rift2340 extends Config((site, here, up) => {
   )
 })
 
-class Rift2350 extends Config((site, here, up) => {
+class Rift2350 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
@@ -385,7 +384,7 @@ class Rift2350 extends Config((site, here, up) => {
   )
 })
 
-class Rift2360 extends Config((site, here, up) => {
+class Rift2360 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
@@ -426,14 +425,14 @@ class Rift2360 extends Config((site, here, up) => {
   )
 })
 
-class Rift2370 extends Config((site, here, up) => {
+class Rift2370 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     fpuNum = 1,
     aluNum = 2,
   )
 })
 
-class Rift2380 extends Config((site, here, up) => {
+class Rift2380 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
@@ -473,7 +472,7 @@ class Rift2380 extends Config((site, here, up) => {
   )
 })
 
-class Rift2390 extends Config((site, here, up) => {
+class Rift2390 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,

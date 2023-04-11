@@ -22,25 +22,21 @@ import chisel3.util._
 
 import rift2Core.define._
 
-import base._
 import rift2Chip._
 
-import chipsalliance.rocketchip.config.Parameters
-import freechips.rocketchip.diplomacy._
+import org.chipsalliance.cde.config._
 
 
 abstract class Stq_Base()(implicit p: Parameters) extends DcacheModule{
 
   def st_w = log2Ceil(stEntry)
 
-  val io = IO( new Bundle{
+  class StqIO extends Bundle{
     val enq = Flipped(DecoupledIO(new Lsu_iss_info))
     val deq = DecoupledIO(new Lsu_iss_info)
 
     val cmm_lsu = Input(new Info_cmm_lsu)
     val is_empty = Output(Bool())
-
-
 
     val overlapReq  = Flipped(Valid(new Stq_req_Bundle))
     val overlapResp = Valid(new Stq_resp_Bundle)
@@ -49,7 +45,10 @@ abstract class Stq_Base()(implicit p: Parameters) extends DcacheModule{
 
     /** prefetch is not guarantee to be accepted by cache*/
     val preFetch = ValidIO( new PreFetch_Req_Bundle )
-  } )
+  }
+
+
+  val io: StqIO = IO( new StqIO )
 
   val buff = RegInit(VecInit(Seq.fill(stEntry)(0.U.asTypeOf(new Lsu_iss_info))))
   

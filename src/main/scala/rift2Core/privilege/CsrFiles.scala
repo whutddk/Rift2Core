@@ -20,11 +20,10 @@ package rift2Core.privilege
 
 import chisel3._
 import chisel3.util._
-import rift2Core.define._
 import rift2Core.backend._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 class Exe_Port extends Bundle {
   val addr = UInt(12.W)
@@ -312,19 +311,19 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
   def csr_read_prilvl(addr: UInt) = {
     val pmpcfg_arr = {
       val addr_chk = for ( i <- 0 until 8 ) yield { addr === ("h3A0".U + (2*i).U) }
-      val reg_sel  = for ( i <- 0 until 8 ) yield { priv_lvl === "b11".U }
+      val reg_sel  = for ( _ <- 0 until 8 ) yield { priv_lvl === "b11".U }
       addr_chk zip reg_sel
     }
 
     val pmpaddr_arr = {
       val addr_chk = for ( i <- 0 until 8*8 ) yield { addr === ("h3B0".U + i.U) }
-      val reg_sel  = for ( i <- 0 until 8*8 ) yield { priv_lvl === "b11".U }
+      val reg_sel  = for ( _ <- 0 until 8*8 ) yield { priv_lvl === "b11".U }
       addr_chk zip reg_sel
     }
 
     val hpmcounter_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hC00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { true.B }
+      val reg_sel  = for ( _ <- 3 until 32 ) yield { true.B }
       addr_chk zip reg_sel
     }
 
@@ -336,7 +335,7 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
 
     val mhpmevent_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("h320".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { priv_lvl === "b11".U }
+      val reg_sel  = for ( _ <- 3 until 32 ) yield { priv_lvl === "b11".U }
       addr_chk zip reg_sel      
     }
 
@@ -429,31 +428,31 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
   def csr_write_denied(addr: UInt) = {
     val pmpcfg_arr = {
       val addr_chk = for ( i <- 0 until 8 ) yield { addr === ("h3A0".U + (2*i).U) }
-      val reg_sel  = for ( i <- 0 until 8 ) yield { true.B }
+      val reg_sel  = for ( _ <- 0 until 8 ) yield { true.B }
       addr_chk zip reg_sel
     }
 
     val pmpaddr_arr = {
       val addr_chk = for ( i <- 0 until 8*8 ) yield { addr === ("h3B0".U + i.U) }
-      val reg_sel  = for ( i <- 0 until 8*8 ) yield { true.B}
+      val reg_sel  = for ( _ <- 0 until 8*8 ) yield { true.B}
       addr_chk zip reg_sel
     }
 
     val hpmcounter_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hC00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { true.B }
+      val reg_sel  = for ( _ <- 3 until 32 ) yield { true.B }
       addr_chk zip reg_sel
     }
 
     val mhpmcounter_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hB00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { true.B }
+      val reg_sel  = for ( _ <- 3 until 32 ) yield { true.B }
       addr_chk zip reg_sel      
     }
 
     val mhpmevent_arr = {
       val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("h320".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { true.B }
+      val reg_sel  = for ( _ <- 3 until 32 ) yield { true.B }
       addr_chk zip reg_sel      
     }
 

@@ -19,15 +19,15 @@ package rift2Core.frontend
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
-import chipsalliance.rocketchip.config.Parameters
-import rift2Chip._
+import org.chipsalliance.cde.config._
 import base._
 
 /**
   * instract fetch stage 4, instr decode,  predict-state 2
   */
 abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
-  val io = IO(new Bundle{
+
+  class IF4IO extends Bundle{
     val if4_req  = Vec(rnChn, Flipped(Decoupled(new IF3_Bundle)))
     val btbResp  = Vec(rnChn, Flipped(Decoupled(new BTBResp_Bundle)))
     val bimResp  = Vec(rnChn, Flipped(Decoupled(new BIMResp_Bundle)))
@@ -43,8 +43,10 @@ abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
     val bftq = Decoupled(new Branch_FTarget_Bundle)
     val jftq = Decoupled(new Jump_FTarget_Bundle)
 
-    val flush = Input(Bool())
-  })
+    val flush = Input(Bool())    
+  }
+
+  val io: IF4IO = IO(new IF4IO)
 
   val ras = Module(new RAS)
   val instr_fifo = Module(new MultiPortFifo( new IF4_Bundle, (if(!isMinArea) 4 else 1), rnChn, rnChn ))

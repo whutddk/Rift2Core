@@ -19,14 +19,12 @@
 package rift2Chip
 
 import chisel3._
-import chisel3.util._
 import rift2Core._
 
 import debug._
 
-import rift2Core.define._
 
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.amba.axi4._
@@ -56,7 +54,7 @@ class Rift2NoC(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyM
   val nDevices = 31
   val i_plic = LazyModule( new Plic( nHarts = 1, nPriorities = 8, nDevices = nDevices ))
   val sifiveCache = LazyModule(new InclusiveCache(
-      cache = CacheParameters( level = 2, ways = 2, sets = 8, blockBytes = l1DW/8, beatBytes = l1BeatBits/8 ),
+      cache = CacheParameters( level = 2, ways = 2, sets = 8, blockBytes = l1DW/8, beatBytes = l1BeatBits/8, hintsSkipProbe = false ),
       micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
       control = None
     ))
@@ -142,7 +140,7 @@ class Rift2NoC(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyM
         //   UserEgressParams( srcId = 8, payloadBits = 8 ),
         //   UserEgressParams( srcId = 8, payloadBits = 8 ),
         // ),
-        routerParams = (i: Int) => UserRouterParams(// Payload width. Must match payload width on all channels attached to this routing node
+        routerParams = (_) => UserRouterParams(// Payload width. Must match payload width on all channels attached to this routing node
           payloadBits = 128,
           combineSAST = false,// Combines SA and ST stages (removes pipeline register)
           combineRCVA = false,// Combines RC and VA stages (removes pipeline register)
@@ -272,7 +270,7 @@ class Rift2NoC(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyM
 //   val i_rift2Core = LazyModule( new Rift2Core(isFlatten) )
 
 //   val sifiveCache = if( hasL2 ) { Some(    LazyModule(new InclusiveCache(
-//       cache = CacheParameters( level = 2, ways = 2, sets = 4, blockBytes = l1DW/8, beatBytes = l1BeatBits/8 ),
+//       cache = CacheParameters( level = 2, ways = 2, sets = 4, blockBytes = l1DW/8, beatBytes = l1BeatBits/8, hintsSkipProbe = false ),
 //       micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
 //       control = None
 //     )))
