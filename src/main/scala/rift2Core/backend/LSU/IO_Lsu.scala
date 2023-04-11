@@ -24,14 +24,14 @@ import chisel3.util._
 import rift2Core.define._
 
 import rift2Chip._
-import base._
 
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 
 class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
-  val io = IO(new Bundle{
+
+  class IOLSUIO extends Bundle{
     val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
     val deq = new DecoupledIO(new Dcache_Deq_Bundle)
     val is_empty = Output(Bool())
@@ -39,8 +39,9 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
     val getPut    = new DecoupledIO(new TLBundleA(edge.bundle))
     val access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
 
-    // val flush = Input(Bool())
-  })
+    // val flush = Input(Bool())    
+  }
+  val io: IOLSUIO = IO(new IOLSUIO)
 
   val is_busy    = RegInit(false.B)
   val isTransing = RegInit(false.B)

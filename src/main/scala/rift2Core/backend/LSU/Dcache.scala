@@ -20,15 +20,12 @@ package rift2Core.backend.lsu
 
 import chisel3._
 import chisel3.util._
-import chisel3.util.random._
 
 import rift2Core.define._
 
 import rift2Chip._
-import base._
 
-import chipsalliance.rocketchip.config.Parameters
-import freechips.rocketchip.diplomacy._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 
@@ -93,7 +90,7 @@ class Dcache_Deq_Bundle(implicit p: Parameters) extends Dcache_ScoreBoard_Bundle
 abstract class DcacheBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheModule {
   val dEdge = edge
 
-  val io = IO(new Bundle{
+  class DcacheIO extends Bundle{
     val enq = Flipped(new DecoupledIO(new Dcache_Enq_Bundle))
     val deq = new DecoupledIO(new Dcache_Deq_Bundle)
     val is_empty = Output(Bool())
@@ -110,11 +107,13 @@ abstract class DcacheBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) exte
     val writeBackUnit_dcache_grant   = if( hasL2 ) Some(Flipped(new DecoupledIO(new TLBundleD(dEdge.bundle)))) else {None}
 
     val dcache_getPut = if ( hasL2 ) { None } else { Some(        new DecoupledIO(new TLBundleA(edge.bundle)) ) }
-    val dcache_access = if ( hasL2 ) { None } else { Some(Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))) }
-  })
+    val dcache_access = if ( hasL2 ) { None } else { Some(Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))) }    
+  } 
+
+  val io: DcacheIO = IO(new DcacheIO)
 
   val missUnit      = if( hasL2 ) Some(Module(new MissUnit(edge = edge, setting = 2, id = id)))      else {None}
-  val probeUnit     = if( hasL2 ) Some(Module(new ProbeUnit(edge = edge, id = id)))                  else {None}
+  val probeUnit     = if( hasL2 ) Some(Module(new ProbeUnit(edge = edge)))                  else {None}
   val writeBackUnit = if( hasL2 ) Some(Module(new WriteBackUnit(edge = edge, setting = 2, id = id))) else {None}
 
   val getUnit = if( hasL2 ) {None} else {Some(Module(new GetUnit(edge = edge, id = id)))}

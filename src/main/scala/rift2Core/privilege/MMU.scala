@@ -20,13 +20,11 @@ package rift2Core.privilege
 import chisel3._
 import chisel3.util._
 
-import chisel3.util.random._
 import chisel3.experimental.dataview._
 
 import rift2Chip._
 
-import chipsalliance.rocketchip.config.Parameters
-import freechips.rocketchip.diplomacy._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 class Info_pte_sv39 extends Bundle {
@@ -110,7 +108,8 @@ class Info_cmm_mmu(implicit p: Parameters) extends RiftBundle {
   *
   */
 class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
+
+  class MMUIO extends Bundle{
     val if_mmu = Flipped(DecoupledIO(new Info_mmu_req))
     val mmu_if = DecoupledIO(new Info_mmu_rsp)
     val if_flush = Input(Bool())
@@ -119,14 +118,13 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val mmu_lsu = DecoupledIO(new Info_mmu_rsp)
     val lsu_flush = Input(Bool())
 
-
     val cmm_mmu = Input( new Info_cmm_mmu )
-
 
     val ptw_get    = new DecoupledIO(new TLBundleA(edge.bundle))
     val ptw_access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
+  }
 
-  })
+  val io: MMUIO = IO(new MMUIO)
 
   val itlb = Module( new TLB )
   val dtlb = Module( new TLB )

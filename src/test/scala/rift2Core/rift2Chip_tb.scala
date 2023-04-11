@@ -22,10 +22,8 @@ package test
 
 import chisel3._
 import rift2Chip._
-import rift2Core._
 
 import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.config._
 import chisel3.stage._
 
 class Rift2GoCfg extends Rift2330
@@ -38,7 +36,7 @@ object testMain extends App {
   // val cfg = new NormalCfg
   // val cfg = new Rift2GoCfg
   // val cfg = new Rift2350
-  val cfg = new Rift2330D
+  val cfg = new Rift2370
 
   (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
       ChiselGeneratorAnnotation(() => {
@@ -139,7 +137,6 @@ object testAll extends App {
 //     ))
 // }
 
-import base._
 import rift2Core.backend._
 
 object testModule extends App {

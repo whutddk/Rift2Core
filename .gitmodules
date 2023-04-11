@@ -1,15 +1,13 @@
-[submodule "block-inclusivecache-sifive"]
-	path = block-inclusivecache-sifive
-	url = https://github.com/sifive/block-inclusivecache-sifive.git
-[submodule "rocket-chip"]
-	path = rocket-chip
+[submodule "dependencies/rocket-chip"]
+	path = dependencies/rocket-chip
 	url = https://github.com/chipsalliance/rocket-chip.git
-[submodule "sifive-blocks"]
-	path = sifive-blocks
-	url = https://github.com/sifive/sifive-blocks.git
-[submodule "berkeley-hardfloat"]
-	path = berkeley-hardfloat
-	url = https://github.com/ucb-bar/berkeley-hardfloat.git
-[submodule "constellation"]
-	path = constellation
+[submodule "dependencies/constellation"]
+	path = dependencies/constellation
 	url = https://github.com/ucb-bar/constellation.git
+[submodule "dependencies/inclusivecache"]
+	path = dependencies/inclusivecache
+	url = https://github.com/chipsalliance/rocket-chip-inclusive-cache.git
+[submodule "dependencies/blocks"]
+	path = dependencies/blocks
+	url = https://github.com/chipsalliance/rocket-chip-blocks.git
+

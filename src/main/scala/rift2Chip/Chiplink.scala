@@ -22,7 +22,7 @@ import chisel3.util._
 
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.diplomacy._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.util._
 
 class TLReq_Bundle extends Bundle{
@@ -57,13 +57,16 @@ class ChipLinkMaster(implicit p: Parameters) extends LazyModule{
   lazy val module = new ChipLinkMasterImp(this)
 
   class TLSlave(edge: TLEdgeIn) extends Module{
-    val io = IO(new Bundle{
+
+    class TLSlaveIO extends Bundle{
       val req = DecoupledIO(new TLReq_Bundle)
       val rsp = Flipped(DecoupledIO(new TLRsp_Bundle))
 
       val a = Flipped(new DecoupledIO(new TLBundleA(edge.bundle)))
       val d = new DecoupledIO(new TLBundleD(edge.bundle))
-    })
+    }
+
+    val io = IO(new TLSlaveIO)
 
     // val ( tlMstBus, tlMstEdge ) = chipLinkMasterNode.in.head
 
@@ -130,7 +133,8 @@ class ChipLinkMaster(implicit p: Parameters) extends LazyModule{
 
 
   class HexSpiMaster extends Module{
-    val io = IO(new Bundle{
+
+    class HexSpiMasterIO extends Bundle{
       val hspi_clk   = Output(Bool())//Input(Bool())
       // val hspi_reset = Input(Bool())
       val hspi_rx    = Input ( new HexSpiIO_Bundle )
@@ -139,8 +143,10 @@ class ChipLinkMaster(implicit p: Parameters) extends LazyModule{
 
       val req = Flipped(DecoupledIO(new TLReq_Bundle))
       val rsp = DecoupledIO(new TLRsp_Bundle)
+    }
 
-    })
+    val io: HexSpiMasterIO = IO(new HexSpiMasterIO)
+
     // withClockAndReset( (~io.hspi_clk).asClock, io.hspi_reset ) {
       io.hspi_clk := clock.asBool()
 
@@ -217,13 +223,16 @@ class ChipLinkMaster(implicit p: Parameters) extends LazyModule{
 
 
   class ChipLinkMasterImp(outer: ChipLinkMaster) extends LazyModuleImp(outer) {
-    val io = IO(new Bundle{
+
+    class ChipLinkMasterIO extends Bundle{
       val hspi_clk   = Output(Bool())
       //val hspi_reset = Input(Bool())
       val hspi_rx    = Input ( new HexSpiIO_Bundle )
       val hspi_tx   = Output( new HexSpiIO_Bundle )
       val hspi_oen = Output(Bool())
-    })
+    }
+
+    val io: ChipLinkMasterIO = IO(new ChipLinkMasterIO)
 
 
     val ( tlMstBus, tlMstEdge ) = chipLinkMasterNode.in.head
@@ -299,13 +308,16 @@ class ChiplinkSlave(implicit p: Parameters) extends LazyModule{
 
 
   class TLMaster(edge: TLEdgeOut) extends Module{
-    val io = IO(new Bundle{
+
+    class TLMasterIO extends Bundle{
       val req = Flipped(DecoupledIO(new TLReq_Bundle))
       val rsp = DecoupledIO(new TLRsp_Bundle)
 
       val a = new DecoupledIO(new TLBundleA(edge.bundle))
       val d = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
-    })
+    }
+
+    val io: TLMasterIO = IO(new TLMasterIO)
 
     // val (tlSlvBus, tlSlvEdge) = ChipLinkSlaveNode.out.head
 
@@ -373,7 +385,8 @@ class ChiplinkSlave(implicit p: Parameters) extends LazyModule{
 
 
   class HexSpiSlave extends RawModule{
-    val io = IO(new Bundle{
+
+    class HexSpiSlaveIO extends Bundle{
       val hspi_clk   = Input(Bool())
       val hspi_reset = Input(Bool())
       val hspi_rx    = Input ( new HexSpiIO_Bundle )
@@ -381,7 +394,10 @@ class ChiplinkSlave(implicit p: Parameters) extends LazyModule{
 
       val req = DecoupledIO(new TLReq_Bundle)
       val rsp = Flipped(DecoupledIO(new TLRsp_Bundle))
-    })
+    }
+
+    val io: HexSpiSlaveIO = IO(new HexSpiSlaveIO)
+
     withClockAndReset( io.hspi_clk.asClock, io.hspi_reset ) {
       val txCounter = RegInit(15.U(4.W))
       val rxCounter = RegInit(0.U(3.W))
@@ -443,12 +459,15 @@ class ChiplinkSlave(implicit p: Parameters) extends LazyModule{
   }
 
   class ChipLinkSlaveImp(outer: ChiplinkSlave) extends LazyModuleImp(outer) {
-    val io = IO(new Bundle{
+
+    class ChipLinkSlaveIO extends Bundle{
       val hspi_clk   = Input(Bool())
       val hspi_reset = Input(Bool())
       val hspi_rx    = Input ( new HexSpiIO_Bundle )
       val hspi_tx   = Output( new HexSpiIO_Bundle )
-    })
+    }
+
+    val io: ChipLinkSlaveIO = IO(new ChipLinkSlaveIO)
 
     val (tlSlvBus, tlSlvEdge) = ChipLinkSlaveNode.out.head
     val tlMaster = Module(new TLMaster(tlSlvEdge))

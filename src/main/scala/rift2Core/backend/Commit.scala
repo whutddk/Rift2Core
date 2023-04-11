@@ -22,14 +22,13 @@ import chisel3._
 import chisel3.util._
 
 import rift2Core.define._
-import rift2Core.frontend._
 import rift2Core.backend._
 import rift2Core.privilege._
 import debug._
 import chisel3.experimental._
 import base._
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 import rift2Core.diff._
 
 class ExInt_Bundle extends Bundle {
@@ -274,7 +273,8 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
 
 
 abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
+
+  class CommitIO extends Bundle{
     val cm_op = Vec(cm_chn, new Info_commit_op)
     val rod = Vec(cm_chn, Flipped(new DecoupledIO( new Info_reorder_i ) ))
 
@@ -307,10 +307,10 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
     val plic   = Input(new Plic_Bundle)
 
     val diff_commit = Output(new Info_cmm_diff)
-    val diff_csr = Output(new Info_csr_reg)
+    val diff_csr = Output(new Info_csr_reg)    
+  }
 
-
-  })
+  val io: CommitIO = IO(new CommitIO)
 
 
   val csrfiles = Reg(new CSR_Bundle)
@@ -740,7 +740,7 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
           io.cmmRedirect.bits.pc := Mux1H(Seq(
               cmm_state(i).exint.emu_reset              -> "h80000000".U,
               cmm_state(i).isDebugInterrupt             -> "h00000800".U,
-            )),          
+            ))          
         }
         .elsewhen(cmm_state(i).isEbreakDM) {
           io.cmmRedirect.valid := true.B
@@ -758,15 +758,15 @@ class Commit()(implicit p: Parameters) extends BaseCommit with CsrFiles with Com
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := Mux1H(Seq(
               (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
-              (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
-            )),
+              (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt,
+            ))
         }
         .elsewhen( cmm_state(i).isInterrupt ) {
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := Mux1H(Seq(
               (update_priv_lvl(cmm_state(i)) === "b11".U) -> cmm_state(i).csrfiles.mtvec.asUInt,
-              (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt
-            )),
+              (update_priv_lvl(cmm_state(i)) === "b01".U) -> cmm_state(i).csrfiles.stvec.asUInt,
+            ))
         }
 
         when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {

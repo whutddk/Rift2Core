@@ -25,10 +25,11 @@ import rift2Core.define._
 import rift2Core.privilege._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 class Csr(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
+
+  class CsrIO extends Bundle {
     val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
     val csr_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
 
@@ -37,8 +38,10 @@ class Csr(implicit p: Parameters) extends RiftModule {
 
     val csr_cmm_op = DecoupledIO( new Exe_Port ) 
 
-    val flush = Input(Bool())
-  })
+    val flush = Input(Bool())    
+  }
+
+  val io: CsrIO = IO(new CsrIO)
 
   val csr_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, true, false ) )
   io.csr_exe_iwb <> csr_exe_iwb_fifo.io.deq

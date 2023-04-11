@@ -2,120 +2,165 @@
 
 // See README.md for license details.
 
-ThisBuild / scalaVersion     := "2.12.9"
+ThisBuild / scalaVersion     := "2.13.10"
 
 ThisBuild / version          := "2.3.5"//-SNAPSHOT
 ThisBuild / organization     := "io.github.whutddk"
+val chiselVersion = "3.5.6"
 
 
-
-
-lazy val rocketchip = (project in file("./rocket-chip"))
-  .settings(
-    name := "rocketchip",
-    organization := "edu.berkeley.cs",
-    libraryDependencies ++= Seq(
-      "edu.berkeley.cs" %% "chisel3" % "3.5.4",
-    ),
-    scalacOptions ++= Seq(
-      "-language:reflectiveCalls",
-      "-Xcheckinit"
-    ),
-    addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.5.4" cross CrossVersion.full),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
+lazy val commonSettings = Seq(
+  // organization := "edu.berkeley.cs",
+  // version := "1.6",
+  assembly / assemblyMergeStrategy := { _ match {
+    case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+    case _ => MergeStrategy.first}},
+  scalacOptions ++= Seq(
+    "-deprecation",
+    "-unchecked",
+    "-Ymacro-annotations"), // fix hierarchy API
 )
 
-lazy val constellation = (project in file("./constellation"))
+lazy val chiselSettings = Seq(
+  libraryDependencies ++= Seq("edu.berkeley.cs" %% "chisel3" % chiselVersion,
+  "org.apache.commons" % "commons-lang3" % "3.12.0",
+  "org.apache.commons" % "commons-text" % "1.9"),
+  addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % chiselVersion cross CrossVersion.full))
+
+/**
+  * It has been a struggle for us to override settings in subprojects.
+  * An example would be adding a dependency to rocketchip on midas's targetutils library,
+  * or replacing dsptools's maven dependency on chisel with the local chisel project.
+  *
+  * This function works around this by specifying the project's root at src/ and overriding
+  * scalaSource and resourceDirectory.
+  */
+def freshProject(name: String, dir: File): Project = {
+  Project(id = name, base = dir / "src")
+    .settings(
+      Compile / scalaSource := baseDirectory.value / "main" / "scala",
+      Compile / resourceDirectory := baseDirectory.value / "main" / "resources"
+    )
+}
+
+// Rocket-chip dependencies (subsumes making RC a RootProject)
+lazy val hardfloat  = (project in file("./dependencies/rocketchip/berkeley-hardfloat"))
+  .settings(chiselSettings)
+  .settings(commonSettings)
+  .settings(name := "hardfloat", organization := "edu.berkeley.cs")
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.json4s" %% "json4s-jackson" % "3.6.6",
+      "org.scalatest" %% "scalatest" % "3.2.0" % "test"
+    )
+  )
+
+lazy val rocketMacros  = (project in file("./dependencies/rocket-chip/macros"))
+  .settings(chiselSettings)
+  .settings(commonSettings)
+  .settings(name := "rocketMacros", organization := "org.chipsalliance")
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.json4s" %% "json4s-jackson" % "3.6.6",
+      "org.scalatest" %% "scalatest" % "3.2.0" % "test"
+    )
+  )
+
+lazy val rocketConfig = (project in file("./dependencies/rocket-chip/cde/cde/src/chipsalliance/rocketchip"))
+  .settings(chiselSettings)
+  .settings(commonSettings)
+  .settings(name := "rocketConfig", organization := "org.chipsalliance")
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.json4s" %% "json4s-jackson" % "3.6.6",
+      "org.scalatest" %% "scalatest" % "3.2.0" % "test"
+    )
+  )
+
+lazy val rocketchip = freshProject("rocketchip", file("./dependencies/rocket-chip"))
+  .dependsOn(hardfloat, rocketMacros, rocketConfig)
+  .settings(commonSettings)
+  .settings(chiselSettings)
+  .settings(name := "rocketchip", organization := "org.chipsalliance", version := "1.6")
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.json4s" %% "json4s-jackson" % "3.6.6",
+      "org.scalatest" %% "scalatest" % "3.2.0" % "test"
+    )
+  )
+  .settings( // Settings for scalafix
+    semanticdbEnabled := true,
+    semanticdbVersion := "4.7.6",
+    scalacOptions += "-Ywarn-unused"
+  )
+lazy val rocketLibDeps = (rocketchip / Keys.libraryDependencies)
+
+lazy val constellation = (project in file("./dependencies/constellation"))
   .dependsOn(rocketchip)
+  .settings(chiselSettings)
+  .settings(commonSettings)
+  .settings(name := "constellation", organization := "edu.berkeley.cs")
   .settings(
-    name := "constellation",
-    organization := "edu.berkeley.cs",
     libraryDependencies ++= Seq(
-      "edu.berkeley.cs" %% "chisel3" % "3.5.4",
-      "edu.berkeley.cs" %% "chiseltest" % "0.5.4" % "test"
-    ),
-    scalacOptions ++= Seq(
-      // "-organization:\"edu.berkeley.cs\"",
-      "-Xsource:2.11",
-      "-language:reflectiveCalls",
-      "-deprecation",
-      "-feature"
-    ),
-    addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.5.4" cross CrossVersion.full),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
-)
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.json4s" %% "json4s-jackson" % "3.6.6",
+      "org.scalatest" %% "scalatest" % "3.2.0" % "test"
+    )
+  )
 
 
-lazy val inclusiveCache = (project in file("./block-inclusivecache-sifive"))
+lazy val inclusiveCache = (project in file("./dependencies/inclusivecache"))
   .dependsOn(rocketchip)
+  .settings(chiselSettings)
+  .settings(commonSettings)
+  .settings(name := "inclusiveCache", organization := "org.chipsalliance")
+  .settings(scalaSource in Compile := baseDirectory.value / "design" / "craft" / "inclusivecache")
   .settings(
-    name := "inclusiveCache",
-    organization := "com.sifive",
     libraryDependencies ++= Seq(
-      "edu.berkeley.cs" %% "chisel3" % "3.5.4",
-    ),
-    scalaSource in Compile := baseDirectory.value / "design" / "craft" / "inclusivecache",
-    scalacOptions ++= Seq(
-      "-Xsource:2.11",
-      "-language:reflectiveCalls",
-      "-Xcheckinit"
-    ),
-    addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.5.4" cross CrossVersion.full),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
-)
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.json4s" %% "json4s-jackson" % "3.6.6",
+      "org.scalatest" %% "scalatest" % "3.2.0" % "test"
+    )
+  )
 
-lazy val sifiveBlocks = (project in file("./sifive-blocks"))
+lazy val blocks = (project in file("./dependencies/blocks"))
   .dependsOn(rocketchip)
+  .settings(chiselSettings)
+  .settings(commonSettings)  
+  .settings(name := "blocks", organization := "org.chipsalliance")
   .settings(
-    name := "sifive-blocks",
-    organization := "com.sifive",
     libraryDependencies ++= Seq(
-      "edu.berkeley.cs" %% "chisel3" % "3.5.4",
-    ),
-    scalacOptions ++= Seq(
-      "-Xsource:2.11",
-      "-language:reflectiveCalls",
-      "-Xcheckinit"
-    ),
-    addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.5.4" cross CrossVersion.full),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
-)
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.json4s" %% "json4s-jackson" % "3.6.6",
+      "org.scalatest" %% "scalatest" % "3.2.0" % "test"
+    )
+  )
 
-lazy val hardfloat = (project in file("./berkeley-hardfloat"))
-  .dependsOn(rocketchip)
-  .settings(
-    name := "berkeley-hardfloat",
-    organization := "edu.berkeley.cs",
-    libraryDependencies ++= Seq(
-      "edu.berkeley.cs" %% "chisel3" % "3.5.4",
-    ),
-    scalacOptions ++= Seq(
-      "-language:reflectiveCalls",
-      "-Xcheckinit"
-    ),
-    addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.5.4" cross CrossVersion.full),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
-)
+
 
 lazy val root = (project in file("."))
   .dependsOn(inclusiveCache)
   .dependsOn(rocketchip)
-  .dependsOn(sifiveBlocks)
+  .dependsOn(blocks)
   .dependsOn(hardfloat)
-  .dependsOn(constellation)
+  .dependsOn(constellation)  
+
+  .settings(commonSettings)
+  .settings(chiselSettings)
+
   .settings(
-    name := "%NAME%",
     libraryDependencies ++= Seq(
-      "edu.berkeley.cs" %% "chisel3" % "3.5.4",
-    ),
-    scalacOptions ++= Seq(
-      "-Xsource:2.11",
-      "-language:reflectiveCalls",
-      "-Xcheckinit"
-    ),
-    addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.5.4" cross CrossVersion.full),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.json4s" %% "json4s-jackson" % "3.6.6",
+      "org.scalatest" %% "scalatest" % "3.2.0" % "test"
+    )
   )
+
 
 
 name := "Rift2Core"

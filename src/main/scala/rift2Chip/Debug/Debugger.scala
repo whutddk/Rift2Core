@@ -17,12 +17,11 @@
 package debug
 
 import chisel3._
-import chisel3.util._
-import rift2Chip._
 
-import freechips.rocketchip.tilelink._
 import freechips.rocketchip.diplomacy._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
+
+
 
 class Debugger(nComponents: Int = 1)(implicit p: Parameters) extends LazyModule{
 
@@ -42,20 +41,21 @@ class Debugger(nComponents: Int = 1)(implicit p: Parameters) extends LazyModule{
 
 
 
-  lazy val module = new LazyModuleImp(this) {
-    val io = IO(new Bundle{
+  lazy val module = new Impl
+
+  class Impl extends LazyModuleImp(this) {
+    
+    class DebuggerIO extends Bundle{
       val JtagIO = new JtagIO()
-      val ndreset     = Output(Bool())
-      // val dmactive    = Output(Bool())
-      // val dmactiveAck = Input(Bool())
-      val dm_cmm      = Vec(nComponents, new Info_DM_cmm )
-      // val sba_getPut  = new DecoupledIO(new TLBundleA(edge.bundle))
-      // val sba_access  = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
-    })
+        val ndreset     = Output(Bool())
+        // val dmactive    = Output(Bool())
+        // val dmactiveAck = Input(Bool())
+        val dm_cmm      = Vec(nComponents, new Info_DM_cmm )
+        // val sba_getPut  = new DecoupledIO(new TLBundleA(edge.bundle))
+        // val sba_access  = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
+    }
 
-
-
-
+    val io = IO(new DebuggerIO)
 
 
 

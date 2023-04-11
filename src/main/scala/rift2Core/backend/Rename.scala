@@ -22,11 +22,12 @@ import chisel3.util._
 import base._
 import rift2Core.define._
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 
 class Rename()(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
+
+  class RenameIO extends Bundle{
     val rnReq = Vec(rnChn, Flipped(new DecoupledIO(new IF4_Bundle)))
     val rnRsp = Vec(rnChn, (new DecoupledIO(new Dpt_info)))
 
@@ -36,8 +37,9 @@ class Rename()(implicit p: Parameters) extends RiftModule {
     val fRename = Vec( rnChn, new Rename_Bundle )
 
     val rod_i = Vec(cm_chn,new DecoupledIO(new Info_reorder_i))
- 
-  })
+  }
+
+  val io: RenameIO = IO(new RenameIO)
 
   val rnRspReport = Module( new RePort( new Dpt_info, port = rnChn) )
   val rnRspFifo = Module(new MultiPortFifo(new Dpt_info, aw = (if(!isMinArea) 4 else 1 ), rnChn, rnChn))

@@ -29,15 +29,12 @@ import rift2Core.backend.fpu._
 import rift2Core.backend.lsu._
 import rift2Core.privilege._
 import rift2Chip._
-import chipsalliance.rocketchip.config._
-import freechips.rocketchip.diplomacy._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 
 class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
-
-
-  val io = IO(new Bundle{
+  class ExecuteIO extends Bundle{
     val alu_iss_exe = Vec(aluNum, Flipped(new DecoupledIO(new Alu_iss_info)))
     val alu_exe_iwb = Vec(aluNum, new DecoupledIO(new WriteBack_info(dw=64)))
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
@@ -91,11 +88,11 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     val preFetch = ValidIO( new PreFetch_Req_Bundle )
 
     val flush = Input(Bool())
+  }
 
+  val io = IO(new ExecuteIO)
 
-  })
-
-  val alu = for( i <- 0 until aluNum ) yield Module(new Alu)
+  val alu = for( _ <- 0 until aluNum ) yield Module(new Alu)
   val bru = Module(new Bru)
   val lsu = {
     val mdl = Module(new Lsu((edge)))
@@ -167,9 +164,9 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
 
   }
   val csr = Module(new Csr)
-  val mulDiv = (if( mulNum > 0 ) { for ( i <- 0 until mulNum ) yield Module(new MulDiv) } else { Seq(Module(new FakeMulDiv)) })
+  val mulDiv = (if( mulNum > 0 ) { for ( _ <- 0 until mulNum ) yield Module(new MulDiv) } else { Seq(Module(new FakeMulDiv)) })
 
-  val fpu = if( fpuNum > 0 ) { for( i <- 0 until fpuNum ) yield Module(new FAlu()) } else { Seq(Module(new FakeFAlu())) }
+  val fpu = if( fpuNum > 0 ) { for( _ <- 0 until fpuNum ) yield Module(new FAlu()) } else { Seq(Module(new FakeFAlu())) }
 
 
   for( i <- 0 until (fpuNum max 1) ) {

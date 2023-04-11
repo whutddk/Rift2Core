@@ -27,7 +27,7 @@ import rift2Chip._
 import rift2Core.privilege._
 import rift2Core.backend._
 
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 
@@ -35,7 +35,7 @@ import freechips.rocketchip.tilelink._
 abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule with HasFPUParameters {
   val dEdge = edge
 
-  val io = IO(new Bundle{
+  class LsuIO extends Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
     val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
     val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
@@ -66,8 +66,11 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
 
     val preFetch = ValidIO( new PreFetch_Req_Bundle )
 
-    val flush = Input(Bool())
-  })
+    val flush = Input(Bool())    
+  }
+
+
+  val io: LsuIO = IO(new LsuIO)
 
   /** when a flush comes, flush all uncommit write & amo request in pending-fifo, and block all request from issue until scoreboard is empty */
   val trans_kill = RegInit(false.B)

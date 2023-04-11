@@ -29,7 +29,7 @@ import debug._
 
 import rift2Core.define._
 
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 
@@ -88,16 +88,18 @@ class Rift2Core(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
   val prefetchClinetNode = TLClientNode(Seq( prefetcherClientParameters))
   
 
-  lazy val module = if(isFlatten) {new Rift2CoreImp(this) with FlattenInstance} else {new Rift2CoreImp(this)}
+  lazy val module: Rift2CoreImp = if(isFlatten) {new Rift2CoreImp(this) with FlattenInstance} else {new Rift2CoreImp(this)}
 }
  
 class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyModuleImp(outer) with HasRiftParameters { 
-  val io = IO(new Bundle{
+  class Rift2CoreIO extends Bundle{
     val dm        = if (hasDebugger) {Some(Flipped(new Info_DM_cmm))} else {None}
     val rtc_clock = Input(Bool())
     val aclint = Input(new AClint_Bundle)
-    val plic = Input(new Plic_Bundle)
-  })
+    val plic = Input(new Plic_Bundle)    
+  }
+  
+  val io: Rift2CoreIO = IO(new Rift2CoreIO)
 
   val ( icache_bus, icache_edge ) = outer.icacheClientNode.out.head
   val ( dcache_bus, dcache_edge ) = outer.dcacheClientNode.out.head

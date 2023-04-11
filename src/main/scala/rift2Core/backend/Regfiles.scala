@@ -20,10 +20,8 @@ import chisel3._
 import chisel3.util._
 import rift2Core.define._
 
-import rift2Core.diff._
-
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 class Lookup_Bundle()(implicit p: Parameters) extends RiftBundle{
   val rsp = Input(new RS_PHY)
@@ -67,8 +65,8 @@ class Info_commit_op(implicit p: Parameters) extends RiftBundle{
 abstract class RegFilesBase(dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RiftModule{
   def opc = rop_chn
   def wbc = wb_chn
-  val io = IO( new Bundle{
 
+  class RegFilesIO extends Bundle{
     val lookup = Vec( rnChn, Flipped(new Lookup_Bundle) )
     val rename = Vec( rnChn, Flipped(new Rename_Bundle) )
 
@@ -84,8 +82,10 @@ abstract class RegFilesBase(dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Para
     /** Commit request from commitUnit */
     val commit = Vec(cm_chn, Flipped(new Info_commit_op))
 
-    val diffReg = Output(Vec(32, UInt(dw.W)))
-  })
+    val diffReg = Output(Vec(32, UInt(dw.W)))    
+  }
+
+  val io: RegFilesIO = IO( new RegFilesIO)
 }
 
 abstract class RegFilesReal(dw: Int, rop_chn: Int, wb_chn: Int)(implicit p: Parameters) extends RegFilesBase(dw, rop_chn, wb_chn){

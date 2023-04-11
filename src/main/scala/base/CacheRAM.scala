@@ -16,22 +16,19 @@
 
 package base
 
-import chipsalliance.rocketchip.config.Parameters
+
 import chisel3._
 import chisel3.util._
-import rift2Core.define._
 
-import rift2Chip._
 
-import chisel3.util.random._
-import rift2Core.define._
 
 
 class DatRAM(dw: Int, cl: Int) extends Module {
   // require( dw == 128 )
   // require( cl <= 256 )
   def line_w   = log2Ceil(cl)
-  val io = IO(new Bundle{
+
+  class DatRAMIO extends Bundle{
     val addrr  = Input(UInt(line_w.W))
     val addrw  = Input(UInt(line_w.W))
 
@@ -40,8 +37,10 @@ class DatRAM(dw: Int, cl: Int) extends Module {
 
     val datar = Output( Vec( dw/8, UInt(8.W) ) )
     val enw   = Input(Bool())
-    val enr   = Input(Bool())
-  })
+    val enr   = Input(Bool())    
+  }
+
+  val io: DatRAMIO = IO(new DatRAMIO)
 
   val datMem = SyncReadMem( cl, Vec( dw/8, UInt(8.W) ) )
   io.datar := DontCare
@@ -68,8 +67,8 @@ class DatRAM(dw: Int, cl: Int) extends Module {
 }
 
 class Generate_sram extends BlackBox with HasBlackBoxInline {
-  val io = IO(new Bundle{
-    
+
+  class Generate_sramIO extends Bundle{
     val data_w  = Input( UInt(128.W) )
     val addr_w  = Input(UInt(4.W))
     val data_wstrb = Input( UInt(16.W)  )
@@ -79,8 +78,10 @@ class Generate_sram extends BlackBox with HasBlackBoxInline {
     val addr_r  = Input(UInt(4.W))
     val en_r   = Input(Bool())
 
-    val CLK = Input(Clock())
-  })
+    val CLK = Input(Clock())    
+  }
+
+  val io: Generate_sramIO = IO(new Generate_sramIO)
 
   setInline("Generate_sram.v",
               """
@@ -139,15 +140,18 @@ module Generate_sram(
 
 class TagRAM(tag_w: Int,  cl: Int) extends Module {
   def line_w   = log2Ceil(cl)
-  val io = IO(new Bundle{
+
+  class TagRAMIO extends Bundle{
     val addrr  = Input(UInt(line_w.W))
     val addrw  = Input(UInt(line_w.W))
 
     val dataw = Input( UInt(tag_w.W) )
     val datar = Output( UInt(tag_w.W) )
     val enw   = Input(Bool())
-    val enr   = Input(Bool())
-  })
+    val enr   = Input(Bool())    
+  }
+
+  val io: TagRAMIO = IO(new TagRAMIO)
 
   val tagMem = SyncReadMem( cl, UInt(tag_w.W) )
 

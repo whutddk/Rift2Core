@@ -23,11 +23,14 @@ import chisel3.util._
 
 
 class XArbiter[T <: Data]( gen: T, in: Int,out: Int) extends Module {
-  val io = IO(new Bundle{
+
+  class XArbiterIO extends Bundle{
     val enq = Vec(in, Flipped(Decoupled(gen)))
     val deq = Vec(out, Decoupled(gen))
-    val chosen = Output(Vec(out, UInt(log2Ceil(in).W) ))
-  })
+    val chosen = Output(Vec(out, UInt(log2Ceil(in).W) ))    
+  }
+
+  val io: XArbiterIO = IO(new XArbiterIO)
 
 
   for ( i <- 0 until out ) {

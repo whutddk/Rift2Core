@@ -20,12 +20,10 @@ import chisel3._
 import chisel3.util._
 import chisel3.util.random._
 
-import rift2Core.define._
-
 import rift2Chip._
 import base._
 
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 
 
@@ -34,7 +32,8 @@ import chipsalliance.rocketchip.config.Parameters
 
 class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
   val id = idx
-  val io = IO(new Bundle {
+
+  class DcacheStageIO extends Bundle{
     val enq = Flipped(Decoupled(new Dcache_Enq_Bundle))
     val reload = Valid(new Dcache_Enq_Bundle)
     val deq = Valid(new Dcache_Deq_Bundle)
@@ -43,9 +42,10 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
     val wb_req = Valid(new Info_writeBack_req)
 
     val isCacheEmpty = Input(Bool())
-    val flush = Input(Bool())
+    val flush = Input(Bool())    
+  }
 
-  })
+  val io: DcacheStageIO = IO(new DcacheStageIO)
 
 
   val datInfoR = Wire( Vec(cb, Vec(dw/8, UInt(8.W))) )
@@ -59,8 +59,8 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
   // val tagEnR = Wire( Vec(cb, Bool()) )
   // val datEnR = Wire( Vec(cb, Bool()) )
 
-  val datRAM = for ( i <- 0 until cb ) yield { Module(new DatRAM(dw, cl)) }
-  val tagRAM = for ( i <- 0 until cb ) yield { Module(new TagRAM(tag_w, cl)) }
+  val datRAM = for ( _ <- 0 until cb ) yield { Module(new DatRAM(dw, cl)) }
+  val tagRAM = for ( _ <- 0 until cb ) yield { Module(new TagRAM(tag_w, cl)) }
 
   val addrSelW = Wire(UInt(line_w.W))
   val addrSelR = Wire(UInt(line_w.W))
@@ -376,8 +376,8 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
       
       val res_pre_pre = {
         val res = Wire( UInt(64.W) )
-        val (new_data, new_strb) = overlap_wr( rdata, 0.U((dw/8).W), overlap_wdata, overlap_wstrb)
-        val overlap_data = Mux( fun.is_lu, new_data, rdata) //align 256
+        val (newData, _) = overlap_wr( rdata, 0.U((dw/8).W), overlap_wdata, overlap_wstrb)
+        val overlap_data = Mux( fun.is_lu, newData, rdata) //align 256
         res := reAlign_data( from = dw, to = 64, overlap_data, paddr )
         res
       }

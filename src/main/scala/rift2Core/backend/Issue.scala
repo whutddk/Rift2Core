@@ -22,7 +22,7 @@ import chisel3.util._
 import rift2Core.define._
 import base._
 import rift2Chip._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 
 
 
@@ -31,8 +31,7 @@ import chipsalliance.rocketchip.config._
 abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPUParameters{
   // def dptEntry = 16
 
-  val io = IO(new Bundle{
-
+  class IssueIO extends Bundle{
     val dptReq = Vec(rnChn, Flipped(new DecoupledIO(new Dpt_info)))
 
     val alu_iss_exe = Vec(aluNum, new DecoupledIO(new Alu_iss_info))
@@ -51,8 +50,10 @@ abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPU
     val irgRsp = Flipped( Vec( opChn, Valid(new ReadOp_Rsp_Bundle(64)) ) )
     val frgRsp = Flipped( Vec( opChn, Valid(new ReadOp_Rsp_Bundle(65)) ) )
 
-    val flush = Input(Bool())
-  })
+    val flush = Input(Bool())    
+  } 
+
+  val io: IssueIO = IO(new IssueIO)
 }
 
 
@@ -601,7 +602,7 @@ trait IssSelAlu{ this: IssueSel =>
 
   val aluIssIdx = Wire( Vec( aluNum, UInt((log2Ceil(dptEntry)).W) ) )
   val aluIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_alu_iss(i) }
-  val aluIssFifo = for( i <- 0 until aluNum ) yield {
+  val aluIssFifo = for( _ <- 0 until aluNum ) yield {
     Module(new Queue( new Alu_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true ))
   }
 
@@ -667,7 +668,7 @@ trait IssSelMul{ this: IssueSel =>
   if ( mulNum != 0 ) {
     val mulIssIdx  = Wire( Vec(mulNum, UInt((log2Ceil(dptEntry)).W) )  )
     val mulIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_mul_iss(i) }
-    val mulIssFifo = for( i <- 0 until mulNum ) yield {
+    val mulIssFifo = for( _ <- 0 until mulNum ) yield {
       Module(new Queue( new Mul_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true ))
     }
 
