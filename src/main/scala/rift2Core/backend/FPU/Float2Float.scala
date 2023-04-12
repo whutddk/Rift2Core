@@ -28,7 +28,7 @@ class FPToFP(latency: Int)(implicit p: Parameters) extends RiftModule with HasFP
 
   class FPToFPIO extends Bundle{
     val in = Flipped(ValidIO(new Fpu_iss_info))
-    val frm = Input(UInt(3.W))
+          // val frm = Input(UInt(3.W))
     val out = ValidIO(new Fres_Info)
   }
 
@@ -42,6 +42,7 @@ class FPToFP(latency: Int)(implicit p: Parameters) extends RiftModule with HasFP
 
   val op1 = unbox(io.in.bits.param.dat.op1, io.in.bits.fun.FtypeTagIn, None)
   val op2 = unbox(io.in.bits.param.dat.op2, io.in.bits.fun.FtypeTagIn, None)
+  val frm = io.in.bits.param.dat.op0
 
   val fsgnjMux_exc     = WireDefault(0.U(5.W))
   val fsgnjMux_toFloat = WireDefault(0.U(65.W))
@@ -94,7 +95,7 @@ class FPToFP(latency: Int)(implicit p: Parameters) extends RiftModule with HasFP
     when ( (io.in.bits.fun.FtypeTagOut === 0.U) &&  io.in.bits.fun.FtypeTagIn === 1.U) {
       val narrower = Module(new hardfloat.RecFNToRecFN(FType.D.exp, FType.D.sig, FType.S.exp, FType.S.sig))
       narrower.io.in := op1
-      narrower.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+      narrower.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, frm, io.in.bits.param.rm)
       narrower.io.detectTininess := hardfloat.consts.tininess_afterRounding
       // val narrowed = sanitizeNaN(narrower.io.out, FType.S)
       out.toFloat := box(Cat(widened >> 33, narrower.io.out), 0.U )

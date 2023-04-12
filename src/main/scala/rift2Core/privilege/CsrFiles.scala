@@ -56,6 +56,18 @@ class FCSRBundle extends Bundle{
   val fflags   = UInt(5.W)
 }
 
+class VCSRBundle extends Bundle{
+  val vxrm     = UInt(2.W)
+  val vxsat    = UInt(1.W)
+}
+
+class VConfigBundle(implicit p: Parameters) extends RiftBundle{
+  require( log2Ceil(vParams.vlmax) <= 55 )
+  val vill     = UInt(1.W)
+  val vl       = UInt(55.W)
+  val vtype    = UInt(8.W)
+}
+
 /**
   * Machine Status Registers
   * @param SD (63) whether either fs or xs is dirty
@@ -179,6 +191,11 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
   val priv_lvl = UInt(2.W)
   // val new_priv = UInt(2.W)
   val DMode    = Bool()
+
+  val vstart  = UInt( (log2Ceil(vParams.vlmax)).W )
+  val vcsr    = new VCSRBundle
+  val vConfig = new VConfigBundle
+  val vlenb   = UInt((log2Ceil(vParams.vlen/8)).W)
 
   // val ustatus  = UInt(64.W)
   // val uie      = UInt(64.W)
@@ -348,9 +365,21 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
           // ( addr === "h042".U ) -> ucause,
           // ( addr === "h043".U ) -> utval,
           // ( addr === "h044".U ) -> uip,
+
           ( addr === "h001".U ) -> (priv_lvl >= "b00".U),
           ( addr === "h002".U ) -> (priv_lvl >= "b00".U),
           ( addr === "h003".U ) -> (priv_lvl >= "b00".U),
+
+          ( addr === "h008".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "h009".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "h00A".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "h00F".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "hC20".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "hC21".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "hC22".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "hFFE".U ) -> (priv_lvl >= "b00".U),
+          ( addr === "hFFF".U ) -> (priv_lvl >= "b00".U),
+
           ( addr === "hC00".U ) -> (priv_lvl >= "b00".U),
           ( addr === "hC01".U ) -> (priv_lvl >= "b00".U),
           ( addr === "hC02".U ) -> (priv_lvl >= "b00".U),
@@ -465,9 +494,20 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
           // ( addr === "h042".U ) -> ucause,
           // ( addr === "h043".U ) -> utval,
           // ( addr === "h044".U ) -> uip,
-          ( addr === "h001".U ) -> true.B,
-          ( addr === "h002".U ) -> true.B,
-          ( addr === "h003".U ) -> true.B,
+          ( addr === "h001".U ) -> true.B, //fflags
+          ( addr === "h002".U ) -> true.B, //frm
+          ( addr === "h003".U ) -> true.B, //fcsr
+
+          ( addr === "h008".U ) -> true.B, //vstart
+          ( addr === "h009".U ) -> true.B, //vxsat
+          ( addr === "h00A".U ) -> true.B, //vxrm
+          ( addr === "h00F".U ) -> true.B,
+          ( addr === "hC20".U ) -> false.B,
+          ( addr === "hC21".U ) -> false.B,
+          ( addr === "hC22".U ) -> false.B,
+          ( addr === "hFFE".U ) -> true.B,
+          ( addr === "hFFF".U ) -> true.B,
+
           ( addr === "hC00".U ) -> false.B,
           ( addr === "hC01".U ) -> false.B,
           ( addr === "hC02".U ) -> false.B,
@@ -534,134 +574,148 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
           ( addr === "h7B0".U ) -> DMode,
           ( addr === "h7B1".U ) -> DMode,
           ( addr === "h7B2".U ) -> DMode,
-          ( addr === "h7B3".U ) -> DMode
+          ( addr === "h7B3".U ) -> DMode,
+
+          ( addr === "hFFF".U ) -> true.B,
         )
 
     val res = Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
     ~res
   }
 
-  def csr_read_res(addr: UInt) = {
-    val pmpcfg_arr = {
-      val addr_chk = for ( i <- 0 until pmpNum ) yield { addr === ("h3A0".U + (2*i).U) }
-      val reg_sel  = for ( i <- 0 until pmpNum ) yield { pmpcfg(i).asUInt }
-      addr_chk zip reg_sel
-    }
+  // def csr_read_res(addr: UInt) = {
+  //   val pmpcfg_arr = {
+  //     val addr_chk = for ( i <- 0 until pmpNum ) yield { addr === ("h3A0".U + (2*i).U) }
+  //     val reg_sel  = for ( i <- 0 until pmpNum ) yield { pmpcfg(i).asUInt }
+  //     addr_chk zip reg_sel
+  //   }
 
-    val pmpaddr_arr = {
-      val addr_chk = for ( i <- 0 until 8*pmpNum ) yield { addr === ("h3B0".U + i.U) }
-      val reg_sel  = for ( i <- 0 until 8*pmpNum ) yield { pmpaddr(i)}
-      addr_chk zip reg_sel
-    }
+  //   val pmpaddr_arr = {
+  //     val addr_chk = for ( i <- 0 until 8*pmpNum ) yield { addr === ("h3B0".U + i.U) }
+  //     val reg_sel  = for ( i <- 0 until 8*pmpNum ) yield { pmpaddr(i)}
+  //     addr_chk zip reg_sel
+  //   }
 
-    val hpmcounter_arr = {
-      val addr_chk = for ( i <- 3 until 3+hpmNum ) yield { addr === ("hC00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 3+hpmNum ) yield { hpmcounter(i) }
-      addr_chk zip reg_sel
-    }
+  //   val hpmcounter_arr = {
+  //     val addr_chk = for ( i <- 3 until 3+hpmNum ) yield { addr === ("hC00".U + i.U) }
+  //     val reg_sel  = for ( i <- 3 until 3+hpmNum ) yield { hpmcounter(i) }
+  //     addr_chk zip reg_sel
+  //   }
 
-    val mhpmcounter_arr = {
-      val addr_chk = for ( i <- 3 until 3+hpmNum ) yield { addr === ("hB00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 3+hpmNum ) yield { mhpmcounter(i) }
-      addr_chk zip reg_sel      
-    }
+  //   val mhpmcounter_arr = {
+  //     val addr_chk = for ( i <- 3 until 3+hpmNum ) yield { addr === ("hB00".U + i.U) }
+  //     val reg_sel  = for ( i <- 3 until 3+hpmNum ) yield { mhpmcounter(i) }
+  //     addr_chk zip reg_sel      
+  //   }
 
-    val mhpmevent_arr = {
-      val addr_chk = for ( i <- 3 until 3+hpmNum ) yield { addr === ("h320".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 3+hpmNum ) yield { mhpmevent(i) }
-      addr_chk zip reg_sel      
-    }
+  //   val mhpmevent_arr = {
+  //     val addr_chk = for ( i <- 3 until 3+hpmNum ) yield { addr === ("h320".U + i.U) }
+  //     val reg_sel  = for ( i <- 3 until 3+hpmNum ) yield { mhpmevent(i) }
+  //     addr_chk zip reg_sel      
+  //   }
 
-    val normal_arr = Array(
-          // ( addr === "h000".U ) -> ustatus,
-          // ( addr === "h004".U ) -> uie,
-          // ( addr === "h005".U ) -> utvec,
-          // ( addr === "h040".U ) -> uscratch,
-          // ( addr === "h041".U ) -> uepc,
-          // ( addr === "h042".U ) -> ucause,
-          // ( addr === "h043".U ) -> utval,
-          // ( addr === "h044".U ) -> uip,
-          ( addr === "h001".U ) -> fcsr.fflags, 
-          ( addr === "h002".U ) -> fcsr.frm,
-          ( addr === "h003".U ) -> fcsr.asUInt,
-          ( addr === "hC00".U ) -> cycle,
-          ( addr === "hC01".U ) -> time,
-          ( addr === "hC02".U ) -> instret,
-          ( addr === "h100".U ) -> sstatus.asUInt,
-          // ( addr === "h102".U ) -> sedeleg,
-          // ( addr === "h103".U ) -> sideleg,
-          ( addr === "h104".U ) -> sie.asUInt,
-          ( addr === "h105".U ) -> stvec.asUInt,
-          ( addr === "h106".U ) -> scounteren.asUInt,
-          ( addr === "h140".U ) -> sscratch,
-          ( addr === "h141".U ) -> sepc,
-          ( addr === "h142".U ) -> scause.asUInt,
-          ( addr === "h143".U ) -> stval,
-          ( addr === "h144".U ) -> sip.asUInt,
-          ( addr === "h180".U ) -> satp.asUInt,
-          // ( addr === "h600".U ) -> hstatus,
-          // ( addr === "h602".U ) -> hedeleg,
-          // ( addr === "h603".U ) -> hideleg,
-          // ( addr === "h604".U ) -> hie,
-          // ( addr === "h606".U ) -> hcounteren,
-          // ( addr === "h607".U ) -> hgeie,
-          // ( addr === "h643".U ) -> htval,
-          // ( addr === "h644".U ) -> hip,
-          // ( addr === "h645".U ) -> hvip,
-          // ( addr === "h64A".U ) -> htinst,
-          // ( addr === "hE12".U ) -> hgeip,
-          // ( addr === "h680".U ) -> hgatp,
-          // ( addr === "h605".U ) -> htimedelta,
-          // ( addr === "h200".U ) -> vsstatus,
-          // ( addr === "h204".U ) -> vsie,
-          // ( addr === "h205".U ) -> vstvec,
-          // ( addr === "h240".U ) -> vsscratch,
-          // ( addr === "h241".U ) -> vsepc,
-          // ( addr === "h242".U ) -> vscause,
-          // ( addr === "h243".U ) -> vstval,
-          // ( addr === "h244".U ) -> vsip,
-          // ( addr === "h280".U ) -> vsatp,
-          ( addr === "hF11".U ) -> mvendorid,
-          ( addr === "hF12".U ) -> marchid,
-          ( addr === "hF13".U ) -> mimpid,
-          ( addr === "hF14".U ) -> mhartid,
-          ( addr === "h300".U ) -> mstatus.asUInt,
-          ( addr === "h301".U ) -> misa,
-          ( addr === "h302".U ) -> medeleg,
-          ( addr === "h303".U ) -> mideleg,
-          ( addr === "h304".U ) -> mie.asUInt,
-          ( addr === "h305".U ) -> mtvec.asUInt,
-          ( addr === "h306".U ) -> mcounteren.asUInt,
-          ( addr === "h340".U ) -> mscratch,
-          ( addr === "h341".U ) -> mepc,
-          ( addr === "h342".U ) -> mcause.asUInt,
-          ( addr === "h343".U ) -> mtval.asUInt,
-          ( addr === "h344".U ) -> mip.asUInt,
-          ( addr === "h34A".U ) -> mtinst,
-          ( addr === "h34B".U ) -> mtval2,
+  //   val normal_arr = Array(
+  //         // ( addr === "h000".U ) -> ustatus,
+  //         // ( addr === "h004".U ) -> uie,
+  //         // ( addr === "h005".U ) -> utvec,
+  //         // ( addr === "h040".U ) -> uscratch,
+  //         // ( addr === "h041".U ) -> uepc,
+  //         // ( addr === "h042".U ) -> ucause,
+  //         // ( addr === "h043".U ) -> utval,
+  //         // ( addr === "h044".U ) -> uip,
+  //         ( addr === "h001".U ) -> fcsr.fflags, 
+  //         ( addr === "h002".U ) -> fcsr.frm,
+  //         ( addr === "h003".U ) -> fcsr.asUInt,
 
-          ( addr === "hB00".U ) -> mcycle,
-          ( addr === "hB02".U ) -> minstret,
-          ( addr === "h320".U ) -> mcountinhibit,
-          ( addr === "h7A0".U ) -> tselect,
-          ( addr === "h7A1".U ) -> tdata1,
-          ( addr === "h7A2".U ) -> tdata2,
-          ( addr === "h7A3".U ) -> tdata3,
-          ( addr === "h7B0".U ) -> dcsr.asUInt,
-          ( addr === "h7B1".U ) -> dpc,
-          ( addr === "h7B2".U ) -> dscratch0,
-          ( addr === "h7B3".U ) -> dscratch1,
-          ( addr === "h7B4".U ) -> dscratch2,
-        )
+  //         ( addr === "h008".U ) -> vstart, 
+  //         ( addr === "h009".U ) -> vcsr.vxsat,
+  //         ( addr === "h00A".U ) -> vcsr.vxrm,
+  //         ( addr === "h00F".U ) -> vcsr.asUInt,
 
-    Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
-  }
+  //         ( addr === "hC20".U ) -> vConfig.vl,
+  //         ( addr === "hC21".U ) -> vConfig.vtype,
+  //         // ( addr === "hFFE".U ) -> vConfig.asUInt,
+  //         ( addr === "hC22".U ) -> vlenb,
+
+
+  //         ( addr === "hC00".U ) -> cycle,
+  //         ( addr === "hC01".U ) -> time,
+  //         ( addr === "hC02".U ) -> instret,
+  //         ( addr === "h100".U ) -> sstatus.asUInt,
+  //         // ( addr === "h102".U ) -> sedeleg,
+  //         // ( addr === "h103".U ) -> sideleg,
+  //         ( addr === "h104".U ) -> sie.asUInt,
+  //         ( addr === "h105".U ) -> stvec.asUInt,
+  //         ( addr === "h106".U ) -> scounteren.asUInt,
+  //         ( addr === "h140".U ) -> sscratch,
+  //         ( addr === "h141".U ) -> sepc,
+  //         ( addr === "h142".U ) -> scause.asUInt,
+  //         ( addr === "h143".U ) -> stval,
+  //         ( addr === "h144".U ) -> sip.asUInt,
+  //         ( addr === "h180".U ) -> satp.asUInt,
+  //         // ( addr === "h600".U ) -> hstatus,
+  //         // ( addr === "h602".U ) -> hedeleg,
+  //         // ( addr === "h603".U ) -> hideleg,
+  //         // ( addr === "h604".U ) -> hie,
+  //         // ( addr === "h606".U ) -> hcounteren,
+  //         // ( addr === "h607".U ) -> hgeie,
+  //         // ( addr === "h643".U ) -> htval,
+  //         // ( addr === "h644".U ) -> hip,
+  //         // ( addr === "h645".U ) -> hvip,
+  //         // ( addr === "h64A".U ) -> htinst,
+  //         // ( addr === "hE12".U ) -> hgeip,
+  //         // ( addr === "h680".U ) -> hgatp,
+  //         // ( addr === "h605".U ) -> htimedelta,
+  //         // ( addr === "h200".U ) -> vsstatus,
+  //         // ( addr === "h204".U ) -> vsie,
+  //         // ( addr === "h205".U ) -> vstvec,
+  //         // ( addr === "h240".U ) -> vsscratch,
+  //         // ( addr === "h241".U ) -> vsepc,
+  //         // ( addr === "h242".U ) -> vscause,
+  //         // ( addr === "h243".U ) -> vstval,
+  //         // ( addr === "h244".U ) -> vsip,
+  //         // ( addr === "h280".U ) -> vsatp,
+  //         ( addr === "hF11".U ) -> mvendorid,
+  //         ( addr === "hF12".U ) -> marchid,
+  //         ( addr === "hF13".U ) -> mimpid,
+  //         ( addr === "hF14".U ) -> mhartid,
+  //         ( addr === "h300".U ) -> mstatus.asUInt,
+  //         ( addr === "h301".U ) -> misa,
+  //         ( addr === "h302".U ) -> medeleg,
+  //         ( addr === "h303".U ) -> mideleg,
+  //         ( addr === "h304".U ) -> mie.asUInt,
+  //         ( addr === "h305".U ) -> mtvec.asUInt,
+  //         ( addr === "h306".U ) -> mcounteren.asUInt,
+  //         ( addr === "h340".U ) -> mscratch,
+  //         ( addr === "h341".U ) -> mepc,
+  //         ( addr === "h342".U ) -> mcause.asUInt,
+  //         ( addr === "h343".U ) -> mtval.asUInt,
+  //         ( addr === "h344".U ) -> mip.asUInt,
+  //         ( addr === "h34A".U ) -> mtinst,
+  //         ( addr === "h34B".U ) -> mtval2,
+
+  //         ( addr === "hB00".U ) -> mcycle,
+  //         ( addr === "hB02".U ) -> minstret,
+  //         ( addr === "h320".U ) -> mcountinhibit,
+  //         ( addr === "h7A0".U ) -> tselect,
+  //         ( addr === "h7A1".U ) -> tdata1,
+  //         ( addr === "h7A2".U ) -> tdata2,
+  //         ( addr === "h7A3".U ) -> tdata3,
+  //         ( addr === "h7B0".U ) -> dcsr.asUInt,
+  //         ( addr === "h7B1".U ) -> dpc,
+  //         ( addr === "h7B2".U ) -> dscratch0,
+  //         ( addr === "h7B3".U ) -> dscratch1,
+  //         ( addr === "h7B4".U ) -> dscratch2,
+  //       )
+
+  //   Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
+  // }
 
 
 
 }
 
-trait CsrFiles { this: BaseCommit =>
+trait UpdateCsrFilesFun { this: BaseCommit =>
 
 
 
@@ -669,13 +723,13 @@ trait CsrFiles { this: BaseCommit =>
   def update_fcsr( in: CMMState_Bundle): FCSRBundle = {
     val fcsr = WireDefault( in.csrfiles.fcsr )
 
-    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.fcsr.fflags, "h001".U, in.fcsrExe )
-    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.fcsr.frm,    "h002".U, in.fcsrExe )
-    val (enable2, dnxt2) = Reg_Exe_Port( in.csrfiles.fcsr.asUInt, "h003".U, in.fcsrExe )  
+    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.fcsr.fflags, "h001".U, in.csrExe )
+    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.fcsr.frm,    "h002".U, in.csrExe )
+    val (enable2, dnxt2) = Reg_Exe_Port( in.csrfiles.fcsr.asUInt, "h003".U, in.csrExe )  
         
 
-    when(enable0) { fcsr.fflags := dnxt0 }
-    .elsewhen(enable1) { fcsr.frm := dnxt1 }
+    when(enable0)      { fcsr.fflags := dnxt0 }
+    .elsewhen(enable1) { fcsr.frm    := dnxt1 }
     .elsewhen(enable2) { fcsr.fflags := dnxt2(4,0); fcsr.frm := dnxt2(7,5) }   
 
     return fcsr
@@ -1736,6 +1790,77 @@ trait CsrFiles { this: BaseCommit =>
   // }
 
 
+
+
+
+
+  def update_vstart( in: CMMState_Bundle ): UInt = {
+    val vstart = WireDefault( in.csrfiles.vstart )
+
+    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.vstart, "h008".U, in.csrExe )
+    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.vstart, "hFFF".U, in.csrExe ) //vlsu exception
+
+    when( enable0 ){ //csr write vstart
+      vstart := dnxt0
+    }.elsewhen( in.rod.isVector & in.rod.isLast ){  //vector commit will auto reset vstart to 0
+      vstart := 0.U
+    }.elsewhen(enable1){
+      when( dnxt1(63) | dnxt1(62) | dnxt1(61) ){
+        vstart := dnxt1( vlen + log2Ceil(vParams.vlmax) -1, vlen )//exception update temp csr
+        // assert( in.rod.isVector )
+        assert( in.isException | in.isInterrupt )        
+      }
+    }
+
+    return vstart
+  }
+
+
+  def update_vcsr( in: CMMState_Bundle ): VCSRBundle = {
+    val vcsr = WireDefault( in.csrfiles.vcsr )
+
+    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.vcsr.asUInt, "h00F".U, in.csrExe )
+    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.vcsr.vxsat,  "h009".U, in.csrExe )
+    val (enable2, dnxt2) = Reg_Exe_Port( in.csrfiles.vcsr.vxrm,   "h00A".U, in.csrExe )
+
+    when( enable0 ){ //csr write vxsat, vxrm will redirect to vcsr in Module csr
+      vcsr.vxsat := dnxt0(2,1)
+      vcsr.vxrm := dnxt0(0)
+    } .elsewhen( enable1 ){
+      vcsr.vxsat := dnxt1
+    } .elsewhen( enable2 ){
+      vcsr.vxrm  := dnxt2
+    }
+
+    return vcsr
+  }
+
+  def update_vConfig( in: CMMState_Bundle ): VConfigBundle = {
+    val vConfig = WireDefault( in.csrfiles.vConfig )
+
+    val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.vConfig.asUInt, "hFFE".U, in.csrExe ) //vset config from csr
+    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.vConfig.asUInt, "hFFF".U, in.csrExe ) //vlsu FOF none exception
+
+    when( enable0 ){     //vset mux to csr to write vl and vtype
+      vConfig.vill  := dnxt0.extract(63)
+      vConfig.vl    := dnxt0.apply(62,8)
+      vConfig.vtype := dnxt0.apply(7,0)
+    }.elsewhen(enable1){ //vlsu FOF none exception
+      when( dnxt0(60) ){ //trigger fof
+        vConfig.vl    := dnxt0.apply((log2Ceil(vParams.vlmax)-1), 0)        
+      }
+
+    }
+
+    return vConfig
+  }
+
+  def update_vlenb( in: CMMState_Bundle ): UInt = {
+    val vlenb = ((vParams.vlen)/8).U
+    return vlenb
+  }
+
+
   //Debug/Trace Register
   def update_tselect( in: CMMState_Bundle): UInt = {
     val tselect = WireDefault( in.csrfiles.tselect )
@@ -1870,6 +1995,8 @@ trait CsrFiles { this: BaseCommit =>
     return DMode
   }
   
+
+
   def update_csrfiles( in: CMMState_Bundle ): CSR_Bundle = {
     val csrfiles = Wire( new CSR_Bundle )
     csrfiles.priv_lvl      := update_priv_lvl(in)
@@ -1919,6 +2046,21 @@ trait CsrFiles { this: BaseCommit =>
     csrfiles.mhpmevent     := update_mhpmevent(in)
 
     csrfiles.time := DontCare
+
+    if(hasVector){
+      csrfiles.vstart  := update_vstart(in)
+      csrfiles.vcsr    := update_vcsr(in)
+      csrfiles.vConfig := update_vConfig(in)
+      csrfiles.vlenb   := update_vlenb(in)      
+    } else{
+      csrfiles.vstart  := DontCare
+      csrfiles.vcsr    := DontCare
+      csrfiles.vConfig := DontCare
+      csrfiles.vlenb   := DontCare
+    }
+
+
+
     return csrfiles
   }
 }

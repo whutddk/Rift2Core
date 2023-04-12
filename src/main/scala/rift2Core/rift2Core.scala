@@ -136,11 +136,17 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   if3.io.if4Redirect := if4.io.if4Redirect
 
 
-  val rnm_stage = {
-    val mdl = Module(new Rename)
-    mdl.io.rnReq <> if4.io.if4_resp
-    mdl
+  
+  val vfl_stage = if(hasVector){ Some(Module(new VRenameFilter)) } else {None}
+
+  val rnm_stage = Module(new Rename)
+  if( hasVector ){
+    if4.io.if4_resp <> vfl_stage.get.io.enq
+    vfl_stage.get.io.deq <> rnm_stage.io.rnReq
+  } else {
+    if4.io.if4_resp <> rnm_stage.io.rnReq
   }
+
 
 
 
@@ -167,29 +173,49 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
     val mdl = Module(new WriteBack)
     mdl.io.xLookup <> rnm_stage.io.xLookup
     mdl.io.fLookup <> rnm_stage.io.fLookup
+    mdl.io.vLookup <> rnm_stage.io.vLookup
+
     mdl.io.xRename <> rnm_stage.io.xRename
     mdl.io.fRename <> rnm_stage.io.fRename
+    mdl.io.vRename <> rnm_stage.io.vRename
 
     iss_stage.io.irgLog := mdl.io.irgLog
     iss_stage.io.frgLog := mdl.io.frgLog
+    iss_stage.io.vrgLog := mdl.io.vrgLog
+
     mdl.io.irgReq := iss_stage.io.irgReq
     mdl.io.frgReq := iss_stage.io.frgReq
+    mdl.io.vrgReq := iss_stage.io.vrgReq
+
     iss_stage.io.irgRsp := mdl.io.irgRsp
     iss_stage.io.frgRsp := mdl.io.frgRsp
+    iss_stage.io.vrgRsp := mdl.io.vrgRsp
 
 
     mdl.io.alu_iWriteBack <> exe_stage.io.alu_exe_iwb
     mdl.io.bru_iWriteBack <> exe_stage.io.bru_exe_iwb
     mdl.io.csr_iWriteBack <> exe_stage.io.csr_exe_iwb
+    mdl.io.mul_iWriteBack <> exe_stage.io.mul_exe_iwb
+
     mdl.io.mem_iWriteBack <> exe_stage.io.lsu_exe_iwb
     mdl.io.mem_fWriteBack <> exe_stage.io.lsu_exe_fwb
-    mdl.io.mul_iWriteBack <> exe_stage.io.mul_exe_iwb
+    mdl.io.mem_vWriteBack <> exe_stage.io.lsu_exe_vwb
+
     mdl.io.fpu_iWriteBack <> exe_stage.io.fpu_exe_iwb
     mdl.io.fpu_fWriteBack <> exe_stage.io.fpu_exe_fwb
+
+    mdl.io.cWriteBack <> exe_stage.io.cWriteBack
+    mdl.io.csrIsReady <> iss_stage.io.csrIsReady
+
+    if(hasVector) {mdl.io.csrIsReady <> vfl_stage.get.io.csrIsReady}
+
+    mdl.io.cLookup <> rnm_stage.io.cLookup
+    mdl.io.cRename <> rnm_stage.io.cRename
 
 
     mdl
   }
+
 
 
 
@@ -237,12 +263,7 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   cmm_stage.io.cm_op <> iwb_stage.io.commit
   cmm_stage.io.rod <> rnm_stage.io.rod_i
   cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
-  cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
-  cmm_stage.io.csr_addr <> exe_stage.io.csr_addr
-  cmm_stage.io.csr_data <> exe_stage.io.csr_data
-  cmm_stage.io.csr_cmm_op <> exe_stage.io.csr_cmm_op
-  cmm_stage.io.fcsr <> exe_stage.io.fcsr
-  cmm_stage.io.fcsr_cmm_op <> exe_stage.io.fcsr_cmm_op
+  // cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
   cmm_stage.io.bctq <> exe_stage.io.bctq
   cmm_stage.io.jctq <> exe_stage.io.jctq
   cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect
@@ -250,6 +271,14 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   cmm_stage.io.aclint := io.aclint
   cmm_stage.io.plic := io.plic
   if2.io.ifence := cmm_stage.io.ifence
+
+
+
+
+  if(hasVector) {vfl_stage.get.io.csrfiles := cmm_stage.io.csrfiles}
+  iss_stage.io.csrfiles := cmm_stage.io.csrfiles
+  iwb_stage.io.cCommit <> cmm_stage.io.csrCmm
+  cmm_stage.io.csrOp := iwb_stage.io.csrOp
 
 
   cmm_stage.io.rtc_clock := io.rtc_clock
@@ -362,10 +391,14 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   }
 
 
-
+  rnm_stage.io.vLookup.map{x=>x.rsp := DontCare}
+  iss_stage.io.vrgRsp.map{ x => {x.valid := false.B; x.bits := DontCare} }
+  iss_stage.io.vrgLog      := DontCare
+  rnm_stage.io.vRename.map{x=>x.req.ready := true.B; x.rsp := DontCare}
 
 
 }
+
 
 
 

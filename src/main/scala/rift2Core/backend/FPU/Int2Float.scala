@@ -28,8 +28,7 @@ class IntToFP(latency: Int)(implicit p: Parameters) extends RiftModule with HasF
 
   class IntToFPIO extends Bundle{
     val in = Flipped(ValidIO(new Fpu_iss_info))
-    val frm = Input(UInt(3.W))
-    val out = ValidIO(new Fres_Info)    
+    val out = ValidIO(new Fres_Info)
   }
 
   val io: IntToFPIO = IO(new IntToFPIO)
@@ -40,6 +39,7 @@ class IntToFP(latency: Int)(implicit p: Parameters) extends RiftModule with HasF
   out.viewAsSupertype(new Fpu_iss_info) := io.in.bits
 
   val op1 = io.in.bits.param.dat.op1
+  val frm = io.in.bits.param.dat.op0
 
 
   out.toFloat := 0.U
@@ -60,7 +60,7 @@ class IntToFP(latency: Int)(implicit p: Parameters) extends RiftModule with HasF
         val mdl = Module(new hardfloat.INToRecFN(64, t.exp, t.sig))
         mdl.io.signedIn := ~io.in.bits.fun.is_usi
         mdl.io.in := intValue
-        mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+        mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, frm, io.in.bits.param.rm)
         mdl.io.detectTininess := hardfloat.consts.tininess_afterRounding
         mdl
       }

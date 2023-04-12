@@ -27,6 +27,21 @@ import base._
   */
 abstract class IF4Base()(implicit p: Parameters) extends IFetchModule {
 
+
+  /** 
+    * A class representing input and output data for the IF4 stage of a processor pipeline.
+    * @param if4_req A vector of "IF3_Bundle" objects representing input requests for the IF4 stage
+    * @param btbResp A vector of "BTBResp_Bundle" objects representing BTB response data
+    * @param bimResp A vector of "BIMResp_Bundle" objects representing BIM response data
+    * @param tageResp A vector of "TageTableResp_Bundle" objects representing TAGE table response data
+    * @param if4_resp A vector of "IF4_Bundle" objects representing output response data from the IF4 stage
+    * @param if4_update_ghist A vector of "Ghist_reflash_Bundle" objects representing requests to update the global history table
+    * @param if4Redirect A signal indicating whether the perivious stage should redirect instructions
+    * @param jcmm_update A signal from backend containing updated data for a jump target
+    * @param bftq A queue for branch target data
+    * @param jftq A queue for jump target data
+    * @param flush A boolean input that can be used to clear the pipeline
+    */
   class IF4IO extends Bundle{
     val if4_req  = Vec(rnChn, Flipped(Decoupled(new IF3_Bundle)))
     val btbResp  = Vec(rnChn, Flipped(Decoupled(new BTBResp_Bundle)))

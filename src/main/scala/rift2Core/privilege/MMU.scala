@@ -197,13 +197,15 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     io.mmu_if.bits.paddr := ipaddr
 
     io.mmu_if.bits.is_access_fault :=
-      PMP( io.cmm_mmu, ipaddr, Cat( io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R) ) | 
-      (iptw.io.ptw_o.bits.is_access_fault & iptw.io.ptw_o.bits.is_X & iptw.io.ptw_o.valid) |
-      ipaddr(63,plen) =/= (0.U)
+      io.if_mmu.valid & (
+        PMP( io.cmm_mmu, ipaddr, Cat( io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R) ) | 
+        (iptw.io.ptw_o.bits.is_access_fault & iptw.io.ptw_o.bits.is_X & iptw.io.ptw_o.valid) |
+        ipaddr(63,plen) =/= (0.U)        
+      )
+
 
     io.mmu_if.bits.is_paging_fault := 
-      ~is_bypass_if &
-      (
+      io.if_mmu.valid & ~is_bypass_if & (
         is_chk_page_fault( pte, io.if_mmu.bits.vaddr, io.cmm_mmu.priv_lvl_if, "b100".U) |
         (iptw.io.ptw_o.bits.is_ptw_fail & iptw.io.ptw_o.bits.is_X & iptw.io.ptw_o.valid)
       )
@@ -229,12 +231,15 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     io.mmu_lsu.bits.paddr := dpaddr
 
     io.mmu_lsu.bits.is_access_fault :=
-      PMP( io.cmm_mmu, dpaddr, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R) ) | 
-      (dptw.io.ptw_o.bits.is_access_fault & (~dptw.io.ptw_o.bits.is_X & dptw.io.ptw_o.valid)) |
-      dpaddr(63,plen) =/= (0.U)
+      io.mmu_lsu.valid & (
+        PMP( io.cmm_mmu, dpaddr, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R) ) | 
+        (dptw.io.ptw_o.bits.is_access_fault & (~dptw.io.ptw_o.bits.is_X & dptw.io.ptw_o.valid)) |
+        dpaddr(63,plen) =/= (0.U)      
+      )
+
 
     io.mmu_lsu.bits.is_paging_fault :=
-      ~is_bypass_ls & (
+      io.mmu_lsu.valid & ~is_bypass_ls & (
         is_chk_page_fault( pte, io.lsu_mmu.bits.vaddr, io.cmm_mmu.priv_lvl_ls, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R )) |
         dptw.io.ptw_o.bits.is_ptw_fail & ~dptw.io.ptw_o.bits.is_X & dptw.io.ptw_o.valid
       )
