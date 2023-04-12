@@ -44,7 +44,7 @@ def freshProject(name: String, dir: File): Project = {
 }
 
 // Rocket-chip dependencies (subsumes making RC a RootProject)
-lazy val hardfloat  = (project in file("./dependencies/rocketchip/berkeley-hardfloat"))
+lazy val hardfloat  = (project in file("./dependencies/rocket-chip/hardfloat"))
   .settings(chiselSettings)
   .settings(commonSettings)
   .settings(name := "hardfloat", organization := "edu.berkeley.cs")

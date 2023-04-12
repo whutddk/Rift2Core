@@ -32,6 +32,12 @@ import org.chipsalliance.cde.config._
 
 class Decode16(implicit p: Parameters) extends RiftModule {
 
+  /**
+    * This class defines the input and output ports for a RISC-V 16-bit decoder.
+    * @param x The 16-bit instruction to decode, taken as input.
+    * @param pc The current program counter, taken as input.
+    * @param info The decoded instruction, returned as an output of type Info_instruction.
+    */
   class Decode16IO extends Bundle{
     val x  = Input(UInt(16.W))
     val pc = Input(UInt(64.W))
@@ -48,6 +54,7 @@ class Decode16(implicit p: Parameters) extends RiftModule {
   info.param.pc := pc
   info.param.is_rvc := true.B
 
+  /** create different kinds of Immediate here */
   def addi4spnImm = Cat(0.U(54.W), x(10,7), x(12,11), x(5), x(6), 0.U(2.W))
   def lwImm = Cat(0.U(57.W), x(5), x(12,10), x(6), 0.U(2.W))
   def ldImm = Cat(0.U(56.W), x(6,5), x(12,10), 0.U(3.W))
@@ -478,7 +485,15 @@ class Decode16(implicit p: Parameters) extends RiftModule {
 
 } 
 
+/** This object provides a method to instantiate a RISC-V 16-bit instruction decoder*/
 object Decode16 {
+  /**
+    * Decodes the 16-bit instruction using the given input signals and parameters.
+    * @param x The 16-bit instruction to decode, taken as input of type UInt.
+    * @param pc The current program counter, taken as input of type UInt.
+    * @param hasFpu A boolean flag indicating whether the instruction includes a floating point unit.
+    * @return Returns the decoded instruction as an instance of the Info_instruction class.
+    */
   def apply(x:UInt, pc: UInt, hasFpu: Boolean)(implicit p: Parameters): Info_instruction = {
     // val info = Wire(new Info_instruction)
     val dec16 = Module(new Decode16)
@@ -489,8 +504,15 @@ object Decode16 {
 }
 
 
+/** This class provides a method to decode a RISC-V 32-bit instruction. */
 class Decode32(implicit p: Parameters) extends RiftModule {
 
+  /**
+    * This class defines the input and output signals for the RISC-V 32-bit instruction decoder module.
+    * @param x The 32-bit RISC-V instruction to be decoded and taken as input of type UInt.
+    * @param pc The program counter to keep track of the instruction addresses and taken as input of type UInt with width 64 bits.
+    * @param info The decoded instruction, returned as an output of type Info_instruction.
+    */ 
   class Decode32IO extends Bundle{
     val x  = Input(UInt(32.W))
     val pc = Input(UInt(64.W))
@@ -914,14 +936,24 @@ class Decode32(implicit p: Parameters) extends RiftModule {
 
     info.privil_isa.is_access_fault     := false.B
     info.privil_isa.is_paging_fault     := false.B
-
-
-
 } 
 
-
-
+/**
+ * This object implements a 32-bit RISC-V instruction decoder.
+ * @note It takes UInt inputs x and pc, along with a boolean hasFpu to indicate whether
+ *       or not the processor has a floating point unit. An implicit Parameters object is
+ *       also expected to be in scope.
+ */
 object Decode32 {
+  /**
+    * Decodes the given 32-bit RISC-V instruction.
+    *
+    * @param x The 32-bit instruction to be decoded.
+    * @param pc The program counter for the instruction.
+    * @param hasFpu Indicates whether or not the processor has a floating point unit.
+    * @param p The implicit Parameters object for the Rift2Core.
+    * @return An Info_instruction object representing the decoded instruction.
+    */
   def apply(x:UInt, pc: UInt, hasFpu: Boolean)(implicit p: Parameters): Info_instruction = {
     // val info = Wire(new Info_instruction)
     val dec32 = Module(new Decode32)

@@ -781,6 +781,13 @@ class Reg_PHY(implicit p: Parameters) extends RiftBundle {
 
 
 
+/**
+  * This class represents a bundle of all the supported Instruction Set Architectures (ISA).
+  * It provides access to different ISA types such as Arithmetic logic Unit (ALU), Branch and Jump Unit (BRU),
+  * Load Store Unit (LSU), Control and Status Register (CSR), Multiply and Divide Unit (MUL), Privileged instructions (Privilege_isa),
+  * and Floating Point Unit (FPU).
+  * @param p Implicit parameter containing information about the processor's configuration.
+  */
 class Instruction_set(implicit p: Parameters) extends RiftBundle{
   val alu_isa = new Alu_isa
   val bru_isa = new Bru_isa
@@ -790,41 +797,43 @@ class Instruction_set(implicit p: Parameters) extends RiftBundle{
   val privil_isa = new Privil_isa
   val fpu_isa = new Fpu_isa
 
-  def is_fwb =
-    lsu_isa.is_fwb | fpu_isa.is_fwb
-
-  // def is_ooo_dpt = alu_isa.is_alu | mul_isa.is_mulDiv
-  // def is_ito_dpt = bru_isa.is_bru | csr_isa.is_csr | lsu_isa.is_lsu | fpu_isa.is_fpu
+  /** @return A Boolean value indicating the whether a float point result will be written back. */
+  def is_fwb = lsu_isa.is_fwb | fpu_isa.is_fwb
+  /** @return A Boolean value indicating whether this a privileged instruction is dispatched. */
   def is_privil_dpt = privil_isa.is_privil
+  /** @return A Boolean value indicating whether the instruction is dispatched to FPU.*/
   def is_fpu_dpt = fpu_isa.is_fpu
+  /** @return A Boolean value indicating whether a integer result will be written back. */
   def is_iwb = ~is_fwb
+  /** @return A Boolean value indicating whether the instruction is legal or not.*/
   def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mulDiv | privil_isa.is_privil | fpu_isa.is_fpu) 
-
-  // def dptRegion = MuxCase( 0.U, Array(
-  //   alu_isa.is_alu    -> 1.U,
-  //   mul_isa.is_mulDiv -> 2.U,
-  //   bru_isa.is_bru    -> 3.U,
-  //   csr_isa.is_csr    -> 4.U,
-  //   lsu_isa.is_lsu    -> 5.U,
-  //   fpu_isa.is_fpu    -> 6.U,
-  // ))
 }
 
 
-
+/**
+ * A class that extends RiftBundle and represents an instruction parameter.
+ * @param p An implicit parameter of type Parameters.
+ */
 class Instruction_param(implicit p: Parameters) extends RiftBundle {
+  /** Indicate whether the parameter is in compressed RISC-V format. */
   val is_rvc = Bool()
+  /** Represents the program counter with 'vlen' bits. */
   val pc = UInt(vlen.W)
-  
+  /** Represents an immediate value with 64 bits. */
   val imm = UInt(64.W)
+  /** Represents a 'RM' field with 3 bits (usually for a rounding mode). */
   val rm = UInt(3.W)
+  /** Represents a raw source/destination register index. */
   val raw = new Reg_RAW
-
 }
 
+/**
+  * A class that extends Instruction_set and represents an information of the instruction.
+  * @param p An implicit parameter of type Parameters.
+  */
 class Info_instruction(implicit p: Parameters) extends Instruction_set {
+  /** the parameters of the instruction */
   val param = new Instruction_param
-
 }
 
 
@@ -851,8 +860,6 @@ class Alu_param(implicit p: Parameters) extends RD_PHY {
   val is_usi = Bool()
 
   val dat = new Operation_source(dw=64)
-
-  // override def cloneType = ( new Alu_param ).asInstanceOf[this.type]
 }
 
 class Alu_iss_info(implicit p: Parameters) extends RiftBundle {

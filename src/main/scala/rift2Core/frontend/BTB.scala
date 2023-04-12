@@ -25,7 +25,11 @@ import org.chipsalliance.cde.config._
 
 
 
-
+/**
+  * A branch target buffer (BTB) module for RISC-V processors.
+  * @constructor Creates a new instance of the BTB.
+  * @param p The implicit Parameters object for the processor.
+  */
 class BTB()(implicit p: Parameters) extends IFetchModule {
 
   class BTBIO extends Bundle{

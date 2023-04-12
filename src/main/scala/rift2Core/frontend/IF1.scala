@@ -22,15 +22,25 @@ import rift2Core.define._
 import org.chipsalliance.cde.config._
 import base._
 
+
+
+
 /**
   * instract fetch stage 1, generate pc
   */
 abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
 
+  /**
+    * @constructor Create a new IF1IO bundle instance with the following signals:
+    * @param if4Redirect a Flipped (input) Valid bundle of type IF4_Redirect_Bundle used to handle instruction fetch pipeline redirection from IF4
+    * @param cmmRedirect a Flipped (input) Valid bundle of type Commit_Redirect_Bundle used to handle instruction fetch pipeline redirection from Commit
+    * @param pc_gen a Decoupled (in/out) bundle of type IF1_Bundle used to generate program counter addresses to if2
+    * @param jcmm_update a Flipped (input) Valid bundle of type Jump_CTarget_Bundle used to handle updates to jump targets for the CPU
+    * @param bcmm_update a Flipped (input) Valid bundle of type Branch_CTarget_Bundle used to handle updates to branch targets for the CPU
+    */
   class IF1IO extends Bundle{
     val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
     val cmmRedirect = Flipped(Valid(new Commit_Redirect_Bundle))
-
 
     val pc_gen = Decoupled(new IF1_Bundle)
 
@@ -38,12 +48,16 @@ abstract class IF1Base()(implicit p: Parameters) extends IFetchModule {
     val bcmm_update = Flipped(Valid(new Branch_CTarget_Bundle))    
   }
 
+
   val io: IF1IO = IO(new IF1IO)
 
   val pc_qout = RegInit("h80000000".U(64.W))
-
 }
 
+
+/**
+  * Trait that adds uBTB functionality to IF1GenModule
+  */
 trait IF1uBTB { this: IF1Base => 
   val uBTB = Module(new uBTB)
 
@@ -71,6 +85,10 @@ trait IF1uBTB { this: IF1Base =>
 
 }
 
+
+/**
+  * Trait that disables uBTB functionality
+  */
 trait IF1NuBTB{ this: IF1Base =>
   val uBTB = Module(new FakeuBTB)
 
@@ -87,7 +105,9 @@ trait IF1NuBTB{ this: IF1Base =>
   uBTB.io.if4Redirect.bits  := 0.U.asTypeOf(new IF4_Redirect_Bundle)
 }
 
-
+/**
+  * Class that extends IF1Base and adds uBTB functionality.
+  **/
 class IF1Predict()(implicit p: Parameters) extends IF1Base with IF1uBTB {
   val any_reset = reset.asBool
 
