@@ -559,6 +559,7 @@ class Dividor(implicit p: Parameters) extends RiftModule {
   divRtnArb.io.in(0).valid := algDivider.io.deq.valid
   divRtnArb.io.in(0).bits.res := divRes
   divRtnArb.io.in(0).bits.rd0 := algDivider.io.deq.bits.param.rd0
+
   algDivider.io.deq.ready  := divRtnArb.io.in(0).ready
 
   io.enq.ready := Mux(divBypass, divRtnArb.io.in(1).ready, algDivider.io.enq.ready)

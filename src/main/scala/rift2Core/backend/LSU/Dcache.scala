@@ -27,7 +27,7 @@ import rift2Chip._
 
 import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
-
+import chisel3.experimental.dataview._
 
 
 
@@ -59,13 +59,18 @@ abstract class Dcache_ScoreBoard_Bundle(implicit p: Parameters) extends DcacheBu
   val chkIdx = UInt((log2Ceil(sbEntry)).W)
 }
 
+
+
 class Dcache_Enq_Bundle(implicit p: Parameters) extends Dcache_ScoreBoard_Bundle {
   val paddr = UInt(plen.W)
-  val wdata  = UInt(dw.W)
-  val wstrb  = UInt((dw/8).W)
+  val wdata = UInt(dw.W)
+  val wstrb = UInt((dw/8).W)
 
-  val fun    = new Cache_op
-  val rd = new RD_PHY
+  val fun   = new Cache_op
+  val rd    = new RD_PHY
+
+  val vAttach = if(hasVector) {Some(new VDcache_Attach_Bundle)} else {None}
+
 
   def tagSel = paddr(plen-1,plen-tag_w)
   def clSel  = paddr(addr_lsb+bk_w + line_w-1, addr_lsb+bk_w)
@@ -77,6 +82,8 @@ class Dcache_Enq_Bundle(implicit p: Parameters) extends Dcache_ScoreBoard_Bundle
 class Dcache_Deq_Bundle(implicit p: Parameters) extends Dcache_ScoreBoard_Bundle {
   val wb = new WriteBack_info(dw=64)
   val is_load_amo = Bool()
+
+  val vAttach = if(hasVector) {Some(new VDcache_Attach_Bundle)} else {None}
 
   val is_flw = Bool()
   val is_fld = Bool()
@@ -129,7 +136,53 @@ abstract class DcacheBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) exte
   val reload_fifo = Module( new Queue( new Dcache_Enq_Bundle, 1, true, false) )
 
   val stage = Module(new DcacheStage(id))
+
+
+
+  def pkg_Dcache_Enq_Bundle( ori: Info_miss_rsp )(implicit p: Parameters): Dcache_Enq_Bundle = {
+    val res = Wire(new Dcache_Enq_Bundle)
+
+    res.paddr := ori.paddr
+    res.wstrb := "hFFFFFFFF".U
+    res.wdata := ori.wdata
+
+    {
+      res.fun := 0.U.asTypeOf(new Cache_op)
+      res.fun.grant := true.B      
+    }
+    res.rd := 0.U.asTypeOf(new RD_PHY)
+    res.chkIdx := 0.U
+
+    if(hasVector){ res.vAttach.get := DontCare }
+
+    res
+  }
+  
+  def pkg_Dcache_Enq_Bundle( ori: Info_probe_req )(implicit p: Parameters): Dcache_Enq_Bundle = {
+    val res = Wire(new Dcache_Enq_Bundle)
+    res.paddr := ori.paddr
+    res.wstrb := 0.U
+    res.wdata := 0.U
+
+    {
+      res.fun := 0.U.asTypeOf(new Cache_op)
+      res.fun.probe := true.B      
+    }
+    res.rd := 0.U.asTypeOf(new RD_PHY)
+    res.chkIdx := 0.U
+
+    if(hasVector){ res.vAttach.get := DontCare }
+
+    res
+  }
+
+
+
+
+
 }
+
+
 
 trait DcacheScoreBoard { this: DcacheBase =>
   // val cache_buffer = Module(new Cache_buffer)
@@ -187,12 +240,6 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
     io.writeBackUnit_dcache_release.get <> writeBackUnit.get.io.cache_release
     writeBackUnit.get.io.cache_grant <> io.writeBackUnit_dcache_grant.get  
 
-
-
-
-
-
-
   } else {
     val getPutArb = Module(new Arbiter(new TLBundleA(edge.bundle), 2) )
     io.dcache_getPut.get <> getPutArb.io.out
@@ -216,14 +263,14 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
     stage.io.wb_req <> writeBackUnit.get.io.wb_req
   
     probeUnit.get.io.probeBan := writeBackUnit.get.io.miss_ban
-    missUnit.get.io.miss_ban := writeBackUnit.get.io.miss_ban
+    missUnit.get.io.miss_ban  := writeBackUnit.get.io.miss_ban
     writeBackUnit.get.io.release_ban := missUnit.get.io.release_ban
 
-    rd_arb.io.in(0).bits := pkg_Dcache_Enq_Bundle( missUnit.get.io.rsp.bits )
+    rd_arb.io.in(0).bits  := pkg_Dcache_Enq_Bundle( missUnit.get.io.rsp.bits )
     rd_arb.io.in(0).valid := missUnit.get.io.rsp.valid
     missUnit.get.io.rsp.ready := rd_arb.io.in(0).ready
 
-    rd_arb.io.in(1).bits := pkg_Dcache_Enq_Bundle(probeUnit.get.io.req.bits) 
+    rd_arb.io.in(1).bits  := pkg_Dcache_Enq_Bundle(probeUnit.get.io.req.bits) 
     rd_arb.io.in(1).valid := probeUnit.get.io.req.valid
     probeUnit.get.io.req.ready := rd_arb.io.in(1).ready
 
@@ -231,10 +278,10 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
     stage.io.missUnit_req      <> getUnit.get.io.req
     stage.io.wb_req <> putUnit.get.io.wb_req
   
-    getUnit.get.io.miss_ban := putUnit.get.io.miss_ban
+    getUnit.get.io.miss_ban    := putUnit.get.io.miss_ban
     putUnit.get.io.release_ban := getUnit.get.io.release_ban
 
-    rd_arb.io.in(0).bits := pkg_Dcache_Enq_Bundle( getUnit.get.io.rsp.bits )
+    rd_arb.io.in(0).bits  := pkg_Dcache_Enq_Bundle( getUnit.get.io.rsp.bits )
     rd_arb.io.in(0).valid := getUnit.get.io.rsp.valid
     getUnit.get.io.rsp.ready := rd_arb.io.in(0).ready
 
@@ -270,15 +317,12 @@ class Dcache(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends DcacheBas
   rtn_fifo.io.enq.bits  := stage.io.deq.bits
  
   rtn_fifo.io.deq <> io.deq
-  // rtn_fifo.io.deq <> Decoupled1toN( VecInit( io.deq, cache_buffer.io.buf_deq ) )
-
-
 
   io.is_empty := isSBEmpty
   stage.io.isCacheEmpty := isSBEmpty
 
   when(reload_fifo.io.enq.valid) {assert(reload_fifo.io.enq.ready, "Assert Failed at Dcache, Pipeline stuck!")}
-  when(rtn_fifo.io.enq.valid) {assert(rtn_fifo.io.enq.ready, "Assert Failed at Dcache, Pipeline stuck!")}
+  when(rtn_fifo.io.enq.valid)    {assert(rtn_fifo.io.enq.ready, "Assert Failed at Dcache, Pipeline stuck!")}
 
 }
 

@@ -29,19 +29,24 @@ import rift2Core.backend._
 
 import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
+import chisel3.experimental.dataview._
 
-
+class LSU_WriteBack_Bundle(dw: Int)(implicit p: Parameters) extends WriteBack_info(dw = 64){
+  val vAttach = if(hasVector) {Some(new VDcache_Attach_Bundle)} else {None}
+}
 
 abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule with HasFPUParameters {
   val dEdge = edge
 
   class LsuIO extends Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
+    val lsu_exe_iwb = new DecoupledIO(new LSU_WriteBack_Bundle(dw=64))
     val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
 
+    val lsu_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))
+
     val cmm_lsu = Input(new Info_cmm_lsu)
-    val lsu_cmm = Output( new Info_lsu_cmm )
+                    // val lsu_cmm = Output( new Info_lsu_cmm )
 
     val lsu_mmu = DecoupledIO(new Info_mmu_req)
     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
@@ -110,7 +115,7 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     * @param in Dcache_Deq_Bundle
     * @return WriteBack_info 
     */
-  val lu_wb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, false, true ) )
+  val lu_wb_fifo = Module( new Queue( new LSU_WriteBack_Bundle(dw=64), 1, false, true ) )
 
   val flu_wb_fifo = Module( new Queue( new WriteBack_info(dw=65), 1, false, true ) )
 
@@ -118,28 +123,64 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     * @param in Lsu_iss_info
     * @return WriteBack_info
     */
-  val su_wb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, false, true ) )
-  val fe_wb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, false, true ) )
+  val su_wb_fifo = Module( new Queue( new LSU_WriteBack_Bundle(dw=64), 1, false, true ) )
+  val fe_wb_fifo = Module( new Queue( new LSU_WriteBack_Bundle(dw=64), 1, false, true ) )
 
   /** merge lu-writeback and su-writeback
     * @param in WriteBack_info
     * @return WriteBack_info
     */
-  val rtn_arb = Module(new Arbiter( new WriteBack_info(dw=64), 3))
+  val irtn_arb = Module(new Arbiter( new LSU_WriteBack_Bundle(dw=64), 4))
+  val frtn_arb = Module(new Arbiter( new WriteBack_info(dw=65), 2))
 
   /** indicate the mem unit is empty by all seq-element is empty*/
   val is_empty = Wire(Bool())
+
+
+
+  /** package write and amo operation*/
+  def pkg_Dcache_Enq_Bundle( ori: Lsu_iss_info, overlapReq: Stq_req_Bundle, overlapResp: Stq_resp_Bundle)(implicit p: Parameters) = {
+
+    val res = Wire(new Dcache_Enq_Bundle)
+    val dw = res.wdata.getWidth
+
+    res.paddr := ori.paddr
+    res.wdata := Mux( ori.fun.is_lu, reAlign_data( from = 64, to = dw, data = overlapResp.wdata, addr = overlapReq.paddr ), ori.wdata_align(dw))
+    res.wstrb := Mux( ori.fun.is_lu, reAlign_strb( from = 64, to = dw, strb = overlapResp.wstrb, addr = overlapReq.paddr ), ori.wstrb_align(dw))
+
+    {
+      res.fun := 0.U.asTypeOf(new Cache_op)
+      res.fun.viewAsSupertype(new Lsu_isa) := ori.fun.viewAsSupertype(new Lsu_isa)
+
+    }
+    res.rd.rd0 := ori.param.rd0
+
+    res.chkIdx := 0.U
+
+    if( hasVector ){
+      res.vAttach.get := ori.vAttach.get
+    }
+ 
+
+
+
+    res
+  
+  }
 }
 
 /** request mmu and get the paddr */
 trait LSU_AddrTrans { this: LsuBase => 
-  // addrTrans( io.lsu_iss_exe.bits, io.mmu_lsu, trans_kill | is_fence_op)
 
   /** the transation will be blocked if the request is illegal */
   addrTransIO.valid := io.mmu_lsu.valid & ~io.mmu_lsu.bits.is_fault & ~io.lsu_iss_exe.bits.is_misAlign & ~(trans_kill | io.lsu_iss_exe.bits.fun.is_fence)
   addrTransIO.bits := io.lsu_iss_exe.bits
   addrTransIO.bits.param.dat.op1 := io.mmu_lsu.bits.paddr
-  io.mmu_lsu.ready := addrTransIO.ready & ~io.mmu_lsu.bits.is_fault & ~io.lsu_iss_exe.bits.is_misAlign & ~(trans_kill | io.lsu_iss_exe.bits.fun.is_fence)
+  io.mmu_lsu.ready :=
+    ( addrTransIO.ready & ~io.mmu_lsu.bits.is_fault & ~io.lsu_iss_exe.bits.is_misAlign & ~(trans_kill | io.lsu_iss_exe.bits.fun.is_fence) ) |
+    ( irtn_arb.io.in(3).fire ) |
+    ( frtn_arb.io.in(1).fire )
+
 
   io.lsu_mmu.valid := io.lsu_iss_exe.valid & ~io.lsu_iss_exe.bits.fun.is_fence
   io.lsu_mmu.bits.vaddr := io.lsu_iss_exe.bits.param.dat.op1
@@ -148,18 +189,15 @@ trait LSU_AddrTrans { this: LsuBase =>
   io.lsu_mmu.bits.is_X := false.B
   io.lsu_iss_exe.ready :=
     ( ~io.lsu_iss_exe.bits.fun.is_fence & io.lsu_mmu.ready) |
-    (  io.lsu_iss_exe.bits.fun.is_fence & fe_wb_fifo.io.enq.fire) 
+    (  io.lsu_iss_exe.bits.fun.is_fence & fe_wb_fifo.io.enq.fire)
+
 
 }
 
 /** Mux store load amo request into three different ways */
 trait LSU_OpMux { this: LsuBase => 
   /** route operation into load, store, and amo */
-  // val opMux = {
-  //   val mdl = Module(new OpMux)
-  //   mdl.io.enq <> addrTrans( io.lsu_iss_exe.bits, io.mmu_lsu, trans_kill | is_fence_op)
-  //   mdl
-  // }
+
   addrTransIO.ready := false.B
 
   when( addrTransIO.bits.fun.is_lu ) {
@@ -258,6 +296,7 @@ trait LSU_RegionMux { this: LsuBase =>
 
 /** depending on the paddr, the cache request will be divided into 4 or 8 (nm) "bank" */
 trait LSU_CacheMux { this: LsuBase =>
+  println("Warning, different Cache Bank is requesting one by one!")
   val CacheMuxBits = pkg_Dcache_Enq_Bundle(regionDCacheIO.bits, stQueue.io.overlapReq.bits, stQueue.io.overlapResp.bits)
 
 
@@ -440,6 +479,7 @@ trait LSU_WriteBack { this: LsuBase =>
   lu_wb_fifo.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.is_iwb &  ~trans_kill 
   lu_wb_fifo.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
   lu_wb_fifo.io.enq.bits.res := lu_wb_arb.io.out.bits.wb.res
+  if(hasVector) {lu_wb_fifo.io.enq.bits.vAttach.get := lu_wb_arb.io.out.bits.vAttach.get}
   lu_wb_fifo.reset := reset.asBool | io.flush
 
 
@@ -450,7 +490,7 @@ trait LSU_WriteBack { this: LsuBase =>
         lu_wb_arb.io.out.bits.is_flw -> box(recode(lu_wb_arb.io.out.bits.wb.res, 0), FType.D),
         lu_wb_arb.io.out.bits.is_fld -> box(recode(lu_wb_arb.io.out.bits.wb.res, 1), FType.D),
       ))
-  flu_wb_fifo.io.deq <> io.lsu_exe_fwb
+  flu_wb_fifo.io.deq <> frtn_arb.io.in(0)
   flu_wb_fifo.reset := reset.asBool | io.flush
 
 
@@ -460,6 +500,7 @@ trait LSU_WriteBack { this: LsuBase =>
   su_wb_fifo.io.enq.valid    := opStIO.fire
   su_wb_fifo.io.enq.bits.rd0 := opStIO.bits.param.rd0
   su_wb_fifo.io.enq.bits.res := 0.U
+  if(hasVector) {su_wb_fifo.io.enq.bits.vAttach.get := opStIO.bits.vAttach.get}
   su_wb_fifo.reset := reset.asBool | io.flush
 
   opStIO.ready := su_wb_fifo.io.enq.ready & stQueue.io.enq.ready
@@ -469,43 +510,60 @@ trait LSU_WriteBack { this: LsuBase =>
   fe_wb_fifo.reset := reset.asBool | io.flush
   fe_wb_fifo.io.enq.valid := is_empty & io.lsu_iss_exe.bits.fun.is_fence & io.lsu_iss_exe.valid
   fe_wb_fifo.io.enq.bits.rd0 := io.lsu_iss_exe.bits.param.rd0
-  fe_wb_fifo.io.enq.bits.res := 0.U
+  fe_wb_fifo.io.enq.bits.res := 0.U(64.W)
+  if(hasVector) {fe_wb_fifo.io.enq.bits.vAttach.get := io.lsu_iss_exe.bits.vAttach.get}
+
   fe_wb_fifo.reset := reset.asBool | io.flush
 
 
 
-  rtn_arb.io.in(0) <> su_wb_fifo.io.deq
-  rtn_arb.io.in(1) <> lu_wb_fifo.io.deq
-  rtn_arb.io.in(2) <> fe_wb_fifo.io.deq
-  rtn_arb.io.out <> io.lsu_exe_iwb
+  irtn_arb.io.in(0) <> su_wb_fifo.io.deq
+  irtn_arb.io.in(1) <> lu_wb_fifo.io.deq
+  irtn_arb.io.in(2) <> fe_wb_fifo.io.deq
+  irtn_arb.io.out <> io.lsu_exe_iwb
 
-
+  frtn_arb.io.out <> io.lsu_exe_fwb
 }
 
 
 
 trait LSU_Fault { this: LsuBase =>
-  val isAccessFaultReg = RegInit(false.B)
-  val isPagingFault    = RegInit(false.B)
-  val isMisAlign = RegInit(false.B)
-  val trapAddrReg = Reg(UInt(64.W))
 
-  when( io.flush ) {
-    isAccessFaultReg := false.B
-    isPagingFault    := false.B
-    isMisAlign       := false.B    
-  } .elsewhen( io.mmu_lsu.valid & is_empty ) {
-    isAccessFaultReg := io.mmu_lsu.bits.is_access_fault
-    isPagingFault    := io.mmu_lsu.bits.is_paging_fault
-    isMisAlign       := io.lsu_iss_exe.bits.is_misAlign
-    trapAddrReg      :=  io.lsu_iss_exe.bits.param.dat.op1
-  }
+  irtn_arb.io.in(3).valid := 
+    io.mmu_lsu.valid &
+      (io.mmu_lsu.bits.is_fault | io.lsu_iss_exe.bits.is_misAlign) & ~trans_kill &
+      io.lsu_iss_exe.bits.fun.is_iwb
 
-  io.lsu_cmm.is_access_fault := isAccessFaultReg
-  io.lsu_cmm.is_paging_fault := isPagingFault
-  io.lsu_cmm.is_misAlign     := isMisAlign
-  io.lsu_cmm.trap_addr       := trapAddrReg
+  irtn_arb.io.in(3).bits.rd0 := io.lsu_iss_exe.bits.param.rd0
+  irtn_arb.io.in(3).bits.res := 0.U
 
+
+  frtn_arb.io.in(1).valid := 
+    io.mmu_lsu.valid &
+      (io.mmu_lsu.bits.is_fault | io.lsu_iss_exe.bits.is_misAlign) & ~trans_kill &
+      io.lsu_iss_exe.bits.fun.is_fwb
+
+  frtn_arb.io.in(1).bits.rd0 := io.lsu_iss_exe.bits.param.rd0
+  frtn_arb.io.in(1).bits.res := 0.U
+
+
+  io.lsu_cWriteBack.valid := io.lsu_iss_exe.fire
+    // (io.mmu_lsu.fire     &  (io.mmu_lsu.bits.is_access_fault | io.mmu_lsu.bits.is_paging_fault | io.lsu_iss_exe.bits.is_misAlign)) |
+    // (io.mmu_lsu.fire     & ~(io.mmu_lsu.bits.is_access_fault | io.mmu_lsu.bits.is_paging_fault | io.lsu_iss_exe.bits.is_misAlign)) |
+    // (io.lsu_iss_exe.fire & io.lsu_iss_exe.bits.fun.is_fence )
+  
+  io.lsu_cWriteBack.bits.addr := "hfff".U
+  io.lsu_cWriteBack.bits.dati := 
+    Cat(
+      io.mmu_lsu.bits.is_access_fault,
+      io.mmu_lsu.bits.is_paging_fault, 
+      io.lsu_iss_exe.bits.is_misAlign,
+      (io.lsu_iss_exe.bits.param.dat.op1(vlen-1, 0) | 0.U(61.W))
+    ); require(vlen <= 61)
+  io.lsu_cWriteBack.bits.op_rw := io.mmu_lsu.bits.is_access_fault | io.mmu_lsu.bits.is_paging_fault | io.lsu_iss_exe.bits.is_misAlign
+  io.lsu_cWriteBack.bits.op_rs := false.B
+  io.lsu_cWriteBack.bits.op_rc := false.B
+  io.lsu_cWriteBack.bits.idx   := io.lsu_iss_exe.bits.param.csrw(log2Ceil(cRegNum)-1, 0 )
 
 
 

@@ -28,7 +28,6 @@ class FDivSqrt()(implicit p: Parameters) extends RiftModule with HasFPUParameter
 
   class FDivSqrtIO extends Bundle{
     val in = Flipped(ValidIO(new Fpu_iss_info))
-    val frm = Input(UInt(3.W))
     val out = ValidIO(new Fres_Info)
     val pending = Output(Bool())    
   }
@@ -37,6 +36,7 @@ class FDivSqrt()(implicit p: Parameters) extends RiftModule with HasFPUParameter
 
   val op1 = unbox(io.in.bits.param.dat.op1, io.in.bits.fun.FtypeTagIn, None)
   val op2 = unbox(io.in.bits.param.dat.op2, io.in.bits.fun.FtypeTagIn, None)
+  val frm = io.in.bits.param.dat.op0
 
   io.pending := false.B
   io.out.valid := false.B
@@ -51,7 +51,7 @@ class FDivSqrt()(implicit p: Parameters) extends RiftModule with HasFPUParameter
     divSqrt.io.sqrtOp := io.in.bits.fun.fsqrt_s | io.in.bits.fun.fsqrt_d
     divSqrt.io.a := maxType.unsafeConvert(op1, t)
     divSqrt.io.b := maxType.unsafeConvert(op2, t)
-    divSqrt.io.roundingMode :=  Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+    divSqrt.io.roundingMode :=  Mux(io.in.bits.param.rm === "b111".U, frm, io.in.bits.param.rm)
     divSqrt.io.detectTininess := hardfloat.consts.tininess_afterRounding
 
     when (divSqrt.io.outValid_div | divSqrt.io.outValid_sqrt) {

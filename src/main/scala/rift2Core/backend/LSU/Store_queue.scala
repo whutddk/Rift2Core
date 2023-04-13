@@ -71,17 +71,17 @@ abstract class Stq_Base()(implicit p: Parameters) extends DcacheModule{
 }
 
 trait Stq_Ptr { this: Stq_Base => 
-  {
-    val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending, false.B)
-    val is_amo_pos = io.cmm_lsu.is_amo_pending & ~is_amo_pre
-    when( io.flush ) {
-      is_amo := false.B
-    } .elsewhen( is_amo_pos ) {
-      is_amo := true.B
-    } .elsewhen(is_amo & ~io.is_empty) {
-      is_amo := false.B
-    }
+{
+  val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending, false.B)
+  val is_amo_pos = io.cmm_lsu.is_amo_pending & ~is_amo_pre
+  when( io.flush ) {
+    is_amo := false.B
+  } .elsewhen( is_amo_pos ) {
+    is_amo := true.B
+  } .elsewhen(is_amo & ~io.is_empty) {
+    is_amo := false.B
   }
+}
 
 
   val is_st_commited = io.cmm_lsu.is_store_commit
@@ -91,13 +91,13 @@ trait Stq_Ptr { this: Stq_Base =>
   io.deq.bits := Mux( io.deq.valid, rd_buff, 0.U.asTypeOf(new Lsu_iss_info) )
 
   when( io.flush ) {
-    if( cm_chn ==2 ) {
+    if( cmChn == 2 ) {
       when( is_st_commited(1) & is_st_commited(0) ) { wr_ptr_reg := cm_ptr_reg + 2.U }
       .elsewhen( is_st_commited(0) | (is_amo & ~io.is_empty) | is_st_commited(1) ) { wr_ptr_reg := cm_ptr_reg + 1.U } //amo only resolved at chn0
-      .otherwise{ wr_ptr_reg := cm_ptr_reg }      
-    } else if ( cm_chn == 1 ) {
+      .otherwise{ wr_ptr_reg := cm_ptr_reg }
+    } else if ( cmChn == 1 ) {
       when( is_st_commited(0) | (is_amo & ~io.is_empty) ) { wr_ptr_reg := cm_ptr_reg + 1.U } //amo only resolved at chn0
-      .otherwise{ wr_ptr_reg := cm_ptr_reg }         
+      .otherwise{ wr_ptr_reg := cm_ptr_reg }
     } else {
       require(false)
     }
@@ -112,7 +112,7 @@ trait Stq_Ptr { this: Stq_Base =>
     buff(rd_ptr) := 0.U.asTypeOf(new Lsu_iss_info)
   }
 
-  if( cm_chn == 2 ) {
+  if( cmChn == 2 ) {
     when( is_st_commited(1) & is_st_commited(0) ) {
       cm_ptr_reg := cm_ptr_reg + 2.U
       assert( ~is_amo )
@@ -121,8 +121,10 @@ trait Stq_Ptr { this: Stq_Base =>
       cm_ptr_reg := cm_ptr_reg + 1.U
       assert( ~((is_st_commited(0) | is_st_commited(1)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
       assert( cm_ptr_reg =/= wr_ptr_reg )
-    }    
-  } else if( cm_chn == 1 ) {
+    } .elsewhen( (if(hasVector){(buff(cm_ptr_reg + 1.U).vAttach.get.bufIdx =/= (vParams.lsuEntry).U) & ~emty} else {false.B}) ){ //a vls will auto commit
+      cm_ptr_reg := cm_ptr_reg + 1.U
+    }
+  } else if( cmChn == 1 ) {
     when( is_st_commited(0) ) {
       cm_ptr_reg := cm_ptr_reg + 1.U
       assert( ~is_amo )
@@ -131,13 +133,14 @@ trait Stq_Ptr { this: Stq_Base =>
       cm_ptr_reg := cm_ptr_reg + 1.U
       assert( ~((is_st_commited(0)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
       assert( cm_ptr_reg =/= wr_ptr_reg )
+    } .elsewhen( (if(hasVector){(buff(cm_ptr_reg + 1.U).vAttach.get.bufIdx =/= (vParams.lsuEntry).U) & ~emty} else {false.B}) ){ //a vls will auto commit
+      cm_ptr_reg := cm_ptr_reg + 1.U
     }
   } else {
     require(false)
   }
 
-
-    io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
+  io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
 }
 
 trait Stq_Overlap{ this: Stq_Base => 

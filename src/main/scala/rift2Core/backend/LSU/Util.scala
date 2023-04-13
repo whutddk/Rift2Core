@@ -40,60 +40,7 @@ object Strb2Mask{
 }
 
 
-object pkg_Dcache_Enq_Bundle{
-  def apply( ori: Info_miss_rsp )(implicit p: Parameters) = {
-    val res = Wire(new Dcache_Enq_Bundle)
 
-    res.paddr := ori.paddr
-    res.wstrb := "hFFFFFFFF".U
-    res.wdata := ori.wdata
-
-    {
-      res.fun := 0.U.asTypeOf(new Cache_op)
-      res.fun.grant := true.B      
-    }
-    res.rd := 0.U.asTypeOf(new RD_PHY)
-    res.chkIdx := 0.U
-    res
-  }
-  
-  def apply( ori: Info_probe_req )(implicit p: Parameters) = {
-    val res = Wire(new Dcache_Enq_Bundle)
-    res.paddr := ori.paddr
-    res.wstrb := 0.U
-    res.wdata := 0.U
-
-    {
-      res.fun := 0.U.asTypeOf(new Cache_op)
-      res.fun.probe := true.B      
-    }
-    res.rd := 0.U.asTypeOf(new RD_PHY)
-    res.chkIdx := 0.U
-    res
-  }
-
-  /** package write and amo operation*/
-  def apply( ori: Lsu_iss_info, overlapReq: Stq_req_Bundle, overlapResp: Stq_resp_Bundle)(implicit p: Parameters) = {
-
-    val res = Wire(new Dcache_Enq_Bundle)
-    val dw = res.wdata.getWidth
-
-    res.paddr := ori.paddr
-    res.wdata := Mux( ori.fun.is_lu, reAlign_data( from = 64, to = dw, data = overlapResp.wdata, addr = overlapReq.paddr ), ori.wdata_align(dw))
-    res.wstrb := Mux( ori.fun.is_lu, reAlign_strb( from = 64, to = dw, strb = overlapResp.wstrb, addr = overlapReq.paddr ), ori.wstrb_align(dw))
-
-    {
-      res.fun := 0.U.asTypeOf(new Cache_op)
-      res.fun.viewAsSupertype(new Lsu_isa) := ori.fun.viewAsSupertype(new Lsu_isa)
-
-    }
-    res.rd.rd0 := ori.param.rd0
-
-    res.chkIdx := 0.U
-    res
-  
-  }
-}
 
 object overlap_wr{
   def apply( ori: UInt, ori_wstrb: UInt, wdata: UInt, wstrb: UInt): (UInt, UInt) = {

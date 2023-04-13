@@ -23,10 +23,12 @@ class Rift2300 extends Config((_, _, _) => {
     rnChn = 1,
     opChn = 1,
     wbChn = 1,
-    cm_chn = 1,
+    cmChn = 1,
 
     pmpNum = 0,
-    regNum = 34,
+    xRegNum = 34,
+    fRegNum = 34,
+    vRegNum = 34,
     hpmNum  = 0,
 
     l1BeatBits = 64,
@@ -85,10 +87,12 @@ class Rift2310 extends Config((_, _, _) => {
     rnChn = 1,
     opChn = 1,
     wbChn = 1,
-    cm_chn = 1,
+    cmChn = 1,
 
     pmpNum = 0,
-    regNum = 34,
+    xRegNum = 34,
+    fRegNum = 34,
+    vRegNum = 34,
     hpmNum  = 0,
 
     l1BeatBits = 64,
@@ -143,10 +147,12 @@ class Rift2320 extends Config((_, _, _) => {
     rnChn = 1,
     opChn = 2,
     wbChn = 1,
-    cm_chn = 1,
+    cmChn = 1,
 
     pmpNum = 0,
-    regNum = 34,
+    xRegNum = 34,
+    fRegNum = 34,
+    vRegNum = 34,
     hpmNum  = 0,
 
     l1BeatBits = 64,
@@ -191,20 +197,24 @@ class Rift2320 extends Config((_, _, _) => {
 
 class Rift2330 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
+    hasL2  = true,
     hasDebugger = true,
     hasPreFetch = false,
     hasuBTB = false,
-    // hasLRU = false,
 
     ftChn = 4,
 
+    rnChn = 2,
     opChn = 2,
     wbChn = 2,
+    cmChn = 2,
 
-      pmpNum = 0,
-      hpmNum  = 0,
+    pmpNum = 0,
+    hpmNum  = 0,
 
-    regNum = 34,
+    xRegNum = 34,
+    fRegNum = 34,
+    vRegNum = 34,
 
     l1BeatBits = 64,
     memBeatBits = 64,
@@ -217,11 +227,6 @@ class Rift2330 extends Config((_, _, _) => {
       btb_cl = 4,
       bim_cl = 8,
       ras_dp = 4,
-      // uBTB_tag_w = 16,
-      // btb_cl = 4096,
-      // bim_cl = 4096,
-      // ras_dp = 256,
-      // tage_table = 6, 
     ),
 
     l1DW = 128,
@@ -258,9 +263,11 @@ class Rift2330D extends Config((_, _, _) => {
     rnChn = 1,
     opChn = 1,
     wbChn = 1,
-    cm_chn = 1,
+    cmChn = 1,
 
-    regNum = 34,
+    xRegNum = 34,
+    fRegNum = 34,
+    vRegNum = 34,
 
     pmpNum = 0,
     hpmNum  = 0,
@@ -310,7 +317,9 @@ class Rift2340 extends Config((_, _, _) => {
     opChn = 4,
     wbChn = 2,
 
-    regNum = 48,
+    xRegNum = 48,
+    fRegNum = 48,
+    vRegNum = 48,
 
     l1BeatBits = 64,
     memBeatBits = 64,
@@ -351,7 +360,9 @@ class Rift2350 extends Config((_, _, _) => {
     opChn = 4,
     wbChn = 4,
 
-    regNum = 48,
+    xRegNum = 48,
+    fRegNum = 48,
+    vRegNum = 48,
 
     l1BeatBits = 128,
     memBeatBits = 128,
@@ -392,7 +403,9 @@ class Rift2360 extends Config((_, _, _) => {
     opChn = 4,
     wbChn = 4,
 
-    regNum = 54,
+    xRegNum = 54,
+    fRegNum = 54,
+    vRegNum = 54,
 
     l1BeatBits = 128,
     memBeatBits = 128,
@@ -427,8 +440,24 @@ class Rift2360 extends Config((_, _, _) => {
 
 class Rift2370 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
-    fpuNum = 1,
-    aluNum = 2,
+    hasVector = false,
+
+    aluNum = 1,
+
+    dptEntry = 4,
+
+    icacheParameters = IcacheParameters(
+      bk = 1,
+      cb = 2,
+      cl = 128
+    ),
+    dcacheParameters = DcacheParameters(
+      bk = 2,
+      cb = 2,
+      cl = 128,
+      stEntry = 4,
+      sbEntry = 4,
+    ),
   )
 })
 
@@ -440,7 +469,9 @@ class Rift2380 extends Config((_, _, _) => {
     opChn = 6,
     wbChn = 4,
 
-    regNum = 96,
+    xRegNum = 96,
+    fRegNum = 96,
+    vRegNum = 96,
 
     l1BeatBits = 128,
     memBeatBits = 128,
@@ -480,7 +511,9 @@ class Rift2390 extends Config((_, _, _) => {
     opChn = 8,
     wbChn = 4,
 
-    regNum = 128,
+    xRegNum = 128,
+    fRegNum = 128,
+    vRegNum = 128,
 
     l1BeatBits = 128,
     memBeatBits = 128,
