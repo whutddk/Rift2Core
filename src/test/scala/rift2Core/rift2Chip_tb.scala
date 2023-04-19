@@ -36,7 +36,7 @@ object testMain extends App {
   // val cfg = new NormalCfg
   // val cfg = new Rift2GoCfg
   // val cfg = new Rift2350
-  val cfg = new Rift2370
+  val cfg = new Rift2330D
 
   (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
       ChiselGeneratorAnnotation(() => {

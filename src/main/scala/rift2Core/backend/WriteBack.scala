@@ -52,11 +52,11 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
     val irgReq = Flipped(Vec( opChn, Valid( UInt((log2Ceil(xRegNum)).W) ) ))
     val frgReq = Flipped(Vec( opChn, Valid( UInt((log2Ceil(fRegNum)).W) ) ))
-    val vrgReq = Flipped(Vec( opChn, Valid( UInt((log2Ceil(fRegNum)).W) ) ))
+    val vrgReq = Flipped(Vec( vParams.opChn, Valid( UInt((log2Ceil(vRegNum)).W) ) ))
 
     val irgRsp =  Vec( opChn, Valid(new ReadOp_Rsp_Bundle(64) ))
     val frgRsp =  Vec( opChn, Valid(new ReadOp_Rsp_Bundle(65) ))
-    val vrgRsp =  Vec( opChn, Valid(new ReadOp_Rsp_Bundle(vParams.vlen) ))
+    val vrgRsp =  Vec( vParams.opChn, Valid(new ReadOp_Rsp_Bundle(vParams.vlen) ))
 
 
     val alu_iWriteBack = Vec(aluNum, Flipped(new DecoupledIO(new WriteBack_info(dw = 64))))

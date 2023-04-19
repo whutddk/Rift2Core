@@ -268,6 +268,7 @@ class Rift2330D extends Config((_, _, _) => {
     xRegNum = 34,
     fRegNum = 34,
     vRegNum = 34,
+    cRegNum = 4,
 
     pmpNum = 0,
     hpmNum  = 0,

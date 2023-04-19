@@ -219,6 +219,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     val ackhavereset_W1 = Wire(Bool())
 
     val resumeReq_W1 = Wire(Bool())
+    val haltReq_W    = Wire(Bool())
   }
 
   /**
@@ -267,6 +268,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       }
         
     }
+
 
 
 
@@ -615,8 +617,8 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         RegField(1),
         RegField.w(1, RegWriteFn((valid, data) => { { ackhavereset_W1 := valid & (data === 1.U) }; true.B }), RegFieldDesc("ackhavereset", "0: No effect; 1: Clear havereset for any selected harts")),
         RegField(1, hartreset(hartsel), RegFieldDesc("hartreset",         "hartreset",         reset=Some(0))),
-        RegField.w(1, RegWriteFn((valid, data) => { resumeReq_W1 := (haltreq(hartsel) === 0.U & valid & data === 1.U); true.B }), RegFieldDesc("resumereq", "Writing 1 causes the currently selected harts to resume once, if they are halted when the write occurs. It also clears the resume ack bit for those harts.resumereq is ignored if haltreq is set.")),
-        RegField.w(1, RegWriteFn((valid, data) => { when(valid) {haltreq(hartsel) := data}; true.B }), RegFieldDesc("haltreq",         "haltreq"))
+        RegField.w(1, RegWriteFn((valid, data) => { resumeReq_W1 := ( haltReq_W === 0.U & valid & data === 1.U); true.B }), RegFieldDesc("resumereq", "Writing 1 causes the currently selected harts to resume once, if they are halted when the write occurs. It also clears the resume ack bit for those harts.resumereq is ignored if haltreq is set.")),
+        RegField.w(1, RegWriteFn((valid, data) => { when(valid) { haltReq_W := data; haltreq(hartsel) := haltReq_W} .otherwise{haltReq_W := DontCare}; true.B }), RegFieldDesc("haltreq",         "haltreq"))
       )),
 
       (0x11 << 2) -> RegFieldGroup("dmstatus", Some("debug module status register"), Seq(
