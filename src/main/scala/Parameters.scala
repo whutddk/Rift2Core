@@ -180,7 +180,7 @@ case class RiftSetting(
   xRegNum: Int = 64,
   fRegNum: Int = 64,
   vRegNum: Int = 64,
-  cRegNum: Int = 8,
+  // cRegNum: Int = 8,
 
   pmpNum: Int = 1,
   hpmNum: Int = 4,
@@ -275,7 +275,7 @@ trait HasRiftParameters {
   def vRegNum = riftSetting.vRegNum
   def maxRegNum = xRegNum max fRegNum max vRegNum
 
-  def cRegNum = riftSetting.cRegNum
+  // def cRegNum = riftSetting.cRegNum
 
   def pmpNum = riftSetting.pmpNum
   def hpmNum = riftSetting.hpmNum

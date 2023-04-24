@@ -34,7 +34,8 @@ abstract class CSRBase(implicit p: Parameters) extends RiftModule {
 
     val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
     val csr_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
-    val csr_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))
+            // val csr_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))
+    val xpuCsrWriteBack = Valid(new Exe_Port)
 
     val flush = Input(Bool())    
   }
@@ -51,7 +52,7 @@ abstract class CSRBase(implicit p: Parameters) extends RiftModule {
   val rc = io.csr_iss_exe.bits.fun.rc
   
   val dat = io.csr_iss_exe.bits.param.dat.op1
-  val addr = io.csr_iss_exe.bits.param.csrw( log2Ceil(cRegNum)+11, log2Ceil(cRegNum)+0 )
+  val addr = io.csr_iss_exe.bits.param.dat.op3(11,0)
 
   val dontWrite = (dat === 0.U) & ( rs | rc )
 
@@ -62,14 +63,13 @@ abstract class CSRBase(implicit p: Parameters) extends RiftModule {
   csr_exe_iwb_fifo.io.enq.bits.res := io.csr_iss_exe.bits.param.dat.op2
   csr_exe_iwb_fifo.io.enq.bits.rd0 := io.csr_iss_exe.bits.param.rd0
 
-  io.csr_cWriteBack.valid := csr_exe_iwb_fifo.io.enq.fire
-
-  io.csr_cWriteBack.bits.addr  := addr
-  io.csr_cWriteBack.bits.dati  := dat
-  io.csr_cWriteBack.bits.op_rw := rw & ~dontWrite
-  io.csr_cWriteBack.bits.op_rs := rs & ~dontWrite
-  io.csr_cWriteBack.bits.op_rc := rc & ~dontWrite
-  io.csr_cWriteBack.bits.idx   := io.csr_iss_exe.bits.param.csrw(log2Ceil(cRegNum)-1, 0 )
+  io.xpuCsrWriteBack.valid := csr_exe_iwb_fifo.io.enq.fire
+  io.xpuCsrWriteBack.bits.addr  := addr
+  io.xpuCsrWriteBack.bits.dat_i  := dat
+  io.xpuCsrWriteBack.bits.op_rw := rw & ~dontWrite
+  io.xpuCsrWriteBack.bits.op_rs := rs & ~dontWrite
+  io.xpuCsrWriteBack.bits.op_rc := rc & ~dontWrite
+  // io.xpuCsrWriteBack.bits.idx   := io.csr_iss_exe.bits.param.csrw(log2Ceil(cRegNum)-1, 0 )
 
 }
 
@@ -122,14 +122,14 @@ trait VConfig{ this: CSRBase =>
     csr_exe_iwb_fifo.io.enq.bits.res := io.csr_iss_exe.bits.param.dat.op2(62,8) //VConfig(62,8) 
     require( (log2Ceil(vParams.vlmax) + 8 + 1) <= 64 )
 
-    assert( io.csr_cWriteBack.bits.op_rw === false.B & io.csr_cWriteBack.bits.op_rs === false.B & io.csr_cWriteBack.bits.op_rc === false.B )
+    assert( io.xpuCsrWriteBack.bits.op_rw === false.B & io.xpuCsrWriteBack.bits.op_rs === false.B & io.xpuCsrWriteBack.bits.op_rc === false.B )
   }
 
   when( addr === "hC21".U ){ //vtype
     csr_exe_iwb_fifo.io.enq.bits.res := Cat( io.csr_iss_exe.bits.param.dat.op2.extract(63), 0.U(55.W), io.csr_iss_exe.bits.param.dat.op2(7,0))
     require( (log2Ceil(vParams.vlmax) + 8 + 1) <= 64 )
 
-    assert( io.csr_cWriteBack.bits.op_rw === false.B & io.csr_cWriteBack.bits.op_rs === false.B & io.csr_cWriteBack.bits.op_rc === false.B )
+    assert( io.xpuCsrWriteBack.bits.op_rw === false.B & io.xpuCsrWriteBack.bits.op_rs === false.B & io.xpuCsrWriteBack.bits.op_rc === false.B )
   }
   
   when( addr === "hFFE".U ){ //vconfig
@@ -176,12 +176,12 @@ trait VConfig{ this: CSRBase =>
 
 
     csr_exe_iwb_fifo.io.enq.bits.res := nvl
-    io.csr_cWriteBack.bits.addr  := "hFFE".U
+    io.xpuCsrWriteBack.bits.addr  := "hFFE".U
 
     assert( ~rw & ~rs & ~rs )
 
-    io.csr_cWriteBack.bits.op_rw := true.B
-    io.csr_cWriteBack.bits.dati := Cat( vill, nvl | 0.U((64-log2Ceil(vParams.vlmax)-8).W), vtype )
+    io.xpuCsrWriteBack.bits.op_rw := true.B
+    io.xpuCsrWriteBack.bits.dat_i := Cat( vill, nvl | 0.U((64-log2Ceil(vParams.vlmax)-8).W), vtype )
 
   }
 } 

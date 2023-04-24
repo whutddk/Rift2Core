@@ -43,10 +43,10 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     val lsu_exe_iwb = new DecoupledIO(new LSU_WriteBack_Bundle(dw=64))
     val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
 
-    val lsu_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))
+            // val lsu_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))
 
     val cmm_lsu = Input(new Info_cmm_lsu)
-                    // val lsu_cmm = Output( new Info_lsu_cmm )
+    val lsu_cmm = Output( new Info_lsu_cmm )
 
     val lsu_mmu = DecoupledIO(new Info_mmu_req)
     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
@@ -187,9 +187,6 @@ trait LSU_AddrTrans { this: LsuBase =>
   io.lsu_mmu.bits.is_R := io.lsu_iss_exe.bits.fun.is_R
   io.lsu_mmu.bits.is_W := io.lsu_iss_exe.bits.fun.is_W
   io.lsu_mmu.bits.is_X := false.B
-  io.lsu_iss_exe.ready :=
-    ( ~io.lsu_iss_exe.bits.fun.is_fence & io.lsu_mmu.ready) |
-    (  io.lsu_iss_exe.bits.fun.is_fence & fe_wb_fifo.io.enq.fire)
 
 
 }
@@ -546,39 +543,19 @@ trait LSU_Fault { this: LsuBase =>
   frtn_arb.io.in(1).bits.rd0 := io.lsu_iss_exe.bits.param.rd0
   frtn_arb.io.in(1).bits.res := 0.U
 
+  val excReg = RegInit(0.U.asTypeOf(new Info_lsu_cmm))
+  io.lsu_cmm := excReg
 
-  io.lsu_cWriteBack.valid := io.lsu_iss_exe.fire
-    // (io.mmu_lsu.fire     &  (io.mmu_lsu.bits.is_access_fault | io.mmu_lsu.bits.is_paging_fault | io.lsu_iss_exe.bits.is_misAlign)) |
-    // (io.mmu_lsu.fire     & ~(io.mmu_lsu.bits.is_access_fault | io.mmu_lsu.bits.is_paging_fault | io.lsu_iss_exe.bits.is_misAlign)) |
-    // (io.lsu_iss_exe.fire & io.lsu_iss_exe.bits.fun.is_fence )
-  
-  io.lsu_cWriteBack.bits.addr := "hfff".U
-  io.lsu_cWriteBack.bits.dati := 
-    Cat(
-      io.mmu_lsu.bits.is_access_fault,
-      io.mmu_lsu.bits.is_paging_fault, 
-      io.lsu_iss_exe.bits.is_misAlign,
-      (io.lsu_iss_exe.bits.param.dat.op1(vlen-1, 0) | 0.U(61.W))
-    ); require(vlen <= 61)
-  io.lsu_cWriteBack.bits.op_rw := io.mmu_lsu.bits.is_access_fault | io.mmu_lsu.bits.is_paging_fault | io.lsu_iss_exe.bits.is_misAlign
-  io.lsu_cWriteBack.bits.op_rs := false.B
-  io.lsu_cWriteBack.bits.op_rc := false.B
-  io.lsu_cWriteBack.bits.idx   := io.lsu_iss_exe.bits.param.csrw(log2Ceil(cRegNum)-1, 0 )
+  when(io.flush){
+    excReg := 0.U.asTypeOf(new Info_lsu_cmm)
+  }.elsewhen( io.lsu_iss_exe.fire & ~(excReg.is_access_fault | excReg.is_paging_fault | excReg.is_misAlign) ){
+    excReg.is_access_fault := io.mmu_lsu.bits.is_access_fault
+    excReg.is_paging_fault := io.mmu_lsu.bits.is_paging_fault
+    excReg.is_misAlign     := io.lsu_iss_exe.bits.is_misAlign
+    excReg.trap_addr       := io.lsu_iss_exe.bits.param.dat.op1(vlen-1, 0)
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  val isFaultBlock = excReg.is_access_fault | excReg.is_paging_fault | excReg.is_misAlign
 
 }
 
@@ -592,6 +569,12 @@ class Lsu(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends LsuBase(edge)
   with LSU_Mem
   with LSU_WriteBack
   with LSU_Fault{
+
+  io.lsu_iss_exe.ready := 
+    (
+      ( ~io.lsu_iss_exe.bits.fun.is_fence & io.lsu_mmu.ready) |
+      (  io.lsu_iss_exe.bits.fun.is_fence & fe_wb_fifo.io.enq.fire)      
+    ) & ~(isFaultBlock) //fault block
 
   is_empty := 
     stQueue.io.is_empty & 

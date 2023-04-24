@@ -137,12 +137,12 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
 
 
   
-  val vfl_stage = if(hasVector){ Some(Module(new VRenameFilter)) } else {None}
+  // val vfl_stage = if(hasVector){ Some(Module(new VRenameFilter)) } else {None}
 
   val rnm_stage = Module(new Rename)
   if( hasVector ){
-    if4.io.if4_resp <> vfl_stage.get.io.enq
-    vfl_stage.get.io.deq <> rnm_stage.io.rnReq
+    // if4.io.if4_resp <> vfl_stage.get.io.enq
+    // vfl_stage.get.io.deq <> rnm_stage.io.rnReq
   } else {
     if4.io.if4_resp <> rnm_stage.io.rnReq
   }
@@ -204,14 +204,15 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
     mdl.io.fpu_iWriteBack <> exe_stage.io.fpu_exe_iwb
     mdl.io.fpu_fWriteBack <> exe_stage.io.fpu_exe_fwb
 
-    mdl.io.cWriteBack <> exe_stage.io.cWriteBack
-    mdl.io.csrIsReady <> iss_stage.io.csrIsReady
 
-    if(hasVector) {mdl.io.csrIsReady <> vfl_stage.get.io.csrIsReady}
+    mdl.io.xpuCsrWriteBack := exe_stage.io.xpuCsrWriteBack
+    mdl.io.fpuCsrWriteBack := exe_stage.io.fpuCsrWriteBack
 
-    mdl.io.cLookup <> rnm_stage.io.cLookup
-    mdl.io.cRename <> rnm_stage.io.cRename
 
+    mdl.io.xpuCsrMolloc    <> rnm_stage.io.xpuCsrMolloc
+    mdl.io.fpuCsrMolloc    <> rnm_stage.io.fpuCsrMolloc
+
+    // if(hasVector) {vfl_stage.get.io.csrIsReady := DontCare}
 
     mdl
   }
@@ -263,7 +264,7 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   cmm_stage.io.cm_op <> iwb_stage.io.commit
   cmm_stage.io.rod <> rnm_stage.io.rod_i
   cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
-  // cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
+  cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
   cmm_stage.io.bctq <> exe_stage.io.bctq
   cmm_stage.io.jctq <> exe_stage.io.jctq
   cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect
@@ -275,10 +276,12 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
 
 
 
-  if(hasVector) {vfl_stage.get.io.csrfiles := cmm_stage.io.csrfiles}
+  // if(hasVector) {vfl_stage.get.io.csrfiles := cmm_stage.io.csrfiles}
   iss_stage.io.csrfiles := cmm_stage.io.csrfiles
-  iwb_stage.io.cCommit <> cmm_stage.io.csrCmm
-  cmm_stage.io.csrOp := iwb_stage.io.csrOp
+
+  iwb_stage.io.xpuCsrCommit <> cmm_stage.io.xpuCsrCommit
+  iwb_stage.io.fpuCsrCommit <> cmm_stage.io.fpuCsrCommit
+
 
 
   cmm_stage.io.rtc_clock := io.rtc_clock
