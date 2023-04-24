@@ -25,13 +25,15 @@ import rift2Core.backend._
 import rift2Chip._
 import org.chipsalliance.cde.config._
 
-class Exe_Port extends Bundle {
-  val addr = UInt(12.W)
+class CsrOperator extends Bundle{
   val dat_i = UInt(64.W)
   val op_rw = Bool()
   val op_rs = Bool()
   val op_rc = Bool()
+}
 
+class Exe_Port extends CsrOperator {
+  val addr = UInt(12.W)
 }
 
 

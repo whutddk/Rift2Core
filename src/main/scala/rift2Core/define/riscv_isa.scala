@@ -1114,9 +1114,6 @@ class Info_instruction(implicit p: Parameters) extends Instruction_set {
 
 class Dpt_info(implicit p: Parameters) extends Info_instruction {
   val phy = new Reg_PHY
-  val csrr = UInt( (12+log2Ceil(cRegNum)).W )
-  val csrw = UInt( (12+log2Ceil(cRegNum)).W )
-
 }
 
 
@@ -1169,9 +1166,7 @@ class Bru_iss_info(implicit p: Parameters) extends RiftBundle {
 
 
 class Lsu_param(implicit p: Parameters) extends RD_PHY {
-
   val dat    = new Operation_source( dw=(if(hasVector){vParams.vlen} else{64}) )
-  val csrw = UInt( (12+log2Ceil(cRegNum)).W)
 
   // override def cloneType = ( new Lsu_param ).asInstanceOf[this.type]
 }
@@ -1244,7 +1239,7 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val is_wfi = Bool()
   val is_csr = Bool()
   val is_fpu = Bool()
-  // val is_fcsr = Bool()
+  val is_fcsr = Bool()
   val is_rvc = Bool()
 
   val isXcmm = Bool()
@@ -1253,8 +1248,6 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
 
   val privil = new Privil_isa
   val is_illeage = Bool()
-
-  val csrw = UInt((12+log2Ceil(cRegNum)).W)
 
   val isVector = Bool()
   val isLast   = Bool()
@@ -1273,7 +1266,6 @@ class Csr_function(implicit p: Parameters) extends RiftBundle {
 
 class Csr_param(implicit p: Parameters) extends RD_PHY {
   val dat = new Operation_source(dw=64)
-  val csrw = UInt( (12+log2Ceil(cRegNum)).W)
 
   // override def cloneType = ( new Csr_param ).asInstanceOf[this.type]
 }
