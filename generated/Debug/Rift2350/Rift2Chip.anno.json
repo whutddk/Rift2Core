@@ -3,2113 +3,2161 @@
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|DatRAM",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/if2:IF2/datRAM_0:DatRAM",
-    "index":0.006872852233676976
+    "index":0.0068143100511073255
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|DatRAM_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/if2:IF2/datRAM_1:DatRAM",
-    "index":0.00859106529209622
+    "index":0.008517887563884156
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|TagRAM",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/if2:IF2/tagRAM_0:TagRAM",
-    "index":0.010309278350515464
+    "index":0.010221465076660987
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|TagRAM_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/if2:IF2/tagRAM_1:TagRAM",
-    "index":0.012027491408934709
+    "index":0.01192504258943782
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/if2:IF2/rpl_sel_rpl_prng:MaxPeriodFibonacciLFSR_1",
-    "index":0.013745704467353952
+    "index":0.013628620102214651
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Decode16",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/if4:IF4/instr_fifo_io_enq_0_bits_dec16:Decode16",
-    "index":0.06701030927835051
+    "index":0.06643952299829642
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Decode32",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/if4:IF4/instr_fifo_io_enq_0_bits_dec32:Decode32",
-    "index":0.06872852233676977
+    "index":0.06814310051107325
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Decode16_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/if4:IF4/instr_fifo_io_enq_1_bits_dec16:Decode16",
-    "index":0.070446735395189
+    "index":0.06984667802385008
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Decode32_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/if4:IF4/instr_fifo_io_enq_1_bits_dec32:Decode32",
-    "index":0.07216494845360824
+    "index":0.07155025553662692
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_7",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/alu_0:Alu/alu_exe_iwb_fifo:Queue_7",
-    "index":0.09278350515463918
+    "original":"~Rift2Chip|Queue_2",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/iss_stage:Issue/aluIssFifo_0:Queue_2",
+    "index":0.0817717206132879
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_3",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/iss_stage:Issue/aluIssFifo_1:Queue_2",
+    "index":0.08347529812606473
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_8",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/bru:Bru/bru_exe_iwb_fifo:Queue_7",
-    "index":0.09621993127147767
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/alu_0:Alu/alu_exe_iwb_fifo:Queue_8",
+    "index":0.09369676320272573
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Alu",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/alu_0:Alu",
+    "index":0.09540034071550256
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_9",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/alu_1:Alu/alu_exe_iwb_fifo:Queue_8",
+    "index":0.09710391822827939
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Alu_1",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/alu_1:Alu",
+    "index":0.09880749574105621
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_10",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/bru:Bru/bru_exe_iwb_fifo:Queue_8",
+    "index":0.10051107325383304
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|IO_Lsu",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/system:IO_Lsu",
-    "index":0.10652920962199312
+    "index":0.11073253833049404
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|IO_Lsu_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/periph:IO_Lsu",
-    "index":0.10824742268041238
+    "index":0.11243611584327087
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_11",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/probeUnit:ProbeUnit/probe_fifo:Queue_11",
-    "index":0.11168384879725086
+    "original":"~Rift2Chip|Queue_13",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/probeUnit:ProbeUnit/probe_fifo:Queue_13",
+    "index":0.11584327086882454
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|ProbeUnit",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/probeUnit:ProbeUnit",
-    "index":0.1134020618556701
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_12",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/writeBackUnit:WriteBackUnit/wb_fifo:Queue_12",
-    "index":0.11512027491408934
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_13",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/lsEntry:Queue_13",
-    "index":0.11855670103092783
+    "index":0.11754684838160136
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_14",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/rtn_fifo:Queue_14",
-    "index":0.12027491408934708
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/writeBackUnit:WriteBackUnit/wb_fifo:Queue_14",
+    "index":0.11925042589437819
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_15",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/lsEntry:Queue_15",
+    "index":0.12265758091993186
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_16",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/rtn_fifo:Queue_16",
+    "index":0.12436115843270869
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Arbiter_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/op_arb:Arbiter_1",
-    "index":0.12199312714776632
+    "index":0.1260647359454855
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Arbiter_2",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/rd_arb:Arbiter_2",
-    "index":0.12371134020618557
+    "index":0.12776831345826234
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_15",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/reload_fifo:Queue_15",
-    "index":0.1254295532646048
+    "original":"~Rift2Chip|Queue_17",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/reload_fifo:Queue_17",
+    "index":0.12947189097103917
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|DatRAM_2",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/stage:DcacheStage/datRAM_0:DatRAM",
-    "index":0.12714776632302405
+    "index":0.131175468483816
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|DatRAM_3",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/stage:DcacheStage/datRAM_1:DatRAM",
-    "index":0.12886597938144329
+    "index":0.13287904599659284
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|TagRAM_2",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/stage:DcacheStage/tagRAM_0:TagRAM_2",
-    "index":0.13058419243986255
+    "index":0.13458262350936967
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|TagRAM_3",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/stage:DcacheStage/tagRAM_1:TagRAM_2",
-    "index":0.1323024054982818
+    "index":0.1362862010221465
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_2",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_0:Dcache/stage:DcacheStage/rplSel_rpl_prng:MaxPeriodFibonacciLFSR_1",
-    "index":0.13402061855670103
+    "index":0.13798977853492334
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_16",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/probeUnit:ProbeUnit/probe_fifo:Queue_11",
-    "index":0.140893470790378
+    "original":"~Rift2Chip|Queue_18",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/probeUnit:ProbeUnit/probe_fifo:Queue_13",
+    "index":0.14480408858603067
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|ProbeUnit_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/probeUnit:ProbeUnit",
-    "index":0.14261168384879724
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_17",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/writeBackUnit:WriteBackUnit_1/wb_fifo:Queue_12",
-    "index":0.14432989690721648
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_18",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/lsEntry:Queue_13",
-    "index":0.14776632302405499
+    "index":0.1465076660988075
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_19",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/rtn_fifo:Queue_14",
-    "index":0.14948453608247422
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/writeBackUnit:WriteBackUnit_1/wb_fifo:Queue_14",
+    "index":0.14821124361158433
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_20",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/lsEntry:Queue_15",
+    "index":0.151618398637138
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_21",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/rtn_fifo:Queue_16",
+    "index":0.15332197614991483
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Arbiter_3",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/op_arb:Arbiter_1",
-    "index":0.15120274914089346
+    "index":0.15502555366269166
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Arbiter_4",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/rd_arb:Arbiter_2",
-    "index":0.15292096219931273
+    "index":0.1567291311754685
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_20",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/reload_fifo:Queue_15",
-    "index":0.15463917525773196
+    "original":"~Rift2Chip|Queue_22",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/reload_fifo:Queue_17",
+    "index":0.15843270868824533
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|DatRAM_4",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/stage:DcacheStage_1/datRAM_0:DatRAM",
-    "index":0.1563573883161512
+    "index":0.16013628620102216
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|DatRAM_5",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/stage:DcacheStage_1/datRAM_1:DatRAM",
-    "index":0.15807560137457044
+    "index":0.16183986371379896
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|TagRAM_4",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/stage:DcacheStage_1/tagRAM_0:TagRAM_2",
-    "index":0.15979381443298968
+    "index":0.1635434412265758
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|TagRAM_5",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/stage:DcacheStage_1/tagRAM_1:TagRAM_2",
-    "index":0.16151202749140894
+    "index":0.16524701873935263
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_3",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/cache_1:Dcache_1/stage:DcacheStage_1/rplSel_rpl_prng:MaxPeriodFibonacciLFSR_1",
-    "index":0.16323024054982818
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_21",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/lu_wb_fifo:Queue_21",
-    "index":0.17010309278350516
+    "index":0.16695059625212946
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_23",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/su_wb_fifo:Queue_21",
-    "index":0.17353951890034364
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_24",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/fe_wb_fifo:Queue_21",
-    "index":0.17525773195876287
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Arbiter_7",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/acquireArb:Arbiter_7",
-    "index":0.17869415807560138
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/lu_wb_fifo:Queue_23",
+    "index":0.1737649063032368
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_25",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/csr:Csr/csr_exe_iwb_fifo:Queue_7",
-    "index":0.18556701030927836
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/su_wb_fifo:Queue_23",
+    "index":0.17717206132879046
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_26",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/fe_wb_fifo:Queue_23",
+    "index":0.1788756388415673
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Arbiter_8",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/lsu:Lsu/acquireArb:Arbiter_8",
+    "index":0.1839863713798978
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_27",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/mulDiv_0:MulDiv/mul_exe_iwb_fifo:Queue_7",
-    "index":0.19072164948453607
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/csr:CSR/csr_exe_iwb_fifo:Queue_8",
+    "index":0.19080068143100512
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_28",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/mulDiv_0:MulDiv/multiplier:Multiplier/pipeMidStageInfo:Queue_28",
-    "index":0.19243986254295534
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/mulDiv_0:MulDiv/mul_exe_iwb_fifo:Queue_8",
+    "index":0.19420783645655879
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_29",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/mulDiv_0:MulDiv/multiplier:Multiplier/pipeFnlStageInfo:Queue_28",
-    "index":0.19415807560137457
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/mulDiv_0:MulDiv/multiplier:Multiplier/pipeMidStageInfo:Queue_29",
+    "index":0.19591141396933562
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Arbiter_10",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/mulDiv_0:MulDiv/dividor:Dividor/divRtnArb:Arbiter_10",
-    "index":0.19931271477663232
+    "original":"~Rift2Chip|Queue_30",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/mulDiv_0:MulDiv/multiplier:Multiplier/pipeFnlStageInfo:Queue_29",
+    "index":0.19761499148211242
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Arbiter_11",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/mulDiv_0:MulDiv/iwbArb:Arbiter_10",
-    "index":0.2027491408934708
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/mulDiv_0:MulDiv/dividor:Dividor/divRtnArb:Arbiter_11",
+    "index":0.20272572402044292
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|ReDirect_5",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/cmm_stage:Commit/csrExe_mdl:ReDirect_5",
-    "index":0.21993127147766323
+    "original":"~Rift2Chip|Arbiter_12",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/exe_stage:Execute/mulDiv_0:MulDiv/iwbArb:Arbiter_11",
+    "index":0.2061328790459966
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|ReDirect_6",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/cmm_stage:Commit/fcsrExe_mdl:ReDirect_5",
-    "index":0.22164948453608246
+    "original":"~Rift2Chip|Queue_31",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/iwb_stage:WriteBack/cReg:CsrScoreBoard/xpuInflyCounter:Queue_31",
+    "index":0.21805792163543442
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_32",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/iwb_stage:WriteBack/cReg:CsrScoreBoard/xpuWriteBackFifo:Queue_32",
+    "index":0.21976149914821125
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_33",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/iwb_stage:WriteBack/cReg:CsrScoreBoard/fpuInflyCounter:Queue_31",
+    "index":0.22146507666098808
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_34",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/iwb_stage:WriteBack/cReg:CsrScoreBoard/fpuWriteBackFifo:Queue_32",
+    "index":0.2231686541737649
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_4",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/itlb:TLB/random_idx_prng:MaxPeriodFibonacciLFSR_4",
-    "index":0.22508591065292097
+    "index":0.23168654173764908
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_5",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/itlb:TLB/random_idx_prng_1:MaxPeriodFibonacciLFSR_4",
-    "index":0.2268041237113402
+    "index":0.23339011925042588
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_6",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/itlb:TLB/random_idx_prng_2:MaxPeriodFibonacciLFSR_4",
-    "index":0.22852233676975944
+    "index":0.23509369676320271
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_7",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/itlb:TLB/random_idx_prng_3:MaxPeriodFibonacciLFSR_4",
-    "index":0.23024054982817868
+    "index":0.23679727427597955
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|TLB",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/itlb:TLB",
-    "index":0.23195876288659795
+    "index":0.23850085178875638
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_8",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/dtlb:TLB/random_idx_prng:MaxPeriodFibonacciLFSR_4",
-    "index":0.23367697594501718
+    "index":0.2402044293015332
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_9",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/dtlb:TLB/random_idx_prng_1:MaxPeriodFibonacciLFSR_4",
-    "index":0.23539518900343642
+    "index":0.24190800681431004
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_10",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/dtlb:TLB/random_idx_prng_2:MaxPeriodFibonacciLFSR_4",
-    "index":0.23711340206185566
+    "index":0.24361158432708688
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_11",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/dtlb:TLB/random_idx_prng_3:MaxPeriodFibonacciLFSR_4",
-    "index":0.23883161512027493
+    "index":0.2453151618398637
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|TLB_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/dtlb:TLB",
-    "index":0.24054982817869416
+    "index":0.24701873935264054
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|PMP",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/iptw:PTW/walkRspBits_is_access_fault_mdl:PMP",
-    "index":0.2422680412371134
+    "index":0.24872231686541738
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|PMP_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/dptw:PTW_1/walkRspBits_is_access_fault_mdl:PMP",
-    "index":0.24570446735395188
+    "index":0.252129471890971
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|PMP_2",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/io_mmu_if_bits_is_access_fault_mdl:PMP",
-    "index":0.24914089347079038
+    "index":0.2555366269165247
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|PMP_3",
     "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/io_mmu_lsu_bits_is_access_fault_mdl:PMP",
-    "index":0.2508591065292096
+    "index":0.2572402044293015
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Arbiter_12",
-    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/ptwGetArb:Arbiter_7",
-    "index":0.25257731958762886
+    "original":"~Rift2Chip|Arbiter_13",
+    "duplicate":"~Rift2Chip|Rift2Chip/i_rift2Core:Rift2Core/i_mmu:MMU/ptwGetArb:Arbiter_8",
+    "index":0.25894378194207834
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dm:DebugModule/monitor:TLMonitor/plusarg_reader:plusarg_reader",
-    "index":0.26288659793814434
+    "index":0.26916524701873934
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dm:DebugModule/monitor:TLMonitor/plusarg_reader_1:plusarg_reader",
-    "index":0.2646048109965636
+    "index":0.2708688245315162
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/widx_widx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.2852233676975945
+    "index":0.29131175468483816
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/widx_widx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_1:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.2869415807560137
+    "index":0.293015332197615
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_2",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/widx_widx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_2:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.28865979381443296
+    "index":0.29471890971039183
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_3",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/widx_widx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_3:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.29037800687285226
+    "index":0.29642248722316866
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w4_d3_i0",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/widx_widx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0",
-    "index":0.2920962199312715
+    "index":0.2981260647359455
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|ClockCrossingReg_w42",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/io_deq_bits_deq_bits_reg:ClockCrossingReg_w42",
-    "index":0.29381443298969073
+    "index":0.29982964224872233
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_4",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/sink_valid_0:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.29553264604810997
+    "index":0.30153321976149916
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/sink_valid_0:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.2972508591065292
+    "index":0.303236797274276
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/sink_valid_0:AsyncValidSync",
-    "index":0.29896907216494845
+    "index":0.3049403747870528
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_5",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/sink_valid_1:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3006872852233677
+    "index":0.30664395229982966
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/sink_valid_1:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.3024054982817869
+    "index":0.3083475298126065
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/sink_valid_1:AsyncValidSync",
-    "index":0.30412371134020616
+    "index":0.3100511073253833
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_6",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/source_extend:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.30584192439862545
+    "index":0.31175468483816016
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_2",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/source_extend:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.3075601374570447
+    "index":0.313458262350937
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_2",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/source_extend:AsyncValidSync",
-    "index":0.30927835051546393
+    "index":0.3151618398637138
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_7",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/source_valid:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.31099656357388317
+    "index":0.31686541737649065
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_3",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/source_valid:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.3127147766323024
+    "index":0.3185689948892675
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_3",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink/source_valid:AsyncValidSync",
-    "index":0.31443298969072164
+    "index":0.3202725724020443
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncQueueSink",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dmi_dm_req_sink:AsyncQueueSink",
-    "index":0.3161512027491409
+    "index":0.3219761499148211
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_8",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/ridx_ridx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3178694158075601
+    "index":0.32367972742759793
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_9",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/ridx_ridx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_1:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.31958762886597936
+    "index":0.32538330494037476
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_10",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/ridx_ridx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_2:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.32130584192439865
+    "index":0.3270868824531516
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_11",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/ridx_ridx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_3:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3230240549828179
+    "index":0.3287904599659284
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w4_d3_i0_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/ridx_ridx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0",
-    "index":0.3247422680412371
+    "index":0.33049403747870526
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_12",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/source_valid_0:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.32646048109965636
+    "index":0.3321976149914821
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_4",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/source_valid_0:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.3281786941580756
+    "index":0.3339011925042589
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_4",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/source_valid_0:AsyncValidSync",
-    "index":0.32989690721649484
+    "index":0.33560477001703576
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_13",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/source_valid_1:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3316151202749141
+    "index":0.3373083475298126
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_5",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/source_valid_1:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.3333333333333333
+    "index":0.3390119250425894
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_5",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/source_valid_1:AsyncValidSync",
-    "index":0.33505154639175255
+    "index":0.34071550255536626
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_14",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/sink_extend:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.33676975945017185
+    "index":0.3424190800681431
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_6",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/sink_extend:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.3384879725085911
+    "index":0.3441226575809199
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_6",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/sink_extend:AsyncValidSync",
-    "index":0.3402061855670103
+    "index":0.34582623509369675
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_15",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/sink_valid:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.34192439862542956
+    "index":0.3475298126064736
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_7",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/sink_valid:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.3436426116838488
+    "index":0.3492333901192504
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_7",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource/sink_valid:AsyncValidSync",
-    "index":0.34536082474226804
+    "index":0.35093696763202725
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncQueueSource",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/resp_ToAsync_source:AsyncQueueSource",
-    "index":0.3470790378006873
+    "index":0.3526405451448041
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_16",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/widx_widx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3487972508591065
+    "index":0.3543441226575809
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_17",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/widx_widx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_1:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.35051546391752575
+    "index":0.35604770017035775
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_18",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/widx_widx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_2:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.35223367697594504
+    "index":0.3577512776831346
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_19",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/widx_widx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_3:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3539518900343643
+    "index":0.3594548551959114
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w4_d3_i0_2",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/widx_widx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0",
-    "index":0.3556701030927835
+    "index":0.36115843270868825
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|ClockCrossingReg_w42_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/io_deq_bits_deq_bits_reg:ClockCrossingReg_w42",
-    "index":0.35738831615120276
+    "index":0.3628620102214651
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_20",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/sink_valid_0:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.359106529209622
+    "index":0.3645655877342419
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_8",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/sink_valid_0:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.36082474226804123
+    "index":0.36626916524701875
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_8",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/sink_valid_0:AsyncValidSync",
-    "index":0.36254295532646047
+    "index":0.3679727427597956
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_21",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/sink_valid_1:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3642611683848797
+    "index":0.3696763202725724
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_9",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/sink_valid_1:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.36597938144329895
+    "index":0.37137989778534924
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_9",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/sink_valid_1:AsyncValidSync",
-    "index":0.36769759450171824
+    "index":0.3730834752981261
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_22",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/source_extend:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3694158075601375
+    "index":0.3747870528109029
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_10",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/source_extend:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.3711340206185567
+    "index":0.37649063032367974
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_10",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/source_extend:AsyncValidSync",
-    "index":0.37285223367697595
+    "index":0.3781942078364566
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_23",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/source_valid:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3745704467353952
+    "index":0.3798977853492334
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_11",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/source_valid:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.37628865979381443
+    "index":0.38160136286201024
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_11",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink/source_valid:AsyncValidSync",
-    "index":0.37800687285223367
+    "index":0.3833049403747871
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncQueueSink_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/io_dtm_dmi_resp_sink:AsyncQueueSink",
-    "index":0.3797250859106529
+    "index":0.3850085178875639
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_24",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/ridx_ridx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.38144329896907214
+    "index":0.38671209540034074
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_25",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/ridx_ridx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_1:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.38316151202749144
+    "index":0.38841567291311757
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_26",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/ridx_ridx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_2:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3848797250859107
+    "index":0.3901192504258944
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_27",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/ridx_ridx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0/output_chain_3:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3865979381443299
+    "index":0.39182282793867124
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w4_d3_i0_3",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/ridx_ridx_gray:AsyncResetSynchronizerShiftReg_w4_d3_i0",
-    "index":0.38831615120274915
+    "index":0.393526405451448
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_28",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/source_valid_0:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3900343642611684
+    "index":0.39522998296422485
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_12",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/source_valid_0:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.3917525773195876
+    "index":0.3969335604770017
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_12",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/source_valid_0:AsyncValidSync",
-    "index":0.39347079037800686
+    "index":0.3986371379897785
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_29",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/source_valid_1:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.3951890034364261
+    "index":0.40034071550255534
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_13",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/source_valid_1:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.39690721649484534
+    "index":0.4020442930153322
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_13",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/source_valid_1:AsyncValidSync",
-    "index":0.39862542955326463
+    "index":0.403747870528109
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_30",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/sink_extend:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.40034364261168387
+    "index":0.40545144804088584
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_14",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/sink_extend:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.4020618556701031
+    "index":0.4071550255536627
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_14",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/sink_extend:AsyncValidSync",
-    "index":0.40378006872852235
+    "index":0.4088586030664395
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerPrimitiveShiftReg_d3_i0_31",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/sink_valid:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0/output_chain:AsyncResetSynchronizerPrimitiveShiftReg_d3_i0",
-    "index":0.4054982817869416
+    "index":0.41056218057921634
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncResetSynchronizerShiftReg_w1_d3_i0_15",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/sink_valid:AsyncValidSync/io_out_sink_valid_0:AsyncResetSynchronizerShiftReg_w1_d3_i0",
-    "index":0.4072164948453608
+    "index":0.4122657580919932
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncValidSync_15",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource/sink_valid:AsyncValidSync",
-    "index":0.40893470790378006
+    "index":0.41396933560477
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|AsyncQueueSource_1",
     "duplicate":"~Rift2Chip|Rift2Chip/i_debugger:Debugger/dmi:DMI/req_ToAsync_source:AsyncQueueSource",
-    "index":0.4106529209621993
+    "index":0.41567291311754684
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_2",
     "duplicate":"~Rift2Chip|Rift2Chip/i_aclint:AClint/monitor:TLMonitor_1/plusarg_reader:plusarg_reader",
-    "index":0.41580756013745707
+    "index":0.42078364565587734
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_3",
     "duplicate":"~Rift2Chip|Rift2Chip/i_aclint:AClint/monitor:TLMonitor_1/plusarg_reader_1:plusarg_reader",
-    "index":0.4175257731958763
+    "index":0.42248722316865417
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_4",
     "duplicate":"~Rift2Chip|Rift2Chip/i_plic:Plic/monitor:TLMonitor_2/plusarg_reader:plusarg_reader",
-    "index":0.422680412371134
+    "index":0.42759795570698467
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_5",
     "duplicate":"~Rift2Chip|Rift2Chip/i_plic:Plic/monitor:TLMonitor_2/plusarg_reader_1:plusarg_reader",
-    "index":0.42439862542955326
+    "index":0.4293015332197615
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_6",
     "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/monitor:TLMonitor_3/plusarg_reader:plusarg_reader",
-    "index":0.43127147766323026
+    "index":0.43611584327086883
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_7",
     "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/monitor:TLMonitor_3/plusarg_reader_1:plusarg_reader",
-    "index":0.4329896907216495
+    "index":0.43781942078364566
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|MaxPeriodFibonacciLFSR_12",
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/directory:Directory/victimLFSR_prng:MaxPeriodFibonacciLFSR_1",
+    "index":0.48211243611584326
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_0:MSHR",
-    "index":0.4845360824742268
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_0:MSHR",
+    "index":0.4889267461669506
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_1",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_1:MSHR",
-    "index":0.48625429553264604
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_1:MSHR",
+    "index":0.4906303236797274
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_2",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_2:MSHR",
-    "index":0.4879725085910653
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_2:MSHR",
+    "index":0.49233390119250425
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_3",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_3:MSHR",
-    "index":0.4896907216494845
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_3:MSHR",
+    "index":0.4940374787052811
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_4",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_4:MSHR",
-    "index":0.49140893470790376
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_4:MSHR",
+    "index":0.4957410562180579
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_5",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_5:MSHR",
-    "index":0.49312714776632305
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_5:MSHR",
+    "index":0.49744463373083475
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_6",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_6:MSHR",
-    "index":0.4948453608247423
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_6:MSHR",
+    "index":0.4991482112436116
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_7",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_7:MSHR",
-    "index":0.4965635738831615
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_7:MSHR",
+    "index":0.5008517887563884
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_8",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_8:MSHR",
-    "index":0.49828178694158076
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_8:MSHR",
+    "index":0.5025553662691652
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_9",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_9:MSHR",
-    "index":0.5
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_9:MSHR",
+    "index":0.504258943781942
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_10",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_10:MSHR",
-    "index":0.5017182130584192
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_10:MSHR",
+    "index":0.5059625212947189
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_11",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_11:MSHR",
-    "index":0.5034364261168385
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_11:MSHR",
+    "index":0.5076660988074957
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_12",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_12:MSHR",
-    "index":0.5051546391752577
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_12:MSHR",
+    "index":0.5093696763202725
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_13",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_13:MSHR",
-    "index":0.506872852233677
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_13:MSHR",
+    "index":0.5110732538330494
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_14",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_14:MSHR",
-    "index":0.5085910652920962
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_14:MSHR",
+    "index":0.5127768313458262
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_15",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_15:MSHR",
-    "index":0.5103092783505154
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_15:MSHR",
+    "index":0.514480408858603
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_16",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_16:MSHR",
-    "index":0.5120274914089347
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_16:MSHR",
+    "index":0.5161839863713799
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_17",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_17:MSHR",
-    "index":0.5137457044673539
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_17:MSHR",
+    "index":0.5178875638841567
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_18",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_18:MSHR",
-    "index":0.5154639175257731
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_18:MSHR",
+    "index":0.5195911413969335
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_19",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/abc_mshrs_19:MSHR",
-    "index":0.5171821305841925
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/abc_mshrs_19:MSHR",
+    "index":0.5212947189097104
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_20",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/bc_mshr:MSHR",
-    "index":0.5189003436426117
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/bc_mshr:MSHR",
+    "index":0.5229982964224872
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|MSHR_21",
-    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/mods_0:Scheduler/c_mshr:MSHR",
-    "index":0.520618556701031
+    "duplicate":"~Rift2Chip|Rift2Chip/sifiveCache:InclusiveCache/inclusive_cache_bank_sched:InclusiveCacheBankScheduler/c_mshr:MSHR",
+    "index":0.524701873935264
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_8",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar:TLXbar/monitor:TLMonitor_4/plusarg_reader:plusarg_reader",
-    "index":0.5257731958762887
+    "index":0.5298126064735945
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_9",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar:TLXbar/monitor:TLMonitor_4/plusarg_reader_1:plusarg_reader",
-    "index":0.5274914089347079
+    "index":0.5315161839863713
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_10",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar:TLXbar/monitor_1:TLMonitor_5/plusarg_reader:plusarg_reader",
-    "index":0.5309278350515464
+    "index":0.534923339011925
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_11",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar:TLXbar/monitor_1:TLMonitor_5/plusarg_reader_1:plusarg_reader",
-    "index":0.5326460481099656
+    "index":0.5366269165247018
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_12",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_1:TLXbar_1/monitor:TLMonitor_6/plusarg_reader:plusarg_reader",
-    "index":0.5378006872852233
+    "index":0.5417376490630323
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_13",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_1:TLXbar_1/monitor:TLMonitor_6/plusarg_reader_1:plusarg_reader",
-    "index":0.5395189003436426
+    "index":0.5434412265758092
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_14",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_1:TLXbar_1/monitor_1:TLMonitor_7/plusarg_reader:plusarg_reader",
-    "index":0.5429553264604811
+    "index":0.5468483816013628
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_15",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_1:TLXbar_1/monitor_1:TLMonitor_7/plusarg_reader_1:plusarg_reader",
-    "index":0.5446735395189003
+    "index":0.5485519591141397
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_16",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_2:TLXbar_2/monitor:TLMonitor_8/plusarg_reader:plusarg_reader",
-    "index":0.5498281786941581
+    "index":0.5536626916524702
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_17",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_2:TLXbar_2/monitor:TLMonitor_8/plusarg_reader_1:plusarg_reader",
-    "index":0.5515463917525774
+    "index":0.555366269165247
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_18",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_2:TLXbar_2/monitor_1:TLMonitor_9/plusarg_reader:plusarg_reader",
-    "index":0.5549828178694158
+    "index":0.5587734241908007
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_19",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_2:TLXbar_2/monitor_1:TLMonitor_9/plusarg_reader_1:plusarg_reader",
-    "index":0.5567010309278351
+    "index":0.5604770017035775
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_20",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_2:TLXbar_2/monitor_2:TLMonitor_10/plusarg_reader:plusarg_reader",
-    "index":0.5601374570446735
+    "index":0.5638841567291312
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_21",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_2:TLXbar_2/monitor_2:TLMonitor_10/plusarg_reader_1:plusarg_reader",
-    "index":0.5618556701030928
+    "index":0.565587734241908
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_22",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_2:TLXbar_2/monitor_3:TLMonitor_11/plusarg_reader:plusarg_reader",
-    "index":0.5652920962199313
+    "index":0.5689948892674617
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_23",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_2:TLXbar_2/monitor_3:TLMonitor_11/plusarg_reader_1:plusarg_reader",
-    "index":0.5670103092783505
+    "index":0.5706984667802385
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_24",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_3:TLXbar_3/monitor:TLMonitor_12/plusarg_reader:plusarg_reader",
-    "index":0.5721649484536082
+    "index":0.575809199318569
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_25",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_3:TLXbar_3/monitor:TLMonitor_12/plusarg_reader_1:plusarg_reader",
-    "index":0.5738831615120275
+    "index":0.5775127768313458
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_26",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_3:TLXbar_3/monitor_1:TLMonitor_13/plusarg_reader:plusarg_reader",
-    "index":0.5773195876288659
+    "index":0.5809199318568995
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_27",
     "duplicate":"~Rift2Chip|Rift2Chip/xbar_3:TLXbar_3/monitor_1:TLMonitor_13/plusarg_reader_1:plusarg_reader",
-    "index":0.5790378006872853
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_2",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility:QueueCompatibility_2",
-    "index":0.584192439862543
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_3",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_1:QueueCompatibility_2",
-    "index":0.5859106529209622
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_4",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_2:QueueCompatibility_2",
-    "index":0.5876288659793815
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_5",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_3:QueueCompatibility_2",
-    "index":0.5893470790378007
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_6",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_4:QueueCompatibility_2",
-    "index":0.5910652920962199
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_7",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_5:QueueCompatibility_2",
-    "index":0.5927835051546392
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_8",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_6:QueueCompatibility_2",
-    "index":0.5945017182130584
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_9",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_7:QueueCompatibility_2",
-    "index":0.5962199312714777
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_10",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_8:QueueCompatibility_2",
-    "index":0.5979381443298969
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_11",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_9:QueueCompatibility_2",
-    "index":0.5996563573883161
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_12",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_10:QueueCompatibility_12",
-    "index":0.6013745704467354
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_13",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_11:QueueCompatibility_12",
-    "index":0.6030927835051546
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_14",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_12:QueueCompatibility_12",
-    "index":0.6048109965635738
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_15",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_13:QueueCompatibility_12",
-    "index":0.6065292096219931
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_16",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_14:QueueCompatibility_12",
-    "index":0.6082474226804123
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_17",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_15:QueueCompatibility_12",
-    "index":0.6099656357388317
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_18",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_16:QueueCompatibility_2",
-    "index":0.6116838487972509
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_19",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_17:QueueCompatibility_2",
-    "index":0.6134020618556701
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_20",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_18:QueueCompatibility_2",
-    "index":0.6151202749140894
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_21",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_19:QueueCompatibility_2",
-    "index":0.6168384879725086
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_22",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_20:QueueCompatibility_2",
-    "index":0.6185567010309279
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_23",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_21:QueueCompatibility_2",
-    "index":0.6202749140893471
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_24",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_22:QueueCompatibility_2",
-    "index":0.6219931271477663
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_25",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_23:QueueCompatibility_2",
-    "index":0.6237113402061856
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_26",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_24:QueueCompatibility_2",
-    "index":0.6254295532646048
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_27",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_25:QueueCompatibility_2",
-    "index":0.627147766323024
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_28",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_26:QueueCompatibility_12",
-    "index":0.6288659793814433
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_29",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_27:QueueCompatibility_12",
-    "index":0.6305841924398625
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_30",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_28:QueueCompatibility_12",
-    "index":0.6323024054982818
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_31",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_29:QueueCompatibility_12",
-    "index":0.634020618556701
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_32",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_30:QueueCompatibility_12",
-    "index":0.6357388316151202
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_33",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/QueueCompatibility_31:QueueCompatibility_12",
-    "index":0.6374570446735395
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_40",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_0:Queue_40",
-    "index":0.6426116838487973
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_41",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_1:Queue_40",
-    "index":0.6443298969072165
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_42",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_2:Queue_40",
-    "index":0.6460481099656358
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_43",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_3:Queue_40",
-    "index":0.647766323024055
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_44",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_4:Queue_40",
-    "index":0.6494845360824743
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_45",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_5:Queue_40",
-    "index":0.6512027491408935
-  },
-  {
-    "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_46",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_6:Queue_40",
-    "index":0.6529209621993127
+    "index":0.5826235093696763
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_47",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_7:Queue_40",
-    "index":0.654639175257732
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue:Queue_47",
+    "index":0.5877342419080068
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_48",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_8:Queue_40",
-    "index":0.6563573883161512
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_1:Queue_47",
+    "index":0.5894378194207837
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_49",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_9:Queue_40",
-    "index":0.6580756013745704
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_2:Queue_47",
+    "index":0.5911413969335605
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_50",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_10:Queue_40",
-    "index":0.6597938144329897
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_3:Queue_47",
+    "index":0.5928449744463373
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_51",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_11:Queue_40",
-    "index":0.6615120274914089
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_4:Queue_47",
+    "index":0.5945485519591142
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_52",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_12:Queue_40",
-    "index":0.6632302405498282
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_5:Queue_47",
+    "index":0.596252129471891
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_53",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_13:Queue_40",
-    "index":0.6649484536082474
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_6:Queue_47",
+    "index":0.5979557069846678
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_54",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_14:Queue_40",
-    "index":0.6666666666666666
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_7:Queue_47",
+    "index":0.5996592844974447
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_55",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_15:Queue_40",
-    "index":0.6683848797250859
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_8:Queue_47",
+    "index":0.6013628620102215
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_56",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_16:Queue_40",
-    "index":0.6701030927835051
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_9:Queue_47",
+    "index":0.6030664395229983
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_57",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_17:Queue_40",
-    "index":0.6718213058419243
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_10:Queue_57",
+    "index":0.6047700170357752
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_58",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_18:Queue_40",
-    "index":0.6735395189003437
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_11:Queue_57",
+    "index":0.606473594548552
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_59",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_19:Queue_40",
-    "index":0.6752577319587629
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_12:Queue_57",
+    "index":0.6081771720613288
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_60",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_20:Queue_40",
-    "index":0.6769759450171822
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_13:Queue_57",
+    "index":0.6098807495741057
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_61",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_21:Queue_40",
-    "index":0.6786941580756014
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_14:Queue_57",
+    "index":0.6115843270868825
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_62",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_22:Queue_40",
-    "index":0.6804123711340206
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_15:Queue_57",
+    "index":0.6132879045996593
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_63",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_23:Queue_40",
-    "index":0.6821305841924399
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_16:Queue_47",
+    "index":0.6149914821124361
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_64",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_24:Queue_40",
-    "index":0.6838487972508591
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_17:Queue_47",
+    "index":0.616695059625213
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_65",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_25:Queue_40",
-    "index":0.6855670103092784
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_18:Queue_47",
+    "index":0.6183986371379898
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_66",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_26:Queue_40",
-    "index":0.6872852233676976
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_19:Queue_47",
+    "index":0.6201022146507666
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_67",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_27:Queue_40",
-    "index":0.6890034364261168
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_20:Queue_47",
+    "index":0.6218057921635435
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_68",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_28:Queue_40",
-    "index":0.6907216494845361
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_21:Queue_47",
+    "index":0.6235093696763203
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_69",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_29:Queue_40",
-    "index":0.6924398625429553
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_22:Queue_47",
+    "index":0.6252129471890971
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_70",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_30:Queue_40",
-    "index":0.6941580756013745
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_23:Queue_47",
+    "index":0.626916524701874
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_71",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_31:Queue_40",
-    "index":0.6958762886597938
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_24:Queue_47",
+    "index":0.6286201022146508
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_72",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_32:Queue_40",
-    "index":0.697594501718213
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_25:Queue_47",
+    "index":0.6303236797274276
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_73",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_33:Queue_40",
-    "index":0.6993127147766323
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_26:Queue_57",
+    "index":0.6320272572402045
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_74",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_34:Queue_40",
-    "index":0.7010309278350515
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_27:Queue_57",
+    "index":0.6337308347529813
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_75",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_35:Queue_40",
-    "index":0.7027491408934707
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_28:Queue_57",
+    "index":0.6354344122657581
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_76",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_36:Queue_40",
-    "index":0.7044673539518901
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_29:Queue_57",
+    "index":0.637137989778535
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_77",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_37:Queue_40",
-    "index":0.7061855670103093
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_30:Queue_57",
+    "index":0.6388415672913118
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_78",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_38:Queue_40",
-    "index":0.7079037800687286
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank:AXI4UserYanker/Queue_31:Queue_57",
+    "index":0.6405451448040886
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_79",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_39:Queue_40",
-    "index":0.7096219931271478
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_0:Queue_79",
+    "index":0.645655877342419
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_80",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_40:Queue_40",
-    "index":0.711340206185567
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_1:Queue_79",
+    "index":0.6473594548551959
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|Queue_81",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_41:Queue_40",
-    "index":0.7130584192439863
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_2:Queue_79",
+    "index":0.6490630323679727
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_82",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_3:Queue_79",
+    "index":0.6507666098807495
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_83",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_4:Queue_79",
+    "index":0.6524701873935264
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_84",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_5:Queue_79",
+    "index":0.6541737649063032
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_85",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_6:Queue_79",
+    "index":0.65587734241908
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_86",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_7:Queue_79",
+    "index":0.6575809199318569
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_87",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_8:Queue_79",
+    "index":0.6592844974446337
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_88",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_9:Queue_79",
+    "index":0.6609880749574105
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_89",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_10:Queue_79",
+    "index":0.6626916524701874
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_90",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_11:Queue_79",
+    "index":0.6643952299829642
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_91",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_12:Queue_79",
+    "index":0.666098807495741
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_92",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_13:Queue_79",
+    "index":0.6678023850085179
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_93",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_14:Queue_79",
+    "index":0.6695059625212947
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_94",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_15:Queue_79",
+    "index":0.6712095400340715
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_95",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_16:Queue_79",
+    "index":0.6729131175468483
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_96",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_17:Queue_79",
+    "index":0.6746166950596252
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_97",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_18:Queue_79",
+    "index":0.676320272572402
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_98",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_19:Queue_79",
+    "index":0.6780238500851788
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_99",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_20:Queue_79",
+    "index":0.6797274275979557
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_100",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_21:Queue_79",
+    "index":0.6814310051107325
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_101",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_22:Queue_79",
+    "index":0.6831345826235093
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_102",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_23:Queue_79",
+    "index":0.6848381601362862
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_103",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_24:Queue_79",
+    "index":0.686541737649063
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_104",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_25:Queue_79",
+    "index":0.6882453151618398
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_105",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_26:Queue_79",
+    "index":0.6899488926746167
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_106",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_27:Queue_79",
+    "index":0.6916524701873935
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_107",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_28:Queue_79",
+    "index":0.6933560477001703
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_108",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_29:Queue_79",
+    "index":0.6950596252129472
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_109",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_30:Queue_79",
+    "index":0.696763202725724
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_110",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_31:Queue_79",
+    "index":0.6984667802385008
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_111",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_32:Queue_79",
+    "index":0.7001703577512777
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_112",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_33:Queue_79",
+    "index":0.7018739352640545
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_113",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_34:Queue_79",
+    "index":0.7035775127768313
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_114",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_35:Queue_79",
+    "index":0.7052810902896082
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_115",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_36:Queue_79",
+    "index":0.706984667802385
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_116",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_37:Queue_79",
+    "index":0.7086882453151618
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_117",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_38:Queue_79",
+    "index":0.7103918228279387
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_118",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_39:Queue_79",
+    "index":0.7120954003407155
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_119",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_40:Queue_79",
+    "index":0.7137989778534923
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~Rift2Chip|Queue_120",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint:AXI4Deinterleaver/qs_queue_41:Queue_79",
+    "index":0.7155025553662692
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_28",
     "duplicate":"~Rift2Chip|Rift2Chip/tl2axi4:TLToAXI4/monitor:TLMonitor_14/plusarg_reader:plusarg_reader",
-    "index":0.7164948453608248
+    "index":0.7189097103918228
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_29",
     "duplicate":"~Rift2Chip|Rift2Chip/tl2axi4:TLToAXI4/monitor:TLMonitor_14/plusarg_reader_1:plusarg_reader",
-    "index":0.718213058419244
+    "index":0.7206132879045997
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_34",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility:QueueCompatibility_34",
-    "index":0.7285223367697594
+    "original":"~Rift2Chip|Queue_123",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue:Queue_123",
+    "index":0.7308347529812607
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_35",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_1:QueueCompatibility_34",
-    "index":0.7302405498281787
+    "original":"~Rift2Chip|Queue_124",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_1:Queue_123",
+    "index":0.7325383304940375
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_36",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_2:QueueCompatibility_34",
-    "index":0.7319587628865979
+    "original":"~Rift2Chip|Queue_125",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_2:Queue_123",
+    "index":0.7342419080068143
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_37",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_3:QueueCompatibility_34",
-    "index":0.7336769759450171
+    "original":"~Rift2Chip|Queue_126",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_3:Queue_123",
+    "index":0.7359454855195912
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_38",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_4:QueueCompatibility_34",
-    "index":0.7353951890034365
+    "original":"~Rift2Chip|Queue_127",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_4:Queue_123",
+    "index":0.737649063032368
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_39",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_5:QueueCompatibility_34",
-    "index":0.7371134020618557
+    "original":"~Rift2Chip|Queue_128",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_5:Queue_123",
+    "index":0.7393526405451448
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_40",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_6:QueueCompatibility_34",
-    "index":0.738831615120275
+    "original":"~Rift2Chip|Queue_129",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_6:Queue_123",
+    "index":0.7410562180579217
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_41",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_7:QueueCompatibility_34",
-    "index":0.7405498281786942
+    "original":"~Rift2Chip|Queue_130",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_7:Queue_123",
+    "index":0.7427597955706985
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_42",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_8:QueueCompatibility_34",
-    "index":0.7422680412371134
+    "original":"~Rift2Chip|Queue_131",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_8:Queue_123",
+    "index":0.7444633730834753
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_43",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_9:QueueCompatibility_34",
-    "index":0.7439862542955327
+    "original":"~Rift2Chip|Queue_132",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_9:Queue_123",
+    "index":0.7461669505962522
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_44",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_10:QueueCompatibility_34",
-    "index":0.7457044673539519
+    "original":"~Rift2Chip|Queue_133",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_10:Queue_123",
+    "index":0.747870528109029
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_45",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_11:QueueCompatibility_34",
-    "index":0.7474226804123711
+    "original":"~Rift2Chip|Queue_134",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_11:Queue_123",
+    "index":0.7495741056218058
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_46",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_12:QueueCompatibility_34",
-    "index":0.7491408934707904
+    "original":"~Rift2Chip|Queue_135",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_12:Queue_123",
+    "index":0.7512776831345827
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_47",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_13:QueueCompatibility_34",
-    "index":0.7508591065292096
+    "original":"~Rift2Chip|Queue_136",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_13:Queue_123",
+    "index":0.7529812606473595
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_48",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_14:QueueCompatibility_34",
-    "index":0.7525773195876289
+    "original":"~Rift2Chip|Queue_137",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_14:Queue_123",
+    "index":0.7546848381601363
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|QueueCompatibility_49",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/QueueCompatibility_15:QueueCompatibility_34",
-    "index":0.7542955326460481
+    "original":"~Rift2Chip|Queue_138",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4yank_1:AXI4UserYanker_1/Queue_15:Queue_123",
+    "index":0.7563884156729132
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_84",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_0:Queue_84",
-    "index":0.7594501718213058
+    "original":"~Rift2Chip|Queue_139",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_0:Queue_139",
+    "index":0.7614991482112436
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_85",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_1:Queue_84",
-    "index":0.761168384879725
+    "original":"~Rift2Chip|Queue_140",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_1:Queue_139",
+    "index":0.7632027257240205
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_86",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_2:Queue_84",
-    "index":0.7628865979381443
+    "original":"~Rift2Chip|Queue_141",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_2:Queue_139",
+    "index":0.7649063032367973
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_87",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_3:Queue_84",
-    "index":0.7646048109965635
+    "original":"~Rift2Chip|Queue_142",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_3:Queue_139",
+    "index":0.7666098807495741
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_88",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_4:Queue_84",
-    "index":0.7663230240549829
+    "original":"~Rift2Chip|Queue_143",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_4:Queue_139",
+    "index":0.768313458262351
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_89",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_5:Queue_84",
-    "index":0.7680412371134021
+    "original":"~Rift2Chip|Queue_144",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_5:Queue_139",
+    "index":0.7700170357751278
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_90",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_6:Queue_84",
-    "index":0.7697594501718213
+    "original":"~Rift2Chip|Queue_145",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_6:Queue_139",
+    "index":0.7717206132879046
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_91",
-    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_7:Queue_84",
-    "index":0.7714776632302406
+    "original":"~Rift2Chip|Queue_146",
+    "duplicate":"~Rift2Chip|Rift2Chip/axi4deint_1:AXI4Deinterleaver_1/qs_queue_7:Queue_139",
+    "index":0.7734241908006815
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_30",
     "duplicate":"~Rift2Chip|Rift2Chip/tl2axi4_1:TLToAXI4_1/monitor:TLMonitor_15/plusarg_reader:plusarg_reader",
-    "index":0.7749140893470791
+    "index":0.7768313458262351
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_31",
     "duplicate":"~Rift2Chip|Rift2Chip/tl2axi4_1:TLToAXI4_1/monitor:TLMonitor_15/plusarg_reader_1:plusarg_reader",
-    "index":0.7766323024054983
+    "index":0.778534923339012
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_32",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer:TLBuffer/monitor:TLMonitor_16/plusarg_reader:plusarg_reader",
-    "index":0.7869415807560137
+    "index":0.7887563884156729
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_33",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer:TLBuffer/monitor:TLMonitor_16/plusarg_reader_1:plusarg_reader",
-    "index":0.788659793814433
+    "index":0.7904599659284497
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_34",
     "duplicate":"~Rift2Chip|Rift2Chip/cork:TLCacheCork/monitor:TLMonitor_17/plusarg_reader:plusarg_reader",
-    "index":0.7972508591065293
+    "index":0.7989778534923339
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_35",
     "duplicate":"~Rift2Chip|Rift2Chip/cork:TLCacheCork/monitor:TLMonitor_17/plusarg_reader_1:plusarg_reader",
-    "index":0.7989690721649485
+    "index":0.8006814310051107
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_96",
-    "duplicate":"~Rift2Chip|Rift2Chip/cork:TLCacheCork/q:Queue_96",
-    "index":0.8041237113402062
+    "original":"~Rift2Chip|Queue_151",
+    "duplicate":"~Rift2Chip|Rift2Chip/cork:TLCacheCork/q:Queue_151",
+    "index":0.8057921635434412
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_97",
-    "duplicate":"~Rift2Chip|Rift2Chip/cork:TLCacheCork/q_1:Queue_96",
-    "index":0.8058419243986255
+    "original":"~Rift2Chip|Queue_152",
+    "duplicate":"~Rift2Chip|Rift2Chip/cork:TLCacheCork/q_1:Queue_151",
+    "index":0.807495741056218
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_36",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_1:TLBuffer_1/monitor:TLMonitor_18/plusarg_reader:plusarg_reader",
-    "index":0.8092783505154639
+    "index":0.8109028960817717
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_37",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_1:TLBuffer_1/monitor:TLMonitor_18/plusarg_reader_1:plusarg_reader",
-    "index":0.8109965635738832
+    "index":0.8126064735945485
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_102",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_1:TLBuffer_1/bundleOut_0_e_q:Queue_102",
-    "index":0.8213058419243986
+    "original":"~Rift2Chip|Queue_157",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_1:TLBuffer_1/x1_e_q:Queue_157",
+    "index":0.8228279386712095
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_38",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_2:TLBuffer_2/monitor:TLMonitor_19/plusarg_reader:plusarg_reader",
-    "index":0.8247422680412371
+    "index":0.8262350936967632
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_39",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_2:TLBuffer_2/monitor:TLMonitor_19/plusarg_reader_1:plusarg_reader",
-    "index":0.8264604810996563
+    "index":0.82793867120954
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_103",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_2:TLBuffer_2/bundleOut_0_a_q:Queue_103",
-    "index":0.8298969072164949
+    "original":"~Rift2Chip|Queue_158",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_2:TLBuffer_2/x1_a_q:Queue_158",
+    "index":0.8313458262350937
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_40",
     "duplicate":"~Rift2Chip|Rift2Chip/widget_2:TLWidthWidget_2/monitor:TLMonitor_20/plusarg_reader:plusarg_reader",
-    "index":0.8350515463917526
+    "index":0.8364565587734242
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_41",
     "duplicate":"~Rift2Chip|Rift2Chip/widget_2:TLWidthWidget_2/monitor:TLMonitor_20/plusarg_reader_1:plusarg_reader",
-    "index":0.8367697594501718
+    "index":0.838160136286201
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_42",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_3:TLBuffer_3/monitor:TLMonitor_21/plusarg_reader:plusarg_reader",
-    "index":0.8436426116838488
+    "index":0.8449744463373083
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_43",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_3:TLBuffer_3/monitor:TLMonitor_21/plusarg_reader_1:plusarg_reader",
-    "index":0.845360824742268
+    "index":0.8466780238500852
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_44",
     "duplicate":"~Rift2Chip|Rift2Chip/widget_3:TLWidthWidget_3/monitor:TLMonitor_22/plusarg_reader:plusarg_reader",
-    "index":0.8539518900343642
+    "index":0.8551959114139693
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_45",
     "duplicate":"~Rift2Chip|Rift2Chip/widget_3:TLWidthWidget_3/monitor:TLMonitor_22/plusarg_reader_1:plusarg_reader",
-    "index":0.8556701030927835
+    "index":0.8568994889267462
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_46",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_4:TLBuffer_4/monitor:TLMonitor_23/plusarg_reader:plusarg_reader",
-    "index":0.8625429553264605
+    "index":0.8637137989778535
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_47",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_4:TLBuffer_4/monitor:TLMonitor_23/plusarg_reader_1:plusarg_reader",
-    "index":0.8642611683848798
+    "index":0.8654173764906303
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_48",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_5:TLBuffer_5/monitor:TLMonitor_24/plusarg_reader:plusarg_reader",
-    "index":0.872852233676976
+    "index":0.8739352640545145
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_49",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_5:TLBuffer_5/monitor:TLMonitor_24/plusarg_reader_1:plusarg_reader",
-    "index":0.8745704467353952
+    "index":0.8756388415672913
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_110",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_5:TLBuffer_5/bundleIn_0_d_q:Queue_110",
-    "index":0.8797250859106529
+    "original":"~Rift2Chip|Queue_165",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_5:TLBuffer_5/bundleIn_0_d_q:Queue_165",
+    "index":0.8807495741056218
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_50",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_6:TLBuffer_6/monitor:TLMonitor_25/plusarg_reader:plusarg_reader",
-    "index":0.8831615120274914
+    "index":0.8841567291311755
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_51",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_6:TLBuffer_6/monitor:TLMonitor_25/plusarg_reader_1:plusarg_reader",
-    "index":0.8848797250859106
+    "index":0.8858603066439523
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_111",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_6:TLBuffer_6/bundleOut_0_a_q:Queue_103",
-    "index":0.8883161512027491
+    "original":"~Rift2Chip|Queue_166",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_6:TLBuffer_6/x1_a_q:Queue_158",
+    "index":0.889267461669506
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_112",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_6:TLBuffer_6/bundleIn_0_d_q:Queue_112",
-    "index":0.8900343642611683
+    "original":"~Rift2Chip|Queue_167",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_6:TLBuffer_6/bundleIn_0_d_q:Queue_167",
+    "index":0.8909710391822828
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_52",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_7:TLBuffer_7/monitor:TLMonitor_26/plusarg_reader:plusarg_reader",
-    "index":0.8934707903780069
+    "index":0.8943781942078365
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_53",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_7:TLBuffer_7/monitor:TLMonitor_26/plusarg_reader_1:plusarg_reader",
-    "index":0.8951890034364262
+    "index":0.8960817717206133
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_113",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_7:TLBuffer_7/bundleOut_0_a_q:Queue_103",
-    "index":0.8986254295532646
+    "original":"~Rift2Chip|Queue_168",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_7:TLBuffer_7/x1_a_q:Queue_158",
+    "index":0.899488926746167
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_114",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_7:TLBuffer_7/bundleIn_0_d_q:Queue_112",
-    "index":0.9003436426116839
+    "original":"~Rift2Chip|Queue_169",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_7:TLBuffer_7/bundleIn_0_d_q:Queue_167",
+    "index":0.9011925042589438
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_117",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_7:TLBuffer_7/bundleOut_0_e_q:Queue_102",
-    "index":0.9054982817869416
+    "original":"~Rift2Chip|Queue_172",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_7:TLBuffer_7/x1_e_q:Queue_157",
+    "index":0.9063032367972743
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_54",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_8:TLBuffer_8/monitor:TLMonitor_27/plusarg_reader:plusarg_reader",
-    "index":0.9089347079037801
+    "index":0.909710391822828
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_55",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_8:TLBuffer_8/monitor:TLMonitor_27/plusarg_reader_1:plusarg_reader",
-    "index":0.9106529209621993
+    "index":0.9114139693356048
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_118",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_8:TLBuffer_8/bundleOut_0_a_q:Queue_103",
-    "index":0.9140893470790378
+    "original":"~Rift2Chip|Queue_173",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_8:TLBuffer_8/x1_a_q:Queue_158",
+    "index":0.9148211243611585
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_119",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_8:TLBuffer_8/bundleIn_0_d_q:Queue_112",
-    "index":0.915807560137457
+    "original":"~Rift2Chip|Queue_174",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_8:TLBuffer_8/bundleIn_0_d_q:Queue_167",
+    "index":0.9165247018739353
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_56",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_9:TLBuffer_9/monitor:TLMonitor_28/plusarg_reader:plusarg_reader",
-    "index":0.9192439862542955
+    "index":0.919931856899489
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_57",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_9:TLBuffer_9/monitor:TLMonitor_28/plusarg_reader_1:plusarg_reader",
-    "index":0.9209621993127147
+    "index":0.9216354344122658
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_120",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_9:TLBuffer_9/bundleOut_0_a_q:Queue_103",
-    "index":0.9243986254295533
+    "original":"~Rift2Chip|Queue_175",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_9:TLBuffer_9/x1_a_q:Queue_158",
+    "index":0.9250425894378195
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_121",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_9:TLBuffer_9/bundleIn_0_d_q:Queue_112",
-    "index":0.9261168384879725
+    "original":"~Rift2Chip|Queue_176",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_9:TLBuffer_9/bundleIn_0_d_q:Queue_167",
+    "index":0.9267461669505963
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_58",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_10:TLBuffer_10/monitor:TLMonitor_29/plusarg_reader:plusarg_reader",
-    "index":0.929553264604811
+    "index":0.9301533219761499
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_59",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_10:TLBuffer_10/monitor:TLMonitor_29/plusarg_reader_1:plusarg_reader",
-    "index":0.9312714776632303
+    "index":0.9318568994889267
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_122",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_10:TLBuffer_10/bundleOut_0_a_q:Queue_122",
-    "index":0.9347079037800687
+    "original":"~Rift2Chip|Queue_177",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_10:TLBuffer_10/x1_a_q:Queue_177",
+    "index":0.9352640545144804
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_123",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_10:TLBuffer_10/bundleIn_0_d_q:Queue_110",
-    "index":0.936426116838488
+    "original":"~Rift2Chip|Queue_178",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_10:TLBuffer_10/bundleIn_0_d_q:Queue_165",
+    "index":0.9369676320272572
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_60",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_11:TLBuffer_11/monitor:TLMonitor_30/plusarg_reader:plusarg_reader",
-    "index":0.9398625429553265
+    "index":0.9403747870528109
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_61",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_11:TLBuffer_11/monitor:TLMonitor_30/plusarg_reader_1:plusarg_reader",
-    "index":0.9415807560137457
+    "index":0.9420783645655877
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_124",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_11:TLBuffer_11/bundleOut_0_a_q:Queue_122",
-    "index":0.9450171821305842
+    "original":"~Rift2Chip|Queue_179",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_11:TLBuffer_11/x1_a_q:Queue_177",
+    "index":0.9454855195911414
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_125",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_11:TLBuffer_11/bundleIn_0_d_q:Queue_110",
-    "index":0.9467353951890034
+    "original":"~Rift2Chip|Queue_180",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_11:TLBuffer_11/bundleIn_0_d_q:Queue_165",
+    "index":0.9471890971039182
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_62",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_12:TLBuffer_12/monitor:TLMonitor_31/plusarg_reader:plusarg_reader",
-    "index":0.9501718213058419
+    "index":0.9505962521294719
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_63",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_12:TLBuffer_12/monitor:TLMonitor_31/plusarg_reader_1:plusarg_reader",
-    "index":0.9518900343642611
+    "index":0.9522998296422487
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_64",
     "duplicate":"~Rift2Chip|Rift2Chip/fragmenter:TLFragmenter/monitor:TLMonitor_32/plusarg_reader:plusarg_reader",
-    "index":0.9604810996563574
+    "index":0.9608177172061328
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_65",
     "duplicate":"~Rift2Chip|Rift2Chip/fragmenter:TLFragmenter/monitor:TLMonitor_32/plusarg_reader_1:plusarg_reader",
-    "index":0.9621993127147767
+    "index":0.9625212947189097
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_66",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_13:TLBuffer_13/monitor:TLMonitor_33/plusarg_reader:plusarg_reader",
-    "index":0.9690721649484536
+    "index":0.969335604770017
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_67",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_13:TLBuffer_13/monitor:TLMonitor_33/plusarg_reader_1:plusarg_reader",
-    "index":0.9707903780068728
+    "index":0.9710391822827938
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_68",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_14:TLBuffer_14/monitor:TLMonitor_34/plusarg_reader:plusarg_reader",
-    "index":0.979381443298969
+    "index":0.979557069846678
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_69",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_14:TLBuffer_14/monitor:TLMonitor_34/plusarg_reader_1:plusarg_reader",
-    "index":0.9810996563573883
+    "index":0.9812606473594548
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_131",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_14:TLBuffer_14/bundleIn_0_d_q:Queue_131",
-    "index":0.9862542955326461
+    "original":"~Rift2Chip|Queue_186",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_14:TLBuffer_14/bundleIn_0_d_q:Queue_186",
+    "index":0.9863713798977853
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_70",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_15:TLBuffer_15/monitor:TLMonitor_35/plusarg_reader:plusarg_reader",
-    "index":0.9896907216494846
+    "index":0.989778534923339
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~Rift2Chip|plusarg_reader_71",
     "duplicate":"~Rift2Chip|Rift2Chip/buffer_15:TLBuffer_15/monitor:TLMonitor_35/plusarg_reader_1:plusarg_reader",
-    "index":0.9914089347079038
+    "index":0.9914821124361158
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~Rift2Chip|Queue_133",
-    "duplicate":"~Rift2Chip|Rift2Chip/buffer_15:TLBuffer_15/bundleIn_0_d_q:Queue_131",
-    "index":0.9965635738831615
+    "original":"~Rift2Chip|Queue_188",
+    "duplicate":"~Rift2Chip|Rift2Chip/buffer_15:TLBuffer_15/bundleIn_0_d_q:Queue_186",
+    "index":0.9965928449744463
   },
   {
     "class":"firrtl.EmitAllModulesAnnotation",
@@ -2172,42 +2220,82 @@
   {
     "class":"freechips.rocketchip.util.SRAMAnnotation",
     "target":"Rift2Chip.Directory.cc_dir_0",
-    "address_width":12,
+    "address_width":11,
     "name":"cc_dir",
-    "data_width":72,
-    "depth":4096,
+    "data_width":152,
+    "depth":2048,
     "description":"Directory RAM",
-    "write_mask_granularity":18
+    "write_mask_granularity":19
   },
   {
     "class":"freechips.rocketchip.util.SRAMAnnotation",
     "target":"Rift2Chip.Directory.cc_dir_1",
-    "address_width":12,
+    "address_width":11,
     "name":"cc_dir",
-    "data_width":72,
-    "depth":4096,
+    "data_width":152,
+    "depth":2048,
     "description":"Directory RAM",
-    "write_mask_granularity":18
+    "write_mask_granularity":19
   },
   {
     "class":"freechips.rocketchip.util.SRAMAnnotation",
     "target":"Rift2Chip.Directory.cc_dir_2",
-    "address_width":12,
+    "address_width":11,
     "name":"cc_dir",
-    "data_width":72,
-    "depth":4096,
+    "data_width":152,
+    "depth":2048,
     "description":"Directory RAM",
-    "write_mask_granularity":18
+    "write_mask_granularity":19
   },
   {
     "class":"freechips.rocketchip.util.SRAMAnnotation",
     "target":"Rift2Chip.Directory.cc_dir_3",
-    "address_width":12,
+    "address_width":11,
     "name":"cc_dir",
-    "data_width":72,
-    "depth":4096,
+    "data_width":152,
+    "depth":2048,
     "description":"Directory RAM",
-    "write_mask_granularity":18
+    "write_mask_granularity":19
+  },
+  {
+    "class":"freechips.rocketchip.util.SRAMAnnotation",
+    "target":"Rift2Chip.Directory.cc_dir_4",
+    "address_width":11,
+    "name":"cc_dir",
+    "data_width":152,
+    "depth":2048,
+    "description":"Directory RAM",
+    "write_mask_granularity":19
+  },
+  {
+    "class":"freechips.rocketchip.util.SRAMAnnotation",
+    "target":"Rift2Chip.Directory.cc_dir_5",
+    "address_width":11,
+    "name":"cc_dir",
+    "data_width":152,
+    "depth":2048,
+    "description":"Directory RAM",
+    "write_mask_granularity":19
+  },
+  {
+    "class":"freechips.rocketchip.util.SRAMAnnotation",
+    "target":"Rift2Chip.Directory.cc_dir_6",
+    "address_width":11,
+    "name":"cc_dir",
+    "data_width":152,
+    "depth":2048,
+    "description":"Directory RAM",
+    "write_mask_granularity":19
+  },
+  {
+    "class":"freechips.rocketchip.util.SRAMAnnotation",
+    "target":"Rift2Chip.Directory.cc_dir_7",
+    "address_width":11,
+    "name":"cc_dir",
+    "data_width":152,
+    "depth":2048,
+    "description":"Directory RAM",
+    "write_mask_granularity":19
   },
   {
     "class":"freechips.rocketchip.util.RegFieldDescMappingAnnotation",
@@ -7892,6 +7980,10 @@
   },
   {
     "class":"firrtl.transforms.DontTouchAnnotation",
+    "target":"~Rift2Chip|Issue>bufReqNum_0_3"
+  },
+  {
+    "class":"firrtl.transforms.DontTouchAnnotation",
     "target":"~Rift2Chip|Issue>bufReqNum_1_0"
   },
   {
@@ -7901,6 +7993,10 @@
   {
     "class":"firrtl.transforms.DontTouchAnnotation",
     "target":"~Rift2Chip|Issue>bufReqNum_1_2"
+  },
+  {
+    "class":"firrtl.transforms.DontTouchAnnotation",
+    "target":"~Rift2Chip|Issue>bufReqNum_1_3"
   },
   {
     "class":"firrtl.transforms.DontTouchAnnotation",
@@ -7916,6 +8012,10 @@
   },
   {
     "class":"firrtl.transforms.DontTouchAnnotation",
+    "target":"~Rift2Chip|Issue>bufReqNum_2_3"
+  },
+  {
+    "class":"firrtl.transforms.DontTouchAnnotation",
     "target":"~Rift2Chip|Issue>bufReqNum_3_0"
   },
   {
@@ -7925,6 +8025,10 @@
   {
     "class":"firrtl.transforms.DontTouchAnnotation",
     "target":"~Rift2Chip|Issue>bufReqNum_3_2"
+  },
+  {
+    "class":"firrtl.transforms.DontTouchAnnotation",
+    "target":"~Rift2Chip|Issue>bufReqNum_3_3"
   },
   {
     "class":"firrtl.transforms.DontTouchAnnotation",
@@ -7940,6 +8044,10 @@
   },
   {
     "class":"firrtl.transforms.DontTouchAnnotation",
+    "target":"~Rift2Chip|Issue>bufReqNum_4_3"
+  },
+  {
+    "class":"firrtl.transforms.DontTouchAnnotation",
     "target":"~Rift2Chip|Issue>bufReqNum_5_0"
   },
   {
@@ -7949,6 +8057,10 @@
   {
     "class":"firrtl.transforms.DontTouchAnnotation",
     "target":"~Rift2Chip|Issue>bufReqNum_5_2"
+  },
+  {
+    "class":"firrtl.transforms.DontTouchAnnotation",
+    "target":"~Rift2Chip|Issue>bufReqNum_5_3"
   },
   {
     "class":"firrtl.transforms.DontTouchAnnotation",
@@ -7964,6 +8076,10 @@
   },
   {
     "class":"firrtl.transforms.DontTouchAnnotation",
+    "target":"~Rift2Chip|Issue>bufReqNum_6_3"
+  },
+  {
+    "class":"firrtl.transforms.DontTouchAnnotation",
     "target":"~Rift2Chip|Issue>bufReqNum_7_0"
   },
   {
@@ -7973,6 +8089,10 @@
   {
     "class":"firrtl.transforms.DontTouchAnnotation",
     "target":"~Rift2Chip|Issue>bufReqNum_7_2"
+  },
+  {
+    "class":"firrtl.transforms.DontTouchAnnotation",
+    "target":"~Rift2Chip|Issue>bufReqNum_7_3"
   },
   {
     "class":"firrtl.transforms.BlackBoxTargetDirAnno",
@@ -7987,9 +8107,10 @@
   },
   {
     "class":"firrtl.transforms.CombinationalPath",
-    "sink":"~Rift2Chip|Rift2Chip>system_0_r_ready",
+    "sink":"~Rift2Chip|Rift2Chip>system_0_b_ready",
     "sources":[
-      "~Rift2Chip|Rift2Chip>system_0_r_bits_id"
+      "~Rift2Chip|Rift2Chip>system_0_b_bits_id",
+      "~Rift2Chip|Rift2Chip>system_0_b_valid"
     ]
   },
   {
@@ -8001,10 +8122,9 @@
   },
   {
     "class":"firrtl.transforms.CombinationalPath",
-    "sink":"~Rift2Chip|Rift2Chip>system_0_b_ready",
+    "sink":"~Rift2Chip|Rift2Chip>system_0_r_ready",
     "sources":[
-      "~Rift2Chip|Rift2Chip>system_0_b_bits_id",
-      "~Rift2Chip|Rift2Chip>system_0_b_valid"
+      "~Rift2Chip|Rift2Chip>system_0_r_bits_id"
     ]
   }
 ]
