@@ -25,13 +25,15 @@ import rift2Core.backend._
 import rift2Chip._
 import org.chipsalliance.cde.config._
 
-class Exe_Port extends Bundle {
-  val addr = UInt(12.W)
+class CsrOperator extends Bundle{
   val dat_i = UInt(64.W)
   val op_rw = Bool()
   val op_rs = Bool()
   val op_rc = Bool()
+}
 
+class Exe_Port extends CsrOperator {
+  val addr = UInt(12.W)
 }
 
 
@@ -205,22 +207,22 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
   // val ucause   = UInt(64.W)
   // val utval    = UInt(64.W)
   // val uip      = UInt(64.W)
-  // val fflags   = UInt(64.W)
-  // val frm      = UInt(64.W)
+  val fflags   = UInt(64.W)
+  val frm      = UInt(64.W)
   val fcsr        = new FCSRBundle
   /** Hardware Performance Monitor -- time (read-only) @return a count of the number of ***rtc*** cycles executed by the ***processor core*** on which the hart is running from an arbitrary start time in the past*/
   val time        = UInt(64.W)
-  // val sstatus     = UInt(64.W)
+  val sstatus     = new MStatusBundle
   // val sedeleg  = UInt(64.W)
   // val sideleg  = UInt(64.W)
-  // val sie         = new MSIntBundle
+  val sie         = new MSIntBundle
   val stvec       = new TVecBundle
   val scounteren  = new CounterenBundle
   val sscratch    = UInt(64.W)
   val sepc        = UInt(64.W)
   val scause      = new CauseBundle
   val stval       = UInt(64.W)
-  // val sip         = new MSIntBundle
+  val sip         = new MSIntBundle
   val satp        = new SatpBundle
   // val hstatus     = UInt(64.W)
   // val hedeleg     = UInt(64.W)
@@ -275,22 +277,16 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
   val dscratch1   = UInt(64.W)
   val dscratch2   = UInt(64.W)
 
-
   val pmpcfg  = (if(pmpNum==0) { Vec( 1, Vec(8, new PmpcfgBundle) ) } else {Vec( pmpNum, Vec(8, new PmpcfgBundle) )})
   val pmpaddr = (if(pmpNum==0) { Vec( 8, UInt(64.W)) }      else {Vec( 8*pmpNum, UInt(64.W))})
-
-
 
   val mhpmcounter = Vec( 32, UInt(64.W))
   val mhpmevent   = Vec( 32, UInt(64.W))
 
 
-  def sstatus = (mstatus.asUInt & Cat( "b1".U, 0.U(29.W), "b11".U, 0.U(12.W), "b11011110000101100010".U )).asTypeOf(new MStatusBundle)
-  def sie = mie
-  def sip = mip
-  def cycle = mcycle
-  def instret = minstret
-  def hpmcounter = mhpmcounter
+  val cycle      = UInt(64.W)
+  val instret    = UInt(64.W)
+  val hpmcounter = Vec( 32, UInt(64.W))
 
   def is_ssi: Bool = { 
     val is_ssi = mip.ssi & mie.ssi & mstatus.sie & ~( priv_lvl === "b11".U & mideleg(1) )
@@ -325,393 +321,28 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
     return is_s_interrupt
   }
 
-  def csr_read_prilvl(addr: UInt) = {
-    val pmpcfg_arr = {
-      val addr_chk = for ( i <- 0 until 8 ) yield { addr === ("h3A0".U + (2*i).U) }
-      val reg_sel  = for ( _ <- 0 until 8 ) yield { priv_lvl === "b11".U }
-      addr_chk zip reg_sel
-    }
 
-    val pmpaddr_arr = {
-      val addr_chk = for ( i <- 0 until 8*8 ) yield { addr === ("h3B0".U + i.U) }
-      val reg_sel  = for ( _ <- 0 until 8*8 ) yield { priv_lvl === "b11".U }
-      addr_chk zip reg_sel
-    }
-
-    val hpmcounter_arr = {
-      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hC00".U + i.U) }
-      val reg_sel  = for ( _ <- 3 until 32 ) yield { true.B }
-      addr_chk zip reg_sel
-    }
-
-    val mhpmcounter_arr = {
-      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hB00".U + i.U) }
-      val reg_sel  = for ( i <- 3 until 32 ) yield { priv_lvl === "b11".U | (priv_lvl === "b01".U & mcounteren.asUInt(i) ) }
-      addr_chk zip reg_sel      
-    }
-
-    val mhpmevent_arr = {
-      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("h320".U + i.U) }
-      val reg_sel  = for ( _ <- 3 until 32 ) yield { priv_lvl === "b11".U }
-      addr_chk zip reg_sel      
-    }
-
-    val normal_arr = Array(
-          // ( addr === "h000".U ) -> ustatus,
-          // ( addr === "h004".U ) -> uie,
-          // ( addr === "h005".U ) -> utvec,
-          // ( addr === "h040".U ) -> uscratch,
-          // ( addr === "h041".U ) -> uepc,
-          // ( addr === "h042".U ) -> ucause,
-          // ( addr === "h043".U ) -> utval,
-          // ( addr === "h044".U ) -> uip,
-
-          ( addr === "h001".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "h002".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "h003".U ) -> (priv_lvl >= "b00".U),
-
-          ( addr === "h008".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "h009".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "h00A".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "h00F".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "hC20".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "hC21".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "hC22".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "hFFE".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "hFFF".U ) -> (priv_lvl >= "b00".U),
-
-          ( addr === "hC00".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "hC01".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "hC02".U ) -> (priv_lvl >= "b00".U),
-          ( addr === "h100".U ) -> (priv_lvl >= "b00".U),
-          // ( addr === "h102".U ) -> sedeleg,
-          // ( addr === "h103".U ) -> sideleg,
-          ( addr === "h104".U ) -> (priv_lvl >= "b01".U),
-          ( addr === "h105".U ) -> (priv_lvl >= "b01".U),
-          ( addr === "h106".U ) -> (priv_lvl >= "b01".U),
-          ( addr === "h140".U ) -> (priv_lvl >= "b01".U),
-          ( addr === "h141".U ) -> (priv_lvl >= "b01".U),
-          ( addr === "h142".U ) -> (priv_lvl >= "b01".U),
-          ( addr === "h143".U ) -> (priv_lvl >= "b01".U),
-          ( addr === "h144".U ) -> (priv_lvl >= "b01".U),
-          ( addr === "h180".U ) -> ((priv_lvl === "b11".U) | (priv_lvl === "b01".U & mstatus.tvm === 0.U)), //TVM IN S-MODE
-          ( addr === "h600".U ) -> false.B,
-          ( addr === "h602".U ) -> false.B,
-          ( addr === "h603".U ) -> false.B,
-          ( addr === "h604".U ) -> false.B,
-          ( addr === "h606".U ) -> false.B,
-          ( addr === "h607".U ) -> false.B,
-          ( addr === "h643".U ) -> false.B,
-          ( addr === "h644".U ) -> false.B,
-          ( addr === "h645".U ) -> false.B,
-          ( addr === "h64A".U ) -> false.B,
-          ( addr === "hE12".U ) -> false.B,
-          ( addr === "h680".U ) -> false.B,
-          ( addr === "h605".U ) -> false.B,
-          ( addr === "h200".U ) -> false.B,
-          ( addr === "h204".U ) -> false.B,
-          ( addr === "h205".U ) -> false.B,
-          ( addr === "h240".U ) -> false.B,
-          ( addr === "h241".U ) -> false.B,
-          ( addr === "h242".U ) -> false.B,
-          ( addr === "h243".U ) -> false.B,
-          ( addr === "h244".U ) -> false.B,
-          ( addr === "h280".U ) -> false.B,
-          ( addr === "hF11".U ) -> (priv_lvl === "b11".U),
-          ( addr === "hF12".U ) -> (priv_lvl === "b11".U),
-          ( addr === "hF13".U ) -> (priv_lvl === "b11".U),
-          ( addr === "hF14".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h300".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h301".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h302".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h303".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h304".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h305".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h306".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h340".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h341".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h342".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h343".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h344".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h34A".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h34B".U ) -> (priv_lvl === "b11".U),
-
-          ( addr === "hB00".U ) -> (priv_lvl === "b11".U | (priv_lvl === "b01".U & mcounteren.cy)),
-          ( addr === "hB02".U ) -> (priv_lvl === "b11".U | (priv_lvl === "b01".U & mcounteren.ir)),
-          ( addr === "h320".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h7A0".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h7A1".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h7A2".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h7A3".U ) -> (priv_lvl === "b11".U),
-          ( addr === "h7B0".U ) -> DMode,
-          ( addr === "h7B1".U ) -> DMode,
-          ( addr === "h7B2".U ) -> DMode,
-          ( addr === "h7B3".U ) -> DMode
-        )
-
-    val res = Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
-    ~res
+  def isViolateCSRR(addr: UInt): Bool = {
+    return MuxCase( true.B, //non-exist csr
+      Seq( //special situation has higher priority
+        ( addr === "h180".U ) -> ~((priv_lvl === "b11".U) | (priv_lvl === "b01".U & mstatus.tvm === 0.U)), //TVM IN S-MODE
+        ( addr === "hB00".U ) -> ~((priv_lvl === "b11".U) | (priv_lvl === "b01".U & mcounteren.cy)),
+        ( addr === "hB02".U ) -> ~((priv_lvl === "b11".U) | (priv_lvl === "b01".U & mcounteren.ir)),
+      ) ++
+      CSRInfoTable.CSRGroup.map{ csr =>
+        (addr === (csr.address).U) -> 
+          ( (priv_lvl < (csr.priv).U) | //wrong priv
+            (if( csr.isDMode ) { ~DMode } else {false.B})
+          )
+      }
+    )
   }
 
-
-  def csr_write_denied(addr: UInt) = {
-    val pmpcfg_arr = {
-      val addr_chk = for ( i <- 0 until 8 ) yield { addr === ("h3A0".U + (2*i).U) }
-      val reg_sel  = for ( _ <- 0 until 8 ) yield { true.B }
-      addr_chk zip reg_sel
-    }
-
-    val pmpaddr_arr = {
-      val addr_chk = for ( i <- 0 until 8*8 ) yield { addr === ("h3B0".U + i.U) }
-      val reg_sel  = for ( _ <- 0 until 8*8 ) yield { true.B}
-      addr_chk zip reg_sel
-    }
-
-    val hpmcounter_arr = {
-      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hC00".U + i.U) }
-      val reg_sel  = for ( _ <- 3 until 32 ) yield { true.B }
-      addr_chk zip reg_sel
-    }
-
-    val mhpmcounter_arr = {
-      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("hB00".U + i.U) }
-      val reg_sel  = for ( _ <- 3 until 32 ) yield { true.B }
-      addr_chk zip reg_sel      
-    }
-
-    val mhpmevent_arr = {
-      val addr_chk = for ( i <- 3 until 32 ) yield { addr === ("h320".U + i.U) }
-      val reg_sel  = for ( _ <- 3 until 32 ) yield { true.B }
-      addr_chk zip reg_sel      
-    }
-
-    val normal_arr = Array(
-          // ( addr === "h000".U ) -> ustatus,
-          // ( addr === "h004".U ) -> uie,
-          // ( addr === "h005".U ) -> utvec,
-          // ( addr === "h040".U ) -> uscratch,
-          // ( addr === "h041".U ) -> uepc,
-          // ( addr === "h042".U ) -> ucause,
-          // ( addr === "h043".U ) -> utval,
-          // ( addr === "h044".U ) -> uip,
-          ( addr === "h001".U ) -> true.B, //fflags
-          ( addr === "h002".U ) -> true.B, //frm
-          ( addr === "h003".U ) -> true.B, //fcsr
-
-          ( addr === "h008".U ) -> true.B, //vstart
-          ( addr === "h009".U ) -> true.B, //vxsat
-          ( addr === "h00A".U ) -> true.B, //vxrm
-          ( addr === "h00F".U ) -> true.B,
-          ( addr === "hC20".U ) -> false.B,
-          ( addr === "hC21".U ) -> false.B,
-          ( addr === "hC22".U ) -> false.B,
-          ( addr === "hFFE".U ) -> true.B,
-          ( addr === "hFFF".U ) -> true.B,
-
-          ( addr === "hC00".U ) -> false.B,
-          ( addr === "hC01".U ) -> false.B,
-          ( addr === "hC02".U ) -> false.B,
-          ( addr === "h100".U ) -> true.B,
-          // ( addr === "h102".U ) -> sedeleg,
-          // ( addr === "h103".U ) -> sideleg,
-          ( addr === "h104".U ) -> true.B,
-          ( addr === "h105".U ) -> true.B,
-          ( addr === "h106".U ) -> true.B,
-          ( addr === "h140".U ) -> true.B,
-          ( addr === "h141".U ) -> true.B,
-          ( addr === "h142".U ) -> true.B,
-          ( addr === "h143".U ) -> true.B,
-          ( addr === "h144".U ) -> true.B,
-          ( addr === "h180".U ) -> true.B,
-          ( addr === "h600".U ) -> false.B,
-          ( addr === "h602".U ) -> false.B,
-          ( addr === "h603".U ) -> false.B,
-          ( addr === "h604".U ) -> false.B,
-          ( addr === "h606".U ) -> false.B,
-          ( addr === "h607".U ) -> false.B,
-          ( addr === "h643".U ) -> false.B,
-          ( addr === "h644".U ) -> false.B,
-          ( addr === "h645".U ) -> false.B,
-          ( addr === "h64A".U ) -> false.B,
-          ( addr === "hE12".U ) -> false.B,
-          ( addr === "h680".U ) -> false.B,
-          ( addr === "h605".U ) -> false.B,
-          ( addr === "h200".U ) -> false.B,
-          ( addr === "h204".U ) -> false.B,
-          ( addr === "h205".U ) -> false.B,
-          ( addr === "h240".U ) -> false.B,
-          ( addr === "h241".U ) -> false.B,
-          ( addr === "h242".U ) -> false.B,
-          ( addr === "h243".U ) -> false.B,
-          ( addr === "h244".U ) -> false.B,
-          ( addr === "h280".U ) -> false.B,
-          ( addr === "hF11".U ) -> true.B,
-          ( addr === "hF12".U ) -> true.B,
-          ( addr === "hF13".U ) -> true.B,
-          ( addr === "hF14".U ) -> true.B,
-          ( addr === "h300".U ) -> true.B,
-          ( addr === "h301".U ) -> true.B,
-          ( addr === "h302".U ) -> true.B,
-          ( addr === "h303".U ) -> true.B,
-          ( addr === "h304".U ) -> true.B,
-          ( addr === "h305".U ) -> true.B,
-          ( addr === "h306".U ) -> true.B,
-          ( addr === "h340".U ) -> true.B,
-          ( addr === "h341".U ) -> true.B,
-          ( addr === "h342".U ) -> true.B,
-          ( addr === "h343".U ) -> true.B,
-          ( addr === "h344".U ) -> true.B,
-          ( addr === "h34A".U ) -> true.B,
-          ( addr === "h34B".U ) -> true.B,
-
-          ( addr === "hB00".U ) -> true.B,
-          ( addr === "hB02".U ) -> true.B,
-          ( addr === "h320".U ) -> true.B,
-          ( addr === "h7A0".U ) -> true.B,
-          ( addr === "h7A1".U ) -> true.B,
-          ( addr === "h7A2".U ) -> true.B,
-          ( addr === "h7A3".U ) -> true.B,
-          ( addr === "h7B0".U ) -> DMode,
-          ( addr === "h7B1".U ) -> DMode,
-          ( addr === "h7B2".U ) -> DMode,
-          ( addr === "h7B3".U ) -> DMode,
-
-          ( addr === "hFFF".U ) -> true.B,
-        )
-
-    val res = Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
-    ~res
+  def isViolateCSRW(addr: UInt): Bool = {
+    return CSRInfoTable.CSRGroup.map{ csr =>
+      (addr === (csr.address).U) & ((csr.isRO).B)
+    }.reduce(_|_)
   }
-
-  // def csr_read_res(addr: UInt) = {
-  //   val pmpcfg_arr = {
-  //     val addr_chk = for ( i <- 0 until pmpNum ) yield { addr === ("h3A0".U + (2*i).U) }
-  //     val reg_sel  = for ( i <- 0 until pmpNum ) yield { pmpcfg(i).asUInt }
-  //     addr_chk zip reg_sel
-  //   }
-
-  //   val pmpaddr_arr = {
-  //     val addr_chk = for ( i <- 0 until 8*pmpNum ) yield { addr === ("h3B0".U + i.U) }
-  //     val reg_sel  = for ( i <- 0 until 8*pmpNum ) yield { pmpaddr(i)}
-  //     addr_chk zip reg_sel
-  //   }
-
-  //   val hpmcounter_arr = {
-  //     val addr_chk = for ( i <- 3 until 3+hpmNum ) yield { addr === ("hC00".U + i.U) }
-  //     val reg_sel  = for ( i <- 3 until 3+hpmNum ) yield { hpmcounter(i) }
-  //     addr_chk zip reg_sel
-  //   }
-
-  //   val mhpmcounter_arr = {
-  //     val addr_chk = for ( i <- 3 until 3+hpmNum ) yield { addr === ("hB00".U + i.U) }
-  //     val reg_sel  = for ( i <- 3 until 3+hpmNum ) yield { mhpmcounter(i) }
-  //     addr_chk zip reg_sel      
-  //   }
-
-  //   val mhpmevent_arr = {
-  //     val addr_chk = for ( i <- 3 until 3+hpmNum ) yield { addr === ("h320".U + i.U) }
-  //     val reg_sel  = for ( i <- 3 until 3+hpmNum ) yield { mhpmevent(i) }
-  //     addr_chk zip reg_sel      
-  //   }
-
-  //   val normal_arr = Array(
-  //         // ( addr === "h000".U ) -> ustatus,
-  //         // ( addr === "h004".U ) -> uie,
-  //         // ( addr === "h005".U ) -> utvec,
-  //         // ( addr === "h040".U ) -> uscratch,
-  //         // ( addr === "h041".U ) -> uepc,
-  //         // ( addr === "h042".U ) -> ucause,
-  //         // ( addr === "h043".U ) -> utval,
-  //         // ( addr === "h044".U ) -> uip,
-  //         ( addr === "h001".U ) -> fcsr.fflags, 
-  //         ( addr === "h002".U ) -> fcsr.frm,
-  //         ( addr === "h003".U ) -> fcsr.asUInt,
-
-  //         ( addr === "h008".U ) -> vstart, 
-  //         ( addr === "h009".U ) -> vcsr.vxsat,
-  //         ( addr === "h00A".U ) -> vcsr.vxrm,
-  //         ( addr === "h00F".U ) -> vcsr.asUInt,
-
-  //         ( addr === "hC20".U ) -> vConfig.vl,
-  //         ( addr === "hC21".U ) -> vConfig.vtype,
-  //         // ( addr === "hFFE".U ) -> vConfig.asUInt,
-  //         ( addr === "hC22".U ) -> vlenb,
-
-
-  //         ( addr === "hC00".U ) -> cycle,
-  //         ( addr === "hC01".U ) -> time,
-  //         ( addr === "hC02".U ) -> instret,
-  //         ( addr === "h100".U ) -> sstatus.asUInt,
-  //         // ( addr === "h102".U ) -> sedeleg,
-  //         // ( addr === "h103".U ) -> sideleg,
-  //         ( addr === "h104".U ) -> sie.asUInt,
-  //         ( addr === "h105".U ) -> stvec.asUInt,
-  //         ( addr === "h106".U ) -> scounteren.asUInt,
-  //         ( addr === "h140".U ) -> sscratch,
-  //         ( addr === "h141".U ) -> sepc,
-  //         ( addr === "h142".U ) -> scause.asUInt,
-  //         ( addr === "h143".U ) -> stval,
-  //         ( addr === "h144".U ) -> sip.asUInt,
-  //         ( addr === "h180".U ) -> satp.asUInt,
-  //         // ( addr === "h600".U ) -> hstatus,
-  //         // ( addr === "h602".U ) -> hedeleg,
-  //         // ( addr === "h603".U ) -> hideleg,
-  //         // ( addr === "h604".U ) -> hie,
-  //         // ( addr === "h606".U ) -> hcounteren,
-  //         // ( addr === "h607".U ) -> hgeie,
-  //         // ( addr === "h643".U ) -> htval,
-  //         // ( addr === "h644".U ) -> hip,
-  //         // ( addr === "h645".U ) -> hvip,
-  //         // ( addr === "h64A".U ) -> htinst,
-  //         // ( addr === "hE12".U ) -> hgeip,
-  //         // ( addr === "h680".U ) -> hgatp,
-  //         // ( addr === "h605".U ) -> htimedelta,
-  //         // ( addr === "h200".U ) -> vsstatus,
-  //         // ( addr === "h204".U ) -> vsie,
-  //         // ( addr === "h205".U ) -> vstvec,
-  //         // ( addr === "h240".U ) -> vsscratch,
-  //         // ( addr === "h241".U ) -> vsepc,
-  //         // ( addr === "h242".U ) -> vscause,
-  //         // ( addr === "h243".U ) -> vstval,
-  //         // ( addr === "h244".U ) -> vsip,
-  //         // ( addr === "h280".U ) -> vsatp,
-  //         ( addr === "hF11".U ) -> mvendorid,
-  //         ( addr === "hF12".U ) -> marchid,
-  //         ( addr === "hF13".U ) -> mimpid,
-  //         ( addr === "hF14".U ) -> mhartid,
-  //         ( addr === "h300".U ) -> mstatus.asUInt,
-  //         ( addr === "h301".U ) -> misa,
-  //         ( addr === "h302".U ) -> medeleg,
-  //         ( addr === "h303".U ) -> mideleg,
-  //         ( addr === "h304".U ) -> mie.asUInt,
-  //         ( addr === "h305".U ) -> mtvec.asUInt,
-  //         ( addr === "h306".U ) -> mcounteren.asUInt,
-  //         ( addr === "h340".U ) -> mscratch,
-  //         ( addr === "h341".U ) -> mepc,
-  //         ( addr === "h342".U ) -> mcause.asUInt,
-  //         ( addr === "h343".U ) -> mtval.asUInt,
-  //         ( addr === "h344".U ) -> mip.asUInt,
-  //         ( addr === "h34A".U ) -> mtinst,
-  //         ( addr === "h34B".U ) -> mtval2,
-
-  //         ( addr === "hB00".U ) -> mcycle,
-  //         ( addr === "hB02".U ) -> minstret,
-  //         ( addr === "h320".U ) -> mcountinhibit,
-  //         ( addr === "h7A0".U ) -> tselect,
-  //         ( addr === "h7A1".U ) -> tdata1,
-  //         ( addr === "h7A2".U ) -> tdata2,
-  //         ( addr === "h7A3".U ) -> tdata3,
-  //         ( addr === "h7B0".U ) -> dcsr.asUInt,
-  //         ( addr === "h7B1".U ) -> dpc,
-  //         ( addr === "h7B2".U ) -> dscratch0,
-  //         ( addr === "h7B3".U ) -> dscratch1,
-  //         ( addr === "h7B4".U ) -> dscratch2,
-  //       )
-
-  //   Mux1H(pmpcfg_arr ++ pmpaddr_arr ++ hpmcounter_arr ++ mhpmcounter_arr ++ mhpmevent_arr ++ normal_arr )
-  // }
-
-
 
 }
 
@@ -2059,7 +1690,15 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
       csrfiles.vlenb   := DontCare
     }
 
+    csrfiles.sstatus    := (csrfiles.mstatus.asUInt & Cat( "b1".U, 0.U(29.W), "b11".U, 0.U(12.W), "b11011110000101100010".U )).asTypeOf(new MStatusBundle)
+    csrfiles.sie        := csrfiles.mie
+    csrfiles.sip        := csrfiles.mip
+    csrfiles.cycle      := csrfiles.mcycle
+    csrfiles.instret    := csrfiles.minstret
+    csrfiles.hpmcounter := csrfiles.mhpmcounter
 
+    csrfiles.fflags     := csrfiles.fcsr.fflags
+    csrfiles.frm        := csrfiles.fcsr.frm
 
     return csrfiles
   }

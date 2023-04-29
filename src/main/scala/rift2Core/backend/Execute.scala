@@ -66,13 +66,14 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     val bcmm_update = Valid(new Branch_CTarget_Bundle)
     val jcmm_update = Valid(new Jump_CTarget_Bundle)
 
-    val cWriteBack = Vec(3, Valid(new SeqReg_WriteBack_Bundle(64, cRegNum)))
-
+    // val cWriteBack = Vec(3, Valid(new SeqReg_WriteBack_Bundle(64, cRegNum)))
+    val fpuCsrWriteBack = Valid(new Exe_Port)
+    val xpuCsrWriteBack = Valid(new Exe_Port)
 
     val lsu_mmu = DecoupledIO(new Info_mmu_req)
     val mmu_lsu = Flipped(DecoupledIO(new Info_mmu_rsp))
     val cmm_lsu = Input(new Info_cmm_lsu)
-    // val lsu_cmm = Output( new Info_lsu_cmm )
+    val lsu_cmm = Output( new Info_lsu_cmm )
 
     val missUnit_dcache_acquire  = if( hasL2 ) Some(new DecoupledIO(new TLBundleA(edge(0).bundle)))               else {None}
     val missUnit_dcache_grant    = if( hasL2 ) Some(Flipped(new DecoupledIO(new TLBundleD(edge(0).bundle))))      else {None}
@@ -99,12 +100,14 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   val alu = for( _ <- 0 until aluNum ) yield Module(new Alu)
   val bru = Module(new Bru)
   val lsu = {
-    val mdl = Module(new VectorLSU((edge)))
+    val mdl = Module(new Lsu((edge)))
 
     mdl.io.lsu_iss_exe <> io.lsu_iss_exe
     mdl.io.lsu_exe_iwb <> io.lsu_exe_iwb
     mdl.io.lsu_exe_fwb <> io.lsu_exe_fwb
-    mdl.io.lsu_exe_vwb <> io.lsu_exe_vwb
+    // mdl.io.lsu_exe_vwb <> io.lsu_exe_vwb
+    io.lsu_exe_vwb.valid := false.B
+    io.lsu_exe_vwb.bits  := DontCare
 
     mdl.io.lsu_mmu <> io.lsu_mmu
     mdl.io.mmu_lsu <> io.mmu_lsu
@@ -163,7 +166,8 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
 
     io.preFetch := mdl.io.preFetch
 
-    mdl.io.lsu_cWriteBack <> io.cWriteBack(1)
+    io.lsu_cmm := mdl.io.lsu_cmm
+    // mdl.io.lsu_cWriteBack <> io.cWriteBack(1)
 
     mdl.io.flush := io.flush
     mdl
@@ -179,7 +183,8 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     fpu(i).io.fpu_iss_exe <> io.fpu_iss_exe(i)
     fpu(i).io.fpu_exe_iwb <> io.fpu_exe_iwb(i)
     fpu(i).io.fpu_exe_fwb <> io.fpu_exe_fwb(i)
-    fpu(i).io.fpu_cWriteBack <> io.cWriteBack(2)
+    // fpu(i).io.fpu_cWriteBack <> io.cWriteBack(2)
+    io.fpuCsrWriteBack := fpu(i).io.fpuCsrWriteBack
     fpu(i).io.flush := io.flush
   }
 
@@ -206,7 +211,8 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   csr.io.csr_iss_exe <> io.csr_iss_exe
   csr.io.csr_exe_iwb <> io.csr_exe_iwb
   csr.io.flush <> io.flush
-  csr.io.csr_cWriteBack <> io.cWriteBack(0)
+  io.xpuCsrWriteBack := csr.io.xpuCsrWriteBack
+  // csr.io.csr_cWriteBack <> io.cWriteBack(0)
 
 
   for( i <- 0 until (mulNum max 1) ) {

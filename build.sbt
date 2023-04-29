@@ -4,7 +4,7 @@
 
 ThisBuild / scalaVersion     := "2.13.10"
 
-ThisBuild / version          := "2.3.5"//-SNAPSHOT
+ThisBuild / version          := "2.3.6"//-SNAPSHOT
 ThisBuild / organization     := "io.github.whutddk"
 val chiselVersion = "3.5.6"
 

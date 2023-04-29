@@ -58,7 +58,6 @@ abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPU
     val vrgRsp = Vec( vParams.opChn, Flipped(Valid(new ReadOp_Rsp_Bundle(vParams.vlen)) ) )
 
     val csrfiles = Input(new CSR_Bundle)
-    val csrIsReady = Input(new CSR_LOG_Bundle(cRegNum))
 
     val flush = Input(Bool())    
   } 
@@ -732,249 +731,13 @@ trait IssLoadVOp { this: IssueBase =>
   }
 }
 
-trait IssLoadCsr { this: IssueBase =>
 
-  val isCSRRReady = 
-    for( i <- 0 until dptEntry ) yield {
-      val csrSel = bufInfo(i).param.imm(11,0)
-      val phySel = bufInfo(i).csrr( log2Ceil(cRegNum)-1, 0 )
-
-      ((csrSel === "hf11".U) & ( io.csrIsReady.mvendorid.isCmm(phySel)      === true.B)) |
-      ((csrSel === "hf12".U) & ( io.csrIsReady.marchid.isCmm(  phySel)        === true.B)) |
-      ((csrSel === "hf13".U) & ( io.csrIsReady.mimpid.isCmm(   phySel)         === true.B)) |
-      ((csrSel === "hf14".U) & ( io.csrIsReady.mhartid.isCmm(  phySel)        === true.B)) |
-      ((csrSel === "h300".U) & ( io.csrIsReady.mstatus.isCmm(phySel) === true.B)) |
-      ((csrSel === "h301".U) & ( io.csrIsReady.misa.isCmm(   phySel)           === true.B)) |
-      ((csrSel === "h302".U) & ( io.csrIsReady.medeleg.isCmm(phySel)        === true.B)) |
-      ((csrSel === "h303".U) & ( io.csrIsReady.mideleg.isCmm(phySel)        === true.B)) |
-      ((csrSel === "h304".U) & ( io.csrIsReady.mie.isCmm(    phySel)            === true.B)) |
-      ((csrSel === "h305".U) & ( io.csrIsReady.mtvec.isCmm(  phySel)          === true.B)) |
-      ((csrSel === "h306".U) & ( io.csrIsReady.mcounteren.isCmm(phySel)     === true.B)) |
-      ((csrSel === "h340".U) & ( io.csrIsReady.mscratch.isCmm(phySel)       === true.B)) |
-      ((csrSel === "h341".U) & ( io.csrIsReady.mepc.isCmm(phySel)           === true.B)) |
-      ((csrSel === "h342".U) & ( io.csrIsReady.mcause.isCmm(phySel)         === true.B)) |
-      ((csrSel === "h343".U) & ( io.csrIsReady.mtval.isCmm(phySel)          === true.B)) |
-      ((csrSel === "h344".U) & ( io.csrIsReady.mip.isCmm(phySel)            === true.B)) |
-      ((csrSel === "h34A".U) & ( io.csrIsReady.mtinst.isCmm(  phySel)         === true.B)) |
-      ((csrSel === "h34B".U) & ( io.csrIsReady.mtval2.isCmm(  phySel)         === true.B)) |
-      ((csrSel === "hB00".U) & ( io.csrIsReady.mcycle.isCmm(  phySel)         === true.B)) |
-      ((csrSel === "hB02".U) & ( io.csrIsReady.minstret.isCmm(phySel)       === true.B)) |
-      ((csrSel === "h100".U) & ( io.csrIsReady.sstatus.isCmm(phySel)        === true.B)) |
-      // ((csrSel === "h102".U) & ( io.csrIsReady.sedeleg(phySel)        === true.B)) |
-      // ((csrSel === "h103".U) & ( io.csrIsReady.sideleg(phySel)        === true.B)) |
-      ((csrSel === "h104".U) & ( io.csrIsReady.sie.isCmm(       phySel)            === true.B)) |
-      ((csrSel === "h105".U) & ( io.csrIsReady.stvec.isCmm(     phySel)          === true.B)) |
-      ((csrSel === "h106".U) & ( io.csrIsReady.scounteren.isCmm(phySel)     === true.B)) |
-      ((csrSel === "h140".U) & ( io.csrIsReady.sscratch.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h141".U) & ( io.csrIsReady.sepc.isCmm(      phySel)           === true.B)) |
-      ((csrSel === "h142".U) & ( io.csrIsReady.scause.isCmm(    phySel)         === true.B)) |
-      ((csrSel === "h143".U) & ( io.csrIsReady.stval.isCmm(     phySel)          === true.B)) |
-      ((csrSel === "h144".U) & ( io.csrIsReady.sip.isCmm(       phySel)            === true.B)) |
-      ((csrSel === "h180".U) & ( io.csrIsReady.satp.isCmm(      phySel)           === true.B)) |
-      ((csrSel === "h7A0".U) & ( io.csrIsReady.tselect.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h7A1".U) & ( io.csrIsReady.tdata1.isCmm(    phySel)         === true.B)) |
-      ((csrSel === "h7A2".U) & ( io.csrIsReady.tdata2.isCmm(    phySel)         === true.B)) |
-      ((csrSel === "h7A3".U) & ( io.csrIsReady.tdata3.isCmm(    phySel)         === true.B)) |
-      ((csrSel === "h7B0".U) & ( io.csrIsReady.dcsr.isCmm(      phySel)           === true.B)) |
-      ((csrSel === "h7B1".U) & ( io.csrIsReady.dpc.isCmm(       phySel)            === true.B)) |
-      ((csrSel === "h7B2".U) & ( io.csrIsReady.dscratch0.isCmm( phySel)      === true.B)) |
-      ((csrSel === "h7B3".U) & ( io.csrIsReady.dscratch1.isCmm( phySel)      === true.B)) |
-      ((csrSel === "h7B4".U) & ( io.csrIsReady.dscratch2.isCmm( phySel)      === true.B)) |
-      ((csrSel === "h320".U) & ( io.csrIsReady.mcountinhibit.isCmm(phySel)  === true.B)) |
-      ((csrSel === "h3A0".U) & ( io.csrIsReady.pmpcfg0.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3A2".U) & ( io.csrIsReady.pmpcfg2.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3A4".U) & ( io.csrIsReady.pmpcfg4.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3A6".U) & ( io.csrIsReady.pmpcfg6.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3A8".U) & ( io.csrIsReady.pmpcfg8.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3AA".U) & ( io.csrIsReady.pmpcfg10.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3AC".U) & ( io.csrIsReady.pmpcfg12.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3AE".U) & ( io.csrIsReady.pmpcfg14.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3B0".U) & (io.csrIsReady.pmpaddr0.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3B1".U) & (io.csrIsReady.pmpaddr1.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3B2".U) & (io.csrIsReady.pmpaddr2.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3B3".U) & (io.csrIsReady.pmpaddr3.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3B4".U) & (io.csrIsReady.pmpaddr4.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3B5".U) & (io.csrIsReady.pmpaddr5.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3B6".U) & (io.csrIsReady.pmpaddr6.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3B7".U) & (io.csrIsReady.pmpaddr7.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3B8".U) & (io.csrIsReady.pmpaddr8.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3B9".U) & (io.csrIsReady.pmpaddr9.isCmm(   phySel)        === true.B)) |
-      ((csrSel === "h3BA".U) & (io.csrIsReady.pmpaddr10.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3BB".U) & (io.csrIsReady.pmpaddr11.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3BC".U) & (io.csrIsReady.pmpaddr12.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3BD".U) & (io.csrIsReady.pmpaddr13.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3BE".U) & (io.csrIsReady.pmpaddr14.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3BF".U) & (io.csrIsReady.pmpaddr15.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3C0".U) & (io.csrIsReady.pmpaddr16.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3C1".U) & (io.csrIsReady.pmpaddr17.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3C2".U) & (io.csrIsReady.pmpaddr18.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3C3".U) & (io.csrIsReady.pmpaddr19.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3C4".U) & (io.csrIsReady.pmpaddr20.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3C5".U) & (io.csrIsReady.pmpaddr21.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3C6".U) & (io.csrIsReady.pmpaddr22.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3C7".U) & (io.csrIsReady.pmpaddr23.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3C8".U) & (io.csrIsReady.pmpaddr24.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3C9".U) & (io.csrIsReady.pmpaddr25.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3CA".U) & (io.csrIsReady.pmpaddr26.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3CB".U) & (io.csrIsReady.pmpaddr27.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3CC".U) & (io.csrIsReady.pmpaddr28.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3CD".U) & (io.csrIsReady.pmpaddr29.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3CE".U) & (io.csrIsReady.pmpaddr30.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3CF".U) & (io.csrIsReady.pmpaddr31.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3D0".U) & (io.csrIsReady.pmpaddr32.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3D1".U) & (io.csrIsReady.pmpaddr33.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3D2".U) & (io.csrIsReady.pmpaddr34.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3D3".U) & (io.csrIsReady.pmpaddr35.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3D4".U) & (io.csrIsReady.pmpaddr36.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3D5".U) & (io.csrIsReady.pmpaddr37.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3D6".U) & (io.csrIsReady.pmpaddr38.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3D7".U) & (io.csrIsReady.pmpaddr39.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3D8".U) & (io.csrIsReady.pmpaddr40.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3D9".U) & (io.csrIsReady.pmpaddr41.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3DA".U) & (io.csrIsReady.pmpaddr42.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3DB".U) & (io.csrIsReady.pmpaddr43.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3DC".U) & (io.csrIsReady.pmpaddr44.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3DD".U) & (io.csrIsReady.pmpaddr45.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3DE".U) & (io.csrIsReady.pmpaddr46.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3DF".U) & (io.csrIsReady.pmpaddr47.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3E0".U) & (io.csrIsReady.pmpaddr48.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3E1".U) & (io.csrIsReady.pmpaddr49.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3E2".U) & (io.csrIsReady.pmpaddr50.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3E3".U) & (io.csrIsReady.pmpaddr51.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3E4".U) & (io.csrIsReady.pmpaddr52.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3E5".U) & (io.csrIsReady.pmpaddr53.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3E6".U) & (io.csrIsReady.pmpaddr54.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3E7".U) & (io.csrIsReady.pmpaddr55.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3E8".U) & (io.csrIsReady.pmpaddr56.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3E9".U) & (io.csrIsReady.pmpaddr57.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3EA".U) & (io.csrIsReady.pmpaddr58.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3EB".U) & (io.csrIsReady.pmpaddr59.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3EC".U) & (io.csrIsReady.pmpaddr60.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3ED".U) & (io.csrIsReady.pmpaddr61.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3EE".U) & (io.csrIsReady.pmpaddr62.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "h3EF".U) & (io.csrIsReady.pmpaddr63.isCmm(  phySel)       === true.B)) |
-      ((csrSel === "hB03".U) & (io.csrIsReady.mhpmcounter3.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hB04".U) & (io.csrIsReady.mhpmcounter4.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hB05".U) & (io.csrIsReady.mhpmcounter5.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hB06".U) & (io.csrIsReady.mhpmcounter6.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hB07".U) & (io.csrIsReady.mhpmcounter7.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hB08".U) & (io.csrIsReady.mhpmcounter8.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hB09".U) & (io.csrIsReady.mhpmcounter9.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hB0A".U) & (io.csrIsReady.mhpmcounter10.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB0B".U) & (io.csrIsReady.mhpmcounter11.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB0C".U) & (io.csrIsReady.mhpmcounter12.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB0D".U) & (io.csrIsReady.mhpmcounter13.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB0E".U) & (io.csrIsReady.mhpmcounter14.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB0F".U) & (io.csrIsReady.mhpmcounter15.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB10".U) & (io.csrIsReady.mhpmcounter16.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB11".U) & (io.csrIsReady.mhpmcounter17.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB12".U) & (io.csrIsReady.mhpmcounter18.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB13".U) & (io.csrIsReady.mhpmcounter19.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB14".U) & (io.csrIsReady.mhpmcounter20.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB15".U) & (io.csrIsReady.mhpmcounter21.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB16".U) & (io.csrIsReady.mhpmcounter22.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB17".U) & (io.csrIsReady.mhpmcounter23.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB18".U) & (io.csrIsReady.mhpmcounter24.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB19".U) & (io.csrIsReady.mhpmcounter25.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB1A".U) & (io.csrIsReady.mhpmcounter26.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB1B".U) & (io.csrIsReady.mhpmcounter27.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB1C".U) & (io.csrIsReady.mhpmcounter28.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB1D".U) & (io.csrIsReady.mhpmcounter29.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB1E".U) & (io.csrIsReady.mhpmcounter30.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hB1F".U) & (io.csrIsReady.mhpmcounter31.isCmm(phySel)   === true.B)) |
-      ((csrSel === "h323".U) & (io.csrIsReady.mhpmevent3.isCmm(   phySel)    === true.B)) |
-      ((csrSel === "h324".U) & (io.csrIsReady.mhpmevent4.isCmm(   phySel)    === true.B)) |
-      ((csrSel === "h325".U) & (io.csrIsReady.mhpmevent5.isCmm(   phySel)    === true.B)) |
-      ((csrSel === "h326".U) & (io.csrIsReady.mhpmevent6.isCmm(   phySel)    === true.B)) |
-      ((csrSel === "h327".U) & (io.csrIsReady.mhpmevent7.isCmm(   phySel)    === true.B)) |
-      ((csrSel === "h328".U) & (io.csrIsReady.mhpmevent8.isCmm(   phySel)    === true.B)) |
-      ((csrSel === "h329".U) & (io.csrIsReady.mhpmevent9.isCmm(   phySel)    === true.B)) |
-      ((csrSel === "h32A".U) & (io.csrIsReady.mhpmevent10.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h32B".U) & (io.csrIsReady.mhpmevent11.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h32C".U) & (io.csrIsReady.mhpmevent12.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h32D".U) & (io.csrIsReady.mhpmevent13.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h32E".U) & (io.csrIsReady.mhpmevent14.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h32F".U) & (io.csrIsReady.mhpmevent15.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h330".U) & (io.csrIsReady.mhpmevent16.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h331".U) & (io.csrIsReady.mhpmevent17.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h332".U) & (io.csrIsReady.mhpmevent18.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h333".U) & (io.csrIsReady.mhpmevent19.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h334".U) & (io.csrIsReady.mhpmevent20.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h335".U) & (io.csrIsReady.mhpmevent21.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h336".U) & (io.csrIsReady.mhpmevent22.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h337".U) & (io.csrIsReady.mhpmevent23.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h338".U) & (io.csrIsReady.mhpmevent24.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h339".U) & (io.csrIsReady.mhpmevent25.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h33A".U) & (io.csrIsReady.mhpmevent26.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h33B".U) & (io.csrIsReady.mhpmevent27.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h33C".U) & (io.csrIsReady.mhpmevent28.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h33D".U) & (io.csrIsReady.mhpmevent29.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h33E".U) & (io.csrIsReady.mhpmevent30.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "h33F".U) & (io.csrIsReady.mhpmevent31.isCmm(  phySel)   === true.B)) |
-      ((csrSel === "hC00".U) & (io.csrIsReady.cycle.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hC01".U) & (io.csrIsReady.time.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hC02".U) & (io.csrIsReady.instret.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hC03".U) & (io.csrIsReady.hpmcounter3.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hC04".U) & (io.csrIsReady.hpmcounter4.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hC05".U) & (io.csrIsReady.hpmcounter5.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hC06".U) & (io.csrIsReady.hpmcounter6.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hC07".U) & (io.csrIsReady.hpmcounter7.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hC08".U) & (io.csrIsReady.hpmcounter8.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hC09".U) & (io.csrIsReady.hpmcounter9.isCmm(phySel)    === true.B)) |
-      ((csrSel === "hC0A".U) & (io.csrIsReady.hpmcounter10.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC0B".U) & (io.csrIsReady.hpmcounter11.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC0C".U) & (io.csrIsReady.hpmcounter12.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC0D".U) & (io.csrIsReady.hpmcounter13.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC0E".U) & (io.csrIsReady.hpmcounter14.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC0F".U) & (io.csrIsReady.hpmcounter15.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC10".U) & (io.csrIsReady.hpmcounter16.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC11".U) & (io.csrIsReady.hpmcounter17.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC12".U) & (io.csrIsReady.hpmcounter18.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC13".U) & (io.csrIsReady.hpmcounter19.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC14".U) & (io.csrIsReady.hpmcounter20.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC15".U) & (io.csrIsReady.hpmcounter21.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC16".U) & (io.csrIsReady.hpmcounter22.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC17".U) & (io.csrIsReady.hpmcounter23.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC18".U) & (io.csrIsReady.hpmcounter24.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC19".U) & (io.csrIsReady.hpmcounter25.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC1A".U) & (io.csrIsReady.hpmcounter26.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC1B".U) & (io.csrIsReady.hpmcounter27.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC1C".U) & (io.csrIsReady.hpmcounter28.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC1D".U) & (io.csrIsReady.hpmcounter29.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC1E".U) & (io.csrIsReady.hpmcounter30.isCmm(phySel)   === true.B)) |
-      ((csrSel === "hC1F".U) & (io.csrIsReady.hpmcounter31.isCmm(phySel)   === true.B)) |
-      ((csrSel === "h001".U) & (io.csrIsReady.fflags.isCmm(phySel) & io.csrIsReady.fcsr.isFree)) | // fflag
-      ((csrSel === "h002".U) & (io.csrIsReady.frm.isCmm(phySel)   & io.csrIsReady.fcsr.isFree)) |  // frm
-      ((csrSel === "h003".U) & (io.csrIsReady.fcsr.isCmm(phySel)  & io.csrIsReady.fflags.isFree & io.csrIsReady.frm.isFree)) |
-      ((csrSel === "h008".U) & (io.csrIsReady.vstart.isCmm(phySel)       === true.B)) |
-      ((csrSel === "h009".U) & (io.csrIsReady.vxsat.isCmm(phySel) & io.csrIsReady.vcsr.isFree)) | // vxsat only write in vConfig
-      ((csrSel === "h00A".U) & (io.csrIsReady.vxrm.isCmm(phySel)  & io.csrIsReady.vcsr.isFree)) | // vxrm only write in vConfig
-      ((csrSel === "h00F".U) & (io.csrIsReady.vcsr.isCmm(phySel)  & io.csrIsReady.vxsat.isFree & io.csrIsReady.vxrm.isFree)) |
-      ((csrSel === "hC20".U) & (io.csrIsReady.vConfig.isCmm(phySel)      === true.B)) | //vl only write in vConfig
-      ((csrSel === "hC21".U) & (io.csrIsReady.vConfig.isCmm(phySel)      === true.B)) | //vtype only write into vConfig
-      ((csrSel === "hC22".U) & (io.csrIsReady.vlenb.isCmm(phySel)        === true.B)) |
-      ((csrSel === "hFFE".U) & ( true.B )) //vconfig always ready at issue stage
-    }
-
-  val isFRMRReady =
-    for( i <- 0 until dptEntry ) yield {
-      val phySel = bufInfo(i).csrr( log2Ceil(cRegNum)-1, 0 )
-      io.csrIsReady.frm.isCmm(phySel) === true.B
-    }
-
-  // val isCSRvConfigReady =
-  //   for( i <- 0 until dptEntry ) yield {
-  //     val phySel = bufInfo(i).csrr( log2Ceil(cRegNum)-1, 0 )
-  //     io.csrIsReady.vConfig.isCmm(phySel) === true.B
-  //   }  
-}
 
 
 abstract class IssueSel()(implicit p: Parameters) extends IssueBase
 with IssLoadIOp
 with IssLoadFOp
-with IssLoadVOp
-with IssLoadCsr{
+with IssLoadVOp{
   val postIsOpReady = Wire( Vec( dptEntry, Vec(4, Bool())) )
   val postBufOperator = Wire( Vec( dptEntry, Vec(4, UInt(vParams.vlen.W))) )
 
@@ -988,8 +751,6 @@ with IssLoadCsr{
     postBufOperator(i)(1) := MuxCase( bufOperator(i)(1) , io.irgRsp.map{x => { ( isBufXop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }})
     postBufOperator(i)(2) := MuxCase( bufOperator(i)(2) , io.irgRsp.map{x => { ( isBufXop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }})
     postBufOperator(i)(3) := MuxCase( bufOperator(i)(3) ,                                                                                                        io.frgRsp.map{x => { ( isBufFop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> x.bits.op }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> x.bits.op }})
-  
-
   }
 
 }
@@ -1266,62 +1027,14 @@ trait IssSelCsr{ this: IssueSel =>
         bufInfo(idx).csr_isa.rw  -> postBufOperator(idx)(1), bufInfo(idx).csr_isa.rwi -> bufInfo(idx).param.raw.rs1,
         bufInfo(idx).csr_isa.rs  -> postBufOperator(idx)(1), bufInfo(idx).csr_isa.rsi -> bufInfo(idx).param.raw.rs1,
         bufInfo(idx).csr_isa.rc  -> postBufOperator(idx)(1), bufInfo(idx).csr_isa.rci -> bufInfo(idx).param.raw.rs1,
-
-        (bufInfo(idx).vectorIsa.vsetvli | bufInfo(idx).vectorIsa.vsetvl) ->
-          Mux( bufInfo(idx).param.raw.rs1 =/= 0.U, postBufOperator(idx)(1), Mux( bufInfo(idx).param.raw.rd0 =/= 0.U, (vParams.vlmax).U, io.csrfiles.vConfig.vl)),
-        bufInfo(idx).vectorIsa.vsetivli -> bufInfo(idx).param.raw.rs1,
       ))
 
+    /** automatically create csr address mux according CSRInfoTable */
     res.param.dat.op2 := 
-      Mux1H( Seq(
-        (csrSel === "hf11".U) -> io.csrfiles.mvendorid,
-        (csrSel === "hf12".U) -> io.csrfiles.marchid,
-        (csrSel === "hf13".U) -> io.csrfiles.mimpid,
-        (csrSel === "hf14".U) -> io.csrfiles.mhartid,
-        (csrSel === "h300".U) -> io.csrfiles.mstatus.asUInt,
-        (csrSel === "h301".U) -> io.csrfiles.misa,
-        (csrSel === "h302".U) -> io.csrfiles.medeleg,
-        (csrSel === "h303".U) -> io.csrfiles.mideleg,
-        (csrSel === "h304".U) -> io.csrfiles.mie.asUInt,
-        (csrSel === "h305".U) -> io.csrfiles.mtvec.asUInt,
-        (csrSel === "h306".U) -> io.csrfiles.mcounteren.asUInt,
-        (csrSel === "h340".U) -> io.csrfiles.mscratch,
-        (csrSel === "h341".U) -> io.csrfiles.mepc,
-        (csrSel === "h342".U) -> io.csrfiles.mcause.asUInt,
-        (csrSel === "h343".U) -> io.csrfiles.mtval,
-        (csrSel === "h344".U) -> io.csrfiles.mip.asUInt,
-        (csrSel === "h34A".U) -> io.csrfiles.mtinst,
-        (csrSel === "h34B".U) -> io.csrfiles.mtval2,
-        (csrSel === "hB00".U) -> io.csrfiles.mcycle,
-        (csrSel === "hB02".U) -> io.csrfiles.minstret,
-        (csrSel === "h100".U) -> io.csrfiles.sstatus.asUInt,
-        // (csrSel === "h102".U) -> io.csrfiles.sedeleg,
-        // (csrSel === "h103".U) -> io.csrfiles.sideleg,
-        (csrSel === "h104".U) -> io.csrfiles.sie.asUInt,
-        (csrSel === "h105".U) -> io.csrfiles.stvec.asUInt,
-        (csrSel === "h106".U) -> io.csrfiles.scounteren.asUInt,
-        (csrSel === "h140".U) -> io.csrfiles.sscratch,
-        (csrSel === "h141".U) -> io.csrfiles.sepc,
-        (csrSel === "h142".U) -> io.csrfiles.scause.asUInt,
-        (csrSel === "h143".U) -> io.csrfiles.stval,
-        (csrSel === "h144".U) -> io.csrfiles.sip.asUInt,
-        (csrSel === "h180".U) -> io.csrfiles.satp.asUInt,
-        (csrSel === "h7A0".U) -> io.csrfiles.tselect,
-        (csrSel === "h7A1".U) -> io.csrfiles.tdata1,
-        (csrSel === "h7A2".U) -> io.csrfiles.tdata2,
-        (csrSel === "h7A3".U) -> io.csrfiles.tdata3,
-        (csrSel === "h7B0".U) -> io.csrfiles.dcsr.asUInt,
-        (csrSel === "h7B1".U) -> io.csrfiles.dpc,
-        (csrSel === "h7B2".U) -> io.csrfiles.dscratch0,
-        (csrSel === "h7B3".U) -> io.csrfiles.dscratch1,
-        (csrSel === "h7B4".U) -> io.csrfiles.dscratch2,
-        (csrSel === "h320".U) -> io.csrfiles.mcountinhibit,
-        (csrSel === "hC00".U) -> io.csrfiles.cycle,
-        (csrSel === "hC01".U) -> io.csrfiles.time,
-        (csrSel === "hC02".U) -> io.csrfiles.instret,
-
-
-        ) ++
+      Mux1H(
+        (for ( info <- CSRInfoTable.CSRGroup; io <- io.csrfiles.elements; if( (info.name == io._1) ) ) yield {
+          (csrSel === (info.address).U) -> ( io._2.asUInt )
+        }) ++
 
         (for( i <- 0 until pmpNum by 2 ) yield{
           ((csrSel === ("h3A0".U + i.U)) -> io.csrfiles.pmpcfg(i).asUInt)
@@ -1341,34 +1054,13 @@ trait IssSelCsr{ this: IssueSel =>
 
         (for( i <- 3 until 32 ) yield{
           ((csrSel === ("hC00".U + i.U)) -> io.csrfiles.hpmcounter(i))
-        }) ++
-
-        Seq(
-          (csrSel === "h001".U) -> io.csrfiles.fcsr.fflags,
-          (csrSel === "h002".U) -> io.csrfiles.fcsr.frm,
-          (csrSel === "h003".U) -> io.csrfiles.fcsr.asUInt,
-
-          (csrSel === "h008".U) -> io.csrfiles.vstart,
-          (csrSel === "h009".U) -> io.csrfiles.vcsr.vxsat,
-          (csrSel === "h00A".U) -> io.csrfiles.vcsr.vxrm,
-          (csrSel === "h00F".U) -> io.csrfiles.vcsr.asUInt,
-          (csrSel === "hC20".U) -> io.csrfiles.vConfig.vl,
-          (csrSel === "hC21".U) -> io.csrfiles.vConfig.vtype,
-          (csrSel === "hC22".U) -> io.csrfiles.vlenb,
-          (csrSel === "hFFE".U) -> ( Mux1H(Seq(
-            bufInfo(idx).vectorIsa.vsetvli  -> bufInfo(idx).param.imm(10,0),
-            bufInfo(idx).vectorIsa.vsetivli -> bufInfo(idx).param.imm(9,0 ),
-            bufInfo(idx).vectorIsa.vsetvl   -> postBufOperator(idx)(2))) ),          
-        )
-
-
+        }) 
       )
 
     res.param.dat.op0 := 0.U
-    res.param.dat.op3 := 0.U
+    res.param.dat.op3 := bufInfo(idx).param.imm(11,0)
 
     res.param.rd0     := bufInfo(idx).phy.rd0
-    res.param.csrw    := bufInfo(idx).csrw
 
     return res
   }
@@ -1380,11 +1072,11 @@ trait IssSelCsr{ this: IssueSel =>
   val csrIssMatrix   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )) 
   val maskCondCsrIss = Wire( Vec( dptEntry, Bool()) )
 
-  //only oldest instr will be selected
+  /** only oldest instr will be selected, donot bypass un-ready operotar */
   for( i <- 0 until dptEntry ) {
     maskCondCsrIss(i) := 
       ~bufValid(i) |
-      (~bufInfo(i).csr_isa.is_csr & ~bufInfo(i).vectorIsa.isVConfig)
+      (~bufInfo(i).csr_isa.is_csr) 
   }
 
   csrIssMatrix := MatrixMask( ageMatrixR, maskCondCsrIss )
@@ -1397,10 +1089,10 @@ trait IssSelCsr{ this: IssueSel =>
   csrIssIdx := csrIssMatrix.indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
 
   csrIssFifo.io.enq.valid := 
-    ( 0 until dptEntry ).map{ i => { csrIssMatrix(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & isCSRRReady(i) } }.reduce(_|_)
+    ( 0 until dptEntry ).map{ i => { csrIssMatrix(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(1) & postIsOpReady(i)(2) } }.reduce(_|_)
 
   csrIssFifo.io.enq.bits  := 
-    Mux1H( ( 0 until dptEntry ).map{ i => { (csrIssMatrix(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & isCSRRReady(i) ) -> csrIssInfo(i) } } )
+    Mux1H( ( 0 until dptEntry ).map{ i => { (csrIssMatrix(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(1) & postIsOpReady(i)(2) ) -> csrIssInfo(i) } } )
 
   for( i <- 0 until dptEntry ) {
     when( csrIssFifo.io.enq.fire & csrIssIdx === i.U ) {
@@ -1425,12 +1117,12 @@ trait IssSelLsu{ this: IssueSel =>
     res.param.dat.op0 := Mux( bufInfo(idx).lsu_isa.is_vls, postBufOperator(idx)(0), 0.U )
 
     res.param.dat.op1 := 
-      MuxCase( (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(), Array(
+      MuxCase( (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(), Seq(
         (bufInfo(idx).lsu_isa.is_lrsc | bufInfo(idx).lsu_isa.is_amo) -> postBufOperator(idx)(1),
 
       ))
     res.param.dat.op2 :=
-      MuxCase( postBufOperator(idx)(2), Array(
+      MuxCase( postBufOperator(idx)(2), Seq(
         bufInfo(idx).lsu_isa.isFStore    -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
         bufInfo(idx).lsu_isa.isVConstant -> postBufOperator(idx)(2),//rs2
         bufInfo(idx).lsu_isa.isVIndex    -> postBufOperator(idx)(2),//vs2
@@ -1442,7 +1134,6 @@ trait IssSelLsu{ this: IssueSel =>
 
     res.param.rd0 := bufInfo(idx).phy.rd0
 
-    res.param.csrw := Cat("hFFF".U, bufInfo(idx).csrw(log2Ceil(cRegNum)-1, 0))
 
     if( hasVector ){
  
@@ -1528,7 +1219,6 @@ trait IssSelFpu{ this: IssueSel =>
     
     res.param.rd0 := bufInfo(idx).phy.rd0
     res.param.rm := bufInfo(idx).param.rm
-    res.param.csrw    := bufInfo(idx).csrw
 
     return res
   }
@@ -1542,9 +1232,6 @@ trait IssSelFpu{ this: IssueSel =>
     val fpuIssMatrix   = Wire( Vec(fpuNum, Vec( dptEntry, Vec(dptEntry, Bool() ) )) )
     val maskCondFpuIss = Wire( Vec(fpuNum, Vec( dptEntry, Bool()) ))
 
-
-
-  
     for( i <- 0 until dptEntry ) {
       maskCondFpuIss(0)(i) := 
         ~bufValid(i) |
@@ -1559,18 +1246,17 @@ trait IssSelFpu{ this: IssueSel =>
     )
 
     fpuIssFifo.io.enq.valid := 
-      ( 0 until dptEntry ).map{ i => { fpuIssMatrix(0)(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) & isFRMRReady(i) } }.reduce(_|_)
+      ( 0 until dptEntry ).map{ i => { fpuIssMatrix(0)(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) } }.reduce(_|_)
 
     fpuIssFifo.io.enq.bits  := 
-      Mux1H( ( 0 until dptEntry ).map{ i => { (fpuIssMatrix(0)(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) & isFRMRReady(i) ) -> fpuIssInfo(i) } } )
+      Mux1H( ( 0 until dptEntry ).map{ i => { (fpuIssMatrix(0)(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3)  ) -> fpuIssInfo(i) } } )
     
-
     fpuIssIdx(0) := fpuIssMatrix(0).indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
 
     for( i <- 0 until dptEntry ) {
       when( fpuIssFifo.io.enq.fire & fpuIssIdx(0) === i.U ) {
         bufValid(i) := false.B
-        assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) & isFRMRReady(i) )
+        assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) )
         assert( bufValid(i) )
         assert( bufInfo(i).fpu_isa.is_fpu )
       }

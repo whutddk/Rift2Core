@@ -441,23 +441,6 @@ class Rift2360 extends Config((_, _, _) => {
 class Rift2370 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasVector = false,
-
-    aluNum = 1,
-
-    dptEntry = 4,
-
-    icacheParameters = IcacheParameters(
-      bk = 1,
-      cb = 2,
-      cl = 128
-    ),
-    dcacheParameters = DcacheParameters(
-      bk = 2,
-      cb = 2,
-      cl = 128,
-      stEntry = 4,
-      sbEntry = 4,
-    ),
   )
 })
 

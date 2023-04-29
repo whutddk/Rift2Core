@@ -33,18 +33,22 @@ import org.chipsalliance.cde.config._
 import rift2Core.privilege._
 
 
+
+
+
+
 class WriteBack(implicit p: Parameters) extends RiftModule {
 
   class WriteBackIO extends Bundle{
     val xLookup = Vec( rnChn, Flipped(new Lookup_Bundle) )
     val fLookup = Vec( rnChn, Flipped(new Lookup_Bundle) )
     val vLookup = Vec( rnChn, Flipped(new Lookup_Bundle) )
-    val cLookup = Vec( rnChn, new SeqReg_Lookup_Bundle(cRegNum))
+              // val cLookup = Vec( rnChn, new SeqReg_Lookup_Bundle(cRegNum))
 
     val xRename = Vec( rnChn, Flipped(new Rename_Bundle) )
     val fRename = Vec( rnChn, Flipped(new Rename_Bundle) )
     val vRename = Vec( rnChn, Flipped(new Rename_Bundle) )
-    val cRename = Vec( rnChn, new SeqReg_Rename_Bundle(cRegNum))
+              // val cRename = Vec( rnChn, new SeqReg_Rename_Bundle(cRegNum))
 
     val irgLog = Output( Vec(xRegNum, UInt(2.W)) )
     val frgLog = Output( Vec(fRegNum, UInt(2.W)) )
@@ -52,11 +56,11 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
     val irgReq = Flipped(Vec( opChn, Valid( UInt((log2Ceil(xRegNum)).W) ) ))
     val frgReq = Flipped(Vec( opChn, Valid( UInt((log2Ceil(fRegNum)).W) ) ))
-    val vrgReq = Flipped(Vec( opChn, Valid( UInt((log2Ceil(fRegNum)).W) ) ))
+    val vrgReq = Flipped(Vec( vParams.opChn, Valid( UInt((log2Ceil(vRegNum)).W) ) ))
 
     val irgRsp =  Vec( opChn, Valid(new ReadOp_Rsp_Bundle(64) ))
     val frgRsp =  Vec( opChn, Valid(new ReadOp_Rsp_Bundle(65) ))
-    val vrgRsp =  Vec( opChn, Valid(new ReadOp_Rsp_Bundle(vParams.vlen) ))
+    val vrgRsp =  Vec( vParams.opChn, Valid(new ReadOp_Rsp_Bundle(vParams.vlen) ))
 
 
     val alu_iWriteBack = Vec(aluNum, Flipped(new DecoupledIO(new WriteBack_info(dw = 64))))
@@ -71,15 +75,22 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
     val mem_vWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = vParams.vlen)))
 
-    val cWriteBack     = Vec(3, Flipped(Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))))
+                // val cWriteBack     = Vec(3, Flipped(Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))))
 
 
     
     val commit  = Vec(cmChn, Flipped((new Info_commit_op(32, maxRegNum))))
-    val cCommit = Vec(cmChn, Flipped(new SeqReg_Commit_Bundle(cRegNum)))
+                // val cCommit = Vec(cmChn, Flipped(new SeqReg_Commit_Bundle(cRegNum)))
 
-    val csrIsReady = Output(new CSR_LOG_Bundle(cRegNum))
-    val csrOp= Output(Vec(cmChn, new Exe_Port) )
+                // val csrIsReady = Output(new CSR_LOG_Bundle(cRegNum))
+                // val csrOp= Output(Vec(cmChn, new Exe_Port) )
+
+    val xpuCsrMolloc    = Flipped(Vec(rnChn, Decoupled(UInt(12.W))))
+    val xpuCsrWriteBack = Flipped(Valid(new Exe_Port))
+    val xpuCsrCommit    = Decoupled(new Exe_Port)
+    val fpuCsrMolloc    = Flipped(Vec(rnChn, Decoupled(Bool())))
+    val fpuCsrWriteBack = Flipped(Valid(new Exe_Port))
+    val fpuCsrCommit    = Decoupled(new Exe_Port)
 
     val diffXReg = Output(Vec(32, UInt(64.W)))
     val diffFReg = Output(Vec(32, UInt(65.W)))    
@@ -92,26 +103,33 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
   val fReg = if( fpuNum > 0 ) { Module(new FRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn)) } else {  Module(new FakeRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn) ) }
   val vReg = if( hasVector )  { Module(new VRegFiles(dw = vParams.vlen, dp = vRegNum, rnChn, vParams.opChn, 1, cmChn)) } else {  Module(new FakeRegFiles(dw = vParams.vlen, dp = vRegNum, rnChn, vParams.opChn, 1, cmChn) ) }
   
-  val cReg = Module(new CRegfiles( rnChn, wbc = 3, cmChn ))
+  val cReg = Module(new CsrScoreBoard)
+        // cReg.io.xpu: XPUCsrIO = IO(Flipped(new XPUCsrIO))
+        // cReg.io.fpu: FPUCsrIO = IO(Flipped(new FPUCsrIO))
 
+  io.xpuCsrMolloc    <> cReg.io.xpu.molloc
+  io.xpuCsrWriteBack <> cReg.io.xpu.writeBack
+  io.xpuCsrCommit    <> cReg.io.xpu.commit
+  io.fpuCsrMolloc    <> cReg.io.fpu.molloc
+  io.fpuCsrWriteBack <> cReg.io.fpu.writeBack
+  io.fpuCsrCommit    <> cReg.io.fpu.commit
 
   
 
 
-  io.cCommit    <> cReg.io.commit
-  io.csrOp      <> cReg.io.csrOp
-  io.csrIsReady := cReg.io.isReady
+              // io.cCommit    <> cReg.io.commit
+              // io.csrOp      <> cReg.io.csrOp
+              // io.csrIsReady := cReg.io.isReady
 
   iReg.io.rename <> io.xRename
   fReg.io.rename <> io.fRename
   vReg.io.rename <> io.vRename
-  cReg.io.rename <> io.cRename
+              // cReg.io.rename <> io.cRename
 
   iReg.io.lookup <> io.xLookup
   fReg.io.lookup <> io.fLookup
   vReg.io.lookup <> io.vLookup
-  cReg.io.lookup <> io.cLookup
-
+              // cReg.io.lookup <> io.cLookup
 
   for ( i <- 0 until cmChn ) yield {
     iReg.io.commit(i).is_comfirm    := false.B
@@ -140,6 +158,8 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     vReg.io.commit(i).toX           := false.B
     vReg.io.commit(i).toF           := false.B
     vReg.io.commit(i).toV           := false.B
+
+    cReg.io.isAbort := ( 0 until cmChn ).map{ i => io.commit(i).is_abort | io.commit(i).is_MisPredict }.foldLeft(false.B)(_|_)
 
     io.commit(i).is_writeback := false.B
 
@@ -194,6 +214,6 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
   vReg.io.exe_writeBack(0) <> io.mem_vWriteBack
 
-  cReg.io.writeBack <> io.cWriteBack
+              // cReg.io.writeBack <> io.cWriteBack
 
 }

@@ -35,7 +35,9 @@ class FAluIO(implicit p: Parameters) extends RiftBundle{
   val fpu_iss_exe = Flipped(DecoupledIO(new Fpu_iss_info))
   val fpu_exe_iwb = DecoupledIO(new WriteBack_info(dw=65))
   val fpu_exe_fwb = DecoupledIO(new WriteBack_info(dw=65))
-  val fpu_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))
+          // val fpu_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))
+  val fpuCsrWriteBack = Valid(new Exe_Port)
+
   val flush = Input(Bool())
 }
 
@@ -57,9 +59,9 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
   }
 
   val fpu_exe_csr_fifo = {
-    val mdl = Module( new Queue( new SeqReg_WriteBack_Bundle(64, cRegNum), infly ) )
-    io.fpu_cWriteBack.valid := mdl.io.deq.valid
-    io.fpu_cWriteBack.bits  := mdl.io.deq.bits
+    val mdl = Module( new Queue( new Exe_Port, infly ) )
+    io.fpuCsrWriteBack.valid := mdl.io.deq.valid
+    io.fpuCsrWriteBack.bits  := mdl.io.deq.bits
     mdl.io.deq.ready        := true.B
     mdl.reset := io.flush | reset.asBool
     mdl
@@ -158,7 +160,7 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
 
   fpu_exe_csr_fifo.io.enq.valid       := i2f.io.out.valid | f2f.io.out.valid | sfma.io.out.valid | dfma.io.out.valid | divSqrt.io.out.valid | f2i.io.out.valid
   fpu_exe_csr_fifo.io.enq.bits.addr  := "h001".U
-  fpu_exe_csr_fifo.io.enq.bits.dati  := 
+  fpu_exe_csr_fifo.io.enq.bits.dat_i  := 
     Mux1H(Seq(
       f2i.io.out.valid      -> f2i.io.out.bits.exc,
       i2f.io.out.valid      -> i2f.io.out.bits.exc,
@@ -171,15 +173,15 @@ class FAlu(latency: Int = 5, infly: Int = 8)(implicit p: Parameters) extends Rif
   fpu_exe_csr_fifo.io.enq.bits.op_rw := false.B
   fpu_exe_csr_fifo.io.enq.bits.op_rs := true.B
   fpu_exe_csr_fifo.io.enq.bits.op_rc := false.B
-  fpu_exe_csr_fifo.io.enq.bits.idx   :=
-    Mux1H(Seq(
-      f2i.io.out.valid      -> f2i.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
-      i2f.io.out.valid      -> i2f.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
-      f2f.io.out.valid      -> f2f.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
-      sfma.io.out.valid     -> sfma.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
-      dfma.io.out.valid     -> dfma.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
-      divSqrt.io.out.valid  -> divSqrt.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
-    ))
+  // fpu_exe_csr_fifo.io.enq.bits.idx   :=
+  //   Mux1H(Seq(
+  //     f2i.io.out.valid      -> f2i.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
+  //     i2f.io.out.valid      -> i2f.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
+  //     f2f.io.out.valid      -> f2f.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
+  //     sfma.io.out.valid     -> sfma.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
+  //     dfma.io.out.valid     -> dfma.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
+  //     divSqrt.io.out.valid  -> divSqrt.io.out.bits.param.csrw(log2Ceil(cRegNum)-1, 0),
+  //   ))
 
 
 
@@ -202,14 +204,14 @@ class FakeFAlu(implicit p: Parameters) extends RiftModule with HasFPUParameters{
   io.fpu_exe_fwb.valid := false.B
   io.fpu_exe_fwb.bits  := 0.U.asTypeOf(new WriteBack_info(dw=65))
 
-  io.fpu_cWriteBack.valid := false.B
+  io.fpuCsrWriteBack.valid := false.B
   
-  io.fpu_cWriteBack.bits.addr  := 0.U
-  io.fpu_cWriteBack.bits.dati  := 0.U
-  io.fpu_cWriteBack.bits.op_rw := false.B
-  io.fpu_cWriteBack.bits.op_rs := false.B
-  io.fpu_cWriteBack.bits.op_rc := false.B
-  io.fpu_cWriteBack.bits.idx   := 0.U
+  io.fpuCsrWriteBack.bits.addr  := 0.U
+  io.fpuCsrWriteBack.bits.dat_i  := 0.U
+  io.fpuCsrWriteBack.bits.op_rw := false.B
+  io.fpuCsrWriteBack.bits.op_rs := false.B
+  io.fpuCsrWriteBack.bits.op_rc := false.B
+  // io.fpuCsrWriteBack.bits.idx   := 0.U
 
   assert( ~io.fpu_iss_exe.valid )
 }
