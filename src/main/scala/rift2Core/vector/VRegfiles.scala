@@ -25,51 +25,154 @@ import rift2Chip._
 import org.chipsalliance.cde.config._
 
 
-trait VRegFilesLookup{ this: RegFilesReal => 
+class Vector_Commit_Bundle()(implicit p: Parameters) extends RiftBundle{
+  val isComfirm = Output(Bool())
+  val isAbort   = Output(Bool())
+  val raw       = Output(UInt(( log2Ceil(32) ).W))
 
-  val mollocIdx: Vec[UInt]
+  val isWroteback  = Input(Bool())
+  val isExcepiton  = Input(Bool())
+  val excepitonIdx = Input(UInt((log2Ceil(vParams.vlen/8).W)))
+}
 
-  for ( i <- 0 until rnc ) {
-    val idx1 = io.lookup(i).req.rs1
-    val idx2 = io.lookup(i).req.rs2
-    val idx3 = io.lookup(i).req.rs3
+class Vector_WriteBack_Bundle()(implicit p: Parameters) extends RiftBundle {
+  val res = UInt(8.W)
+  val isMask = Bool()
+  val isExcepiton = Bool()
+}
 
+abstract class VRegfilesBase()(implicit p: Parameters) extends RiftModule {
 
-    if ( i == 0 ) {
-      io.lookup(i).rsp.vm0 := rename_ptr(0)
-      io.lookup(i).rsp.rs1 := rename_ptr(idx1)
-      io.lookup(i).rsp.rs2 := rename_ptr(idx2)
-      io.lookup(i).rsp.rs3 := rename_ptr(idx3)
-    } else {
-      io.lookup(i).rsp.vm0 := rename_ptr(0)
-      io.lookup(i).rsp.rs1 := rename_ptr(idx1)
-      io.lookup(i).rsp.rs2 := rename_ptr(idx2)
-      io.lookup(i).rsp.rs3 := rename_ptr(idx3)
+  class VRegFilesIO extends Bundle{
+    val molloc = Flipped(Decoupled(new UInt(5.W)) ) //molloc at read op
+    val readOp = Vec( 32, Valid(UInt( (vParams.vlen).W )) )
 
-      for ( j <- 0 until i ) {
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === 0.U ) ) { io.lookup(i).rsp.vm0 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx1) ) { io.lookup(i).rsp.rs1 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx2) ) { io.lookup(i).rsp.rs2 := mollocIdx(j) }
-        when( io.rename(j).req.valid && (io.rename(j).req.bits.rd0 === idx3) ) { io.lookup(i).rsp.rs3 := mollocIdx(j) }
+    val writeBack = Vec(wbc, Vec( 32, Vec(8, (new Valid(new Vector_WriteBack_Bundle)))))
+
+    val commit = Vec(cmm, Flipped(new Vector_Commit_Bundle))
+    val diffReg = Output(Vec(32, UInt((vParams.vlen/8).W)))    
+  }
+
+  val io: RegFilesIO = IO( new VRegFilesIO)
+
+  val wbFiles =
+    for( _ <- 0 until 32 ) yield {
+      for( _ <- 0 until vParams.vlen/8 ) yield
+      Reg(UInt(8.U))
+    }
+
+  val files =
+    for( _ <- 0 until 32 ) yield {
+      Reg(UInt(vParams.vlen))
+    }
+
+  val isMolloced =
+    for( _ <- 0 until 32 ) yield {
+      // for( _ <- 0 until vParams.vlen/8 ) yield {
+        RegInit(false.B)      
+      // }
+    }
+
+  val isWroteBack =
+    for( _ <- 0 until 32 ) yield {
+      for( _ <- 0 until vParams.vlen/8 ) yield {
+        RegInit(true.B)
       }
     }
-    when( io.rename(i).req.fire ) {
-      assert( io.lookup(i).rsp.vm0 =/= 0.U )      
-      assert( io.lookup(i).rsp.rs1 =/= 0.U )
-      assert( io.lookup(i).rsp.rs2 =/= 0.U )
-      assert( io.lookup(i).rsp.rs3 =/= 0.U )
+
+  val isExcepiton =
+    for( _ <- 0 until 32 ) yield {
+      for( _ <- 0 until vParams.vlen/8 ) yield {
+        RegInit(false.B)      
+      }
+    }
+
+}
+
+trait VRegMolloc{ this: VRegfilesBase =>
+  io.molloc.ready := 
+    Mux1H( ( 0 until 32 ).map{ i => (i.U === io.molloc.bits) -> ~(isMolloced(i)) } )
+
+  when( io.molloc.fire ){
+    ( 0 until 32 ).map{ i =>
+      when( i.U === io.molloc.bits ) {
+        assert( isMolloced(i) === false.B )
+        isMolloced(i) := true.B
+        isWroteBack(i) := 0.U.asTypeOf(isWroteBack(i))
+      }
     }
   }
 }
 
-class VRegFiles(dw: Int, dp: Int, rnc: Int, rop: Int, wbc: Int, cmm: Int)(implicit p: Parameters) extends RegFilesReal(dw, dp, arc = 32, rnc, rop, wbc, cmm)
-with RegFilesReName
-with VRegFilesLookup
-with RegFilesReadOP
-with RegFilesWriteBack
-with RegFilesCommit{
+trait VRegReadOp{ this: VRegfilesBase =>
+  for( i <- 0 until 32 ){
+    io.readOp(i).valid :=
+      (~isMolloced(i)) |
+      (isMolloced(i) & isWroteBack(i).reduce(_&_))
+
+    io.readOp(i).bits := 
+      Mux(
+        isMolloced(i),
+        Mux( isWroteBack(i).reduce(_&_), wbFiles, 0.U),
+        files(i)
+      )
+  }
+}
+
+trait VRegWriteBack{ this: VRegfilesBase =>
+
+  for( chn <- 0 until wbc ) {
+    for( i <- 0 until 32 ) {
+      for( j <- 0 until 8 ) {
+        when( io.writeBack(i)(j).fire ){
+
+          assert( isMolloced(i) )
+
+          when( ~io.writeBack(i)(j).bits.isMask ) {
+            wbFiles(i)(j) := io.writeBack(chn)(i)(j).bits.res
+          }
+
+          isExcepiton(i)(j) := io.writeBack(i)(j).bits.isException
+          isWroteBack(i)(j) := true.B
+
+        }
+      }
+    }
+  }
 
 }
 
 
 
+
+/**
+  * In order regfile commit donot need override
+  */
+trait VRegCommit{ this: VRegfilesBase =>
+  for ( i <- 0 until cmm ){ 
+    val idx = io.commit(i).raw
+    io.commit(i).isWroteback  := isWroteBack(idx).reduce(_&_)
+    io.commit(i).isExcepiton  := isExcepiton(idx).reduce(_|_)
+    io.commit(i).excepitonIdx := isExcepiton(idx).indexWhere( (x: Bool) => (x === true.B) )
+
+    when( io.commit(i).isAbort ){
+      isMolloced  := 0.U.asTypeOf(isMolloced)
+      isWroteBack := 0.U.asTypeOf(isWroteBack)
+      isExcepiton := 0.U.asTypeOf(isExcepiton)
+    }
+    .elsewhen( io.commit(i).isComfirm ){
+      files(idx) := Cat( wbFiles(idx).reverse )
+      isMolloced(idx)  := false.B
+      isWroteBack(idx) := 0.U.asTypeOf(isWroteBack(idx))
+      isExcepiton(idx) := 0.U.asTypeOf(isExcepiton(idx))
+    }
+  }
+}
+
+class VRegfiles()(implicit p: Parameters) extends VRegfilesBase
+with VRegMolloc
+with VRegReadOp
+with VRegWriteBack
+with VRegCommit{
+
+}

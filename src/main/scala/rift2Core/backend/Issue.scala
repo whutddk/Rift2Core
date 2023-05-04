@@ -43,8 +43,6 @@ abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPU
     val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
     val fpu_iss_exe = Vec(fpuNum max 1, new DecoupledIO(new Fpu_iss_info))
 
-    // val vpu_iss_exe = new DecoupledIO(new Vpu_iss_info)
-
     val irgLog = Input( Vec(xRegNum, UInt(2.W)) )
     val frgLog = Input( Vec(fRegNum, UInt(2.W)) )
     val vrgLog = Input( Vec(vRegNum, UInt(2.W)) )
@@ -1271,9 +1269,7 @@ trait IssSelFpu{ this: IssueSel =>
 
 }
 
-trait IssSelVpu{ this: IssueSel =>
 
-}
 
 
 class Issue()(implicit p: Parameters) extends IssueSel
@@ -1282,8 +1278,7 @@ with IssSelMul
 with IssSelBru
 with IssSelCsr
 with IssSelLsu
-with IssSelFpu
-with IssSelVpu{
+with IssSelFpu{
   
 }
 
