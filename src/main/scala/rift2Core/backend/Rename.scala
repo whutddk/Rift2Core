@@ -40,8 +40,6 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
     val xpuCsrMolloc    = Vec(rnChn, Decoupled(UInt(12.W)))
     val fpuCsrMolloc    = Vec(rnChn, Decoupled(Bool()))
 
-    val lsuRoQueue = Decoupled(new LSU_Request_Source)
-
     val rod_i = Vec(cmChn,new DecoupledIO(new Info_reorder_i))
   }
 
@@ -49,9 +47,6 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
 
   val rnRspFifo = Module(new MultiPortFifo(new Dpt_info, aw = (if(!isMinArea) 4 else 1 ), rnChn, rnChn))
   rnRspFifo.io.deq <> io.rnRsp
-
-  val lsuRoQueue = Module(new MultiPortFifo(new LSU_Request_Source, aw = (if(!isMinArea) 4 else 1 ), rnChn, 1))
-  lsuRoQueue.io.deq <> io.lsuRoQueue
 
   val reOrder_fifo_i = {
     val mdl = Module(new MultiPortFifo(new Info_reorder_i, aw = (if(!isMinArea) 4 else 1 ), rnChn, cmChn))
@@ -238,30 +233,6 @@ trait RenameFeatureCheck { this: RenameBase =>
 
 }
 
-trait RenameFeatureCheck { this: RenameBase =>
-
-  for( i <- 0 until rnChn ){
-    lsuRoQueue.io.enq(i).valid := 
-      rnRspFifo.io.enq(i).fire & rnRspFifo.io.enq(i).bits.lsu_isa.is_lsu
-
-    lsuRoQueue.io.enq(i).bits.isXPU :=
-      rnRspFifo.io.enq(i).bits.lsu_isa.is_xls  |
-      rnRspFifo.io.enq(i).bits.lsu_isa.is_lrsc |
-      rnRspFifo.io.enq(i).bits.lsu_isa.is_amo  |
-      rnRspFifo.io.enq(i).bits.lsu_isa.is_fence
-
-    lsuRoQueue.io.enq(i).bits.isFPU :=
-      rnRspFifo.io.enq(i).bits.lsu_isa.is_fls
-
-    lsuRoQueue.io.enq(i).bits.isVPU :=
-      rnRspFifo.io.enq(i).bits.lsu_isa.is_vls
-  }
-
-
-
-}
-
-
 
 
 class Rename()(implicit p: Parameters) extends RenameBase
@@ -282,7 +253,6 @@ with RenameFeatureCheck {
         reOrder_fifo_i.io.enq(j).ready &
         (io.xpuCsrMolloc(j).ready | ~io.rnReq(j).bits.csr_isa.is_csr) & 
         (io.fpuCsrMolloc(j).ready | ~io.rnReq(j).bits.fpu_isa.is_fpu) & 
-        lsuRoQueue.io.enq(i).ready &
         rnRspFifo.io.enq(j).ready
       }
     ).reduce(_&_)

@@ -123,7 +123,7 @@ object CSRInfoTable{
       CSRInfo( name = "vxrm",          address = 0x00A, isRO = false, priv = 0, isDMode = false ),
       CSRInfo( name = "vcsr",          address = 0x00F, isRO = false, priv = 0, isDMode = false ),
       CSRInfo( name = "vl",            address = 0xC20, isRO = false, priv = 0, isDMode = false ),
-      CSRInfo( name = "type",          address = 0xC21, isRO = false, priv = 0, isDMode = false ),
+      CSRInfo( name = "vtype",         address = 0xC21, isRO = false, priv = 0, isDMode = false ),
       CSRInfo( name = "vConfig",       address = 0xFFE, isRO = false, priv = 0, isDMode = false ),
       CSRInfo( name = "vlenb",         address = 0xC22, isRO = true , priv = 0, isDMode = false ),
     )

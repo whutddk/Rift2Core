@@ -55,12 +55,20 @@ class FPUCsrIO(implicit p: Parameters) extends RiftBundle{
 }
 
 /**
+  * An interface for VPUCsrIO signals.
+  * @param p The parameters of the system.
+  */
+class VPUCsrIO(implicit p: Parameters) extends FPUCsrIO
+
+
+/**
   * An interface for the CSR scoreboard signals.
   * @param p The parameters of the system.
   */
 class CsrScoreBoardIO(implicit p: Parameters) extends RiftBundle{
   val xpu: XPUCsrIO      = new XPUCsrIO
   val fpu: FPUCsrIO      = new FPUCsrIO
+  val vpu: VPUCsrIO      = new VPUCsrIO
   val isAbort: Bool = Input(Bool())
 }
 
@@ -113,16 +121,21 @@ abstract class CsrScoreBoardBase(implicit p: Parameters) extends RiftModule{
 
   /** Maximum inflight number of CSR Instruction */
   def xpuInfly = 4
-  val xpuInflyCounter  = Module( new Queue(new Bool(),   entries = xpuInfly, pipe = false, flow = false) ) //Module(new MultiPortFifo( dw = Bool(), aw = log2Ceil(xpuInfly), in = rnChn, out = cmChn ))
-  val xpuWriteBackFifo = Module( new Queue(new Exe_Port, entries = xpuInfly, pipe = false, flow = false) ) //Module(new MultiPortFifo( dw = new Exe_Port, aw = log2Ceil(xpuInfly), in = 1, out = cmChn ))
+  val xpuInflyCounter  = Module( new Queue(new Bool(),   entries = xpuInfly, pipe = false, flow = false) )
+  val xpuWriteBackFifo = Module( new Queue(new Exe_Port, entries = xpuInfly, pipe = false, flow = false) )
   val isXpuInfly = xpuInflyCounter.io.deq.valid
 
   /** Maximum inflight number of FALU */
   def fpuInfly = 4
-  val fpuInflyCounter  = Module( new Queue(new Bool(),   entries = fpuInfly, pipe = false, flow = false) ) //Module(new MultiPortFifo( dw = Bool(), aw = log2Ceil(fpuInfly), in = rnChn, out = cmChn ))
-  val fpuWriteBackFifo = Module( new Queue(new Exe_Port, entries = fpuInfly, pipe = false, flow = false) ) //Module(new MultiPortFifo( dw = new Exe_Port, aw = log2Ceil(fpuInfly), in = 1, out = cmChn ))
+  val fpuInflyCounter  = Module( new Queue(new Bool(),   entries = fpuInfly, pipe = false, flow = false) )
+  val fpuWriteBackFifo = Module( new Queue(new Exe_Port, entries = fpuInfly, pipe = false, flow = false) )
   val isFpuInfly = fpuInflyCounter.io.deq.valid
 
+  /** Maximum inflight number of VALU, Works in Ping-ping Mode */
+  def vpuInfly = 1
+  val vpuInflyCounter  = Module( new Queue(new Bool(),   entries = vpuInfly, pipe = true, flow = false) )
+  val vpuWriteBackFifo = Module( new Queue(new Exe_Port, entries = vpuInfly, pipe = true, flow = false) )
+  val isVpuInfly = vpuInflyCounter.io.deq.valid
 }
 
 /** A trait that extends CsrScoreBoardBase and defines a scoreboard module for the CSR Instruction. */
@@ -205,6 +218,50 @@ trait CsrScoreBoardFPU{ this: CsrScoreBoardBase =>
     io.fpu.commit <> fpuWriteBackFifo.io.deq
     assert( ~(fpuWriteBackFifo.io.deq.ready & ~fpuWriteBackFifo.io.deq.valid) )
   }
+}
+
+
+trait CsrScoreBoardVPU{ this: CsrScoreBoardBase =>
+  // val fflags: CSRInOrderReadWrite = FPUStatus.apply(0); require(fflags.address == 0x001)
+  // val frm   : CSRInOrderReadWrite = FPUStatus.apply(1); require(frm.address    == 0x002)
+  // val fcsr  : CSRInOrderReadWrite = FPUStatus.apply(2); require(fcsr.address   == 0x003)
+
+  val vstart : CSRInOrderReadWrite = VPUStatus.apply(0); require( vstart.address == 0x008)
+  val vxsat  : CSRInOrderReadWrite = VPUStatus.apply(1); require( vxsat.address == 0x009)
+  val vxrm   : CSRInOrderReadWrite = VPUStatus.apply(2); require( vxrm.address == 0x00A)
+  val vcsr   : CSRInOrderReadWrite = VPUStatus.apply(3); require( vcsr.address == 0x00F)
+  val vl     : CSRInOrderReadWrite = VPUStatus.apply(4); require( vl.address == 0xC20)
+  val vtype  : CSRInOrderReadWrite = VPUStatus.apply(5); require( vtype.address == 0xC21)
+  val vConfig: CSRInOrderReadWrite = VPUStatus.apply(6); require( vConfig.address == 0xFFE)
+  val vlenb  : CSRInOrderReadWrite = VPUStatus.apply(7); require( vlenb.address == 0xC22)
+
+                for( i <- 0 until rnChn ){
+                  io.vpu.molloc(i).ready := 
+                    fflags.isReady4Molloc &
+                    frm.isReady4Molloc &
+                    fcsr.isReady4Molloc &   // no csr instruciton out-standing 
+                    fpuInflyCounter.io.enq.ready & //the falu out-standing instructions are not overflow 
+                    (0 until i).map{ j => ~(io.fpu.molloc(j).valid) }.foldLeft(true.B)(_&_) & //single issue
+                    (0 until i).map{ j => ~(io.xpu.molloc(j).valid & (io.xpu.molloc(j).bits === ("h001").U | io.xpu.molloc(j).bits === ("h002").U | io.xpu.molloc(j).bits === ("h003").U) ) }.foldLeft(true.B)(_&_) //no csr instruction molloc
+              
+                  fpuInflyCounter.io.enq.valid := io.fpu.molloc.map{ x => x.fire }.foldLeft(false.B)(_|_)
+                  fpuInflyCounter.io.enq.bits  := DontCare
+
+                  assert(PopCount( io.fpu.molloc.map{ x => x.fire } ) <= 1.U, "Assert Failed, only one chn will fire")
+                }
+
+                fpuWriteBackFifo.io.enq.valid := io.fpu.writeBack.fire
+                fpuWriteBackFifo.io.enq.bits  := io.fpu.writeBack.bits
+                assert( ~(fpuWriteBackFifo.io.enq.valid & ~fpuWriteBackFifo.io.enq.ready), "Assert Failed at fpuWriteBackFifo, Overflow!\n")
+
+                for( i <- 0 until cmChn ) {
+                  fpuInflyCounter.io.deq.ready := io.fpu.commit.fire
+                  assert( ~(fpuInflyCounter.io.deq.ready & ~fpuInflyCounter.io.deq.valid) )
+                  
+                  io.fpu.commit <> fpuWriteBackFifo.io.deq
+                  assert( ~(fpuWriteBackFifo.io.deq.ready & ~fpuWriteBackFifo.io.deq.valid) )
+                }
+
 }
 
 
