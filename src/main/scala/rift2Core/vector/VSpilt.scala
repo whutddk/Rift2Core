@@ -184,26 +184,26 @@ trait VecSplitterMicroInstr{ this: VecSplitterBase =>
 
     microInstr(i).param.raw.rs2 :=
       Mux1H(Seq(
-        ( vSpiltReq.vectorIsa.isVS2 &  vSpiltReq.vectorIsa.isVS2P ) -> ( vSpiltReq.param.raw.rs2 + (lmulSel(i) << 1) + widenSel(i) ),
-        ( vSpiltReq.vectorIsa.isVS2 & ~vSpiltReq.vectorIsa.isVS2P ) -> ( vSpiltReq.param.raw.rs2 +  lmulSel(i) ),
-        ( vSpiltReq.lsu_isa.isVS2                                 ) -> ( vSpiltReq.param.raw.rs2 +  lmulSel(i) ), //nf didn't effect vs2 in lsu
-        ( vSpiltReq.isRS2                                         ) -> ( vSpiltReq.param.raw.rs2 ),
+        ( vSplitReq.vectorIsa.isVS2 &  vSplitReq.vectorIsa.isVS2P ) -> ( vSplitReq.param.raw.rs2 + (lmulSel(i) << 1) + widenSel(i) ),
+        ( vSplitReq.vectorIsa.isVS2 & ~vSplitReq.vectorIsa.isVS2P ) -> ( vSplitReq.param.raw.rs2 +  lmulSel(i) ),
+        ( vSplitReq.lsu_isa.isVS2                                 ) -> ( vSplitReq.param.raw.rs2 +  lmulSel(i) ), //nf didn't effect vs2 in lsu
+        ( vSplitReq.isRS2                                         ) -> ( vSplitReq.param.raw.rs2 ),
       ))
 
     microInstr(i).param.raw.rs3 := 
       Mux1H( Seq(
-        ( vSpiltReq.vectorIsa.isVwb &  vSpiltReq.vectorIsa.is2Malloc ) -> (vSpiltReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i)),
-        ( vSpiltReq.vectorIsa.isVwb & ~vSpiltReq.vectorIsa.is2Malloc ) -> (vSpiltReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSpiltReq.lsu_isa.isVwb                                    ) -> (vSpiltReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSpiltReq.lsu_isa.isVS3                                    ) -> (vSpiltReq.param.raw.rs3), //VSTORE
+        ( vSplitReq.vectorIsa.isVwb &  vSplitReq.vectorIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i)),
+        ( vSplitReq.vectorIsa.isVwb & ~vSplitReq.vectorIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+        ( vSplitReq.lsu_isa.isVwb                                    ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+        ( vSplitReq.lsu_isa.isVS3                                    ) -> (vSplitReq.param.raw.rs3), //VSTORE
       ))
 
     microInstr(i).param.raw.rd0 := 
       Mux1H( Seq(
-        ( vSpiltReq.vectorIsa.isVwb &  vSpiltReq.vectorIsa.is2Malloc ) -> (vSpiltReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i) ),
-        ( vSpiltReq.vectorIsa.isVwb & ~vSpiltReq.vectorIsa.is2Malloc ) -> (vSpiltReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSpiltReq.lsu_isa.isVLoad                                  ) -> (vSpiltReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSpiltReq.lsu_isa.isVStore                                 ) -> 0.U,
+        ( vSplitReq.vectorIsa.isVwb &  vSplitReq.vectorIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i) ),
+        ( vSplitReq.vectorIsa.isVwb & ~vSplitReq.vectorIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+        ( vSplitReq.lsu_isa.isVLoad                                  ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+        ( vSplitReq.lsu_isa.isVStore                                 ) -> 0.U,
       ))
 
     microInstr(i).vAttach.get.isLast    := (i+1).U === Cal_MicroInstr_Cnt
@@ -213,65 +213,11 @@ trait VecSplitterMicroInstr{ this: VecSplitterBase =>
     microInstr(i).vAttach.get.vstartSel := DontCare
   }
 
-
 }
 
 
 
-
-
-abstract class VecSplitterMux()(implicit p: Parameters) extends VecSplitterBase with VecSplitterMicroInstr{
-
-  when(vecSplitFifo.io.deq(0).valid) { //when fifo is not empty
-
-    (0 until 8).map{ i =>
-      vecSplitFifo.io.enq(i).valid := false.B
-    }
-
-    (0 until rnChn).map{ i => io.enq(i).ready := false.B}
-
-    io.deq <> vecSplitFifo.io.deq //when fifo is not empty, connect all input from fifo
-
-  }.otherwise{ //when fifo is empty
-    for( i <- 0 until rnChn ){
-      when( ( 0 to i ).map{ j => ~isVcsrInfoReady(j)}.fold(false.B)(_|_) ){ // csr not ready
-        io.enq(i).ready := false.B
-        io.deq(i).valid := false.B
-        io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
-      }.otherwise{
-        when( ( ( 0 until i ).map{ j => isAcquireFifo(j)}).fold(false.B)(_|_) ){ //the pervious instr has requested fifo
-          io.enq(i).ready := false.B
-
-          io.deq(i).valid := false.B
-          io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
-        }.elsewhen( isAcquireFifo(i) ){ //the this instr will request fifo
-
-          for( eleIdx <- 0 until 8 ){
-            vRenameScoreBoardFifo.io.enq(eleIdx).valid := eleIdx.U < Cal_MicroInstr_Cnt(i)
-            vRenameScoreBoardFifo.io.enq(eleIdx).bits  := Pkg_MicroInstr_Bundle(eleIdx)(i)
-          }
-
-          io.enq(i).ready := vRenameScoreBoardFifo.io.enq(0).fire
-
-          io.deq(i).valid := false.B
-          io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
-
-          when(vRenameScoreBoardFifo.io.enq(0).fire) {
-            assert( Cal_MicroInstr_Cnt(i) <=  8.U )
-            assert( Cal_MicroInstr_Cnt(i) =/= 0.U )
-          }
-
-        }.otherwise{ //no instr has requested fifo yield //xinstr, finstr, vinstr
-          io.enq(i) <> io.deq(i)
-        }
-      }
-      
-    }
-  }
-}
-
-
-class VecSplitter()(implicit p: Parameters) extends VecSplitterMux{
+class VecSplitter()(implicit p: Parameters) extends VecSplitterBase with VecSplitterMux with VecSplitterMicroInstr{
 
 }
 

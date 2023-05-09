@@ -121,7 +121,6 @@ trait RenameMalloc { this: RenameBase =>
       io.rnReq(i).fire & ( 0 to i ).map{ j => ~io.rnReq(i).bits.is_privil_dpt }.foldLeft(false.B)(_|_)  //~io.rnReq(i).bits.is_privil_dpt
 
     rnRspFifo.io.enq(i).bits  := Pkg_Rename_Bundle(io.rnReq(i).bits, reg_phy(i))
-            
 
     io.xRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.is_iwb
     io.xRename(i).req.bits.rd0 := io.rnReq(i).bits.param.raw.rd0
@@ -134,7 +133,8 @@ trait RenameMalloc { this: RenameBase =>
     reg_phy(i).rd0 := 
       Mux1H(
         Seq(io.xRename(i).req.fire -> io.xRename(i).rsp.rd0) ++
-        (if(fpuNum > 0) { Seq(io.fRename(i).req.fire -> io.fRename(i).rsp.rd0) } else { Seq() } )
+        ( if(fpuNum > 0) { Seq(io.fRename(i).req.fire -> io.fRename(i).rsp.rd0) }                              else { Seq() } ) ++
+        ( if(hasVector)  { Seq(io.rnReq(i).fire & io.rnReq(i).bits.is_vwb -> io.rnReq(i).bits.param.raw.rd0) } else { Seq() } ) //vector dont need to rename
       )
   }
 }
@@ -162,22 +162,27 @@ trait WriteBackLookup {  this: RenameBase =>
     }
 
     reg_phy(i).vm0 :=
-      (if( hasVector ) { io.vLookup(i).rsp.vm0 } else { 0.U })
+      (if( hasVector ) { io.rnReq(i).bits.param.raw.vm0 } else { 0.U })
 
     reg_phy(i).rs1 :=
-      MuxCase( io.xLookup(i).rsp.rs1, Seq() ++
-        ( if( fpuNum > 0 ) { Seq(io.rnReq(i).bits.fpu_isa.is_fop -> io.fLookup(i).rsp.rs1) } else Seq() ) ++ 
-      )
+      Mux1H( Seq(
+        io.rnReq(i).bits.isRS1 -> io.xLookup(i).rsp.rs1,
+        io.rnReq(i).bits.isFS1 -> io.fLookup(i).rsp.rs1,
+        io.rnReq(i).bits.isVS1 -> io.rnReq(i).bits.param.raw.rs1, //dont lookup
+      ))
 
     reg_phy(i).rs2 :=
-      MuxCase( io.xLookup(i).rsp.rs2, Seq() ++ 
-        ( if( fpuNum > 0 ) { Seq((io.rnReq(i).bits.fpu_isa.is_fop  | io.rnReq(i).bits.lsu_isa.isFStore) -> io.fLookup(i).rsp.rs2) } else {Seq()} )
-      )
+      Mux1H(Seq(
+        io.rnReq(i).bits.isRS2 -> io.xLookup(i).rsp.rs2,
+        io.rnReq(i).bits.isFS2 -> io.fLookup(i).rsp.rs2,
+        io.rnReq(i).bits.isVS2 -> io.rnReq(i).bits.param.raw.rs2, //dont lookup
+      ))
 
     reg_phy(i).rs3 :=
-      MuxCase(0.U, Seq() ++ 
-        (if( fpuNum > 0 ) { Seq( io.rnReq(i).bits.fpu_isa.is_fop                                    -> io.fLookup(i).rsp.rs3)} else {Seq()} )
-      )
+      Mux1H(Seq(
+        io.rnReq(i).bits.isFS3 -> io.fLookup(i).rsp.rs3,
+        io.rnReq(i).bits.isVS3 -> io.rnReq(i).bits.param.raw.rs3, //dont lookup
+      ))
 
   }
 }
