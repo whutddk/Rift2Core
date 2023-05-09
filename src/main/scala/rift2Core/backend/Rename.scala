@@ -211,6 +211,22 @@ trait CSRMalloc{ this: RenameBase =>
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 trait RenameFeatureCheck { this: RenameBase =>
   if ( fpuNum > 0 ) {
   } else {
@@ -232,6 +248,11 @@ trait RenameFeatureCheck { this: RenameBase =>
   }
 
 }
+
+
+
+
+
 
 
 

@@ -213,7 +213,7 @@ class Lsu_isa extends Bundle {
 
   def is_fwb = flw | fld
 
-  def isVwb = isVLoad
+
 
 
   def isAcquireFifo = is_vls
@@ -833,7 +833,7 @@ class VectorIsa extends Bundle {
 
 
 
-  def isVAlu =
+  def isVXpu =
     vadd.sel | vsub.sel | vrsub.sel | vminu.sel | vmin.sel | vmaxu.sel | vmax.sel | vand.sel | vor.sel | vxor.sel | 
     vwaddu.sel | vwadd.sel | vwsubu.sel | vwsub.sel | vwaddu_w.sel | vwadd_w.sel  | vwsubu_w.sel | vwsub_w.sel | vadc.sel | vmadc.sel | vsbc.sel | vmsbc.sel |
     vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
@@ -848,9 +848,7 @@ class VectorIsa extends Bundle {
     vslideup.sel | vslidedown.sel | vslide1up.sel | vslide1down.sel |
     vrgather.sel | vrgatherei16.sel |
     vcompress.sel |
-    vmvnr.sel
-
-  def isVMul = 
+    vmvnr.sel |
     vdivu.sel | vdiv.sel  | vremu.sel | vrem.sel  |
     vmulhu.sel | vmul.sel | vmulhsu.sel | vmulh.sel |
     vmadd.sel  | vnmsub.sel | vmacc.sel  | vnmsac.sel |
@@ -922,7 +920,7 @@ class VectorIsa extends Bundle {
 
 
 
-  def isRD0 = isVAlu | isVMul | isVQpu | isVFpu
+  def isRD0 = isVXpu | isVQpu | isVFpu
 
 
   def is2Malloc = 
@@ -953,9 +951,9 @@ class VectorIsa extends Bundle {
 
 
 
-  def isAcquireFifo = isVAlu | isVMul | isVQpu | isVFpu
+  def isVALU = isVXpu | isVQpu | isVFpu
 
-  def isVXpu = isVAlu | isVMul 
+
   def isVector = isVXpu | isVQpu | isVFpu | isVConfig// | isVMem
 
 
