@@ -22,6 +22,20 @@ import rift2Chip._
 import org.chipsalliance.cde.config._
 
 
+
+trait Vec_PreRename_Bundle{ this: RiftBundle =>
+  val vtype   = UInt( 64.W )
+
+  val lmulSel  = UInt(3.W)
+  val nfSel    = UInt(3.W)
+  val widenSel = UInt(1.W)
+
+  val microIdx = UInt(3.W)
+
+}
+
+
+
 class VRename_Attach_Bundle(implicit p: Parameters) extends RiftBundle{
   val nf     = UInt(3.W)
   val vm     = Bool()
@@ -45,6 +59,11 @@ class VDcache_Attach_Bundle(implicit p: Parameters) extends VRename_Attach_Bundl
   val eleIdx = UInt(log2Ceil(vParams.vlen/8).W  )
 
 }
+
+trait Vec_PreIssue_Bundle{ this: RiftBundle =>
+  val eleIdx = UInt(log2Ceil(vParams.vlen/8).W  )
+}
+
 
 class VLsu_Attach_Bundle(implicit p: Parameters) extends VRename_Attach_Bundle{
   val vWidth = UInt(3.W)

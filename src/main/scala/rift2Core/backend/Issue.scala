@@ -966,7 +966,7 @@ trait IssSelLsu{ this: IssueSel =>
 
     res.fun := bufInfo(idx).lsu_isa
 
-    res.param.dat.op0 := Mux( bufInfo(idx).lsu_isa.is_vls, postBufOperator(idx)(0), 0.U )
+    res.param.dat.op0 := Mux( bufInfo(idx).lsu_isa.is_vls, vecBufOperator(0), 0.U )
 
     res.param.dat.op1 := 
       MuxCase( (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(), Seq(
@@ -976,12 +976,12 @@ trait IssSelLsu{ this: IssueSel =>
     res.param.dat.op2 :=
       MuxCase( postBufOperator(idx)(2), Seq(
         bufInfo(idx).lsu_isa.isFStore    -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
-        bufInfo(idx).lsu_isa.isVConstant -> postBufOperator(idx)(2),//rs2
-        bufInfo(idx).lsu_isa.isVIndex    -> postBufOperator(idx)(2),//vs2
+        bufInfo(idx).lsu_isa.isVConstant -> vecBufOperator(2),//rs2
+        bufInfo(idx).lsu_isa.isVIndex    -> vecBufOperator(2),//vs2
       ))
 
     res.param.dat.op3 := 
-      Mux( bufInfo(idx).lsu_isa.isVStore, postBufOperator(idx)(3), 0.U )
+      Mux( bufInfo(idx).lsu_isa.isVStore, vecBufOperator(3), 0.U )
 
 
     res.param.rd0 := bufInfo(idx).phy.rd0
@@ -1003,9 +1003,9 @@ trait IssSelLsu{ this: IssueSel =>
       res.vAttach.get.isLast    := bufInfo(idx).vAttach.get.isLast
 
 
-      res.vAttach.get.vstart := bufInfo(idx).vAttach.get.vstart
+      res.vAttach.get.vstart := DontCare
       res.vAttach.get.vtype  := bufInfo(idx).vAttach.get.vtype
-      res.vAttach.get.vl     := bufInfo(idx).vAttach.get.vl
+      res.vAttach.get.vl     := DontCare
 
       res.vAttach.get.nfSel   := bufInfo(idx).vAttach.get.nfSel
       res.vAttach.get.lmulSel := bufInfo(idx).vAttach.get.lmulSel
@@ -1121,6 +1121,81 @@ trait IssSelFpu{ this: IssueSel =>
     io.fpu_iss_exe(0).bits  := DontCare
   }
 
+}
+
+
+trait IssSelVpu{ this: IssueSel =>
+  val vpuIssIdx  = Wire( UInt((log2Ceil(dptEntry)).W) )
+  val vpuIssFifo = Module(new Queue( new Vpu_iss_info, 1, flow = true ) )
+  val vpuIssInfo = Wire( Vec(dptEntry, new Vpu_iss_info) )
+
+  for( i <- 0 until dptEntry ) {
+    vpuIssInfo(i).fun := bufInfo(idx).vectorIsa
+
+    vpuIssInfo(i).param.dat.op0 :=
+    vpuIssInfo(i).param.dat.op1 := 
+    vpuIssInfo(i).param.dat.op2 :=
+    vpuIssInfo(i).param.dat.op3 := 
+    vpuIssInfo(i).param.rd0 := bufInfo(idx).phy.rd0
+
+    vpuIssInfo(i).vAttach.get.vWidth    := bufInfo(idx).param.vWidth
+    vpuIssInfo(i).vAttach.get.nf        := bufInfo(idx).vAttach.get.nf
+    vpuIssInfo(i).vAttach.get.vm        := bufInfo(idx).vAttach.get.vm
+    vpuIssInfo(i).vAttach.get.bufIdx    := DontCare
+    vpuIssInfo(i).vAttach.get.eleIdx    := DontCare
+    vpuIssInfo(i).vAttach.get.lmulSel   := bufInfo(idx).vAttach.get.lmulSel
+    vpuIssInfo(i).vAttach.get.nfSel     := bufInfo(idx).vAttach.get.nfSel
+    vpuIssInfo(i).vAttach.get.widenSel  := bufInfo(idx).vAttach.get.widenSel
+    vpuIssInfo(i).vAttach.get.vstartSel := bufInfo(idx).vAttach.get.vstartSel
+    vpuIssInfo(i).vAttach.get.isLast    := bufInfo(idx).vAttach.get.isLast
+    vpuIssInfo(i).vAttach.get.vstart    := DontCare
+    vpuIssInfo(i).vAttach.get.vtype     := bufInfo(idx).vAttach.get.vtype
+    vpuIssInfo(i).vAttach.get.vl        := DontCare
+    vpuIssInfo(i).vAttach.get.nfSel     := bufInfo(idx).vAttach.get.nfSel
+    vpuIssInfo(i).vAttach.get.lmulSel   := bufInfo(idx).vAttach.get.lmulSel
+  
+  }
+
+
+  val vpuIssMatrix   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )) 
+  val maskCondVpuIss = Wire( Vec( dptEntry, Bool()) )
+
+  //only oldest instr will be selected, in-order-issue
+  for( i <- 0 until dptEntry ) {
+    maskCondLsuIss(i) := 
+      ~bufValid(i) |
+      ~bufInfo(i).vetorIsa.isVector
+  }
+
+  vpuIssMatrix := MatrixMask( ageMatrixR, maskCondVpuIss )
+  
+  assert(
+    vpuIssMatrix.forall( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === true.B) ) ) |
+    PopCount( vpuIssMatrix.map{(x: Vec[Bool]) => x.forall((y: Bool) => (y === false.B))} ) === 1.U
+  )
+
+  vpuIssIdx := vpuIssMatrix.indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
+
+  vpuIssFifo.io.enq.valid := 
+    ( 0 until dptEntry ).map{ i => { vpuIssMatrix(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) } }.reduce(_|_)
+
+  vpuIssFifo.io.enq.bits  := 
+    Mux1H( ( 0 until dptEntry ).map{ i => { (vpuIssMatrix(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) ) -> vpuIssInfo(i) } } )
+
+  for( i <- 0 until dptEntry ) {
+    when( vpuIssFifo.io.enq.fire & vpuIssIdx === i.U ) {
+      bufValid(i) := false.B
+      assert( postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) )
+      assert( bufValid(i) )
+      assert( bufInfo(i).vetorIsa.isVector )
+    }
+  }
+
+
+
+  
+  vpuIssFifo.io.deq <> io.vpu_iss_exe
+  vpuIssFifo.reset := io.flush | reset.asBool
 }
 
 

@@ -45,9 +45,9 @@ import org.chipsalliance.cde.config._
 
 
 
-abstract class VecSplitterBase()(implicit p: Parameters) extends RiftModule {
+abstract class VecPreRenameBase()(implicit p: Parameters) extends RiftModule {
 
-  class VecSplitterIO extends Bundle{
+  class VecPreRenameIO extends Bundle{
     val enq = Vec(rnChn, Flipped(new DecoupledIO(new IF4_Bundle)))
     val deq = Vec(rnChn, new DecoupledIO(new IF4_Bundle))
 
@@ -58,7 +58,7 @@ abstract class VecSplitterBase()(implicit p: Parameters) extends RiftModule {
     val flush = Input(Bool())
   }
 
-  val io: VecSplitterIO = IO(new VecSplitterIO)
+  val io: VecPreRenameIO = IO(new VecPreRenameIO)
 
   val vecSplitFifo = Module(new MultiPortFifo( new Dpt_info, aw = 3, 8, 1 ) )
 
@@ -76,7 +76,7 @@ abstract class VecSplitterBase()(implicit p: Parameters) extends RiftModule {
 }
 
 
-trait VecSplitterMux{ this: VecSplitterBase =>
+trait VecPreRenameMux{ this: VecPreRenameBase =>
 
   for( i <- 0 until rnChn ){
 
@@ -104,9 +104,7 @@ trait VecSplitterMux{ this: VecSplitterBase =>
         }
       }
     }
-
   }
-
 }
 
 
@@ -114,7 +112,7 @@ trait VecSplitterMux{ this: VecSplitterBase =>
 
 
 
-trait VecSplitterMicroInstr{ this: VecSplitterBase =>
+trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
       
 
 
@@ -180,6 +178,9 @@ trait VecSplitterMicroInstr{ this: VecSplitterBase =>
 
     microInstr(i).vAttach.get.widenSel := widenSel(i)
 
+    microInstr(i).vAttach.get.microIdx = i.U
+  // def microIdx = isWiden * lmulSel + widenSel
+
     microInstr(i).param.raw.rs1 := vSplitReq.param.raw.rs1 + Mux( vSplitReq.vectorIsa.isVS1, lmulSel(i), 0.U)
 
     microInstr(i).param.raw.rs2 :=
@@ -217,7 +218,7 @@ trait VecSplitterMicroInstr{ this: VecSplitterBase =>
 
 
 
-class VecSplitter()(implicit p: Parameters) extends VecSplitterBase with VecSplitterMux with VecSplitterMicroInstr{
+class VecPreRename()(implicit p: Parameters) extends VecPreRenameBase with VecPreRenameMux with VecPreRenameMicroInstr{
 
 }
 
