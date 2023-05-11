@@ -531,7 +531,7 @@ trait DptReadVOp { this: DptAgeMatrix =>
 abstract class IssueBase()(implicit p: Parameters) extends DptAgeMatrix
 with DptReadIOp
 with DptReadFOp
-with DptReadVOp
+// with DptReadVOp
 
 
 
@@ -569,27 +569,26 @@ trait IssLoadFOp { this: IssueBase =>
   }
 }
 
-trait IssLoadVOp { this: IssueBase =>
-  ( 0 until dptEntry ).map{ i => 
-    when( selMatrixReadVOp(i).forall( (y: Bool) => (y === false.B) ) ){
-      for( rs <- 0 to 3 ){
-        val idx = bufReqNum(i)(rs)
-        when( isBufVop(i)(rs) & ~isOpReady(i)(rs) & io.vReadOp(idx).valid ){
-          vecBufOperator(rs) := io.vReadOp(idx).bits
-          isOpReady(i)(rs) := true.B
-        }
-      }
-    }
-  }
-}
+// trait IssLoadVOp { this: IssueBase =>
+//   ( 0 until dptEntry ).map{ i => 
+//     when( selMatrixReadVOp(i).forall( (y: Bool) => (y === false.B) ) ){
+//       for( rs <- 0 to 3 ){
+//         val idx = bufReqNum(i)(rs)
+//         when( isBufVop(i)(rs) & ~isOpReady(i)(rs) & io.vReadOp(idx).valid ){
+//           vecBufOperator(rs) := io.vReadOp(idx).bits
+//           isOpReady(i)(rs) := true.B
+//         }
+//       }
+//     }
+//   }
+// }
 
 
 
 
 abstract class IssueSel()(implicit p: Parameters) extends IssueBase
 with IssLoadIOp
-with IssLoadFOp
-with IssLoadVOp{
+with IssLoadFOp{
   val postIsOpReady = Wire( Vec( dptEntry, Vec(4, Bool())) )
   val postBufOperator = Wire( Vec( dptEntry, Vec(4, UInt(vParams.vlen.W))) )
 
@@ -961,61 +960,76 @@ trait IssSelCsr{ this: IssueSel =>
 
 trait IssSelLsu{ this: IssueSel =>
 
-  def Pkg_lsu_iss( idx: Int ): Lsu_iss_info = {
-    val res = Wire(new Lsu_iss_info)
 
-    res.fun := bufInfo(idx).lsu_isa
 
-    res.param.dat.op0 := Mux( bufInfo(idx).lsu_isa.is_vls, vecBufOperator(0), 0.U )
+  val lsuIssIdx = Wire( UInt((log2Ceil(dptEntry)).W) )
+  val lsuIssInfo = Wire( Vec( dptEntry, new Lsu_iss_info) )
+  val lsuIssFifo = Module(new Queue( new Lsu_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true ) )
 
-    res.param.dat.op1 := 
-      MuxCase( (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(), Seq(
-        (bufInfo(idx).lsu_isa.is_lrsc | bufInfo(idx).lsu_isa.is_amo) -> postBufOperator(idx)(1),
+
+  for( i <- 0 until dptEntry ) {
+
+    lsuIssInfo(i).fun := bufInfo(idx).lsu_isa
+
+    lsuIssInfo(i).param.dat.op0 := Mux( bufInfo(idx).lsu_isa.is_vls, vecBufOperator(0), 0.U )
+
+    lsuIssInfo(i).param.dat.op1 := 
+      Mux1H(Seq(
+                                                                      -> (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(),
+        (bufInfo(idx).lsu_isa.is_lrsc | bufInfo(idx).lsu_isa.is_amo)  -> postBufOperator(idx)(1),
+                                                                      -> ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth ),
+                                                                      -> ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth ) + ori.param.dat.op2(63,0) * i.U,
+                                                                      -> ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth ) + adjVSEle( ori.param.dat.op2, i, "b000".U, ori.vAttach.get.vsew ) 
+                                                                      -> ori.param.dat.op1(63,0) + adjAddr( i, nf = "b000".U, vWidth = "b000".U ) + ((ori.vAttach.get.nf + 1.U) << log2Ceil(vParams.vlen/8))
       ))
 
-    res.param.dat.op2 :=
-      MuxCase( postBufOperator(idx)(2), Seq(
-        bufInfo(idx).lsu_isa.isFStore    -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
-        bufInfo(idx).lsu_isa.isVConstant -> vecBufOperator(2),//rs2
-        bufInfo(idx).lsu_isa.isVIndex    -> vecBufOperator(2),//vs2
+
+      // MuxCase( (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(), Seq(
+      //   (bufInfo(idx).lsu_isa.is_lrsc | bufInfo(idx).lsu_isa.is_amo) -> postBufOperator(idx)(1),
+      // ))
+
+    lsuIssInfo(i).param.dat.op2 :=
+      Mux1H(Seq(
+                                          -> postBufOperator(idx)(2),
+        bufInfo(idx).lsu_isa.isFStore     -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
+                                          -> adjVS3Ele( ori.param.dat.op3, i, ori.vAttach.get.nf, vsew = ori.vAttach.get.vWidth ),
+                                          -> adjVSEle( ori.param.dat.op3, i, ori.vAttach.get.nf, ori.vAttach.get.vsew ),
+                                          -> adjVSEle( ori.param.dat.op3, i, nf = "b000".U, vsew = "b000".U ),
       ))
+      // MuxCase( postBufOperator(idx)(2), Seq(
+      //   bufInfo(idx).lsu_isa.isFStore    -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
+      //   bufInfo(idx).lsu_isa.isVConstant -> //postBufOperator(idx)(2) *    ,//rs2
+      //   bufInfo(idx).lsu_isa.isVIndex    -> //bufInfo(idx).vAttach.vop2 + ,//vs2
+      // ))
 
-    res.param.dat.op3 := 
-      Mux( bufInfo(idx).lsu_isa.isVStore, vecBufOperator(3), 0.U )
+    lsuIssInfo(i).param.dat.op3 := DontCare
+      // Mux( bufInfo(idx).lsu_isa.isVStore,  , 0.U ) //vs3
 
 
-    res.param.rd0 := bufInfo(idx).phy.rd0
+    lsuIssInfo(i).param.rd0 := bufInfo(idx).phy.rd0
 
 
     if( hasVector ){
- 
-      res.vAttach.get.vWidth   := bufInfo(idx).param.vWidth
-      res.vAttach.get.nf       := bufInfo(idx).vAttach.get.nf
-      res.vAttach.get.vm       := bufInfo(idx).vAttach.get.vm
-      // res.vAttach.get.isFoF    := bufInfo(idx).param.raw.rs2.extract(4).asBool
-      res.vAttach.get.bufIdx := DontCare
-      res.vAttach.get.eleIdx := DontCare
-
-      res.vAttach.get.lmulSel   := bufInfo(idx).vAttach.get.lmulSel
-      res.vAttach.get.nfSel     := bufInfo(idx).vAttach.get.nfSel
-      res.vAttach.get.widenSel  := bufInfo(idx).vAttach.get.widenSel
-      res.vAttach.get.vstartSel := bufInfo(idx).vAttach.get.vstartSel
-      res.vAttach.get.isLast    := bufInfo(idx).vAttach.get.isLast
-
-
-      res.vAttach.get.vstart := DontCare
-      res.vAttach.get.vtype  := bufInfo(idx).vAttach.get.vtype
-      res.vAttach.get.vl     := DontCare
-
-      res.vAttach.get.nfSel   := bufInfo(idx).vAttach.get.nfSel
-      res.vAttach.get.lmulSel := bufInfo(idx).vAttach.get.lmulSel
-
+      lsuIssInfo(i).vAttach.get.vWidth   := bufInfo(idx).param.vWidth
+      lsuIssInfo(i).vAttach.get.nf       := bufInfo(idx).vAttach.get.nf
+      lsuIssInfo(i).vAttach.get.vm       := bufInfo(idx).vAttach.get.vm
+      lsuIssInfo(i).vAttach.get.bufIdx := DontCare
+      lsuIssInfo(i).vAttach.get.eleIdx := DontCare
+      lsuIssInfo(i).vAttach.get.lmulSel   := bufInfo(idx).vAttach.get.lmulSel
+      lsuIssInfo(i).vAttach.get.nfSel     := bufInfo(idx).vAttach.get.nfSel
+      lsuIssInfo(i).vAttach.get.widenSel  := bufInfo(idx).vAttach.get.widenSel
+      lsuIssInfo(i).vAttach.get.vstartSel := bufInfo(idx).vAttach.get.vstartSel
+      lsuIssInfo(i).vAttach.get.isLast    := bufInfo(idx).vAttach.get.isLast
+      lsuIssInfo(i).vAttach.get.vstart := DontCare
+      lsuIssInfo(i).vAttach.get.vtype  := bufInfo(idx).vAttach.get.vtype
+      lsuIssInfo(i).vAttach.get.vl     := DontCare
+      lsuIssInfo(i).vAttach.get.nfSel   := bufInfo(idx).vAttach.get.nfSel
+      lsuIssInfo(i).vAttach.get.lmulSel := bufInfo(idx).vAttach.get.lmulSel
     }
-    return res
   }
-  val lsuIssIdx = Wire( UInt((log2Ceil(dptEntry)).W) )
-  val lsuIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_lsu_iss(i) }
-  val lsuIssFifo = Module(new Queue( new Lsu_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true ) )
+
+
+
 
   val lsuIssMatrix   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )) 
   val maskCondLsuIss = Wire( Vec( dptEntry, Bool()) )

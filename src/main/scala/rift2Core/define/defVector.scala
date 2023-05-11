@@ -62,6 +62,9 @@ class VDcache_Attach_Bundle(implicit p: Parameters) extends VRename_Attach_Bundl
 
 trait Vec_PreIssue_Bundle{ this: RiftBundle =>
   val eleIdx = UInt(log2Ceil(vParams.vlen/8).W  )
+  val vop0 = Bool()
+  val vop1 = UInt(64.W)
+  val vop2 = UInt(64.W)
 }
 
 

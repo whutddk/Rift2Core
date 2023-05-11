@@ -26,10 +26,7 @@ import rift2Core.privilege._
 import rift2Chip._
 import org.chipsalliance.cde.config._
 
-//read vector Operator
-//check commit for vstore
-//ignore vstart vl 
-//split execute unit
+
 abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
   class VecPreIssueIO extends Bundle{
     val enq = Vec(rnChn, Flipped(new DecoupledIO(new Dpt_info)))
@@ -46,32 +43,31 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
   val vpuExeInfo = Wire( Vec( vParams.vlen/8, new Dpt_info ) )
   val vlsExeInfo = Wire( Vec( vParams.vlen/8, new Dpt_info ) )
 
-  val vop = Wire( Vec(4, UInt((vParams.vlen).W)) )
+  val vop = Wire( Vec(3, UInt((vParams.vlen).W)) )
+  val vsew = vecDptInfo.vAttach.get.vsew
 
+  val preIssueBuf = 
+    for( i <- 0 until vParams.vlen/8 ) yield { Reg(new Dpt_info) }
 
+  val isBufValid = RegInit( VecInit(Seq.fill(vParams.vlen/8){false.B}) )
 
+  val isBusy = isBufValid.reduce(_|_)
 }
 
-trait VecPreIssueReadOP{ this: VecPreIssueBase =>
+
+
+
+trait VecPreIssueReadOp{ this: VecPreIssueBase =>
   val idx = Seq( vecDptInfo.phy.vm0, vecDptInfo.phy.rs1, vecDptInfo.phy.rs2, vecDptInfo.phy.rs3 )
 
   vop(0) := io.readOp(idx(0)).bits
-  vop(1) := io.readOp(idx(1)).bits
+
+  vop(1) := Mux( vecDptInfo.vectorIsa.isVector, io.readOp(idx(1)).bits, io.readOp(idx(3)).bits )
   vop(2) := io.readOp(idx(2)).bits
-  vop(3) := io.readOp(idx(3)).bits
+
 }
 
 trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
-
-  val mask8  = Wire( UInt((vParams.vlen/8 ).W))
-  val mask16 = Wire( UInt((vParams.vlen/16).W))
-  val mask32 = Wire( UInt((vParams.vlen/32).W))
-  val mask64 = Wire( UInt((vParams.vlen/64).W))
-
-  mask8  := vop(0)(vParams.vlen/8-1,  0) | Fill( vParams.vlen/8,  ori.vAttach.get.vm )
-  mask16 := vop(0)(vParams.vlen/16-1, 0) | Fill( vParams.vlen/16, ori.vAttach.get.vm )
-  mask32 := vop(0)(vParams.vlen/32-1, 0) | Fill( vParams.vlen/32, ori.vAttach.get.vm )
-  mask64 := vop(0)(vParams.vlen/64-1, 0) | Fill( vParams.vlen/64, ori.vAttach.get.vm )
 
   for( i <- 0 until vParams.vlen/8 ){
     vlsExeInfo(i).lsu_isa    := vecDptInfo.lsu_isa
@@ -87,12 +83,6 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
     vlsExeInfo(i).param.pc      := DontCare
     vlsExeInfo(i).param.imm     := vecDptInfo.param.imm
     vlsExeInfo(i).param.rm      := vecDptInfo.param.rm
-    vlsExeInfo(i).param.raw.vm0 :=
-    vlsExeInfo(i).param.raw.rs1 :=
-    vlsExeInfo(i).param.raw.rs2 :=
-    vlsExeInfo(i).param.raw.rs3 :=
-
-    vlsExeInfo(i).vAttach.get.eleIdx := 
 
     vlsExeInfo(i).vAttach.get.nf     := vecDptInfo.vAttach.get.nf
     vlsExeInfo(i).vAttach.get.vm     := vecDptInfo.vAttach.get.vm
@@ -103,123 +93,217 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
 
     vlsExeInfo(i).vAttach.get.vtype   := vecDptInfo.vAttach.get.vtype
 
+
+    when( ori.fun.vle | iss.fun.vlm | iss.fun.vleNff | iss.fun.vleNff | iss.fun.vlNreN ){
+
+      vlsExeInfo(i).param.raw.vm0 := DontCare
+      vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
+      vlsExeInfo(i).param.raw.rs2 := DontCare
+      vlsExeInfo(i).param.raw.rs3 := DontCare
+
+      vlsExeInfo(i).vAttach.get.eleIdx := i.U
+
+      vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
+      vlsExeInfo(i).vAttach.get.vop1 := DontCare
+      vlsExeInfo(i).vAttach.get.vop2 := DontCare
+
+    }.elsewhen( iss.fun.vse | iss.fun.vsm | iss.fun.vsNr ){
+
+      vlsExeInfo(i).param.raw.vm0 := DontCare
+      vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
+      vlsExeInfo(i).param.raw.rs2 := DontCare
+      vlsExeInfo(i).param.raw.rs3 := DontCare
+
+      vlsExeInfo(i).vAttach.get.eleIdx := i.U
+
+      vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
+      vlsExeInfo(i).vAttach.get.vop1 := 
+        Mux1H(Seq(
+          (vsew === "b000".U) -> (vop(1) >> (i >> 3).U ).apply(7,0),
+          (vsew === "b001".U) -> (vop(1) >> (i >> 4).U ).apply(15,0),
+          (vsew === "b010".U) -> (vop(1) >> (i >> 5).U ).apply(31,0),
+          (vsew === "b011".U) -> (vop(1) >> (i >> 6).U ).apply(63,0),
+        ))
+      vlsExeInfo(i).vAttach.get.vop2 := DontCare
+
+
+    }.elsewhen( iss.fun.vlse ){
+
+      vlsExeInfo(i).param.raw.vm0 := DontCare
+      vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
+      vlsExeInfo(i).param.raw.rs2 := vecDptInfo.param.raw.rs2
+      vlsExeInfo(i).param.raw.rs3 := DontCare
+
+      vlsExeInfo(i).vAttach.get.eleIdx := i.U
+
+      vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
+      vlsExeInfo(i).vAttach.get.vop1 := DontCare
+      vlsExeInfo(i).vAttach.get.vop2 := DontCare
+
+
+    }.elsewhen( iss.fun.vsse ){
+
+      vlsExeInfo(i).param.raw.vm0 := DontCare
+      vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
+      vlsExeInfo(i).param.raw.rs2 := vecDptInfo.param.raw.rs2
+      vlsExeInfo(i).param.raw.rs3 := DontCare
+
+      vlsExeInfo(i).vAttach.get.eleIdx := i.U
+
+      vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
+      vlsExeInfo(i).vAttach.get.vop1 := 
+        Mux1H(Seq(
+          (vsew === "b000".U) -> (vop(1) >> (i >> 3).U ).apply(7,0),
+          (vsew === "b001".U) -> (vop(1) >> (i >> 4).U ).apply(15,0),
+          (vsew === "b010".U) -> (vop(1) >> (i >> 5).U ).apply(31,0),
+          (vsew === "b011".U) -> (vop(1) >> (i >> 6).U ).apply(63,0),
+        ))
+      vlsExeInfo(i).vAttach.get.vop2 := DontCare
+
+    }.elsewhen( iss.fun.vloxei ){
+
+      vlsExeInfo(i).param.raw.vm0 := DontCare
+      vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
+      vlsExeInfo(i).param.raw.rs2 := DontCare
+      vlsExeInfo(i).param.raw.rs3 := DontCare
+
+      vlsExeInfo(i).vAttach.get.eleIdx := i.U
+
+      vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
+      vlsExeInfo(i).vAttach.get.vop1 := DontCare
+      vlsExeInfo(i).vAttach.get.vop2 := 
+        Mux1H(Seq(
+          (vsew === "b000".U) -> (vop(2) >> (i >> 3).U ).apply(7,0),
+          (vsew === "b001".U) -> (vop(2) >> (i >> 4).U ).apply(15,0),
+          (vsew === "b010".U) -> (vop(2) >> (i >> 5).U ).apply(31,0),
+          (vsew === "b011".U) -> (vop(2) >> (i >> 6).U ).apply(63,0),
+        ))
+
+    }.elsewhen( iss.fun.vsoxei ){
+
+      vlsExeInfo(i).param.raw.vm0 := DontCare
+      vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
+      vlsExeInfo(i).param.raw.rs2 := DontCare
+      vlsExeInfo(i).param.raw.rs3 := DontCare
+
+      vlsExeInfo(i).vAttach.get.eleIdx := i.U
+
+      vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
+      vlsExeInfo(i).vAttach.get.vop1 := 
+        Mux1H(Seq(
+          (vsew === "b000".U) -> (vop(1) >> (i >> 3).U ).apply(7,0),
+          (vsew === "b001".U) -> (vop(1) >> (i >> 4).U ).apply(15,0),
+          (vsew === "b010".U) -> (vop(1) >> (i >> 5).U ).apply(31,0),
+          (vsew === "b011".U) -> (vop(1) >> (i >> 6).U ).apply(63,0),
+        ))
+      vlsExeInfo(i).vAttach.get.vop2 :=
+        Mux1H(Seq(
+          (vsew === "b000".U) -> (vop(2) >> (i >> 3).U ).apply(7,0),
+          (vsew === "b001".U) -> (vop(2) >> (i >> 4).U ).apply(15,0),
+          (vsew === "b010".U) -> (vop(2) >> (i >> 5).U ).apply(31,0),
+          (vsew === "b011".U) -> (vop(2) >> (i >> 6).U ).apply(63,0),
+        ))
+
+      
+      sbInfo.splitInfo(i).fun.sb := ori.vAttach.get.vWidth === "b000".U
+      sbInfo.splitInfo(i).fun.sh := ori.vAttach.get.vWidth === "b001".U
+      sbInfo.splitInfo(i).fun.sw := ori.vAttach.get.vWidth === "b010".U
+      sbInfo.splitInfo(i).fun.sd := ori.vAttach.get.vWidth === "b011".U
+        
+      sbInfo.splitInfo(i).param.dat.op1 := ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth ) + adjVSEle( ori.param.dat.op2, i, "b000".U, ori.vAttach.get.vsew ) 
+      sbInfo.splitInfo(i).param.dat.op2 := adjVSEle( ori.param.dat.op3, i, ori.vAttach.get.nf, ori.vAttach.get.vsew )
+
+      sbInfo.isExeReady := false.B
+
+
+
+    }.otherwise{
+      vpuExeInfo(i) := 0.U.asTypeOf(new Dpt_info)
+    }
+
   }
-//       when( ~sbInfo.isRequested(i) ){
-//         require( vParams.lsuEntry <= maxRegNum )
-//         require( vParams.vlen/8   <= maxRegNum )
-//         val eleIdx = i.U
 
-//         sbInfo.splitInfo(i).param.rd0            := eleIdx
-//         sbInfo.splitInfo(i).vAttach.get.entrySel := bufIdx
-//         sbInfo.splitInfo(i).param.dat.op3 := DontCare
-//         sbInfo.splitInfo(i).param.dat.op4 := DontCare
-
-//         when( ori.fun.vle | iss.fun.vlm | iss.fun.vleNff | iss.fun.vleNff ){
-//           println("Warning, vlm should be take care before load in vlsu")
-//           sbInfo.splitInfo(i).fun.lbu := ori.vAttach.get.vWidth === "b000".U
-//           sbInfo.splitInfo(i).fun.lhu := ori.vAttach.get.vWidth === "b001".U
-//           sbInfo.splitInfo(i).fun.lwu := ori.vAttach.get.vWidth === "b010".U
-//           sbInfo.splitInfo(i).fun.ld  := ori.vAttach.get.vWidth === "b011".U
-
-//           sbInfo.splitInfo(i).param.dat.op1 := ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth )
-//           sbInfo.splitInfo(i).param.dat.op2 := DontCare
-
-//           sbInfo.isExeReady := true.B
-//         }.elsewhen( iss.fun.vse | iss.fun.vsm ){
-//           println("Warning, vsm should be take care before load in vlsu")
-//           sbInfo.splitInfo(i).fun.sb := ori.vAttach.get.vWidth === "b000".U
-//           sbInfo.splitInfo(i).fun.sh := ori.vAttach.get.vWidth === "b001".U
-//           sbInfo.splitInfo(i).fun.sw := ori.vAttach.get.vWidth === "b010".U
-//           sbInfo.splitInfo(i).fun.sd := ori.vAttach.get.vWidth === "b011".U
-
-//           sbInfo.splitInfo(i).param.dat.op1 := ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth )
-//           sbInfo.splitInfo(i).param.dat.op2 := adjVS3Ele( ori.param.dat.op3, i, ori.vAttach.get.nf, vsew = ori.vAttach.get.vWidth )
-
-//           sbInfo.isExeReady := false.B
-//         }.elsewhen( iss.fun.vlse ){
-//           sbInfo.splitInfo(i).fun.lbu := ori.vAttach.get.vWidth === "b000".U
-//           sbInfo.splitInfo(i).fun.lhu := ori.vAttach.get.vWidth === "b001".U
-//           sbInfo.splitInfo(i).fun.lwu := ori.vAttach.get.vWidth === "b010".U
-//           sbInfo.splitInfo(i).fun.ld  := ori.vAttach.get.vWidth === "b011".U
-           
-//           sbInfo.splitInfo(i).param.dat.op1 := ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth ) + ori.param.dat.op2(63,0) * i.U
-//           sbInfo.splitInfo(i).param.dat.op2 := DontCare   
-
-//           sbInfo.isExeReady := true.B           
-//         }.elsewhen( iss.fun.vsse ){
-//           sbInfo.splitInfo(i).fun.sb := ori.vAttach.get.vWidth === "b000".U
-//           sbInfo.splitInfo(i).fun.sh := ori.vAttach.get.vWidth === "b001".U
-//           sbInfo.splitInfo(i).fun.sw := ori.vAttach.get.vWidth === "b010".U
-//           sbInfo.splitInfo(i).fun.sd := ori.vAttach.get.vWidth === "b011".U
-           
-//           sbInfo.splitInfo(i).param.dat.op1 := ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth ) + ori.param.dat.op2(63,0) * i.U
-//           sbInfo.splitInfo(i).param.dat.op2 := adjVSEle( ori.param.dat.op3, i, ori.vAttach.get.nf, vsew = ori.vAttach.get.vWidth )
-
-//           sbInfo.isExeReady := false.B
-//         }.elsewhen( iss.fun.vloxei ){
-//           sbInfo.splitInfo(i).fun.lbu := ori.vAttach.get.vWidth === "b000".U
-//           sbInfo.splitInfo(i).fun.lhu := ori.vAttach.get.vWidth === "b001".U
-//           sbInfo.splitInfo(i).fun.lwu := ori.vAttach.get.vWidth === "b010".U
-//           sbInfo.splitInfo(i).fun.ld  := ori.vAttach.get.vWidth === "b011".U
-           
-//           sbInfo.splitInfo(i).param.dat.op1 := ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth ) + adjVSEle( ori.param.dat.op2, i, "b000".U, ori.vAttach.get.vsew ) 
-//           sbInfo.splitInfo(i).param.dat.op2 := DontCare
-
-//           sbInfo.isExeReady := true.B
-//         }.elsewhen( iss.fun.vsoxei ){
-//           sbInfo.splitInfo(i).fun.sb := ori.vAttach.get.vWidth === "b000".U
-//           sbInfo.splitInfo(i).fun.sh := ori.vAttach.get.vWidth === "b001".U
-//           sbInfo.splitInfo(i).fun.sw := ori.vAttach.get.vWidth === "b010".U
-//           sbInfo.splitInfo(i).fun.sd := ori.vAttach.get.vWidth === "b011".U
-           
-//           sbInfo.splitInfo(i).param.dat.op1 := ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth ) + adjVSEle( ori.param.dat.op2, i, "b000".U, ori.vAttach.get.vsew ) 
-//           sbInfo.splitInfo(i).param.dat.op2 := adjVSEle( ori.param.dat.op3, i, ori.vAttach.get.nf, ori.vAttach.get.vsew )
-
-//           sbInfo.isExeReady := false.B
-//         }.elsewhen( iss.fun.vlNreN ){
-
-//           sbInfo.splitInfo(i).fun.lbu := true.B//ori.param.vWidth === "b000".U
-//           // sbInfo.splitInfo(i).fun.lhu := ori.param.vWidth === "b001".U
-//           // sbInfo.splitInfo(i).fun.lwu := ori.param.vWidth === "b010".U
-//           // sbInfo.splitInfo(i).fun.ld := ori.param.vWidth === "b011".U
-
-//           sbInfo.splitInfo(i).param.dat.op1 := ori.param.dat.op1(63,0) + ((ori.vAttach.get.nf + 1.U) << log2Ceil(vParams.vlen/8)) + adjAddr( i, nf = "b000".U, vWidth = "b000".U )
-//           sbInfo.splitInfo(i).param.dat.op2 := DontCare
-
-//           sbInfo.isExeReady := true.B
-//         }.elsewhen( iss.fun.vsNr ){
-
-//           sbInfo.splitInfo(i).fun.sb := true.B//ori.param.vWidth === "b000".U
-//           // sbInfo.splitInfo(i).fun.sh := ori.param.vWidth === "b001".U
-//           // sbInfo.splitInfo(i).fun.sw := ori.param.vWidth === "b010".U
-//           // sbInfo.splitInfo(i).fun.sd := ori.param.vWidth === "b011".U
-
-//           sbInfo.splitInfo(i).param.dat.op1 := ori.param.dat.op1(63,0) + ((ori.vAttach.get.nf + 1.U) << log2Ceil(vParams.vlen/8)) + adjAddr( i, nf = "b000".U, vWidth = "b000".U )
-//           sbInfo.splitInfo(i).param.dat.op2 := adjVSEle( ori.param.dat.op3, i, nf = "b000".U, vsew = "b000".U )
-//           sbInfo.isExeReady := false.B
-//         }.otherwise{
-//           assert(false.B, "Assert Failed, a none Vector LSU instr is push into the VScoreboard!")
-//         }
-
-//       }
 }
-
 
 trait VecPreIssueVpuSpliter{ this: VecPreIssueBase =>
-
+  for( i <- 0 until vParams.vlen/8 ){
+    vpuExeInfo(i) := 0.U.asTypeOf(new Dpt_info)
+  }
 }
-
-
 
 trait VecPreIssueMux{ this: VecPreIssueBase =>
 
+  val validMask = Wire( Vec( vParams.vlen/8, Vec( vParams.vlen/8, Bool() ) ))
+  val deqSel    = Wire( Vec( vParams.vlen/8, UInt( log2Ceil(vParams.vlen/8).W )) )
+
+  validMask(0) := isBufValid
+  for( i <- 1 until vParams.vlen/8 ){
+    validMask(i) := validMask(i-1) & ~(1.U((vParams.vlen/8).W) << deqSel(i-1))
+  }
+
+  for( i <- 0 until vParams.vlen/8 ){
+    deqSel(i) := validMask.indexWhere((x: Bool) => (x === true.B))
+  }
+
+
+  for( i <- 0 until rnChn ){
+    when( isBusy ){
+      io.deq(i).valid := isBufValid(deqSel(i))
+      io.deq(i).bits  := preIssueBuf(deqSel(i))
+
+      when( io.deq(i).fire ){
+        assert(isBufValid(deqSel(i)) === true.B)
+        isBufValid(deqSel(i)) := false.B
+            preIssueBuf(deqSel(i)) := 0.U.asTypeOf(new Dpt_info)
+      }
+
+      io.enq(i).ready := false.B
+    } .otherwise{
+      when( (0 until i).map{ j => io.enq(j).bits.lsu_isa.isVector | io.enq(j).bits.vectorIsa.isVALU }.foldLeft(false.B)(_|_) ){
+        io.deq(i).valid := false.B
+        io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
+        io.enq(i).ready := false.B
+      } .otherwise{
+        when( ~(io.enq(i).bits.lsu_isa.isVector | io.enq(i).bits.vectorIsa.isVALU) ){
+          io.enq(i) <> io.deq(i)
+        } .otherwise{
+          vecDptInfo := io.enq(i).bits
+
+          io.deq(i).valid := false.B
+          io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
+
+          when( io.enq(i).fire ) {
+            for( j <- 0 until vParams.vlen/8 ){
+              preIssueBuf(j) := 
+                Mux1H(Seq(
+                  io.enq(i).bits.lsu_isa.isVector -> vlsExeInfo(j),
+                  io.enq(i).bits.vectorIsa.isVALU -> vpuExeInfo(j),
+                ))
+                
+              isBufValid(j) := 
+                Mux1H(Seq(
+                  (vsew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                  (vsew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                  (vsew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                  (vsew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                ))                
+            }
+          }
+
+          io.enq(i).ready := true.B
+        }
+      }
+    }
+  }
 }
 
 
 
 
 
-class ecPreIssue()(implicit p: Parameters) extends VecPreIssueBase
+class VecPreIssue()(implicit p: Parameters) extends VecPreIssueBase
 with VecPreIssueMux
-with VecPreIssueReadOP
-with VecPreIssueSpliter
+with VecPreIssueReadOp
+with VecPreIssueVlsSpliter
+with VecPreIssueVpuSpliter
+

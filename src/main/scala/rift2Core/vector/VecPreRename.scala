@@ -81,8 +81,8 @@ trait VecPreRenameMux{ this: VecPreRenameBase =>
   for( i <- 0 until rnChn ){
 
     when( vecSplitFifo.io.deq(0).valid ){
-      io.deq(i).valid := false.B
-      io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
+      io.deq(i) <> vecSplitFifo.io.deq(i)
+
       io.enq(i).ready := false.B
     } .otherwise{
       when( (0 until i).map{ j => io.enq(j).bits.lsu_isa.isVector | io.enq(j).bits.vectorIsa.isVALU }.foldLeft(false.B)(_|_) ){
@@ -99,7 +99,7 @@ trait VecPreRenameMux{ this: VecPreRenameBase =>
           }.otherwise{ //splitter
             io.deq(i).valid := false.B
             io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
-            io.enq(i).ready := false.B
+            io.enq(i).ready := true.B
           }
         }
       }
