@@ -66,6 +66,7 @@ abstract class VecPreRenameBase()(implicit p: Parameters) extends RiftModule {
 
   val vtype   = io.csrfiles.vtype
   val lmul    = vtype(2,0)
+  val vsew    = vtype(5,3)
   val nf      = vSplitReq.vAttach.get.nf
 
   val isVALU  = vSplitReq.vectorIsa.isVALU
@@ -178,7 +179,17 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
 
     microInstr(i).vAttach.get.widenSel := widenSel(i)
 
-    microInstr(i).vAttach.get.microIdx = i.U
+    microInstr(i).vAttach.get.microIdx := i.U
+
+    microInstr(i).vAttach.get.vstartSel := 
+      Mux1H(Seq(
+        vsew === "b000".U -> (i*vParams.vlen / 8).U,
+        vsew === "b001".U -> (i*vParams.vlen / 16).U,
+        vsew === "b010".U -> (i*vParams.vlen / 32).U,
+        vsew === "b011".U -> (i*vParams.vlen / 64).U,
+      ))
+
+
   // def microIdx = isWiden * lmulSel + widenSel
 
     microInstr(i).param.raw.rs1 := vSplitReq.param.raw.rs1 + Mux( vSplitReq.vectorIsa.isVS1, lmulSel(i), 0.U)

@@ -127,24 +127,36 @@ trait DptBoard{ this: DptBase =>
       when( io.dptReq(i).bits.phy.vm0 === 0.U ) {
         isOpReady (entrySel(i))(0) := true.B
         bufOperator(entrySel(i))(0) := 0.U
+      } .elsewhen(io.dptReq(i).bits.isVM0) {
+        isOpReady (entrySel(i))(0) := true.B
+        bufOperator(entrySel(i))(0) := io.dptReq(i).bits.vAttach.vop0
       } .otherwise {
         isOpReady (entrySel(i))(0) := false.B
       }
       when( io.dptReq(i).bits.phy.rs1 === 0.U ) {
         isOpReady (entrySel(i))(1) := true.B
         bufOperator(entrySel(i))(1) := 0.U
+      } .elsewhen(io.dptReq(i).bits.isVS1) {
+        isOpReady (entrySel(i))(1) := true.B
+        bufOperator(entrySel(i))(1) := io.dptReq(i).bits.vAttach.vop1
       } .otherwise {
         isOpReady (entrySel(i))(1) := false.B
       }
       when( io.dptReq(i).bits.phy.rs2 === 0.U ) {
         isOpReady (entrySel(i))(2) := true.B
         bufOperator(entrySel(i))(2) := 0.U
+      } .elsewhen(io.dptReq(i).bits.isVS2) {
+        isOpReady (entrySel(i))(2) := true.B
+        bufOperator(entrySel(i))(2) := io.dptReq(i).bits.vAttach.vop2
       } .otherwise{
         isOpReady (entrySel(i))(2) := false.B
       }
       when( io.dptReq(i).bits.phy.rs3 === 0.U ) {
         isOpReady (entrySel(i))(3) := true.B
         bufOperator(entrySel(i))(3) := 0.U
+      } .elsewhen(io.dptReq(i).bits.isVS3) {
+        isOpReady (entrySel(i))(3) := true.B
+        bufOperator(entrySel(i))(3) := io.dptReq(i).bits.vAttach.vop3
       } .otherwise {
         isOpReady (entrySel(i))(3) := false.B
       }
@@ -975,12 +987,12 @@ trait IssSelLsu{ this: IssueSel =>
 
     lsuIssInfo(i).param.dat.op1 := 
       Mux1H(Seq(
-                                                                      -> (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(),
+        (bufInfo(idx).lsu_isa.is_xls  | bufInfo(idx).lsu_isa.is_fls)  -> (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(),
         (bufInfo(idx).lsu_isa.is_lrsc | bufInfo(idx).lsu_isa.is_amo)  -> postBufOperator(idx)(1),
-                                                                      -> ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth ),
-                                                                      -> ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth ) + ori.param.dat.op2(63,0) * i.U,
-                                                                      -> ori.param.dat.op1(63,0) + adjAddr( i, ori.vAttach.get.nf, ori.vAttach.get.vWidth ) + adjVSEle( ori.param.dat.op2, i, "b000".U, ori.vAttach.get.vsew ) 
-                                                                      -> ori.param.dat.op1(63,0) + adjAddr( i, nf = "b000".U, vWidth = "b000".U ) + ((ori.vAttach.get.nf + 1.U) << log2Ceil(vParams.vlen/8))
+        (bufInfo(idx).lsu_isa.isUnitStride )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset,
+        (bufInfo(idx).lsu_isa.isStridde    )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset + postBufOperator(idx)(2) * i.U,
+        (bufInfo(idx).lsu_isa.isIndex      )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset + postBufOperator(idx)(2),//vop2
+                                                                      // -> postBufOperator(idx)(1).asSInt + adjAddr( i, nf = "b000".U, vWidth = "b000".U ) + ((ori.vAttach.get.nf + 1.U) << log2Ceil(vParams.vlen/8))
       ))
 
 
@@ -990,11 +1002,9 @@ trait IssSelLsu{ this: IssueSel =>
 
     lsuIssInfo(i).param.dat.op2 :=
       Mux1H(Seq(
-                                          -> postBufOperator(idx)(2),
+        bufInfo(idx).lsu_isa.isXStore     -> postBufOperator(idx)(2),
         bufInfo(idx).lsu_isa.isFStore     -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
-                                          -> adjVS3Ele( ori.param.dat.op3, i, ori.vAttach.get.nf, vsew = ori.vAttach.get.vWidth ),
-                                          -> adjVSEle( ori.param.dat.op3, i, ori.vAttach.get.nf, ori.vAttach.get.vsew ),
-                                          -> adjVSEle( ori.param.dat.op3, i, nf = "b000".U, vsew = "b000".U ),
+        bufInfo(idx).lsu_isa.isVStore     -> postBufOperator(idx)(3),
       ))
       // MuxCase( postBufOperator(idx)(2), Seq(
       //   bufInfo(idx).lsu_isa.isFStore    -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),

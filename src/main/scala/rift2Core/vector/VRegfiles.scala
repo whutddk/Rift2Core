@@ -37,8 +37,8 @@ class Vector_Commit_Bundle()(implicit p: Parameters) extends RiftBundle{
 
 class Vector_WriteBack_Bundle()(implicit p: Parameters) extends RiftBundle {
   val res = UInt(8.W)
-  val isMask = Bool()
-  val isExcepiton = Bool()
+  // val isMask = Bool()
+  // val isExcepiton = Bool()
 }
 
 abstract class VRegfilesBase()(implicit p: Parameters) extends RiftModule {
@@ -48,6 +48,7 @@ abstract class VRegfilesBase()(implicit p: Parameters) extends RiftModule {
     val readOp = Vec( 32, Valid(UInt( (vParams.vlen).W )) )
 
     val writeBack = Vec(wbc, Vec( 32, Vec(8, (new Valid(new Vector_WriteBack_Bundle)))))
+    val exception = 
 
     val commit = Vec(cmm, Flipped(new Vector_Commit_Bundle))
     val diffReg = Output(Vec(32, UInt((vParams.vlen/8).W)))    

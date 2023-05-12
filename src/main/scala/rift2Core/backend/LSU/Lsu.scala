@@ -42,6 +42,8 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
     val lsu_exe_iwb = new DecoupledIO(new LSU_WriteBack_Bundle(dw=64))
     val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
+    val lsu_exe_vwb = Vec( 32, Vec(8, (new Valid(new Vector_WriteBack_Bundle))))
+    val lsu_exe_vexc = 
 
             // val lsu_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))
 

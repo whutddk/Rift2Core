@@ -189,6 +189,9 @@ class Lsu_isa extends Bundle {
   def is_R = is_lu | is_lr | is_amo
   def is_W = is_su | is_sc | is_amo
 
+  def isXLoad  = lb | lh | lw | ld | lbu | lhu | lwu | is_lr
+  def isXStore = sb | sh | sw | sd | is_sc
+
   def isFLoad  = flw | fld
   def isFStore = fsw | fsd
 
@@ -216,8 +219,12 @@ class Lsu_isa extends Bundle {
 
 
 
-  def isAcquireFifo = is_vls
+  // def isAcquireFifo = is_vls
 
+
+  def isUnitStride = vle | vse | vlm | vsm | vlNreN | vsNr | vleNff
+  def isStridde = vlse | vsse
+  def isIndex = vloxei | vsoxei
 
   def is_fpu = flw | fsw | fld | fsd
   def isVector = is_vls

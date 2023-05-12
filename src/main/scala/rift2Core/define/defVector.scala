@@ -65,6 +65,7 @@ trait Vec_PreIssue_Bundle{ this: RiftBundle =>
   val vop0 = Bool()
   val vop1 = UInt(64.W)
   val vop2 = UInt(64.W)
+  val voffset = UInt(64.W) 
 }
 
 

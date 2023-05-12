@@ -34,6 +34,11 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
 
     val molloc = Decoupled(new UInt(5.W)) //molloc at read op
     val readOp = Flipped(Vec( 32, Valid(UInt( (vParams.vlen).W )) ) )
+
+    val csrfiles = Input(new CSR_Bundle)
+    val isPndVStore = Input(Bool())
+
+    val flush = Input(Bool())
   }
 
   val io: VecPreIssueIO = IO(new VecPreIssueIO)
@@ -52,6 +57,14 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
   val isBufValid = RegInit( VecInit(Seq.fill(vParams.vlen/8){false.B}) )
 
   val isBusy = isBufValid.reduce(_|_)
+
+  val lmul  = vecDptInfo.vAttach.get.vlmul
+  val lmulSel  = vecDptInfo.vAttach.get.mulSel
+  val nf     = vecDptInfo.vAttach.get.nf
+  val nfSel  = vecDptInfo.vAttach.get.nfSel
+  val vWidth = vecDptInfo.vAttach.get.vWidth
+  val vstart = csrfiles.vstart
+  val vl     = csrfiles.vl
 }
 
 
@@ -68,6 +81,7 @@ trait VecPreIssueReadOp{ this: VecPreIssueBase =>
 }
 
 trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
+
 
   for( i <- 0 until vParams.vlen/8 ){
     vlsExeInfo(i).lsu_isa    := vecDptInfo.lsu_isa
@@ -93,6 +107,13 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
 
     vlsExeInfo(i).vAttach.get.vtype   := vecDptInfo.vAttach.get.vtype
 
+    vlsExeInfo(i).vAttach.get.voffset := 
+      (Mux1H(Seq(
+        (nf === 0.U) -> ( i*1 ).U, (nf === 1.U) -> ( i*2 ).U,
+        (nf === 2.U) -> ( i*3 ).U, (nf === 3.U) -> ( i*4 ).U,
+        (nf === 4.U) -> ( i*5 ).U, (nf === 5.U) -> ( i*6 ).U,
+        (nf === 6.U) -> ( i*7 ).U, (nf === 7.U) -> ( i*8 ).U,
+      )) + nfSel) >> vWidth
 
     when( ori.fun.vle | iss.fun.vlm | iss.fun.vleNff | iss.fun.vleNff | iss.fun.vlNreN ){
 
@@ -106,6 +127,8 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := DontCare
       vlsExeInfo(i).vAttach.get.vop2 := DontCare
+
+
 
     }.elsewhen( iss.fun.vse | iss.fun.vsm | iss.fun.vsNr ){
 
@@ -246,6 +269,21 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
   }
 
 
+
+  val isVSTorePnd = RegInit(false.B)
+  val isVStprePre  = RegNext(io.isPndVStore, false.B)
+  val isVStprePost = io.isPndVStore & ~isVStprePre
+  when( io.flush ) {
+    isVSTorePnd := false.B
+  } .elsewhen( isVStprePost ) {
+    isVSTorePnd := true.B
+  } .elsewhen(isVSTorePnd & ~isBusy) {
+    isVSTorePnd := false.B
+  }
+
+
+
+
   for( i <- 0 until rnChn ){
     when( isBusy ){
       io.deq(i).valid := isBufValid(deqSel(i))
@@ -273,7 +311,9 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
           io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
 
           when( io.enq(i).fire ) {
+
             for( j <- 0 until vParams.vlen/8 ){
+
               preIssueBuf(j) := 
                 Mux1H(Seq(
                   io.enq(i).bits.lsu_isa.isVector -> vlsExeInfo(j),
@@ -281,6 +321,10 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
                 ))
                 
               isBufValid(j) := 
+                Mux( io.enq(i).bits.lsu_isa.isVStore,
+                isVSTorePnd & (vstartSel+j.U >= vstart) & (vstartSel+j.U <= vl),
+                true.B) &
+
                 Mux1H(Seq(
                   (vsew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
                   (vsew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
