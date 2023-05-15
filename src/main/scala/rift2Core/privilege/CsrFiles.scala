@@ -1429,18 +1429,17 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
     val vstart = WireDefault( in.csrfiles.vstart )
 
     val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.vstart, "h008".U, in.csrExe )
-    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.vstart, "hFFF".U, in.csrExe ) //vlsu exception
+    // val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.vstart, "hFFF".U, in.csrExe ) //vlsu exception
 
     when( enable0 ){ //csr write vstart
       vstart := dnxt0
-    }.elsewhen( in.rod.isVector & in.rod.isLast ){  //vector commit will auto reset vstart to 0
-      vstart := 0.U
-    }.elsewhen(enable1){
-      when( dnxt1(63) | dnxt1(62) | dnxt1(61) ){
-        vstart := dnxt1( vlen + log2Ceil(vParams.vlmax) -1, vlen )//exception update temp csr
-        // assert( in.rod.isVector )
-        assert( in.isException | in.isInterrupt )        
-      }
+    }.elsewhen( in.rod.isVector ){  //vector commit will auto reset vstart to 0
+      vstart := 
+        Mux1H(Seq(
+          -> 0.U,
+          -> vstart + vl
+          -> vstart + exceptionIdx
+        ))
     }
 
     return vstart

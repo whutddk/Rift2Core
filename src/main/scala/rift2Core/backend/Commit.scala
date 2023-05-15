@@ -49,6 +49,7 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
 
   class CommitIO extends Bundle{
     val cm_op = Vec(cmChn, new Info_commit_op(32, maxRegNum))
+    val vCommit = Vec(cmChn, new Vector_Commit_Bundle)
               // val csrCmm = Vec(cmChn, new SeqReg_Commit_Bundle(cRegNum))
               // val csrOp = Input(Vec(cmChn, new Exe_Port))
     val rod = Vec(cmChn, Flipped(new DecoupledIO( new Info_reorder_i ) ))
@@ -70,6 +71,7 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
 
     val xpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
     val fpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
+    val vpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
   }
 
   val io: CommitIO = IO(new CommitIO)
@@ -233,7 +235,13 @@ trait CommitComb{ this: CommitState =>
         io.rod(i).bits.is_fcsr -> io.fpuCsrCommit.bits.asUInt,
       )).asTypeOf(new Exe_Port)
 
-    cmm_state(i).is_wb   := io.cm_op(i).is_writeback
+    cmm_state(i).is_wb   :=
+      Mux1H(Seq(
+        io.rod(i).bits.isXcmm -> io.cm_op(i).is_writeback,
+        io.rod(i).bits.isFcmm -> io.cm_op(i).is_writeback,
+        io.rod(i).bits.isVcmm -> io.vCommit(i).isWroteback,
+      ))
+      
     cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
     cmm_state(i).ill_dvaddr               := io.lsu_cmm.trap_addr
     // cmm_state(i).is_csrr_illegal          := cmm_state(i).csrfiles.csr_read_prilvl(io.xpuCsrCommit.bits.addr)// & io.csr_addr.valid
@@ -261,15 +269,18 @@ trait CommitRegFiles { this: CommitState =>
     io.cm_op(i).raw := io.rod(i).bits.rd0_raw
     io.cm_op(i).toX := io.rod(i).bits.isXcmm
     io.cm_op(i).toF := io.rod(i).bits.isFcmm
-    io.cm_op(i).toV := io.rod(i).bits.isVcmm
-  }
 
+    io.vCommit(i).phy := io.rod(i).bits.rd0_raw
+  }
 
 
   ( 0 until cmChn ).map{ i =>
     io.cm_op(i).is_comfirm      := commit_state_is_comfirm(i)
     io.cm_op(i).is_MisPredict   := commit_state_is_misPredict(i)
     io.cm_op(i).is_abort        := commit_state_is_abort(i)
+
+    io.vCommit(i).isComfirm := io.rod(i).bits.isVcmm & commit_state_is_comfirm(i)
+    io.vCommit(i).isAbort   := commit_state_is_misPredict(i) | commit_state_is_abort(i)
   }
 
 }
@@ -603,39 +614,52 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   val ill_ivaddr = UInt(64.W)
 	val ill_dvaddr = UInt(64.W)
 
-
   val exint = new ExInt_Bundle
+
+  val isVException = Bool()
+  val excepitonIdx = UInt((log2Ceil(vParams.vlen/8).W))
 
   def is_load_accessFault: Bool = {
     val is_load_accessFault = 
-      rod.is_lu & is_wb & lsu_cmm.is_access_fault
+      lsu_cmm.is_access_fault & (
+        (rod.is_lu & is_wb) | (rod.isVLoad & isVException & ~(rod.isFoF & excepitonIdx =/= 0.U) )
+      )
+
     return is_load_accessFault
   }
 
   def is_store_accessFault: Bool = {
     val is_store_accessFault =
-      ( rod.is_su | rod.is_amo ) & is_wb & lsu_cmm.is_access_fault
+      lsu_cmm.is_access_fault & (
+        ( ( rod.is_su | rod.is_amo ) & is_wb ) | (rod.isVStore & isVException)
+      )
 
     return is_store_accessFault
   }
 
   def is_load_pagingFault: Bool = {
     val is_load_pagingFault =
-      rod.is_lu & is_wb & lsu_cmm.is_paging_fault
+      lsu_cmm.is_paging_fault & (
+        ( rod.is_lu & is_wb ) | (rod.isVLoad & isVException & ~(rod.isFoF & excepitonIdx =/= 0.U) )
+      )
 
     return is_load_pagingFault
   }
 
   def is_store_pagingFault: Bool = {
     val is_store_pagingFault =
-      ( rod.is_su | rod.is_amo ) & is_wb & lsu_cmm.is_paging_fault
+      lsu_cmm.is_paging_fault & (
+        (( rod.is_su | rod.is_amo ) & is_wb) | (rod.isVStore & isVException)
+      )
 
     return is_store_pagingFault
   }
 
   def is_load_misAlign: Bool = {
     val is_load_misAlign =
-      rod.is_lu & is_wb & lsu_cmm.is_misAlign
+      lsu_cmm.is_misAlign & (
+        ( rod.is_lu & is_wb ) | (rod.isVLoad & isVException & ~(rod.isFoF & excepitonIdx =/= 0.U) )
+      )
 
     return is_load_misAlign
   }
@@ -646,7 +670,9 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
 
   def is_store_misAlign: Bool = {
     val is_store_misAlign =
-      (rod.is_su | rod.is_amo) & is_wb & lsu_cmm.is_misAlign
+      lsu_cmm.is_misAlign & (
+        ( (rod.is_su | rod.is_amo) & is_wb ) | (rod.isVStore & isVException)
+      )
 
     return is_store_misAlign
   }

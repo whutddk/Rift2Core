@@ -28,18 +28,19 @@ import org.chipsalliance.cde.config._
 class Vector_Commit_Bundle()(implicit p: Parameters) extends RiftBundle{
   val isComfirm = Output(Bool())
   val isAbort   = Output(Bool())
-  val raw       = Output(UInt(( log2Ceil(32) ).W))
+  val phy       = Output(UInt(( log2Ceil(33) ).W))
 
   val isWroteback  = Input(Bool())
-  val isExcepiton  = Input(Bool())
+  val isException  = Input(Bool())
   val excepitonIdx = Input(UInt((log2Ceil(vParams.vlen/8).W)))
 }
 
 class Vector_WriteBack_Bundle()(implicit p: Parameters) extends RiftBundle {
   val res = UInt(8.W)
   // val isMask = Bool()
-  // val isExcepiton = Bool()
+  val isException = Bool()
 }
+
 
 abstract class VRegfilesBase()(implicit p: Parameters) extends RiftModule {
 
@@ -47,11 +48,10 @@ abstract class VRegfilesBase()(implicit p: Parameters) extends RiftModule {
     val molloc = Flipped(Decoupled(new UInt(5.W)) ) //molloc at read op
     val readOp = Vec( 32, Valid(UInt( (vParams.vlen).W )) )
 
-    val writeBack = Vec(wbc, Vec( 32, Vec(8, (new Valid(new Vector_WriteBack_Bundle)))))
-    val exception = 
+    val writeBack = Vec( 33, Vec(vParams.vlen/8, (new Valid(new Vector_WriteBack_Bundle))))
 
     val commit = Vec(cmm, Flipped(new Vector_Commit_Bundle))
-    val diffReg = Output(Vec(32, UInt((vParams.vlen/8).W)))    
+    val diffReg = Output(Vec(32, UInt((vParams.vlen/8).W)))
   }
 
   val io: RegFilesIO = IO( new VRegFilesIO)
@@ -81,7 +81,7 @@ abstract class VRegfilesBase()(implicit p: Parameters) extends RiftModule {
       }
     }
 
-  val isExcepiton =
+  val isException =
     for( _ <- 0 until 32 ) yield {
       for( _ <- 0 until vParams.vlen/8 ) yield {
         RegInit(false.B)      
@@ -122,24 +122,24 @@ trait VRegReadOp{ this: VRegfilesBase =>
 
 trait VRegWriteBack{ this: VRegfilesBase =>
 
-  for( chn <- 0 until wbc ) {
-    for( i <- 0 until 32 ) {
-      for( j <- 0 until 8 ) {
+  // for( chn <- 0 until wbc ) {
+    for( i <- 0 until 33 ) {
+      for( j <- 0 until vParams.vlen/8 ) {
         when( io.writeBack(i)(j).fire ){
 
           assert( isMolloced(i) )
 
           when( ~io.writeBack(i)(j).bits.isMask ) {
-            wbFiles(i)(j) := io.writeBack(chn)(i)(j).bits.res
+            wbFiles(i)(j) := io.writeBack(i)(j).bits.res
           }
 
-          isExcepiton(i)(j) := io.writeBack(i)(j).bits.isException
+          isException(i)(j) := io.writeBack(i)(j).bits.isException
           isWroteBack(i)(j) := true.B
 
         }
       }
     }
-  }
+  // }
 
 }
 
@@ -151,21 +151,21 @@ trait VRegWriteBack{ this: VRegfilesBase =>
   */
 trait VRegCommit{ this: VRegfilesBase =>
   for ( i <- 0 until cmm ){ 
-    val idx = io.commit(i).raw
+    val idx = io.commit(i).phy
     io.commit(i).isWroteback  := isWroteBack(idx).reduce(_&_)
-    io.commit(i).isExcepiton  := isExcepiton(idx).reduce(_|_)
-    io.commit(i).excepitonIdx := isExcepiton(idx).indexWhere( (x: Bool) => (x === true.B) )
+    io.commit(i).isException  := isException(idx).reduce(_|_)
+    io.commit(i).excepitonIdx := isException(idx).indexWhere( (x: Bool) => (x === true.B) )
 
     when( io.commit(i).isAbort ){
       isMolloced  := 0.U.asTypeOf(isMolloced)
       isWroteBack := 0.U.asTypeOf(isWroteBack)
-      isExcepiton := 0.U.asTypeOf(isExcepiton)
+      isException := 0.U.asTypeOf(isException)
     }
     .elsewhen( io.commit(i).isComfirm ){
       files(idx) := Cat( wbFiles(idx).reverse )
       isMolloced(idx)  := false.B
       isWroteBack(idx) := 0.U.asTypeOf(isWroteBack(idx))
-      isExcepiton(idx) := 0.U.asTypeOf(isExcepiton(idx))
+      isException(idx) := 0.U.asTypeOf(isException(idx))
     }
   }
 }
@@ -176,4 +176,23 @@ with VRegReadOp
 with VRegWriteBack
 with VRegCommit{
 
+}
+
+
+
+class FakeRegFiles()(implicit p: Parameters) extends VRegfilesBase{
+  io.molloc.ready := true.B
+
+  for( i <- 0 until 32 ) {
+    io.readOp(i).valid := false.B
+    io.readOp(i).bits  := 0.U
+  }
+
+  for( i<- 0 until cmm ){
+    io.commit(i).isWroteBack := true.B
+    io.commit(i).isException := false.B
+    io.commit(i).excepitonIdx := 0.U
+  }
+
+  io.diffReg := 0.U.asTypeOf(io.diffReg)
 }

@@ -44,12 +44,12 @@ class Cache_op extends Lsu_isa {
   val preft = Bool()
 
   def is_atom = is_amo
-  def is_access = is_atom | is_lu | is_su | is_lr | is_sc
-  def is_tag_r = is_atom | is_lu | is_su | is_lr | is_sc | grant | probe | preft
-  def is_dat_r = is_atom | is_lu | is_lr | grant | probe
+  def is_access = is_atom | is_lu | is_su | is_lr | is_sc | isVLoad | isVStore
+  def is_tag_r = is_atom | is_lu | is_su | is_lr | is_sc | isVLoad | isVStore | grant | probe | preft
+  def is_dat_r = is_atom | is_lu | isVLoad | is_lr | grant | probe
   def is_tag_w = grant
-  def is_dat_w = is_atom | is_su | is_sc | grant
-  def isDirtyOp = is_atom | is_su | is_sc
+  def is_dat_w = is_atom | is_su | is_sc | isVStore | grant
+  def isDirtyOp = is_atom | is_su | is_sc | isVStore
   def is_wb = is_atom | is_lu | is_lr
 
 }
@@ -215,7 +215,7 @@ trait DcacheScoreBoard { this: DcacheBase =>
 
 
 
-  for ( i <- 0 until sbEntry ) yield {
+  for ( i <- 0 until sbEntry ) {
     when( sbValid(i) === true.B ) {
       assert( sbBuff.count( (x: Dcache_Enq_Bundle) => (x.paddr === sbBuff(i).paddr) ) === 1.U )
     }

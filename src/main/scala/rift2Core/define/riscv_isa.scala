@@ -1233,14 +1233,19 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val pc = UInt(vlen.W)
   val rd0_raw = UInt(5.W)
   val rd0_phy = UInt((log2Ceil(maxRegNum)).W)
+
   val is_branch = Bool()
   val is_jalr = Bool()
+
   val is_lu = Bool()
   val is_su = Bool()
   val is_amo = Bool()
   val is_fence = Bool()
   val is_fence_i = Bool()
   val is_sfence_vma = Bool()
+  val isVLoad = Bool()
+  val isVStore = Bool()
+
   val is_wfi = Bool()
   val is_csr = Bool()
   val is_fpu = Bool()
