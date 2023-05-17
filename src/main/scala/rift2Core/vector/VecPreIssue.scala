@@ -75,7 +75,7 @@ trait VecPreIssueReadOp{ this: VecPreIssueBase =>
 
   vop(0) := io.readOp(idx(0)).bits
 
-  vop(1) := Mux( vecDptInfo.vectorIsa.isVector, io.readOp(idx(1)).bits, io.readOp(idx(3)).bits )
+  vop(1) := Mux( vecDptInfo.vecIsa.isVector, io.readOp(idx(1)).bits, io.readOp(idx(3)).bits )
   vop(2) := io.readOp(idx(2)).bits
 
 }
@@ -84,14 +84,14 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
 
 
   for( i <- 0 until vParams.vlen/8 ){
-    vlsExeInfo(i).lsu_isa    := vecDptInfo.lsu_isa
-    vlsExeInfo(i).alu_isa    := 0.U.asTypeOf(new Alu_isa)
-    vlsExeInfo(i).bru_isa    := 0.U.asTypeOf(new Bru_isa)
-    vlsExeInfo(i).csr_isa    := 0.U.asTypeOf(new Csr_isa)
-    vlsExeInfo(i).mul_isa    := 0.U.asTypeOf(new Mul_isa)
+    vlsExeInfo(i).lsuIsa    := vecDptInfo.lsuIsa
+    vlsExeInfo(i).aluIsa    := 0.U.asTypeOf(new Alu_isa)
+    vlsExeInfo(i).bruIsa    := 0.U.asTypeOf(new Bru_isa)
+    vlsExeInfo(i).csrIsa    := 0.U.asTypeOf(new Csr_isa)
+    vlsExeInfo(i).mulIsa    := 0.U.asTypeOf(new Mul_isa)
     vlsExeInfo(i).privil_isa := 0.U.asTypeOf(new Privil_isa)
-    vlsExeInfo(i).fpu_isa    := 0.U.asTypeOf(new Fpu_isa)
-    vlsExeInfo(i).vectorIsa  := 0.U.asTypeOf(new VectorIsa)
+    vlsExeInfo(i).fpuIsa    := 0.U.asTypeOf(new Fpu_isa)
+    vlsExeInfo(i).vecIsa  := 0.U.asTypeOf(new vecIsa)
 
     vlsExeInfo(i).param.is_rvc  := false.B
     vlsExeInfo(i).param.pc      := DontCare
@@ -297,12 +297,12 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
 
       io.enq(i).ready := false.B
     } .otherwise{
-      when( (0 until i).map{ j => io.enq(j).bits.lsu_isa.isVector | io.enq(j).bits.vectorIsa.isVALU }.foldLeft(false.B)(_|_) ){
+      when( (0 until i).map{ j => io.enq(j).bits.lsuIsa.isVector | io.enq(j).bits.vecIsa.isVALU }.foldLeft(false.B)(_|_) ){
         io.deq(i).valid := false.B
         io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
         io.enq(i).ready := false.B
       } .otherwise{
-        when( ~(io.enq(i).bits.lsu_isa.isVector | io.enq(i).bits.vectorIsa.isVALU) ){
+        when( ~(io.enq(i).bits.lsuIsa.isVector | io.enq(i).bits.vecIsa.isVALU) ){
           io.enq(i) <> io.deq(i)
         } .otherwise{
           vecDptInfo := io.enq(i).bits
@@ -316,12 +316,12 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
 
               preIssueBuf(j) := 
                 Mux1H(Seq(
-                  io.enq(i).bits.lsu_isa.isVector -> vlsExeInfo(j),
-                  io.enq(i).bits.vectorIsa.isVALU -> vpuExeInfo(j),
+                  io.enq(i).bits.lsuIsa.isVector -> vlsExeInfo(j),
+                  io.enq(i).bits.vecIsa.isVALU -> vpuExeInfo(j),
                 ))
                 
               isBufValid(j) := 
-                Mux( io.enq(i).bits.lsu_isa.isVStore,
+                Mux( io.enq(i).bits.lsuIsa.isVStore,
                 isVSTorePnd & (vstartSel+j.U >= vstart) & (vstartSel+j.U <= vl),
                 true.B) &
 
@@ -350,4 +350,14 @@ with VecPreIssueMux
 with VecPreIssueReadOp
 with VecPreIssueVlsSpliter
 with VecPreIssueVpuSpliter
+
+
+
+class FakeVecPreIssue()(implicit p: Parameters) extends VecPreIssueBase{
+  io.enq <> io.deq
+
+  io.molloc.valid := false.B
+  io.molloc.bits  := 0.U
+}
+
 

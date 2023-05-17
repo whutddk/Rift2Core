@@ -393,8 +393,12 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
     deqBits.wb.rd0      := pipeStage1Bits.rd.rd0 
     deqBits.chkIdx      := pipeStage1Bits.chkIdx
     deqBits.is_load_amo := pipeStage1Bits.fun.is_wb
-    deqBits.is_flw      := pipeStage1Bits.fun.flw
-    deqBits.is_fld      := pipeStage1Bits.fun.fld
+    // deqBits.is_flw      := pipeStage1Bits.fun.flw
+    // deqBits.is_fld      := pipeStage1Bits.fun.fld
+    deqBits.isXwb       := pipeStage1Bits.fun.isXwb
+    deqBits.isFwb       := pipeStage1Bits.fun.isFwb
+    deqBits.isVwb       := pipeStage1Bits.fun.isVwb
+
     if(hasVector) { deqBits.vAttach.get    := pipeStage1Bits.vAttach.get }
 
   } .otherwise {

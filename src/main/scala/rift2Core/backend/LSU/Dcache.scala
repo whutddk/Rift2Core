@@ -85,11 +85,12 @@ class Dcache_Deq_Bundle(implicit p: Parameters) extends Dcache_ScoreBoard_Bundle
 
   val vAttach = if(hasVector) {Some(new VDcache_Attach_Bundle)} else {None}
 
-  val is_flw = Bool()
-  val is_fld = Bool()
+  // val is_flw = Bool()
+  // val is_fld = Bool()
 
-  def is_iwb = ~is_fwb
-  def is_fwb = is_flw | is_fld
+  val isXwb = Bool()
+  val isFwb = Bool()
+  val isVwb = Bool()
 
 }
 

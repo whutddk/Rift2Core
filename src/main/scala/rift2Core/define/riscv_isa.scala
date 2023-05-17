@@ -206,17 +206,18 @@ class Lsu_isa extends Bundle {
   def isVS2 = isVIndex
   def isVS3 = isVStore
 
-  def is_iwb =
+  def isXwb =
     lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd |
     fence | fence_i | sfence_vma | lr_w | sc_w |
     amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w |
     lr_d | sc_d | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d |
-    fsw | fsd |
-    vse | vsm | vsse | vsoxei | vsNr
-
-  def is_fwb = flw | fld
+    fsw | fsd
 
 
+
+  def isFwb = flw | fld
+
+  def isVwb = vse | vsm | vsse | vsoxei | vsNr
 
 
   // def isAcquireFifo = is_vls
@@ -466,14 +467,14 @@ class Fpu_isa extends Bundle {
     fcvt_w_d  | fcvt_wu_d | fcvt_l_d  | fcvt_lu_d |
     fcvt_s_d  | fcvt_d_s
 
-  def is_iwb = 
+  def isXwb = 
     feq_s | flt_s | fle_s | feq_d | flt_d | fle_d |
     fmv_x_w | fmv_x_d | fclass_s | fclass_d |
     fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |
     fmv_x_w | fmv_x_d 
     //| fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
 
-  def is_fwb =
+  def isFwb =
     fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s | fdiv_s | fsqrt_s |
     fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d | fdiv_d | fsqrt_d |
     fsgnj_s | fsgnjn_s | fsgnjx_s |
@@ -594,7 +595,7 @@ class Fpu_isa extends Bundle {
 
 
 
-class VectorIsa extends Bundle {
+class VecIsa extends Bundle {
   class OPI extends Bundle{
     val ivv = Bool()
     val ivx = Bool()
@@ -1034,42 +1035,42 @@ class Reg_PHY(implicit p: Parameters) extends RiftBundle {
   * @param p Implicit parameter containing information about the processor's configuration.
   */
 class Instruction_set(implicit p: Parameters) extends RiftBundle{
-  val alu_isa = new Alu_isa
-  val bru_isa = new Bru_isa
-  val lsu_isa = new Lsu_isa
-  val csr_isa = new Csr_isa
-  val mul_isa = new Mul_isa
+  val aluIsa = new Alu_isa
+  val bruIsa = new Bru_isa
+  val lsuIsa = new Lsu_isa
+  val csrIsa = new Csr_isa
+  val mulIsa = new Mul_isa
   val privil_isa = new Privil_isa
-  val fpu_isa = new Fpu_isa
-  val vectorIsa = new VectorIsa
+  val fpuIsa = new Fpu_isa
+  val vecIsa = new VecIsa
 
 
 
 
   /** @return A Boolean value indicating the whether a float point result will be written back. */
-  def is_fwb = lsu_isa.is_fwb | fpu_isa.is_fwb | vectorIsa.isFwb
+  def isFwb = lsuIsa.isFwb | fpuIsa.isFwb | vecIsa.isFwb
   /** @return A Boolean value indicating whether a integer result will be written back. */
-  def is_iwb = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_iwb | csr_isa.is_csr | mul_isa.is_mulDiv | fpu_isa.is_iwb | vectorIsa.isXwb
-  def isVwb = vectorIsa.isVwb | lsu_isa.isVwb
+  def isXwb = aluIsa.is_alu | bruIsa.is_bru | lsuIsa.isXwb | csrIsa.is_csr | mulIsa.is_mulDiv | fpuIsa.isXwb | vecIsa.isXwb
+  def isVwb = vecIsa.isVwb | lsuIsa.isVwb
 
   /** @return A Boolean value indicating whether this a privileged instruction is dispatched. */
   def is_privil_dpt = privil_isa.is_privil
   /** @return A Boolean value indicating whether the instruction is dispatched to FPU.*/
-  def is_fpu_dpt = fpu_isa.is_fpu
+  def is_fpu_dpt = fpuIsa.is_fpu
   /** @return A Boolean value indicating whether the instruction is legal or not.*/
-  def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mulDiv | privil_isa.is_privil | fpu_isa.is_fpu) 
+  def is_illeage = ~(aluIsa.is_alu | bruIsa.is_bru | lsuIsa.is_lsu | csrIsa.is_csr | mulIsa.is_mulDiv | privil_isa.is_privil | fpuIsa.is_fpu) 
 
-  def isRS1 = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.isRS1 | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isRS1
-  def isRS2 = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.isRS2 | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isRS2
+  def isRS1 = aluIsa.is_alu | bruIsa.is_bru | lsuIsa.isRS1 | csrIsa.is_csr | mulIsa.is_mulDiv | (fpuIsa.is_fpu & ~fpuIsa.is_fop) | vecIsa.isRS1
+  def isRS2 = aluIsa.is_alu | bruIsa.is_bru | lsuIsa.isRS2 | csrIsa.is_csr | mulIsa.is_mulDiv | (fpuIsa.is_fpu & ~fpuIsa.is_fop) | vecIsa.isRS2
 
-  def isFS1 = fpu_isa.is_fop | vectorIsa.isFS1
-  def isFS2 = fpu_isa.is_fop | lsu_isa.isFS2
-  def isFS3 = fpu_isa.is_fop
+  def isFS1 = fpuIsa.is_fop | vecIsa.isFS1
+  def isFS2 = fpuIsa.is_fop | lsuIsa.isFS2
+  def isFS3 = fpuIsa.is_fop
 
-  def isVM0 = vectorIsa.isVector
-  def isVS1 = vectorIsa.isVS1
-  def isVS2 = vectorIsa.isVS2 | lsu_isa.isVS2
-  def isVS3 = vectorIsa.isVwb | lsu_isa.isVS3
+  def isVM0 = vecIsa.isVector
+  def isVS1 = vecIsa.isVS1
+  def isVS2 = vecIsa.isVS2 | lsuIsa.isVS2
+  def isVS3 = vecIsa.isVwb | lsuIsa.isVS3
 
 }
 
@@ -1112,7 +1113,7 @@ class Info_instruction(implicit p: Parameters) extends Instruction_set {
 
   val vAttach = if(hasVector){Some(new VRename_Attach_Bundle)} else {None}
 
-  // def isFoF = (param.raw.rs2 === "b10000".U) & lsu_isa.vle
+  // def isFoF = (param.raw.rs2 === "b10000".U) & lsuIsa.vle
 
 }
 
@@ -1243,8 +1244,7 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val is_fence = Bool()
   val is_fence_i = Bool()
   val is_sfence_vma = Bool()
-  val isVLoad = Bool()
-  val isVStore = Bool()
+
 
   val is_wfi = Bool()
   val is_csr = Bool()
@@ -1252,15 +1252,18 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val is_fcsr = Bool()
   val is_rvc = Bool()
 
-  val isXcmm = Bool()
-  val isFcmm = Bool()
-  val isVcmm = Bool()
+  val isXwb = Bool()
+  val isFwb = Bool()
+  val isVwb = Bool()
 
   val privil = new Privil_isa
   val is_illeage = Bool()
 
   val isVector = Bool()
-  val isLast   = Bool()
+  val isVLoad = Bool()
+  val isVStore = Bool()
+  val isFoF    = Bool()
+  val vlCnt    = UInt((log2Ceil(vParams.vlen).W))
 
 }
 

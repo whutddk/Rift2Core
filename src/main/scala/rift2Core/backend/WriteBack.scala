@@ -84,7 +84,8 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
 
     
-    val commit  = Vec(cmChn, Flipped((new Info_commit_op(32, maxRegNum))))
+    val XCommit = Vec(cmChn, Flipped((new Info_commit_op(32, xRegNum))))
+    val FCommit = Vec(cmChn, Flipped((new Info_commit_op(32, fRegNum))))
     val vCommit = Vec(cmChn, Flipped(new Vector_Commit_Bundle))
                 // val cCommit = Vec(cmChn, Flipped(new SeqReg_Commit_Bundle(cRegNum)))
 
@@ -97,6 +98,9 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     val fpuCsrMolloc    = Flipped(Vec(rnChn, Decoupled(Bool())))
     val fpuCsrWriteBack = Flipped(Valid(new Exe_Port))
     val fpuCsrCommit    = Decoupled(new Exe_Port)
+    val vpuCsrMolloc    = Flipped(Vec(rnChn, Decoupled(Bool())))
+    val vpuCsrWriteBack = Flipped(Valid(new Exe_Port))
+    val vpuCsrCommit    = Decoupled(new Exe_Port)
 
     val diffXReg = Output(Vec(32, UInt(64.W)))
     val diffFReg = Output(Vec(32, UInt(65.W)))
@@ -109,19 +113,9 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
   val iReg = Module(new XRegFiles(dw = 64, dp = xRegNum, rnChn, opChn, wbChn, cmChn))
   val fReg = if( fpuNum > 0 ) { Module(new FRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn)) } else {  Module(new FakeRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn) ) }
   val vReg = if( hasVector )  { Module(new VRegFiles) } else {  Module(new FakeRegFiles ) }
-  
-    val molloc = Flipped(Decoupled(new UInt(5.W)) ) //molloc at read op
-    val readOp = Vec( 32, Valid(UInt( (vParams.vlen).W )) )
-
-    val writeBack = Vec( 33, Vec(vParams.vlen/8, (new Valid(new Vector_WriteBack_Bundle))))
-
-    val commit = Vec(cmm, Flipped(new Vector_Commit_Bundle))
-    val diffReg = Output(Vec(32, UInt((vParams.vlen/8).W)))
-
-
   val cReg = Module(new CsrScoreBoard)
-        // cReg.io.xpu: XPUCsrIO = IO(Flipped(new XPUCsrIO))
-        // cReg.io.fpu: FPUCsrIO = IO(Flipped(new FPUCsrIO))
+
+
 
   io.xpuCsrMolloc    <> cReg.io.xpu.molloc
   io.xpuCsrWriteBack <> cReg.io.xpu.writeBack
@@ -129,51 +123,53 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
   io.fpuCsrMolloc    <> cReg.io.fpu.molloc
   io.fpuCsrWriteBack <> cReg.io.fpu.writeBack
   io.fpuCsrCommit    <> cReg.io.fpu.commit
+  io.vpuCsrMolloc    <> cReg.io.vpu.molloc
+  io.vpuCsrWriteBack <> cReg.io.vpu.writeBack
+  io.vpuCsrCommit    <> cReg.io.vpu.commit
 
   iReg.io.rename <> io.xRename
-  fReg.io.rename <> io.fRename
-              // vReg.io.rename <> io.vRename
-              // cReg.io.rename <> io.cRename
-
   iReg.io.lookup <> io.xLookup
+  iReg.io.commit <> io.xCommit
+
+  fReg.io.rename <> io.fRename
   fReg.io.lookup <> io.fLookup
-              // vReg.io.lookup <> io.vLookup
-              // cReg.io.lookup <> io.cLookup
+  fReg.io.commit <> io.fCommit
+
 
   vReg.io.molloc <> io.vMolloc
   vReg.io.readOp <> io.vReadOp
   vReg.io.commit <> io.vCommit
 
 
-  for ( i <- 0 until cmChn ) yield {
-    iReg.io.commit(i).is_comfirm    := false.B
-    iReg.io.commit(i).is_MisPredict := io.commit(i).is_MisPredict
-    iReg.io.commit(i).is_abort      := io.commit(i).is_abort
-    iReg.io.commit(i).raw           := 0.U
-    iReg.io.commit(i).phy           := 0.U
-    iReg.io.commit(i).toX           := false.B
-    iReg.io.commit(i).toF           := false.B
-    iReg.io.commit(i).toV           := false.B
+  // for ( i <- 0 until cmChn ) yield {
+    // iReg.io.commit(i).is_comfirm    := false.B
+    // iReg.io.commit(i).is_MisPredict := io.commit(i).is_MisPredict
+    // iReg.io.commit(i).is_abort      := io.commit(i).is_abort
+    // iReg.io.commit(i).raw           := 0.U
+    // iReg.io.commit(i).phy           := 0.U
+    // iReg.io.commit(i).toX           := false.B
+    // iReg.io.commit(i).toF           := false.B
+    // iReg.io.commit(i).toV           := false.B
 
-    fReg.io.commit(i).is_comfirm    := false.B
-    fReg.io.commit(i).is_MisPredict := false.B
-    fReg.io.commit(i).is_abort      := io.commit(i).is_abort | io.commit(i).is_MisPredict
-    fReg.io.commit(i).raw           := 0.U
-    fReg.io.commit(i).phy           := 0.U
-    fReg.io.commit(i).toX           := false.B
-    fReg.io.commit(i).toF           := false.B
-    fReg.io.commit(i).toV           := false.B
+    // fReg.io.commit(i).is_comfirm    := false.B
+    // fReg.io.commit(i).is_MisPredict := false.B
+    // fReg.io.commit(i).is_abort      := io.commit(i).is_abort | io.commit(i).is_MisPredict
+    // fReg.io.commit(i).raw           := 0.U
+    // fReg.io.commit(i).phy           := 0.U
+    // fReg.io.commit(i).toX           := false.B
+    // fReg.io.commit(i).toF           := false.B
+    // fReg.io.commit(i).toV           := false.B
 
-    cReg.io.isAbort := ( 0 until cmChn ).map{ i => io.commit(i).is_abort | io.commit(i).is_MisPredict }.foldLeft(false.B)(_|_)
+    
 
-    io.commit(i).is_writeback := false.B
+    // io.commit(i).is_writeback := false.B
 
-    when( io.commit(i).toX === true.B ) {iReg.io.commit(i) <> io.commit(i)}
-    .elsewhen( io.commit(i).toF === true.B ) {fReg.io.commit(i) <> io.commit(i)}
+    // when( io.commit(i).toX === true.B ) {iReg.io.commit(i) <> io.commit(i)}
+    // .elsewhen( io.commit(i).toF === true.B ) {fReg.io.commit(i) <> io.commit(i)}
 
-  }
+  // }
 
-
+  cReg.io.isAbort := ( 0 until cmChn ).map{ i => io.commit(i).is_abort | io.commit(i).is_MisPredict }.foldLeft(false.B)(_|_)
 
   iReg.io.diffReg <> io.diffXReg
   fReg.io.diffReg <> io.diffFReg

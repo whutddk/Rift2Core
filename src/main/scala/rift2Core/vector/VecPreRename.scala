@@ -69,10 +69,10 @@ abstract class VecPreRenameBase()(implicit p: Parameters) extends RiftModule {
   val vsew    = vtype(5,3)
   val nf      = vSplitReq.vAttach.get.nf
 
-  val isVALU  = vSplitReq.vectorIsa.isVALU
-  val isVLSU  = vSplitReq.lsu_isa.isVector
+  val isVALU  = vSplitReq.vecIsa.isVALU
+  val isVLSU  = vSplitReq.lsuIsa.isVector
 
-  val isWiden = vSplitReq.vectorIsa.isVS2P | vSplitReq.vectorIsa.is2Malloc
+  val isWiden = vSplitReq.vecIsa.isVS2P | vSplitReq.vecIsa.is2Malloc
 
 }
 
@@ -86,12 +86,12 @@ trait VecPreRenameMux{ this: VecPreRenameBase =>
 
       io.enq(i).ready := false.B
     } .otherwise{
-      when( (0 until i).map{ j => io.enq(j).bits.lsu_isa.isVector | io.enq(j).bits.vectorIsa.isVALU }.foldLeft(false.B)(_|_) ){
+      when( (0 until i).map{ j => io.enq(j).bits.lsuIsa.isVector | io.enq(j).bits.vecIsa.isVALU }.foldLeft(false.B)(_|_) ){
         io.deq(i).valid := false.B
         io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
         io.enq(i).ready := false.B
       } .otherwise{
-        when( ~(io.enq(i).bits.lsu_isa.isVector | io.enq(i).bits.vectorIsa.isVALU) ){
+        when( ~(io.enq(i).bits.lsuIsa.isVector | io.enq(i).bits.vecIsa.isVALU) ){
           io.enq(i) <> io.deq(i)
         } .otherwise{
           vecSplitReq := io.enq(i).bits
@@ -149,14 +149,14 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
 
     widenSel(i) := Mux( isWiden, (i%2).U, 0.U )
 
-    microInstr(i).alu_isa    := 0.U.asTypeOf( new Alu_isa )
-    microInstr(i).bru_isa    := 0.U.asTypeOf( new Bru_isa )
-    microInstr(i).lsu_isa    := vSplitReq.lsu_isa
-    microInstr(i).csr_isa    := 0.U.asTypeOf( new Csr_isa )
-    microInstr(i).mul_isa    := 0.U.asTypeOf( new Mul_isa )
+    microInstr(i).aluIsa    := 0.U.asTypeOf( new Alu_isa )
+    microInstr(i).bruIsa    := 0.U.asTypeOf( new Bru_isa )
+    microInstr(i).lsuIsa    := vSplitReq.lsuIsa
+    microInstr(i).csrIsa    := 0.U.asTypeOf( new Csr_isa )
+    microInstr(i).mulIsa    := 0.U.asTypeOf( new Mul_isa )
     microInstr(i).privil_isa := 0.U.asTypeOf( new Privil_isa )
-    microInstr(i).fpu_isa    := 0.U.asTypeOf( new Fpu_isa )
-    microInstr(i).vectorIsa  := vSplitReq.vectorIsa
+    microInstr(i).fpuIsa    := 0.U.asTypeOf( new Fpu_isa )
+    microInstr(i).vecIsa  := vSplitReq.vecIsa
 
     microInstr(i).param.is_rvc := false.B
     microInstr(i).param.pc  := vSplitReq.param.pc
@@ -192,30 +192,30 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
 
   // def microIdx = isWiden * lmulSel + widenSel
 
-    microInstr(i).param.raw.rs1 := vSplitReq.param.raw.rs1 + Mux( vSplitReq.vectorIsa.isVS1, lmulSel(i), 0.U)
+    microInstr(i).param.raw.rs1 := vSplitReq.param.raw.rs1 + Mux( vSplitReq.vecIsa.isVS1, lmulSel(i), 0.U)
 
     microInstr(i).param.raw.rs2 :=
       Mux1H(Seq(
-        ( vSplitReq.vectorIsa.isVS2 &  vSplitReq.vectorIsa.isVS2P ) -> ( vSplitReq.param.raw.rs2 + (lmulSel(i) << 1) + widenSel(i) ),
-        ( vSplitReq.vectorIsa.isVS2 & ~vSplitReq.vectorIsa.isVS2P ) -> ( vSplitReq.param.raw.rs2 +  lmulSel(i) ),
-        ( vSplitReq.lsu_isa.isVS2                                 ) -> ( vSplitReq.param.raw.rs2 +  lmulSel(i) ), //nf didn't effect vs2 in lsu
+        ( vSplitReq.vecIsa.isVS2 &  vSplitReq.vecIsa.isVS2P ) -> ( vSplitReq.param.raw.rs2 + (lmulSel(i) << 1) + widenSel(i) ),
+        ( vSplitReq.vecIsa.isVS2 & ~vSplitReq.vecIsa.isVS2P ) -> ( vSplitReq.param.raw.rs2 +  lmulSel(i) ),
+        ( vSplitReq.lsuIsa.isVS2                                 ) -> ( vSplitReq.param.raw.rs2 +  lmulSel(i) ), //nf didn't effect vs2 in lsu
         ( vSplitReq.isRS2                                         ) -> ( vSplitReq.param.raw.rs2 ),
       ))
 
     microInstr(i).param.raw.rs3 := 
       Mux1H( Seq(
-        ( vSplitReq.vectorIsa.isVwb &  vSplitReq.vectorIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i)),
-        ( vSplitReq.vectorIsa.isVwb & ~vSplitReq.vectorIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSplitReq.lsu_isa.isVwb                                    ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSplitReq.lsu_isa.isVS3                                    ) -> (vSplitReq.param.raw.rs3), //VSTORE
+        ( vSplitReq.vecIsa.isVwb &  vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i)),
+        ( vSplitReq.vecIsa.isVwb & ~vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+        ( vSplitReq.lsuIsa.isVwb                                    ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+        ( vSplitReq.lsuIsa.isVS3                                    ) -> (vSplitReq.param.raw.rs3), //VSTORE
       ))
 
     microInstr(i).param.raw.rd0 := 
       Mux1H( Seq(
-        ( vSplitReq.vectorIsa.isVwb &  vSplitReq.vectorIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i) ),
-        ( vSplitReq.vectorIsa.isVwb & ~vSplitReq.vectorIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSplitReq.lsu_isa.isVLoad                                  ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSplitReq.lsu_isa.isVStore                                 ) -> 0.U,
+        ( vSplitReq.vecIsa.isVwb &  vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i) ),
+        ( vSplitReq.vecIsa.isVwb & ~vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+        ( vSplitReq.lsuIsa.isVLoad                                  ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+        ( vSplitReq.lsuIsa.isVStore                                 ) -> 0.U,
       ))
 
     microInstr(i).vAttach.get.isLast    := (i+1).U === Cal_MicroInstr_Cnt
@@ -233,4 +233,9 @@ class VecPreRename()(implicit p: Parameters) extends VecPreRenameBase with VecPr
 
 }
 
+class FakeVecPreRename()(implicit p: Parameters) extends VecPreRenameBase{
+  io.enq <> io.deq
 
+  io.vpuCsrMolloc.valid := false.B
+  io.vpuCsrMolloc.bits  := false.B
+}

@@ -626,60 +626,60 @@ trait IssSelAlu{ this: IssueSel =>
     val res = Wire(new Alu_iss_info)
     val src1 = postBufOperator(idx)(1)
     val src2 = postBufOperator(idx)(2)
-    res.fun.add := bufInfo(idx).alu_isa.is_fun_add
-    res.fun.slt := bufInfo(idx).alu_isa.is_fun_slt
-    res.fun.xor := bufInfo(idx).alu_isa.is_fun_xor
-    res.fun.or  := bufInfo(idx).alu_isa.is_fun_or
-    res.fun.and := bufInfo(idx).alu_isa.is_fun_and
-    res.fun.sll := bufInfo(idx).alu_isa.is_fun_sll
-    res.fun.srl := bufInfo(idx).alu_isa.is_fun_srl
-    res.fun.sra := bufInfo(idx).alu_isa.is_fun_sra
+    res.fun.add := bufInfo(idx).aluIsa.is_fun_add
+    res.fun.slt := bufInfo(idx).aluIsa.is_fun_slt
+    res.fun.xor := bufInfo(idx).aluIsa.is_fun_xor
+    res.fun.or  := bufInfo(idx).aluIsa.is_fun_or
+    res.fun.and := bufInfo(idx).aluIsa.is_fun_and
+    res.fun.sll := bufInfo(idx).aluIsa.is_fun_sll
+    res.fun.srl := bufInfo(idx).aluIsa.is_fun_srl
+    res.fun.sra := bufInfo(idx).aluIsa.is_fun_sra
 
-    res.param.is_32w  := bufInfo(idx).alu_isa.is_32w
-    res.param.is_usi  := bufInfo(idx).alu_isa.is_usi
+    res.param.is_32w  := bufInfo(idx).aluIsa.is_32w
+    res.param.is_usi  := bufInfo(idx).aluIsa.is_usi
 
 
     res.param.dat.op1 :=
       Mux1H(Seq(
-        bufInfo(idx).alu_isa.lui    -> 0.U,  bufInfo(idx).alu_isa.auipc  -> extVaddr(bufInfo(idx).param.pc, vlen),
-        bufInfo(idx).alu_isa.addi   -> src1, bufInfo(idx).alu_isa.addiw  -> src1,
-        bufInfo(idx).alu_isa.slti   -> src1, bufInfo(idx).alu_isa.sltiu  -> src1,
-        bufInfo(idx).alu_isa.xori   -> src1, bufInfo(idx).alu_isa.ori    -> src1,
-        bufInfo(idx).alu_isa.andi   -> src1, bufInfo(idx).alu_isa.slli   -> src1,
-        bufInfo(idx).alu_isa.slliw  -> src1, bufInfo(idx).alu_isa.srli   -> src1,
-        bufInfo(idx).alu_isa.srliw  -> src1, bufInfo(idx).alu_isa.srai   -> src1,
-        bufInfo(idx).alu_isa.sraiw  -> src1, bufInfo(idx).alu_isa.add    -> src1,
-        bufInfo(idx).alu_isa.addw   -> src1, bufInfo(idx).alu_isa.sub    -> src1,
-        bufInfo(idx).alu_isa.subw   -> src1, bufInfo(idx).alu_isa.sll    -> src1,
-        bufInfo(idx).alu_isa.sllw   -> src1, bufInfo(idx).alu_isa.slt    -> src1,
-        bufInfo(idx).alu_isa.sltu   -> src1, bufInfo(idx).alu_isa.xor    -> src1,
-        bufInfo(idx).alu_isa.srl    -> src1, bufInfo(idx).alu_isa.srlw   -> src1,
-        bufInfo(idx).alu_isa.sra    -> src1, bufInfo(idx).alu_isa.sraw   -> src1,
-        bufInfo(idx).alu_isa.or     -> src1, bufInfo(idx).alu_isa.and    -> src1,
+        bufInfo(idx).aluIsa.lui    -> 0.U,  bufInfo(idx).aluIsa.auipc  -> extVaddr(bufInfo(idx).param.pc, vlen),
+        bufInfo(idx).aluIsa.addi   -> src1, bufInfo(idx).aluIsa.addiw  -> src1,
+        bufInfo(idx).aluIsa.slti   -> src1, bufInfo(idx).aluIsa.sltiu  -> src1,
+        bufInfo(idx).aluIsa.xori   -> src1, bufInfo(idx).aluIsa.ori    -> src1,
+        bufInfo(idx).aluIsa.andi   -> src1, bufInfo(idx).aluIsa.slli   -> src1,
+        bufInfo(idx).aluIsa.slliw  -> src1, bufInfo(idx).aluIsa.srli   -> src1,
+        bufInfo(idx).aluIsa.srliw  -> src1, bufInfo(idx).aluIsa.srai   -> src1,
+        bufInfo(idx).aluIsa.sraiw  -> src1, bufInfo(idx).aluIsa.add    -> src1,
+        bufInfo(idx).aluIsa.addw   -> src1, bufInfo(idx).aluIsa.sub    -> src1,
+        bufInfo(idx).aluIsa.subw   -> src1, bufInfo(idx).aluIsa.sll    -> src1,
+        bufInfo(idx).aluIsa.sllw   -> src1, bufInfo(idx).aluIsa.slt    -> src1,
+        bufInfo(idx).aluIsa.sltu   -> src1, bufInfo(idx).aluIsa.xor    -> src1,
+        bufInfo(idx).aluIsa.srl    -> src1, bufInfo(idx).aluIsa.srlw   -> src1,
+        bufInfo(idx).aluIsa.sra    -> src1, bufInfo(idx).aluIsa.sraw   -> src1,
+        bufInfo(idx).aluIsa.or     -> src1, bufInfo(idx).aluIsa.and    -> src1,
 
-        bufInfo(idx).alu_isa.wfi    -> 0.U,
+        bufInfo(idx).aluIsa.wfi    -> 0.U,
 
     ))
 
     res.param.dat.op2 :=
       Mux1H(Seq(
-        bufInfo(idx).alu_isa.lui    -> bufInfo(idx).param.imm,      bufInfo(idx).alu_isa.auipc  -> bufInfo(idx).param.imm,
-        bufInfo(idx).alu_isa.addi   -> bufInfo(idx).param.imm,      bufInfo(idx).alu_isa.addiw  -> bufInfo(idx).param.imm,
-        bufInfo(idx).alu_isa.slti   -> bufInfo(idx).param.imm,      bufInfo(idx).alu_isa.sltiu  -> bufInfo(idx).param.imm,
-        bufInfo(idx).alu_isa.xori   -> bufInfo(idx).param.imm,      bufInfo(idx).alu_isa.ori    -> bufInfo(idx).param.imm,
-        bufInfo(idx).alu_isa.andi   -> bufInfo(idx).param.imm,      bufInfo(idx).alu_isa.slli   -> bufInfo(idx).param.imm(5,0),
-        bufInfo(idx).alu_isa.slliw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).alu_isa.srli   -> bufInfo(idx).param.imm(5,0),
-        bufInfo(idx).alu_isa.srliw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).alu_isa.srai   -> bufInfo(idx).param.imm(5,0),
-        bufInfo(idx).alu_isa.sraiw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).alu_isa.add    -> src2,
-        bufInfo(idx).alu_isa.addw   -> src2,                        bufInfo(idx).alu_isa.sub    -> (~src2 + 1.U),
-        bufInfo(idx).alu_isa.subw   -> (~src2 + 1.U),               bufInfo(idx).alu_isa.sll    -> src2,
-        bufInfo(idx).alu_isa.sllw   -> src2,                        bufInfo(idx).alu_isa.slt    -> src2,
-        bufInfo(idx).alu_isa.sltu   -> src2,                        bufInfo(idx).alu_isa.xor    -> src2,
-        bufInfo(idx).alu_isa.srl    -> src2,                        bufInfo(idx).alu_isa.srlw   -> src2,
-        bufInfo(idx).alu_isa.sra    -> src2,                        bufInfo(idx).alu_isa.sraw   -> src2,
-        bufInfo(idx).alu_isa.or     -> src2,                        bufInfo(idx).alu_isa.and    -> src2,
+        bufInfo(idx).aluIsa.lui    -> bufInfo(idx).param.imm,      bufInfo(idx).aluIsa.auipc  -> bufInfo(idx).param.imm,
+        bufInfo(idx).aluIsa.addi   -> bufInfo(idx).param.imm,      bufInfo(idx).aluIsa.addiw  -> bufInfo(idx).param.imm,
+        bufInfo(idx).aluIsa.slti   -> bufInfo(idx).param.imm,      bufInfo(idx).aluIsa.sltiu  -> bufInfo(idx).param.imm,
+        bufInfo(idx).aluIsa.xori   -> bufInfo(idx).param.imm,      bufInfo(idx).aluIsa.ori    -> bufInfo(idx).param.imm,
+        bufInfo(idx).aluIsa.andi   -> bufInfo(idx).param.imm,      bufInfo(idx).aluIsa.slli   -> bufInfo(idx).param.imm(5,0),
+        bufInfo(idx).aluIsa.slliw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).aluIsa.srli   -> bufInfo(idx).param.imm(5,0),
+        bufInfo(idx).aluIsa.srliw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).aluIsa.srai   -> bufInfo(idx).param.imm(5,0),
+        bufInfo(idx).aluIsa.sraiw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).aluIsa.add    -> src2,
+        bufInfo(idx).aluIsa.addw   -> src2,                        bufInfo(idx).aluIsa.sub    -> (~src2 + 1.U),
+        bufInfo(idx).aluIsa.subw   -> (~src2 + 1.U),               bufInfo(idx).aluIsa.sll    -> src2,
+        bufInfo(idx).aluIsa.sllw   -> src2,                        bufInfo(idx).aluIsa.slt    -> src2,
+        bufInfo(idx).aluIsa.sltu   -> src2,                        bufInfo(idx).aluIsa.xor    -> src2,
+        bufInfo(idx).aluIsa.srl    -> src2,                        bufInfo(idx).aluIsa.srlw   -> src2,
+        bufInfo(idx).aluIsa.sra    -> src2,                        bufInfo(idx).aluIsa.sraw   -> src2,
+        bufInfo(idx).aluIsa.or     -> src2,                        bufInfo(idx).aluIsa.and    -> src2,
 
-        bufInfo(idx).alu_isa.wfi    -> 0.U
+        bufInfo(idx).aluIsa.wfi    -> 0.U
     ))
     res.param.dat.op0 := 0.U
     res.param.dat.op3 := 0.U
@@ -704,7 +704,7 @@ trait IssSelAlu{ this: IssueSel =>
       for( i <- 0 until dptEntry ) {
         maskCondAluIss(iss)(i) := 
           ~bufValid(i) |
-          ~bufInfo(i).alu_isa.is_alu |
+          ~bufInfo(i).aluIsa.is_alu |
           ~(postIsOpReady(i)(1) & postIsOpReady(i)(2))
       }
     } else {
@@ -731,7 +731,7 @@ trait IssSelAlu{ this: IssueSel =>
         bufValid(i) := false.B
         assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) )
         assert( bufValid(i) )
-        assert( bufInfo(i).alu_isa.is_alu )
+        assert( bufInfo(i).aluIsa.is_alu )
       }
     }
     aluIssFifo(iss).io.deq <> io.alu_iss_exe(iss)
@@ -744,7 +744,7 @@ trait IssSelMul{ this: IssueSel =>
 
   def Pkg_mul_iss(idx: Int): Mul_iss_info = {
     val res = Wire(new Mul_iss_info)
-    res.fun := bufInfo(idx).mul_isa
+    res.fun := bufInfo(idx).mulIsa
 
     res.param.dat.op0 := 0.U
     res.param.dat.op1 := postBufOperator(idx)(1)
@@ -770,7 +770,7 @@ trait IssSelMul{ this: IssueSel =>
         for( i <- 0 until dptEntry ) {
           maskCondMulIss(iss)(i) := 
             ~bufValid(i) |
-            ~bufInfo(i).mul_isa.is_mulDiv |
+            ~bufInfo(i).mulIsa.is_mulDiv |
             ~(postIsOpReady(i)(1) & postIsOpReady(i)(2))
         }
       } else {
@@ -797,7 +797,7 @@ trait IssSelMul{ this: IssueSel =>
           bufValid(i) := false.B
           assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) )
           assert( bufValid(i) )
-          assert( bufInfo(i).mul_isa.is_mulDiv )
+          assert( bufInfo(i).mulIsa.is_mulDiv )
         }
       }
       mulIssFifo(iss).io.deq <> io.mul_iss_exe(iss)
@@ -817,7 +817,7 @@ trait IssSelBru{ this: IssueSel =>
 
   def Pkg_bru_iss(idx: Int): Bru_iss_info = {
     val res = Wire(new Bru_iss_info)
-    res.fun           := bufInfo(idx).bru_isa
+    res.fun           := bufInfo(idx).bruIsa
     res.param.is_rvc  := bufInfo(idx).param.is_rvc
     res.param.pc      := extVaddr(bufInfo(idx).param.pc, vlen)
     res.param.imm     := bufInfo(idx).param.imm
@@ -843,7 +843,7 @@ trait IssSelBru{ this: IssueSel =>
   for( i <- 0 until dptEntry ) {
     maskCondBruIss(i) := 
       ~bufValid(i) |
-      ~bufInfo(i).bru_isa.is_bru
+      ~bufInfo(i).bruIsa.is_bru
   }
 
   bruIssMatrix := MatrixMask( ageMatrixR, maskCondBruIss )
@@ -866,7 +866,7 @@ trait IssSelBru{ this: IssueSel =>
       bufValid(i) := false.B
       assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) )
       assert( bufValid(i) )
-      assert( bufInfo(i).bru_isa.is_bru )
+      assert( bufInfo(i).bruIsa.is_bru )
     }
   }
 
@@ -881,15 +881,15 @@ trait IssSelCsr{ this: IssueSel =>
     val res = Wire(new Csr_iss_info)
     val csrSel = bufInfo(idx).param.imm(11,0)
 
-    res.fun.rc  := bufInfo(idx).csr_isa.rc | bufInfo(idx).csr_isa.rci
-    res.fun.rs  := bufInfo(idx).csr_isa.rs | bufInfo(idx).csr_isa.rsi
-    res.fun.rw  := bufInfo(idx).csr_isa.rw | bufInfo(idx).csr_isa.rwi
+    res.fun.rc  := bufInfo(idx).csrIsa.rc | bufInfo(idx).csrIsa.rci
+    res.fun.rs  := bufInfo(idx).csrIsa.rs | bufInfo(idx).csrIsa.rsi
+    res.fun.rw  := bufInfo(idx).csrIsa.rw | bufInfo(idx).csrIsa.rwi
 
     res.param.dat.op1 := 
       Mux1H(Seq(
-        bufInfo(idx).csr_isa.rw  -> postBufOperator(idx)(1), bufInfo(idx).csr_isa.rwi -> bufInfo(idx).param.raw.rs1,
-        bufInfo(idx).csr_isa.rs  -> postBufOperator(idx)(1), bufInfo(idx).csr_isa.rsi -> bufInfo(idx).param.raw.rs1,
-        bufInfo(idx).csr_isa.rc  -> postBufOperator(idx)(1), bufInfo(idx).csr_isa.rci -> bufInfo(idx).param.raw.rs1,
+        bufInfo(idx).csrIsa.rw  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rwi -> bufInfo(idx).param.raw.rs1,
+        bufInfo(idx).csrIsa.rs  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rsi -> bufInfo(idx).param.raw.rs1,
+        bufInfo(idx).csrIsa.rc  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rci -> bufInfo(idx).param.raw.rs1,
       ))
 
     /** automatically create csr address mux according CSRInfoTable */
@@ -939,7 +939,7 @@ trait IssSelCsr{ this: IssueSel =>
   for( i <- 0 until dptEntry ) {
     maskCondCsrIss(i) := 
       ~bufValid(i) |
-      (~bufInfo(i).csr_isa.is_csr) 
+      (~bufInfo(i).csrIsa.is_csr) 
   }
 
   csrIssMatrix := MatrixMask( ageMatrixR, maskCondCsrIss )
@@ -962,7 +962,7 @@ trait IssSelCsr{ this: IssueSel =>
       bufValid(i) := false.B
       assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) )
       assert( bufValid(i) )
-      assert( bufInfo(i).csr_isa.is_csr )
+      assert( bufInfo(i).csrIsa.is_csr )
     }
   }
 
@@ -981,39 +981,39 @@ trait IssSelLsu{ this: IssueSel =>
 
   for( i <- 0 until dptEntry ) {
 
-    lsuIssInfo(i).fun := bufInfo(idx).lsu_isa
+    lsuIssInfo(i).fun := bufInfo(idx).lsuIsa
 
-    lsuIssInfo(i).param.dat.op0 := Mux( bufInfo(idx).lsu_isa.is_vls, vecBufOperator(0), 0.U )
+    lsuIssInfo(i).param.dat.op0 := Mux( bufInfo(idx).lsuIsa.is_vls, vecBufOperator(0), 0.U )
 
     lsuIssInfo(i).param.dat.op1 := 
       Mux1H(Seq(
-        (bufInfo(idx).lsu_isa.is_xls  | bufInfo(idx).lsu_isa.is_fls)  -> (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(),
-        (bufInfo(idx).lsu_isa.is_lrsc | bufInfo(idx).lsu_isa.is_amo)  -> postBufOperator(idx)(1),
-        (bufInfo(idx).lsu_isa.isUnitStride )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset,
-        (bufInfo(idx).lsu_isa.isStridde    )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset + postBufOperator(idx)(2) * i.U,
-        (bufInfo(idx).lsu_isa.isIndex      )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset + postBufOperator(idx)(2),//vop2
+        (bufInfo(idx).lsuIsa.is_xls  | bufInfo(idx).lsuIsa.is_fls)  -> (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(),
+        (bufInfo(idx).lsuIsa.is_lrsc | bufInfo(idx).lsuIsa.is_amo)  -> postBufOperator(idx)(1),
+        (bufInfo(idx).lsuIsa.isUnitStride )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset,
+        (bufInfo(idx).lsuIsa.isStridde    )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset + postBufOperator(idx)(2) * i.U,
+        (bufInfo(idx).lsuIsa.isIndex      )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset + postBufOperator(idx)(2),//vop2
                                                                       // -> postBufOperator(idx)(1).asSInt + adjAddr( i, nf = "b000".U, vWidth = "b000".U ) + ((ori.vAttach.get.nf + 1.U) << log2Ceil(vParams.vlen/8))
       ))
 
 
       // MuxCase( (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(), Seq(
-      //   (bufInfo(idx).lsu_isa.is_lrsc | bufInfo(idx).lsu_isa.is_amo) -> postBufOperator(idx)(1),
+      //   (bufInfo(idx).lsuIsa.is_lrsc | bufInfo(idx).lsuIsa.is_amo) -> postBufOperator(idx)(1),
       // ))
 
     lsuIssInfo(i).param.dat.op2 :=
       Mux1H(Seq(
-        bufInfo(idx).lsu_isa.isXStore     -> postBufOperator(idx)(2),
-        bufInfo(idx).lsu_isa.isFStore     -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
-        bufInfo(idx).lsu_isa.isVStore     -> postBufOperator(idx)(3),
+        bufInfo(idx).lsuIsa.isXStore     -> postBufOperator(idx)(2),
+        bufInfo(idx).lsuIsa.isFStore     -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
+        bufInfo(idx).lsuIsa.isVStore     -> postBufOperator(idx)(3),
       ))
       // MuxCase( postBufOperator(idx)(2), Seq(
-      //   bufInfo(idx).lsu_isa.isFStore    -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
-      //   bufInfo(idx).lsu_isa.isVConstant -> //postBufOperator(idx)(2) *    ,//rs2
-      //   bufInfo(idx).lsu_isa.isVIndex    -> //bufInfo(idx).vAttach.vop2 + ,//vs2
+      //   bufInfo(idx).lsuIsa.isFStore    -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
+      //   bufInfo(idx).lsuIsa.isVConstant -> //postBufOperator(idx)(2) *    ,//rs2
+      //   bufInfo(idx).lsuIsa.isVIndex    -> //bufInfo(idx).vAttach.vop2 + ,//vs2
       // ))
 
     lsuIssInfo(i).param.dat.op3 := DontCare
-      // Mux( bufInfo(idx).lsu_isa.isVStore,  , 0.U ) //vs3
+      // Mux( bufInfo(idx).lsuIsa.isVStore,  , 0.U ) //vs3
 
 
     lsuIssInfo(i).param.rd0 := bufInfo(idx).phy.rd0
@@ -1048,7 +1048,7 @@ trait IssSelLsu{ this: IssueSel =>
   for( i <- 0 until dptEntry ) {
     maskCondLsuIss(i) := 
       ~bufValid(i) |
-      ~bufInfo(i).lsu_isa.is_lsu
+      ~bufInfo(i).lsuIsa.is_lsu
   }
 
   lsuIssMatrix := MatrixMask( ageMatrixR, maskCondLsuIss )
@@ -1071,7 +1071,7 @@ trait IssSelLsu{ this: IssueSel =>
       bufValid(i) := false.B
       assert( postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) )
       assert( bufValid(i) )
-      assert( bufInfo(i).lsu_isa.is_lsu )
+      assert( bufInfo(i).lsuIsa.is_lsu )
     }
   }
 
@@ -1086,7 +1086,7 @@ trait IssSelFpu{ this: IssueSel =>
   def Pkg_fpu_iss(idx: Int): Fpu_iss_info = {
     val res = Wire(new Fpu_iss_info)
 
-    res.fun := bufInfo(idx).fpu_isa
+    res.fun := bufInfo(idx).fpuIsa
 
     res.param.dat.op0 := io.csrfiles.fcsr.frm
     res.param.dat.op1 := postBufOperator(idx)(1)
@@ -1111,7 +1111,7 @@ trait IssSelFpu{ this: IssueSel =>
     for( i <- 0 until dptEntry ) {
       maskCondFpuIss(0)(i) := 
         ~bufValid(i) |
-        ~bufInfo(i).fpu_isa.is_fpu
+        ~bufInfo(i).fpuIsa.is_fpu
     }
 
     fpuIssMatrix(0) := MatrixMask( ageMatrixR, maskCondFpuIss(0) )
@@ -1134,7 +1134,7 @@ trait IssSelFpu{ this: IssueSel =>
         bufValid(i) := false.B
         assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) )
         assert( bufValid(i) )
-        assert( bufInfo(i).fpu_isa.is_fpu )
+        assert( bufInfo(i).fpuIsa.is_fpu )
       }
     }
 
@@ -1154,7 +1154,7 @@ trait IssSelVpu{ this: IssueSel =>
   val vpuIssInfo = Wire( Vec(dptEntry, new Vpu_iss_info) )
 
   for( i <- 0 until dptEntry ) {
-    vpuIssInfo(i).fun := bufInfo(idx).vectorIsa
+    vpuIssInfo(i).fun := bufInfo(idx).vecIsa
 
     vpuIssInfo(i).param.dat.op0 :=
     vpuIssInfo(i).param.dat.op1 := 

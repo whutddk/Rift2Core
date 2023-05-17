@@ -48,7 +48,10 @@ class ExInt_Bundle extends Bundle {
 abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
 
   class CommitIO extends Bundle{
-    val cm_op = Vec(cmChn, new Info_commit_op(32, maxRegNum))
+    // val cm_op = Vec(cmChn, new Info_commit_op(32, maxRegNum))
+
+    val xCommit = Vec(cmChn, new Info_commit_op(32, xRegNum))
+    val fCommit = Vec(cmChn, new Info_commit_op(32, fRegNum))
     val vCommit = Vec(cmChn, new Vector_Commit_Bundle)
               // val csrCmm = Vec(cmChn, new SeqReg_Commit_Bundle(cRegNum))
               // val csrOp = Input(Vec(cmChn, new Exe_Port))
@@ -237,9 +240,9 @@ trait CommitComb{ this: CommitState =>
 
     cmm_state(i).is_wb   :=
       Mux1H(Seq(
-        io.rod(i).bits.isXcmm -> io.cm_op(i).is_writeback,
-        io.rod(i).bits.isFcmm -> io.cm_op(i).is_writeback,
-        io.rod(i).bits.isVcmm -> io.vCommit(i).isWroteback,
+        io.rod(i).bits.isXwb -> io.xCommit(i).is_writeback,
+        io.rod(i).bits.isFwb -> io.fCommit(i).is_writeback,
+        io.rod(i).bits.isVwb -> io.vCommit(i).isWroteback,
       ))
       
     cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
@@ -257,6 +260,9 @@ trait CommitComb{ this: CommitState =>
 	  cmm_state(i).exint.mei := io.plic.mei
 	  cmm_state(i).exint.sei := io.plic.sei 
 
+
+    cmm_state(i).isVException := io.rod(i).bits.isVwb & io.vCommit(i).isException
+    cmm_state(i).excepitonIdx := io.vCommit(i).excepitonIdx
   }}
 
 }
@@ -265,21 +271,26 @@ trait CommitComb{ this: CommitState =>
 trait CommitRegFiles { this: CommitState =>
 
   for ( i <- 0 until cmChn ) yield {
-    io.cm_op(i).phy := io.rod(i).bits.rd0_phy
-    io.cm_op(i).raw := io.rod(i).bits.rd0_raw
-    io.cm_op(i).toX := io.rod(i).bits.isXcmm
-    io.cm_op(i).toF := io.rod(i).bits.isFcmm
+    io.xCommit(i).phy := io.rod(i).bits.rd0_phy
+    io.xCommit(i).raw := io.rod(i).bits.rd0_raw
+
+    io.fCommit(i).phy := io.rod(i).bits.rd0_phy
+    io.fCommit(i).raw := io.rod(i).bits.rd0_raw
 
     io.vCommit(i).phy := io.rod(i).bits.rd0_raw
   }
 
 
   ( 0 until cmChn ).map{ i =>
-    io.cm_op(i).is_comfirm      := commit_state_is_comfirm(i)
-    io.cm_op(i).is_MisPredict   := commit_state_is_misPredict(i)
-    io.cm_op(i).is_abort        := commit_state_is_abort(i)
+    io.xCommit(i).is_comfirm      := commit_state_is_comfirm(i)
+    io.xCommit(i).is_MisPredict   := commit_state_is_misPredict(i)
+    io.xCommit(i).is_abort        := commit_state_is_abort(i)
 
-    io.vCommit(i).isComfirm := io.rod(i).bits.isVcmm & commit_state_is_comfirm(i)
+    io.fCommit(i).is_comfirm      := commit_state_is_comfirm(i)
+    io.fCommit(i).is_MisPredict   := false.B
+    io.fCommit(i).is_abort        := commit_state_is_abort(i) | commit_state_is_misPredict(i)
+
+    io.vCommit(i).isComfirm := io.rod(i).bits.isVwb & commit_state_is_comfirm(i)
     io.vCommit(i).isAbort   := commit_state_is_misPredict(i) | commit_state_is_abort(i)
   }
 
@@ -484,8 +495,8 @@ trait CommitIFRedirect { this: CommitState =>
 trait CommitDiff { this: CommitState =>
   ( 0 until cmChn ).map{i =>
     io.diff_commit.pc(i) := extVaddr(io.rod(i).bits.pc, vlen)
-    io.diff_commit.comfirm(i) := (commit_state_is_comfirm(i) | commit_state_is_misPredict(i)) & io.rod(i).bits.isLast
-    io.diff_commit.abort(i) := commit_state_is_abort(i) & io.rod(i).bits.isLast
+    io.diff_commit.comfirm(i) := (commit_state_is_comfirm(i) | commit_state_is_misPredict(i))
+    io.diff_commit.abort(i) := commit_state_is_abort(i)
   } 
 
   io.diff_commit.priv_lvl := csrfiles.priv_lvl
@@ -559,7 +570,7 @@ trait CommitInfoMMU{ this: CommitState =>
 
 trait CommitInfoLsu{ this: CommitState =>
   io.cmm_lsu.is_amo_pending := {
-    io.rod(0).valid & io.rod(0).bits.is_amo & ~io.cm_op(0).is_writeback //only pending amo in rod0 is send out
+    io.rod(0).valid & io.rod(0).bits.is_amo & ~io.xCommit(0).is_writeback //only pending amo in rod0 is send out
   }
   println("Warning, amo_pending can only emmit at chn0")
 
@@ -568,7 +579,7 @@ trait CommitInfoLsu{ this: CommitState =>
   }
 
   io.cmm_lsu.isVstorePending := {
-    io.rod(0).valid & io.rod(0).bits.is_su & io.rod(0).bits.isVector & ~io.cm_op(0).is_writeback //only pending amo in rod0 is send out
+    io.rod(0).valid & io.rod(0).bits.is_su & io.rod(0).bits.isVector & ~io.vCommit(0).isWroteBack //only pending amo in rod0 is send out
   }
   println("Warning, vstore_pending can only emmit at chn0")
 }

@@ -478,13 +478,13 @@ trait LSU_WriteBack { this: LsuBase =>
 
 
 
-  lu_wb_fifo.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.is_iwb & ~trans_kill 
+  lu_wb_fifo.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.isXwb & ~trans_kill 
   lu_wb_fifo.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
   lu_wb_fifo.io.enq.bits.res := lu_wb_arb.io.out.bits.wb.res
   lu_wb_fifo.reset := reset.asBool | io.flush
 
 
-  flu_wb_fifo.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.is_fwb & ~trans_kill 
+  flu_wb_fifo.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.isFwb & ~trans_kill 
   flu_wb_fifo.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
   flu_wb_fifo.io.enq.bits.res := 
       Mux1H(Seq(
@@ -494,7 +494,7 @@ trait LSU_WriteBack { this: LsuBase =>
   flu_wb_fifo.io.deq <> frtn_arb.io.in(0)
   flu_wb_fifo.reset := reset.asBool | io.flush
 
-  vlu_wb_fifo.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.is_fwb & ~trans_kill 
+  vlu_wb_fifo.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.isFwb & ~trans_kill 
   vlu_wb_fifo.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
   vlu_wb_fifo.io.enq.bits.res := lu_wb_arb.io.out.bits.wb.res
   vlu_wb_fifo.reset := reset.asBool | io.flush
@@ -549,7 +549,7 @@ trait LSU_Fault { this: LsuBase =>
   irtn_arb.io.in(3).valid := 
     io.mmu_lsu.valid &
       (io.mmu_lsu.bits.is_fault | io.lsu_iss_exe.bits.is_misAlign) & ~trans_kill &
-      io.lsu_iss_exe.bits.fun.is_iwb
+      io.lsu_iss_exe.bits.fun.isXwb
 
   irtn_arb.io.in(3).bits.rd0 := io.lsu_iss_exe.bits.param.rd0
   irtn_arb.io.in(3).bits.res := 0.U
@@ -558,7 +558,7 @@ trait LSU_Fault { this: LsuBase =>
   frtn_arb.io.in(1).valid := 
     io.mmu_lsu.valid &
       (io.mmu_lsu.bits.is_fault | io.lsu_iss_exe.bits.is_misAlign) & ~trans_kill &
-      io.lsu_iss_exe.bits.fun.is_fwb
+      io.lsu_iss_exe.bits.fun.isFwb
 
   frtn_arb.io.in(1).bits.rd0 := io.lsu_iss_exe.bits.param.rd0
   frtn_arb.io.in(1).bits.res := 0.U

@@ -1435,11 +1435,10 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
       vstart := dnxt0
     }.elsewhen( in.rod.isVector ){  //vector commit will auto reset vstart to 0
       vstart := 
-        Mux1H(Seq(
-          -> 0.U,
-          -> vstart + vl
-          -> vstart + exceptionIdx
-        ))
+        Mux(
+          in.isException, vstart + in.exceptionIdx,
+          Mux( (vstart + in.rod.vlCnt) === in.csrfiles.vl, 0.U, vstart + in.rod.vlCnt )
+        )
     }
 
     return vstart
@@ -1469,22 +1468,19 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
     val vConfig = WireDefault( in.csrfiles.vConfig )
 
     val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.vConfig.asUInt, "hFFE".U, in.csrExe ) //vset config from csr
-    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.vConfig.asUInt, "hFFF".U, in.csrExe ) //vlsu FOF none exception
 
     when( enable0 ){     //vset mux to csr to write vl and vtype
       vConfig.vill  := dnxt0.extract(63)
       vConfig.vl    := dnxt0.apply(62,8)
       vConfig.vtype := dnxt0.apply(7,0)
-    }.elsewhen(enable1){ //vlsu FOF none exception
-      when( dnxt0(60) ){ //trigger fof
-        vConfig.vl    := dnxt0.apply((log2Ceil(vParams.vlmax)-1), 0)        
-      }
-
+    }.elsewhen( in.rod.isVLoad & in.isVException & (in.rod.isFoF & in.excepitonIdx =/= 0.U) ){
+      vConfig.vl    := in.csrfiles.vstart + in.exceptionIdx
     }
 
     return vConfig
   }
 
+  
   def update_vlenb( in: CMMState_Bundle ): UInt = {
     val vlenb = ((vParams.vlen)/8).U
     return vlenb

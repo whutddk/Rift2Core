@@ -56,62 +56,6 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
 
   val reg_phy = Wire(Vec(rnChn, new Reg_PHY ) )
 
-  def Pkg_Rename_Bundle( instr: Info_instruction, rename: Reg_PHY): Dpt_info = {
-    val res = Wire(new Dpt_info)
-
-    res.alu_isa    := instr.alu_isa
-    res.bru_isa    := instr.bru_isa
-    res.lsu_isa    := instr.lsu_isa
-    res.csr_isa    := instr.csr_isa
-    res.mul_isa    := instr.mul_isa
-    res.vectorIsa  := instr.vectorIsa
-    res.privil_isa := 0.U.asTypeOf( new Privil_isa )
-    res.fpu_isa    := instr.fpu_isa
-    res.param      := instr.param
-    res.phy        := rename
-
-                    when( instr.fpu_isa.is_fpu ) {
-                      when(~instr.fpu_isa.hasTwoRs) { res.phy.rs2 := 0.U }
-                      when(~instr.fpu_isa.hasThreeRs) { res.phy.rs3 := 0.U }      
-                    }
-
-    return res
-  }
-
-
-  def Pkg_rod_i(instr:Info_instruction, rename: Reg_PHY): Info_reorder_i = {
-    val res = Wire(new Info_reorder_i)
-
-      res.pc             := instr.param.pc
-      res.rd0_raw        := instr.param.raw.rd0
-      res.rd0_phy        := rename.rd0
-      res.is_branch      := instr.bru_isa.is_branch
-      res.is_jalr        := instr.bru_isa.jalr
-      res.is_lu          := instr.lsu_isa.is_lu
-      res.is_su          := instr.lsu_isa.is_su
-      res.is_amo         := instr.lsu_isa.is_amo
-      res.is_fence       := instr.lsu_isa.fence
-      res.is_fence_i     := instr.lsu_isa.fence_i
-      res.is_sfence_vma  := instr.lsu_isa.sfence_vma
-      res.is_wfi         := instr.alu_isa.wfi
-      res.is_csr         := instr.csr_isa.is_csr
-      res.is_fcsr        := instr.fpu_isa.is_fpu
-      res.is_fpu         := instr.fpu_isa.is_fpu | instr.lsu_isa.is_fpu
-      res.privil         := instr.privil_isa
-      res.is_illeage     := instr.is_illeage
-      res.is_rvc         := instr.param.is_rvc
-
-      res.isXcmm := instr.is_iwb
-      res.isFcmm := instr.is_fwb
-      res.isVcmm := instr.isVwb
-
-      res.isVector := instr.vectorIsa.isVector | instr.lsu_isa.is_vls
-
-      res.isLast   := (if(hasVector){ instr.vAttach.get.isLast } else { true.B })
-      
-
-    return res
-  }
 }
 
 trait RenameMalloc { this: RenameBase =>
@@ -120,12 +64,26 @@ trait RenameMalloc { this: RenameBase =>
     rnRspFifo.io.enq(i).valid :=
       io.rnReq(i).fire & ( 0 to i ).map{ j => ~io.rnReq(i).bits.is_privil_dpt }.foldLeft(false.B)(_|_)  //~io.rnReq(i).bits.is_privil_dpt
 
-    rnRspFifo.io.enq(i).bits  := Pkg_Rename_Bundle(io.rnReq(i).bits, reg_phy(i))
+    rnRspFifo.io.enq(i).bits.aluIsa    := io.rnReq(i).bits.aluIsa
+    rnRspFifo.io.enq(i).bits.bruIsa    := io.rnReq(i).bits.bruIsa
+    rnRspFifo.io.enq(i).bits.lsuIsa    := io.rnReq(i).bits.lsuIsa
+    rnRspFifo.io.enq(i).bits.csrIsa    := io.rnReq(i).bits.csrIsa
+    rnRspFifo.io.enq(i).bits.mulIsa    := io.rnReq(i).bits.mulIsa
+    rnRspFifo.io.enq(i).bits.vecIsa  := io.rnReq(i).bits.vecIsa
+    rnRspFifo.io.enq(i).bits.privil_isa := 0.U.asTypeOf( new Privil_isa )
+    rnRspFifo.io.enq(i).bits.fpuIsa    := io.rnReq(i).bits.fpuIsa
+    rnRspFifo.io.enq(i).bits.param      := io.rnReq(i).bits.param
+    rnRspFifo.io.enq(i).bits.phy        := reg_phy(i)
 
-    io.xRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.is_iwb
+            when( io.rnReq(i).bits.fpuIsa.is_fpu ) {
+              when(~io.rnReq(i).bits.fpuIsa.hasTwoRs) { rnRspFifo.io.enq(i).bits.phy.rs2 := 0.U }
+              when(~io.rnReq(i).bits.fpuIsa.hasThreeRs) { rnRspFifo.io.enq(i).bits.phy.rs3 := 0.U }      
+            }
+
+    io.xRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.isXwb
     io.xRename(i).req.bits.rd0 := io.rnReq(i).bits.param.raw.rd0
 
-    io.fRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.is_fwb
+    io.fRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.isFwb
     io.fRename(i).req.bits.rd0 := io.rnReq(i).bits.param.raw.rd0
 
     for ( j <- 0 until rnChn ) { assert( PopCount( Seq(io.vRename(j).req.fire, io.fRename(j).req.fire, io.xRename(j).req.fire)) <= 1.U, "Assert Failed, rename should be one-hot" ) }
@@ -193,7 +151,37 @@ trait LoadRob{ this: RenameBase =>
   reOrder_fifo_i.io.flush := false.B
   for ( i <- 0 until rnChn ){
     reOrder_fifo_i.io.enq(i).valid := io.rnReq(i).fire
-    reOrder_fifo_i.io.enq(i).bits  := Pkg_rod_i(io.rnReq(i).bits, reg_phy(i))    
+
+    reOrder_fifo_i.io.enq(i).bits.pc             := io.rnReq(i).bits.param.pc
+    reOrder_fifo_i.io.enq(i).bits.rd0_raw        := io.rnReq(i).bits.param.raw.rd0
+    reOrder_fifo_i.io.enq(i).bits.rd0_phy        := reg_phy(i).rd0
+    reOrder_fifo_i.io.enq(i).bits.is_branch      := io.rnReq(i).bits.bruIsa.is_branch
+    reOrder_fifo_i.io.enq(i).bits.is_jalr        := io.rnReq(i).bits.bruIsa.jalr
+    reOrder_fifo_i.io.enq(i).bits.is_lu          := io.rnReq(i).bits.lsuIsa.is_lu
+    reOrder_fifo_i.io.enq(i).bits.is_su          := io.rnReq(i).bits.lsuIsa.is_su
+    reOrder_fifo_i.io.enq(i).bits.is_amo         := io.rnReq(i).bits.lsuIsa.is_amo
+    reOrder_fifo_i.io.enq(i).bits.is_fence       := io.rnReq(i).bits.lsuIsa.fence
+    reOrder_fifo_i.io.enq(i).bits.is_fence_i     := io.rnReq(i).bits.lsuIsa.fence_i
+    reOrder_fifo_i.io.enq(i).bits.is_sfence_vma  := io.rnReq(i).bits.lsuIsa.sfence_vma
+    reOrder_fifo_i.io.enq(i).bits.is_wfi         := io.rnReq(i).bits.aluIsa.wfi
+    reOrder_fifo_i.io.enq(i).bits.is_csr         := io.rnReq(i).bits.csrIsa.is_csr
+    reOrder_fifo_i.io.enq(i).bits.is_fcsr        := io.rnReq(i).bits.fpuIsa.is_fpu
+    reOrder_fifo_i.io.enq(i).bits.is_fpu         := io.rnReq(i).bits.fpuIsa.is_fpu | io.rnReq(i).bits.lsuIsa.is_fpu
+    reOrder_fifo_i.io.enq(i).bits.privil         := io.rnReq(i).bits.privil_isa
+    reOrder_fifo_i.io.enq(i).bits.is_illeage     := io.rnReq(i).bits.is_illeage
+    reOrder_fifo_i.io.enq(i).bits.is_rvc         := io.rnReq(i).bits.param.is_rvc
+
+    reOrder_fifo_i.io.enq(i).bits.isXwb := io.rnReq(i).bits.isXwb
+    reOrder_fifo_i.io.enq(i).bits.isFwb := io.rnReq(i).bits.isFwb
+    reOrder_fifo_i.io.enq(i).bits.isVwb := io.rnReq(i).bits.isVwb
+      
+    reOrder_fifo_i.io.enq(i).bits.isVector := io.rnReq(i).bits.vecIsa.isVector | io.rnReq(i).bits.lsuIsa.is_vls
+    reOrder_fifo_i.io.enq(i).bits.isVLoad  := io.rnReq(i).bits.lsuIsa.isVLoad
+    reOrder_fifo_i.io.enq(i).bits.isVStore := io.rnReq(i).bits.lsuIsa.isVStore
+    reOrder_fifo_i.io.enq(i).bits.isFoF    := io.rnReq(i).bits.lsuIsa.vleNff
+    reOrder_fifo_i.io.enq(i).bits.vlCnt    := io.rnReq(i).bits.vAttach.vlCnt
+
+
   }
 
 }
@@ -202,34 +190,18 @@ trait LoadRob{ this: RenameBase =>
 trait CSRMalloc{ this: RenameBase =>
   for ( i <- 0 until rnChn ) {
     io.xpuCsrMolloc(i).bits := 
-      Mux( io.rnReq(i).bits.csr_isa.is_csr, io.rnReq(i).bits.param.imm, 0.U)
+      Mux( io.rnReq(i).bits.csrIsa.is_csr, io.rnReq(i).bits.param.imm, 0.U)
 
     io.xpuCsrMolloc(i).valid :=
-      io.rnReq(i).fire & io.rnReq(i).bits.csr_isa.is_csr
+      io.rnReq(i).fire & io.rnReq(i).bits.csrIsa.is_csr
 
     io.fpuCsrMolloc(i).bits := DontCare
 
     io.fpuCsrMolloc(i).valid :=
-      io.rnReq(i).fire & io.rnReq(i).bits.fpu_isa.is_fpu     
+      io.rnReq(i).fire & io.rnReq(i).bits.fpuIsa.is_fpu     
   }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 trait RenameFeatureCheck { this: RenameBase =>
@@ -237,8 +209,8 @@ trait RenameFeatureCheck { this: RenameBase =>
   } else {
     for ( i <- 0 until rnChn ) {
       when( io.rnReq(i).fire ) {
-        assert(io.rnReq(i).bits.fpu_isa.is_fpu === false.B)
-        assert(io.rnReq(i).bits.is_fwb === false.B)
+        assert(io.rnReq(i).bits.fpuIsa.is_fpu === false.B)
+        assert(io.rnReq(i).bits.isFwb === false.B)
       }
     }
   }
@@ -247,7 +219,7 @@ trait RenameFeatureCheck { this: RenameBase =>
   } else {
     for ( i <- 0 until rnChn ) {
       when( io.rnReq(i).fire ) {
-        assert(io.rnReq(i).bits.mul_isa.is_mulDiv === false.B, "Assert Failed at Rename, MulDiv is not supported in this Version!")
+        assert(io.rnReq(i).bits.mulIsa.is_mulDiv === false.B, "Assert Failed at Rename, MulDiv is not supported in this Version!")
       }
     }    
   }
@@ -277,8 +249,8 @@ with RenameFeatureCheck {
         io.xRename(j).req.ready &
         io.fRename(j).req.ready &
         reOrder_fifo_i.io.enq(j).ready &
-        (io.xpuCsrMolloc(j).ready | ~io.rnReq(j).bits.csr_isa.is_csr) & 
-        (io.fpuCsrMolloc(j).ready | ~io.rnReq(j).bits.fpu_isa.is_fpu) & 
+        (io.xpuCsrMolloc(j).ready | ~io.rnReq(j).bits.csrIsa.is_csr) & 
+        (io.fpuCsrMolloc(j).ready | ~io.rnReq(j).bits.fpuIsa.is_fpu) & 
         rnRspFifo.io.enq(j).ready
       }
     ).reduce(_&_)
