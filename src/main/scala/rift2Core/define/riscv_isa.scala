@@ -1113,8 +1113,6 @@ class Info_instruction(implicit p: Parameters) extends Instruction_set {
 
   val vAttach = if(hasVector){Some(new VRename_Attach_Bundle)} else {None}
 
-  // def isFoF = (param.raw.rs2 === "b10000".U) & lsuIsa.vle
-
 }
 
 
@@ -1329,7 +1327,7 @@ class Info_clint_csr(implicit p: Parameters) extends RiftBundle {
 
 
 class Info_cmm_lsu(implicit p: Parameters) extends RiftBundle {
-  val isVstorePending = Bool()
+  // val isVstorePending = Bool()
   val is_amo_pending  = Bool()
   val is_store_commit = Vec(cmChn, Bool())
 }

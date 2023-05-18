@@ -161,9 +161,9 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
 
     res.chkIdx := 0.U
 
-    if( hasVector ){
-      res.vAttach.get := ori.vAttach.get
-    }
+    // if( hasVector ){
+    //   res.vAttach.get := ori.vAttach.get
+    // }
  
 
 

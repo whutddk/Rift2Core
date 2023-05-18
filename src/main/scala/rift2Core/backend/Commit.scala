@@ -75,6 +75,8 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
     val xpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
     val fpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
     val vpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
+
+    val isPndVStore = Output(Bool())
   }
 
   val io: CommitIO = IO(new CommitIO)
@@ -578,10 +580,11 @@ trait CommitInfoLsu{ this: CommitState =>
     io.cmm_lsu.is_store_commit(i) := io.rod(i).bits.is_su & commit_state_is_comfirm(i)
   }
 
-  io.cmm_lsu.isVstorePending := {
-    io.rod(0).valid & io.rod(0).bits.is_su & io.rod(0).bits.isVector & ~io.vCommit(0).isWroteBack //only pending amo in rod0 is send out
-  }
-  println("Warning, vstore_pending can only emmit at chn0")
+  // io.cmm_lsu.isVstorePending := {
+  //   io.rod(0).valid & io.rod(0).bits.is_su & io.rod(0).bits.isVector & ~io.vCommit(0).isWroteBack //only pending amo in rod0 is send out
+  // }
+  // println("Warning, vstore_pending can only emmit at chn0")
+  io.isPndVStore := io.rod(0).valid & io.rod(0).bits.isVStore
 }
 
 

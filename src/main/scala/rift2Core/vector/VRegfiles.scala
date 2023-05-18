@@ -25,6 +25,13 @@ import rift2Chip._
 import org.chipsalliance.cde.config._
 
 
+class Vector_Molloc_Bundle()(implicit p: Parameters) extends RiftBundle{
+  val idx    = UInt(6.W)
+  val vsew   = UInt(2.W)
+  val isMask = Vec( vParams.vlen / 8, Bool() )
+}
+
+
 class Vector_Commit_Bundle()(implicit p: Parameters) extends RiftBundle{
   val isComfirm = Output(Bool())
   val isAbort   = Output(Bool())
@@ -45,10 +52,11 @@ class Vector_WriteBack_Bundle()(implicit p: Parameters) extends RiftBundle {
 abstract class VRegfilesBase()(implicit p: Parameters) extends RiftModule {
 
   class VRegFilesIO extends Bundle{
-    val molloc = Flipped(Decoupled(new UInt(5.W)) ) //molloc at read op
+    val molloc = Flipped(Decoupled(new Vector_Molloc_Bundle ) ) //molloc at read op
     val readOp = Vec( 32, Valid(UInt( (vParams.vlen).W )) )
 
-    val writeBack = Vec( 33, Vec(vParams.vlen/8, (new Valid(new Vector_WriteBack_Bundle))))
+    val exeWriteBack  = Vec( 33, Vec( vParams.vlen/8, (new Valid(new Vector_WriteBack_Bundle)) ))
+    val maskWriteBack = Vec( 33, Vec( vParams.vlen/8, Bool() ))
 
     val commit = Vec(cmm, Flipped(new Vector_Commit_Bundle))
     val diffReg = Output(Vec(32, UInt((vParams.vlen/8).W)))
@@ -57,37 +65,46 @@ abstract class VRegfilesBase()(implicit p: Parameters) extends RiftModule {
   val io: RegFilesIO = IO( new VRegFilesIO)
 
   val wbFiles =
-    for( _ <- 0 until 32 ) yield {
+    for( _ <- 0 until 33 ) yield {
       for( _ <- 0 until vParams.vlen/8 ) yield
-      Reg(UInt(8.U))
+      Reg(UInt(64.U))
     }
 
   val files =
-    for( _ <- 0 until 32 ) yield {
+    for( _ <- 0 until 33 ) yield {
       Reg(UInt(vParams.vlen))
     }
 
   val isMolloced =
-    for( _ <- 0 until 32 ) yield {
-      // for( _ <- 0 until vParams.vlen/8 ) yield {
-        RegInit(false.B)      
-      // }
+    for( _ <- 0 until 33 ) yield {
+      RegInit(false.B)      
+    }
+  
+  val vsew =
+    for( _ <- 0 until 33 ) yield {
+      RegInit(UInt(2.W))      
     }
 
   val isWroteBack =
-    for( _ <- 0 until 32 ) yield {
+    for( _ <- 0 until 33 ) yield {
       for( _ <- 0 until vParams.vlen/8 ) yield {
         RegInit(true.B)
       }
     }
 
   val isException =
-    for( _ <- 0 until 32 ) yield {
+    for( _ <- 0 until 33 ) yield {
       for( _ <- 0 until vParams.vlen/8 ) yield {
         RegInit(false.B)      
       }
     }
 
+  val isMask =
+    for( _ <- 0 until 33 ) yield {
+      for( _ <- 0 until vParams.vlen/8 ) yield {
+        RegInit(false.B)      
+      }
+    }
 }
 
 trait VRegMolloc{ this: VRegfilesBase =>
@@ -96,10 +113,35 @@ trait VRegMolloc{ this: VRegfilesBase =>
 
   when( io.molloc.fire ){
     ( 0 until 32 ).map{ i =>
-      when( i.U === io.molloc.bits ) {
+      when( i.U === io.molloc.bits.idx ) {
         assert( isMolloced(i) === false.B )
         isMolloced(i) := true.B
-        isWroteBack(i) := 0.U.asTypeOf(isWroteBack(i))
+        vsew(i)       := io.molloc.bits.sew
+
+        for( j <- 0 until vParams.vlen/8 ) {
+          when( io.molloc.bits.sew === "b00".U ){
+            isWroteBack(i)(j) := io.molloc.bits.isMask(j)
+            isMask(i)(j)      := io.molloc.bits.isMask(j)
+          }
+          when( io.molloc.bits.sew === "b01".U ){
+            if( j < vParams.vlen/16 ){
+              isWroteBack(i)(j) := io.molloc.bits.isMask(j)
+              isMask(i)(j)      := io.molloc.bits.isMask(j)
+            }
+          }
+          when( io.molloc.bits.sew === "b10".U ){
+            if( j < vParams.vlen/32 ){
+              isWroteBack(i)(j) := io.molloc.bits.isMask(j)
+              isMask(i)(j)      := io.molloc.bits.isMask(j)
+            }
+          }
+          when( io.molloc.bits.sew === "b11".U ){
+            if( j < vParams.vlen/64 ){
+              isWroteBack(i)(j) := io.molloc.bits.isMask(j)
+              isMask(i)(j)      := io.molloc.bits.isMask(j)
+            }
+          }
+        }
       }
     }
   }
@@ -107,16 +149,19 @@ trait VRegMolloc{ this: VRegfilesBase =>
 
 trait VRegReadOp{ this: VRegfilesBase =>
   for( i <- 0 until 32 ){
-    io.readOp(i).valid :=
-      (~isMolloced(i)) |
-      (isMolloced(i) & isWroteBack(i).reduce(_&_))
+    io.readOp(i).valid := ~isMolloced(i)
+      // (~isMolloced(i)) |
+      // (isMolloced(i) &
+      //   Mux1H(Seq(
+      //     (vsew(i) === "b00".U) -> (0 until vParams.vlen/8 ).map{ j => isWroteBack(i)(j) }.reduce(_&_),
+      //     (vsew(i) === "b01".U) -> (0 until vParams.vlen/16).map{ j => isWroteBack(i)(j) }.reduce(_&_),
+      //     (vsew(i) === "b10".U) -> (0 until vParams.vlen/32).map{ j => isWroteBack(i)(j) }.reduce(_&_),
+      //     (vsew(i) === "b11".U) -> (0 until vParams.vlen/64).map{ j => isWroteBack(i)(j) }.reduce(_&_),
+      //   ))
+      // )
 
-    io.readOp(i).bits := 
-      Mux(
-        isMolloced(i),
-        Mux( isWroteBack(i).reduce(_&_), wbFiles, 0.U),
-        files(i)
-      )
+    io.readOp(i).bits := files(i)
+      // Mux( isMolloced(i), Cat(wbFiles(i), files(i) )
   }
 }
 
@@ -125,15 +170,17 @@ trait VRegWriteBack{ this: VRegfilesBase =>
   // for( chn <- 0 until wbc ) {
     for( i <- 0 until 33 ) {
       for( j <- 0 until vParams.vlen/8 ) {
-        when( io.writeBack(i)(j).fire ){
+        when( io.exeWriteBack(i)(j).fire ){
 
           assert( isMolloced(i) )
+          when( vsew(i) === "b00".U ) {assert( j.U < (vParams.vlen/8 ).U, "Assert Failed, invalid VWriteback" )}
+          when( vsew(i) === "b01".U ) { assert( j.U < (vParams.vlen/16).U, "Assert Failed, invalid VWriteback" ) }
+          when( vsew(i) === "b10".U ) { assert( j.U < (vParams.vlen/32).U, "Assert Failed, invalid VWriteback" ) }
+          when( vsew(i) === "b11".U ) { assert( j.U < (vParams.vlen/64).U, "Assert Failed, invalid VWriteback" ) }
 
-          when( ~io.writeBack(i)(j).bits.isMask ) {
-            wbFiles(i)(j) := io.writeBack(i)(j).bits.res
-          }
+          wbFiles(i)(j) := io.exeWriteBack(i)(j).bits.res
 
-          isException(i)(j) := io.writeBack(i)(j).bits.isException
+          isException(i)(j) := io.exeWriteBack(i)(j).bits.isException
           isWroteBack(i)(j) := true.B
 
         }
@@ -162,10 +209,36 @@ trait VRegCommit{ this: VRegfilesBase =>
       isException := 0.U.asTypeOf(isException)
     }
     .elsewhen( io.commit(i).isComfirm ){
-      files(idx) := Cat( wbFiles(idx).reverse )
       isMolloced(idx)  := false.B
       isWroteBack(idx) := 0.U.asTypeOf(isWroteBack(idx))
       isException(idx) := 0.U.asTypeOf(isException(idx))
+
+      when( vsew(idx) === "b00".U ) {
+        files(idx) := Cat(
+          ( 0 until vParams.vlen/8 ).map{ j =>
+            Mux( isMask(idx)(j), files(idx)( 8*j+7, 8*j ), wbFiles(idx)(j)(7,0) )
+          }.reverse
+        )
+      } .elsewhen( vsew(idx) === "b01".U ) {
+        files(idx) := Cat(
+          ( 0 until vParams.vlen/16 ).map{ j =>
+            Mux( isMask(idx)(j), files(idx)( 16*j+15, 16*j ), wbFiles(idx)(j)(15,0) )
+          }.reverse
+        )
+      } .elsewhen( vsew(idx) === "b10".U ) {
+        files(idx) := Cat(
+          ( 0 until vParams.vlen/32 ).map{ j =>
+            Mux( isMask(idx)(j), files(idx)( 32*j+31, 32*j ), wbFiles(idx)(j)(31,0) )
+          }.reverse
+        )
+      } .elsewhen( vsew(idx) === "b11".U ) {
+        files(idx) := Cat(
+          ( 0 until vParams.vlen/64 ).map{ j =>
+            Mux( isMask(idx)(j), files(idx)( 64*j+63, 64*j ), wbFiles(idx)(j)(63,0) )
+          }.reverse
+        )
+      }
+
     }
   }
 }

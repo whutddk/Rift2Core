@@ -36,7 +36,7 @@ import freechips.rocketchip.tilelink._
 import chisel3.util.experimental.{FlattenInstance, InlineInstance}
 
 
-abstract class Rift2CoreBase(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyModule with HasRiftParameters {
+class Rift2Core(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyModule with HasRiftParameters {
   val prefetcherClientParameters = TLMasterPortParameters.v1(
     Seq(TLMasterParameters.v1(
       name = "prefetch",
@@ -91,7 +91,7 @@ abstract class Rift2CoreBase(isFlatten: Boolean = false)(implicit p: Parameters)
   lazy val module: Rift2CoreImp = if(isFlatten) {new Rift2CoreImp(this) with FlattenInstance} else {new Rift2CoreImp(this)}
 }
  
-class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyModuleImp(outer) with HasRiftParameters { 
+abstract class Rift2CoreImpBase(outer: Rift2Core, isFlatten: Boolean = false) extends LazyModuleImp(outer) with HasRiftParameters { 
   class Rift2CoreIO extends Bundle{
     val dm        = if (hasDebugger) {Some(Flipped(new Info_DM_cmm))} else {None}
     val rtc_clock = Input(Bool())
@@ -128,7 +128,7 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
 
 }
 
-trait Rift2CoreFrontend{ this: Rift2CoreBase =>
+trait Rift2CoreImpFrontend{ this: Rift2CoreImpBase =>
 
   if1.io.if4Redirect := if4.io.if4Redirect
 
@@ -144,13 +144,20 @@ trait Rift2CoreFrontend{ this: Rift2CoreBase =>
   if3.io.if4Redirect := if4.io.if4Redirect
 }
 
-trait Rift2CoreBackend{ this: Rift2CoreBase =>
+trait Rift2CoreImpBackend{ this: Rift2CoreImpBase =>
   
   if4.io.if4_resp <> preRename_stage.io.enq
   preRename_stage.io.deq <> rnm_stage.io.rnReq
-  
+
+  preRename_stage.io.vpuCsrMolloc <> iwb_stage.io.vpuCsrMolloc
+
   rnm_stage.io.rnRsp <> preIssue_stage.io.enq
+  
   preIssue_stage.io.deq <> iss_stage.io.dptReq
+
+  preIssue_stage.io.molloc <> iwb_stage.io.vMolloc
+  preIssue_stage.io.readOp <> iwb_stage.io.vReadOp
+
 
   iss_stage.io.alu_iss_exe <> exe_stage.io.alu_iss_exe
   iss_stage.io.bru_iss_exe <> exe_stage.io.bru_iss_exe
@@ -189,20 +196,19 @@ trait Rift2CoreBackend{ this: Rift2CoreBase =>
 
   iwb_stage.io.xpuCsrWriteBack := exe_stage.io.xpuCsrWriteBack
   iwb_stage.io.fpuCsrWriteBack := exe_stage.io.fpuCsrWriteBack
+  iwb_stage.io.vpuCsrWriteBack.valid := false.B
+  iwb_stage.io.vpuCsrWriteBack.bits  := DontCare
 
   iwb_stage.io.xpuCsrMolloc    <> rnm_stage.io.xpuCsrMolloc
   iwb_stage.io.fpuCsrMolloc    <> rnm_stage.io.fpuCsrMolloc
 
-
+  preRename_stage.io.csrfiles := cmm_stage.io.csrfiles
+  preIssue_stage.io.csrfiles := cmm_stage.io.csrfiles
   iss_stage.io.csrfiles := cmm_stage.io.csrfiles
 
-  rnm_stage.io.vLookup.map{x=>x.rsp := DontCare}
-  iss_stage.io.vrgRsp.map{ x => {x.valid := false.B; x.bits := DontCare} }
-  iss_stage.io.vrgLog      := DontCare
-  rnm_stage.io.vRename.map{x=>x.req.ready := true.B; x.rsp := DontCare}
 }
 
-trait Rift2CorePredict{ this: Rift2CoreBase =>
+trait Rift2CoreImpPredict{ this: Rift2CoreImpBase =>
   if1.io.jcmm_update := exe_stage.io.jcmm_update
   if1.io.bcmm_update := exe_stage.io.bcmm_update
   if3.io.jcmm_update := exe_stage.io.jcmm_update
@@ -213,7 +219,7 @@ trait Rift2CorePredict{ this: Rift2CoreBase =>
   exe_stage.io.jftq <> if4.io.jftq
 }
 
-trait Rift2CoreBus{ this: Rift2CoreBase =>
+trait Rift2CoreImpBus{ this: Rift2CoreImpBase =>
 
   if2.io.icache_access.bits := icache_bus.d.bits
   if2.io.icache_access.valid := icache_bus.d.valid
@@ -296,7 +302,7 @@ trait Rift2CoreBus{ this: Rift2CoreBase =>
   prefetcher.io.hintAck.valid := prefetch_bus.d.valid
 }
 
-trait Rift2CoreMMU{ this: Rift2CoreBase =>
+trait Rift2CoreImpMMU{ this: Rift2CoreImpBase =>
   i_mmu.io.if_mmu <> if2.io.if_mmu
   i_mmu.io.mmu_if <> if2.io.mmu_if
   i_mmu.io.lsu_mmu <> exe_stage.io.lsu_mmu
@@ -304,11 +310,17 @@ trait Rift2CoreMMU{ this: Rift2CoreBase =>
   i_mmu.io.cmm_mmu <> cmm_stage.io.cmm_mmu
 }
 
-trait Rift2CoreCommit{ this: Rift2CoreBase =>
-  cmm_stage.io.cm_op <> iwb_stage.io.commit
+trait Rift2CoreImpCommit{ this: Rift2CoreImpBase =>
+  iwb_stage.io.xCommit <> cmm_stage.io.xCommit
+  iwb_stage.io.fCommit <> cmm_stage.io.fCommit
+  iwb_stage.io.vCommit <> cmm_stage.io.vCommit
+
   cmm_stage.io.rod <> rnm_stage.io.rod_i
+
   cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
   cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
+  preIssue_stage.io.isPndVStore := cmm_stage.io.isPndVStore
+
   cmm_stage.io.bctq <> exe_stage.io.bctq
   cmm_stage.io.jctq <> exe_stage.io.jctq
   cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect
@@ -319,6 +331,7 @@ trait Rift2CoreCommit{ this: Rift2CoreBase =>
 
   iwb_stage.io.xpuCsrCommit <> cmm_stage.io.xpuCsrCommit
   iwb_stage.io.fpuCsrCommit <> cmm_stage.io.fpuCsrCommit
+  iwb_stage.io.vpuCsrCommit <> cmm_stage.io.vpuCsrCommit
 
   cmm_stage.io.rtc_clock := io.rtc_clock
   if (hasDebugger) {cmm_stage.io.dm <> io.dm.get}
@@ -334,7 +347,9 @@ trait Rift2CoreCommit{ this: Rift2CoreBase =>
   if3.io.flush := cmm_stage.io.cmmRedirect.fire
   if4.io.flush := cmm_stage.io.cmmRedirect.fire
 
+  preRename_stage.io.flush := cmm_stage.io.cmmRedirect.fire
   rnm_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
+  preIssue_stage.io.flush := cmm_stage.io.cmmRedirect.fire
   iss_stage.io.flush := cmm_stage.io.cmmRedirect.fire
   exe_stage.io.flush := cmm_stage.io.cmmRedirect.fire
 
@@ -347,45 +362,20 @@ trait Rift2CoreCommit{ this: Rift2CoreBase =>
 }
 
 
-class Rift2Core(isFlatten: Boolean = false)(implicit p: Parameters) extends Rift2CoreBase(isFlatten)
-with Rift2CoreFrontend
-with Rift2CoreBackend
-with Rift2CorePredict
-with Rift2CoreBus
-with Rift2CoreMMU
-with Rift2CoreCommit
+class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false)(implicit p: Parameters) extends Rift2CoreImpBase(outer, isFlatten)
+with Rift2CoreImpFrontend
+with Rift2CoreImpBackend
+with Rift2CoreImpPredict
+with Rift2CoreImpBus
+with Rift2CoreImpMMU
+with Rift2CoreImpCommit{
+  
+}
 
 
-preRename_stage.io.vpuCsrMolloc <> iwb_stage.io.vpuCsrMolloc
-preRename_stage.io.csrfiles := cmm_stage.io.csrfiles
-preRename_stage.io.flush := cmm_stage.io.cmmRedirect.fire
 
 
-preIssue_stage.io.molloc <> iwb_stage.io.vMolloc
-preIssue_stage.io.readOp = Flipped(Vec( 32, Valid(UInt( (vParams.vlen).W )) ) )
-preIssue_stage.io.csrfiles := cmm_stage.io.csrfiles
-preIssue_stage.io.isPndVStore = Input(Bool())
-preIssue_stage.io.flush := cmm_stage.io.cmmRedirect.fire
-
- = Flipped(Decoupled(new UInt(5.W)) ) //molloc at read op
-iwb_stage.io.vReadOp = Vec( 32, Valid(UInt( (vParams.vlen).W )) )
-iwb_stage.io.diffVReg = Output(Vec(32, UInt((vParams.vlen).W)))
-
-iwb_stage.io.xCommit  = Vec(cmChn, Flipped((new Info_commit_op(32, maxRegNum))))
-iwb_stage.io.fCommit  = Vec(cmChn, Flipped((new Info_commit_op(32, maxRegNum))))
-iwb_stage.io.vCommit = Vec(cmChn, Flipped(new Vector_Commit_Bundle))
 
 
-    // val cm_op = Vec(cmChn, new Info_commit_op(32, maxRegNum))
-
-cmm_stage.io.xCommit = Vec(cmChn, new Info_commit_op(32, xRegNum))
-cmm_stage.io.fCommit = Vec(cmChn, new Info_commit_op(32, fRegNum))
-cmm_stage.io.vCommit = Vec(cmChn, new Vector_Commit_Bundle)
-
-cmm_stage.io.xpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
-cmm_stage.io.fpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
-cmm_stage.io.vpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
 
 
-iwb_stage.io.vpuCsrWriteBack = Flipped(Valid(new Exe_Port))
-iwb_stage.io.vpuCsrCommit    = Decoupled(new Exe_Port)

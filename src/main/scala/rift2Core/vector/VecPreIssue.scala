@@ -27,6 +27,8 @@ import rift2Chip._
 import org.chipsalliance.cde.config._
 
 
+
+
 abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
   class VecPreIssueIO extends Bundle{
     val enq = Vec(rnChn, Flipped(new DecoupledIO(new Dpt_info)))
@@ -51,10 +53,11 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
   val vop = Wire( Vec(3, UInt((vParams.vlen).W)) )
   val vsew = vecDptInfo.vAttach.get.vsew
 
-  val preIssueBuf = 
-    for( i <- 0 until vParams.vlen/8 ) yield { Reg(new Dpt_info) }
+  val preIssueBufDnxt = for( i <- 0 until vParams.vlen/8 ) yield { Wire(new Dpt_info) }
+  val isBufValidDnxt = for( i <- 0 until vParams.vlen/8 ) yield { Wire(Bool()) }
 
-  val isBufValid = RegInit( VecInit(Seq.fill(vParams.vlen/8){false.B}) )
+  val preIssueBuf = for( i <- 0 until vParams.vlen/8 ) yield { Reg(new Dpt_info) }
+  val isBufValid = for( i <- 0 until vParams.vlen/8 ) yield  { RegInit( false.B ) }
 
   val isBusy = isBufValid.reduce(_|_)
 
@@ -295,11 +298,18 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
             preIssueBuf(deqSel(i)) := 0.U.asTypeOf(new Dpt_info)
       }
 
+
+      io.molloc.valid := false.B
+      io.molloc.bits  := DontCare
       io.enq(i).ready := false.B
     } .otherwise{
       when( (0 until i).map{ j => io.enq(j).bits.lsuIsa.isVector | io.enq(j).bits.vecIsa.isVALU }.foldLeft(false.B)(_|_) ){
         io.deq(i).valid := false.B
         io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
+
+        io.molloc.valid := false.B
+        io.molloc.bits  := DontCare
+
         io.enq(i).ready := false.B
       } .otherwise{
         when( ~(io.enq(i).bits.lsuIsa.isVector | io.enq(i).bits.vecIsa.isVALU) ){
@@ -310,31 +320,55 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
           io.deq(i).valid := false.B
           io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
 
-          when( io.enq(i).fire ) {
+// when( io.enq(i).fire ) {
 
-            for( j <- 0 until vParams.vlen/8 ){
+          for( j <- 0 until vParams.vlen/8 ){
 
-              preIssueBuf(j) := 
-                Mux1H(Seq(
-                  io.enq(i).bits.lsuIsa.isVector -> vlsExeInfo(j),
-                  io.enq(i).bits.vecIsa.isVALU -> vpuExeInfo(j),
-                ))
-                
-              isBufValid(j) := 
-                Mux( io.enq(i).bits.lsuIsa.isVStore,
+            preIssueBufDnxt(j) := 
+              Mux1H(Seq(
+                io.enq(i).bits.lsuIsa.isVector -> vlsExeInfo(j),
+                io.enq(i).bits.vecIsa.isVALU -> vpuExeInfo(j),
+              ))
+              
+            isBufValidDnxt(j) := 
+              Mux1H(Seq(
+                (vsew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                (vsew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                (vsew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                (vsew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
+              ))      
+
+            io.molloc.bits.isMask(j) :=
+              Mux1H(Seq(
+                (vsew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, false.B, vop(0)(j) === 0.U )),
+                (vsew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, false.B, vop(0)(j) === 0.U )),
+                (vsew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, false.B, vop(0)(j) === 0.U )),
+                (vsew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, false.B, vop(0)(j) === 0.U )),
+              ))      
+          }
+          // }
+
+          io.molloc.valid := 
+            Mux( io.enq(i).bits.lsuIsa.isVStore,
                 isVSTorePnd & (vstartSel+j.U >= vstart) & (vstartSel+j.U <= vl),
                 true.B) &
+            io.enq(i).bits.isVwb &
+            Mux(io.enq(i).bits.isVM0, io.readOp(idx(0)).valid, true.B) &
+            Mux(io.enq(i).bits.isVS1, io.readOp(idx(1)).valid, true.B) &
+            Mux(io.enq(i).bits.isVS2, io.readOp(idx(2)).valid, true.B) &
+            Mux(io.enq(i).bits.isVS3, io.readOp(idx(3)).valid, true.B)
 
-                Mux1H(Seq(
-                  (vsew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                  (vsew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                  (vsew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                  (vsew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                ))                
+          io.molloc.bits.idx    := io.enq(i).bits.param.rd0
+          io.molloc.bits.vsew   := vsew(1,0)
+
+          io.enq(i).ready := io.molloc.fire
+
+          when(  io.enq(i).fire ){
+            for( j <- 0 until vParams.vlen/8 ){
+              preIssueBuf(j) := preIssueBufDnxt(j)            
+              isBufValid(j)  := isBufValidDnxt(j)
             }
           }
-
-          io.enq(i).ready := true.B
         }
       }
     }

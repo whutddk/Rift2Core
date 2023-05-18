@@ -129,7 +129,7 @@ trait DptBoard{ this: DptBase =>
         bufOperator(entrySel(i))(0) := 0.U
       } .elsewhen(io.dptReq(i).bits.isVM0) {
         isOpReady (entrySel(i))(0) := true.B
-        bufOperator(entrySel(i))(0) := io.dptReq(i).bits.vAttach.vop0
+        bufOperator(entrySel(i))(0) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop0} else {0.U})
       } .otherwise {
         isOpReady (entrySel(i))(0) := false.B
       }
@@ -138,7 +138,7 @@ trait DptBoard{ this: DptBase =>
         bufOperator(entrySel(i))(1) := 0.U
       } .elsewhen(io.dptReq(i).bits.isVS1) {
         isOpReady (entrySel(i))(1) := true.B
-        bufOperator(entrySel(i))(1) := io.dptReq(i).bits.vAttach.vop1
+        bufOperator(entrySel(i))(1) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop1} else {0.U})
       } .otherwise {
         isOpReady (entrySel(i))(1) := false.B
       }
@@ -147,7 +147,7 @@ trait DptBoard{ this: DptBase =>
         bufOperator(entrySel(i))(2) := 0.U
       } .elsewhen(io.dptReq(i).bits.isVS2) {
         isOpReady (entrySel(i))(2) := true.B
-        bufOperator(entrySel(i))(2) := io.dptReq(i).bits.vAttach.vop2
+        bufOperator(entrySel(i))(2) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop2} else {0.U})
       } .otherwise{
         isOpReady (entrySel(i))(2) := false.B
       }
@@ -156,7 +156,7 @@ trait DptBoard{ this: DptBase =>
         bufOperator(entrySel(i))(3) := 0.U
       } .elsewhen(io.dptReq(i).bits.isVS3) {
         isOpReady (entrySel(i))(3) := true.B
-        bufOperator(entrySel(i))(3) := io.dptReq(i).bits.vAttach.vop3
+        bufOperator(entrySel(i))(3) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop1} else {0.U})
       } .otherwise {
         isOpReady (entrySel(i))(3) := false.B
       }
@@ -508,37 +508,37 @@ trait DptReadFOp { this: DptAgeMatrix =>
 
 }
 
-trait DptReadVOp { this: DptAgeMatrix =>
+// trait DptReadVOp { this: DptAgeMatrix =>
 
-  /** Whether this vs can request operator reading */
-  val canVOpReq = Wire( Vec( dptEntry,Bool() ))
+//   /** Whether this vs can request operator reading */
+//   val canVOpReq = Wire( Vec( dptEntry,Bool() ))
   
-  for( i <- 0 until dptEntry ) {
-    canVOpReq(i) := isBufVop(i)(0) | isBufVop(i)(1) | isBufVop(i)(2) | isBufVop(i)(3)   
-  }
+//   for( i <- 0 until dptEntry ) {
+//     canVOpReq(i) := isBufVop(i)(0) | isBufVop(i)(1) | isBufVop(i)(2) | isBufVop(i)(3)   
+//   }
 
-  /** Who is the highest priority to read operator in each dpt Entry */
-  val selMatrixReadVOp   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) ) )
-  val maskCondSelReadVOp = Wire( Vec( dptEntry, Bool() ) )
+//   /** Who is the highest priority to read operator in each dpt Entry */
+//   val selMatrixReadVOp   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) ) )
+//   val maskCondSelReadVOp = Wire( Vec( dptEntry, Bool() ) )
 
-  for ( i <- 0 until dptEntry ){
-    maskCondSelReadVOp(i) := ~bufValid(i) | ~canVOpReq(i)
-  }
+//   for ( i <- 0 until dptEntry ){
+//     maskCondSelReadVOp(i) := ~bufValid(i) | ~canVOpReq(i)
+//   }
 
-  selMatrixReadVOp := MatrixMask( ageMatrixPostR, maskCondSelReadVOp )
+//   selMatrixReadVOp := MatrixMask( ageMatrixPostR, maskCondSelReadVOp )
 
-  assert(
-    selMatrixReadVOp.forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B)} ) |
-    PopCount( selMatrixReadVOp.map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
-  )
+//   assert(
+//     selMatrixReadVOp.forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B)} ) |
+//     PopCount( selMatrixReadVOp.map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
+//   )
 
-  // val isReadVOpNoneReq = Wire( Bool())
-  val selReadVOpEntry = Wire( UInt((log2Ceil(dptEntry)).W) )
-
-
+//   // val isReadVOpNoneReq = Wire( Bool())
+//   val selReadVOpEntry = Wire( UInt((log2Ceil(dptEntry)).W) )
 
 
-}
+
+
+// }
 
 abstract class IssueBase()(implicit p: Parameters) extends DptAgeMatrix
 with DptReadIOp
@@ -605,15 +605,15 @@ with IssLoadFOp{
   val postBufOperator = Wire( Vec( dptEntry, Vec(4, UInt(vParams.vlen.W))) )
 
   for( i <- 0 until dptEntry ){
-    postIsOpReady(i)(0)   := MuxCase( isOpReady(i)(0),                                                                                                                                                                                                            io.vrgRsp.map{x => { ( isBufVop(i)(0) & x.valid & (x.bits.phy === bufReqNum(i)(0))) -> true.B }})
-    postIsOpReady(i)(1)   := MuxCase( isOpReady(i)(1),    io.irgRsp.map{x => { ( isBufXop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }} ++ io.frgRsp.map{x => { ( isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }})
-    postIsOpReady(i)(2)   := MuxCase( isOpReady(i)(2),    io.irgRsp.map{x => { ( isBufXop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }} ++ io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }})
-    postIsOpReady(i)(3)   := MuxCase( isOpReady(i)(3),                                                                                                        io.frgRsp.map{x => { ( isBufFop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> true.B }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> true.B }})
+    postIsOpReady(i)(0)   := isOpReady(i)(0)
+    postIsOpReady(i)(1)   := MuxCase( isOpReady(i)(1),    io.irgRsp.map{x => { ( isBufXop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }} ++ io.frgRsp.map{x => { ( isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }} )
+    postIsOpReady(i)(2)   := MuxCase( isOpReady(i)(2),    io.irgRsp.map{x => { ( isBufXop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }} ++ io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }} )
+    postIsOpReady(i)(3)   := MuxCase( isOpReady(i)(3),                                                                                                        io.frgRsp.map{x => { ( isBufFop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> true.B }} )
 
-    postBufOperator(i)(0) := MuxCase( bufOperator(i)(0) ,                                                                                                                                                                                                               io.vrgRsp.map{x => { ( isBufVop(i)(0) & x.valid & (x.bits.phy === bufReqNum(i)(0))) -> x.bits.op }})
-    postBufOperator(i)(1) := MuxCase( bufOperator(i)(1) , io.irgRsp.map{x => { ( isBufXop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }})
-    postBufOperator(i)(2) := MuxCase( bufOperator(i)(2) , io.irgRsp.map{x => { ( isBufXop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }})
-    postBufOperator(i)(3) := MuxCase( bufOperator(i)(3) ,                                                                                                        io.frgRsp.map{x => { ( isBufFop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> x.bits.op }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> x.bits.op }})
+    postBufOperator(i)(0) := bufOperator(i)(0)
+    postBufOperator(i)(1) := MuxCase( bufOperator(i)(1) , io.irgRsp.map{x => { ( isBufXop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }} )
+    postBufOperator(i)(2) := MuxCase( bufOperator(i)(2) , io.irgRsp.map{x => { ( isBufXop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} )
+    postBufOperator(i)(3) := MuxCase( bufOperator(i)(3) ,                                                                                                        io.frgRsp.map{x => { ( isBufFop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> x.bits.op }} )
   }
 
 }
@@ -981,60 +981,62 @@ trait IssSelLsu{ this: IssueSel =>
 
   for( i <- 0 until dptEntry ) {
 
-    lsuIssInfo(i).fun := bufInfo(idx).lsuIsa
+    lsuIssInfo(i).fun := bufInfo(i).lsuIsa
 
-    lsuIssInfo(i).param.dat.op0 := Mux( bufInfo(idx).lsuIsa.is_vls, vecBufOperator(0), 0.U )
+    lsuIssInfo(i).param.dat.op0 := Mux( bufInfo(i).lsuIsa.is_vls, vecBufOperator(0), 0.U )
 
     lsuIssInfo(i).param.dat.op1 := 
       Mux1H(Seq(
-        (bufInfo(idx).lsuIsa.is_xls  | bufInfo(idx).lsuIsa.is_fls)  -> (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(),
-        (bufInfo(idx).lsuIsa.is_lrsc | bufInfo(idx).lsuIsa.is_amo)  -> postBufOperator(idx)(1),
-        (bufInfo(idx).lsuIsa.isUnitStride )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset,
-        (bufInfo(idx).lsuIsa.isStridde    )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset + postBufOperator(idx)(2) * i.U,
-        (bufInfo(idx).lsuIsa.isIndex      )                          -> postBufOperator(idx)(1).asSInt + bufInfo(idx).vAttach.voffset + postBufOperator(idx)(2),//vop2
-                                                                      // -> postBufOperator(idx)(1).asSInt + adjAddr( i, nf = "b000".U, vWidth = "b000".U ) + ((ori.vAttach.get.nf + 1.U) << log2Ceil(vParams.vlen/8))
-      ))
+        (bufInfo(i).lsuIsa.is_xls  | bufInfo(i).lsuIsa.is_fls)  -> (postBufOperator(i)(1).asSInt + bufInfo(i).param.imm.asSInt()).asUInt(),
+        (bufInfo(i).lsuIsa.is_lrsc | bufInfo(i).lsuIsa.is_amo)  -> postBufOperator(i)(1),
+      ) ++ (if(hasVector) { Seq(
+              (bufInfo(i).lsuIsa.isUnitStride ) -> postBufOperator(i)(1).asSInt + bufInfo(i).vAttach.get.voffset,
+              (bufInfo(i).lsuIsa.isStridde    ) -> postBufOperator(i)(1).asSInt + bufInfo(i).vAttach.get.voffset + postBufOperator(i)(2) * i.U,
+              (bufInfo(i).lsuIsa.isIndex      ) -> postBufOperator(i)(1).asSInt + bufInfo(i).vAttach.get.voffset + postBufOperator(i)(2),//vop2
+      )} else { Seq() })
+                                                                      // -> postBufOperator(i)(1).asSInt + adjAddr( i, nf = "b000".U, vWidth = "b000".U ) + ((ori.vAttach.get.nf + 1.U) << log2Ceil(vParams.vlen/8))
+      )
 
 
-      // MuxCase( (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(), Seq(
-      //   (bufInfo(idx).lsuIsa.is_lrsc | bufInfo(idx).lsuIsa.is_amo) -> postBufOperator(idx)(1),
+      // MuxCase( (postBufOperator(i)(1).asSInt + bufInfo(i).param.imm.asSInt()).asUInt(), Seq(
+      //   (bufInfo(i).lsuIsa.is_lrsc | bufInfo(i).lsuIsa.is_amo) -> postBufOperator(i)(1),
       // ))
 
     lsuIssInfo(i).param.dat.op2 :=
       Mux1H(Seq(
-        bufInfo(idx).lsuIsa.isXStore     -> postBufOperator(idx)(2),
-        bufInfo(idx).lsuIsa.isFStore     -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
-        bufInfo(idx).lsuIsa.isVStore     -> postBufOperator(idx)(3),
+        bufInfo(i).lsuIsa.isXStore     -> postBufOperator(i)(2),
+        bufInfo(i).lsuIsa.isFStore     -> ieee(unbox(postBufOperator(i)(2), 1.U, None), t = FType.D),
+        bufInfo(i).lsuIsa.isVStore     -> postBufOperator(i)(3),
       ))
-      // MuxCase( postBufOperator(idx)(2), Seq(
-      //   bufInfo(idx).lsuIsa.isFStore    -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
-      //   bufInfo(idx).lsuIsa.isVConstant -> //postBufOperator(idx)(2) *    ,//rs2
-      //   bufInfo(idx).lsuIsa.isVIndex    -> //bufInfo(idx).vAttach.vop2 + ,//vs2
+      // MuxCase( postBufOperator(i)(2), Seq(
+      //   bufInfo(i).lsuIsa.isFStore    -> ieee(unbox(postBufOperator(i)(2), 1.U, None), t = FType.D),
+      //   bufInfo(i).lsuIsa.isVConstant -> //postBufOperator(i)(2) *    ,//rs2
+      //   bufInfo(i).lsuIsa.isVIndex    -> //bufInfo(i).vAttach.vop2 + ,//vs2
       // ))
 
     lsuIssInfo(i).param.dat.op3 := DontCare
-      // Mux( bufInfo(idx).lsuIsa.isVStore,  , 0.U ) //vs3
+      // Mux( bufInfo(i).lsuIsa.isVStore,  , 0.U ) //vs3
 
 
-    lsuIssInfo(i).param.rd0 := bufInfo(idx).phy.rd0
+    lsuIssInfo(i).param.rd0 := bufInfo(i).phy.rd0
 
 
     if( hasVector ){
-      lsuIssInfo(i).vAttach.get.vWidth   := bufInfo(idx).param.vWidth
-      lsuIssInfo(i).vAttach.get.nf       := bufInfo(idx).vAttach.get.nf
-      lsuIssInfo(i).vAttach.get.vm       := bufInfo(idx).vAttach.get.vm
+      lsuIssInfo(i).vAttach.get.vWidth   := bufInfo(i).param.vWidth
+      lsuIssInfo(i).vAttach.get.nf       := bufInfo(i).vAttach.get.nf
+      lsuIssInfo(i).vAttach.get.vm       := bufInfo(i).vAttach.get.vm
       lsuIssInfo(i).vAttach.get.bufIdx := DontCare
       lsuIssInfo(i).vAttach.get.eleIdx := DontCare
-      lsuIssInfo(i).vAttach.get.lmulSel   := bufInfo(idx).vAttach.get.lmulSel
-      lsuIssInfo(i).vAttach.get.nfSel     := bufInfo(idx).vAttach.get.nfSel
-      lsuIssInfo(i).vAttach.get.widenSel  := bufInfo(idx).vAttach.get.widenSel
-      lsuIssInfo(i).vAttach.get.vstartSel := bufInfo(idx).vAttach.get.vstartSel
-      lsuIssInfo(i).vAttach.get.isLast    := bufInfo(idx).vAttach.get.isLast
+      lsuIssInfo(i).vAttach.get.lmulSel   := bufInfo(i).vAttach.get.lmulSel
+      lsuIssInfo(i).vAttach.get.nfSel     := bufInfo(i).vAttach.get.nfSel
+      lsuIssInfo(i).vAttach.get.widenSel  := bufInfo(i).vAttach.get.widenSel
+      lsuIssInfo(i).vAttach.get.vstartSel := bufInfo(i).vAttach.get.vstartSel
+      lsuIssInfo(i).vAttach.get.isLast    := bufInfo(i).vAttach.get.isLast
       lsuIssInfo(i).vAttach.get.vstart := DontCare
-      lsuIssInfo(i).vAttach.get.vtype  := bufInfo(idx).vAttach.get.vtype
+      lsuIssInfo(i).vAttach.get.vtype  := bufInfo(i).vAttach.get.vtype
       lsuIssInfo(i).vAttach.get.vl     := DontCare
-      lsuIssInfo(i).vAttach.get.nfSel   := bufInfo(idx).vAttach.get.nfSel
-      lsuIssInfo(i).vAttach.get.lmulSel := bufInfo(idx).vAttach.get.lmulSel
+      lsuIssInfo(i).vAttach.get.nfSel   := bufInfo(i).vAttach.get.nfSel
+      lsuIssInfo(i).vAttach.get.lmulSel := bufInfo(i).vAttach.get.lmulSel
     }
   }
 

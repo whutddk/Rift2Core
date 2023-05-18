@@ -399,7 +399,7 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
     deqBits.isFwb       := pipeStage1Bits.fun.isFwb
     deqBits.isVwb       := pipeStage1Bits.fun.isVwb
 
-    if(hasVector) { deqBits.vAttach.get    := pipeStage1Bits.vAttach.get }
+    // if(hasVector) { deqBits.vAttach.get    := pipeStage1Bits.vAttach.get }
 
   } .otherwise {
     deqValid := false.B
