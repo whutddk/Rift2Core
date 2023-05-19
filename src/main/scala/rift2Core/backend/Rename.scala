@@ -86,13 +86,13 @@ trait RenameMalloc { this: RenameBase =>
     io.fRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.isFwb
     io.fRename(i).req.bits.rd0 := io.rnReq(i).bits.param.raw.rd0
 
-    for ( j <- 0 until rnChn ) { assert( PopCount( Seq(io.vRename(j).req.fire, io.fRename(j).req.fire, io.xRename(j).req.fire)) <= 1.U, "Assert Failed, rename should be one-hot" ) }
+    for ( j <- 0 until rnChn ) { assert( PopCount( Seq(io.fRename(j).req.fire, io.xRename(j).req.fire)) <= 1.U, "Assert Failed, rename should be one-hot" ) }
 
     reg_phy(i).rd0 := 
       Mux1H(
         Seq(io.xRename(i).req.fire -> io.xRename(i).rsp.rd0) ++
-        ( if(fpuNum > 0) { Seq(io.fRename(i).req.fire -> io.fRename(i).rsp.rd0) }                              else { Seq() } ) ++
-        ( if(hasVector)  { Seq(io.rnReq(i).fire & io.rnReq(i).bits.is_vwb -> io.rnReq(i).bits.param.raw.rd0) } else { Seq() } ) //vector dont need to rename
+        ( if(fpuNum > 0) { Seq( io.fRename(i).req.fire -> io.fRename(i).rsp.rd0) }                              else { Seq() } ) ++
+        ( if(hasVector)  { Seq((io.rnReq(i).fire & io.rnReq(i).bits.isVwb ) -> io.rnReq(i).bits.param.raw.rd0) } else { Seq() } ) //vector dont need to rename
       )
   }
 }
@@ -111,7 +111,7 @@ trait WriteBackLookup {  this: RenameBase =>
       io.fLookup(i).req.vm0 := DontCare
       io.fLookup(i).req.rs1 := io.rnReq(i).bits.param.raw.rs1
       io.fLookup(i).req.rs2 := io.rnReq(i).bits.param.raw.rs2
-      io.fLookup(i).req.rs3 := io.rnReq(i).bits.param.raw.rs3      
+      io.fLookup(i).req.rs3 := io.rnReq(i).bits.param.raw.rs3
     } else {
       io.fLookup(i).req.vm0 := DontCare
       io.fLookup(i).req.rs1 := 0.U
@@ -179,7 +179,7 @@ trait LoadRob{ this: RenameBase =>
     reOrder_fifo_i.io.enq(i).bits.isVLoad  := io.rnReq(i).bits.lsuIsa.isVLoad
     reOrder_fifo_i.io.enq(i).bits.isVStore := io.rnReq(i).bits.lsuIsa.isVStore
     reOrder_fifo_i.io.enq(i).bits.isFoF    := io.rnReq(i).bits.lsuIsa.vleNff
-    reOrder_fifo_i.io.enq(i).bits.vlCnt    := io.rnReq(i).bits.vAttach.vlCnt
+    reOrder_fifo_i.io.enq(i).bits.vlCnt    := io.rnReq(i).bits.vAttach.get.vlCnt
 
 
   }

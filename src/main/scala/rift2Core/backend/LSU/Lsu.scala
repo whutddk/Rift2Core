@@ -31,18 +31,18 @@ import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 import chisel3.experimental.dataview._
 
-class LSU_WriteBack_Bundle(dw: Int)(implicit p: Parameters) extends WriteBack_info(dw = 64){
-  val vAttach = if(hasVector) {Some(new VDcache_Attach_Bundle)} else {None}
-}
+// class LSU_WriteBack_Bundle(dw: Int)(implicit p: Parameters) extends WriteBack_info(dw = 64){
+//   val vAttach = if(hasVector) {Some(new VDcache_Attach_Bundle)} else {None}
+// }
 
 abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends DcacheModule with HasFPUParameters {
   val dEdge = edge
 
   class LsuIO extends Bundle{
     val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_iwb = new DecoupledIO(new LSU_WriteBack_Bundle(dw=64))
+    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
     val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
-    val lsu_exe_vwb = Vec( 33, Vec(8, (new Valid(new Vector_WriteBack_Bundle))))
+    val lsu_exe_vwb = Valid(new Vector_WriteBack_Bundle)
 
             // val lsu_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))
 
@@ -115,7 +115,7 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     * @param in Dcache_Deq_Bundle
     * @return WriteBack_info 
     */
-  val lu_wb_fifo = Module( new Queue( new LSU_WriteBack_Bundle(dw=64), 1, false, true ) )
+  val lu_wb_fifo = Module( new Queue( new Vector_WriteBack_Bundle, 1, false, true ) )
 
   val flu_wb_fifo = Module( new Queue( new WriteBack_info(dw=65), 1, false, true ) )
 
@@ -123,19 +123,19 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     * @param in Lsu_iss_info
     * @return WriteBack_info
     */
-  val su_wb_fifo = Module( new Queue( new LSU_WriteBack_Bundle(dw=64), 1, false, true ) )
-  val fe_wb_fifo = Module( new Queue( new LSU_WriteBack_Bundle(dw=64), 1, false, true ) )
+  val su_wb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, false, true ) )
+  val fe_wb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, false, true ) )
 
-  val vsu_wb_fifo = Module( new Queue( new LSU_WriteBack_Bundle(dw=64), 1, false, true ) )
-  val vlu_wb_fifo = Module( new Queue( new LSU_WriteBack_Bundle(dw=64), 1, false, true ) )
+  val vsu_wb_fifo = Module( new Queue( new Vector_WriteBack_Bundle, 1, false, true ) )
+  val vlu_wb_fifo = Module( new Queue( new Vector_WriteBack_Bundle, 1, false, true ) )
 
   /** merge lu-writeback and su-writeback
     * @param in WriteBack_info
     * @return WriteBack_info
     */
-  val irtn_arb = Module(new Arbiter( new LSU_WriteBack_Bundle(dw=64), 4))
+  val irtn_arb = Module(new Arbiter( new WriteBack_info(dw=64), 4))
   val frtn_arb = Module(new Arbiter( new WriteBack_info(dw=65), 2))
-  val vrtn_arb = Module(new Arbiter( new WriteBack_info(dw=64), 3))
+  val vrtn_arb = Module(new Arbiter( new Vector_WriteBack_Bundle, 3))
 
   /** indicate the mem unit is empty by all seq-element is empty*/
   val is_empty = Wire(Bool())
@@ -161,9 +161,9 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
 
     res.chkIdx := 0.U
 
-    // if( hasVector ){
-    //   res.vAttach.get := ori.vAttach.get
-    // }
+    if( hasVector ){
+      res.vAttach.get := ori.vAttach.get
+    }
  
 
 
@@ -494,10 +494,12 @@ trait LSU_WriteBack { this: LsuBase =>
   flu_wb_fifo.io.deq <> frtn_arb.io.in(0)
   flu_wb_fifo.reset := reset.asBool | io.flush
 
-  vlu_wb_fifo.io.enq.valid := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.isFwb & ~trans_kill 
-  vlu_wb_fifo.io.enq.bits.rd0 := lu_wb_arb.io.out.bits.wb.rd0
-  vlu_wb_fifo.io.enq.bits.res := lu_wb_arb.io.out.bits.wb.res
-  vlu_wb_fifo.reset := reset.asBool | io.flush
+  vlu_wb_fifo.io.enq.valid            := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.isFwb & ~trans_kill 
+  vlu_wb_fifo.io.enq.bits.rd0         := lu_wb_arb.io.out.bits.wb.rd0
+  vlu_wb_fifo.io.enq.bits.res         := lu_wb_arb.io.out.bits.wb.res
+  vlu_wb_fifo.io.enq.bits.eleIdx      := lu_wb_arb.io.out.bits.vAttach.get.eleIdx
+  vlu_wb_fifo.io.enq.bits.isException := false.B
+  vlu_wb_fifo.reset                   := reset.asBool | io.flush
 
 
   lu_wb_arb.io.out.ready := (lu_wb_fifo.io.enq.ready & flu_wb_fifo.io.enq.ready & vlu_wb_fifo.io.enq.ready) | trans_kill
@@ -508,10 +510,12 @@ trait LSU_WriteBack { this: LsuBase =>
   su_wb_fifo.io.enq.bits.res := 0.U
   su_wb_fifo.reset := reset.asBool | io.flush
 
-  vsu_wb_fifo.io.enq.valid    := opStIO.fire & opStIO.bits.fun.isVector
-  vsu_wb_fifo.io.enq.bits.rd0 := opStIO.bits.param.rd0
-  vsu_wb_fifo.io.enq.bits.res := 0.U
-  vsu_wb_fifo.reset := reset.asBool | io.flush
+  vsu_wb_fifo.io.enq.valid            := opStIO.fire & opStIO.bits.fun.isVector
+  vsu_wb_fifo.io.enq.bits.rd0         := opStIO.bits.param.rd0 //32.U
+  vsu_wb_fifo.io.enq.bits.res         := 0.U
+  vsu_wb_fifo.io.enq.bits.eleIdx      := opStIO.bits.vAttach.get.eleIdx
+  vsu_wb_fifo.io.enq.bits.isException := false.B
+  vsu_wb_fifo.reset                   := reset.asBool | io.flush
 
   opStIO.ready := su_wb_fifo.io.enq.ready & vsu_wb_fifo.io.enq.ready & stQueue.io.enq.ready
   opAmIO.ready := stQueue.io.enq.ready
@@ -570,6 +574,7 @@ trait LSU_Fault { this: LsuBase =>
 
   vrtn_arb.io.in(2).bits.rd0 := io.lsu_iss_exe.bits.param.rd0
   vrtn_arb.io.in(2).bits.res := 0.U
+  vrtn_arb.io.in(2).bits.eleIdx := io.lsu_iss_exe.bits.vAttach.get.eleIdx
   vrtn_arb.io.in(2).bits.isException := true.B
 
   val excReg = RegInit(0.U.asTypeOf(new Info_lsu_cmm))

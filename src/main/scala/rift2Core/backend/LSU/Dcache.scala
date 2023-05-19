@@ -69,7 +69,7 @@ class Dcache_Enq_Bundle(implicit p: Parameters) extends Dcache_ScoreBoard_Bundle
   val fun   = new Cache_op
   val rd    = new RD_PHY
 
-  // val vAttach = if(hasVector) {Some(new VDcache_Attach_Bundle)} else {None}
+  val vAttach = if(hasVector) {Some(new VLsu_Attach_Bundle)} else {None}
 
 
   def tagSel = paddr(plen-1,plen-tag_w)
@@ -83,10 +83,10 @@ class Dcache_Deq_Bundle(implicit p: Parameters) extends Dcache_ScoreBoard_Bundle
   val wb = new WriteBack_info(dw=64)
   val is_load_amo = Bool()
 
-  // val vAttach = if(hasVector) {Some(new VDcache_Attach_Bundle)} else {None}
+  val vAttach = if(hasVector) {Some(new VLsu_Attach_Bundle)} else {None}
 
-  // val is_flw = Bool()
-  // val is_fld = Bool()
+  val is_flw = Bool()
+  val is_fld = Bool()
 
   val isXwb = Bool()
   val isFwb = Bool()
@@ -154,7 +154,7 @@ abstract class DcacheBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) exte
     res.rd := 0.U.asTypeOf(new RD_PHY)
     res.chkIdx := 0.U
 
-    // if(hasVector){ res.vAttach.get := DontCare }
+    if(hasVector){ res.vAttach.get := DontCare }
 
     res
   }
@@ -172,7 +172,7 @@ abstract class DcacheBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) exte
     res.rd := 0.U.asTypeOf(new RD_PHY)
     res.chkIdx := 0.U
 
-    // if(hasVector){ res.vAttach.get := DontCare }
+    if(hasVector){ res.vAttach.get := DontCare }
 
     res
   }

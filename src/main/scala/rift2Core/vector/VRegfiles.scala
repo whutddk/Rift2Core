@@ -39,30 +39,29 @@ class Vector_Commit_Bundle()(implicit p: Parameters) extends RiftBundle{
 
   val isWroteback  = Input(Bool())
   val isException  = Input(Bool())
-  val excepitonIdx = Input(UInt((log2Ceil(vParams.vlen/8).W)))
+  val exceptionIdx = Input(UInt((log2Ceil(vParams.vlen/8).W)))
 }
 
-class Vector_WriteBack_Bundle()(implicit p: Parameters) extends RiftBundle {
-  val res = UInt(8.W)
-  // val isMask = Bool()
+class Vector_WriteBack_Bundle()(implicit p: Parameters) extends WriteBack_info(dw = 8) {
+  val eleIdx = UInt( (log2Ceil(vParams.vlen/8)).W )
+
   val isException = Bool()
 }
 
 
-abstract class VRegfilesBase()(implicit p: Parameters) extends RiftModule {
+abstract class VRegFilesBase()(implicit p: Parameters) extends RiftModule {
 
   class VRegFilesIO extends Bundle{
     val molloc = Flipped(Decoupled(new Vector_Molloc_Bundle ) ) //molloc at read op
     val readOp = Vec( 32, Valid(UInt( (vParams.vlen).W )) )
 
-    val exeWriteBack  = Vec( 33, Vec( vParams.vlen/8, (new Valid(new Vector_WriteBack_Bundle)) ))
-    val maskWriteBack = Vec( 33, Vec( vParams.vlen/8, Bool() ))
+    val writeBack  = Valid(new Vector_WriteBack_Bundle)
 
-    val commit = Vec(cmm, Flipped(new Vector_Commit_Bundle))
+    val commit = Vec(cmChn, Flipped(new Vector_Commit_Bundle))
     val diffReg = Output(Vec(32, UInt((vParams.vlen/8).W)))
   }
 
-  val io: RegFilesIO = IO( new VRegFilesIO)
+  val io: VRegFilesIO = IO( new VRegFilesIO)
 
   val wbFiles =
     for( _ <- 0 until 33 ) yield {
@@ -107,7 +106,7 @@ abstract class VRegfilesBase()(implicit p: Parameters) extends RiftModule {
     }
 }
 
-trait VRegMolloc{ this: VRegfilesBase =>
+trait VRegMolloc{ this: VRegFilesBase =>
   io.molloc.ready := 
     Mux1H( ( 0 until 32 ).map{ i => (i.U === io.molloc.bits) -> ~(isMolloced(i)) } )
 
@@ -147,7 +146,7 @@ trait VRegMolloc{ this: VRegfilesBase =>
   }
 }
 
-trait VRegReadOp{ this: VRegfilesBase =>
+trait VRegReadOp{ this: VRegFilesBase =>
   for( i <- 0 until 32 ){
     io.readOp(i).valid := ~isMolloced(i)
       // (~isMolloced(i)) |
@@ -165,27 +164,29 @@ trait VRegReadOp{ this: VRegfilesBase =>
   }
 }
 
-trait VRegWriteBack{ this: VRegfilesBase =>
+trait VRegWriteBack{ this: VRegFilesBase =>
 
   // for( chn <- 0 until wbc ) {
-    for( i <- 0 until 33 ) {
-      for( j <- 0 until vParams.vlen/8 ) {
-        when( io.exeWriteBack(i)(j).fire ){
 
-          assert( isMolloced(i) )
-          when( vsew(i) === "b00".U ) {assert( j.U < (vParams.vlen/8 ).U, "Assert Failed, invalid VWriteback" )}
-          when( vsew(i) === "b01".U ) { assert( j.U < (vParams.vlen/16).U, "Assert Failed, invalid VWriteback" ) }
-          when( vsew(i) === "b10".U ) { assert( j.U < (vParams.vlen/32).U, "Assert Failed, invalid VWriteback" ) }
-          when( vsew(i) === "b11".U ) { assert( j.U < (vParams.vlen/64).U, "Assert Failed, invalid VWriteback" ) }
 
-          wbFiles(i)(j) := io.exeWriteBack(i)(j).bits.res
+  when( io.writeBack.fire ){
+    val i = io.writeBack.bits.rd0
+    val j = io.writeBack.bits.eleIdx
 
-          isException(i)(j) := io.exeWriteBack(i)(j).bits.isException
-          isWroteBack(i)(j) := true.B
+    assert( isMolloced(i) )
+    when( vsew(i) === "b00".U ) {assert( j.U < (vParams.vlen/8 ).U, "Assert Failed, invalid VWriteback" )}
+    when( vsew(i) === "b01".U ) { assert( j.U < (vParams.vlen/16).U, "Assert Failed, invalid VWriteback" ) }
+    when( vsew(i) === "b10".U ) { assert( j.U < (vParams.vlen/32).U, "Assert Failed, invalid VWriteback" ) }
+    when( vsew(i) === "b11".U ) { assert( j.U < (vParams.vlen/64).U, "Assert Failed, invalid VWriteback" ) }
 
-        }
-      }
-    }
+    wbFiles(i)(j) := io.writeBack.bits.res
+
+    isException(i)(j) := io.writeBack.bits.isException
+    isWroteBack(i)(j) := true.B
+
+  }
+
+
   // }
 
 }
@@ -196,12 +197,12 @@ trait VRegWriteBack{ this: VRegfilesBase =>
 /**
   * In order regfile commit donot need override
   */
-trait VRegCommit{ this: VRegfilesBase =>
-  for ( i <- 0 until cmm ){ 
+trait VRegCommit{ this: VRegFilesBase =>
+  for ( i <- 0 until cmChn ){ 
     val idx = io.commit(i).phy
     io.commit(i).isWroteback  := isWroteBack(idx).reduce(_&_)
     io.commit(i).isException  := isException(idx).reduce(_|_)
-    io.commit(i).excepitonIdx := isException(idx).indexWhere( (x: Bool) => (x === true.B) )
+    io.commit(i).exceptionIdx := isException(idx).indexWhere( (x: Bool) => (x === true.B) )
 
     when( io.commit(i).isAbort ){
       isMolloced  := 0.U.asTypeOf(isMolloced)
@@ -243,7 +244,7 @@ trait VRegCommit{ this: VRegfilesBase =>
   }
 }
 
-class VRegfiles()(implicit p: Parameters) extends VRegfilesBase
+class VRegFiles()(implicit p: Parameters) extends VRegFilesBase
 with VRegMolloc
 with VRegReadOp
 with VRegWriteBack
@@ -253,7 +254,7 @@ with VRegCommit{
 
 
 
-class FakeRegFiles()(implicit p: Parameters) extends VRegfilesBase{
+class FakeVRegFiles()(implicit p: Parameters) extends VRegFilesBase{
   io.molloc.ready := true.B
 
   for( i <- 0 until 32 ) {
@@ -261,10 +262,10 @@ class FakeRegFiles()(implicit p: Parameters) extends VRegfilesBase{
     io.readOp(i).bits  := 0.U
   }
 
-  for( i<- 0 until cmm ){
+  for( i<- 0 until cmChn ){
     io.commit(i).isWroteBack := true.B
     io.commit(i).isException := false.B
-    io.commit(i).excepitonIdx := 0.U
+    io.commit(i).exceptionIdx := 0.U
   }
 
   io.diffReg := 0.U.asTypeOf(io.diffReg)

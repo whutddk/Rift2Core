@@ -346,9 +346,10 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
                 (vsew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.vm === true.B, false.B, vop(0)(j) === 0.U )),
               ))      
           }
-          // }
+// }
 
           io.molloc.valid := 
+            io.enq(i).valid &
             Mux( io.enq(i).bits.lsuIsa.isVStore,
                 isVSTorePnd & (vstartSel+j.U >= vstart) & (vstartSel+j.U <= vl),
                 true.B) &
@@ -361,9 +362,13 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
           io.molloc.bits.idx    := io.enq(i).bits.param.rd0
           io.molloc.bits.vsew   := vsew(1,0)
 
-          io.enq(i).ready := io.molloc.fire
+          io.enq(i).ready := io.molloc.ready
 
-          when(  io.enq(i).fire ){
+          assert( io.enq(i).fire === io.molloc.fire )
+
+          when( io.flush ){
+            isBufValid(j) := false.B
+          } .elsewhen(  io.enq(i).fire ){
             for( j <- 0 until vParams.vlen/8 ){
               preIssueBuf(j) := preIssueBufDnxt(j)            
               isBufValid(j)  := isBufValidDnxt(j)

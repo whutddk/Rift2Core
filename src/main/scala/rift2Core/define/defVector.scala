@@ -38,8 +38,12 @@ trait Vec_PreRename_Bundle{ this: RiftBundle =>
 
 }
 
-trait Vec_PreIssue_Bundle{ this: RiftBundle =>
+trait Vec_element_Index{ this: RiftBundle =>
   val eleIdx = UInt(log2Ceil(vParams.vlen/8).W  )
+}
+
+trait Vec_PreIssue_Bundle{ this: RiftBundle =>
+
   val vop0 = Bool()
   val vop1 = UInt(64.W)
   val vop2 = UInt(64.W)
@@ -48,9 +52,13 @@ trait Vec_PreIssue_Bundle{ this: RiftBundle =>
 
 class VRename_Attach_Bundle(implicit p: Parameters) extends RiftBundle
 with Vec_PreRename_Bundle
-with Vec_PreIssue_Bundle{
+with Vec_PreIssue_Bundle
+with Vec_element_Index{
 
 }
+
+class VLsu_Attach_Bundle(implicit p: Parameters) extends RiftBundle
+with Vec_element_Index
 
 
 // class VDcache_Attach_Bundle(implicit p: Parameters) extends VRename_Attach_Bundle{

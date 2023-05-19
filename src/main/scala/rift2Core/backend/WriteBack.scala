@@ -62,7 +62,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     val frgRsp =  Vec( opChn, Valid(new ReadOp_Rsp_Bundle(65) ))
               // val vrgRsp =  Vec( vParams.opChn, Valid(new ReadOp_Rsp_Bundle(vParams.vlen) ))
 
-    val vMolloc = Flipped(Decoupled(new UInt(5.W)) ) //molloc at read op
+    val vMolloc = Flipped(Decoupled(new Vector_Molloc_Bundle ) ) //molloc at read op
     val vReadOp = Vec( 32, Valid(UInt( (vParams.vlen).W )) )
 
 
@@ -84,8 +84,8 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
 
     
-    val XCommit = Vec(cmChn, Flipped((new Info_commit_op(32, xRegNum))))
-    val FCommit = Vec(cmChn, Flipped((new Info_commit_op(32, fRegNum))))
+    val xCommit = Vec(cmChn, Flipped((new Info_commit_op(32, xRegNum))))
+    val fCommit = Vec(cmChn, Flipped((new Info_commit_op(32, fRegNum))))
     val vCommit = Vec(cmChn, Flipped(new Vector_Commit_Bundle))
                 // val cCommit = Vec(cmChn, Flipped(new SeqReg_Commit_Bundle(cRegNum)))
 
@@ -112,7 +112,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
   val iReg = Module(new XRegFiles(dw = 64, dp = xRegNum, rnChn, opChn, wbChn, cmChn))
   val fReg = if( fpuNum > 0 ) { Module(new FRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn)) } else {  Module(new FakeRegFiles(dw = 65, dp = fRegNum, rnChn, opChn, 2, cmChn) ) }
-  val vReg = if( hasVector )  { Module(new VRegFiles) } else {  Module(new FakeRegFiles ) }
+  val vReg = if( hasVector )  { Module(new VRegFiles) } else {  Module(new FakeVRegFiles ) }
   val cReg = Module(new CsrScoreBoard)
 
 
@@ -169,7 +169,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
 
   // }
 
-  cReg.io.isAbort := ( 0 until cmChn ).map{ i => io.commit(i).is_abort | io.commit(i).is_MisPredict }.foldLeft(false.B)(_|_)
+  cReg.io.isAbort := ( 0 until cmChn ).map{ i => io.xCommit(i).is_abort | io.xCommit(i).is_MisPredict }.foldLeft(false.B)(_|_)
 
   iReg.io.diffReg <> io.diffXReg
   fReg.io.diffReg <> io.diffFReg
@@ -212,7 +212,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
   fReg.io.exe_writeBack(1) <> io.fpu_fWriteBack(0); require( fpuNum <= 1 )
 
 
-  vReg.io.exe_writeBack(0) <> io.mem_vWriteBack
+  vReg.io.writeBack <> io.mem_vWriteBack
 
               // cReg.io.writeBack <> io.cWriteBack
 

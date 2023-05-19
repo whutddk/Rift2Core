@@ -264,7 +264,7 @@ trait CommitComb{ this: CommitState =>
 
 
     cmm_state(i).isVException := io.rod(i).bits.isVwb & io.vCommit(i).isException
-    cmm_state(i).excepitonIdx := io.vCommit(i).excepitonIdx
+    cmm_state(i).exceptionIdx := io.vCommit(i).exceptionIdx
   }}
 
 }
@@ -631,12 +631,12 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   val exint = new ExInt_Bundle
 
   val isVException = Bool()
-  val excepitonIdx = UInt((log2Ceil(vParams.vlen/8).W))
+  val exceptionIdx = UInt((log2Ceil(vParams.vlen/8).W))
 
   def is_load_accessFault: Bool = {
     val is_load_accessFault = 
       lsu_cmm.is_access_fault & (
-        (rod.is_lu & is_wb) | (rod.isVLoad & isVException & ~(rod.isFoF & excepitonIdx =/= 0.U) )
+        (rod.is_lu & is_wb) | (rod.isVLoad & isVException & ~(rod.isFoF & exceptionIdx =/= 0.U) )
       )
 
     return is_load_accessFault
@@ -654,7 +654,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   def is_load_pagingFault: Bool = {
     val is_load_pagingFault =
       lsu_cmm.is_paging_fault & (
-        ( rod.is_lu & is_wb ) | (rod.isVLoad & isVException & ~(rod.isFoF & excepitonIdx =/= 0.U) )
+        ( rod.is_lu & is_wb ) | (rod.isVLoad & isVException & ~(rod.isFoF & exceptionIdx =/= 0.U) )
       )
 
     return is_load_pagingFault
@@ -672,7 +672,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   def is_load_misAlign: Bool = {
     val is_load_misAlign =
       lsu_cmm.is_misAlign & (
-        ( rod.is_lu & is_wb ) | (rod.isVLoad & isVException & ~(rod.isFoF & excepitonIdx =/= 0.U) )
+        ( rod.is_lu & is_wb ) | (rod.isVLoad & isVException & ~(rod.isFoF & exceptionIdx =/= 0.U) )
       )
 
     return is_load_misAlign

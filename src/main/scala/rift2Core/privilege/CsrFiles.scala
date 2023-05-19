@@ -1437,7 +1437,7 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
       vstart := 
         Mux(
           in.isException, vstart + in.exceptionIdx,
-          Mux( (vstart + in.rod.vlCnt) === in.csrfiles.vl, 0.U, vstart + in.rod.vlCnt )
+          Mux( (vstart + in.rod.vlCnt) === in.csrfiles.vConfig.vl, 0.U, vstart + in.rod.vlCnt )
         )
     }
 
@@ -1473,7 +1473,7 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
       vConfig.vill  := dnxt0.extract(63)
       vConfig.vl    := dnxt0.apply(62,8)
       vConfig.vtype := dnxt0.apply(7,0)
-    }.elsewhen( in.rod.isVLoad & in.isVException & (in.rod.isFoF & in.excepitonIdx =/= 0.U) ){
+    }.elsewhen( in.rod.isVLoad & in.isVException & (in.rod.isFoF & in.exceptionIdx =/= 0.U) ){
       vConfig.vl    := in.csrfiles.vstart + in.exceptionIdx
     }
 
