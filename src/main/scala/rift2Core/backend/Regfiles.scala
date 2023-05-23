@@ -45,9 +45,6 @@ class Info_commit_op(arc: Int, dp: Int)(implicit p: Parameters) extends RiftBund
   val is_abort   = Output(Bool())
   val raw        = Output(UInt(( log2Ceil(arc)       ).W))
   val phy        = Output(UInt(( log2Ceil(maxRegNum) ).W))
-  val toX        = Output(Bool())
-  val toF        = Output(Bool())
-  val toV        = Output(Bool())
   val is_writeback = Input(Bool())
 }
 

@@ -284,7 +284,8 @@ trait CsrScoreBoardVPU{ this: CsrScoreBoardBase =>
 
 class CsrScoreBoard(implicit p: Parameters) extends CsrScoreBoardBase
 with CsrScoreBoardXPU
-with CsrScoreBoardFPU{
+with CsrScoreBoardFPU
+with CsrScoreBoardVPU{
 
   CSRStatus.map{ x => 
     x.isFlush := io.isAbort

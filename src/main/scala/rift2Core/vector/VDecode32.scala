@@ -580,22 +580,25 @@ trait VDecode32{ this: DecodeBase =>
     info.vAttach.get.vm  := x(25).asBool()
     info.vAttach.get.nf  := x(31,29)
 
-
+    info.vAttach.get.vtype     := 0.U
+    info.vAttach.get.vstartSel := 0.U
     info.vAttach.get.lmulSel   := 0.U
     info.vAttach.get.nfSel     := 0.U
     info.vAttach.get.widenSel  := 0.U
-    info.vAttach.get.vstartSel := 0.U
-    info.vAttach.get.isLast    := true.B
-    info.vAttach.get.vstart    := 0.U
-    info.vAttach.get.vl        := 0.U
-    info.vAttach.get.vtype     := 0.U
+    info.vAttach.get.microIdx  := 0.U
+    info.vAttach.get.vlCnt     := 0.U
+    info.vAttach.get.eleIdx    := 0.U
+    info.vAttach.get.vop0      := false.B
+    info.vAttach.get.vop1      := 0.U
+    info.vAttach.get.vop2      := 0.U
+    info.vAttach.get.voffset   := 0.U 
 
   }
 }
 
 trait NVDecode{ this: DecodeBase =>
   if( !hasVector ) {
-    info.vecIsa := 0.U.asTypeOf( new vecIsa )
+    info.vecIsa := 0.U.asTypeOf( new VecIsa )
 
     info.lsuIsa.vle    := false.B
     info.lsuIsa.vse    := false.B

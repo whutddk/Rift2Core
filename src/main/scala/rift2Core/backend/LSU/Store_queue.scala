@@ -121,7 +121,7 @@ trait Stq_Ptr { this: Stq_Base =>
       cm_ptr_reg := cm_ptr_reg + 1.U
       assert( ~((is_st_commited(0) | is_st_commited(1)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
       assert( cm_ptr_reg =/= wr_ptr_reg )
-    } .elsewhen( (if(hasVector){(buff(cm_ptr_reg + 1.U).vAttach.get.bufIdx =/= (vParams.lsuEntry).U) & ~emty} else {false.B}) ){ //a vls will auto commit
+    } .elsewhen( buff(cm_ptr_reg + 1.U).fun.isVector & ~emty ){ //a vls will auto commit
       cm_ptr_reg := cm_ptr_reg + 1.U
     }
   } else if( cmChn == 1 ) {
@@ -133,7 +133,7 @@ trait Stq_Ptr { this: Stq_Base =>
       cm_ptr_reg := cm_ptr_reg + 1.U
       assert( ~((is_st_commited(0)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
       assert( cm_ptr_reg =/= wr_ptr_reg )
-    } .elsewhen( (if(hasVector){(buff(cm_ptr_reg + 1.U).vAttach.get.bufIdx =/= (vParams.lsuEntry).U) & ~emty} else {false.B}) ){ //a vls will auto commit
+    } .elsewhen( buff(cm_ptr_reg + 1.U).fun.isVector & ~emty ){ //a vls will auto commit
       cm_ptr_reg := cm_ptr_reg + 1.U
     }
   } else {

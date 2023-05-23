@@ -78,7 +78,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     val mem_fWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = 65)))
     val fpu_fWriteBack = Vec(fpuNum max 1, Flipped(new DecoupledIO(new WriteBack_info(dw = 65))))
 
-    val mem_vWriteBack = Flipped(new DecoupledIO(new WriteBack_info(dw = vParams.vlen)))
+    val mem_vWriteBack = Flipped(new DecoupledIO(new Vector_WriteBack_Bundle))
 
                 // val cWriteBack     = Vec(3, Flipped(Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))))
 

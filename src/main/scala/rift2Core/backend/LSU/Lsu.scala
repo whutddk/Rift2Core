@@ -39,10 +39,10 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
   val dEdge = edge
 
   class LsuIO extends Bundle{
-    val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
-    val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
-    val lsu_exe_vwb = Valid(new Vector_WriteBack_Bundle)
+    val lsu_iss_exe = Flipped(Decoupled(new Lsu_iss_info))
+    val lsu_exe_iwb = Decoupled(new WriteBack_info(dw=64))
+    val lsu_exe_fwb = Decoupled(new WriteBack_info(dw=65))
+    val lsu_exe_vwb = Decoupled(new Vector_WriteBack_Bundle)
 
             // val lsu_cWriteBack = Valid(new SeqReg_WriteBack_Bundle(64, cRegNum))
 
@@ -115,7 +115,7 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     * @param in Dcache_Deq_Bundle
     * @return WriteBack_info 
     */
-  val lu_wb_fifo = Module( new Queue( new Vector_WriteBack_Bundle, 1, false, true ) )
+  val lu_wb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, false, true ) )
 
   val flu_wb_fifo = Module( new Queue( new WriteBack_info(dw=65), 1, false, true ) )
 
@@ -494,12 +494,19 @@ trait LSU_WriteBack { this: LsuBase =>
   flu_wb_fifo.io.deq <> frtn_arb.io.in(0)
   flu_wb_fifo.reset := reset.asBool | io.flush
 
-  vlu_wb_fifo.io.enq.valid            := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.isFwb & ~trans_kill 
-  vlu_wb_fifo.io.enq.bits.rd0         := lu_wb_arb.io.out.bits.wb.rd0
-  vlu_wb_fifo.io.enq.bits.res         := lu_wb_arb.io.out.bits.wb.res
-  vlu_wb_fifo.io.enq.bits.eleIdx      := lu_wb_arb.io.out.bits.vAttach.get.eleIdx
-  vlu_wb_fifo.io.enq.bits.isException := false.B
-  vlu_wb_fifo.reset                   := reset.asBool | io.flush
+  if( hasVector ){
+    vlu_wb_fifo.io.enq.valid            := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.isFwb & ~trans_kill 
+    vlu_wb_fifo.io.enq.bits.rd0         := lu_wb_arb.io.out.bits.wb.rd0
+    vlu_wb_fifo.io.enq.bits.res         := lu_wb_arb.io.out.bits.wb.res
+    vlu_wb_fifo.io.enq.bits.eleIdx      := lu_wb_arb.io.out.bits.vAttach.get.eleIdx
+    vlu_wb_fifo.io.enq.bits.isException := false.B
+    vlu_wb_fifo.reset                   := reset.asBool | io.flush    
+  } else {
+    vlu_wb_fifo.io.enq.valid            := false.B
+    vlu_wb_fifo.io.enq.bits             := DontCare
+    vlu_wb_fifo.reset                   := reset.asBool | io.flush 
+  }
+
 
 
   lu_wb_arb.io.out.ready := (lu_wb_fifo.io.enq.ready & flu_wb_fifo.io.enq.ready & vlu_wb_fifo.io.enq.ready) | trans_kill
@@ -510,12 +517,20 @@ trait LSU_WriteBack { this: LsuBase =>
   su_wb_fifo.io.enq.bits.res := 0.U
   su_wb_fifo.reset := reset.asBool | io.flush
 
-  vsu_wb_fifo.io.enq.valid            := opStIO.fire & opStIO.bits.fun.isVector
-  vsu_wb_fifo.io.enq.bits.rd0         := opStIO.bits.param.rd0 //32.U
-  vsu_wb_fifo.io.enq.bits.res         := 0.U
-  vsu_wb_fifo.io.enq.bits.eleIdx      := opStIO.bits.vAttach.get.eleIdx
-  vsu_wb_fifo.io.enq.bits.isException := false.B
-  vsu_wb_fifo.reset                   := reset.asBool | io.flush
+  if(hasVector){
+    vsu_wb_fifo.io.enq.valid            := opStIO.fire & opStIO.bits.fun.isVector
+    vsu_wb_fifo.io.enq.bits.rd0         := opStIO.bits.param.rd0 //32.U
+    vsu_wb_fifo.io.enq.bits.res         := 0.U
+    vsu_wb_fifo.io.enq.bits.eleIdx      := opStIO.bits.vAttach.get.eleIdx
+    vsu_wb_fifo.io.enq.bits.isException := false.B
+    vsu_wb_fifo.reset                   := reset.asBool | io.flush    
+
+  } else {
+    vsu_wb_fifo.io.enq.valid            := false.B
+    vsu_wb_fifo.io.enq.bits             := DontCare
+    vsu_wb_fifo.reset                   := reset.asBool | io.flush 
+  }
+
 
   opStIO.ready := su_wb_fifo.io.enq.ready & vsu_wb_fifo.io.enq.ready & stQueue.io.enq.ready
   opAmIO.ready := stQueue.io.enq.ready
@@ -537,13 +552,29 @@ trait LSU_WriteBack { this: LsuBase =>
 
   frtn_arb.io.out <> io.lsu_exe_fwb
 
-  vrtn_arb.io.in(0) <> vsu_wb_fifo.io.deq
-  vrtn_arb.io.in(0).bits.isException := false.B
+  if(hasVector){
+    vrtn_arb.io.in(0) <> vsu_wb_fifo.io.deq
+    vrtn_arb.io.in(0).bits.isException := false.B
 
-  vrtn_arb.io.in(1) <> vlu_wb_fifo.io.deq
-  vrtn_arb.io.in(1).bits.isException := false.B
+    vrtn_arb.io.in(1) <> vlu_wb_fifo.io.deq
+    vrtn_arb.io.in(1).bits.isException := false.B
 
-  vrtn_arb.io.out <> io.lsu_exe_vwb
+    vrtn_arb.io.out <> io.lsu_exe_vwb    
+  } else {
+    vsu_wb_fifo.io.deq.ready := true.B
+    vlu_wb_fifo.io.deq.ready := true.B
+
+    vrtn_arb.io.in(0).valid := false.B
+    vrtn_arb.io.in(0).bits  := DontCare
+    vrtn_arb.io.in(1).valid := false.B
+    vrtn_arb.io.in(1).bits  := DontCare
+
+    vrtn_arb.io.out.ready := false.B
+
+    io.lsu_exe_vwb.valid    := false.B
+    io.lsu_exe_vwb.bits     := DontCare
+  }
+
 }
 
 
@@ -567,15 +598,21 @@ trait LSU_Fault { this: LsuBase =>
   frtn_arb.io.in(1).bits.rd0 := io.lsu_iss_exe.bits.param.rd0
   frtn_arb.io.in(1).bits.res := 0.U
 
-  vrtn_arb.io.in(2).valid := 
-    io.mmu_lsu.valid &
-      (io.mmu_lsu.bits.is_fault | io.lsu_iss_exe.bits.is_misAlign) & ~trans_kill &
-      io.lsu_iss_exe.bits.fun.isVector
+  if(hasVector){
+    vrtn_arb.io.in(2).valid := 
+      io.mmu_lsu.valid &
+        (io.mmu_lsu.bits.is_fault | io.lsu_iss_exe.bits.is_misAlign) & ~trans_kill &
+        io.lsu_iss_exe.bits.fun.isVector
 
-  vrtn_arb.io.in(2).bits.rd0 := io.lsu_iss_exe.bits.param.rd0
-  vrtn_arb.io.in(2).bits.res := 0.U
-  vrtn_arb.io.in(2).bits.eleIdx := io.lsu_iss_exe.bits.vAttach.get.eleIdx
-  vrtn_arb.io.in(2).bits.isException := true.B
+    vrtn_arb.io.in(2).bits.rd0 := io.lsu_iss_exe.bits.param.rd0
+    vrtn_arb.io.in(2).bits.res := 0.U
+    vrtn_arb.io.in(2).bits.eleIdx := io.lsu_iss_exe.bits.vAttach.get.eleIdx
+    vrtn_arb.io.in(2).bits.isException := true.B    
+  } else {
+    vrtn_arb.io.in(2).valid := false.B
+    vrtn_arb.io.in(2).bits  := DontCare
+  }
+
 
   val excReg = RegInit(0.U.asTypeOf(new Info_lsu_cmm))
   io.lsu_cmm := excReg

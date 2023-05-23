@@ -284,11 +284,11 @@ trait CommitRegFiles { this: CommitState =>
 
 
   ( 0 until cmChn ).map{ i =>
-    io.xCommit(i).is_comfirm      := commit_state_is_comfirm(i)
-    io.xCommit(i).is_MisPredict   := commit_state_is_misPredict(i)
+    io.xCommit(i).is_comfirm      := io.rod(i).bits.isXwb & commit_state_is_comfirm(i)
+    io.xCommit(i).is_MisPredict   := io.rod(i).bits.isXwb & commit_state_is_misPredict(i)
     io.xCommit(i).is_abort        := commit_state_is_abort(i)
 
-    io.fCommit(i).is_comfirm      := commit_state_is_comfirm(i)
+    io.fCommit(i).is_comfirm      := io.rod(i).bits.isFwb & commit_state_is_comfirm(i)
     io.fCommit(i).is_MisPredict   := false.B
     io.fCommit(i).is_abort        := commit_state_is_abort(i) | commit_state_is_misPredict(i)
 
@@ -308,6 +308,8 @@ trait CommitCsrFiles { this: CommitState =>
         // io.csrCmm(i).isAbort   := commit_state_is_abort(i) | commit_state_is_misPredict(i)
         // io.csrCmm(i).idx       := io.rod(i).bits.csrw( log2Ceil(cRegNum)-1,  0 )
         // io.csrCmm(i).addr      := io.rod(i).bits.csrw( log2Ceil(cRegNum)+11, log2Ceil(cRegNum)+0 )
+
+  io.vpuCsrCommit.ready := false.B
 
 
   csrfiles.mcycle := csrfiles.mcycle + 1.U //may be overriden
@@ -581,7 +583,7 @@ trait CommitInfoLsu{ this: CommitState =>
   }
 
   // io.cmm_lsu.isVstorePending := {
-  //   io.rod(0).valid & io.rod(0).bits.is_su & io.rod(0).bits.isVector & ~io.vCommit(0).isWroteBack //only pending amo in rod0 is send out
+  //   io.rod(0).valid & io.rod(0).bits.is_su & io.rod(0).bits.isVector & ~io.vCommit(0).isWroteback //only pending amo in rod0 is send out
   // }
   // println("Warning, vstore_pending can only emmit at chn0")
   io.isPndVStore := io.rod(0).valid & io.rod(0).bits.isVStore

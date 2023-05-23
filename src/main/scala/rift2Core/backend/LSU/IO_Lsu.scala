@@ -126,6 +126,10 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
   io.deq.bits.is_flw := Mux( io.deq.valid, pending.fun.flw, false.B )
   io.deq.bits.is_fld := Mux( io.deq.valid, pending.fun.fld, false.B )
 
+  io.deq.bits.isXwb := pending.fun.isXwb
+  io.deq.bits.isFwb := pending.fun.isFwb
+  io.deq.bits.isVwb := pending.fun.isVwb
+
   if(hasVector){io.deq.bits.vAttach.get := io.enq.bits.vAttach.get}
 
   io.access.ready := io.deq.ready

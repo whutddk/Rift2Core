@@ -35,19 +35,19 @@ import freechips.rocketchip.tilelink._
 
 class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
   class ExecuteIO extends Bundle{
-    val alu_iss_exe = Vec(aluNum, Flipped(new DecoupledIO(new Alu_iss_info)))
-    val alu_exe_iwb = Vec(aluNum, new DecoupledIO(new WriteBack_info(dw=64)))
+    val alu_iss_exe = Vec(aluNum, Flipped(Decoupled(new Alu_iss_info)))
+    val alu_exe_iwb = Vec(aluNum, Decoupled(new WriteBack_info(dw=64)))
     
-    val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
-    val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
+    val bru_iss_exe = Flipped(Decoupled(new Bru_iss_info))
+    val bru_exe_iwb = Decoupled(new WriteBack_info(dw=64))
 
-    val csr_iss_exe = Flipped(new DecoupledIO(new Csr_iss_info))
-    val csr_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
+    val csr_iss_exe = Flipped(Decoupled(new Csr_iss_info))
+    val csr_exe_iwb = Decoupled(new WriteBack_info(dw=64))
 
-    val lsu_iss_exe = Flipped(new DecoupledIO(new Lsu_iss_info))
-    val lsu_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
-    val lsu_exe_fwb = new DecoupledIO(new WriteBack_info(dw=65))
-    val lsu_exe_vwb = new DecoupledIO(new WriteBack_info(dw=vParams.vlen))
+    val lsu_iss_exe = Flipped(Decoupled(new Lsu_iss_info))
+    val lsu_exe_iwb = Decoupled(new WriteBack_info(dw=64))
+    val lsu_exe_fwb = Decoupled(new WriteBack_info(dw=65))
+    val lsu_exe_vwb = Decoupled(new Vector_WriteBack_Bundle)
 
     val mul_iss_exe = Vec(mulNum max 1, Flipped(new DecoupledIO(new Mul_iss_info)))
     val mul_exe_iwb = Vec(mulNum max 1, new DecoupledIO(new WriteBack_info(dw=64)))
@@ -105,9 +105,8 @@ class Execute(edge: Seq[TLEdgeOut])(implicit p: Parameters) extends RiftModule {
     mdl.io.lsu_iss_exe <> io.lsu_iss_exe
     mdl.io.lsu_exe_iwb <> io.lsu_exe_iwb
     mdl.io.lsu_exe_fwb <> io.lsu_exe_fwb
-    // mdl.io.lsu_exe_vwb <> io.lsu_exe_vwb
-    io.lsu_exe_vwb.valid := false.B
-    io.lsu_exe_vwb.bits  := DontCare
+    mdl.io.lsu_exe_vwb <> io.lsu_exe_vwb
+
 
     mdl.io.lsu_mmu <> io.lsu_mmu
     mdl.io.mmu_lsu <> io.mmu_lsu

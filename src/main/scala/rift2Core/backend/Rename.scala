@@ -62,7 +62,7 @@ trait RenameMalloc { this: RenameBase =>
   for ( i <- 0 until rnChn ) {
 
     rnRspFifo.io.enq(i).valid :=
-      io.rnReq(i).fire & ( 0 to i ).map{ j => ~io.rnReq(i).bits.is_privil_dpt }.foldLeft(false.B)(_|_)  //~io.rnReq(i).bits.is_privil_dpt
+      io.rnReq(i).fire & ( 0 to i ).map{ j => ~io.rnReq(j).bits.is_privil_dpt }.foldLeft(true.B)(_&_)  //~io.rnReq(i).bits.is_privil_dpt
 
     rnRspFifo.io.enq(i).bits.aluIsa    := io.rnReq(i).bits.aluIsa
     rnRspFifo.io.enq(i).bits.bruIsa    := io.rnReq(i).bits.bruIsa
@@ -174,12 +174,21 @@ trait LoadRob{ this: RenameBase =>
     reOrder_fifo_i.io.enq(i).bits.isXwb := io.rnReq(i).bits.isXwb
     reOrder_fifo_i.io.enq(i).bits.isFwb := io.rnReq(i).bits.isFwb
     reOrder_fifo_i.io.enq(i).bits.isVwb := io.rnReq(i).bits.isVwb
-      
-    reOrder_fifo_i.io.enq(i).bits.isVector := io.rnReq(i).bits.vecIsa.isVector | io.rnReq(i).bits.lsuIsa.is_vls
-    reOrder_fifo_i.io.enq(i).bits.isVLoad  := io.rnReq(i).bits.lsuIsa.isVLoad
-    reOrder_fifo_i.io.enq(i).bits.isVStore := io.rnReq(i).bits.lsuIsa.isVStore
-    reOrder_fifo_i.io.enq(i).bits.isFoF    := io.rnReq(i).bits.lsuIsa.vleNff
-    reOrder_fifo_i.io.enq(i).bits.vlCnt    := io.rnReq(i).bits.vAttach.get.vlCnt
+
+    if(hasVector){
+      reOrder_fifo_i.io.enq(i).bits.isVector := io.rnReq(i).bits.vecIsa.isVector | io.rnReq(i).bits.lsuIsa.is_vls
+      reOrder_fifo_i.io.enq(i).bits.isVLoad  := io.rnReq(i).bits.lsuIsa.isVLoad
+      reOrder_fifo_i.io.enq(i).bits.isVStore := io.rnReq(i).bits.lsuIsa.isVStore
+      reOrder_fifo_i.io.enq(i).bits.isFoF    := io.rnReq(i).bits.lsuIsa.vleNff
+      reOrder_fifo_i.io.enq(i).bits.vlCnt    := io.rnReq(i).bits.vAttach.get.vlCnt
+    } else{
+      reOrder_fifo_i.io.enq(i).bits.isVector := false.B
+      reOrder_fifo_i.io.enq(i).bits.isVLoad  := false.B
+      reOrder_fifo_i.io.enq(i).bits.isVStore := false.B
+      reOrder_fifo_i.io.enq(i).bits.isFoF    := false.B
+      reOrder_fifo_i.io.enq(i).bits.vlCnt    := 0.U
+    }
+
 
 
   }

@@ -49,94 +49,71 @@ class Vector_WriteBack_Bundle()(implicit p: Parameters) extends WriteBack_info(d
 }
 
 
+class VRegFilesIO()(implicit p: Parameters) extends RiftBundle{
+  val molloc = Flipped(Decoupled(new Vector_Molloc_Bundle ) ) //molloc at read op
+  val readOp = Vec( 32, Valid(UInt( (vParams.vlen).W )) )
+
+  val writeBack  = Flipped(Decoupled(new Vector_WriteBack_Bundle))
+
+  val commit = Vec(cmChn, Flipped(new Vector_Commit_Bundle))
+  val diffReg = Output(Vec(32, UInt((vParams.vlen/8).W)))
+}
+
 abstract class VRegFilesBase()(implicit p: Parameters) extends RiftModule {
-
-  class VRegFilesIO extends Bundle{
-    val molloc = Flipped(Decoupled(new Vector_Molloc_Bundle ) ) //molloc at read op
-    val readOp = Vec( 32, Valid(UInt( (vParams.vlen).W )) )
-
-    val writeBack  = Valid(new Vector_WriteBack_Bundle)
-
-    val commit = Vec(cmChn, Flipped(new Vector_Commit_Bundle))
-    val diffReg = Output(Vec(32, UInt((vParams.vlen/8).W)))
-  }
 
   val io: VRegFilesIO = IO( new VRegFilesIO)
 
-  val wbFiles =
-    for( _ <- 0 until 33 ) yield {
-      for( _ <- 0 until vParams.vlen/8 ) yield
-      Reg(UInt(64.U))
-    }
+  val wbFiles = Reg(Vec(33, Vec(vParams.vlen/8, UInt(64.W)) ))
 
-  val files =
-    for( _ <- 0 until 33 ) yield {
-      Reg(UInt(vParams.vlen))
-    }
+  val files = Reg( Vec(33, UInt((vParams.vlen).W)) )
 
-  val isMolloced =
-    for( _ <- 0 until 33 ) yield {
-      RegInit(false.B)      
-    }
-  
-  val vsew =
-    for( _ <- 0 until 33 ) yield {
-      RegInit(UInt(2.W))      
-    }
+  val isMolloced = RegInit( VecInit(Seq.fill(33){false.B}) )
 
-  val isWroteBack =
-    for( _ <- 0 until 33 ) yield {
-      for( _ <- 0 until vParams.vlen/8 ) yield {
-        RegInit(true.B)
-      }
-    }
+  val vsew = Reg( Vec( 33, UInt(2.W)) )
+
+  val isWroteback =
+    RegInit( VecInit( Seq.fill(32){ VecInit( Seq.fill(vParams.vlen/8){true.B}  ) }) )
 
   val isException =
-    for( _ <- 0 until 33 ) yield {
-      for( _ <- 0 until vParams.vlen/8 ) yield {
-        RegInit(false.B)      
-      }
-    }
+    RegInit( VecInit( Seq.fill(32){ VecInit( Seq.fill(vParams.vlen/8){false.B} ) }) )
 
   val isMask =
-    for( _ <- 0 until 33 ) yield {
-      for( _ <- 0 until vParams.vlen/8 ) yield {
-        RegInit(false.B)      
-      }
-    }
+    RegInit( VecInit( Seq.fill(32){ VecInit( Seq.fill(vParams.vlen/8){false.B} ) }) )
+
 }
+
 
 trait VRegMolloc{ this: VRegFilesBase =>
   io.molloc.ready := 
-    Mux1H( ( 0 until 32 ).map{ i => (i.U === io.molloc.bits) -> ~(isMolloced(i)) } )
+    Mux1H( ( 0 until 32 ).map{ i => (i.U === io.molloc.bits.idx) -> ~(isMolloced(i)) } )
 
   when( io.molloc.fire ){
     ( 0 until 32 ).map{ i =>
       when( i.U === io.molloc.bits.idx ) {
         assert( isMolloced(i) === false.B )
         isMolloced(i) := true.B
-        vsew(i)       := io.molloc.bits.sew
+        vsew(i)       := io.molloc.bits.vsew
 
         for( j <- 0 until vParams.vlen/8 ) {
-          when( io.molloc.bits.sew === "b00".U ){
-            isWroteBack(i)(j) := io.molloc.bits.isMask(j)
+          when( io.molloc.bits.vsew === "b00".U ){
+            isWroteback(i)(j) := io.molloc.bits.isMask(j)
             isMask(i)(j)      := io.molloc.bits.isMask(j)
           }
-          when( io.molloc.bits.sew === "b01".U ){
+          when( io.molloc.bits.vsew === "b01".U ){
             if( j < vParams.vlen/16 ){
-              isWroteBack(i)(j) := io.molloc.bits.isMask(j)
+              isWroteback(i)(j) := io.molloc.bits.isMask(j)
               isMask(i)(j)      := io.molloc.bits.isMask(j)
             }
           }
-          when( io.molloc.bits.sew === "b10".U ){
+          when( io.molloc.bits.vsew === "b10".U ){
             if( j < vParams.vlen/32 ){
-              isWroteBack(i)(j) := io.molloc.bits.isMask(j)
+              isWroteback(i)(j) := io.molloc.bits.isMask(j)
               isMask(i)(j)      := io.molloc.bits.isMask(j)
             }
           }
-          when( io.molloc.bits.sew === "b11".U ){
+          when( io.molloc.bits.vsew === "b11".U ){
             if( j < vParams.vlen/64 ){
-              isWroteBack(i)(j) := io.molloc.bits.isMask(j)
+              isWroteback(i)(j) := io.molloc.bits.isMask(j)
               isMask(i)(j)      := io.molloc.bits.isMask(j)
             }
           }
@@ -152,10 +129,10 @@ trait VRegReadOp{ this: VRegFilesBase =>
       // (~isMolloced(i)) |
       // (isMolloced(i) &
       //   Mux1H(Seq(
-      //     (vsew(i) === "b00".U) -> (0 until vParams.vlen/8 ).map{ j => isWroteBack(i)(j) }.reduce(_&_),
-      //     (vsew(i) === "b01".U) -> (0 until vParams.vlen/16).map{ j => isWroteBack(i)(j) }.reduce(_&_),
-      //     (vsew(i) === "b10".U) -> (0 until vParams.vlen/32).map{ j => isWroteBack(i)(j) }.reduce(_&_),
-      //     (vsew(i) === "b11".U) -> (0 until vParams.vlen/64).map{ j => isWroteBack(i)(j) }.reduce(_&_),
+      //     (vsew(i) === "b00".U) -> (0 until vParams.vlen/8 ).map{ j => isWroteback(i)(j) }.reduce(_&_),
+      //     (vsew(i) === "b01".U) -> (0 until vParams.vlen/16).map{ j => isWroteback(i)(j) }.reduce(_&_),
+      //     (vsew(i) === "b10".U) -> (0 until vParams.vlen/32).map{ j => isWroteback(i)(j) }.reduce(_&_),
+      //     (vsew(i) === "b11".U) -> (0 until vParams.vlen/64).map{ j => isWroteback(i)(j) }.reduce(_&_),
       //   ))
       // )
 
@@ -167,22 +144,22 @@ trait VRegReadOp{ this: VRegFilesBase =>
 trait VRegWriteBack{ this: VRegFilesBase =>
 
   // for( chn <- 0 until wbc ) {
-
+  io.writeBack.ready := true.B
 
   when( io.writeBack.fire ){
     val i = io.writeBack.bits.rd0
     val j = io.writeBack.bits.eleIdx
 
     assert( isMolloced(i) )
-    when( vsew(i) === "b00".U ) {assert( j.U < (vParams.vlen/8 ).U, "Assert Failed, invalid VWriteback" )}
-    when( vsew(i) === "b01".U ) { assert( j.U < (vParams.vlen/16).U, "Assert Failed, invalid VWriteback" ) }
-    when( vsew(i) === "b10".U ) { assert( j.U < (vParams.vlen/32).U, "Assert Failed, invalid VWriteback" ) }
-    when( vsew(i) === "b11".U ) { assert( j.U < (vParams.vlen/64).U, "Assert Failed, invalid VWriteback" ) }
+    when( vsew(i) === "b00".U ) {assert( j < (vParams.vlen/8 ).U, "Assert Failed, invalid VWriteback" )}
+    when( vsew(i) === "b01".U ) { assert( j < (vParams.vlen/16).U, "Assert Failed, invalid VWriteback" ) }
+    when( vsew(i) === "b10".U ) { assert( j < (vParams.vlen/32).U, "Assert Failed, invalid VWriteback" ) }
+    when( vsew(i) === "b11".U ) { assert( j < (vParams.vlen/64).U, "Assert Failed, invalid VWriteback" ) }
 
     wbFiles(i)(j) := io.writeBack.bits.res
 
     isException(i)(j) := io.writeBack.bits.isException
-    isWroteBack(i)(j) := true.B
+    isWroteback(i)(j) := true.B
 
   }
 
@@ -200,18 +177,18 @@ trait VRegWriteBack{ this: VRegFilesBase =>
 trait VRegCommit{ this: VRegFilesBase =>
   for ( i <- 0 until cmChn ){ 
     val idx = io.commit(i).phy
-    io.commit(i).isWroteback  := isWroteBack(idx).reduce(_&_)
+    io.commit(i).isWroteback  := isWroteback(idx).reduce(_&_)
     io.commit(i).isException  := isException(idx).reduce(_|_)
     io.commit(i).exceptionIdx := isException(idx).indexWhere( (x: Bool) => (x === true.B) )
 
     when( io.commit(i).isAbort ){
       isMolloced  := 0.U.asTypeOf(isMolloced)
-      isWroteBack := 0.U.asTypeOf(isWroteBack)
+      isWroteback := 0.U.asTypeOf(isWroteback)
       isException := 0.U.asTypeOf(isException)
     }
     .elsewhen( io.commit(i).isComfirm ){
       isMolloced(idx)  := false.B
-      isWroteBack(idx) := 0.U.asTypeOf(isWroteBack(idx))
+      isWroteback(idx) := 0.U.asTypeOf(isWroteback(idx))
       isException(idx) := 0.U.asTypeOf(isException(idx))
 
       when( vsew(idx) === "b00".U ) {
@@ -254,8 +231,11 @@ with VRegCommit{
 
 
 
-class FakeVRegFiles()(implicit p: Parameters) extends VRegFilesBase{
+class FakeVRegFiles()(implicit p: Parameters) extends RiftModule{
+  val io: VRegFilesIO = IO( new VRegFilesIO )
+
   io.molloc.ready := true.B
+  io.writeBack.ready := true.B
 
   for( i <- 0 until 32 ) {
     io.readOp(i).valid := false.B
@@ -263,7 +243,7 @@ class FakeVRegFiles()(implicit p: Parameters) extends VRegFilesBase{
   }
 
   for( i<- 0 until cmChn ){
-    io.commit(i).isWroteBack := true.B
+    io.commit(i).isWroteback := true.B
     io.commit(i).isException := false.B
     io.commit(i).exceptionIdx := 0.U
   }

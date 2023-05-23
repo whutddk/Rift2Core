@@ -49,7 +49,7 @@ abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPU
 
     val irgReq = Vec( opChn, Valid( UInt((log2Ceil(xRegNum)).W) ) )
     val frgReq = Vec( opChn, Valid( UInt((log2Ceil(fRegNum)).W) ) )    
-    val vrgReq = Vec( vParams.opChn, Valid( UInt((log2Ceil(vRegNum)).W) ) )    
+            // val vrgReq = Vec( vParams.opChn, Valid( UInt((log2Ceil(vRegNum)).W) ) )    
 
     val irgRsp = Vec( opChn, Flipped(Valid(new ReadOp_Rsp_Bundle(64)) ) )
     val frgRsp = Vec( opChn, Flipped(Valid(new ReadOp_Rsp_Bundle(65)) ) )
@@ -1004,9 +1004,10 @@ trait IssSelLsu{ this: IssueSel =>
 
     lsuIssInfo(i).param.dat.op2 :=
       Mux1H(Seq(
-        bufInfo(i).lsuIsa.isXStore     -> postBufOperator(i)(2),
-        bufInfo(i).lsuIsa.isFStore     -> ieee(unbox(postBufOperator(i)(2), 1.U, None), t = FType.D),
-        bufInfo(i).lsuIsa.isVStore     -> postBufOperator(i)(3),
+        bufInfo(i).lsuIsa.is_amo   -> postBufOperator(i)(2),
+        bufInfo(i).lsuIsa.isXStore -> postBufOperator(i)(2),
+        bufInfo(i).lsuIsa.isFStore -> ieee(unbox(postBufOperator(i)(2), 1.U, None), t = FType.D),
+        bufInfo(i).lsuIsa.isVStore -> postBufOperator(i)(3),
       ))
       // MuxCase( postBufOperator(i)(2), Seq(
       //   bufInfo(i).lsuIsa.isFStore    -> ieee(unbox(postBufOperator(i)(2), 1.U, None), t = FType.D),

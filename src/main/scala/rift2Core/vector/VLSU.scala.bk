@@ -36,7 +36,7 @@ class VLSU_Entry_Bundle(implicit p: Parameters) extends RiftBundle{
   val originInfo     = new Lsu_iss_info
   val splitInfo      = Vec( vParams.vlen/8, new Lsu_iss_info)
   val isRequested = Vec( vParams.vlen/8, Bool() )
-  val isWroteBack = Vec( vParams.vlen/8, Bool() )
+  val isWroteback = Vec( vParams.vlen/8, Bool() )
   val isException = Vec( vParams.vlen/8, Bool() )
   val exceptionInfo = UInt(64.W)
   val res         = UInt(vParams.vlen.W)
@@ -47,7 +47,7 @@ class VLSU_Entry_Bundle(implicit p: Parameters) extends RiftBundle{
 
 class Vector_WriteBack_Bundle(implicit p: Parameters) extends RiftBundle{
   val res         = Vec( vParams.vlen/8, UInt(8.W) )
-  val isWroteBack = Vec( vParams.vlen/8, Bool() )
+  val isWroteback = Vec( vParams.vlen/8, Bool() )
   val isMasked    = Vec( vParams.vlen/8, Bool() )
   val isInvalid   = Vec( vParams.vlen/8, Bool() )
   val vstart      = UInt((log2Ceil(8*vParams.vlen/8)).W)
@@ -213,7 +213,7 @@ abstract class VLSUScoreboard(edge: Seq[TLEdgeOut])(implicit p: Parameters) exte
       )
 
     sbInfo.isRequested := eleValid.asBools
-    sbInfo.isWroteBack := eleValid.asBools
+    sbInfo.isWroteback := eleValid.asBools
 
     sbInfo.isException := (0.U((vParams.vlen/8).W)).asBools
 
@@ -392,7 +392,7 @@ abstract class VLSUScoreboard(edge: Seq[TLEdgeOut])(implicit p: Parameters) exte
     resMasked32 := ( iwb.res & Fill( 32, 1.U(1.W) ) ) << (eleIdx << 5)
     resMasked64 := ( iwb.res & Fill( 64, 1.U(1.W) ) ) << (eleIdx << 6)
     
-    sbInfo.isWroteBack(eleIdx) := true.B
+    sbInfo.isWroteback(eleIdx) := true.B
 
     when( cwb.op_rw & ~sbInfo.isException.reduce(_|_) ){
       sbInfo.exceptionInfo := cwb.dati
@@ -528,7 +528,7 @@ trait VLSUEnq{ this: VLSUScoreboard => if(hasVector){
         for( i <- 0 until vParams.vlen/8 ){
           when( sbBuf(sbEXEPtr).isRequested(i) === false.B ){
             sbBuf(sbEXEPtr).isRequested(i) := true.B
-            sbBuf(sbEXEPtr).isWroteBack(i) := true.B
+            sbBuf(sbEXEPtr).isWroteback(i) := true.B
           }
         }
 
@@ -580,7 +580,7 @@ trait VLSUDeq{ this: VLSUScoreboard => if(hasVector){
       sbBuf(bufIdx) := Pkg_VlsuScoreBoard_update( sbBuf(bufIdx), iwb = lsu.io.lsu_exe_iwb.bits, cwb = lsu.io.lsu_cWriteBack.bits )
     }
 
-    when( sbBuf(sbVWBPtr).isWroteBack.reduce(_&_) ){ //all load is written back
+    when( sbBuf(sbVWBPtr).isWroteback.reduce(_&_) ){ //all load is written back
       val (vwb, cwb) = Pkg_VlsuScoreBoard_Rtn( buf = sbBuf(sbVWBPtr) )
       io.lsu_exe_vwb.valid := true.B
       io.lsu_exe_vwb.bits  := vwb

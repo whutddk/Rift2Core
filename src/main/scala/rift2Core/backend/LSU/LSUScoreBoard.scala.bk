@@ -35,7 +35,7 @@
 //   val originInfo     = new Lsu_iss_info
 //   val splitInfo      = Vec( vParams.vlen/8, new Lsu_iss_info)
 //   val isRequested = Vec( vParams.vlen/8, Bool() )
-//   val isWroteBack = Vec( vParams.vlen/8, Bool() )
+//   val isWroteback = Vec( vParams.vlen/8, Bool() )
 //   val isException = Vec( vParams.vlen/8, Bool() )
 //   val exceptionInfo = UInt(64.W)
 //   val res         = UInt(vParams.vlen.W)

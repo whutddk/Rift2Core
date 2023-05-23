@@ -34,12 +34,13 @@ trait Vec_PreRename_Bundle{ this: RiftBundle =>
   val widenSel = UInt(1.W)
 
   val microIdx = UInt(3.W)
-  val vlCnt   = UInt( log2Ceil( vParams.vlen / 8 ).W )
-
+  val vlCnt   = UInt( log2Ceil( vParams.vlen / 8 ).W ) //how many vec-element in this micro instrution, load at preRename
+  def vsew  = vtype(5,3)
+  def vlmul = vtype(2,0)
 }
 
 trait Vec_element_Index{ this: RiftBundle =>
-  val eleIdx = UInt(log2Ceil(vParams.vlen/8).W  )
+  val eleIdx = UInt(log2Ceil(vParams.vlen/8).W  ) //the index of vec-element in micro instruciton, load at preIssue
 }
 
 trait Vec_PreIssue_Bundle{ this: RiftBundle =>
@@ -47,7 +48,7 @@ trait Vec_PreIssue_Bundle{ this: RiftBundle =>
   val vop0 = Bool()
   val vop1 = UInt(64.W)
   val vop2 = UInt(64.W)
-  val voffset = UInt(64.W) 
+  val voffset = UInt(64.W) //the index of vec-element in whole instruction, load at preIssue used at exe 
 }
 
 class VRename_Attach_Bundle(implicit p: Parameters) extends RiftBundle
