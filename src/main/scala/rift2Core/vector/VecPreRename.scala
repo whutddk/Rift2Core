@@ -57,7 +57,7 @@ class VecPreRenameIO()(implicit p: Parameters) extends RiftBundle{
 abstract class VecPreRenameBase()(implicit p: Parameters) extends RiftModule {
   val io: VecPreRenameIO = IO(new VecPreRenameIO)
 
-  val vecSplitFifo = Module(new MultiPortFifo( new Dpt_info, aw = 3, 8, 1 ) )
+  val vecSplitFifo = Module(new MultiPortFifo( new IF4_Bundle, aw = 3, 8, rnChn ) )
 
   val vSplitReq = WireDefault(0.U.asTypeOf(new IF4_Bundle))
 
@@ -80,13 +80,16 @@ trait VecPreRenameMux{ this: VecPreRenameBase =>
 
     when( vecSplitFifo.io.deq(0).valid ){
       io.deq(i) <> vecSplitFifo.io.deq(i)
-
       io.enq(i).ready := false.B
+      vSplitReq := 0.U.asTypeOf(new IF4_Bundle)
     } .otherwise{
+      vecSplitFifo.io.deq(i).ready := false.B
+
       when( (0 until i).map{ j => io.enq(j).bits.lsuIsa.isVector | io.enq(j).bits.vecIsa.isVALU }.foldLeft(false.B)(_|_) ){
         io.deq(i).valid := false.B
         io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
         io.enq(i).ready := false.B
+        vSplitReq := 0.U.asTypeOf(new IF4_Bundle)
       } .otherwise{
         when( ~(io.enq(i).bits.lsuIsa.isVector | io.enq(i).bits.vecIsa.isVALU) ){
           io.enq(i) <> io.deq(i)
@@ -98,6 +101,8 @@ trait VecPreRenameMux{ this: VecPreRenameBase =>
             io.deq(i).valid := false.B
             io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
             io.enq(i).ready := true.B
+
+            assert( io.enq(i).fire === vecSplitFifo.io.enq(0).fire )
           }
         }
       }
@@ -116,16 +121,22 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
 
   val microInstrCnt = 
     Mux1H(Seq(
-      ( isVALU   ) -> (lmul(1,0)),
+      ( isVALU   ) -> Mux(isWiden, 2.U << lmul(1,0), (lmul(1,0))),
       ( isVLSU   ) -> ((nf+1.U) << lmul(1,0)),
-      ( isWiden  ) -> ( 2.U     << lmul(1,0)),
     ))
 
   val microInstr = Wire( Vec( 8, new IF4_Bundle ) )
   val lmulSel    = Wire( Vec( 8, UInt(3.W)) )
   val widenSel   = Wire( Vec( 8, UInt(3.W)) )
 
+  val fifoReq = 
+    (0 until rnChn).map{ i => io.enq(i).valid & (io.enq(i).bits.lsuIsa.isVector | io.enq(i).bits.vecIsa.isVALU) & ~(nf === 0.U & lmul(1,0) === 0.U & ~isWiden) }.foldLeft(false.B)(_|_)
+
+
   for( i <- 0 until 8 ) {
+    vecSplitFifo.io.enq(i).valid := fifoReq & (i.U <= microInstrCnt)
+    vecSplitFifo.io.enq(i).bits  := microInstr(i)
+    assert( ~(vecSplitFifo.io.enq(i).valid & ~vecSplitFifo.io.enq(i).ready) )
 
     when( isVLSU ){
       lmulSel(i) := Mux1H(Seq(
@@ -135,9 +146,9 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
         (nf === "b110".U) -> 0.U,     (nf === "b111".U) -> 0.U,
       ))
     }.elsewhen( isWiden ){
-      lmulSel := (i/2).U
+      lmulSel(i) := (i/2).U
     }.otherwise{
-      lmulSel := (i/1).U
+      lmulSel(i) := (i/1).U
     }
 
     widenSel(i) := Mux( isWiden, (i%2).U, 0.U )
@@ -161,6 +172,7 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
 
   // def microIdx = isWiden * lmulSel + widenSel
 
+    microInstr(i).param.raw.vm0 := vSplitReq.param.raw.vm0
     microInstr(i).param.raw.rs1 := vSplitReq.param.raw.rs1 + Mux( vSplitReq.vecIsa.isVS1, lmulSel(i), 0.U)
 
     microInstr(i).param.raw.rs2 :=
@@ -186,10 +198,6 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
         ( vSplitReq.lsuIsa.isVLoad                                  ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
         ( vSplitReq.lsuIsa.isVStore                                 ) -> 0.U,
       ))
-
-
-
-
 
     microInstr(i).vAttach.get.vm        := vSplitReq.vAttach.get.vm
     microInstr(i).vAttach.get.nf        := nf
@@ -226,7 +234,12 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
 
 
 class VecPreRename()(implicit p: Parameters) extends VecPreRenameBase with VecPreRenameMux with VecPreRenameMicroInstr{
+  for( i <- 0 until rnChn ) {
+    io.vpuCsrMolloc(i).valid := false.B
+    io.vpuCsrMolloc(i).bits  := false.B    
+  }
 
+  vecSplitFifo.io.flush := io.flush
 }
 
 class FakeVecPreRename()(implicit p: Parameters) extends RiftModule{

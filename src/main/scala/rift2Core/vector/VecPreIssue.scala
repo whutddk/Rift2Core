@@ -50,8 +50,8 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
 
   val vop = Wire( Vec(3, UInt((vParams.vlen).W)) )
 
-  val preIssueBufDnxt =  Wire( Vec( vParams.vlen/8, new Dpt_info))
-  val isBufValidDnxt  = Wire(Vec( vParams.vlen/8, Bool()) )
+  // val preIssueBufDnxt =  Wire( Vec( vParams.vlen/8, new Dpt_info))
+  // val isBufValidDnxt  = Wire(Vec( vParams.vlen/8, Bool()) )
 
   val preIssueBuf = Reg( Vec( vParams.vlen/8, new Dpt_info) )
   val isBufValid  = RegInit( VecInit( Seq.fill(vParams.vlen/8 ){false.B} ))
@@ -63,12 +63,12 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
   val vstart = io.csrfiles.vstart
   val vl     = io.csrfiles.vConfig.vl
 
-  val vsew     = (if(hasVector) {vecDptInfo.vAttach.get.vsew}    else {0.U})
-  val lmul     = (if(hasVector) {vecDptInfo.vAttach.get.vlmul}   else {0.U})
-  val lmulSel  = (if(hasVector) {vecDptInfo.vAttach.get.lmulSel} else {0.U})
-  val nf       = (if(hasVector) {vecDptInfo.vAttach.get.nf}      else {0.U})
-  val nfSel    = (if(hasVector) {vecDptInfo.vAttach.get.nfSel}   else {0.U})
-
+  val vsew     = (if(hasVector) {vecDptInfo.vAttach.get.vsew}     else {0.U})
+  val lmul     = (if(hasVector) {vecDptInfo.vAttach.get.vlmul}    else {0.U})
+  val lmulSel  = (if(hasVector) {vecDptInfo.vAttach.get.lmulSel}  else {0.U})
+  val nf       = (if(hasVector) {vecDptInfo.vAttach.get.nf}       else {0.U})
+  val nfSel    = (if(hasVector) {vecDptInfo.vAttach.get.nfSel}    else {0.U})
+  val microIdx = (if(hasVector) {vecDptInfo.vAttach.get.microIdx} else {0.U})
 }
 
 
@@ -77,7 +77,7 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
 trait VecPreIssueReadOp{ this: VecPreIssueBase =>
   val idx = Seq( vecDptInfo.phy.vm0, vecDptInfo.phy.rs1, vecDptInfo.phy.rs2, vecDptInfo.phy.rs3 )
 
-  vop(0) := io.readOp(idx(0)).bits
+  vop(0) := io.readOp(idx(0)).bits >> ( microIdx >> (vsew(1,0) + 3.U) )
 
   vop(1) := Mux( vecDptInfo.vecIsa.isVector, io.readOp(idx(1)).bits, io.readOp(idx(3)).bits )
   vop(2) := io.readOp(idx(2)).bits
@@ -97,21 +97,13 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
     vlsExeInfo(i).fpuIsa    := 0.U.asTypeOf(new Fpu_isa)
     vlsExeInfo(i).vecIsa  := 0.U.asTypeOf(new VecIsa)
 
-    vlsExeInfo(i).param.is_rvc  := false.B
-    vlsExeInfo(i).param.pc      := DontCare
-    vlsExeInfo(i).param.imm     := vecDptInfo.param.imm
-    vlsExeInfo(i).param.rm      := vecDptInfo.param.rm
 
-    vlsExeInfo(i).vAttach.get.nf     := vecDptInfo.vAttach.get.nf
-    vlsExeInfo(i).vAttach.get.vm     := vecDptInfo.vAttach.get.vm
+    vlsExeInfo(i).param   := vecDptInfo.param
+    vlsExeInfo(i).phy     := vecDptInfo.phy
+    vlsExeInfo(i).vAttach.get     := vecDptInfo.vAttach.get
 
-    vlsExeInfo(i).vAttach.get.lmulSel  := vecDptInfo.vAttach.get.lmulSel
-    vlsExeInfo(i).vAttach.get.nfSel    := vecDptInfo.vAttach.get.nfSel
-    vlsExeInfo(i).vAttach.get.widenSel := vecDptInfo.vAttach.get.widenSel
 
-    vlsExeInfo(i).vAttach.get.vtype   := vecDptInfo.vAttach.get.vtype
-
-    vlsExeInfo(i).vAttach.get.voffset := 
+    vlsExeInfo(i).vAttach.get.voffset :=  //override
       (Mux1H(Seq(
         (nf === 0.U) -> ( i*1 ).U, (nf === 1.U) -> ( i*2 ).U,
         (nf === 2.U) -> ( i*3 ).U, (nf === 3.U) -> ( i*4 ).U,
@@ -119,10 +111,16 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
         (nf === 6.U) -> ( i*7 ).U, (nf === 7.U) -> ( i*8 ).U,
       )) + nfSel) >> vWidth
 
+
+
+
+
+
+
     when( vecDptInfo.lsuIsa.vle | vecDptInfo.lsuIsa.vlm | vecDptInfo.lsuIsa.vleNff | vecDptInfo.lsuIsa.vleNff | vecDptInfo.lsuIsa.vlNreN ){
 
       vlsExeInfo(i).param.raw.vm0 := DontCare
-      vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
+      vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1 //override
       vlsExeInfo(i).param.raw.rs2 := DontCare
       vlsExeInfo(i).param.raw.rs3 := DontCare
 
@@ -286,60 +284,62 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
       when( io.deq(i).fire ){
         assert(isBufValid(deqSel(i)) === true.B)
         isBufValid(deqSel(i)) := false.B
-            preIssueBuf(deqSel(i)) := 0.U.asTypeOf(new Dpt_info)
+        preIssueBuf(deqSel(i)) := 0.U.asTypeOf(new Dpt_info)
       }
 
 
       io.molloc.valid := false.B
       io.molloc.bits  := DontCare
       io.enq(i).ready := false.B
+
+      vecDptInfo := 0.U.asTypeOf(new Dpt_info)
     } .otherwise{
       when( (0 until i).map{ j => io.enq(j).bits.lsuIsa.isVector | io.enq(j).bits.vecIsa.isVALU }.foldLeft(false.B)(_|_) ){
         io.deq(i).valid := false.B
-        io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
+        io.deq(i).bits  := 0.U.asTypeOf(new Dpt_info)
 
         io.molloc.valid := false.B
         io.molloc.bits  := DontCare
 
         io.enq(i).ready := false.B
+
+        vecDptInfo := 0.U.asTypeOf(new Dpt_info)
       } .otherwise{
         when( ~(io.enq(i).bits.lsuIsa.isVector | io.enq(i).bits.vecIsa.isVALU) ){
           io.enq(i) <> io.deq(i)
+          vecDptInfo := 0.U.asTypeOf(new Dpt_info)
+          io.molloc.valid := false.B
+          io.molloc.bits  := DontCare
         } .otherwise{
           val idx = Seq( vecDptInfo.phy.vm0, vecDptInfo.phy.rs1, vecDptInfo.phy.rs2, vecDptInfo.phy.rs3 )
 
           vecDptInfo := io.enq(i).bits
 
           io.deq(i).valid := false.B
-          io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
+          io.deq(i).bits  := 0.U.asTypeOf(new Dpt_info)
 
-// when( io.enq(i).fire ) {
+          when( io.enq(i).fire ) {
 
-          for( j <- 0 until vParams.vlen/8 ){
+            for( j <- 0 until vParams.vlen/8 ){
 
-            preIssueBufDnxt(j) := 
-              Mux1H(Seq(
-                io.enq(i).bits.lsuIsa.isVector -> vlsExeInfo(j),
-                io.enq(i).bits.vecIsa.isVALU -> vpuExeInfo(j),
-              ))
-              
-            isBufValidDnxt(j) := 
-              Mux1H(Seq(
-                (vsew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                (vsew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                (vsew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                (vsew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
-              ))      
-
-            io.molloc.bits.isMask(j) :=
-              Mux1H(Seq(
-                (vsew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
-                (vsew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
-                (vsew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
-                (vsew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
-              ))      
+              preIssueBuf(j) := 
+                Mux1H(Seq(
+                  io.enq(i).bits.lsuIsa.isVector -> vlsExeInfo(j),
+                  io.enq(i).bits.vecIsa.isVALU -> vpuExeInfo(j),
+                ))
+                
+              isBufValid(j) := 
+                Mux1H(Seq(
+                  (vsew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                  (vsew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                  (vsew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                  (vsew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                ))      
+            }
           }
-// }
+
+
+
 
           io.molloc.valid := 
             io.enq(i).valid &
@@ -352,6 +352,17 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
             Mux(io.enq(i).bits.isVS2, io.readOp(idx(2)).valid, true.B) &
             Mux(io.enq(i).bits.isVS3, io.readOp(idx(3)).valid, true.B)
 
+          for( j <- 0 until vParams.vlen/8 ){
+            io.molloc.bits.isMask(j) :=
+              Mux1H(Seq(
+                (vsew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
+                (vsew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
+                (vsew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
+                (vsew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
+              ))      
+
+          }
+
           io.molloc.bits.idx    := io.enq(i).bits.phy.rd0
           io.molloc.bits.vsew   := vsew(1,0)
 
@@ -359,16 +370,16 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
 
           assert( io.enq(i).fire === io.molloc.fire )
 
-          for( j <- 0 until vParams.vlen/8 ){
-            when( io.flush ){
-              isBufValid(j) := false.B
-            } .elsewhen(  io.enq(i).fire ){
-              for( j <- 0 until vParams.vlen/8 ){
-                preIssueBuf(j) := preIssueBufDnxt(j)            
-                isBufValid(j)  := isBufValidDnxt(j)
-              }
-            }
-          }
+          // for( j <- 0 until vParams.vlen/8 ){
+          //   when( io.flush ){
+          //     isBufValid(j) := false.B
+          //   } .elsewhen(  io.enq(i).fire ){
+          //     for( j <- 0 until vParams.vlen/8 ){
+          //       preIssueBuf(j) := preIssueBufDnxt(j)            
+          //       isBufValid(j)  := isBufValidDnxt(j)
+          //     }
+          //   }
+          // }
         }
       }
     }

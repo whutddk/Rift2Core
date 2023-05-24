@@ -53,7 +53,7 @@ abstract class DecodeBase (implicit p: Parameters) extends RiftModule {
 
 }
 
-class Decode16(implicit p: Parameters) extends DecodeBase with NVDecode{
+class Decode16(implicit p: Parameters) extends DecodeBase{
   info.param.is_rvc := true.B
 
   /** create different kinds of Immediate here */
@@ -500,7 +500,7 @@ object Decode16 {
     */
   def apply(x:UInt, pc: UInt, hasFpu: Boolean)(implicit p: Parameters): Info_instruction = {
     // val info = Wire(new Info_instruction)
-    val dec16 = Module(new Decode16)
+    val dec16 = Module(new Decode16 with NVDecode)
     dec16.io.x := x
     dec16.io.pc := pc
     return dec16.io.info
@@ -923,8 +923,7 @@ trait Decode32FD{ this: DecodeBase =>
 
 class Decode32(implicit p: Parameters) extends DecodeBase
 with Decode32G
-with Decode32FD
-with VDecode32 with NVDecode{
+with Decode32FD{
   info.param.is_rvc := false.B
 } 
 
@@ -944,9 +943,9 @@ object Decode32 {
     * @param p The implicit Parameters object for the Rift2Core.
     * @return An Info_instruction object representing the decoded instruction.
     */
-  def apply(x:UInt, pc: UInt, hasFpu: Boolean)(implicit p: Parameters): Info_instruction = {
+  def apply(x:UInt, pc: UInt, hasFpu: Boolean, hasVector: Boolean)(implicit p: Parameters): Info_instruction = {
     // val info = Wire(new Info_instruction)
-    val dec32 = Module(new Decode32)
+    val dec32 = Module( (if(hasVector) {new Decode32 with VDecode32} else {new Decode32 with NVDecode}) )
     dec32.io.x := x
     dec32.io.pc := pc
     return dec32.io.info

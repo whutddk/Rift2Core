@@ -1436,8 +1436,8 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
     }.elsewhen( in.rod.isVector ){  //vector commit will auto reset vstart to 0
       vstart := 
         Mux(
-          in.isException, vstart + in.exceptionIdx,
-          Mux( (vstart + in.rod.vlCnt) === in.csrfiles.vConfig.vl, 0.U, vstart + in.rod.vlCnt )
+          in.isException, in.csrfiles.vstart + in.exceptionIdx,
+          Mux( (in.csrfiles.vstart + in.rod.vlCnt) === in.csrfiles.vConfig.vl, 0.U, in.csrfiles.vstart + in.rod.vlCnt )
         )
     }
 

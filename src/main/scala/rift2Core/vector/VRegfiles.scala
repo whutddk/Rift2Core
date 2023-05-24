@@ -226,7 +226,9 @@ with VRegMolloc
 with VRegReadOp
 with VRegWriteBack
 with VRegCommit{
-
+  for( i <- 0 until 32 ) {
+    io.diffReg(i) := files(i)
+  }
 }
 
 

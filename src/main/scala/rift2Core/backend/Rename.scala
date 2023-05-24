@@ -79,6 +79,11 @@ trait RenameMalloc { this: RenameBase =>
               when(~io.rnReq(i).bits.fpuIsa.hasTwoRs) { rnRspFifo.io.enq(i).bits.phy.rs2 := 0.U }
               when(~io.rnReq(i).bits.fpuIsa.hasThreeRs) { rnRspFifo.io.enq(i).bits.phy.rs3 := 0.U }      
             }
+    
+    if(hasVector) {
+      rnRspFifo.io.enq(i).bits.vAttach.get := io.rnReq(i).bits.vAttach.get
+    }
+
 
     io.xRename(i).req.valid    := io.rnReq(i).fire & io.rnReq(i).bits.isXwb
     io.xRename(i).req.bits.rd0 := io.rnReq(i).bits.param.raw.rd0
