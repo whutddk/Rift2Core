@@ -130,7 +130,7 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
   val widenSel   = Wire( Vec( 8, UInt(3.W)) )
 
   val fifoReq = 
-    (0 until rnChn).map{ i => io.enq(i).valid & (io.enq(i).bits.lsuIsa.isVector | io.enq(i).bits.vecIsa.isVALU) & ~(nf === 0.U & lmul(1,0) === 0.U & ~isWiden) }.foldLeft(false.B)(_|_)
+    (0 until rnChn).map{ i => io.enq(i).valid & (io.enq(i).bits.lsuIsa.isVector | io.enq(i).bits.vecIsa.isVALU) & ~( io.enq(i).bits.vAttach.get.nf === 0.U & lmul(1,0) === 0.U & ~(io.enq(i).bits.vecIsa.isVS2P | io.enq(i).bits.vecIsa.is2Malloc)) }.foldLeft(false.B)(_|_)
 
 
   for( i <- 0 until 8 ) {
@@ -153,14 +153,14 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
 
     widenSel(i) := Mux( isWiden, (i%2).U, 0.U )
 
-    microInstr(i).aluIsa    := 0.U.asTypeOf( new Alu_isa )
-    microInstr(i).bruIsa    := 0.U.asTypeOf( new Bru_isa )
-    microInstr(i).lsuIsa    := vSplitReq.lsuIsa
-    microInstr(i).csrIsa    := 0.U.asTypeOf( new Csr_isa )
-    microInstr(i).mulIsa    := 0.U.asTypeOf( new Mul_isa )
+    microInstr(i).aluIsa     := 0.U.asTypeOf( new Alu_isa )
+    microInstr(i).bruIsa     := 0.U.asTypeOf( new Bru_isa )
+    microInstr(i).lsuIsa     := vSplitReq.lsuIsa
+    microInstr(i).csrIsa     := 0.U.asTypeOf( new Csr_isa )
+    microInstr(i).mulIsa     := 0.U.asTypeOf( new Mul_isa )
     microInstr(i).privil_isa := 0.U.asTypeOf( new Privil_isa )
-    microInstr(i).fpuIsa    := 0.U.asTypeOf( new Fpu_isa )
-    microInstr(i).vecIsa  := vSplitReq.vecIsa
+    microInstr(i).fpuIsa     := 0.U.asTypeOf( new Fpu_isa )
+    microInstr(i).vecIsa     := vSplitReq.vecIsa
 
     microInstr(i).param.is_rvc := false.B
     microInstr(i).param.pc  := vSplitReq.param.pc
@@ -195,8 +195,8 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
       Mux1H( Seq(
         ( vSplitReq.vecIsa.isVwb &  vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i) ),
         ( vSplitReq.vecIsa.isVwb & ~vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSplitReq.lsuIsa.isVLoad                                  ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSplitReq.lsuIsa.isVStore                                 ) -> 0.U,
+        ( vSplitReq.lsuIsa.isVLoad                             ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+        ( vSplitReq.lsuIsa.isVStore                            ) -> 0.U,
       ))
 
     microInstr(i).vAttach.get.vm        := vSplitReq.vAttach.get.vm
@@ -219,7 +219,7 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
       ))
     microInstr(i).vAttach.get.widenSel  := widenSel(i)
     microInstr(i).vAttach.get.microIdx  := i.U
-    microInstr(i).vAttach.get.vlCnt     := ((vParams.vlen/8).U) >> lmulSel(i)(1,0); assert( lmulSel(i).extract(2) === 0.U )
+    microInstr(i).vAttach.get.vlCnt     := ((vParams.vlen/8).U) >> lmulSel(i)(1,0); when(vecSplitFifo.io.enq(0).fire) { assert( lmulSel(i).extract(2) === 0.U ) }
     microInstr(i).vAttach.get.eleIdx    := 0.U
     microInstr(i).vAttach.get.vop0      := false.B
     microInstr(i).vAttach.get.vop1      := 0.U

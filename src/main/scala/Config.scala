@@ -442,19 +442,31 @@ class Rift2370 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasVector = true,
 
+    opChn = 2,
+    wbChn = 2,
+
+    pmpNum = 1,
+    hpmNum = 0,
+
+    icacheParameters = IcacheParameters(
+      bk = 1,
+      cb = 2,
+      cl = 16
+    ),
+
     dcacheParameters = DcacheParameters(
       bk = 2,
       cb = 2,
-      cl = 32,
-      stEntry = 4,
-      sbEntry = 4,
+      cl = 16,
+      stEntry = 2,
+      sbEntry = 2,
     ),
 
     ifetchParameters = IFParameters(
       uBTB_entry = 4,
-      btb_cl = 32,
-      bim_cl = 32,
-      ras_dp = 8,
+      btb_cl = 16,
+      bim_cl = 16,
+      ras_dp = 4,
     ),
 
     dptEntry = 4,
