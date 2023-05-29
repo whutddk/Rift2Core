@@ -101,6 +101,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
     val vpuCsrMolloc    = Flipped(Vec(rnChn, Decoupled(Bool())))
     val vpuCsrWriteBack = Flipped(Valid(new Exe_Port))
     val vpuCsrCommit    = Decoupled(new Exe_Port)
+    val isCSRMMUReady   = Output(Bool())
 
     val diffXReg = Output(Vec(32, UInt(64.W)))
     val diffFReg = Output(Vec(32, UInt(65.W)))
@@ -126,6 +127,7 @@ class WriteBack(implicit p: Parameters) extends RiftModule {
   io.vpuCsrMolloc    <> cReg.io.vpu.molloc
   io.vpuCsrWriteBack <> cReg.io.vpu.writeBack
   io.vpuCsrCommit    <> cReg.io.vpu.commit
+  io.isCSRMMUReady   := cReg.io.isMMUReady
 
   iReg.io.rename <> io.xRename
   iReg.io.lookup <> io.xLookup

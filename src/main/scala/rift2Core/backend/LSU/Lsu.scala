@@ -495,7 +495,7 @@ trait LSU_WriteBack { this: LsuBase =>
   flu_wb_fifo.reset := reset.asBool | io.flush
 
   if( hasVector ){
-    vlu_wb_fifo.io.enq.valid            := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.isFwb & ~trans_kill 
+    vlu_wb_fifo.io.enq.valid            := lu_wb_arb.io.out.valid & lu_wb_arb.io.out.bits.isVwb & ~trans_kill 
     vlu_wb_fifo.io.enq.bits.rd0         := lu_wb_arb.io.out.bits.wb.rd0
     vlu_wb_fifo.io.enq.bits.res         := lu_wb_arb.io.out.bits.wb.res
     vlu_wb_fifo.io.enq.bits.eleIdx      := lu_wb_arb.io.out.bits.vAttach.get.eleIdx

@@ -202,12 +202,17 @@ with CommitDebug
             commit_state(i) := Mux( io.jctq.bits.isMisPredict, 2.U, 3.U ) //mis-predict )
           }
         }
-        .elsewhen( io.rod(i).bits.is_csr ){
-          commit_state(i) :=  Mux( ( 0 until i ).map{ j => io.rod(j).bits.is_csr }.foldLeft(false.B)(_|_), 0.U, 3.U )
+        .elsewhen( io.rod(i).bits.is_csr  & ( 0 until i ).map{ j => io.rod(j).bits.is_csr }.foldLeft(false.B)(_|_) ){
+          commit_state(i) := 0.U
         }
-        .elsewhen( io.rod(i).bits.is_fcsr ){
-          commit_state(i) :=  Mux( ( 0 until i ).map{ j => io.rod(j).bits.is_fcsr }.foldLeft(false.B)(_|_), 0.U, 3.U )
+        .elsewhen( io.rod(i).bits.is_fcsr & ( 0 until i ).map{ j => io.rod(j).bits.is_fcsr }.foldLeft(false.B)(_|_) ){
+          commit_state(i) := 0.U
         }
+        // .elsewhen( cmm_state(i).isMMUFlush) {
+        //   commit_state(i) := 1.U //abort
+        //   for ( j <- 0 until i ) { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
+        //   abort_chn := i.U
+        // }
         .otherwise {
           commit_state(i) := 3.U //confirm
         }
@@ -415,7 +420,7 @@ trait CommitIFRedirect { this: CommitState =>
 
   io.cmmRedirect.valid := false.B
   io.cmmRedirect.bits.pc := 0.U
-  for ( i <- 0 until cmChn ) yield {
+  for ( i <- 0 until cmChn ) {
     when(io.rod(i).bits.is_branch & io.bctq.bits.isMisPredict & is_retired(i)) {
       io.cmmRedirect.valid := true.B
       io.cmmRedirect.bits.pc := io.bctq.bits.finalTarget
@@ -432,6 +437,10 @@ trait CommitIFRedirect { this: CommitState =>
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
         }
+        // when( cmm_state(i).isMMUFlush ) {
+        //   io.cmmRedirect.valid   := true.B
+        //   io.cmmRedirect.bits.pc := extVaddr(io.rod(i).bits.pc, vlen)
+        // }
         when( cmm_state(i).isInterrupt | cmm_state(i).isNomaskInterrupt ) {
           assert(false.B, "Assert Failed, All interrupts (including NMI) are masked in Dmode! Page-39")
         }
@@ -447,10 +456,8 @@ trait CommitIFRedirect { this: CommitState =>
         when( cmm_state(i).is_dRet ) {
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.dpc
-        } 
+        }
       } .otherwise {
-
-
         when(cmm_state(i).isNomaskInterrupt){
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := Mux1H(Seq(
@@ -485,11 +492,15 @@ trait CommitIFRedirect { this: CommitState =>
             ))
         }
 
-        when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
+        when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma  ) {
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
         }
 
+        // when( cmm_state(i).isMMUFlush ) {
+        //   io.cmmRedirect.valid   := true.B
+        //   io.cmmRedirect.bits.pc := extVaddr(io.rod(i).bits.pc, vlen)
+        // }
         // assert( PopCount(Seq( cmm_state(i).is_xRet, (cmm_state(i).isInterrupt | cmm_state(i).isException), cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U, "Assert Failed, only one situation will be trigger ecah time!" )
       }
     }
@@ -560,16 +571,36 @@ trait CommitDiff { this: CommitState =>
 
 
 trait CommitInfoMMU{ this: CommitState =>
-    io.cmm_mmu.satp := csrfiles.satp.asUInt
-    if( pmpNum == 0 ) { io.cmm_mmu.pmpcfg  := DontCare } else { for ( i <- 0 until pmpNum )   io.cmm_mmu.pmpcfg(i)  := csrfiles.pmpcfg(i).asUInt }
-    if( pmpNum == 0 ) { io.cmm_mmu.pmpaddr := DontCare } else { for ( i <- 0 until 8*pmpNum ) io.cmm_mmu.pmpaddr(i) := csrfiles.pmpaddr(i)       }
-    io.cmm_mmu.priv_lvl_if   := csrfiles.priv_lvl
-    io.cmm_mmu.priv_lvl_ls   := Mux( csrfiles.mstatus.mprv.asBool, csrfiles.mstatus.mpp, csrfiles.priv_lvl )
-    io.cmm_mmu.mstatus    := csrfiles.mstatus.asUInt
-    io.cmm_mmu.sstatus    := csrfiles.sstatus.asUInt
-    io.cmm_mmu.sfence_vma := ( 0 until cmChn ).map{ i => 
-      commit_state_is_abort(i) & cmm_state(i).is_sfence_vma 
-    }.reduce(_|_)
+  io.cmm_mmu.satp := csrfiles.satp.asUInt
+  if( pmpNum == 0 ) { io.cmm_mmu.pmpcfg  := DontCare } else { for ( i <- 0 until pmpNum )   io.cmm_mmu.pmpcfg(i)  := csrfiles.pmpcfg(i).asUInt }
+  if( pmpNum == 0 ) { io.cmm_mmu.pmpaddr := DontCare } else { for ( i <- 0 until 8*pmpNum ) io.cmm_mmu.pmpaddr(i) := csrfiles.pmpaddr(i)       }
+  io.cmm_mmu.priv_lvl_if   := csrfiles.priv_lvl
+  io.cmm_mmu.priv_lvl_ls   := Mux( csrfiles.mstatus.mprv.asBool, csrfiles.mstatus.mpp, csrfiles.priv_lvl )
+  io.cmm_mmu.mstatus    := csrfiles.mstatus.asUInt
+  io.cmm_mmu.sstatus    := csrfiles.sstatus.asUInt
+  io.cmm_mmu.sfence_vma := ( 0 until cmChn ).map{ i => 
+    commit_state_is_abort(i) & cmm_state(i).is_sfence_vma 
+  }.reduce(_|_)
+
+  // val isMMUFlush = RegInit(false.B)
+  // val isMMUFlushDnxt = 
+  //     (ShiftRegister(io.cmm_mmu.mstatus,1) =/= io.cmm_mmu.mstatus)
+
+  // when( ( 0 until cmChn).map{ i => commit_state_is_abort(i) | commit_state_is_misPredict(i)}.foldLeft(false.B)(_|_) ){
+  //   isMMUFlush := false.B
+  // } .elsewhen( isMMUFlushDnxt ){
+  //   isMMUFlush := true.B
+  // }
+
+  // for( i <- 0 until cmChn ){
+  //   cmm_state(i).isMMUFlush := isMMUFlush | isMMUFlushDnxt
+  // }
+
+
+  //   (ShiftRegister(csrfiles.satp.asUInt,1) =/= csrfiles.satp.asUInt) |
+  //   ( if( pmpNum == 0 ) { false.B } else { ( 0 until pmpNum ).map{ i => ShiftRegister(csrfiles.pmpcfg(i).asUInt, 1) =/= csrfiles.pmpcfg(i).asUInt }.foldLeft(false.B)(_|_) }) |
+  //   ( if( pmpNum == 0 ) { false.B } else { ( 0 until 8*pmpNum ).map{ i => ShiftRegister(csrfiles.pmpaddr(i), 1) =/= csrfiles.pmpaddr(i)}.foldLeft(false.B)(_|_)    }) |
+
 }
 
 trait CommitInfoLsu{ this: CommitState =>
@@ -634,6 +665,8 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
 
   val isVException = Bool()
   val exceptionIdx = UInt((log2Ceil(vParams.vlen/8).W))
+
+  // val isMMUFlush = Bool()
 
   def is_load_accessFault: Bool = {
     val is_load_accessFault = 

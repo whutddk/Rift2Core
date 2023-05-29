@@ -332,7 +332,8 @@ trait Rift2CoreImpCommit{ this: Rift2CoreImpBase =>
   iwb_stage.io.xpuCsrCommit <> cmm_stage.io.xpuCsrCommit
   iwb_stage.io.fpuCsrCommit <> cmm_stage.io.fpuCsrCommit
   iwb_stage.io.vpuCsrCommit <> cmm_stage.io.vpuCsrCommit
-
+  rnm_stage.io.isCSRMMUReady := iwb_stage.io.isCSRMMUReady 
+  
   cmm_stage.io.rtc_clock := io.rtc_clock
   if (hasDebugger) {cmm_stage.io.dm <> io.dm.get}
   else {
@@ -340,8 +341,8 @@ trait Rift2CoreImpCommit{ this: Rift2CoreImpBase =>
     cmm_stage.io.dm.hartHaltReq := false.B
   }
 
-  i_mmu.io.if_flush := if2.io.flush
-  i_mmu.io.lsu_flush := exe_stage.io.flush
+  i_mmu.io.if_flush  := cmm_stage.io.cmmRedirect.fire | if4.io.if4Redirect.valid
+  i_mmu.io.lsu_flush := cmm_stage.io.cmmRedirect.fire
 
   if2.io.flush := cmm_stage.io.cmmRedirect.fire | if4.io.if4Redirect.valid
   if3.io.flush := cmm_stage.io.cmmRedirect.fire

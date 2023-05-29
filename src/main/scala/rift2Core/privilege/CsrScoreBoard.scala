@@ -77,7 +77,9 @@ class CsrScoreBoardIO(implicit p: Parameters) extends RiftBundle{
   val xpu: XPUCsrIO      = new XPUCsrIO
   val fpu: FPUCsrIO      = new FPUCsrIO
   val vpu: VPUCsrIO      = new VPUCsrIO
-  val isAbort: Bool = Input(Bool())
+
+  val isMMUReady: Bool = Output(Bool())
+  val isAbort: Bool      = Input(Bool())
 }
 
 /**
@@ -124,6 +126,11 @@ abstract class CsrScoreBoardBase(implicit p: Parameters) extends RiftModule{
   val FPUStatus: Seq[CSRInOrderReadWrite] = CSRInfoTable.FPUCSRGroup.map{ x => new CSRInOrderReadWrite( x.name, x.address ) }
   val VPUStatus: Seq[CSRInOrderReadWrite] = CSRInfoTable.VPUCSRGroup.map{ x => new CSRInOrderReadWrite( x.name, x.address ) }
 
+  val fflags : CSRInOrderReadWrite = FPUStatus.apply(0); require(fflags.address == 0x001)
+  val frm    : CSRInOrderReadWrite = FPUStatus.apply(1); require(frm.address    == 0x002)
+  val fcsr   : CSRInOrderReadWrite = FPUStatus.apply(2); require(fcsr.address   == 0x003)
+  val mstatus: CSRInOrderReadWrite = XPUStatus.find( _.name == "mstatus").get
+
   /** create all implemented CSR register from the preset Array CSRInfoTable */
   val CSRStatus = XPUStatus ++ FPUStatus ++ VPUStatus
 
@@ -161,9 +168,12 @@ trait CsrScoreBoardXPU{ this: CsrScoreBoardBase =>
           if( (x.address == 0x001) || (x.address == 0x002) || (x.address == 0x003) ){ //no fpu request at fpu csr
             ~isFpuInfly & 
             (0 until i).map{ j => ~(io.fpu.molloc(j).valid) }.foldLeft(true.B)(_&_)
-          } else {
-            true.B
-          }
+          } else { true.B }
+        ) &
+        (
+          if( x.address == 0x003 ){ //fcsr can be block by fflags and frm
+            fflags.isReady4Molloc & frm.isReady4Molloc
+          } else { true.B }   
         ))
       })
     
@@ -198,9 +208,7 @@ trait CsrScoreBoardXPU{ this: CsrScoreBoardBase =>
 /** A trait that extends CsrScoreBoardBase and defines a scoreboard module for the FALU instruction. */
 trait CsrScoreBoardFPU{ this: CsrScoreBoardBase =>
 
-  val fflags: CSRInOrderReadWrite = FPUStatus.apply(0); require(fflags.address == 0x001)
-  val frm   : CSRInOrderReadWrite = FPUStatus.apply(1); require(frm.address    == 0x002)
-  val fcsr  : CSRInOrderReadWrite = FPUStatus.apply(2); require(fcsr.address   == 0x003)
+
 
   for( i <- 0 until rnChn ){
     io.fpu.molloc(i).ready := 
@@ -281,11 +289,20 @@ trait CsrScoreBoardVPU{ this: CsrScoreBoardBase =>
 
 }
 
+trait CsrScoreBoardMemoryProtect{ this: CsrScoreBoardBase =>
+  io.isMMUReady:= {
+
+    mstatus.isReady4Molloc
+  }
+
+}
+
 
 class CsrScoreBoard(implicit p: Parameters) extends CsrScoreBoardBase
 with CsrScoreBoardXPU
 with CsrScoreBoardFPU
-with CsrScoreBoardVPU{
+with CsrScoreBoardVPU
+with CsrScoreBoardMemoryProtect{
 
   CSRStatus.map{ x => 
     x.isFlush := io.isAbort

@@ -39,6 +39,7 @@ abstract class RenameBase()(implicit p: Parameters) extends RiftModule {
 
     val xpuCsrMolloc    = Vec(rnChn, Decoupled(UInt(12.W)))
     val fpuCsrMolloc    = Vec(rnChn, Decoupled(Bool()))
+    val isCSRMMUReady   = Input(Bool())
 
     val rod_i = Vec(cmChn,new DecoupledIO(new Info_reorder_i))
   }
@@ -265,6 +266,7 @@ with RenameFeatureCheck {
         reOrder_fifo_i.io.enq(j).ready &
         (io.xpuCsrMolloc(j).ready | ~io.rnReq(j).bits.csrIsa.is_csr) & 
         (io.fpuCsrMolloc(j).ready | ~io.rnReq(j).bits.fpuIsa.is_fpu) & 
+        (io.isCSRMMUReady & (0 until j).map{k => ~io.rnReq(k).bits.csrIsa.is_csr}.foldLeft(true.B)(_&_) | ~io.rnReq(j).bits.lsuIsa.is_lsu) &
         rnRspFifo.io.enq(j).ready
       }
     ).reduce(_&_)

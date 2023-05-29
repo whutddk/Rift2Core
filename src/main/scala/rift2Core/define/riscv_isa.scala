@@ -1170,7 +1170,7 @@ class Bru_iss_info(implicit p: Parameters) extends RiftBundle {
 
 
 class Lsu_param(implicit p: Parameters) extends RD_PHY {
-  val dat    = new Operation_source( dw=(if(hasVector){vParams.vlen} else{64}) )
+  val dat    = new Operation_source(dw=64)
 
   // override def cloneType = ( new Lsu_param ).asInstanceOf[this.type]
 }
