@@ -519,7 +519,7 @@ trait Decode32G { this: DecodeBase =>
     def shamt_imm = Cat( Fill(58, 0.U), x(25,20) )
 
 
-    def is_iType = info.bruIsa.jalr | info.lsuIsa.lb | info.lsuIsa.lh |info.lsuIsa.lw | info.lsuIsa.lbu | info.lsuIsa.lhu | info.lsuIsa.lwu | info.lsuIsa.ld | info.aluIsa.addi | info.aluIsa.addiw | info.aluIsa.slti | info.aluIsa.sltiu | info.aluIsa.xori | info.aluIsa.ori | info.aluIsa.andi | info.lsuIsa.fence | info.lsuIsa.fence_i | info.csrIsa.rw | info.csrIsa.rs | info.csrIsa.rc | info.csrIsa.rwi | info.csrIsa.rsi | info.csrIsa.rci | info.lsuIsa.flw | info.lsuIsa.fld  | info.vecIsa.isVector //| info.fpuIsa.is_fun_fcsr
+    def is_iType = info.bruIsa.jalr | info.lsuIsa.lb | info.lsuIsa.lh |info.lsuIsa.lw | info.lsuIsa.lbu | info.lsuIsa.lhu | info.lsuIsa.lwu | info.lsuIsa.ld | info.aluIsa.addi | info.aluIsa.addiw | info.aluIsa.slti | info.aluIsa.sltiu | info.aluIsa.xori | info.aluIsa.ori | info.aluIsa.andi | info.lsuIsa.fence | info.lsuIsa.fence_i | info.csrIsa.is_csr | info.lsuIsa.flw | info.lsuIsa.fld  | info.vecIsa.isVector //| info.fpuIsa.is_fun_fcsr
     def is_sType = info.lsuIsa.sb | info.lsuIsa.sh | info.lsuIsa.sw | info.lsuIsa.sd | info.lsuIsa.fsw | info.lsuIsa.fsd 
     def is_bType = info.bruIsa.beq | info.bruIsa.bne | info.bruIsa.blt | info.bruIsa.bge | info.bruIsa.bltu | info.bruIsa.bgeu;
     def is_uType = info.aluIsa.lui | info.aluIsa.auipc;
@@ -617,6 +617,16 @@ trait Decode32G { this: DecodeBase =>
       info.aluIsa.wfi   -> 0.U,
       info.bruIsa.jal   -> 0.U,
       info.bruIsa.jalr  -> 0.U,
+
+      info.csrIsa.rw  -> 0.U,
+      info.csrIsa.rs  -> 0.U,
+      info.csrIsa.rc  -> 0.U,
+      info.csrIsa.rwi -> 0.U,
+      info.csrIsa.rsi -> 0.U,
+      info.csrIsa.rci -> 0.U,
+      info.csrIsa.vsetvli  -> 0.U,
+      info.csrIsa.vsetivli -> 0.U,
+
       info.lsuIsa.lb    -> 0.U,
       info.lsuIsa.lh    -> 0.U,
       info.lsuIsa.lw    -> 0.U,

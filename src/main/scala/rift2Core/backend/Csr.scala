@@ -58,91 +58,103 @@ abstract class CSRBase(implicit p: Parameters) extends RiftModule {
 
   io.csr_iss_exe.ready     := csr_exe_iwb_fifo.io.enq.fire
 
-  csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid
-  csr_exe_iwb_fifo.io.enq.bits.res := io.csr_iss_exe.bits.param.dat.op2
-  csr_exe_iwb_fifo.io.enq.bits.rd0 := io.csr_iss_exe.bits.param.rd0
 
-  io.xpuCsrWriteBack.valid := csr_exe_iwb_fifo.io.enq.fire
-  io.xpuCsrWriteBack.bits.addr  := addr
-  io.xpuCsrWriteBack.bits.dat_i  := dat
-  io.xpuCsrWriteBack.bits.op_rw := rw & ~dontWrite
-  io.xpuCsrWriteBack.bits.op_rs := rs & ~dontWrite
-  io.xpuCsrWriteBack.bits.op_rc := rc & ~dontWrite
 
 }
 
 trait VConfig{ this: CSRBase =>
-  when( addr === "hC20".U ){ //vl read-only from csr
-    csr_exe_iwb_fifo.io.enq.bits.res := io.csr_iss_exe.bits.param.dat.op2(62,8) //VConfig(62,8) 
-    require( (log2Ceil(vParams.vlmax) + 8 + 1) <= 64 )
+  // when( addr === "hC20".U ){ //vl read-only from csr
+  //   csr_exe_iwb_fifo.io.enq.bits.res := io.csr_iss_exe.bits.param.dat.op2(62,8) //VConfig(62,8) 
+  //   require( (log2Ceil(vParams.vlmax) + 8 + 1) <= 64 )
 
-    assert( io.xpuCsrWriteBack.bits.op_rw === false.B & io.xpuCsrWriteBack.bits.op_rs === false.B & io.xpuCsrWriteBack.bits.op_rc === false.B )
-  }
+  //   assert( io.xpuCsrWriteBack.bits.op_rw === false.B & io.xpuCsrWriteBack.bits.op_rs === false.B & io.xpuCsrWriteBack.bits.op_rc === false.B )
+  // }
 
-  when( addr === "hC21".U ){ //vtype
-    csr_exe_iwb_fifo.io.enq.bits.res := Cat( io.csr_iss_exe.bits.param.dat.op2.extract(63), 0.U(55.W), io.csr_iss_exe.bits.param.dat.op2(7,0))
-    require( (log2Ceil(vParams.vlmax) + 8 + 1) <= 64 )
+  // when( addr === "hC21".U ){ //vtype
+  //   csr_exe_iwb_fifo.io.enq.bits.res := Cat( io.csr_iss_exe.bits.param.dat.op2.extract(63), 0.U(55.W), io.csr_iss_exe.bits.param.dat.op2(7,0))
+  //   require( (log2Ceil(vParams.vlmax) + 8 + 1) <= 64 )
 
-    assert( io.xpuCsrWriteBack.bits.op_rw === false.B & io.xpuCsrWriteBack.bits.op_rs === false.B & io.xpuCsrWriteBack.bits.op_rc === false.B )
-  }
-  
-  when( addr === "hFFE".U ){ //vconfig
+  //   assert( io.xpuCsrWriteBack.bits.op_rw === false.B & io.xpuCsrWriteBack.bits.op_rs === false.B & io.xpuCsrWriteBack.bits.op_rc === false.B )
+  // }
+  val avl = Wire( UInt((log2Ceil(vParams.vlmax)+1).W) )
+  val nvl = Wire( UInt((log2Ceil(vParams.vlmax)).W) )
+  val vill = Wire(Bool())
+  val vtype = Wire(UInt(8.W))
 
-    val avl = Wire( UInt((log2Ceil(vParams.vlmax)).W) )
-    val nvl = Wire( UInt((log2Ceil(vParams.vlmax)).W) )
+  val vsew  = io.csr_iss_exe.bits.param.dat.op2(5,3)
+  val vlmul = io.csr_iss_exe.bits.param.dat.op2(2,0)
 
-    avl := io.csr_iss_exe.bits.param.dat.op1
-    nvl := Mux( avl <= (vParams.vlmax).U, avl, Mux( avl < ((vParams.vlmax).U << 1), (avl + 1.U) >> 1, (vParams.vlmax).U ) )
+  avl := io.csr_iss_exe.bits.param.dat.op1
+    Mux1H(Seq(
+      io.csr_iss_exe.bits.fun.vsetvli  -> Mux( io.csr_iss_exe.bits.param.dat.op1 =/= 0.U, io.csr_iss_exe.bits.param.dat.op1, Mux(io.csr_iss_exe.bits.param.rd0 =/= 0.U, Fill(vParams.vlmax,1.U), io.csr_iss_exe.bits.param.dat.op2(12+log2Ceil(vParams.vlmax)-1, 12)) ),
+      io.csr_iss_exe.bits.fun.vsetivli -> io.csr_iss_exe.bits.param.dat.op1,
+      io.csr_iss_exe.bits.fun.vsetvl   -> Mux( io.csr_iss_exe.bits.param.dat.op1 =/= 0.U, io.csr_iss_exe.bits.param.dat.op1, Mux(io.csr_iss_exe.bits.param.rd0 =/= 0.U, Fill(vParams.vlmax,1.U), io.csr_iss_exe.bits.param.dat.op2(12+log2Ceil(vParams.vlmax)-1, 12)) ),
+    ))
 
-    val vill = Wire(Bool())
-    val vtype = Wire(UInt(8.W))
 
-    val vsew  = io.csr_iss_exe.bits.param.dat.op2(5,3)
-    val vlmul = io.csr_iss_exe.bits.param.dat.op2(2,0)
 
-    vill :=
-      (io.csr_iss_exe.bits.param.dat.op2.extract(63) === true.B) |
-      (vsew.extract(2) === true.B) |
-      (vlmul === "b100".U) |
-      (vlmul === "b101".U & (
-          (if( vParams.vlen/8 < 64 ) { vsew === "b011".U } else {false.B}) |
-          (if( vParams.vlen/8 < 32 ) { vsew === "b010".U } else {false.B}) |
-          (if( vParams.vlen/8 < 16 ) { vsew === "b001".U } else {false.B}) |
-          (if( vParams.vlen/8 < 8  ) { vsew === "b000".U } else {false.B})
-        )
-      ) |
-      (vlmul === "b110".U & (
-          (if( vParams.vlen/4 < 64 ) { vsew === "b011".U } else {false.B}) |
-          (if( vParams.vlen/4 < 32 ) { vsew === "b010".U } else {false.B}) |
-          (if( vParams.vlen/4 < 16 ) { vsew === "b001".U } else {false.B}) |
-          (if( vParams.vlen/4 < 8  ) { vsew === "b000".U } else {false.B})
-        )
-      ) |
-      (vlmul === "b111".U & (
-          (if( vParams.vlen/2 < 64 ) { vsew === "b011".U } else {false.B}) |
-          (if( vParams.vlen/2 < 32 ) { vsew === "b010".U } else {false.B}) |
-          (if( vParams.vlen/2 < 16 ) { vsew === "b001".U } else {false.B}) |
-          (if( vParams.vlen/2 < 8  ) { vsew === "b000".U } else {false.B})
-        )
+  vill :=
+    (vsew.extract(2) === true.B) |
+    (vlmul === "b100".U) |
+    (vlmul === "b101".U & (
+        (if( vParams.vlen/8 < 64 ) { vsew === "b011".U } else {false.B}) |
+        (if( vParams.vlen/8 < 32 ) { vsew === "b010".U } else {false.B}) |
+        (if( vParams.vlen/8 < 16 ) { vsew === "b001".U } else {false.B}) |
+        (if( vParams.vlen/8 < 8  ) { vsew === "b000".U } else {false.B})
       )
+    ) |
+    (vlmul === "b110".U & (
+        (if( vParams.vlen/4 < 64 ) { vsew === "b011".U } else {false.B}) |
+        (if( vParams.vlen/4 < 32 ) { vsew === "b010".U } else {false.B}) |
+        (if( vParams.vlen/4 < 16 ) { vsew === "b001".U } else {false.B}) |
+        (if( vParams.vlen/4 < 8  ) { vsew === "b000".U } else {false.B})
+      )
+    ) |
+    (vlmul === "b111".U & (
+        (if( vParams.vlen/2 < 64 ) { vsew === "b011".U } else {false.B}) |
+        (if( vParams.vlen/2 < 32 ) { vsew === "b010".U } else {false.B}) |
+        (if( vParams.vlen/2 < 16 ) { vsew === "b001".U } else {false.B}) |
+        (if( vParams.vlen/2 < 8  ) { vsew === "b000".U } else {false.B})
+      )
+    )
 
-    vtype := Mux( vill, 0.U, io.csr_iss_exe.bits.param.dat.op2(7,0) )
+  vtype := Mux( vill, 0.U, io.csr_iss_exe.bits.param.dat.op2(7,0) )
+  nvl   := Mux( vill, 0.U, Mux( avl <= (vParams.vlmax).U, avl, Mux( avl <= ((vParams.vlmax).U << 1), avl >> 1, (vParams.vlmax).U ) ) )
 
 
-    csr_exe_iwb_fifo.io.enq.bits.res := nvl
-    io.xpuCsrWriteBack.bits.addr  := "hFFE".U
-
-    assert( ~rw & ~rs & ~rs )
-
-    io.xpuCsrWriteBack.bits.op_rw := true.B
-    io.xpuCsrWriteBack.bits.dat_i := Cat( vill, nvl | 0.U((64-log2Ceil(vParams.vlmax)-8).W), vtype )
-
-  }
 } 
 
 
 class CSR(implicit p: Parameters) extends CSRBase 
 with VConfig{
-  
+  csr_exe_iwb_fifo.io.enq.valid := io.csr_iss_exe.valid
+
+  csr_exe_iwb_fifo.io.enq.bits.res :=
+    Mux1H(Seq(
+      (io.csr_iss_exe.bits.fun.rw      | io.csr_iss_exe.bits.fun.rs       | io.csr_iss_exe.bits.fun.rc)     -> io.csr_iss_exe.bits.param.dat.op2,
+      (io.csr_iss_exe.bits.fun.vsetvli | io.csr_iss_exe.bits.fun.vsetivli | io.csr_iss_exe.bits.fun.vsetvl) -> nvl,
+    ))
+    
+  csr_exe_iwb_fifo.io.enq.bits.rd0 := io.csr_iss_exe.bits.param.rd0
+
+  io.xpuCsrWriteBack.valid := csr_exe_iwb_fifo.io.enq.fire
+  io.xpuCsrWriteBack.bits.addr  :=
+    Mux1H(Seq(
+      (io.csr_iss_exe.bits.fun.rw      | io.csr_iss_exe.bits.fun.rs       | io.csr_iss_exe.bits.fun.rc)     -> addr,
+      (io.csr_iss_exe.bits.fun.vsetvli | io.csr_iss_exe.bits.fun.vsetivli | io.csr_iss_exe.bits.fun.vsetvl) -> "hFFE".U,
+    ))
+    
+  io.xpuCsrWriteBack.bits.dat_i  := 
+    Mux1H(Seq(
+      (io.csr_iss_exe.bits.fun.rw      | io.csr_iss_exe.bits.fun.rs       | io.csr_iss_exe.bits.fun.rc)     -> dat,
+      (io.csr_iss_exe.bits.fun.vsetvli | io.csr_iss_exe.bits.fun.vsetivli | io.csr_iss_exe.bits.fun.vsetvl) -> Cat( vill, nvl | 0.U((64-log2Ceil(vParams.vlmax)-8).W), vtype ),
+    ))
+  io.xpuCsrWriteBack.bits.op_rw := 
+    Mux1H(Seq(
+      (io.csr_iss_exe.bits.fun.rw      | io.csr_iss_exe.bits.fun.rs       | io.csr_iss_exe.bits.fun.rc)     -> (rw & ~dontWrite),
+      (io.csr_iss_exe.bits.fun.vsetvli | io.csr_iss_exe.bits.fun.vsetivli | io.csr_iss_exe.bits.fun.vsetvl) -> true.B,
+    ))
+  io.xpuCsrWriteBack.bits.op_rs := rs & ~dontWrite
+  io.xpuCsrWriteBack.bits.op_rc := rc & ~dontWrite
 }
 

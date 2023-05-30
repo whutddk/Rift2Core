@@ -197,6 +197,8 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
   val vstart  = UInt( (log2Ceil(vParams.vlmax)).W )
   val vcsr    = new VCSRBundle
   val vConfig = new VConfigBundle
+  val vl    = UInt(64.W)
+  val vtype = UInt(64.W)
   val vlenb   = UInt((log2Ceil(vParams.vlen/8)).W)
 
   // val ustatus  = UInt(64.W)
@@ -1676,11 +1678,15 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
     if(hasVector){
       csrfiles.vstart  := update_vstart(in)
       csrfiles.vcsr    := update_vcsr(in)
+      csrfiles.vl      := csrfiles.vConfig.vl
+      csrfiles.vtype   := Cat( csrfiles.vConfig.vill, 0.U(55.W), csrfiles.vConfig.vtype)
       csrfiles.vConfig := update_vConfig(in)
       csrfiles.vlenb   := update_vlenb(in)      
     } else{
       csrfiles.vstart  := DontCare
       csrfiles.vcsr    := DontCare
+      csrfiles.vl      := DontCare
+      csrfiles.vtype   := DontCare
       csrfiles.vConfig := DontCare
       csrfiles.vlenb   := DontCare
     }

@@ -884,13 +884,24 @@ trait IssSelCsr{ this: IssueSel =>
     res.fun.rc  := bufInfo(idx).csrIsa.rc | bufInfo(idx).csrIsa.rci
     res.fun.rs  := bufInfo(idx).csrIsa.rs | bufInfo(idx).csrIsa.rsi
     res.fun.rw  := bufInfo(idx).csrIsa.rw | bufInfo(idx).csrIsa.rwi
+    res.fun.vsetvli  := ( if(hasVector) {bufInfo(idx).csrIsa.vsetvli  } else {false.B} )
+    res.fun.vsetivli := ( if(hasVector) {bufInfo(idx).csrIsa.vsetivli } else {false.B} )
+    res.fun.vsetvl   := ( if(hasVector) {bufInfo(idx).csrIsa.vsetvl   } else {false.B} )
 
     res.param.dat.op1 := 
-      Mux1H(Seq(
-        bufInfo(idx).csrIsa.rw  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rwi -> bufInfo(idx).param.raw.rs1,
-        bufInfo(idx).csrIsa.rs  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rsi -> bufInfo(idx).param.raw.rs1,
-        bufInfo(idx).csrIsa.rc  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rci -> bufInfo(idx).param.raw.rs1,
-      ))
+      Mux1H(
+        Seq(
+          bufInfo(idx).csrIsa.rw  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rwi -> bufInfo(idx).param.raw.rs1,
+          bufInfo(idx).csrIsa.rs  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rsi -> bufInfo(idx).param.raw.rs1,
+          bufInfo(idx).csrIsa.rc  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rci -> bufInfo(idx).param.raw.rs1,
+        ) ++
+        ( if(hasVector){
+          Seq(
+            bufInfo(idx).csrIsa.vsetvli  -> postBufOperator(idx)(1),
+            bufInfo(idx).csrIsa.vsetivli -> bufInfo(idx).param.raw.rs1,
+            bufInfo(idx).csrIsa.vsetvl   -> postBufOperator(idx)(1),
+          ) } else {Seq()})
+      )
 
     /** automatically create csr address mux according CSRInfoTable */
     res.param.dat.op2 := 
@@ -917,11 +928,23 @@ trait IssSelCsr{ this: IssueSel =>
 
         (for( i <- 3 until 32 ) yield{
           ((csrSel === ("hC00".U + i.U)) -> io.csrfiles.hpmcounter(i))
-        }) 
+        }) ++
+        
+        ( if(hasVector){ Seq(
+          bufInfo(idx).csrIsa.vsetvli  -> Cat( io.csrfiles.vl, bufInfo(idx).param.imm(11,0)),
+          bufInfo(idx).csrIsa.vsetivli -> Cat( io.csrfiles.vl, bufInfo(idx).param.imm(11,0)),
+          bufInfo(idx).csrIsa.vsetvl   -> Cat( io.csrfiles.vl, postBufOperator(idx)(2).apply(11,0)),
+          ) } else {Seq()})
       )
 
     res.param.dat.op0 := 0.U
-    res.param.dat.op3 := bufInfo(idx).param.imm(11,0)
+    res.param.dat.op3 := 
+      Mux(
+        ( if(hasVector){ bufInfo(idx).csrIsa.vsetvli | bufInfo(idx).csrIsa.vsetivli | bufInfo(idx).csrIsa.vsetvl } else {false.B} ),
+        "hffe".U,
+        bufInfo(idx).param.imm(11,0)
+      )
+      
 
     res.param.rd0     := bufInfo(idx).phy.rd0
 

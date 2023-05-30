@@ -131,6 +131,15 @@ abstract class CsrScoreBoardBase(implicit p: Parameters) extends RiftModule{
   val fcsr   : CSRInOrderReadWrite = FPUStatus.apply(2); require(fcsr.address   == 0x003)
   val mstatus: CSRInOrderReadWrite = XPUStatus.find( _.name == "mstatus").get
 
+  val vstart  : CSRInOrderReadWrite = VPUStatus.apply(0); require( vstart.address == 0x008)
+  val vxsat   : CSRInOrderReadWrite = VPUStatus.apply(1); require( vxsat.address == 0x009)
+  val vxrm    : CSRInOrderReadWrite = VPUStatus.apply(2); require( vxrm.address == 0x00A)
+  val vcsr    : CSRInOrderReadWrite = VPUStatus.apply(3); require( vcsr.address == 0x00F)
+  val vl      : CSRInOrderReadWrite = VPUStatus.apply(4); require( vl.address == 0xC20)
+  val vtype   : CSRInOrderReadWrite = VPUStatus.apply(5); require( vtype.address == 0xC21)
+  val vConfig : CSRInOrderReadWrite = VPUStatus.apply(6); require( vConfig.address == 0xFFE)
+  val vlenb   : CSRInOrderReadWrite = VPUStatus.apply(7); require( vlenb.address == 0xC22)
+
   /** create all implemented CSR register from the preset Array CSRInfoTable */
   val CSRStatus = XPUStatus ++ FPUStatus ++ VPUStatus
 
@@ -171,10 +180,22 @@ trait CsrScoreBoardXPU{ this: CsrScoreBoardBase =>
           } else { true.B }
         ) &
         (
-          if( x.address == 0x003 ){ //fcsr can be block by fflags and frm
+          if( x.address == 0x003 ){ //fcsr can be block by fflags and frm (Read-Only)
             fflags.isReady4Molloc & frm.isReady4Molloc
           } else { true.B }   
-        ))
+        ) &
+        (
+          if( x.address == 0xFFE ){ //vConfig can be block by vtype and vl (Read-Only)
+            vtype.isReady4Molloc & vl.isReady4Molloc
+          } else { true.B }   
+        )
+        // (
+        //   if( (x.address == 0xC21) || (x.address == 0xC22) || (x.address == 0xFFE) ){ //no vpu request at fpu csr
+        //     ~isVpuInfly & 
+        //     (0 until i).map{ j => ~(io.vpu.molloc(j).valid) }.foldLeft(true.B)(_&_)
+        //   } else { true.B }
+        // ) &
+        )
       })
     
     xpuInflyCounter.io.enq.valid := io.xpu.molloc.map{ x => x.fire }.foldLeft(false.B)(_|_)
@@ -243,13 +264,7 @@ trait CsrScoreBoardVPU{ this: CsrScoreBoardBase =>
   println("Warning, Dont care about fcsr and vcsr now!\n")
 
 
-  val vstart : CSRInOrderReadWrite = VPUStatus.apply(0); require( vstart.address == 0x008)
-  val vxsat  : CSRInOrderReadWrite = VPUStatus.apply(1); require( vxsat.address == 0x009)
-  val vxrm   : CSRInOrderReadWrite = VPUStatus.apply(2); require( vxrm.address == 0x00A)
-  val vcsr   : CSRInOrderReadWrite = VPUStatus.apply(3); require( vcsr.address == 0x00F)
-  val vl     : CSRInOrderReadWrite = VPUStatus.apply(4); require( vl.address == 0xC20)
-  val vtype  : CSRInOrderReadWrite = VPUStatus.apply(5); require( vtype.address == 0xC21)
-  val vlenb  : CSRInOrderReadWrite = VPUStatus.apply(7); require( vlenb.address == 0xC22)
+
 
   for( i <- 0 until rnChn ){
 

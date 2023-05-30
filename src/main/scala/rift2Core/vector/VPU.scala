@@ -24,6 +24,35 @@ import rift2Core.define._
 import rift2Chip._
 import org.chipsalliance.cde.config._
 
+class VPU_Param_Bundle(implicit p: Parameters) extends RD_PHY {
+  val dat = new Operation_source(dw=64)
+}
+
+class VPU_Issue_Bundle()(implicit p: Parameters) extends RiftBundle{
+  val fun = new VecIsa
+  val param = new VPU_Param_Bundle
+}
 
 
-    // val v0     = Output( Vec( atNum, Bool() ) )
+
+abstract class VPUBase()(implicit p: Parameters) extends RiftModule{
+  class VPUIO extends Bundle{
+    val vpu_iss_exe = Flipped(new DecoupledIO(new VPU_Issue_Bundle))
+
+    val vpu_exe_iwb = Decoupled(new WriteBack_info(dw=64))
+    val vpu_exe_fwb = Decoupled(new WriteBack_info(dw=65))
+    val vpu_exe_vwb = Decoupled(new Vector_WriteBack_Bundle)
+
+    // val vpuCsrWriteBack = Valid(new Exe_Port)
+
+    val flush = Input(Bool())   
+  }
+}
+
+
+trait VPUConfiguration{ this: VPUBase =>
+
+
+
+}
+

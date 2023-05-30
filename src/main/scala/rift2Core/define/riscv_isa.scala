@@ -240,7 +240,13 @@ class Csr_isa extends Bundle {
   val rsi = Bool()
   val rci = Bool()
 
-  def is_csr = rw | rs | rc | rwi | rsi | rci
+  val vsetvli  = Bool()
+  val vsetivli = Bool()
+  val vsetvl   = Bool()
+
+  def is_csr =
+    rw | rs | rc | rwi | rsi | rci |
+    vsetvli | vsetivli | vsetvl
 
   
 }
@@ -809,10 +815,6 @@ class VecIsa extends Bundle {
   val vfwmsac    = new OPF
   val vfwnmsac   = new OPF
 
-  val vsetvli  = Bool()
-  val vsetivli = Bool()
-  val vsetvl   = Bool()
-
   def isOPI = vadd.sel | vsub.sel | vrsub.sel | vminu.sel | vmin.sel | vmaxu.sel | vmax.sel | vand.sel | vor.sel | vxor.sel | vrgather.sel | vslideup.sel | vrgatherei16.sel | vslidedown.sel | vadc.sel | vmadc.sel | vsbc.sel | vmsbc.sel | vmerge.sel | vmv.sel | vmseq.sel | vmsne.sel | vmsltu.sel | vmslt.sel | vmsleu.sel | vmsle.sel | vmsgtu.sel | vmsgt.sel | vsaddu.sel | vsadd.sel | vssubu.sel  | vssub.sel | vsll.sel | vsmul.sel | vmvnr.sel | vsrl.sel | vsra.sel | vssrl.sel | vssra.sel  | vnsrl.sel | vnsra.sel | vnclipu.sel | vnclip.sel  | vwredsumu.sel | vwredsum.sel
   def isOPM = vredsum.sel | vredand.sel | vredor.sel | vredxor.sel | vredminu.sel | vredmin.sel | vredmaxu.sel | vredmax.sel | vaaddu.sel | vaadd.sel | vasubu.sel | vasub.sel | vslide1up.sel | vslide1down.sel | vcompress.sel | vmandnot.sel | vmand.sel | vmor.sel | vmxor.sel | vmornot.sel | vmnand.sel | vmnor.sel | vmxnor.sel | vdivu.sel | vdiv.sel | vremu.sel | vrem.sel | vmulhu.sel | vmul.sel | vmulhsu.sel | vmulh.sel | vmadd.sel | vnmsub.sel | vmacc.sel | vnmsac.sel | vwaddu.sel | vwadd.sel | vwsubu.sel | vwsub.sel | vwaddu_w.sel | vwadd_w.sel | vwsubu_w.sel | vwsub_w.sel | vwmulu.sel | vwmulsu.sel | vwmul.sel | vwmaccu.sel  | vwmacc.sel | vwmaccus.sel | vwmaccsu.sel
   def isOPF = vfadd.sel | vfredusum.sel | vfsub.sel | vfredosum.sel | vfmin.sel | vfredmin.sel | vfmax.sel | vfredmax.sel | vfsgnj.sel | vfsgnjn.sel | vfsgnjx.sel | vfslide1up.sel | vfslide1down.sel | vfmerge.sel | vfmv.sel | vmfeq.sel | vmfle.sel | vmflt.sel | vmfne.sel | vmfgt.sel | vmfge.sel | vfdiv.sel | vfrdiv.sel | vfmul.sel | vfrsub.sel | vfmadd.sel | vfnmadd.sel | vfmsub.sel | vfnmsub.sel | vfmacc.sel | vfnmacc.sel | vfmsac.sel | vfnmsac.sel | vfwadd.sel | vfwredusum.sel | vfwsub.sel | vfwredosum.sel | vfwadd_w.sel | vfwsub_w.sel | vfwmul.sel | vfwmacc.sel | vfwnmacc.sel | vfwmsac.sel | vfwnmsac.sel
@@ -888,7 +890,6 @@ class VecIsa extends Bundle {
     vfslide1up.sel | vfslide1down.sel
 
 
-  def isVConfig = vsetvli | vsetivli | vsetvl
 
 
 
@@ -896,9 +897,8 @@ class VecIsa extends Bundle {
 
 
 
-
-  def isRS1 = isIVX | isMVX | vsetvli | vsetvl | vmv_s_x
-  def isRS2 = isFVF | vsetvl
+  def isRS1 = isIVX | isMVX | vmv_s_x
+  def isRS2 = isFVF
 
 
 
@@ -944,8 +944,8 @@ class VecIsa extends Bundle {
 
 
 
-  def isXwb =  vsetvli | vsetivli | vsetvl | vfirst | vpopc | vmv_x_s
-  def isFwb =  vfmv_f_s
+  def isXwb = vfirst | vpopc | vmv_x_s
+  def isFwb = vfmv_f_s
   def isVwb =
     isOPI | isOPM | isOPF |
     vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
@@ -962,7 +962,7 @@ class VecIsa extends Bundle {
   def isVALU = isVXpu | isVQpu | isVFpu
 
 
-  def isVector = isVXpu | isVQpu | isVFpu | isVConfig// | isVMem
+  def isVector = isVXpu | isVQpu | isVFpu //| isVConfig | isVMem
 
 
 
@@ -1273,6 +1273,10 @@ class Csr_function(implicit p: Parameters) extends RiftBundle {
   val rw  = Bool()
   val rs  = Bool()
   val rc  = Bool()
+
+  val vsetvli  = Bool()
+  val vsetivli = Bool()
+  val vsetvl   = Bool()
 }
 
 class Csr_param(implicit p: Parameters) extends RD_PHY {
