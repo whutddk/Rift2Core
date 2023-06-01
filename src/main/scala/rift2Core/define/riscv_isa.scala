@@ -244,11 +244,11 @@ class Csr_isa extends Bundle {
   val vsetivli = Bool()
   val vsetvl   = Bool()
 
-  def is_csr =
-    rw | rs | rc | rwi | rsi | rci |
-    vsetvli | vsetivli | vsetvl
+  def isXCSR = rw | rs | rc | rwi | rsi | rci
+  def isVSet = vsetvli | vsetivli | vsetvl
 
-  
+  def is_csr = isXCSR | isVSet
+
 }
 
 class Mul_isa extends Bundle {

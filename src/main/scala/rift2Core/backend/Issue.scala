@@ -931,9 +931,9 @@ trait IssSelCsr{ this: IssueSel =>
         }) ++
         
         ( if(hasVector){ Seq(
-          bufInfo(idx).csrIsa.vsetvli  -> Cat( io.csrfiles.vl, bufInfo(idx).param.imm(11,0)),
-          bufInfo(idx).csrIsa.vsetivli -> Cat( io.csrfiles.vl, bufInfo(idx).param.imm(11,0)),
-          bufInfo(idx).csrIsa.vsetvl   -> Cat( io.csrfiles.vl, postBufOperator(idx)(2).apply(11,0)),
+          bufInfo(idx).csrIsa.vsetvli  -> bufInfo(idx).param.imm(10,0),
+          bufInfo(idx).csrIsa.vsetivli -> bufInfo(idx).param.imm(9,0),
+          bufInfo(idx).csrIsa.vsetvl   -> postBufOperator(idx)(2),
           ) } else {Seq()})
       )
 
@@ -941,7 +941,7 @@ trait IssSelCsr{ this: IssueSel =>
     res.param.dat.op3 := 
       Mux(
         ( if(hasVector){ bufInfo(idx).csrIsa.vsetvli | bufInfo(idx).csrIsa.vsetivli | bufInfo(idx).csrIsa.vsetvl } else {false.B} ),
-        "hffe".U,
+        Cat(io.csrfiles.vl, "hffe".U(12.W)),
         bufInfo(idx).param.imm(11,0)
       )
       

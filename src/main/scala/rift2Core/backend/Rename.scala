@@ -205,7 +205,10 @@ trait LoadRob{ this: RenameBase =>
 trait CSRMalloc{ this: RenameBase =>
   for ( i <- 0 until rnChn ) {
     io.xpuCsrMolloc(i).bits := 
-      Mux( io.rnReq(i).bits.csrIsa.is_csr, io.rnReq(i).bits.param.imm, 0.U)
+      Mux1H(Seq(
+        io.rnReq(i).bits.csrIsa.isXCSR -> io.rnReq(i).bits.param.imm,
+        io.rnReq(i).bits.csrIsa.isVSet -> "hFFE".U,
+      ))
 
     io.xpuCsrMolloc(i).valid :=
       io.rnReq(i).fire & io.rnReq(i).bits.csrIsa.is_csr

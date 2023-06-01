@@ -86,39 +86,40 @@ trait VConfig{ this: CSRBase =>
 
   avl := io.csr_iss_exe.bits.param.dat.op1
     Mux1H(Seq(
-      io.csr_iss_exe.bits.fun.vsetvli  -> Mux( io.csr_iss_exe.bits.param.dat.op1 =/= 0.U, io.csr_iss_exe.bits.param.dat.op1, Mux(io.csr_iss_exe.bits.param.rd0 =/= 0.U, Fill(vParams.vlmax,1.U), io.csr_iss_exe.bits.param.dat.op2(12+log2Ceil(vParams.vlmax)-1, 12)) ),
+      io.csr_iss_exe.bits.fun.vsetvli  -> Mux( io.csr_iss_exe.bits.param.dat.op1 =/= 0.U, io.csr_iss_exe.bits.param.dat.op1, Mux(io.csr_iss_exe.bits.param.rd0 =/= 0.U, Fill(vParams.vlmax,1.U), io.csr_iss_exe.bits.param.dat.op3(12+log2Ceil(vParams.vlmax)-1, 12)) ),
       io.csr_iss_exe.bits.fun.vsetivli -> io.csr_iss_exe.bits.param.dat.op1,
-      io.csr_iss_exe.bits.fun.vsetvl   -> Mux( io.csr_iss_exe.bits.param.dat.op1 =/= 0.U, io.csr_iss_exe.bits.param.dat.op1, Mux(io.csr_iss_exe.bits.param.rd0 =/= 0.U, Fill(vParams.vlmax,1.U), io.csr_iss_exe.bits.param.dat.op2(12+log2Ceil(vParams.vlmax)-1, 12)) ),
+      io.csr_iss_exe.bits.fun.vsetvl   -> Mux( io.csr_iss_exe.bits.param.dat.op1 =/= 0.U, io.csr_iss_exe.bits.param.dat.op1, Mux(io.csr_iss_exe.bits.param.rd0 =/= 0.U, Fill(vParams.vlmax,1.U), io.csr_iss_exe.bits.param.dat.op3(12+log2Ceil(vParams.vlmax)-1, 12)) ),
     ))
 
 
 
   vill :=
+    ( io.csr_iss_exe.bits.param.dat.op2.extract(63) === 1.U ) |
     (vsew.extract(2) === true.B) |
     (vlmul === "b100".U) |
     (vlmul === "b101".U & (
-        (if( vParams.vlen/8 < 64 ) { vsew === "b011".U } else {false.B}) |
-        (if( vParams.vlen/8 < 32 ) { vsew === "b010".U } else {false.B}) |
-        (if( vParams.vlen/8 < 16 ) { vsew === "b001".U } else {false.B}) |
-        (if( vParams.vlen/8 < 8  ) { vsew === "b000".U } else {false.B})
+        (if( vParams.elen/8 < 64 ) { vsew === "b011".U } else {false.B}) |
+        (if( vParams.elen/8 < 32 ) { vsew === "b010".U } else {false.B}) |
+        (if( vParams.elen/8 < 16 ) { vsew === "b001".U } else {false.B}) |
+        (if( vParams.elen/8 < 8  ) { vsew === "b000".U } else {false.B})
       )
     ) |
     (vlmul === "b110".U & (
-        (if( vParams.vlen/4 < 64 ) { vsew === "b011".U } else {false.B}) |
-        (if( vParams.vlen/4 < 32 ) { vsew === "b010".U } else {false.B}) |
-        (if( vParams.vlen/4 < 16 ) { vsew === "b001".U } else {false.B}) |
-        (if( vParams.vlen/4 < 8  ) { vsew === "b000".U } else {false.B})
+        (if( vParams.elen/4 < 64 ) { vsew === "b011".U } else {false.B}) |
+        (if( vParams.elen/4 < 32 ) { vsew === "b010".U } else {false.B}) |
+        (if( vParams.elen/4 < 16 ) { vsew === "b001".U } else {false.B}) |
+        (if( vParams.elen/4 < 8  ) { vsew === "b000".U } else {false.B})
       )
     ) |
     (vlmul === "b111".U & (
-        (if( vParams.vlen/2 < 64 ) { vsew === "b011".U } else {false.B}) |
-        (if( vParams.vlen/2 < 32 ) { vsew === "b010".U } else {false.B}) |
-        (if( vParams.vlen/2 < 16 ) { vsew === "b001".U } else {false.B}) |
-        (if( vParams.vlen/2 < 8  ) { vsew === "b000".U } else {false.B})
+        (if( vParams.elen/2 < 64 ) { vsew === "b011".U } else {false.B}) |
+        (if( vParams.elen/2 < 32 ) { vsew === "b010".U } else {false.B}) |
+        (if( vParams.elen/2 < 16 ) { vsew === "b001".U } else {false.B}) |
+        (if( vParams.elen/2 < 8  ) { vsew === "b000".U } else {false.B})
       )
     )
 
-  vtype := Mux( vill, 0.U, io.csr_iss_exe.bits.param.dat.op2(7,0) )
+  vtype := Mux( vill, 0.U, io.csr_iss_exe.bits.param.dat.op2 )
   nvl   := Mux( vill, 0.U, Mux( avl <= (vParams.vlmax).U, avl, Mux( avl <= ((vParams.vlmax).U << 1), avl >> 1, (vParams.vlmax).U ) ) )
 
 
@@ -147,7 +148,7 @@ with VConfig{
   io.xpuCsrWriteBack.bits.dat_i  := 
     Mux1H(Seq(
       (io.csr_iss_exe.bits.fun.rw      | io.csr_iss_exe.bits.fun.rs       | io.csr_iss_exe.bits.fun.rc)     -> dat,
-      (io.csr_iss_exe.bits.fun.vsetvli | io.csr_iss_exe.bits.fun.vsetivli | io.csr_iss_exe.bits.fun.vsetvl) -> Cat( vill, nvl | 0.U((64-log2Ceil(vParams.vlmax)-8).W), vtype ),
+      (io.csr_iss_exe.bits.fun.vsetvli | io.csr_iss_exe.bits.fun.vsetivli | io.csr_iss_exe.bits.fun.vsetvl) -> Cat( vill, nvl | 0.U((64-1-8).W), vtype ),
     ))
   io.xpuCsrWriteBack.bits.op_rw := 
     Mux1H(Seq(

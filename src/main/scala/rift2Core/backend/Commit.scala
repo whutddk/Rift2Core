@@ -332,7 +332,19 @@ trait CommitCsrFiles { this: CommitState =>
 
     csrfiles.priv_lvl      := "b11".U
     csrfiles.DMode         := false.B
+
+    csrfiles.vstart         := 0.U
+    csrfiles.vcsr           := 0.U.asTypeOf( new VCSRBundle ) 
+    csrfiles.vConfig        := 0.U.asTypeOf( new VConfigBundle )
+    csrfiles.vl             := 0.U
+    csrfiles.vtype          := 0.U
+    csrfiles.vlenb          := ((vParams.vlen)/8).U
+
+
+    csrfiles.fflags        := 0.U
+    csrfiles.frm           := 0.U
     csrfiles.fcsr          := 0.U.asTypeOf(new FCSRBundle)
+
     csrfiles.cycle         := 0.U
     csrfiles.time          := 0.U
     csrfiles.instret       := 0.U
