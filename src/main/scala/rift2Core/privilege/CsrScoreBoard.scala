@@ -185,10 +185,10 @@ trait CsrScoreBoardXPU{ this: CsrScoreBoardBase =>
           } else { true.B }   
         ) &
         (
-          if( x.address == 0xFFE ){ //vConfig can be block by vtype and vl (Read-Only)
-            vtype.isReady4Molloc & vl.isReady4Molloc
+          if( (x.address == 0xFFE) || (x.address == 0xC21) || (x.address == 0xC22) ){ //vConfig can be block by vtype and vl (Read-Only)
+            vtype.isReady4Molloc & vl.isReady4Molloc & vConfig.isReady4Molloc
           } else { true.B }   
-        )
+        )    
         // (
         //   if( (x.address == 0xC21) || (x.address == 0xC22) || (x.address == 0xFFE) ){ //no vpu request at fpu csr
         //     ~isVpuInfly & 

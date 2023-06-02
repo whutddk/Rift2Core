@@ -618,12 +618,7 @@ trait Decode32G { this: DecodeBase =>
       info.bruIsa.jal   -> 0.U,
       info.bruIsa.jalr  -> 0.U,
 
-      info.csrIsa.rw  -> 0.U,
-      info.csrIsa.rs  -> 0.U,
-      info.csrIsa.rc  -> 0.U,
-      info.csrIsa.rwi -> 0.U,
-      info.csrIsa.rsi -> 0.U,
-      info.csrIsa.rci -> 0.U,
+      info.csrIsa.isXCSR  -> 0.U,
       info.csrIsa.vsetvli  -> 0.U,
       info.csrIsa.vsetivli -> 0.U,
 
@@ -648,7 +643,6 @@ trait Decode32G { this: DecodeBase =>
       info.privil_isa.mret   -> 0.U,
       info.privil_isa.dret   -> 0.U,
 
-      info.csrIsa.is_csr    -> 0.U,
       info.fpuIsa.fsqrt_s   -> 0.U,
       info.fpuIsa.fcvt_w_s  -> 0.U,
       info.fpuIsa.fcvt_wu_s -> 0.U,

@@ -905,37 +905,40 @@ trait IssSelCsr{ this: IssueSel =>
 
     /** automatically create csr address mux according CSRInfoTable */
     res.param.dat.op2 := 
-      Mux1H(
-        (for ( info <- CSRInfoTable.CSRGroup; io <- io.csrfiles.elements; if( (info.name == io._1) ) ) yield {
-          (csrSel === (info.address).U) -> ( io._2.asUInt )
-        }) ++
+      Mux(
+        bufInfo(idx).csrIsa.isXCSR,
+        Mux1H(
+          (for ( info <- CSRInfoTable.CSRGroup; io <- io.csrfiles.elements; if( (info.name == io._1) ) ) yield {
+            (csrSel === (info.address).U) -> ( io._2.asUInt )
+          }) ++
 
-        (for( i <- 0 until pmpNum by 2 ) yield{
-          ((csrSel === ("h3A0".U + i.U)) -> io.csrfiles.pmpcfg(i).asUInt)
-        }) ++
+          (for( i <- 0 until pmpNum by 2 ) yield{
+            ((csrSel === ("h3A0".U + i.U)) -> io.csrfiles.pmpcfg(i).asUInt)
+          }) ++
 
-        (for( i <- 0 until pmpNum*8 ) yield{
-          ((csrSel === ("h3B0".U + i.U)) -> io.csrfiles.pmpaddr(i).asUInt)
-        }) ++
+          (for( i <- 0 until pmpNum*8 ) yield{
+            ((csrSel === ("h3B0".U + i.U)) -> io.csrfiles.pmpaddr(i).asUInt)
+          }) ++
 
-        (for( i <- 3 until 32 ) yield{
-          ((csrSel === ("hB00".U + i.U)) -> io.csrfiles.mhpmcounter(i))
-        }) ++
+          (for( i <- 3 until 32 ) yield{
+            ((csrSel === ("hB00".U + i.U)) -> io.csrfiles.mhpmcounter(i))
+          }) ++
 
-        (for( i <- 3 until 32 ) yield{
-          ((csrSel === ("h320".U + i.U)) -> io.csrfiles.mhpmevent(i))
-        }) ++ 
+          (for( i <- 3 until 32 ) yield{
+            ((csrSel === ("h320".U + i.U)) -> io.csrfiles.mhpmevent(i))
+          }) ++ 
 
-        (for( i <- 3 until 32 ) yield{
-          ((csrSel === ("hC00".U + i.U)) -> io.csrfiles.hpmcounter(i))
-        }) ++
-        
-        ( if(hasVector){ Seq(
+          (for( i <- 3 until 32 ) yield{
+            ((csrSel === ("hC00".U + i.U)) -> io.csrfiles.hpmcounter(i))
+          })
+        ),
+        (if(hasVector){ Mux1H(Seq(
           bufInfo(idx).csrIsa.vsetvli  -> bufInfo(idx).param.imm(10,0),
           bufInfo(idx).csrIsa.vsetivli -> bufInfo(idx).param.imm(9,0),
           bufInfo(idx).csrIsa.vsetvl   -> postBufOperator(idx)(2),
-          ) } else {Seq()})
+        ))} else {0.U})
       )
+
 
     res.param.dat.op0 := 0.U
     res.param.dat.op3 := 
