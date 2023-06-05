@@ -138,22 +138,58 @@ class Lsu_isa extends Bundle {
   val fsd = Bool()
 
 
-  val vle      = Bool()
-  val vse      = Bool()
+  val vle8  = Bool()
+  val vle16 = Bool()
+  val vle32 = Bool()
+  val vle64 = Bool()
+  def vle   = vle8 | vle16 | vle32 | vle64
+
+  val vse8  = Bool()
+  val vse16 = Bool()
+  val vse32 = Bool()
+  val vse64 = Bool()
+  val vse   = vse8 | vse16 | vse32 | vse64
 
   val vlm      = Bool()
   val vsm      = Bool()
 
-  val vlse     = Bool()
-  val vsse     = Bool()
+  val vlse8  = Bool()
+  val vlse16 = Bool()
+  val vlse32 = Bool()
+  val vlse64 = Bool()
+  val vlse   = vlse8 | vlse16 | vlse32 | vlse64
 
-  val vloxei   = Bool()
-  val vsoxei   = Bool()
+  val vsse8  = Bool()
+  val vsse16 = Bool()
+  val vsse32 = Bool()
+  val vsse64 = Bool()
+  val vsse   = vsse8 | vsse16 | vsse32 | vsse64
 
-  val vlNreN    = Bool()
-  val vsNr      = Bool()
+  val vloxei8  = Bool()
+  val vloxei16 = Bool()
+  val vloxei32 = Bool()
+  val vloxei64 = Bool()
+  val vloxei   = vloxei8 | vloxei16 | vloxei32 | vloxei64
 
-  val vleNff    = Bool()
+  val vsoxei8  = Bool()
+  val vsoxei16 = Bool()
+  val vsoxei32 = Bool()
+  val vsoxei64 = Bool()
+  val vsoxei   = vsoxei8 | vsoxei16 | vsoxei32 | vsoxei64
+
+  val vlre8  = Bool()
+  val vlre16 = Bool()
+  val vlre32 = Bool()
+  val vlre64 = Bool()
+  val vlre   = vlre8 | vlre16 | vlre32 | vlre64
+
+  val vsr    = Bool()
+
+  val vle8ff  = Bool()
+  val vle16ff = Bool()
+  val vle32ff = Bool()
+  val vle64ff = Bool()
+  val vleNff  = vle8ff | vle16ff | vle32ff | vle64ff
 
   def is_sc = sc_d | sc_w
   def is_lr = lr_d | lr_w
@@ -164,7 +200,7 @@ class Lsu_isa extends Bundle {
 
   def is_su  =
     sb | sh | sw | sd | fsw | fsd |
-    vse | vsm | vsse | vsoxei | vsNr
+    vse | vsm | vsse | vsoxei | vsr
 
   def is_xls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd
   def is_lrsc = is_sc | is_lr
@@ -172,16 +208,32 @@ class Lsu_isa extends Bundle {
     amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d | is_sc
   def is_fls = flw | fsw | fld | fsd
 
-  def is_vls = vle | vse | vlm | vsm | vlse | vsse | vloxei | vsoxei | vlNreN | vsNr | vleNff
+  def is_vls = vle | vse | vlm | vsm | vlse | vsse | vloxei | vsoxei | vlNreN | vsr | vleNff
 
 
   def is_fence = fence | fence_i | sfence_vma
   def is_lsu = is_xls | is_lrsc | is_amo | is_fls | is_fence | is_vls
 
-  def is_byte = lb | lbu | sb
-  def is_half = lh | lhu | sh
-  def is_word = lw | lwu | sw | amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | flw | fsw | lr_w | sc_w
-  def is_dubl = ld | lr_d | fld | sd | sc_d | fsd | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
+
+  def isByte =
+    lb | lbu | sb |
+    vle8 | vse8 | vlse8 | vsse8 |  vlre8 | vle8ff |
+    vlm | vsm
+
+  def isHalf =
+    lh | lhu | sh |
+    vle16 | vse16 | vlse16 | vsse16 | vlre16 | vle16ff
+
+  def isWord =
+    lw | lwu | sw | amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | flw | fsw | lr_w | sc_w |
+    vle32 | vse32 | vlse32 | vsse32 | vlre32 | vle32ff
+  
+  def isDubl =
+    ld | lr_d | fld | sd | sc_d | fsd | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d |
+    vle64 | vse64 | vlse64 | vsse64 | vlre64 | vle64ff |
+    vsr
+
+  def isDynamic = vloxei | vsoxei
 
   def is_usi = lbu | lhu | lwu
 
@@ -196,7 +248,7 @@ class Lsu_isa extends Bundle {
   def isFStore = fsw | fsd
 
   def isVLoad  = vle | vlm | vlse | vloxei | vlNreN | vleNff
-  def isVStore = vse | vsm | vsse | vsoxei | vsNr
+  def isVStore = vse | vsm | vsse | vsoxei | vsr
   def isVConstant = vlse | vsse
   def isVIndex = vloxei | vsoxei
 
@@ -217,13 +269,9 @@ class Lsu_isa extends Bundle {
 
   def isFwb = flw | fld
 
-  def isVwb = vse | vsm | vsse | vsoxei | vsNr
+  def isVwb = is_vls
 
-
-  // def isAcquireFifo = is_vls
-
-
-  def isUnitStride = vle | vse | vlm | vsm | vlNreN | vsNr | vleNff
+  def isUnitStride = vle | vse | vlm | vsm | vlNreN | vsr | vleNff
   def isStridde = vlse | vsse
   def isIndex = vloxei | vsoxei
 

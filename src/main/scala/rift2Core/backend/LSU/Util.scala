@@ -68,10 +68,12 @@ object get_loadRes{
     val align = reAlign_data( from = 64, to = 8, rdata, paddr )
 
     res := Mux1H(Seq(
-      fun.is_byte -> load_byte(fun.is_usi, align),
-      fun.is_half -> load_half(fun.is_usi, align),
-      fun.is_word -> load_word(fun.is_usi, align),
-      fun.is_dubl -> align
+      fun.isByte    -> load_byte(fun.is_usi, align),
+      fun.isHalf    -> load_half(fun.is_usi, align),
+      fun.isWord    -> load_word(fun.is_usi, align),
+      fun.isDubl    -> align,
+      fun.isDynamic ->
+
     ))  
 
     res

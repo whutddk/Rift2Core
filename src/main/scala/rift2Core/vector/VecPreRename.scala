@@ -202,7 +202,7 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
     microInstr(i).vAttach.get.vm        := vSplitReq.vAttach.get.vm
     microInstr(i).vAttach.get.nf        := nf
     microInstr(i).vAttach.get.vtype     := vtype
-    microInstr(i).vAttach.get.vstartSel := 
+    microInstr(i).vAttach.get.vlIdx := 
       Mux1H(Seq(
         ( vsew === "b000".U ) -> (i*vParams.vlen /  8).U,
         ( vsew === "b001".U ) -> (i*vParams.vlen / 16).U,
@@ -224,7 +224,7 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
     microInstr(i).vAttach.get.vop0      := false.B
     microInstr(i).vAttach.get.vop1      := 0.U
     microInstr(i).vAttach.get.vop2      := 0.U
-    microInstr(i).vAttach.get.voffset   := 0.U 
+    // microInstr(i).vAttach.get.voffset   := 0.U 
 
 
   }

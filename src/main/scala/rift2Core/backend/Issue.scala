@@ -1016,9 +1016,13 @@ trait IssSelLsu{ this: IssueSel =>
         (bufInfo(i).lsuIsa.is_xls  | bufInfo(i).lsuIsa.is_fls)  -> (postBufOperator(i)(1).asSInt + bufInfo(i).param.imm.asSInt()).asUInt(),
         (bufInfo(i).lsuIsa.is_lrsc | bufInfo(i).lsuIsa.is_amo)  -> postBufOperator(i)(1),
       ) ++ (if(hasVector) { Seq(
-              (bufInfo(i).lsuIsa.isUnitStride ) -> (postBufOperator(i)(1).asSInt + bufInfo(i).vAttach.get.voffset.asSInt).asUInt(),
-              (bufInfo(i).lsuIsa.isStridde    ) -> (postBufOperator(i)(1).asSInt + bufInfo(i).vAttach.get.voffset.asSInt + (postBufOperator(i)(2) * i.U).asSInt ).asUInt(),
-              (bufInfo(i).lsuIsa.isIndex      ) -> (postBufOperator(i)(1).asSInt + bufInfo(i).vAttach.get.voffset.asSInt + postBufOperator(i)(2).asSInt).asUInt(),//vop2
+              (bufInfo(i).lsuIsa.isUnitStride & isByte) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt >> 3 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & isHalf) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt >> 4 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & isWord) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt >> 5 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & isDubl) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt >> 6 ) ).asUInt(),
+
+              (bufInfo(i).lsuIsa.isStridde    ) -> (postBufOperator(i)(1).asSInt + (bufInfo(i).vAttach.get.vlIdx.asSInt * postBufOperator(i)(2)).asSInt ).asUInt(),//rs2
+              (bufInfo(i).lsuIsa.isIndex      ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt).asUInt(),//vs2 -> vop2 
       )} else { Seq() })
                                                                       // -> postBufOperator(i)(1).asSInt + adjAddr( i, nf = "b000".U, vWidth = "b000".U ) + ((ori.vAttach.get.nf + 1.U) << log2Ceil(vParams.vlen/8))
       )
@@ -1185,7 +1189,7 @@ trait IssSelVpu{ this: IssueSel =>
   //   vpuIssInfo(i).vAttach.get.lmulSel   := bufInfo(idx).vAttach.get.lmulSel
   //   vpuIssInfo(i).vAttach.get.nfSel     := bufInfo(idx).vAttach.get.nfSel
   //   vpuIssInfo(i).vAttach.get.widenSel  := bufInfo(idx).vAttach.get.widenSel
-  //   vpuIssInfo(i).vAttach.get.vstartSel := bufInfo(idx).vAttach.get.vstartSel
+  //   vpuIssInfo(i).vAttach.get.vlIdx     := bufInfo(idx).vAttach.get.vlIdx
   //   vpuIssInfo(i).vAttach.get.isLast    := bufInfo(idx).vAttach.get.isLast
   //   vpuIssInfo(i).vAttach.get.vstart    := DontCare
   //   vpuIssInfo(i).vAttach.get.vtype     := bufInfo(idx).vAttach.get.vtype
