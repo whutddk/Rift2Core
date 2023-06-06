@@ -148,7 +148,7 @@ class Lsu_isa extends Bundle {
   val vse16 = Bool()
   val vse32 = Bool()
   val vse64 = Bool()
-  val vse   = vse8 | vse16 | vse32 | vse64
+  def vse   = vse8 | vse16 | vse32 | vse64
 
   val vlm      = Bool()
   val vsm      = Bool()
@@ -157,31 +157,31 @@ class Lsu_isa extends Bundle {
   val vlse16 = Bool()
   val vlse32 = Bool()
   val vlse64 = Bool()
-  val vlse   = vlse8 | vlse16 | vlse32 | vlse64
+  def vlse   = vlse8 | vlse16 | vlse32 | vlse64
 
   val vsse8  = Bool()
   val vsse16 = Bool()
   val vsse32 = Bool()
   val vsse64 = Bool()
-  val vsse   = vsse8 | vsse16 | vsse32 | vsse64
+  def vsse   = vsse8 | vsse16 | vsse32 | vsse64
 
   val vloxei8  = Bool()
   val vloxei16 = Bool()
   val vloxei32 = Bool()
   val vloxei64 = Bool()
-  val vloxei   = vloxei8 | vloxei16 | vloxei32 | vloxei64
+  def vloxei   = vloxei8 | vloxei16 | vloxei32 | vloxei64
 
   val vsoxei8  = Bool()
   val vsoxei16 = Bool()
   val vsoxei32 = Bool()
   val vsoxei64 = Bool()
-  val vsoxei   = vsoxei8 | vsoxei16 | vsoxei32 | vsoxei64
+  def vsoxei   = vsoxei8 | vsoxei16 | vsoxei32 | vsoxei64
 
   val vlre8  = Bool()
   val vlre16 = Bool()
   val vlre32 = Bool()
   val vlre64 = Bool()
-  val vlre   = vlre8 | vlre16 | vlre32 | vlre64
+  def vlre   = vlre8 | vlre16 | vlre32 | vlre64
 
   val vsr    = Bool()
 
@@ -189,14 +189,14 @@ class Lsu_isa extends Bundle {
   val vle16ff = Bool()
   val vle32ff = Bool()
   val vle64ff = Bool()
-  val vleNff  = vle8ff | vle16ff | vle32ff | vle64ff
+  def vleNff  = vle8ff | vle16ff | vle32ff | vle64ff
 
   def is_sc = sc_d | sc_w
   def is_lr = lr_d | lr_w
 
   def is_lu  =
     lb | lh | lw | ld | lbu | lhu | lwu | flw | fld | is_lr |
-    vle | vlm | vlse | vloxei | vlNreN | vleNff
+    vle | vlm | vlse | vloxei | vlre | vleNff
 
   def is_su  =
     sb | sh | sw | sd | fsw | fsd |
@@ -208,7 +208,7 @@ class Lsu_isa extends Bundle {
     amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d | is_sc
   def is_fls = flw | fsw | fld | fsd
 
-  def is_vls = vle | vse | vlm | vsm | vlse | vsse | vloxei | vsoxei | vlNreN | vsr | vleNff
+  def is_vls = vle | vse | vlm | vsm | vlse | vsse | vloxei | vsoxei | vlre | vsr | vleNff
 
 
   def is_fence = fence | fence_i | sfence_vma
@@ -247,7 +247,7 @@ class Lsu_isa extends Bundle {
   def isFLoad  = flw | fld
   def isFStore = fsw | fsd
 
-  def isVLoad  = vle | vlm | vlse | vloxei | vlNreN | vleNff
+  def isVLoad  = vle | vlm | vlse | vloxei | vlre | vleNff
   def isVStore = vse | vsm | vsse | vsoxei | vsr
   def isVConstant = vlse | vsse
   def isVIndex = vloxei | vsoxei
@@ -271,7 +271,7 @@ class Lsu_isa extends Bundle {
 
   def isVwb = is_vls
 
-  def isUnitStride = vle | vse | vlm | vsm | vlNreN | vsr | vleNff
+  def isUnitStride = vle | vse | vlm | vsm | vlre | vsr | vleNff
   def isStridde = vlse | vsse
   def isIndex = vloxei | vsoxei
 
@@ -1236,10 +1236,17 @@ class Lsu_iss_info(implicit p: Parameters) extends RiftBundle {
 
   def is_misAlign =
     Mux1H( Seq(
-      fun.is_half -> (param.dat.op1(0) =/= 0.U),
-      fun.is_word -> (param.dat.op1(1,0) =/= 0.U),
-      fun.is_dubl -> (param.dat.op1(2,0) =/= 0.U)	
-    ))
+      fun.isHalf -> (param.dat.op1(0)   =/= 0.U),
+      fun.isWord -> (param.dat.op1(1,0) =/= 0.U),
+      fun.isDubl -> (param.dat.op1(2,0) =/= 0.U),
+    ) ++
+      (if(hasVector){
+        Seq(fun.isDynamic -> Mux1H(Seq(
+          (vAttach.get.vsew === "b001".U) -> (param.dat.op1(0)   =/= 0.U),
+          (vAttach.get.vsew === "b010".U) -> (param.dat.op1(1,0) =/= 0.U),
+          (vAttach.get.vsew === "b011".U) -> (param.dat.op1(2,0) =/= 0.U),
+      )))} else {Seq()}) 
+    )
 
   def paddr = param.dat.op1
 
@@ -1252,9 +1259,17 @@ class Lsu_iss_info(implicit p: Parameters) extends RiftBundle {
   def wstrb_align(dw: Int) = {
     val wstrb = Wire(UInt((dw/8).W))
     wstrb := Mux1H(Seq(
-        fun.is_byte -> "b00000001".U, fun.is_half -> "b00000011".U,
-        fun.is_word -> "b00001111".U, fun.is_dubl -> "b11111111".U
-      )) << paddr((log2Ceil(dw/8)-1),0)
+        fun.isByte -> "b00000001".U, fun.isHalf -> "b00000011".U,
+        fun.isWord -> "b00001111".U, fun.isDubl -> "b11111111".U,
+      ) ++
+        (if(hasVector){
+          Seq(fun.isDynamic -> Mux1H(Seq(
+            (vAttach.get.vsew === "b000".U) -> "b00000001".U,
+            (vAttach.get.vsew === "b001".U) -> "b00000011".U,
+            (vAttach.get.vsew === "b010".U) -> "b00001111".U,
+            (vAttach.get.vsew === "b011".U) -> "b11111111".U,
+        )))} else {Seq()})
+      ) << paddr((log2Ceil(dw/8)-1),0)
     wstrb
   }
 }

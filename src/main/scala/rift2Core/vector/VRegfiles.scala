@@ -177,7 +177,14 @@ trait VRegWriteBack{ this: VRegFilesBase =>
 trait VRegCommit{ this: VRegFilesBase =>
   for ( i <- 0 until cmChn ){ 
     val idx = io.commit(i).phy
-    io.commit(i).isWroteback  := isWroteback(idx).reduce(_&_)
+    io.commit(i).isWroteback  :=
+      Mux1H(Seq(
+        (vsew(idx) === "b00".U) -> ( 0 until vParams.vlen /8  ).map{ j => isWroteback(idx)(j) }.reduce(_&_),
+        (vsew(idx) === "b01".U) -> ( 0 until vParams.vlen /16 ).map{ j => isWroteback(idx)(j) }.reduce(_&_),
+        (vsew(idx) === "b10".U) -> ( 0 until vParams.vlen /32 ).map{ j => isWroteback(idx)(j) }.reduce(_&_),
+        (vsew(idx) === "b11".U) -> ( 0 until vParams.vlen /64 ).map{ j => isWroteback(idx)(j) }.reduce(_&_),
+      ))
+
     io.commit(i).isException  := isException(idx).reduce(_|_)
     io.commit(i).exceptionIdx := isException(idx).indexWhere( (x: Bool) => (x === true.B) )
 

@@ -1016,10 +1016,10 @@ trait IssSelLsu{ this: IssueSel =>
         (bufInfo(i).lsuIsa.is_xls  | bufInfo(i).lsuIsa.is_fls)  -> (postBufOperator(i)(1).asSInt + bufInfo(i).param.imm.asSInt()).asUInt(),
         (bufInfo(i).lsuIsa.is_lrsc | bufInfo(i).lsuIsa.is_amo)  -> postBufOperator(i)(1),
       ) ++ (if(hasVector) { Seq(
-              (bufInfo(i).lsuIsa.isUnitStride & isByte) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt >> 3 ) ).asUInt(),
-              (bufInfo(i).lsuIsa.isUnitStride & isHalf) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt >> 4 ) ).asUInt(),
-              (bufInfo(i).lsuIsa.isUnitStride & isWord) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt >> 5 ) ).asUInt(),
-              (bufInfo(i).lsuIsa.isUnitStride & isDubl) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt >> 6 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isByte) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 3 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isHalf) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 4 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isWord) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 5 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isDubl) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 6 ) ).asUInt(),
 
               (bufInfo(i).lsuIsa.isStridde    ) -> (postBufOperator(i)(1).asSInt + (bufInfo(i).vAttach.get.vlIdx.asSInt * postBufOperator(i)(2)).asSInt ).asUInt(),//rs2
               (bufInfo(i).lsuIsa.isIndex      ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt).asUInt(),//vs2 -> vop2 
@@ -1054,6 +1054,7 @@ trait IssSelLsu{ this: IssueSel =>
 
     if( hasVector ){
       lsuIssInfo(i).vAttach.get.eleIdx := bufInfo(i).vAttach.get.eleIdx
+      lsuIssInfo(i).vAttach.get.vtype  := bufInfo(i).vAttach.get.vtype
     }
   }
 

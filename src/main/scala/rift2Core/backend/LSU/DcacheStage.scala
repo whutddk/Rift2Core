@@ -147,8 +147,8 @@ trait DcacheStageLRSC { this: DcacheStageBase =>
   val lr_addr = Reg(UInt(plen.W))
   is_sc_fail := 
     ~is_pending_lr | 
-    (is_lr_64_32n  & pipeStage1Bits.fun.is_word) |
-    (~is_lr_64_32n & pipeStage1Bits.fun.is_dubl) |
+    (is_lr_64_32n  & pipeStage1Bits.fun.isWord) |
+    (~is_lr_64_32n & pipeStage1Bits.fun.isDubl) |
     lr_addr =/= pipeStage1Bits.paddr
 
 
@@ -157,9 +157,9 @@ trait DcacheStageLRSC { this: DcacheStageBase =>
   } .elsewhen( pipeStage1Valid & pipeStage1Bits.fun.is_access & isHit ) {// going to deq fire (validIO)
     when( pipeStage1Bits.fun.is_lr ) {
       is_pending_lr := true.B
-      is_lr_64_32n := pipeStage1Bits.fun.is_dubl
+      is_lr_64_32n := pipeStage1Bits.fun.isDubl
       lr_addr := pipeStage1Bits.paddr
-      assert( pipeStage1Bits.fun.is_dubl | pipeStage1Bits.fun.is_word )
+      assert( pipeStage1Bits.fun.isDubl | pipeStage1Bits.fun.isWord )
     } .elsewhen( pipeStage1Bits.fun.is_sc ) {
       is_pending_lr := false.B
     } .elsewhen( (pipeStage1Bits.fun.is_su | (pipeStage1Bits.fun.is_amo & ~pipeStage1Bits.fun.is_lrsc)) ) {
@@ -380,7 +380,7 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
         res := reAlign_data( from = dw, to = 64, overlap_data, paddr )
         res
       }
-      val res_pre = get_loadRes( fun, paddr, res_pre_pre ) //align 8
+      val res_pre = get_loadRes( fun, pipeStage1Bits.vAttach.get.vsew, paddr, res_pre_pre ) //align 8
 
       val res = Mux(
         pipeStage1Bits.fun.is_sc,

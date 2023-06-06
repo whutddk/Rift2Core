@@ -21,12 +21,16 @@ import chisel3.util._
 import rift2Chip._
 import org.chipsalliance.cde.config._
 
-
+trait Vec_vType_Bundle{ this: RiftBundle =>
+  val vtype   = UInt( 64.W )
+  def vsew  = vtype(5,3)
+  def vlmul = vtype(2,0)
+}
 
 trait Vec_PreRename_Bundle{ this: RiftBundle =>
   val nf     = UInt(3.W)
   val vm     = Bool()
-  val vtype   = UInt( 64.W )
+  
 
   // val vstartSel = UInt( (log2Ceil(vParams.vlmax)).W )
   val lmulSel  = UInt(3.W)
@@ -36,8 +40,7 @@ trait Vec_PreRename_Bundle{ this: RiftBundle =>
   val microIdx = UInt(3.W)
   val vlIdx    = UInt( (log2Ceil(vParams.vlmax)).W )
   val vlCnt   = UInt( log2Ceil( vParams.vlen / 8 ).W ) //how many vec-element in this micro instrution, load at preRename
-  def vsew  = vtype(5,3)
-  def vlmul = vtype(2,0)
+
 }
 
 trait Vec_element_Index{ this: RiftBundle =>
@@ -54,6 +57,7 @@ trait Vec_PreIssue_Bundle{ this: RiftBundle =>
 
 class VRename_Attach_Bundle(implicit p: Parameters) extends RiftBundle
 with Vec_PreRename_Bundle
+with Vec_vType_Bundle
 with Vec_PreIssue_Bundle
 with Vec_element_Index{
 
@@ -61,6 +65,7 @@ with Vec_element_Index{
 
 class VLsu_Attach_Bundle(implicit p: Parameters) extends RiftBundle
 with Vec_element_Index
+with Vec_vType_Bundle
 
 
 // class VDcache_Attach_Bundle(implicit p: Parameters) extends VRename_Attach_Bundle{

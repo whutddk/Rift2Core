@@ -71,17 +71,30 @@ abstract class VecPreRenameBase()(implicit p: Parameters) extends RiftModule {
 
   val isWiden = vSplitReq.vecIsa.isVS2P | vSplitReq.vecIsa.is2Malloc
 
+  val vlsMicInstrCnt = 
+    Mux( lmul.extract(2), (nf+1.U), ((nf+1.U) << lmul(1,0)) )
+
+  val vlsMicInstr = Wire( Vec( 8, new IF4_Bundle ) )
+  val vlsLMulSel  = Wire( Vec( 8, UInt(3.W)) )
+
+  val vpuMicInstrCnt = 0.U
+  val vpuMicInstr = Wire( Vec( 8, new IF4_Bundle ) )
+  val vpuLMulSel  = Wire( Vec( 8, UInt(3.W)) )
 }
 
 
 trait VecPreRenameMux{ this: VecPreRenameBase =>
 
+  vSplitReq := 0.U.asTypeOf(new IF4_Bundle)
+  for( j <- 0 until 8 ) {
+    vecSplitFifo.io.enq(j).valid := false.B
+    vecSplitFifo.io.enq(j).bits  := DontCare
+  }
+  
   for( i <- 0 until rnChn ){
-
     when( vecSplitFifo.io.deq(0).valid ){
       io.deq(i) <> vecSplitFifo.io.deq(i)
       io.enq(i).ready := false.B
-      vSplitReq := 0.U.asTypeOf(new IF4_Bundle)
     } .otherwise{
       vecSplitFifo.io.deq(i).ready := false.B
 
@@ -89,143 +102,275 @@ trait VecPreRenameMux{ this: VecPreRenameBase =>
         io.deq(i).valid := false.B
         io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
         io.enq(i).ready := false.B
-        vSplitReq := 0.U.asTypeOf(new IF4_Bundle)
       } .otherwise{
-        when( ~(io.enq(i).bits.lsuIsa.isVector | io.enq(i).bits.vecIsa.isVALU) ){
-          io.enq(i) <> io.deq(i)
-        } .otherwise{
+
+        when( io.enq(i).bits.lsuIsa.isVector ){
           vSplitReq := io.enq(i).bits
-          when( nf === 0.U & lmul(1,0) === 0.U & ~isWiden ){ //dont splitter
+          when( nf === 0.U & (lmul(1,0) === 0.U | lmul.extract(2) === 1.U)  ){//dont splitter
             io.enq(i) <> io.deq(i)
-          }.otherwise{ //splitter
+          }.otherwise{ //vls splitter
             io.deq(i).valid := false.B
             io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
-            io.enq(i).ready := true.B
+            io.enq(i).ready :=
+              true.B & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_)
+
+            for( j <- 0 until 8 ) {
+              vecSplitFifo.io.enq(j).valid := (j.U <= vlsMicInstrCnt)
+              vecSplitFifo.io.enq(j).bits  := vlsMicInstr(j)
+              assert( ~(vecSplitFifo.io.enq(j).valid & ~vecSplitFifo.io.enq(j).ready) )
+            }
 
             assert( io.enq(i).fire === vecSplitFifo.io.enq(0).fire )
           }
+        }.elsewhen(io.enq(i).bits.vecIsa.isVALU){
+          vSplitReq := io.enq(i).bits
+          when( (lmul(1,0) === 0.U | lmul.extract(2) === 1.U) & ~isWiden ){ //dont splitter
+            io.enq(i) <> io.deq(i)
+          }.otherwise{ //vpu splitter
+            io.deq(i).valid := false.B
+            io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
+            io.enq(i).ready :=
+              vecSplitFifo.io.enq(7).ready & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_)
+
+            assert( false.B, "Assert Failed at preRename, Reaching at an UNCODED AREA!" )
+            assert( io.enq(i).fire === vecSplitFifo.io.enq(0).fire )
+          }
+        }.otherwise{ //not a vector
+          io.enq(i) <> io.deq(i)
         }
+
+
+
       }
     }
   }
 }
 
+trait VecPreRenameVpuMicInstr{ this: VecPreRenameBase =>
+
+  vpuMicInstr := DontCare
+  vpuLMulSel  := DontCare
+  // val microInstrCnt = 
+  //   Mux( lmul.extract(2), 1.U,
+  //     Mux1H(Seq(
+  //       ( isVALU   ) -> Mux(isWiden, 2.U << lmul(1,0), (lmul(1,0))),
+  //       ( isVLSU   ) -> ((nf+1.U) << lmul(1,0)),
+  //     ))
+  //   )
+
+  // val microInstr = Wire( Vec( 8, new IF4_Bundle ) )
+  // val lmulSel    = Wire( Vec( 8, UInt(3.W)) )
+  // val widenSel   = Wire( Vec( 8, UInt(3.W)) )
+
+  // val fifoReq = 
+  //   (0 until rnChn).map{ i => io.enq(i).valid & (io.enq(i).bits.lsuIsa.isVector | io.enq(i).bits.vecIsa.isVALU) & ~( io.enq(i).bits.vAttach.get.nf === 0.U & lmul(1,0) === 0.U & ~(io.enq(i).bits.vecIsa.isVS2P | io.enq(i).bits.vecIsa.is2Malloc)) }.foldLeft(false.B)(_|_)
 
 
+  // for( i <- 0 until 8 ) {
+  //   vecSplitFifo.io.enq(i).valid := fifoReq & (i.U <= microInstrCnt)
+  //   vecSplitFifo.io.enq(i).bits  := microInstr(i)
+  //   assert( ~(vecSplitFifo.io.enq(i).valid & ~vecSplitFifo.io.enq(i).ready) )
 
+  //   when( isVLSU ){
+  //     lmulSel(i) := Mux1H(Seq(
+  //       (nf === "b000".U) -> (i/1).U, (nf === "b001".U) -> (i/2).U, //nf = 2
+  //       (nf === "b010".U) -> (i/3).U, (nf === "b011".U) -> (i/4).U, //nf = 4
+  //       (nf === "b100".U) -> 0.U,     (nf === "b101".U) -> 0.U,
+  //       (nf === "b110".U) -> 0.U,     (nf === "b111".U) -> 0.U,
+  //     ))
+  //   }.elsewhen( isWiden ){
+  //     lmulSel(i) := (i/2).U
+  //   }.otherwise{
+  //     lmulSel(i) := (i/1).U
+  //   }
 
+  //   widenSel(i) := Mux( isWiden, (i%2).U, 0.U )
 
-trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
-      
+  //   microInstr(i).aluIsa     := 0.U.asTypeOf( new Alu_isa )
+  //   microInstr(i).bruIsa     := 0.U.asTypeOf( new Bru_isa )
+  //   microInstr(i).lsuIsa     := vSplitReq.lsuIsa
+  //   microInstr(i).csrIsa     := 0.U.asTypeOf( new Csr_isa )
+  //   microInstr(i).mulIsa     := 0.U.asTypeOf( new Mul_isa )
+  //   microInstr(i).privil_isa := 0.U.asTypeOf( new Privil_isa )
+  //   microInstr(i).fpuIsa     := 0.U.asTypeOf( new Fpu_isa )
+  //   microInstr(i).vecIsa     := vSplitReq.vecIsa
 
-
-  val microInstrCnt = 
-    Mux1H(Seq(
-      ( isVALU   ) -> Mux(isWiden, 2.U << lmul(1,0), (lmul(1,0))),
-      ( isVLSU   ) -> ((nf+1.U) << lmul(1,0)),
-    ))
-
-  val microInstr = Wire( Vec( 8, new IF4_Bundle ) )
-  val lmulSel    = Wire( Vec( 8, UInt(3.W)) )
-  val widenSel   = Wire( Vec( 8, UInt(3.W)) )
-
-  val fifoReq = 
-    (0 until rnChn).map{ i => io.enq(i).valid & (io.enq(i).bits.lsuIsa.isVector | io.enq(i).bits.vecIsa.isVALU) & ~( io.enq(i).bits.vAttach.get.nf === 0.U & lmul(1,0) === 0.U & ~(io.enq(i).bits.vecIsa.isVS2P | io.enq(i).bits.vecIsa.is2Malloc)) }.foldLeft(false.B)(_|_)
-
-
-  for( i <- 0 until 8 ) {
-    vecSplitFifo.io.enq(i).valid := fifoReq & (i.U <= microInstrCnt)
-    vecSplitFifo.io.enq(i).bits  := microInstr(i)
-    assert( ~(vecSplitFifo.io.enq(i).valid & ~vecSplitFifo.io.enq(i).ready) )
-
-    when( isVLSU ){
-      lmulSel(i) := Mux1H(Seq(
-        (nf === "b000".U) -> (i/1).U, (nf === "b001".U) -> (i/2).U, //nf = 2
-        (nf === "b010".U) -> (i/3).U, (nf === "b011".U) -> (i/4).U, //nf = 4
-        (nf === "b100".U) -> 0.U,     (nf === "b101".U) -> 0.U,
-        (nf === "b110".U) -> 0.U,     (nf === "b111".U) -> 0.U,
-      ))
-    }.elsewhen( isWiden ){
-      lmulSel(i) := (i/2).U
-    }.otherwise{
-      lmulSel(i) := (i/1).U
-    }
-
-    widenSel(i) := Mux( isWiden, (i%2).U, 0.U )
-
-    microInstr(i).aluIsa     := 0.U.asTypeOf( new Alu_isa )
-    microInstr(i).bruIsa     := 0.U.asTypeOf( new Bru_isa )
-    microInstr(i).lsuIsa     := vSplitReq.lsuIsa
-    microInstr(i).csrIsa     := 0.U.asTypeOf( new Csr_isa )
-    microInstr(i).mulIsa     := 0.U.asTypeOf( new Mul_isa )
-    microInstr(i).privil_isa := 0.U.asTypeOf( new Privil_isa )
-    microInstr(i).fpuIsa     := 0.U.asTypeOf( new Fpu_isa )
-    microInstr(i).vecIsa     := vSplitReq.vecIsa
-
-    microInstr(i).param.is_rvc := false.B
-    microInstr(i).param.pc  := vSplitReq.param.pc
-    microInstr(i).param.imm := 0.U
-    microInstr(i).param.rm  := vSplitReq.param.rm
+  //   microInstr(i).param.is_rvc := false.B
+  //   microInstr(i).param.pc  := vSplitReq.param.pc
+  //   microInstr(i).param.imm := 0.U
+  //   microInstr(i).param.rm  := vSplitReq.param.rm
 
     
 
+  //   microInstr(i).param.raw.vm0 := vSplitReq.param.raw.vm0
+  //   microInstr(i).param.raw.rs1 := vSplitReq.param.raw.rs1 + Mux( vSplitReq.vecIsa.isVS1, lmulSel(i), 0.U)
 
-  // def microIdx = isWiden * lmulSel + widenSel
+  //   microInstr(i).param.raw.rs2 :=
+  //     Mux1H(Seq(
+  //       ( vSplitReq.vecIsa.isVS2 &  vSplitReq.vecIsa.isVS2P ) -> ( vSplitReq.param.raw.rs2 + (lmulSel(i) << 1) + widenSel(i) ),
+  //       ( vSplitReq.vecIsa.isVS2 & ~vSplitReq.vecIsa.isVS2P ) -> ( vSplitReq.param.raw.rs2 +  lmulSel(i) ),
+  //       ( vSplitReq.lsuIsa.isVS2                                 ) -> ( vSplitReq.param.raw.rs2 +  lmulSel(i) ), //nf didn't effect vs2 in lsu
+  //       ( vSplitReq.isRS2                                         ) -> ( vSplitReq.param.raw.rs2 ),
+  //     ))
 
-    microInstr(i).param.raw.vm0 := vSplitReq.param.raw.vm0
-    microInstr(i).param.raw.rs1 := vSplitReq.param.raw.rs1 + Mux( vSplitReq.vecIsa.isVS1, lmulSel(i), 0.U)
+  //   microInstr(i).param.raw.rs3 := 
+  //     Mux1H( Seq(
+  //       ( vSplitReq.vecIsa.isVwb &  vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i)),
+  //       ( vSplitReq.vecIsa.isVwb & ~vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+  //       ( vSplitReq.lsuIsa.isVwb                                    ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+  //       ( vSplitReq.lsuIsa.isVS3                                    ) -> (vSplitReq.param.raw.rs3), //VSTORE
+  //     ))
 
-    microInstr(i).param.raw.rs2 :=
+  //   microInstr(i).param.raw.rd0 := 
+  //     Mux1H( Seq(
+  //       ( vSplitReq.vecIsa.isVwb &  vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i) ),
+  //       ( vSplitReq.vecIsa.isVwb & ~vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+  //       ( vSplitReq.lsuIsa.isVLoad                             ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
+  //       ( vSplitReq.lsuIsa.isVStore                            ) -> 0.U,
+  //     ))
+
+  //   microInstr(i).vAttach.get.vm        := vSplitReq.vAttach.get.vm
+  //   microInstr(i).vAttach.get.nf        := nf
+  //   microInstr(i).vAttach.get.vtype     := vtype
+  //   microInstr(i).vAttach.get.vlIdx := 
+  //     Mux1H(Seq(
+  //       ( vsew === "b000".U ) -> (i*vParams.vlen /  8).U,
+  //       ( vsew === "b001".U ) -> (i*vParams.vlen / 16).U,
+  //       ( vsew === "b010".U ) -> (i*vParams.vlen / 32).U,
+  //       ( vsew === "b011".U ) -> (i*vParams.vlen / 64).U,
+  //     ))
+  //   microInstr(i).vAttach.get.lmulSel   := lmulSel(i)
+  //   microInstr(i).vAttach.get.nfSel     := 
+  //     Mux1H(Seq(
+  //       (nf === "b000".U) -> (i%1).U, (nf === "b001".U) -> (i%2).U,
+  //       (nf === "b010".U) -> (i%3).U, (nf === "b011".U) -> (i%4).U,
+  //       (nf === "b100".U) -> i.U,     (nf === "b101".U) -> i.U,
+  //       (nf === "b110".U) -> i.U,     (nf === "b111".U) -> i.U,
+  //     ))
+  //   microInstr(i).vAttach.get.widenSel  := widenSel(i)
+  //   microInstr(i).vAttach.get.microIdx  := i.U
+  //   microInstr(i).vAttach.get.vlCnt     := ((vParams.vlen/8).U) >> lmulSel(i)(1,0); when(vecSplitFifo.io.enq(0).fire) { assert( lmulSel(i).extract(2) === 0.U ) }
+  //   microInstr(i).vAttach.get.eleIdx    := 0.U
+  //   microInstr(i).vAttach.get.vop0      := false.B
+  //   microInstr(i).vAttach.get.vop1      := 0.U
+  //   microInstr(i).vAttach.get.vop2      := 0.U
+
+
+  // }
+
+
+}
+
+
+
+
+trait VecPreRenameVlsMicInstr{ this: VecPreRenameBase =>
+      
+
+
+
+
+
+
+
+  for( i <- 0 until 8 ) {
+
+
+    vlsLMulSel(i) := Mux1H(Seq(
+      (nf === "b000".U) -> (i/1).U, (nf === "b001".U) -> (i/2).U, //nf = 2
+      (nf === "b010".U) -> (i/3).U, (nf === "b011".U) -> (i/4).U, //nf = 4
+      (nf === "b100".U) -> 0.U,     (nf === "b101".U) -> 0.U,
+      (nf === "b110".U) -> 0.U,     (nf === "b111".U) -> 0.U,
+    ))
+
+
+    vlsMicInstr(i).aluIsa     := 0.U.asTypeOf( new Alu_isa )
+    vlsMicInstr(i).bruIsa     := 0.U.asTypeOf( new Bru_isa )
+    vlsMicInstr(i).lsuIsa     := vSplitReq.lsuIsa
+    vlsMicInstr(i).csrIsa     := 0.U.asTypeOf( new Csr_isa )
+    vlsMicInstr(i).mulIsa     := 0.U.asTypeOf( new Mul_isa )
+    vlsMicInstr(i).privil_isa := 0.U.asTypeOf( new Privil_isa )
+    vlsMicInstr(i).fpuIsa     := 0.U.asTypeOf( new Fpu_isa )
+    vlsMicInstr(i).vecIsa     := 0.U.asTypeOf( new VecIsa )
+    vlsMicInstr(i).param.is_rvc := false.B
+    vlsMicInstr(i).param.pc  := vSplitReq.param.pc
+    vlsMicInstr(i).param.imm := 0.U
+    vlsMicInstr(i).param.rm  := 0.U
+    vlsMicInstr(i).param.raw.vm0 := vSplitReq.param.raw.vm0
+    vlsMicInstr(i).param.raw.rs1 := vSplitReq.param.raw.rs1
+    vlsMicInstr(i).param.raw.rs2 :=
       Mux1H(Seq(
-        ( vSplitReq.vecIsa.isVS2 &  vSplitReq.vecIsa.isVS2P ) -> ( vSplitReq.param.raw.rs2 + (lmulSel(i) << 1) + widenSel(i) ),
-        ( vSplitReq.vecIsa.isVS2 & ~vSplitReq.vecIsa.isVS2P ) -> ( vSplitReq.param.raw.rs2 +  lmulSel(i) ),
-        ( vSplitReq.lsuIsa.isVS2                                 ) -> ( vSplitReq.param.raw.rs2 +  lmulSel(i) ), //nf didn't effect vs2 in lsu
-        ( vSplitReq.isRS2                                         ) -> ( vSplitReq.param.raw.rs2 ),
+        ( vSplitReq.lsuIsa.isVS2 ) -> ( vSplitReq.param.raw.rs2 + vlsLMulSel(i) ), //nf didn't effect vs2 in lsu
+        ( vSplitReq.isRS2        ) -> ( vSplitReq.param.raw.rs2 ),
       ))
 
-    microInstr(i).param.raw.rs3 := 
+    vlsMicInstr(i).param.raw.rs3 := 
       Mux1H( Seq(
-        ( vSplitReq.vecIsa.isVwb &  vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i)),
-        ( vSplitReq.vecIsa.isVwb & ~vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSplitReq.lsuIsa.isVwb                                    ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSplitReq.lsuIsa.isVS3                                    ) -> (vSplitReq.param.raw.rs3), //VSTORE
+        ( vSplitReq.lsuIsa.isVS3 ) -> (vSplitReq.param.raw.rs3 + vlsLMulSel(i) ), //VSTORE
       ))
 
-    microInstr(i).param.raw.rd0 := 
+    vlsMicInstr(i).param.raw.rd0 := 
       Mux1H( Seq(
-        ( vSplitReq.vecIsa.isVwb &  vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 + (lmulSel(i) << 1) + widenSel(i) ),
-        ( vSplitReq.vecIsa.isVwb & ~vSplitReq.vecIsa.is2Malloc ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSplitReq.lsuIsa.isVLoad                             ) -> (vSplitReq.param.raw.rd0 +  lmulSel(i) ),
-        ( vSplitReq.lsuIsa.isVStore                            ) -> 0.U,
+        ( vSplitReq.lsuIsa.isVLoad  ) -> (vSplitReq.param.raw.rd0 +  vlsLMulSel(i) ),
+        ( vSplitReq.lsuIsa.isVStore ) -> 32.U,
       ))
 
-    microInstr(i).vAttach.get.vm        := vSplitReq.vAttach.get.vm
-    microInstr(i).vAttach.get.nf        := nf
-    microInstr(i).vAttach.get.vtype     := vtype
-    microInstr(i).vAttach.get.vlIdx := 
+    vlsMicInstr(i).vAttach.get.vm        := vSplitReq.vAttach.get.vm
+    vlsMicInstr(i).vAttach.get.nf        := nf
+    vlsMicInstr(i).vAttach.get.vtype     := vtype
+    vlsMicInstr(i).vAttach.get.vlIdx := 
       Mux1H(Seq(
-        ( vsew === "b000".U ) -> (i*vParams.vlen /  8).U,
-        ( vsew === "b001".U ) -> (i*vParams.vlen / 16).U,
-        ( vsew === "b010".U ) -> (i*vParams.vlen / 32).U,
-        ( vsew === "b011".U ) -> (i*vParams.vlen / 64).U,
-      ))
-    microInstr(i).vAttach.get.lmulSel   := lmulSel(i)
-    microInstr(i).vAttach.get.nfSel     := 
+        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) ) -> (i*vParams.vlen /  8).U,
+        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) ) -> (i*vParams.vlen / 16).U,
+        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) ) -> (i*vParams.vlen / 32).U,
+        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) ) -> (i*vParams.vlen / 64).U,
+
+        ( (lmul === BitPat("b101")) & (vsew === "b000".U) ) -> (i*vParams.vlen / 8 / 8 ).U,
+        
+        ( (lmul === BitPat("b110")) & (vsew === "b000".U) ) -> (i*vParams.vlen / 4 / 8 ).U,
+        ( (lmul === BitPat("b110")) & (vsew === "b001".U) ) -> (i*vParams.vlen / 4 / 16).U,
+
+        ( (lmul === BitPat("b111")) & (vsew === "b000".U) ) -> (i*vParams.vlen / 2 / 8 ).U,
+        ( (lmul === BitPat("b111")) & (vsew === "b001".U) ) -> (i*vParams.vlen / 2 / 16).U,
+        ( (lmul === BitPat("b111")) & (vsew === "b010".U) ) -> (i*vParams.vlen / 2 / 32).U,
+
+      )); require( vParams.elen == 64 )
+
+    vlsMicInstr(i).vAttach.get.lmulSel   := vlsLMulSel(i)
+    vlsMicInstr(i).vAttach.get.nfSel     := 
       Mux1H(Seq(
         (nf === "b000".U) -> (i%1).U, (nf === "b001".U) -> (i%2).U,
         (nf === "b010".U) -> (i%3).U, (nf === "b011".U) -> (i%4).U,
         (nf === "b100".U) -> i.U,     (nf === "b101".U) -> i.U,
         (nf === "b110".U) -> i.U,     (nf === "b111".U) -> i.U,
       ))
-    microInstr(i).vAttach.get.widenSel  := widenSel(i)
-    microInstr(i).vAttach.get.microIdx  := i.U
-    microInstr(i).vAttach.get.vlCnt     := ((vParams.vlen/8).U) >> lmulSel(i)(1,0); when(vecSplitFifo.io.enq(0).fire) { assert( lmulSel(i).extract(2) === 0.U ) }
-    microInstr(i).vAttach.get.eleIdx    := 0.U
-    microInstr(i).vAttach.get.vop0      := false.B
-    microInstr(i).vAttach.get.vop1      := 0.U
-    microInstr(i).vAttach.get.vop2      := 0.U
-    // microInstr(i).vAttach.get.voffset   := 0.U 
+    vlsMicInstr(i).vAttach.get.widenSel  := 0.U
+    vlsMicInstr(i).vAttach.get.microIdx  := i.U
+    vlsMicInstr(i).vAttach.get.vlCnt     := 
+      Mux1H(Seq(
+        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) ) -> (vParams.vlen /  8).U,
+        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) ) -> (vParams.vlen / 16).U,
+        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) ) -> (vParams.vlen / 32).U,
+        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) ) -> (vParams.vlen / 64).U,
 
+        ( (lmul === BitPat("b101")) & (vsew === "b000".U) ) -> (vParams.vlen / 8 / 8 ).U,
+        
+        ( (lmul === BitPat("b110")) & (vsew === "b000".U) ) -> (vParams.vlen / 4 / 8 ).U,
+        ( (lmul === BitPat("b110")) & (vsew === "b001".U) ) -> (vParams.vlen / 4 / 16).U,
+
+        ( (lmul === BitPat("b111")) & (vsew === "b000".U) ) -> (vParams.vlen / 2 / 8 ).U,
+        ( (lmul === BitPat("b111")) & (vsew === "b001".U) ) -> (vParams.vlen / 2 / 16).U,
+        ( (lmul === BitPat("b111")) & (vsew === "b010".U) ) -> (vParams.vlen / 2 / 32).U,
+
+      )); require( vParams.elen == 64 )
+
+      // ((vParams.vlen/8).U) >> vlsLMulSel(i)(1,0); when(vecSplitFifo.io.enq(0).fire) { assert( vlsLMulSel(i).extract(2) === 0.U ) }
+
+
+    vlsMicInstr(i).vAttach.get.eleIdx    := 0.U
+    vlsMicInstr(i).vAttach.get.vop0      := false.B
+    vlsMicInstr(i).vAttach.get.vop1      := 0.U
+    vlsMicInstr(i).vAttach.get.vop2      := 0.U
 
   }
 
@@ -233,7 +378,11 @@ trait VecPreRenameMicroInstr{ this: VecPreRenameBase =>
 
 
 
-class VecPreRename()(implicit p: Parameters) extends VecPreRenameBase with VecPreRenameMux with VecPreRenameMicroInstr{
+class VecPreRename()(implicit p: Parameters) extends VecPreRenameBase
+with VecPreRenameMux
+with VecPreRenameVlsMicInstr
+with VecPreRenameVpuMicInstr {
+
   for( i <- 0 until rnChn ) {
     io.vpuCsrMolloc(i).valid := false.B
     io.vpuCsrMolloc(i).bits  := false.B    

@@ -57,7 +57,7 @@ object overlap_wr{
 }
 
 object get_loadRes{
-  def apply( fun: Lsu_isa, paddr: UInt, rdata: UInt ) = {
+  def apply( fun: Lsu_isa, vsew: UInt, paddr: UInt, rdata: UInt ) = {
     require( rdata.getWidth == 64 )
     val res = Wire(UInt(64.W))
 
@@ -72,7 +72,12 @@ object get_loadRes{
       fun.isHalf    -> load_half(fun.is_usi, align),
       fun.isWord    -> load_word(fun.is_usi, align),
       fun.isDubl    -> align,
-      fun.isDynamic ->
+      fun.isDynamic -> Mux1H(Seq(
+                        (vsew === "b000".U) -> load_byte(fun.is_usi, align),
+                        (vsew === "b001".U) -> load_half(fun.is_usi, align),
+                        (vsew === "b010".U) -> load_word(fun.is_usi, align),
+                        (vsew === "b011".U) -> align,
+                      ))
 
     ))  
 

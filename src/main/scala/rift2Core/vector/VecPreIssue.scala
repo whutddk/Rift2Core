@@ -69,6 +69,8 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
   val nf       = (if(hasVector) {vecDptInfo.vAttach.get.nf}       else {0.U})
   val nfSel    = (if(hasVector) {vecDptInfo.vAttach.get.nfSel}    else {0.U})
   val microIdx = (if(hasVector) {vecDptInfo.vAttach.get.microIdx} else {0.U})
+
+  val psew     = WireDefault( 0.U(2.W) )
 }
 
 
@@ -77,7 +79,7 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
 trait VecPreIssueReadOp{ this: VecPreIssueBase =>
   val idx = Seq( vecDptInfo.phy.vm0, vecDptInfo.phy.rs1, vecDptInfo.phy.rs2, vecDptInfo.phy.rs3 )
 
-  vop(0) := io.readOp(idx(0)).bits >> ( microIdx >> (vsew(1,0) + 3.U) )
+  vop(0) := io.readOp(idx(0)).bits >> ( microIdx << (psew + 3.U) )
 
   vop(1) := Mux( vecDptInfo.vecIsa.isVector, io.readOp(idx(1)).bits, io.readOp(idx(3)).bits )
   vop(2) := io.readOp(idx(2)).bits
@@ -118,7 +120,13 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
 
 
 
-    when( vecDptInfo.lsuIsa.vle | vecDptInfo.lsuIsa.vlm | vecDptInfo.lsuIsa.vleNff | vecDptInfo.lsuIsa.vleNff | vecDptInfo.lsuIsa.vlNreN ){
+    when( vecDptInfo.lsuIsa.vle | vecDptInfo.lsuIsa.vlm | vecDptInfo.lsuIsa.vleNff | vecDptInfo.lsuIsa.vleNff | vecDptInfo.lsuIsa.vlre ){
+      psew := Mux1H(Seq(
+        (vecDptInfo.lsuIsa.isByte) -> "b00".U,
+        (vecDptInfo.lsuIsa.isHalf) -> "b01".U,
+        (vecDptInfo.lsuIsa.isWord) -> "b10".U,
+        (vecDptInfo.lsuIsa.isDubl) -> "b11".U,
+      ))
 
       vlsExeInfo(i).param.raw.vm0 := DontCare
       vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1 //override
@@ -134,6 +142,12 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
 
 
     }.elsewhen( vecDptInfo.lsuIsa.vse | vecDptInfo.lsuIsa.vsm | vecDptInfo.lsuIsa.vsr ){
+      psew := Mux1H(Seq(
+        (vecDptInfo.lsuIsa.isByte) -> "b00".U,
+        (vecDptInfo.lsuIsa.isHalf) -> "b01".U,
+        (vecDptInfo.lsuIsa.isWord) -> "b10".U,
+        (vecDptInfo.lsuIsa.isDubl) -> "b11".U,
+      ))
 
       vlsExeInfo(i).param.raw.vm0 := DontCare
       vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
@@ -145,15 +159,21 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := 
         Mux1H(Seq(
-          (vsew === "b000".U) -> (vop(1) >> (i >> 3).U ).apply(7,0),
-          (vsew === "b001".U) -> (vop(1) >> (i >> 4).U ).apply(15,0),
-          (vsew === "b010".U) -> (vop(1) >> (i >> 5).U ).apply(31,0),
-          (vsew === "b011".U) -> (vop(1) >> (i >> 6).U ).apply(63,0),
+          (psew === "b00".U) -> (vop(1) >> (i << 3).U ).apply(7,0),
+          (psew === "b01".U) -> (vop(1) >> (i << 4).U ).apply(15,0),
+          (psew === "b10".U) -> (vop(1) >> (i << 5).U ).apply(31,0),
+          (psew === "b11".U) -> (vop(1) >> (i << 6).U ).apply(63,0),
         ))
       vlsExeInfo(i).vAttach.get.vop2 := DontCare
 
 
     }.elsewhen( vecDptInfo.lsuIsa.vlse ){
+      psew := Mux1H(Seq(
+        (vecDptInfo.lsuIsa.isByte) -> "b00".U,
+        (vecDptInfo.lsuIsa.isHalf) -> "b01".U,
+        (vecDptInfo.lsuIsa.isWord) -> "b10".U,
+        (vecDptInfo.lsuIsa.isDubl) -> "b11".U,
+      ))
 
       vlsExeInfo(i).param.raw.vm0 := DontCare
       vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
@@ -168,6 +188,12 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
 
 
     }.elsewhen( vecDptInfo.lsuIsa.vsse ){
+      psew := Mux1H(Seq(
+        (vecDptInfo.lsuIsa.isByte) -> "b00".U,
+        (vecDptInfo.lsuIsa.isHalf) -> "b01".U,
+        (vecDptInfo.lsuIsa.isWord) -> "b10".U,
+        (vecDptInfo.lsuIsa.isDubl) -> "b11".U,
+      ))
 
       vlsExeInfo(i).param.raw.vm0 := DontCare
       vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
@@ -179,14 +205,15 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := 
         Mux1H(Seq(
-          (vsew === "b000".U) -> (vop(1) >> (i >> 3).U ).apply(7,0),
-          (vsew === "b001".U) -> (vop(1) >> (i >> 4).U ).apply(15,0),
-          (vsew === "b010".U) -> (vop(1) >> (i >> 5).U ).apply(31,0),
-          (vsew === "b011".U) -> (vop(1) >> (i >> 6).U ).apply(63,0),
+          (psew === "b00".U) -> (vop(1) >> (i << 3).U ).apply(7,0),
+          (psew === "b01".U) -> (vop(1) >> (i << 4).U ).apply(15,0),
+          (psew === "b10".U) -> (vop(1) >> (i << 5).U ).apply(31,0),
+          (psew === "b11".U) -> (vop(1) >> (i << 6).U ).apply(63,0),
         ))
       vlsExeInfo(i).vAttach.get.vop2 := DontCare
 
     }.elsewhen( vecDptInfo.lsuIsa.vloxei ){
+      psew := vsew
 
       vlsExeInfo(i).param.raw.vm0 := DontCare
       vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
@@ -199,13 +226,14 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).vAttach.get.vop1 := DontCare
       vlsExeInfo(i).vAttach.get.vop2 := 
         Mux1H(Seq(
-          (vecDptInfo.lsuIsa.vloxei8 ) -> (vop(2) >> (i >> 3).U ).apply(7,0),
-          (vecDptInfo.lsuIsa.vloxei16) -> (vop(2) >> (i >> 4).U ).apply(15,0),
-          (vecDptInfo.lsuIsa.vloxei32) -> (vop(2) >> (i >> 5).U ).apply(31,0),
-          (vecDptInfo.lsuIsa.vloxei64) -> (vop(2) >> (i >> 6).U ).apply(63,0),
+          (vecDptInfo.lsuIsa.vsoxei8 ) -> (vop(2) >> (i << 3).U ).apply(7,0),
+          (vecDptInfo.lsuIsa.vsoxei16) -> (vop(2) >> (i << 4).U ).apply(15,0),
+          (vecDptInfo.lsuIsa.vsoxei32) -> (vop(2) >> (i << 5).U ).apply(31,0),
+          (vecDptInfo.lsuIsa.vsoxei64) -> (vop(2) >> (i << 6).U ).apply(63,0),
         ))
 
     }.elsewhen( vecDptInfo.lsuIsa.vsoxei ){
+      psew := vsew
 
       vlsExeInfo(i).param.raw.vm0 := DontCare
       vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
@@ -217,17 +245,17 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := 
         Mux1H(Seq(
-          (vsew === "b000".U) -> (vop(1) >> (i >> 3).U ).apply(7,0),
-          (vsew === "b001".U) -> (vop(1) >> (i >> 4).U ).apply(15,0),
-          (vsew === "b010".U) -> (vop(1) >> (i >> 5).U ).apply(31,0),
-          (vsew === "b011".U) -> (vop(1) >> (i >> 6).U ).apply(63,0),
+          (psew === "b00".U) -> (vop(1) >> (i << 3).U ).apply(7,0),
+          (psew === "b01".U) -> (vop(1) >> (i << 4).U ).apply(15,0),
+          (psew === "b10".U) -> (vop(1) >> (i << 5).U ).apply(31,0),
+          (psew === "b11".U) -> (vop(1) >> (i << 6).U ).apply(63,0),
         ))
       vlsExeInfo(i).vAttach.get.vop2 :=
         Mux1H(Seq(
-          (vecDptInfo.lsuIsa.vsoxei8 ) -> (vop(2) >> (i >> 3).U ).apply(7,0),
-          (vecDptInfo.lsuIsa.vsoxei16) -> (vop(2) >> (i >> 4).U ).apply(15,0),
-          (vecDptInfo.lsuIsa.vsoxei32) -> (vop(2) >> (i >> 5).U ).apply(31,0),
-          (vecDptInfo.lsuIsa.vsoxei64) -> (vop(2) >> (i >> 6).U ).apply(63,0),
+          (vecDptInfo.lsuIsa.vsoxei8 ) -> (vop(2) >> (i << 3).U ).apply(7,0),
+          (vecDptInfo.lsuIsa.vsoxei16) -> (vop(2) >> (i << 4).U ).apply(15,0),
+          (vecDptInfo.lsuIsa.vsoxei32) -> (vop(2) >> (i << 5).U ).apply(31,0),
+          (vecDptInfo.lsuIsa.vsoxei64) -> (vop(2) >> (i << 6).U ).apply(63,0),
         ))
 
 
@@ -325,10 +353,10 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
                 
               isBufValid(j) := 
                 Mux1H(Seq(
-                  (vsew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                  (vsew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                  (vsew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                  (vsew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                  (psew === "b00".U) -> ( (j.U < (vParams.vlen/ 8).U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                  (psew === "b01".U) -> ( (j.U < (vParams.vlen/16).U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                  (psew === "b10".U) -> ( (j.U < (vParams.vlen/32).U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
+                  (psew === "b11".U) -> ( (j.U < (vParams.vlen/64).U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
                 ))      
             }
           }
@@ -350,16 +378,16 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
           for( j <- 0 until vParams.vlen/8 ){
             io.molloc.bits.isMask(j) :=
               Mux1H(Seq(
-                (vsew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
-                (vsew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
-                (vsew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
-                (vsew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
+                (psew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
+                (psew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
+                (psew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
+                (psew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
               ))      
 
           }
 
           io.molloc.bits.idx    := io.enq(i).bits.phy.rd0
-          io.molloc.bits.vsew   := vsew(1,0)
+          io.molloc.bits.vsew   := psew(1,0)
 
           io.enq(i).ready := io.molloc.ready
 

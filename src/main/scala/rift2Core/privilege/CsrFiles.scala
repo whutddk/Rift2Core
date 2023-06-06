@@ -1439,7 +1439,7 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
       vstart := 
         Mux(
           in.isException, in.csrfiles.vstart + in.exceptionIdx,
-          Mux( (in.csrfiles.vstart + in.rod.vlCnt) === in.csrfiles.vConfig.vl, 0.U, in.csrfiles.vstart + in.rod.vlCnt )
+          Mux( (in.csrfiles.vstart + in.rod.vlCnt) >= in.csrfiles.vConfig.vl, 0.U, in.csrfiles.vstart + in.rod.vlCnt )
         )
     }
 
