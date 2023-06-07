@@ -46,6 +46,9 @@ class VecPreRenameIO()(implicit p: Parameters) extends RiftBundle{
   val vpuCsrMolloc    = Vec(rnChn, Decoupled(Bool()))
   val csrfiles   = Input(new CSR_Bundle)
 
+  val isVStartRsv = Input(Bool())
+  val isVSetRsv   = Input(Bool())
+  val isFoFRsv    = Input(Bool())
 
   val flush = Input(Bool())
 }
@@ -80,6 +83,15 @@ abstract class VecPreRenameBase()(implicit p: Parameters) extends RiftModule {
   val vpuMicInstrCnt = 0.U
   val vpuMicInstr = Wire( Vec( 8, new IF4_Bundle ) )
   val vpuLMulSel  = Wire( Vec( 8, UInt(3.W)) )
+
+  val isVStartOutStanding = RegInit(false.B)
+  val isVSetOutStanding   = RegInit(false.B)
+  val isFoFOutStanding    = RegInit(false.B)
+
+  val isAccessVStart = for( i <- 0 until rnChn ) yield { io.enq(i).bits.csrIsa.isXCSR & io.enq(i).bits.param.imm === "h008".U }
+  val isAccessVType  = for( i <- 0 until rnChn ) yield { io.enq(i).bits.csrIsa.isVSet }
+
+  val isVecPnd = isVStartOutStanding | isVSetOutStanding | isFoFOutStanding
 }
 
 
@@ -98,7 +110,7 @@ trait VecPreRenameMux{ this: VecPreRenameBase =>
     } .otherwise{
       vecSplitFifo.io.deq(i).ready := false.B
 
-      when( (0 until i).map{ j => io.enq(j).bits.lsuIsa.isVector | io.enq(j).bits.vecIsa.isVALU }.foldLeft(false.B)(_|_) ){
+      when( (0 until i).map{ j => io.enq(j).bits.lsuIsa.isVector | io.enq(j).bits.vecIsa.isVALU | isAccessVStart(j) | isAccessVType(j) }.foldLeft(false.B)(_|_) ){
         io.deq(i).valid := false.B
         io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
         io.enq(i).ready := false.B
@@ -106,36 +118,44 @@ trait VecPreRenameMux{ this: VecPreRenameBase =>
 
         when( io.enq(i).bits.lsuIsa.isVector ){
           vSplitReq := io.enq(i).bits
-          when( nf === 0.U & (lmul(1,0) === 0.U | lmul.extract(2) === 1.U)  ){//dont splitter
-            io.enq(i) <> io.deq(i)
-          }.otherwise{ //vls splitter
+          // when( nf === 0.U & (lmul(1,0) === 0.U | lmul.extract(2) === 1.U)  ){//dont splitter
+          //   io.enq(i) <> io.deq(i)
+          // }.otherwise{ //vls splitter
             io.deq(i).valid := false.B
             io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
             io.enq(i).ready :=
-              true.B & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_)
+              ~isVecPnd & vecSplitFifo.io.enq(7).ready & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_) & 
 
             for( j <- 0 until 8 ) {
-              vecSplitFifo.io.enq(j).valid := (j.U <= vlsMicInstrCnt)
+              vecSplitFifo.io.enq(j).valid := ( 0 until i ).map{ k => io.enq(k).fire }.foldLeft(true.B)(_&_) & io.enq(i).valid & (j.U <= vlsMicInstrCnt)
               vecSplitFifo.io.enq(j).bits  := vlsMicInstr(j)
               assert( ~(vecSplitFifo.io.enq(j).valid & ~vecSplitFifo.io.enq(j).ready) )
             }
 
             assert( io.enq(i).fire === vecSplitFifo.io.enq(0).fire )
-          }
+          // }
         }.elsewhen(io.enq(i).bits.vecIsa.isVALU){
           vSplitReq := io.enq(i).bits
-          when( (lmul(1,0) === 0.U | lmul.extract(2) === 1.U) & ~isWiden ){ //dont splitter
-            io.enq(i) <> io.deq(i)
-          }.otherwise{ //vpu splitter
+          // when( (lmul(1,0) === 0.U | lmul.extract(2) === 1.U) & ~isWiden ){ //dont splitter
+          //   io.enq(i) <> io.deq(i)
+          // }.otherwise{ //vpu splitter
             io.deq(i).valid := false.B
             io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
             io.enq(i).ready :=
-              vecSplitFifo.io.enq(7).ready & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_)
+              ~isVecPnd & vecSplitFifo.io.enq(7).ready & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_)
 
             assert( false.B, "Assert Failed at preRename, Reaching at an UNCODED AREA!" )
             assert( io.enq(i).fire === vecSplitFifo.io.enq(0).fire )
+          // }
+        } .elsewhen( isAccessVStart(i) | isAccessVType(i) ){
+          when(isVecPnd){
+            io.deq(i).valid := false.B
+            io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
+            io.enq(i).ready := false.B
+          } .otherwise{
+            io.enq(i) <> io.deq(i)
           }
-        }.otherwise{ //not a vector
+        } .otherwise{ //not a vector
           io.enq(i) <> io.deq(i)
         }
 
@@ -376,12 +396,41 @@ trait VecPreRenameVlsMicInstr{ this: VecPreRenameBase =>
 
 }
 
+trait VecPreRenameVStartVTypeLock{ this: VecPreRenameBase =>
+
+  when( io.flush ){
+    isVStartOutStanding := false.B
+    isVSetOutStanding   := false.B
+    isFoFOutStanding    := false.B
+  } .elsewhen( ( 0 until rnChn ).map{ i => io.enq(i).fire & io.enq(i).bits.csrIsa.isXCSR & io.enq(i).bits.param.imm === "h008".U }.foldLeft(false.B)(_|_) ){
+    isVStartOutStanding := true.B
+    assert(~isVStartOutStanding)
+  } .elsewhen( ( 0 until rnChn ).map{ i => io.enq(i).fire & io.enq(i).bits.csrIsa.isVSet }.foldLeft(false.B)(_|_) ){
+    isVSetOutStanding := true.B
+    assert(~isVSetOutStanding)
+  }.elsewhen( ( 0 until rnChn ).map{ i => io.enq(i).fire & io.enq(i).bits.lsuIsa.vleNff }.foldLeft(false.B)(_|_) ){
+    isFoFOutStanding := true.B
+    assert(~isFoFOutStanding)
+  }.elsewhen( io.isVStartRsv ) {
+    isVStartOutStanding := false.B
+    assert(isVStartOutStanding)
+  } .elsewhen( io.isVSetRsv  ) {
+    isVSetOutStanding   := false.B
+    assert( isVSetOutStanding )
+  } .elsewhen( io.isFoFRsv ) {
+    isFoFOutStanding    := false.B
+    assert( isFoFOutStanding )
+  }
+
+}
+
 
 
 class VecPreRename()(implicit p: Parameters) extends VecPreRenameBase
 with VecPreRenameMux
 with VecPreRenameVlsMicInstr
-with VecPreRenameVpuMicInstr {
+with VecPreRenameVpuMicInstr
+with VecPreRenameVStartVTypeLock{
 
   for( i <- 0 until rnChn ) {
     io.vpuCsrMolloc(i).valid := false.B

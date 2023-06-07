@@ -61,7 +61,7 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
 
   val vWidth = vecDptInfo.param.vWidth
   val vstart = io.csrfiles.vstart
-  val vl     = io.csrfiles.vConfig.vl
+  val vl     = io.csrfiles.vConfig.vl  //pervious vl should be committed
 
   val vsew     = (if(hasVector) {vecDptInfo.vAttach.get.vsew}     else {0.U})
   val lmul     = (if(hasVector) {vecDptInfo.vAttach.get.vlmul}    else {0.U})
@@ -319,10 +319,8 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
         preIssueBuf(deqSel(i)) := 0.U.asTypeOf(new Dpt_info)
       }
 
-
       io.enq(i).ready := false.B
 
-      
     } .otherwise{
       when( (0 until i).map{ j => io.enq(j).bits.lsuIsa.isVector | io.enq(j).bits.vecIsa.isVALU }.foldLeft(false.B)(_|_) ){
         io.deq(i).valid := false.B
@@ -353,11 +351,13 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
                 
               isBufValid(j) := 
                 Mux1H(Seq(
-                  (psew === "b00".U) -> ( (j.U < (vParams.vlen/ 8).U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                  (psew === "b01".U) -> ( (j.U < (vParams.vlen/16).U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                  (psew === "b10".U) -> ( (j.U < (vParams.vlen/32).U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                  (psew === "b11".U) -> ( (j.U < (vParams.vlen/64).U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )),
-                ))      
+                  (psew === "b00".U) -> ( j.U < (vParams.vlen/ 8).U ),
+                  (psew === "b01".U) -> ( j.U < (vParams.vlen/16).U ),
+                  (psew === "b10".U) -> ( j.U < (vParams.vlen/32).U ),
+                  (psew === "b11".U) -> ( j.U < (vParams.vlen/64).U ),
+                )) & 
+                (io.enq(i).bits.vAttach.get.vlIdx + j.U) <= vl &
+                Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )
             }
           }
 
@@ -366,10 +366,10 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
 
           io.molloc.valid := 
             io.enq(i).valid &
-            Mux( io.enq(i).bits.lsuIsa.isVStore,
-                isVSTorePnd & (io.enq(i).bits.vAttach.get.vlIdx >= vstart) & (io.enq(i).bits.vAttach.get.vlIdx <= vl),
-                true.B) &
-            io.enq(i).bits.isVwb //& //we should molloc a vector register
+            Mux( io.enq(i).bits.lsuIsa.isVStore, isVSTorePnd, true.B) &
+            io.enq(i).bits.isVwb & //we should molloc a vector register
+            (io.enq(i).bits.vAttach.get.vlIdx >= vstart) & (io.enq(i).bits.vAttach.get.vlIdx <= vl)
+
                       // Mux(io.enq(i).bits.isVM0, io.readOp(idx(0)).valid, true.B) &
                       // Mux(io.enq(i).bits.isVS1, io.readOp(idx(1)).valid, true.B) &
                       // Mux(io.enq(i).bits.isVS2, io.readOp(idx(2)).valid, true.B) &
@@ -378,34 +378,31 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
           for( j <- 0 until vParams.vlen/8 ){
             io.molloc.bits.isMask(j) :=
               Mux1H(Seq(
-                (psew === "b000".U) -> ( (j.U <  8.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
-                (psew === "b001".U) -> ( (j.U < 16.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
-                (psew === "b010".U) -> ( (j.U < 32.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
-                (psew === "b011".U) -> ( (j.U < 64.U) & Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U )),
-              ))      
-
+                (psew === "b000".U) -> ( j.U >=  8.U ),
+                (psew === "b001".U) -> ( j.U >= 16.U ),
+                (psew === "b010".U) -> ( j.U >= 32.U ),
+                (psew === "b011".U) -> ( j.U >= 64.U ),
+              )) |
+            Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U ) |
+            (io.enq(i).bits.vAttach.get.vlIdx + j.U) > vl |
+            (io.enq(i).bits.vAttach.get.vlIdx + j.U) < vstart
           }
 
           io.molloc.bits.idx    := io.enq(i).bits.phy.rd0
           io.molloc.bits.vsew   := psew(1,0)
 
-          io.enq(i).ready := io.molloc.ready
+          io.enq(i).ready :=
+            io.molloc.ready &
+            Mux( io.enq(i).bits.lsuIsa.isVStore, isVSTorePnd, true.B) &
+            (io.enq(i).bits.vAttach.get.vlIdx >= vstart) & (io.enq(i).bits.vAttach.get.vlIdx <= vl) &
+
 
           when(io.enq(i).bits.isVwb) {
             assert( io.enq(i).fire === io.molloc.fire )
           }
           
 
-          // for( j <- 0 until vParams.vlen/8 ){
-          //   when( io.flush ){
-          //     isBufValid(j) := false.B
-          //   } .elsewhen(  io.enq(i).fire ){
-          //     for( j <- 0 until vParams.vlen/8 ){
-          //       preIssueBuf(j) := preIssueBufDnxt(j)            
-          //       isBufValid(j)  := isBufValidDnxt(j)
-          //     }
-          //   }
-          // }
+
         }
       }
     }

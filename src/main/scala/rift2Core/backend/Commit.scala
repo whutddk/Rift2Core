@@ -449,10 +449,6 @@ trait CommitIFRedirect { this: CommitState =>
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
         }
-        // when( cmm_state(i).isMMUFlush ) {
-        //   io.cmmRedirect.valid   := true.B
-        //   io.cmmRedirect.bits.pc := extVaddr(io.rod(i).bits.pc, vlen)
-        // }
         when( cmm_state(i).isInterrupt | cmm_state(i).isNomaskInterrupt ) {
           assert(false.B, "Assert Failed, All interrupts (including NMI) are masked in Dmode! Page-39")
         }
@@ -583,6 +579,7 @@ trait CommitDiff { this: CommitState =>
 
 
 trait CommitInfoMMU{ this: CommitState =>
+
   io.cmm_mmu.satp := csrfiles.satp.asUInt
   if( pmpNum == 0 ) { io.cmm_mmu.pmpcfg  := DontCare } else { for ( i <- 0 until pmpNum )   io.cmm_mmu.pmpcfg(i)  := csrfiles.pmpcfg(i).asUInt }
   if( pmpNum == 0 ) { io.cmm_mmu.pmpaddr := DontCare } else { for ( i <- 0 until 8*pmpNum ) io.cmm_mmu.pmpaddr(i) := csrfiles.pmpaddr(i)       }
@@ -593,25 +590,6 @@ trait CommitInfoMMU{ this: CommitState =>
   io.cmm_mmu.sfence_vma := ( 0 until cmChn ).map{ i => 
     commit_state_is_abort(i) & cmm_state(i).is_sfence_vma 
   }.reduce(_|_)
-
-  // val isMMUFlush = RegInit(false.B)
-  // val isMMUFlushDnxt = 
-  //     (ShiftRegister(io.cmm_mmu.mstatus,1) =/= io.cmm_mmu.mstatus)
-
-  // when( ( 0 until cmChn).map{ i => commit_state_is_abort(i) | commit_state_is_misPredict(i)}.foldLeft(false.B)(_|_) ){
-  //   isMMUFlush := false.B
-  // } .elsewhen( isMMUFlushDnxt ){
-  //   isMMUFlush := true.B
-  // }
-
-  // for( i <- 0 until cmChn ){
-  //   cmm_state(i).isMMUFlush := isMMUFlush | isMMUFlushDnxt
-  // }
-
-
-  //   (ShiftRegister(csrfiles.satp.asUInt,1) =/= csrfiles.satp.asUInt) |
-  //   ( if( pmpNum == 0 ) { false.B } else { ( 0 until pmpNum ).map{ i => ShiftRegister(csrfiles.pmpcfg(i).asUInt, 1) =/= csrfiles.pmpcfg(i).asUInt }.foldLeft(false.B)(_|_) }) |
-  //   ( if( pmpNum == 0 ) { false.B } else { ( 0 until 8*pmpNum ).map{ i => ShiftRegister(csrfiles.pmpaddr(i), 1) =/= csrfiles.pmpaddr(i)}.foldLeft(false.B)(_|_)    }) |
 
 }
 
@@ -625,6 +603,28 @@ trait CommitInfoLsu{ this: CommitState =>
     io.cmm_lsu.is_store_commit(i) := io.rod(i).bits.is_su & commit_state_is_comfirm(i)
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
   // io.cmm_lsu.isVstorePending := {
   //   io.rod(0).valid & io.rod(0).bits.is_su & io.rod(0).bits.isVector & ~io.vCommit(0).isWroteback //only pending amo in rod0 is send out
   // }
@@ -677,8 +677,6 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
 
   val isVException = Bool()
   val exceptionIdx = UInt((log2Ceil(vParams.vlen/8).W))
-
-  // val isMMUFlush = Bool()
 
   def is_load_accessFault: Bool = {
     val is_load_accessFault = 
@@ -913,5 +911,24 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
     return isNomaskInterrupt
   }
 
+  // def isVStartMdf: Bool = {
+  //   val isVStartMdf = 
+  //   return isVStartMdf
+  // }
+
+  // def isVlMdf: Bool = {
+  //   val isVlMdf
+  //   return isVlMdf
+  // }
+
+  // def isFoFTrg: Bool = {
+  //   val isFoFTrg
+  //   return isFoFTrg
+  // }
+
+  // def isVecRedirect: Bool = {
+  //   val isVecRedirect
+  //   return isVecRedirect
+  // }
 }
 
