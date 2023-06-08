@@ -155,7 +155,6 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     {
       res.fun := 0.U.asTypeOf(new Cache_op)
       res.fun.viewAsSupertype(new Lsu_isa) := ori.fun.viewAsSupertype(new Lsu_isa)
-
     }
     res.rd.rd0 := ori.param.rd0
 
@@ -164,9 +163,6 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     if( hasVector ){
       res.vAttach.get := ori.vAttach.get
     }
- 
-
-
 
     res
   

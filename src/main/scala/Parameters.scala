@@ -91,7 +91,7 @@ abstract class DcacheBundle(implicit val p: Parameters) extends Bundle with HasD
 
 
 case class VectorParameters(
-  vlen: Int = 256,    //The number of bits in a single vector register
+  vlen: Int = 128,    //The number of bits in a single vector register
   elen: Int = 64,     //The maximum size in bits that can produce or consume 
   isEEW8: Boolean = true,
   isEEW16: Boolean = true,
@@ -127,7 +127,7 @@ case class VectorParameters(
   require( isPow2(maxMUL) )
   require(maxMUL >= 8)
 
-  val vlmax = (vlen / minEEW * maxMUL) -1
+  val vlmax = (vlen / minEEW * maxMUL)
   // val atw: Int = {
   //   if(isEEW8) {8}
   //   else if(isEEW16) {16}

@@ -77,6 +77,9 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
     val vpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
 
     val isPndVStore = Output(Bool())
+    val isVStartRsv = Output(Bool())
+    val isVSetRsv   = Output(Bool())
+    val isFoFRsv    = Output(Bool())
   }
 
   val io: CommitIO = IO(new CommitIO)
@@ -602,37 +605,22 @@ trait CommitInfoLsu{ this: CommitState =>
   ( 0 until cmChn ).map{ i =>
     io.cmm_lsu.is_store_commit(i) := io.rod(i).bits.is_su & commit_state_is_comfirm(i)
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   
-  // io.cmm_lsu.isVstorePending := {
-  //   io.rod(0).valid & io.rod(0).bits.is_su & io.rod(0).bits.isVector & ~io.vCommit(0).isWroteback //only pending amo in rod0 is send out
-  // }
-  // println("Warning, vstore_pending can only emmit at chn0")
-  io.isPndVStore := io.rod(0).valid & io.rod(0).bits.isVStore
+
 }
 
+trait CommitInfoVec{ this: CommitState =>
 
+  /**
+    * @note this will trigger vstore emitt at preIssue, and will re-trigger again by vstore wroteback
+    */
+  println("Warning, vstore_pending can only emmit at chn0")
+  io.isPndVStore := io.rod(0).valid & io.rod(0).bits.isVStore & ~io.vCommit(0).isWroteback
+
+  io.isVStartRsv := (0 until cmChn).map{ i => io.rod(i).bits.is_csr & (io.xpuCsrCommit.bits.addr === "h008".U) & commit_state_is_comfirm(i) }.foldLeft(false.B)(_|_)
+  io.isVSetRsv   := (0 until cmChn).map{ i => io.rod(i).bits.is_csr & (io.xpuCsrCommit.bits.addr === "hFFE".U) & commit_state_is_comfirm(i) }.foldLeft(false.B)(_|_)
+  io.isFoFRsv    := (0 until cmChn).map{ i => io.rod(i).bits.isFoF  & commit_state_is_comfirm(i) }.foldLeft(false.B)(_|_)
+}
 
 /**
   * @note new feature
@@ -647,6 +635,7 @@ with CommitRegFiles
 with CommitIFRedirect
 with CommitInfoMMU
 with CommitInfoLsu
+with CommitInfoVec
 with CommitDiff{
 
   ( 0 until cmChn ).map{ i =>

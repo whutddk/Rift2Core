@@ -84,7 +84,47 @@ trait VConfig{ this: CSRBase =>
   val vsew  = io.csr_iss_exe.bits.param.dat.op2(5,3)
   val vlmul = io.csr_iss_exe.bits.param.dat.op2(2,0)
 
-  avl := io.csr_iss_exe.bits.param.dat.op1
+  val realVlmax =
+    Mux1H( Seq(
+      (vsew === "b000".U & vlmul === "b101".U) -> ((vParams.vlen / 8 / 8) max 0).U,
+      (vsew === "b000".U & vlmul === "b110".U) -> ((vParams.vlen / 8 / 4) max 0).U,
+      (vsew === "b000".U & vlmul === "b111".U) -> ((vParams.vlen / 8 / 2) max 0).U,
+      (vsew === "b000".U & vlmul === "b000".U) -> ((vParams.vlen / 8 / 1) max 0).U,
+      (vsew === "b000".U & vlmul === "b001".U) -> ((vParams.vlen / 8 * 2) max 0).U,
+      (vsew === "b000".U & vlmul === "b010".U) -> ((vParams.vlen / 8 * 4) max 0).U,
+      (vsew === "b000".U & vlmul === "b011".U) -> ((vParams.vlen / 8 * 8) max 0).U,
+
+      (vsew === "b001".U & vlmul === "b101".U) -> ((vParams.vlen /16 / 8) max 0).U,
+      (vsew === "b001".U & vlmul === "b110".U) -> ((vParams.vlen /16 / 4) max 0).U,
+      (vsew === "b001".U & vlmul === "b111".U) -> ((vParams.vlen /16 / 2) max 0).U,
+      (vsew === "b001".U & vlmul === "b000".U) -> ((vParams.vlen /16 / 1) max 0).U,
+      (vsew === "b001".U & vlmul === "b001".U) -> ((vParams.vlen /16 * 2) max 0).U,
+      (vsew === "b001".U & vlmul === "b010".U) -> ((vParams.vlen /16 * 4) max 0).U,
+      (vsew === "b001".U & vlmul === "b011".U) -> ((vParams.vlen /16 * 8) max 0).U,
+
+      (vsew === "b010".U & vlmul === "b101".U) -> ((vParams.vlen /32 / 8) max 0 ).U,
+      (vsew === "b010".U & vlmul === "b110".U) -> ((vParams.vlen /32 / 4) max 0 ).U,
+      (vsew === "b010".U & vlmul === "b111".U) -> ((vParams.vlen /32 / 2) max 0 ).U,
+      (vsew === "b010".U & vlmul === "b000".U) -> ((vParams.vlen /32 / 1) max 0 ).U,
+      (vsew === "b010".U & vlmul === "b001".U) -> ((vParams.vlen /32 * 2) max 0 ).U,
+      (vsew === "b010".U & vlmul === "b010".U) -> ((vParams.vlen /32 * 4) max 0 ).U,
+      (vsew === "b010".U & vlmul === "b011".U) -> ((vParams.vlen /32 * 8) max 0 ).U,
+
+      (vsew === "b011".U & vlmul === "b101".U) -> ((vParams.vlen /64 / 8) max 0 ).U,
+      (vsew === "b011".U & vlmul === "b110".U) -> ((vParams.vlen /64 / 4) max 0 ).U,
+      (vsew === "b011".U & vlmul === "b111".U) -> ((vParams.vlen /64 / 2) max 0 ).U,
+      (vsew === "b011".U & vlmul === "b000".U) -> ((vParams.vlen /64 / 1) max 0 ).U,
+      (vsew === "b011".U & vlmul === "b001".U) -> ((vParams.vlen /64 * 2) max 0 ).U,
+      (vsew === "b011".U & vlmul === "b010".U) -> ((vParams.vlen /64 * 4) max 0 ).U,
+      (vsew === "b011".U & vlmul === "b011".U) -> ((vParams.vlen /64 * 8) max 0 ).U,
+    ) )
+    // (vParams.vlen / minEEW * maxMUL) -1
+    // Mux( vlmul.extract(2) === 0.U, )
+    // Mux1H(Seq(
+
+    // )) 
+
+  avl := //io.csr_iss_exe.bits.param.dat.op1
     Mux1H(Seq(
       io.csr_iss_exe.bits.fun.vsetvli  -> Mux( io.csr_iss_exe.bits.param.dat.op1 =/= 0.U, io.csr_iss_exe.bits.param.dat.op1, Mux(io.csr_iss_exe.bits.param.rd0 =/= 0.U, Fill(vParams.vlmax,1.U), io.csr_iss_exe.bits.param.dat.op3(12+log2Ceil(vParams.vlmax)-1, 12)) ),
       io.csr_iss_exe.bits.fun.vsetivli -> io.csr_iss_exe.bits.param.dat.op1,
@@ -120,7 +160,7 @@ trait VConfig{ this: CSRBase =>
     )
 
   vtype := Mux( vill, 0.U, io.csr_iss_exe.bits.param.dat.op2 )
-  nvl   := Mux( vill, 0.U, Mux( avl <= (vParams.vlmax).U, avl, Mux( avl <= ((vParams.vlmax).U << 1), avl >> 1, (vParams.vlmax).U ) ) )
+  nvl   := Mux( vill, 0.U, Mux( avl < realVlmax, avl, realVlmax ) )
 
 
 } 

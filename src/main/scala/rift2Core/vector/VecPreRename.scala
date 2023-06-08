@@ -124,7 +124,7 @@ trait VecPreRenameMux{ this: VecPreRenameBase =>
             io.deq(i).valid := false.B
             io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
             io.enq(i).ready :=
-              ~isVecPnd & vecSplitFifo.io.enq(7).ready & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_) & 
+              ~isVecPnd & vecSplitFifo.io.enq(7).ready & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_)
 
             for( j <- 0 until 8 ) {
               vecSplitFifo.io.enq(j).valid := ( 0 until i ).map{ k => io.enq(k).fire }.foldLeft(true.B)(_&_) & io.enq(i).valid & (j.U <= vlsMicInstrCnt)

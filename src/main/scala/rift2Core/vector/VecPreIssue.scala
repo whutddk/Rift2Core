@@ -394,7 +394,7 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
           io.enq(i).ready :=
             io.molloc.ready &
             Mux( io.enq(i).bits.lsuIsa.isVStore, isVSTorePnd, true.B) &
-            (io.enq(i).bits.vAttach.get.vlIdx >= vstart) & (io.enq(i).bits.vAttach.get.vlIdx <= vl) &
+            (io.enq(i).bits.vAttach.get.vlIdx >= vstart) & (io.enq(i).bits.vAttach.get.vlIdx <= vl)
 
 
           when(io.enq(i).bits.isVwb) {

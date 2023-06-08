@@ -65,14 +65,14 @@ trait RenameMalloc { this: RenameBase =>
     rnRspFifo.io.enq(i).valid :=
       io.rnReq(i).fire & ( 0 to i ).map{ j => ~io.rnReq(j).bits.is_privil_dpt }.foldLeft(true.B)(_&_)  //~io.rnReq(i).bits.is_privil_dpt
 
-    rnRspFifo.io.enq(i).bits.aluIsa    := io.rnReq(i).bits.aluIsa
-    rnRspFifo.io.enq(i).bits.bruIsa    := io.rnReq(i).bits.bruIsa
-    rnRspFifo.io.enq(i).bits.lsuIsa    := io.rnReq(i).bits.lsuIsa
-    rnRspFifo.io.enq(i).bits.csrIsa    := io.rnReq(i).bits.csrIsa
-    rnRspFifo.io.enq(i).bits.mulIsa    := io.rnReq(i).bits.mulIsa
-    rnRspFifo.io.enq(i).bits.vecIsa  := io.rnReq(i).bits.vecIsa
+    rnRspFifo.io.enq(i).bits.aluIsa     := io.rnReq(i).bits.aluIsa
+    rnRspFifo.io.enq(i).bits.bruIsa     := io.rnReq(i).bits.bruIsa
+    rnRspFifo.io.enq(i).bits.lsuIsa     := io.rnReq(i).bits.lsuIsa
+    rnRspFifo.io.enq(i).bits.csrIsa     := io.rnReq(i).bits.csrIsa
+    rnRspFifo.io.enq(i).bits.mulIsa     := io.rnReq(i).bits.mulIsa
+    rnRspFifo.io.enq(i).bits.vecIsa     := io.rnReq(i).bits.vecIsa
     rnRspFifo.io.enq(i).bits.privil_isa := 0.U.asTypeOf( new Privil_isa )
-    rnRspFifo.io.enq(i).bits.fpuIsa    := io.rnReq(i).bits.fpuIsa
+    rnRspFifo.io.enq(i).bits.fpuIsa     := io.rnReq(i).bits.fpuIsa
     rnRspFifo.io.enq(i).bits.param      := io.rnReq(i).bits.param
     rnRspFifo.io.enq(i).bits.phy        := reg_phy(i)
 

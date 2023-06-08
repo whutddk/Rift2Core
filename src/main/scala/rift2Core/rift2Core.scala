@@ -319,7 +319,12 @@ trait Rift2CoreImpCommit{ this: Rift2CoreImpBase =>
 
   cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
   cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
+
   preIssue_stage.io.isPndVStore := cmm_stage.io.isPndVStore
+  preRename_stage.io.isVStartRsv := cmm_stage.io.isVStartRsv
+  preRename_stage.io.isVSetRsv   := cmm_stage.io.isVSetRsv
+  preRename_stage.io.isFoFRsv    := cmm_stage.io.isFoFRsv
+
 
   cmm_stage.io.bctq <> exe_stage.io.bctq
   cmm_stage.io.jctq <> exe_stage.io.jctq
