@@ -151,7 +151,7 @@ trait VRegWriteBack{ this: VRegFilesBase =>
     val j = io.writeBack.bits.eleIdx
 
     assert( isMolloced(i) )
-    when( vsew(i) === "b00".U ) {assert( j < (vParams.vlen/8 ).U, "Assert Failed, invalid VWriteback" )}
+    when( vsew(i) === "b00".U ) { assert( j < (vParams.vlen/8 ).U, "Assert Failed, invalid VWriteback" )}
     when( vsew(i) === "b01".U ) { assert( j < (vParams.vlen/16).U, "Assert Failed, invalid VWriteback" ) }
     when( vsew(i) === "b10".U ) { assert( j < (vParams.vlen/32).U, "Assert Failed, invalid VWriteback" ) }
     when( vsew(i) === "b11".U ) { assert( j < (vParams.vlen/64).U, "Assert Failed, invalid VWriteback" ) }

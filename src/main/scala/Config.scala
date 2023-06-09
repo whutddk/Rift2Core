@@ -458,7 +458,7 @@ class Rift2370 extends Config((_, _, _) => {
       bk = 2,
       cb = 2,
       cl = 8,
-      stEntry = 2,
+      stEntry = 16,
       sbEntry = 2,
     ),
 

@@ -124,12 +124,12 @@ trait VConfig{ this: CSRBase =>
 
     // )) 
 
-  avl := //io.csr_iss_exe.bits.param.dat.op1
-    Mux1H(Seq(
-      io.csr_iss_exe.bits.fun.vsetvli  -> Mux( io.csr_iss_exe.bits.param.dat.op1 =/= 0.U, io.csr_iss_exe.bits.param.dat.op1, Mux(io.csr_iss_exe.bits.param.rd0 =/= 0.U, Fill(vParams.vlmax,1.U), io.csr_iss_exe.bits.param.dat.op3(12+log2Ceil(vParams.vlmax)-1, 12)) ),
-      io.csr_iss_exe.bits.fun.vsetivli -> io.csr_iss_exe.bits.param.dat.op1,
-      io.csr_iss_exe.bits.fun.vsetvl   -> Mux( io.csr_iss_exe.bits.param.dat.op1 =/= 0.U, io.csr_iss_exe.bits.param.dat.op1, Mux(io.csr_iss_exe.bits.param.rd0 =/= 0.U, Fill(vParams.vlmax,1.U), io.csr_iss_exe.bits.param.dat.op3(12+log2Ceil(vParams.vlmax)-1, 12)) ),
-    ))
+  avl := io.csr_iss_exe.bits.param.dat.op1 //reFactor in Issue
+    // Mux1H(Seq(
+    //   io.csr_iss_exe.bits.fun.vsetvli  -> Mux( io.csr_iss_exe.bits.param.dat.op1 =/= 0.U, io.csr_iss_exe.bits.param.dat.op1, Mux(io.csr_iss_exe.bits.param.rd0 =/= 0.U, Fill(vParams.vlmax,1.U), io.csr_iss_exe.bits.param.dat.op3(12+log2Ceil(vParams.vlmax)-1, 12)) ),
+    //   io.csr_iss_exe.bits.fun.vsetivli -> io.csr_iss_exe.bits.param.dat.op1,
+    //   io.csr_iss_exe.bits.fun.vsetvl   -> Mux( io.csr_iss_exe.bits.param.dat.op1 =/= 0.U, io.csr_iss_exe.bits.param.dat.op1, Mux(io.csr_iss_exe.bits.param.rd0 =/= 0.U, Fill(vParams.vlmax,1.U), io.csr_iss_exe.bits.param.dat.op3(12+log2Ceil(vParams.vlmax)-1, 12)) ),
+    // ))
 
 
 

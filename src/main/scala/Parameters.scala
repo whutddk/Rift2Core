@@ -242,6 +242,7 @@ case class RiftSetting(
   if(hasVector){
     // require( rnChn >= 2 )
     require( fpuNum > 0 )
+    require( dcacheParameters.stEntry >= vectorParameters.vlen/8, "Error! VStore will be stuck at Store Queue!" )
   }
 }
 

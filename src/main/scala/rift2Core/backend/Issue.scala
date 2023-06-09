@@ -602,7 +602,7 @@ abstract class IssueSel()(implicit p: Parameters) extends IssueBase
 with IssLoadIOp
 with IssLoadFOp{
   val postIsOpReady = Wire( Vec( dptEntry, Vec(4, Bool())) )
-  val postBufOperator = Wire( Vec( dptEntry, Vec(4, UInt(vParams.vlen.W))) )
+  val postBufOperator = Wire( Vec( dptEntry, Vec(4, UInt(65.W))) )
 
   for( i <- 0 until dptEntry ){
     postIsOpReady(i)(0)   := isOpReady(i)(0)
@@ -897,11 +897,14 @@ trait IssSelCsr{ this: IssueSel =>
         ) ++
         ( if(hasVector){
           Seq(
-            bufInfo(idx).csrIsa.vsetvli  -> postBufOperator(idx)(1),
+            bufInfo(idx).csrIsa.vsetvli  -> Mux( bufInfo(idx).param.raw.rs1 =/= 0.U, postBufOperator(idx)(1), Mux(bufInfo(idx).param.raw.rd0 =/= 0.U, Fill(64,1.U), io.csrfiles.vl) ),
             bufInfo(idx).csrIsa.vsetivli -> bufInfo(idx).param.raw.rs1,
-            bufInfo(idx).csrIsa.vsetvl   -> postBufOperator(idx)(1),
+            bufInfo(idx).csrIsa.vsetvl   -> Mux( bufInfo(idx).param.raw.rs1 =/= 0.U, postBufOperator(idx)(1), Mux(bufInfo(idx).param.raw.rd0 =/= 0.U, Fill(64,1.U), io.csrfiles.vl) ),
           ) } else {Seq()})
       )
+
+
+
 
     /** automatically create csr address mux according CSRInfoTable */
     res.param.dat.op2 := 
@@ -944,7 +947,7 @@ trait IssSelCsr{ this: IssueSel =>
     res.param.dat.op3 := 
       Mux(
         ( if(hasVector){ bufInfo(idx).csrIsa.vsetvli | bufInfo(idx).csrIsa.vsetivli | bufInfo(idx).csrIsa.vsetvl } else {false.B} ),
-        Cat(io.csrfiles.vl, "hffe".U(12.W)),
+        "hffe".U(12.W),
         bufInfo(idx).param.imm(11,0)
       )
       
