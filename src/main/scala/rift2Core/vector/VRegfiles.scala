@@ -42,7 +42,8 @@ class Vector_Commit_Bundle()(implicit p: Parameters) extends RiftBundle{
   val exceptionIdx = Input(UInt((log2Ceil(vParams.vlen/8).W)))
 }
 
-class Vector_WriteBack_Bundle()(implicit p: Parameters) extends WriteBack_info(dw = 8) {
+class Vector_WriteBack_Bundle()(implicit p: Parameters) extends WriteBack_info(dw = 64) {
+  require( vParams.elen <= 64 )
   val eleIdx = UInt( (log2Ceil(vParams.vlen/8)).W )
 
   val isException = Bool()
@@ -63,7 +64,7 @@ abstract class VRegFilesBase()(implicit p: Parameters) extends RiftModule {
 
   val io: VRegFilesIO = IO( new VRegFilesIO)
 
-  val wbFiles = Reg(Vec(33, Vec(vParams.vlen/8, UInt(64.W)) ))
+  val wbFiles = Reg(Vec(33, Vec(vParams.vlen/8, UInt(8.W)) ))
 
   val files = Reg( Vec(33, UInt((vParams.vlen).W)) )
 
@@ -156,7 +157,33 @@ trait VRegWriteBack{ this: VRegFilesBase =>
     when( vsew(i) === "b10".U ) { assert( j < (vParams.vlen/32).U, "Assert Failed, invalid VWriteback" ) }
     when( vsew(i) === "b11".U ) { assert( j < (vParams.vlen/64).U, "Assert Failed, invalid VWriteback" ) }
 
-    wbFiles(i)(j) := io.writeBack.bits.res
+    // wbFiles(i)(j) := io.writeBack.bits.res
+
+    when( vsew(i) === "b00".U ) {
+      wbFiles(i)(j) := io.writeBack.bits.res
+    }
+    when( vsew(i) === "b01".U ) {
+      wbFiles(i)((j<<1) + 0.U) := io.writeBack.bits.res(7,0)
+      wbFiles(i)((j<<1) + 1.U) := io.writeBack.bits.res(15,8)
+    }
+    when( vsew(i) === "b10".U ) {
+      wbFiles(i)((j<<2) + 0.U) := io.writeBack.bits.res(7,0)
+      wbFiles(i)((j<<2) + 1.U) := io.writeBack.bits.res(15,8)
+      wbFiles(i)((j<<2) + 2.U) := io.writeBack.bits.res(23,16)
+      wbFiles(i)((j<<2) + 3.U) := io.writeBack.bits.res(31,24)
+    }
+    when( vsew(i) === "b11".U ) {
+      wbFiles(i)((j<<3) + 0.U) := io.writeBack.bits.res(7,0)
+      wbFiles(i)((j<<3) + 1.U) := io.writeBack.bits.res(15,8)
+      wbFiles(i)((j<<3) + 2.U) := io.writeBack.bits.res(23,16)
+      wbFiles(i)((j<<3) + 3.U) := io.writeBack.bits.res(31,24)
+      wbFiles(i)((j<<3) + 4.U) := io.writeBack.bits.res(39,32)
+      wbFiles(i)((j<<3) + 5.U) := io.writeBack.bits.res(47,40)
+      wbFiles(i)((j<<3) + 6.U) := io.writeBack.bits.res(55,48)
+      wbFiles(i)((j<<3) + 7.U) := io.writeBack.bits.res(63,56)
+    }
+
+
 
     isException(i)(j) := io.writeBack.bits.isException
     isWroteback(i)(j) := true.B
@@ -207,19 +234,19 @@ trait VRegCommit{ this: VRegFilesBase =>
       } .elsewhen( vsew(idx) === "b01".U ) {
         files(idx) := Cat(
           ( 0 until vParams.vlen/16 ).map{ j =>
-            Mux( isMask(idx)(j), files(idx)( 16*j+15, 16*j ), wbFiles(idx)(j)(15,0) )
+            Mux( isMask(idx)(j), files(idx)( 16*j+15, 16*j ), Cat(wbFiles(idx)(2*j+1), wbFiles(idx)(2*j))  )
           }.reverse
         )
       } .elsewhen( vsew(idx) === "b10".U ) {
         files(idx) := Cat(
           ( 0 until vParams.vlen/32 ).map{ j =>
-            Mux( isMask(idx)(j), files(idx)( 32*j+31, 32*j ), wbFiles(idx)(j)(31,0) )
+            Mux( isMask(idx)(j), files(idx)( 32*j+31, 32*j ), Cat(wbFiles(idx)(4*j+3), wbFiles(idx)(4*j+2), wbFiles(idx)(4*j+1), wbFiles(idx)(4*j)) )
           }.reverse
         )
       } .elsewhen( vsew(idx) === "b11".U ) {
         files(idx) := Cat(
           ( 0 until vParams.vlen/64 ).map{ j =>
-            Mux( isMask(idx)(j), files(idx)( 64*j+63, 64*j ), wbFiles(idx)(j)(63,0) )
+            Mux( isMask(idx)(j), files(idx)( 64*j+63, 64*j ), Cat(wbFiles(idx)(8*j+7), wbFiles(idx)(8*j+6), wbFiles(idx)(8*j+5), wbFiles(idx)(8*j+4), wbFiles(idx)(8*j+3), wbFiles(idx)(8*j+2), wbFiles(idx)(8*j+1), wbFiles(idx)(8*j)) )
           }.reverse
         )
       }

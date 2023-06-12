@@ -561,6 +561,9 @@ trait Decode32G { this: DecodeBase =>
       info.lsuIsa.fsw         -> 0.U,
       info.lsuIsa.fsd         -> 0.U,
       info.lsuIsa.sfence_vma  -> 0.U,
+
+      info.lsuIsa.isVStore    -> 0.U,
+      
       info.privil_isa.ecall       -> 0.U,
       info.privil_isa.ebreak      -> 0.U,
       info.privil_isa.mret        -> 0.U,
@@ -635,6 +638,7 @@ trait Decode32G { this: DecodeBase =>
       info.lsuIsa.lr_d  -> 0.U,
       info.lsuIsa.flw       -> 0.U,
       info.lsuIsa.fld       -> 0.U,
+      info.lsuIsa.isUnitStride -> 0.U,
 
       info.privil_isa.ecall  -> 0.U,
       info.privil_isa.ebreak -> 0.U,
@@ -693,6 +697,8 @@ trait Decode32G { this: DecodeBase =>
       info.fpuIsa.fmsub_d  -> x(31,27),
       info.fpuIsa.fnmsub_d -> x(31,27),
       info.fpuIsa.fnmadd_d -> x(31,27),
+      
+      info.lsuIsa.isVStore -> x(11,7),
     ))
 
 

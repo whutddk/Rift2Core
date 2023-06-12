@@ -124,39 +124,39 @@ trait DptBoard{ this: DptBase =>
 
   for( i <- 0 until rnChn ) {
     when( io.dptReq(i).fire ) {
-      when( io.dptReq(i).bits.phy.vm0 === 0.U ) {
-        isOpReady (entrySel(i))(0) := true.B
-        bufOperator(entrySel(i))(0) := 0.U
-      } .elsewhen(io.dptReq(i).bits.isVM0) {
+      when(io.dptReq(i).bits.isVM0) {
         isOpReady (entrySel(i))(0) := true.B
         bufOperator(entrySel(i))(0) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop0} else {0.U})
+      } .elsewhen( io.dptReq(i).bits.phy.vm0 === 0.U ) {
+        isOpReady (entrySel(i))(0) := true.B
+        bufOperator(entrySel(i))(0) := 0.U
       } .otherwise {
         isOpReady (entrySel(i))(0) := false.B
       }
-      when( io.dptReq(i).bits.phy.rs1 === 0.U ) {
-        isOpReady (entrySel(i))(1) := true.B
-        bufOperator(entrySel(i))(1) := 0.U
-      } .elsewhen(io.dptReq(i).bits.isVS1) {
+      when(io.dptReq(i).bits.isVS1) {
         isOpReady (entrySel(i))(1) := true.B
         bufOperator(entrySel(i))(1) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop1} else {0.U})
+      } .elsewhen( io.dptReq(i).bits.phy.rs1 === 0.U ) {
+        isOpReady (entrySel(i))(1) := true.B
+        bufOperator(entrySel(i))(1) := 0.U
       } .otherwise {
         isOpReady (entrySel(i))(1) := false.B
       }
-      when( io.dptReq(i).bits.phy.rs2 === 0.U ) {
-        isOpReady (entrySel(i))(2) := true.B
-        bufOperator(entrySel(i))(2) := 0.U
-      } .elsewhen(io.dptReq(i).bits.isVS2) {
+      when(io.dptReq(i).bits.isVS2) {
         isOpReady (entrySel(i))(2) := true.B
         bufOperator(entrySel(i))(2) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop2} else {0.U})
-      } .otherwise{
+      } .elsewhen( io.dptReq(i).bits.phy.rs2 === 0.U ) {
+        isOpReady (entrySel(i))(2) := true.B
+        bufOperator(entrySel(i))(2) := 0.U
+      }  .otherwise{
         isOpReady (entrySel(i))(2) := false.B
       }
-      when( io.dptReq(i).bits.phy.rs3 === 0.U ) {
-        isOpReady (entrySel(i))(3) := true.B
-        bufOperator(entrySel(i))(3) := 0.U
-      } .elsewhen(io.dptReq(i).bits.isVS3) {
+      when(io.dptReq(i).bits.isVS3) {
         isOpReady (entrySel(i))(3) := true.B
         bufOperator(entrySel(i))(3) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop1} else {0.U})
+      } .elsewhen( io.dptReq(i).bits.phy.rs3 === 0.U ) {
+        isOpReady (entrySel(i))(3) := true.B
+        bufOperator(entrySel(i))(3) := 0.U
       } .otherwise {
         isOpReady (entrySel(i))(3) := false.B
       }
@@ -1019,10 +1019,10 @@ trait IssSelLsu{ this: IssueSel =>
         (bufInfo(i).lsuIsa.is_xls  | bufInfo(i).lsuIsa.is_fls)  -> (postBufOperator(i)(1).asSInt + bufInfo(i).param.imm.asSInt()).asUInt(),
         (bufInfo(i).lsuIsa.is_lrsc | bufInfo(i).lsuIsa.is_amo)  -> postBufOperator(i)(1),
       ) ++ (if(hasVector) { Seq(
-              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isByte) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 3 ) ).asUInt(),
-              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isHalf) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 4 ) ).asUInt(),
-              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isWord) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 5 ) ).asUInt(),
-              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isDubl) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 6 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isByte) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 0 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isHalf) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 1 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isWord) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 2 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isDubl) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 3 ) ).asUInt(),
 
               (bufInfo(i).lsuIsa.isStridde    ) -> (postBufOperator(i)(1).asSInt + (bufInfo(i).vAttach.get.vlIdx.asSInt * postBufOperator(i)(2)).asSInt ).asUInt(),//rs2
               (bufInfo(i).lsuIsa.isIndex      ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt).asUInt(),//vs2 -> vop2 

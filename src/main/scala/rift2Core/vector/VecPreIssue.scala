@@ -48,7 +48,7 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
   val vpuExeInfo = Wire( Vec( vParams.vlen/8, new Dpt_info ) )
   val vlsExeInfo = Wire( Vec( vParams.vlen/8, new Dpt_info ) )
 
-  val vop = Wire( Vec(3, UInt((vParams.vlen).W)) )
+  val vop = Wire( Vec(4, UInt((vParams.vlen).W)) )
 
   // val preIssueBufDnxt =  Wire( Vec( vParams.vlen/8, new Dpt_info))
   // val isBufValidDnxt  = Wire(Vec( vParams.vlen/8, Bool()) )
@@ -77,12 +77,13 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
 
 
 trait VecPreIssueReadOp{ this: VecPreIssueBase =>
-  val idx = Seq( vecDptInfo.phy.vm0, vecDptInfo.phy.rs1, vecDptInfo.phy.rs2, vecDptInfo.phy.rs3 )
+  val idx = Seq( vecDptInfo.param.raw.vm0, vecDptInfo.param.raw.rs1, vecDptInfo.param.raw.rs2, vecDptInfo.param.raw.rs3 )
 
   vop(0) := io.readOp(idx(0)).bits >> ( microIdx << (psew + 3.U) )
 
-  vop(1) := Mux( vecDptInfo.vecIsa.isVector, io.readOp(idx(1)).bits, io.readOp(idx(3)).bits )
+  vop(1) := io.readOp(idx(1)).bits
   vop(2) := io.readOp(idx(2)).bits
+  vop(3) := io.readOp(idx(3)).bits
 
 }
 
@@ -159,10 +160,10 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := 
         Mux1H(Seq(
-          (psew === "b00".U) -> (vop(1) >> (i << 3).U ).apply(7,0),
-          (psew === "b01".U) -> (vop(1) >> (i << 4).U ).apply(15,0),
-          (psew === "b10".U) -> (vop(1) >> (i << 5).U ).apply(31,0),
-          (psew === "b11".U) -> (vop(1) >> (i << 6).U ).apply(63,0),
+          (psew === "b00".U) -> (vop(3) >> (i << 3).U ).apply(7,0),
+          (psew === "b01".U) -> (vop(3) >> (i << 4).U ).apply(15,0),
+          (psew === "b10".U) -> (vop(3) >> (i << 5).U ).apply(31,0),
+          (psew === "b11".U) -> (vop(3) >> (i << 6).U ).apply(63,0),
         ))
       vlsExeInfo(i).vAttach.get.vop2 := DontCare
 
@@ -205,10 +206,10 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := 
         Mux1H(Seq(
-          (psew === "b00".U) -> (vop(1) >> (i << 3).U ).apply(7,0),
-          (psew === "b01".U) -> (vop(1) >> (i << 4).U ).apply(15,0),
-          (psew === "b10".U) -> (vop(1) >> (i << 5).U ).apply(31,0),
-          (psew === "b11".U) -> (vop(1) >> (i << 6).U ).apply(63,0),
+          (psew === "b00".U) -> (vop(3) >> (i << 3).U ).apply(7,0),
+          (psew === "b01".U) -> (vop(3) >> (i << 4).U ).apply(15,0),
+          (psew === "b10".U) -> (vop(3) >> (i << 5).U ).apply(31,0),
+          (psew === "b11".U) -> (vop(3) >> (i << 6).U ).apply(63,0),
         ))
       vlsExeInfo(i).vAttach.get.vop2 := DontCare
 
@@ -245,10 +246,10 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := 
         Mux1H(Seq(
-          (psew === "b00".U) -> (vop(1) >> (i << 3).U ).apply(7,0),
-          (psew === "b01".U) -> (vop(1) >> (i << 4).U ).apply(15,0),
-          (psew === "b10".U) -> (vop(1) >> (i << 5).U ).apply(31,0),
-          (psew === "b11".U) -> (vop(1) >> (i << 6).U ).apply(63,0),
+          (psew === "b00".U) -> (vop(3) >> (i << 3).U ).apply(7,0),
+          (psew === "b01".U) -> (vop(3) >> (i << 4).U ).apply(15,0),
+          (psew === "b10".U) -> (vop(3) >> (i << 5).U ).apply(31,0),
+          (psew === "b11".U) -> (vop(3) >> (i << 6).U ).apply(63,0),
         ))
       vlsExeInfo(i).vAttach.get.vop2 :=
         Mux1H(Seq(
