@@ -382,11 +382,11 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
       }
       val res_pre = get_loadRes( fun, pipeStage1Bits.vAttach.get.vsew, paddr, res_pre_pre ) //align 8
 
-      val res = Mux(
-        pipeStage1Bits.fun.is_sc,
-        Mux( is_sc_fail, 1.U, 0.U ),
-        res_pre
-      )
+      val res = MuxCase(res_pre, Seq(
+        pipeStage1Bits.fun.is_sc    -> Mux( is_sc_fail, 1.U, 0.U ),
+        pipeStage1Bits.fun.isVStore -> 0.U,
+      ))
+
       res
     }
 

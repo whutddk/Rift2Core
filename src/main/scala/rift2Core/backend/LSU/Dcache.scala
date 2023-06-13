@@ -50,7 +50,7 @@ class Cache_op extends Lsu_isa {
   def is_tag_w = grant
   def is_dat_w = is_atom | is_su | is_sc | isVStore | grant
   def isDirtyOp = is_atom | is_su | is_sc | isVStore
-  def is_wb = is_atom | is_lu | is_lr
+  def is_wb = is_atom | is_lu | is_lr | isVStore
 
 }
 
