@@ -98,7 +98,10 @@ trait RenameMalloc { this: RenameBase =>
       Mux1H(
         Seq(io.xRename(i).req.fire -> io.xRename(i).rsp.rd0) ++
         ( if(fpuNum > 0) { Seq( io.fRename(i).req.fire -> io.fRename(i).rsp.rd0) }                              else { Seq() } ) ++
-        ( if(hasVector)  { Seq((io.rnReq(i).fire & io.rnReq(i).bits.isVwb ) -> io.rnReq(i).bits.param.raw.rd0) } else { Seq() } ) //vector dont need to rename
+        ( if(hasVector)  {
+          Seq(
+          (io.rnReq(i).fire & io.rnReq(i).bits.isVwb ) -> Mux( io.rnReq(i).bits.lsuIsa.isVStore, 32.U, io.rnReq(i).bits.param.raw.rd0) )
+        } else { Seq() } ) //vector dont need to rename
       )
   }
 }
@@ -164,7 +167,7 @@ trait LoadRob{ this: RenameBase =>
     reOrder_fifo_i.io.enq(i).bits.is_branch      := io.rnReq(i).bits.bruIsa.is_branch
     reOrder_fifo_i.io.enq(i).bits.is_jalr        := io.rnReq(i).bits.bruIsa.jalr
     reOrder_fifo_i.io.enq(i).bits.is_lu          := io.rnReq(i).bits.lsuIsa.is_lu
-    reOrder_fifo_i.io.enq(i).bits.is_su          := io.rnReq(i).bits.lsuIsa.is_su
+    reOrder_fifo_i.io.enq(i).bits.isXFStore      := io.rnReq(i).bits.lsuIsa.isXStore | io.rnReq(i).bits.lsuIsa.isFStore 
     reOrder_fifo_i.io.enq(i).bits.is_amo         := io.rnReq(i).bits.lsuIsa.is_amo
     reOrder_fifo_i.io.enq(i).bits.is_fence       := io.rnReq(i).bits.lsuIsa.fence
     reOrder_fifo_i.io.enq(i).bits.is_fence_i     := io.rnReq(i).bits.lsuIsa.fence_i

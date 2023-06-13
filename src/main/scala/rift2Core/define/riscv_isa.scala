@@ -1300,7 +1300,7 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val is_jalr = Bool()
 
   val is_lu = Bool()
-  val is_su = Bool()
+  val isXFStore = Bool()
   val is_amo = Bool()
   val is_fence = Bool()
   val is_fence_i = Bool()

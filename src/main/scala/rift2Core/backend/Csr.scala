@@ -77,7 +77,7 @@ trait VConfig{ this: CSRBase =>
   //   assert( io.xpuCsrWriteBack.bits.op_rw === false.B & io.xpuCsrWriteBack.bits.op_rs === false.B & io.xpuCsrWriteBack.bits.op_rc === false.B )
   // }
   val avl = Wire( UInt((log2Ceil(vParams.vlmax)+1).W) )
-  val nvl = Wire( UInt((log2Ceil(vParams.vlmax)).W) )
+  val nvl = Wire( UInt((log2Ceil(vParams.vlmax)+1).W) )
   val vill = Wire(Bool())
   val vtype = Wire(UInt(8.W))
 

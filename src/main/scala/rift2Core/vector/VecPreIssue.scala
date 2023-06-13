@@ -79,7 +79,7 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
 trait VecPreIssueReadOp{ this: VecPreIssueBase =>
   val idx = Seq( vecDptInfo.param.raw.vm0, vecDptInfo.param.raw.rs1, vecDptInfo.param.raw.rs2, vecDptInfo.param.raw.rs3 )
 
-  vop(0) := io.readOp(idx(0)).bits >> ( microIdx << (psew + 3.U) )
+  vop(0) := io.readOp(idx(0)).bits >> ( (microIdx << (log2Ceil(vParams.vlen) -3)) >> psew )
 
   vop(1) := io.readOp(idx(1)).bits
   vop(2) := io.readOp(idx(2)).bits

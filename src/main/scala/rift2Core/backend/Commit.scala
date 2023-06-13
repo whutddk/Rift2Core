@@ -211,6 +211,9 @@ with CommitDebug
         .elsewhen( io.rod(i).bits.is_fcsr & ( 0 until i ).map{ j => io.rod(j).bits.is_fcsr }.foldLeft(false.B)(_|_) ){
           commit_state(i) := 0.U
         }
+        .elsewhen( io.rod(i).bits.isVStore & ( 0 until i ).map{ j => io.rod(j).bits.isVStore }.foldLeft(false.B)(_|_) ){
+          commit_state(i) := 0.U
+        }
         // .elsewhen( cmm_state(i).isMMUFlush) {
         //   commit_state(i) := 1.U //abort
         //   for ( j <- 0 until i ) { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
@@ -287,7 +290,7 @@ trait CommitRegFiles { this: CommitState =>
     io.fCommit(i).phy := io.rod(i).bits.rd0_phy
     io.fCommit(i).raw := io.rod(i).bits.rd0_raw
 
-    io.vCommit(i).phy := io.rod(i).bits.rd0_raw
+    io.vCommit(i).phy := io.rod(i).bits.rd0_phy //vstore is 32.U(6.W)
   }
 
 
@@ -603,7 +606,7 @@ trait CommitInfoLsu{ this: CommitState =>
   println("Warning, amo_pending can only emmit at chn0")
 
   ( 0 until cmChn ).map{ i =>
-    io.cmm_lsu.is_store_commit(i) := io.rod(i).bits.is_su & commit_state_is_comfirm(i)
+    io.cmm_lsu.is_store_commit(i) := io.rod(i).bits.isXFStore & commit_state_is_comfirm(i)
   }
   
 
@@ -679,7 +682,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   def is_store_accessFault: Bool = {
     val is_store_accessFault =
       lsu_cmm.is_access_fault & (
-        ( ( rod.is_su | rod.is_amo ) & is_wb ) | (rod.isVStore & isVException)
+        ( ( rod.isXFStore | rod.is_amo ) & is_wb ) | (rod.isVStore & isVException)
       )
 
     return is_store_accessFault
@@ -697,7 +700,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   def is_store_pagingFault: Bool = {
     val is_store_pagingFault =
       lsu_cmm.is_paging_fault & (
-        (( rod.is_su | rod.is_amo ) & is_wb) | (rod.isVStore & isVException)
+        (( rod.isXFStore | rod.is_amo ) & is_wb) | (rod.isVStore & isVException)
       )
 
     return is_store_pagingFault
@@ -719,7 +722,7 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   def is_store_misAlign: Bool = {
     val is_store_misAlign =
       lsu_cmm.is_misAlign & (
-        ( (rod.is_su | rod.is_amo) & is_wb ) | (rod.isVStore & isVException)
+        ( (rod.isXFStore | rod.is_amo) & is_wb ) | (rod.isVStore & isVException)
       )
 
     return is_store_misAlign

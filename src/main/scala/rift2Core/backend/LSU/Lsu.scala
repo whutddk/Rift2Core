@@ -149,8 +149,8 @@ abstract class LsuBase (edge: Seq[TLEdgeOut])(implicit p: Parameters) extends Dc
     val dw = res.wdata.getWidth
 
     res.paddr := ori.paddr
-    res.wdata := Mux( ori.fun.is_lu | ori.fun.isVStore, reAlign_data( from = 64, to = dw, data = overlapResp.wdata, addr = overlapReq.paddr ), ori.wdata_align(dw))
-    res.wstrb := Mux( ori.fun.is_lu | ori.fun.isVStore, reAlign_strb( from = 64, to = dw, strb = overlapResp.wstrb, addr = overlapReq.paddr ), ori.wstrb_align(dw))
+    res.wdata := Mux( ori.fun.is_lu, reAlign_data( from = 64, to = dw, data = overlapResp.wdata, addr = overlapReq.paddr ), ori.wdata_align(dw))
+    res.wstrb := Mux( ori.fun.is_lu, reAlign_strb( from = 64, to = dw, strb = overlapResp.wstrb, addr = overlapReq.paddr ), ori.wstrb_align(dw))
 
     {
       res.fun := 0.U.asTypeOf(new Cache_op)
@@ -455,7 +455,7 @@ trait LSU_WriteBack { this: LsuBase =>
 
 
 
-  for ( i <- 0 until bk ) yield {
+  for ( i <- 0 until bk ) {
     lu_wb_arb.io.in(i).valid := cache(i).io.deq.valid & cache(i).io.deq.bits.is_load_amo
     lu_wb_arb.io.in(i).bits := Mux( lu_wb_arb.io.in(i).valid, cache(i).io.deq.bits, 0.U.asTypeOf(new Dcache_Deq_Bundle) )
     cache(i).io.deq.ready := lu_wb_arb.io.in(i).ready | ~cache(i).io.deq.bits.is_load_amo

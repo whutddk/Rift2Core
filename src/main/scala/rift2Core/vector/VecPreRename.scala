@@ -332,7 +332,7 @@ trait VecPreRenameVlsMicInstr{ this: VecPreRenameBase =>
     vlsMicInstr(i).param.raw.rd0 := 
       Mux1H( Seq(
         ( vSplitReq.lsuIsa.isVLoad  ) -> (vSplitReq.param.raw.rd0 +  vlsLMulSel(i) ),
-        ( vSplitReq.lsuIsa.isVStore ) -> 32.U,
+        ( vSplitReq.lsuIsa.isVStore ) -> 0.U, //override in next stage for raw has only 5-bits
       ))
 
     vlsMicInstr(i).vAttach.get.vm        := vSplitReq.vAttach.get.vm

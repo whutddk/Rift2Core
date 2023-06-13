@@ -64,7 +64,7 @@ class VCSRBundle extends Bundle{
 }
 
 class VConfigBundle(implicit p: Parameters) extends RiftBundle{
-  require( log2Ceil(vParams.vlmax) <= 55 )
+  require( log2Ceil(vParams.vlmax+1) <= 55 )
   val vill     = UInt(1.W)
   val vl       = UInt(55.W)
   val vtype    = UInt(8.W)
@@ -194,7 +194,7 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
   // val new_priv = UInt(2.W)
   val DMode    = Bool()
 
-  val vstart  = UInt( (log2Ceil(vParams.vlmax)).W )
+  val vstart  = UInt( (log2Ceil(vParams.vlmax)+1).W )
   val vcsr    = new VCSRBundle
   val vConfig = new VConfigBundle
   val vl    = UInt(64.W)

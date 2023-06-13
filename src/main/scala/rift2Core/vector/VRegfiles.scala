@@ -73,23 +73,23 @@ abstract class VRegFilesBase()(implicit p: Parameters) extends RiftModule {
   val vsew = Reg( Vec( 33, UInt(2.W)) )
 
   val isWroteback =
-    RegInit( VecInit( Seq.fill(32){ VecInit( Seq.fill(vParams.vlen/8){true.B}  ) }) )
+    RegInit( VecInit( Seq.fill(33){ VecInit( Seq.fill(vParams.vlen/8){true.B}  ) }) )
 
   val isException =
-    RegInit( VecInit( Seq.fill(32){ VecInit( Seq.fill(vParams.vlen/8){false.B} ) }) )
+    RegInit( VecInit( Seq.fill(33){ VecInit( Seq.fill(vParams.vlen/8){false.B} ) }) )
 
   val isMask =
-    RegInit( VecInit( Seq.fill(32){ VecInit( Seq.fill(vParams.vlen/8){false.B} ) }) )
+    RegInit( VecInit( Seq.fill(33){ VecInit( Seq.fill(vParams.vlen/8){false.B} ) }) )
 
 }
 
 
 trait VRegMolloc{ this: VRegFilesBase =>
   io.molloc.ready := 
-    Mux1H( ( 0 until 32 ).map{ i => (i.U === io.molloc.bits.idx) -> ~(isMolloced(i)) } )
+    Mux1H( ( 0 until 33 ).map{ i => (i.U === io.molloc.bits.idx) -> ~(isMolloced(i)) } )
 
   when( io.molloc.fire ){
-    ( 0 until 32 ).map{ i =>
+    ( 0 until 33 ).map{ i =>
       when( i.U === io.molloc.bits.idx ) {
         assert( isMolloced(i) === false.B )
         isMolloced(i) := true.B
