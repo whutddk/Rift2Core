@@ -61,7 +61,7 @@ abstract class VecPreIssueBase()(implicit p: Parameters) extends RiftModule{
 
   val vWidth = vecDptInfo.param.vWidth
   val vstart = io.csrfiles.vstart
-  val vl     = io.csrfiles.vConfig.vl  //pervious vl should be committed
+  val evl    = WireDefault(io.csrfiles.vConfig.vl)    //pervious vl should be committed, using effective vector length
 
   val vsew     = (if(hasVector) {vecDptInfo.vAttach.get.vsew}     else {0.U})
   val lmul     = (if(hasVector) {vecDptInfo.vAttach.get.vlmul}    else {0.U})
@@ -129,6 +129,9 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
         (vecDptInfo.lsuIsa.isDubl) -> "b11".U,
       ))
 
+      when( vecDptInfo.lsuIsa.vlm ) { evl := io.csrfiles.vConfig.vl >> 3 } //override
+
+
       vlsExeInfo(i).param.raw.vm0 := DontCare
       vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1 //override
       vlsExeInfo(i).param.raw.rs2 := DontCare
@@ -149,6 +152,8 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
         (vecDptInfo.lsuIsa.isWord) -> "b10".U,
         (vecDptInfo.lsuIsa.isDubl) -> "b11".U,
       ))
+
+      when( vecDptInfo.lsuIsa.vsm ) { evl := io.csrfiles.vConfig.vl >> 3 } //override
 
       vlsExeInfo(i).param.raw.vm0 := DontCare
       vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
@@ -357,7 +362,7 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
                   (psew === "b10".U) -> ( j.U < (vParams.vlen/32).U ),
                   (psew === "b11".U) -> ( j.U < (vParams.vlen/64).U ),
                 )) & 
-                (io.enq(i).bits.vAttach.get.vlIdx + j.U) < vl &
+                (io.enq(i).bits.vAttach.get.vlIdx + j.U) < evl &
                 Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )
             }
           }
@@ -387,7 +392,7 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
                 (psew === "b011".U) -> ( j.U >= (vParams.vlen/64).U ),
               )) |
             Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U ) |
-            (io.enq(i).bits.vAttach.get.vlIdx + j.U) >= vl |
+            (io.enq(i).bits.vAttach.get.vlIdx + j.U) >= evl |
             (io.enq(i).bits.vAttach.get.vlIdx + j.U) < vstart
           }
 
