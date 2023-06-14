@@ -1019,13 +1019,20 @@ trait IssSelLsu{ this: IssueSel =>
         (bufInfo(i).lsuIsa.is_xls  | bufInfo(i).lsuIsa.is_fls)  -> (postBufOperator(i)(1).asSInt + bufInfo(i).param.imm.asSInt()).asUInt(),
         (bufInfo(i).lsuIsa.is_lrsc | bufInfo(i).lsuIsa.is_amo)  -> postBufOperator(i)(1),
       ) ++ (if(hasVector) { Seq(
-              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isByte) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 0 ) ).asUInt(),
-              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isHalf) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 1 ) ).asUInt(),
-              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isWord) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 2 ) ).asUInt(),
-              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isDubl) -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx.asSInt << 3 ) ).asUInt(),
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isByte)             -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx << 0 )).asSInt,
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isHalf)             -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx << 1 )).asSInt,
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isWord)             -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx << 2 )).asSInt,
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isDubl)             -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx << 3 )).asSInt,
 
-              (bufInfo(i).lsuIsa.isStridde    ) -> (postBufOperator(i)(1).asSInt + (bufInfo(i).vAttach.get.vlIdx.asSInt * postBufOperator(i)(2)).asSInt ).asUInt(),//rs2
-              (bufInfo(i).lsuIsa.isIndex      ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt).asUInt(),//vs2 -> vop2 
+              (bufInfo(i).lsuIsa.isStridde    & bufInfo(i).lsuIsa.isByte )            -> (postBufOperator(i)(1).asSInt + ( ( vlCnt * lmulSel + bufInfo(i).vAttach.get.eleIdx ) * postBufOperator(i)(2)).asSInt + ( bufInfo(i).vAttach.get.nfSel << 0 ).asSInt ).asUInt(),//rs2
+              (bufInfo(i).lsuIsa.isStridde    & bufInfo(i).lsuIsa.isHalf )            -> (postBufOperator(i)(1).asSInt + ( ( vlCnt * lmulSel + bufInfo(i).vAttach.get.eleIdx ) * postBufOperator(i)(2)).asSInt + ( bufInfo(i).vAttach.get.nfSel << 1 ).asSInt ).asUInt(),//rs2
+              (bufInfo(i).lsuIsa.isStridde    & bufInfo(i).lsuIsa.isWord )            -> (postBufOperator(i)(1).asSInt + ( ( vlCnt * lmulSel + bufInfo(i).vAttach.get.eleIdx ) * postBufOperator(i)(2)).asSInt + ( bufInfo(i).vAttach.get.nfSel << 2 ).asSInt ).asUInt(),//rs2
+              (bufInfo(i).lsuIsa.isStridde    & bufInfo(i).lsuIsa.isDubl )            -> (postBufOperator(i)(1).asSInt + ( ( vlCnt * lmulSel + bufInfo(i).vAttach.get.eleIdx ) * postBufOperator(i)(2)).asSInt + ( bufInfo(i).vAttach.get.nfSel << 3 ).asSInt ).asUInt(),//rs2
+
+              (bufInfo(i).lsuIsa.isIndex      & bufInfo(i).vAttach.vsew === "b00".U ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt                                                          + ( bufInfo(i).vAttach.get.nfSel << 0 ).asSInt ).asUInt(),//vs2 -> vop2 
+              (bufInfo(i).lsuIsa.isIndex      & bufInfo(i).vAttach.vsew === "b01".U ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt                                                          + ( bufInfo(i).vAttach.get.nfSel << 1 ).asSInt ).asUInt(),//vs2 -> vop2 
+              (bufInfo(i).lsuIsa.isIndex      & bufInfo(i).vAttach.vsew === "b10".U ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt                                                          + ( bufInfo(i).vAttach.get.nfSel << 2 ).asSInt ).asUInt(),//vs2 -> vop2 
+              (bufInfo(i).lsuIsa.isIndex      & bufInfo(i).vAttach.vsew === "b11".U ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt                                                          + ( bufInfo(i).vAttach.get.nfSel << 3 ).asSInt ).asUInt(),//vs2 -> vop2 
       )} else { Seq() })
                                                                       // -> postBufOperator(i)(1).asSInt + adjAddr( i, nf = "b000".U, vWidth = "b000".U ) + ((ori.vAttach.get.nf + 1.U) << log2Ceil(vParams.vlen/8))
       )

@@ -106,8 +106,15 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
     vlsExeInfo(i).vAttach.get     := vecDptInfo.vAttach.get
 
 
-    vlsExeInfo(i).vAttach.get.vlIdx :=  //override
-      vecDptInfo.vAttach.get.vlIdx + i.U
+    vlsExeInfo(i).vAttach.get.vlIdx := //override
+      vecDptInfo.vAttach.get.vlCnt + 
+        (Mux1H(Seq(
+            (nf === 0.U) -> ( i*1 ).U, (nf === 1.U) -> ( i*2 ).U,
+            (nf === 2.U) -> ( i*3 ).U, (nf === 3.U) -> ( i*4 ).U,
+            (nf === 4.U) -> ( i*5 ).U, (nf === 5.U) -> ( i*6 ).U,
+            (nf === 6.U) -> ( i*7 ).U, (nf === 7.U) -> ( i*8 ).U,
+          )) + nfSel)
+      // vecDptInfo.vAttach.get.vlIdx  + i.U
           // (Mux1H(Seq(
           //   (nf === 0.U) -> ( i*1 ).U, (nf === 1.U) -> ( i*2 ).U,
           //   (nf === 2.U) -> ( i*3 ).U, (nf === 3.U) -> ( i*4 ).U,
@@ -362,7 +369,8 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
                   (psew === "b10".U) -> ( j.U < (vParams.vlen/32).U ),
                   (psew === "b11".U) -> ( j.U < (vParams.vlen/64).U ),
                 )) & 
-                (io.enq(i).bits.vAttach.get.vlIdx + j.U) < evl &
+                (vlsExeInfo(j).vAttach.get.vlIdx) < evl &
+                (vlsExeInfo(j).vAttach.get.vlIdx) > vstart &
                 Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )
             }
           }
@@ -392,8 +400,8 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
                 (psew === "b011".U) -> ( j.U >= (vParams.vlen/64).U ),
               )) |
             Mux( vlsExeInfo(j).vAttach.get.vm === true.B, false.B, vop(0)(j) === 0.U ) |
-            (io.enq(i).bits.vAttach.get.vlIdx + j.U) >= evl |
-            (io.enq(i).bits.vAttach.get.vlIdx + j.U) < vstart
+            (vlsExeInfo(j).vAttach.get.vlIdx) >= evl |
+            (vlsExeInfo(j).vAttach.get.vlIdx) < vstart
           }
 
           io.molloc.bits.idx    := io.enq(i).bits.phy.rd0
@@ -401,8 +409,7 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
 
           io.enq(i).ready :=
             io.molloc.ready &
-            Mux( io.enq(i).bits.lsuIsa.isVStore, isVSTorePnd, true.B)// &
-            // (io.enq(i).bits.vAttach.get.vlIdx >= vstart) & (io.enq(i).bits.vAttach.get.vlIdx < vl)
+            Mux( io.enq(i).bits.lsuIsa.isVStore, isVSTorePnd, true.B)
 
 
           when(io.enq(i).bits.isVwb) {
