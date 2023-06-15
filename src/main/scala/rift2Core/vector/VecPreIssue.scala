@@ -124,7 +124,8 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
 
 
 
-
+      vlsExeInfo(i).vAttach.get.eleIdx := i.U
+      vlsExeInfo(i).vAttach.get.tEleIdx := vecDptInfo.vAttach.get.tEleIdx + i.U //override
 
 
 
@@ -144,7 +145,6 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).param.raw.rs2 := DontCare
       vlsExeInfo(i).param.raw.rs3 := DontCare
 
-      vlsExeInfo(i).vAttach.get.eleIdx := i.U
 
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := DontCare
@@ -167,7 +167,6 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).param.raw.rs2 := DontCare
       vlsExeInfo(i).param.raw.rs3 := DontCare
 
-      vlsExeInfo(i).vAttach.get.eleIdx := i.U
 
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := 
@@ -193,7 +192,6 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).param.raw.rs2 := vecDptInfo.param.raw.rs2
       vlsExeInfo(i).param.raw.rs3 := DontCare
 
-      vlsExeInfo(i).vAttach.get.eleIdx := i.U
 
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := DontCare
@@ -213,7 +211,7 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).param.raw.rs2 := vecDptInfo.param.raw.rs2
       vlsExeInfo(i).param.raw.rs3 := DontCare
 
-      vlsExeInfo(i).vAttach.get.eleIdx := i.U
+
 
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := 
@@ -233,8 +231,6 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).param.raw.rs2 := DontCare
       vlsExeInfo(i).param.raw.rs3 := DontCare
 
-      vlsExeInfo(i).vAttach.get.eleIdx := i.U
-
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := DontCare
       vlsExeInfo(i).vAttach.get.vop2 := 
@@ -252,8 +248,6 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
       vlsExeInfo(i).param.raw.rs2 := DontCare
       vlsExeInfo(i).param.raw.rs3 := DontCare
-
-      vlsExeInfo(i).vAttach.get.eleIdx := i.U
 
       vlsExeInfo(i).vAttach.get.vop0 := vop(0)(i).asBool
       vlsExeInfo(i).vAttach.get.vop1 := 
@@ -370,7 +364,7 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
                   (psew === "b11".U) -> ( j.U < (vParams.vlen/64).U ),
                 )) & 
                 (vlsExeInfo(j).vAttach.get.vlIdx) < evl &
-                (vlsExeInfo(j).vAttach.get.vlIdx) > vstart &
+                (vlsExeInfo(j).vAttach.get.vlIdx) >= vstart &
                 Mux( vlsExeInfo(j).vAttach.get.vm === true.B, true.B, vop(0)(j) === 1.U )
             }
           }
