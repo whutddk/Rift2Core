@@ -355,6 +355,8 @@ area: yosys
 singleV: VSimTop
 	${R2}/generated/build/$(CONFIG)/VSimTop -w -l -p -f ./tb/ci/vec/$(TESTFILE)
 
+isaV:
+	$(foreach test, $(vecisa), ${R2}/generated/build/$(CONFIG)/VSimTop -l -f ./tb/ci/vec/$(test) || exit; )
 
 # lineCfg += Rift2300
 # lineCfg += Rift2310
