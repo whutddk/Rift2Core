@@ -38,7 +38,7 @@ trait Vec_PreRename_Bundle{ this: RiftBundle =>
   val widenSel = UInt(1.W)
 
   val microIdx = UInt(3.W)
-  val tEleIdx  = UInt( (log2Ceil(vParams.vlmax)+1).W )
+  // val tEleIdx  = UInt( (log2Ceil(vParams.vlmax)+1).W )
   val vlIdx    = UInt( (log2Ceil(vParams.vlmax)+1).W )
   val vlCnt   = UInt( log2Ceil( vParams.vlen / 8 ).W ) //how many vec-element in this micro instrution, load at preRename
 

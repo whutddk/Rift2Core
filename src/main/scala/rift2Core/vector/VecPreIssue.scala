@@ -106,14 +106,14 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
     vlsExeInfo(i).vAttach.get     := vecDptInfo.vAttach.get
 
 
-    vlsExeInfo(i).vAttach.get.vlIdx := //override
-      vecDptInfo.vAttach.get.vlIdx + 
-        (Mux1H(Seq(
-            (nf === 0.U) -> ( i*1 ).U, (nf === 1.U) -> ( i*2 ).U,
-            (nf === 2.U) -> ( i*3 ).U, (nf === 3.U) -> ( i*4 ).U,
-            (nf === 4.U) -> ( i*5 ).U, (nf === 5.U) -> ( i*6 ).U,
-            (nf === 6.U) -> ( i*7 ).U, (nf === 7.U) -> ( i*8 ).U,
-          )) + nfSel)
+    // vlsExeInfo(i).vAttach.get.vlIdx := //override
+      // vecDptInfo.vAttach.get.vlIdx + 
+      //   (Mux1H(Seq(
+      //       (nf === 0.U) -> ( i*1 ).U, (nf === 1.U) -> ( i*2 ).U,
+      //       (nf === 2.U) -> ( i*3 ).U, (nf === 3.U) -> ( i*4 ).U,
+      //       (nf === 4.U) -> ( i*5 ).U, (nf === 5.U) -> ( i*6 ).U,
+      //       (nf === 6.U) -> ( i*7 ).U, (nf === 7.U) -> ( i*8 ).U,
+      //     )) + nfSel)
       // vecDptInfo.vAttach.get.vlIdx  + i.U
           // (Mux1H(Seq(
           //   (nf === 0.U) -> ( i*1 ).U, (nf === 1.U) -> ( i*2 ).U,
@@ -125,7 +125,7 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
 
 
       vlsExeInfo(i).vAttach.get.eleIdx := i.U
-      vlsExeInfo(i).vAttach.get.tEleIdx := vecDptInfo.vAttach.get.tEleIdx + i.U //override
+      vlsExeInfo(i).vAttach.get.vlIdx := vecDptInfo.vAttach.get.vlIdx + i.U //override
 
 
 

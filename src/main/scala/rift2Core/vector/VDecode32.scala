@@ -620,7 +620,7 @@ trait VDecode32{ this: DecodeBase =>
   info.vAttach.get.vlCnt     := 0.U
   
   info.vAttach.get.eleIdx    := 0.U
-  info.vAttach.get.tEleIdx    := 0.U
+  // info.vAttach.get.tEleIdx    := 0.U
   info.vAttach.get.vop0      := false.B
   info.vAttach.get.vop1      := 0.U
   info.vAttach.get.vop2      := 0.U
