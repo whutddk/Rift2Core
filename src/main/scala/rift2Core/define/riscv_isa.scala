@@ -1324,7 +1324,7 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val isVLoad = Bool()
   val isVStore = Bool()
   val isFoF    = Bool()
-  val vlCnt    = UInt((log2Ceil(vParams.vlen).W))
+  val vlIdx    = UInt( (log2Ceil(vParams.vlmax)+1).W )
 
 }
 

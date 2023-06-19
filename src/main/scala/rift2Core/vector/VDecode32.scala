@@ -617,7 +617,6 @@ trait VDecode32{ this: DecodeBase =>
   info.vAttach.get.nfSel     := 0.U
   info.vAttach.get.widenSel  := 0.U
   info.vAttach.get.microIdx  := 0.U
-  info.vAttach.get.vlCnt     := 0.U
   
   info.vAttach.get.eleIdx    := 0.U
   // info.vAttach.get.tEleIdx    := 0.U

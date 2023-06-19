@@ -189,13 +189,13 @@ trait LoadRob{ this: RenameBase =>
       reOrder_fifo_i.io.enq(i).bits.isVLoad  := io.rnReq(i).bits.lsuIsa.isVLoad
       reOrder_fifo_i.io.enq(i).bits.isVStore := io.rnReq(i).bits.lsuIsa.isVStore
       reOrder_fifo_i.io.enq(i).bits.isFoF    := io.rnReq(i).bits.lsuIsa.vleNff
-      reOrder_fifo_i.io.enq(i).bits.vlCnt    := io.rnReq(i).bits.vAttach.get.vlCnt
+      reOrder_fifo_i.io.enq(i).bits.vlIdx    := io.rnReq(i).bits.vAttach.get.vlIdx
     } else{
       reOrder_fifo_i.io.enq(i).bits.isVector := false.B
       reOrder_fifo_i.io.enq(i).bits.isVLoad  := false.B
       reOrder_fifo_i.io.enq(i).bits.isVStore := false.B
       reOrder_fifo_i.io.enq(i).bits.isFoF    := false.B
-      reOrder_fifo_i.io.enq(i).bits.vlCnt    := 0.U
+      reOrder_fifo_i.io.enq(i).bits.vlIdx    := 0.U
     }
 
 
