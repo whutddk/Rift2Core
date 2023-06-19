@@ -119,35 +119,29 @@ trait VecPreRenameMux{ this: VecPreRenameBase =>
 
         when( io.enq(i).bits.lsuIsa.isVector ){
           vSplitReq := io.enq(i).bits
-          // when( nf === 0.U & (lmul(1,0) === 0.U | lmul.extract(2) === 1.U)  ){//dont splitter
-          //   io.enq(i) <> io.deq(i)
-          // }.otherwise{ //vls splitter
-            io.deq(i).valid := false.B
-            io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
-            io.enq(i).ready :=
-              ~isVecPnd & vecSplitFifo.io.enq(7).ready & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_)
 
-            for( j <- 0 until 8 ) {
-              vecSplitFifo.io.enq(j).valid := ~isVecPnd & ( 0 until i ).map{ k => io.enq(k).fire }.foldLeft(true.B)(_&_) & io.enq(i).valid & (j.U < vlsMicInstrCnt)
-              vecSplitFifo.io.enq(j).bits  := vlsMicInstr(j)
-              assert( ~(vecSplitFifo.io.enq(j).valid & ~vecSplitFifo.io.enq(j).ready) )
-            }
+          io.deq(i).valid := false.B
+          io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
+          io.enq(i).ready :=
+            ~isVecPnd & vecSplitFifo.io.enq(7).ready & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_)
 
-            assert( io.enq(i).fire === vecSplitFifo.io.enq(0).fire )
-          // }
+          for( j <- 0 until 8 ) {
+            vecSplitFifo.io.enq(j).valid := ~isVecPnd & ( 0 until i ).map{ k => io.enq(k).fire }.foldLeft(true.B)(_&_) & io.enq(i).valid & (j.U < vlsMicInstrCnt)
+            vecSplitFifo.io.enq(j).bits  := vlsMicInstr(j)
+            assert( ~(vecSplitFifo.io.enq(j).valid & ~vecSplitFifo.io.enq(j).ready) )
+          }
+
+          assert( io.enq(i).fire === vecSplitFifo.io.enq(0).fire )
+
         }.elsewhen(io.enq(i).bits.vecIsa.isVALU){
           vSplitReq := io.enq(i).bits
-          // when( (lmul(1,0) === 0.U | lmul.extract(2) === 1.U) & ~isWiden ){ //dont splitter
-          //   io.enq(i) <> io.deq(i)
-          // }.otherwise{ //vpu splitter
-            io.deq(i).valid := false.B
-            io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
-            io.enq(i).ready :=
-              ~isVecPnd & vecSplitFifo.io.enq(7).ready & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_)
+          io.deq(i).valid := false.B
+          io.deq(i).bits  := 0.U.asTypeOf(new IF4_Bundle)
+          io.enq(i).ready :=
+            ~isVecPnd & vecSplitFifo.io.enq(7).ready & ( 0 until i ).map{ j => io.enq(j).ready }.foldLeft(true.B)(_&_)
 
-            assert( false.B, "Assert Failed at preRename, Reaching at an UNCODED AREA!" )
-            assert( io.enq(i).fire === vecSplitFifo.io.enq(0).fire )
-          // }
+          assert( false.B, "Assert Failed at preRename, Reaching at an UNCODED AREA!" )
+          assert( io.enq(i).fire === vecSplitFifo.io.enq(0).fire )
         } .elsewhen( isAccessVStart(i) | isAccessVType(i) ){
           when(isVecPnd){
             io.deq(i).valid := false.B
@@ -270,7 +264,6 @@ trait VecPreRenameVpuMicInstr{ this: VecPreRenameBase =>
   //     ))
   //   microInstr(i).vAttach.get.widenSel  := widenSel(i)
   //   microInstr(i).vAttach.get.microIdx  := i.U
-  //   microInstr(i).vAttach.get.vlCnt     := ((vParams.vlen/8).U) >> lmulSel(i)(1,0); when(vecSplitFifo.io.enq(0).fire) { assert( lmulSel(i).extract(2) === 0.U ) }
   //   microInstr(i).vAttach.get.eleIdx    := 0.U
   //   microInstr(i).vAttach.get.vop0      := false.B
   //   microInstr(i).vAttach.get.vop1      := 0.U
@@ -295,21 +288,21 @@ trait VecPreRenameVlsMicInstr{ this: VecPreRenameBase =>
 
 
   for( i <- 0 until 8 ) {
-
-
     vlsLMulSel(i) := Mux1H(Seq(
-      (nf === "b000".U) -> (i/1).U, (nf === "b001".U) -> (i/2).U, //nf = 2
-      (nf === "b010".U) -> (i/3).U, (nf === "b011".U) -> (i/4).U, //nf = 4
-      (nf === "b100".U) -> 0.U,     (nf === "b101".U) -> 0.U,
-      (nf === "b110".U) -> 0.U,     (nf === "b111".U) -> 0.U,
+      ( (lmul === BitPat("b1??")) ) -> 0.U,
+      ( (lmul === BitPat("b000")) ) -> 0.U,
+      ( (lmul === BitPat("b001")) ) -> (i%2).U,
+      ( (lmul === BitPat("b010")) ) -> (i%4).U,
+      ( (lmul === BitPat("b011")) ) -> (i%8).U,
     ))
 
     vlsNFSel(i) := Mux1H(Seq(
-      (nf === "b000".U) -> (i%1).U, (nf === "b001".U) -> (i%2).U,
-      (nf === "b010".U) -> (i%3).U, (nf === "b011".U) -> (i%4).U,
-      (nf === "b100".U) -> i.U,     (nf === "b101".U) -> i.U,
-      (nf === "b110".U) -> i.U,     (nf === "b111".U) -> i.U,
-    ))
+      ( (lmul === BitPat("b1??")) ) -> i.U,
+      ( (lmul === BitPat("b000")) ) -> i.U,
+      ( (lmul === BitPat("b001")) ) -> (i/2).U,
+      ( (lmul === BitPat("b010")) ) -> (i/4).U,
+      ( (lmul === BitPat("b011")) ) -> (i/8).U,
+    ))  
 
     vlsMicInstr(i).aluIsa     := 0.U.asTypeOf( new Alu_isa )
     vlsMicInstr(i).bruIsa     := 0.U.asTypeOf( new Bru_isa )
@@ -345,315 +338,35 @@ trait VecPreRenameVlsMicInstr{ this: VecPreRenameBase =>
     vlsMicInstr(i).vAttach.get.vm        := vSplitReq.vAttach.get.vm
     vlsMicInstr(i).vAttach.get.nf        := nf
     vlsMicInstr(i).vAttach.get.vtype     := vtype
-    // vlsMicInstr(i).vAttach.get.vlIdx     := //align to lmul
-    //   Mux1H(Seq(
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen /  8 * 1).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen /  8 * 2).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen /  8 * 3).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen /  8 * 4).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> 0.U,
   
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 16 * 1).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 16 * 2).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 16 * 3).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 16 * 4).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b100".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b101".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b110".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b111".U ) ) -> 0.U,
-
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 32 * 1).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 32 * 2).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 32 * 3).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 32 * 4).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b100".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b101".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b110".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b111".U ) ) -> 0.U,
-
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 64 * 1).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 64 * 2).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 64 * 3).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 64 * 4).U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b100".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b101".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b110".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b111".U ) ) -> 0.U,
-
-    //     ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 8 / 8 * 1).U,
-    //     ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 8 / 8 * 2).U,
-    //     ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 8 / 8 * 3).U,
-    //     ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 8 / 8 * 4).U,
-    //     ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> 0.U,
-        
-    //     ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 4 / 8 * 1).U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 4 / 8 * 2).U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 4 / 8 * 3).U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 4 / 8 * 4).U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> 0.U,
-
-    //     ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 4 / 16 * 1).U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 4 / 16 * 2).U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 4 / 16 * 3).U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 4 / 16 * 4).U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b100".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b101".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b110".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b111".U ) ) -> 0.U,
-
-    //     ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 2 / 8 * 1).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 2 / 8 * 2).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 2 / 8 * 3).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 2 / 8 * 4).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> 0.U,
-
-    //     ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 2 / 16 * 1).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 2 / 16 * 2).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 2 / 16 * 3).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 2 / 16 * 4).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b100".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b101".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b110".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b111".U ) ) -> 0.U,
-
-    //     ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b000".U ) ) -> ( (i/1)*vParams.vlen / 2 / 32 * 1).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b001".U ) ) -> ( (i/2)*vParams.vlen / 2 / 32 * 2).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b010".U ) ) -> ( (i/3)*vParams.vlen / 2 / 32 * 3).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b011".U ) ) -> ( (i/4)*vParams.vlen / 2 / 32 * 4).U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b100".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b101".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b110".U ) ) -> 0.U,
-    //     ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b111".U ) ) -> 0.U,
-    //   )); require( vParams.elen == 64 )
-
-
     vlsMicInstr(i).vAttach.get.lmulSel   := vlsLMulSel(i)
     vlsMicInstr(i).vAttach.get.nfSel     := vlsNFSel(i)
 
     vlsMicInstr(i).vAttach.get.widenSel  := 0.U
     vlsMicInstr(i).vAttach.get.microIdx  := i.U
-    vlsMicInstr(i).vAttach.get.vlCnt     := //align to mul
-      Mux1H(Seq(
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b000".U ) ) -> (vParams.vlen /  8 * 1).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> (vParams.vlen /  8 * 2).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> (vParams.vlen /  8 * 3).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> (vParams.vlen /  8 * 4).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> (vParams.vlen /  8 * 5).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> (vParams.vlen /  8 * 6).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> (vParams.vlen /  8 * 7).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> (vParams.vlen /  8 * 8).U,
-  
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b000".U ) ) -> (vParams.vlen / 16 * 1).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b001".U ) ) -> (vParams.vlen / 16 * 2).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b010".U ) ) -> (vParams.vlen / 16 * 3).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b011".U ) ) -> (vParams.vlen / 16 * 4).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b100".U ) ) -> (vParams.vlen / 16 * 5).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b101".U ) ) -> (vParams.vlen / 16 * 6).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b110".U ) ) -> (vParams.vlen / 16 * 7).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b111".U ) ) -> (vParams.vlen / 16 * 8).U,
 
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b000".U ) ) -> (vParams.vlen / 32 * 1).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b001".U ) ) -> (vParams.vlen / 32 * 2).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b010".U ) ) -> (vParams.vlen / 32 * 3).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b011".U ) ) -> (vParams.vlen / 32 * 4).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b100".U ) ) -> (vParams.vlen / 32 * 5).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b101".U ) ) -> (vParams.vlen / 32 * 6).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b110".U ) ) -> (vParams.vlen / 32 * 7).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b111".U ) ) -> (vParams.vlen / 32 * 8).U,
-
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b000".U ) ) -> (vParams.vlen / 64 * 1).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b001".U ) ) -> (vParams.vlen / 64 * 2).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b010".U ) ) -> (vParams.vlen / 64 * 3).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b011".U ) ) -> (vParams.vlen / 64 * 4).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b100".U ) ) -> (vParams.vlen / 64 * 5).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b101".U ) ) -> (vParams.vlen / 64 * 6).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b110".U ) ) -> (vParams.vlen / 64 * 7).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b111".U ) ) -> (vParams.vlen / 64 * 8).U,
-
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b000".U ) ) -> (vParams.vlen / 8 / 8 * 1).U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> (vParams.vlen / 8 / 8 * 2).U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> (vParams.vlen / 8 / 8 * 3).U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> (vParams.vlen / 8 / 8 * 4).U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> (vParams.vlen / 8 / 8 * 5).U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> (vParams.vlen / 8 / 8 * 6).U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> (vParams.vlen / 8 / 8 * 7).U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> (vParams.vlen / 8 / 8 * 8).U,
-        
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U)  ) -> (vParams.vlen / 4 / 8 * 1).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> (vParams.vlen / 4 / 8 * 2).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> (vParams.vlen / 4 / 8 * 3).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> (vParams.vlen / 4 / 8 * 4).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> (vParams.vlen / 4 / 8 * 5).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> (vParams.vlen / 4 / 8 * 6).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> (vParams.vlen / 4 / 8 * 7).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> (vParams.vlen / 4 / 8 * 8).U,
-
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b000".U ) ) -> (vParams.vlen / 4 / 16 * 1).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b001".U ) ) -> (vParams.vlen / 4 / 16 * 2).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b010".U ) ) -> (vParams.vlen / 4 / 16 * 3).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b011".U ) ) -> (vParams.vlen / 4 / 16 * 4).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b100".U ) ) -> (vParams.vlen / 4 / 16 * 5).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b101".U ) ) -> (vParams.vlen / 4 / 16 * 6).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b110".U ) ) -> (vParams.vlen / 4 / 16 * 7).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b111".U ) ) -> (vParams.vlen / 4 / 16 * 8).U,
-
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b000".U ) ) -> (vParams.vlen / 2 / 8 * 1).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> (vParams.vlen / 2 / 8 * 2).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> (vParams.vlen / 2 / 8 * 3).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> (vParams.vlen / 2 / 8 * 4).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> (vParams.vlen / 2 / 8 * 5).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> (vParams.vlen / 2 / 8 * 6).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> (vParams.vlen / 2 / 8 * 7).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> (vParams.vlen / 2 / 8 * 8).U,
-
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b000".U ) ) -> (vParams.vlen / 2 / 16 * 1).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b001".U ) ) -> (vParams.vlen / 2 / 16 * 2).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b010".U ) ) -> (vParams.vlen / 2 / 16 * 3).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b011".U ) ) -> (vParams.vlen / 2 / 16 * 4).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b100".U ) ) -> (vParams.vlen / 2 / 16 * 5).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b101".U ) ) -> (vParams.vlen / 2 / 16 * 6).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b110".U ) ) -> (vParams.vlen / 2 / 16 * 7).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b111".U ) ) -> (vParams.vlen / 2 / 16 * 8).U,
-
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b000".U ) ) -> (vParams.vlen / 2 / 32 * 1).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b001".U ) ) -> (vParams.vlen / 2 / 32 * 2).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b010".U ) ) -> (vParams.vlen / 2 / 32 * 3).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b011".U ) ) -> (vParams.vlen / 2 / 32 * 4).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b100".U ) ) -> (vParams.vlen / 2 / 32 * 5).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b101".U ) ) -> (vParams.vlen / 2 / 32 * 6).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b110".U ) ) -> (vParams.vlen / 2 / 32 * 7).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b111".U ) ) -> (vParams.vlen / 2 / 32 * 8).U,
-
-
-      )); require( vParams.elen == 64 )
-
-
-
-
-      // Mux1H(Seq(
-      //   ( (lmul === BitPat("b0??")) & (vsew === "b000".U) ) -> (vParams.vlen /  8).U,
-      //   ( (lmul === BitPat("b0??")) & (vsew === "b001".U) ) -> (vParams.vlen / 16).U,
-      //   ( (lmul === BitPat("b0??")) & (vsew === "b010".U) ) -> (vParams.vlen / 32).U,
-      //   ( (lmul === BitPat("b0??")) & (vsew === "b011".U) ) -> (vParams.vlen / 64).U,
-
-      //   ( (lmul === BitPat("b101")) & (vsew === "b000".U) ) -> (vParams.vlen / 8 / 8 ).U,
-        
-      //   ( (lmul === BitPat("b110")) & (vsew === "b000".U) ) -> (vParams.vlen / 4 / 8 ).U,
-      //   ( (lmul === BitPat("b110")) & (vsew === "b001".U) ) -> (vParams.vlen / 4 / 16).U,
-
-      //   ( (lmul === BitPat("b111")) & (vsew === "b000".U) ) -> (vParams.vlen / 2 / 8 ).U,
-      //   ( (lmul === BitPat("b111")) & (vsew === "b001".U) ) -> (vParams.vlen / 2 / 16).U,
-      //   ( (lmul === BitPat("b111")) & (vsew === "b010".U) ) -> (vParams.vlen / 2 / 32).U,
-
-      // )); require( vParams.elen == 64 )
-
-      // ((vParams.vlen/8).U) >> vlsLMulSel(i)(1,0); when(vecSplitFifo.io.enq(0).fire) { assert( vlsLMulSel(i).extract(2) === 0.U ) }
 
 
     vlsMicInstr(i).vAttach.get.eleIdx    := 0.U
     vlsMicInstr(i).vAttach.get.vlIdx   :=
       Mux1H(Seq(
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen /  8).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen /  8).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen /  8).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen /  8).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> 0.U,
-  
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 16).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 16).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 16).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 16).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b100".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b101".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b110".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b001".U) & ( nf === "b111".U ) ) -> 0.U,
+        ( (lmul === BitPat("b1??"))   ) -> 0.U,
+        ( (lmul === BitPat("b000"))   ) -> 0.U,
 
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 32).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 32).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 32).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 32).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b100".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b101".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b110".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b010".U) & ( nf === "b111".U ) ) -> 0.U,
+        ( (lmul === BitPat("b001")) & (vsew === "b000".U) ) -> ((i%2)*vParams.vlen /  8).U,
+        ( (lmul === BitPat("b001")) & (vsew === "b001".U) ) -> ((i%2)*vParams.vlen / 16).U,
+        ( (lmul === BitPat("b001")) & (vsew === "b010".U) ) -> ((i%2)*vParams.vlen / 32).U,
+        ( (lmul === BitPat("b001")) & (vsew === "b011".U) ) -> ((i%2)*vParams.vlen / 64).U,
 
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 64).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 64).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 64).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 64).U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b100".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b101".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b110".U ) ) -> 0.U,
-        ( (lmul === BitPat("b0??")) & (vsew === "b011".U) & ( nf === "b111".U ) ) -> 0.U,
+        ( (lmul === BitPat("b010")) & (vsew === "b000".U) ) -> ((i%4)*vParams.vlen /  8).U,
+        ( (lmul === BitPat("b010")) & (vsew === "b001".U) ) -> ((i%4)*vParams.vlen / 16).U,
+        ( (lmul === BitPat("b010")) & (vsew === "b010".U) ) -> ((i%4)*vParams.vlen / 32).U,
+        ( (lmul === BitPat("b010")) & (vsew === "b011".U) ) -> ((i%4)*vParams.vlen / 64).U,
 
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 8 / 8).U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 8 / 8).U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 8 / 8).U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 8 / 8).U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> 0.U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> 0.U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> 0.U,
-        ( (lmul === BitPat("b101")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> 0.U,
-        
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 4 / 8).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 4 / 8).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 4 / 8).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 4 / 8).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> 0.U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> 0.U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> 0.U,
-        ( (lmul === BitPat("b110")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> 0.U,
-
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 4 / 16).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 4 / 16).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 4 / 16).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 4 / 16).U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b100".U ) ) -> 0.U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b101".U ) ) -> 0.U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b110".U ) ) -> 0.U,
-        ( (lmul === BitPat("b110")) & (vsew === "b001".U) & ( nf === "b111".U ) ) -> 0.U,
-
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 2 / 8).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 2 / 8).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 2 / 8).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 2 / 8).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b100".U ) ) -> 0.U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b101".U ) ) -> 0.U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b110".U ) ) -> 0.U,
-        ( (lmul === BitPat("b111")) & (vsew === "b000".U) & ( nf === "b111".U ) ) -> 0.U,
-
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b000".U ) ) -> ((i/1)*vParams.vlen / 2 / 16).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b001".U ) ) -> ((i/2)*vParams.vlen / 2 / 16).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b010".U ) ) -> ((i/3)*vParams.vlen / 2 / 16).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b011".U ) ) -> ((i/4)*vParams.vlen / 2 / 16).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b100".U ) ) -> 0.U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b101".U ) ) -> 0.U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b110".U ) ) -> 0.U,
-        ( (lmul === BitPat("b111")) & (vsew === "b001".U) & ( nf === "b111".U ) ) -> 0.U,
-
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b000".U ) ) -> ( (i/1)*vParams.vlen / 2 / 32).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b001".U ) ) -> ( (i/2)*vParams.vlen / 2 / 32).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b010".U ) ) -> ( (i/3)*vParams.vlen / 2 / 32).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b011".U ) ) -> ( (i/4)*vParams.vlen / 2 / 32).U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b100".U ) ) -> 0.U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b101".U ) ) -> 0.U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b110".U ) ) -> 0.U,
-        ( (lmul === BitPat("b111")) & (vsew === "b010".U) & ( nf === "b111".U ) ) -> 0.U,
+        ( (lmul === BitPat("b011")) & (vsew === "b000".U) ) -> ((i%8)*vParams.vlen /  8).U,
+        ( (lmul === BitPat("b011")) & (vsew === "b001".U) ) -> ((i%8)*vParams.vlen / 16).U,
+        ( (lmul === BitPat("b011")) & (vsew === "b010".U) ) -> ((i%8)*vParams.vlen / 32).U,
+        ( (lmul === BitPat("b011")) & (vsew === "b011".U) ) -> ((i%8)*vParams.vlen / 64).U,
       )); require( vParams.elen == 64 )
 
     vlsMicInstr(i).vAttach.get.vop0      := false.B
