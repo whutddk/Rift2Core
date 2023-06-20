@@ -74,8 +74,17 @@ abstract class VecPreRenameBase()(implicit p: Parameters) extends RiftModule {
 
   val isWiden = vSplitReq.vecIsa.isVS2P | vSplitReq.vecIsa.is2Malloc
 
-  val vlsMicInstrCnt = 
-    Mux( lmul.extract(2), (nf+1.U), ((nf+1.U) << lmul(1,0)) )
+  val vlsMicInstrCnt = Wire(UInt(4.W))
+  vlsMicInstrCnt :=
+    Mux1H(Seq(
+      (lmul === BitPat("b1??")) -> ((nf+1.U(4.W)) << 0),
+      (lmul === BitPat("b000")) -> ((nf+1.U(4.W)) << 0),
+      (lmul === BitPat("b001")) -> ((nf+1.U(4.W)) << 1),
+      (lmul === BitPat("b010")) -> ((nf+1.U(4.W)) << 2),
+      (lmul === BitPat("b011")) -> ((nf+1.U(4.W)) << 3),
+    )); require( vParams.elen == 64 )
+
+    // Mux( lmul.extract(2), (nf+1.U), ((nf+1.U) << lmul(1,0)) )
 
   val vlsMicInstr = Wire( Vec( 8, new IF4_Bundle ) )
   val vlsLMulSel  = Wire( Vec( 8, UInt(3.W)) )
