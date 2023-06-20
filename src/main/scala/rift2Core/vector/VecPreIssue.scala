@@ -235,10 +235,10 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       vlsExeInfo(i).vAttach.get.vop1 := DontCare
       vlsExeInfo(i).vAttach.get.vop2 := 
         Mux1H(Seq(
-          (vecDptInfo.lsuIsa.vsoxei8 ) -> (vop(2) >> (i << 3).U ).apply(7,0),
-          (vecDptInfo.lsuIsa.vsoxei16) -> (vop(2) >> (i << 4).U ).apply(15,0),
-          (vecDptInfo.lsuIsa.vsoxei32) -> (vop(2) >> (i << 5).U ).apply(31,0),
-          (vecDptInfo.lsuIsa.vsoxei64) -> (vop(2) >> (i << 6).U ).apply(63,0),
+          (vecDptInfo.lsuIsa.vloxei8 ) -> (vop(2) >> (i << 3).U ).apply(7,0),
+          (vecDptInfo.lsuIsa.vloxei16) -> (vop(2) >> (i << 4).U ).apply(15,0),
+          (vecDptInfo.lsuIsa.vloxei32) -> (vop(2) >> (i << 5).U ).apply(31,0),
+          (vecDptInfo.lsuIsa.vloxei64) -> (vop(2) >> (i << 6).U ).apply(63,0),
         ))
 
     }.elsewhen( vecDptInfo.lsuIsa.vsoxei ){
