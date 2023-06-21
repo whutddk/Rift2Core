@@ -106,26 +106,8 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
     vlsExeInfo(i).vAttach.get     := vecDptInfo.vAttach.get
 
 
-    // vlsExeInfo(i).vAttach.get.vlIdx := //override
-      // vecDptInfo.vAttach.get.vlIdx + 
-      //   (Mux1H(Seq(
-      //       (nf === 0.U) -> ( i*1 ).U, (nf === 1.U) -> ( i*2 ).U,
-      //       (nf === 2.U) -> ( i*3 ).U, (nf === 3.U) -> ( i*4 ).U,
-      //       (nf === 4.U) -> ( i*5 ).U, (nf === 5.U) -> ( i*6 ).U,
-      //       (nf === 6.U) -> ( i*7 ).U, (nf === 7.U) -> ( i*8 ).U,
-      //     )) + nfSel)
-      // vecDptInfo.vAttach.get.vlIdx  + i.U
-          // (Mux1H(Seq(
-          //   (nf === 0.U) -> ( i*1 ).U, (nf === 1.U) -> ( i*2 ).U,
-          //   (nf === 2.U) -> ( i*3 ).U, (nf === 3.U) -> ( i*4 ).U,
-          //   (nf === 4.U) -> ( i*5 ).U, (nf === 5.U) -> ( i*6 ).U,
-          //   (nf === 6.U) -> ( i*7 ).U, (nf === 7.U) -> ( i*8 ).U,
-          // )) + nfSel) >> vWidth
-
-
-
-      vlsExeInfo(i).vAttach.get.eleIdx := i.U
-      vlsExeInfo(i).vAttach.get.vlIdx := vecDptInfo.vAttach.get.vlIdx + i.U //override
+    vlsExeInfo(i).vAttach.get.eleIdx := i.U
+    vlsExeInfo(i).vAttach.get.vlIdx := vecDptInfo.vAttach.get.vlIdx + i.U //override
 
 
 
@@ -137,7 +119,12 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
         (vecDptInfo.lsuIsa.isDubl) -> "b11".U,
       ))
 
-      when( vecDptInfo.lsuIsa.vlm ) { evl := io.csrfiles.vConfig.vl >> 3 } //override
+      when( vecDptInfo.lsuIsa.vlm  ) { evl := io.csrfiles.vConfig.vl >> 3 } //override
+      when( vecDptInfo.lsuIsa.vlre ) {
+        evl := Fill( log2Ceil(vParams.vlmax+1), 1.U)
+        vlsExeInfo(i).vAttach.get.nf    := 0.U
+        vlsExeInfo(i).vAttach.get.nfSel := 0.U
+      } //override
 
 
       vlsExeInfo(i).param.raw.vm0 := DontCare
@@ -161,6 +148,11 @@ trait VecPreIssueVlsSpliter{ this: VecPreIssueBase =>
       ))
 
       when( vecDptInfo.lsuIsa.vsm ) { evl := io.csrfiles.vConfig.vl >> 3 } //override
+      when( vecDptInfo.lsuIsa.vsr ) {
+        evl := Fill( log2Ceil(vParams.vlmax+1), 1.U)
+        vlsExeInfo(i).vAttach.get.nf    := 0.U
+        vlsExeInfo(i).vAttach.get.nfSel := 0.U
+      } //override
 
       vlsExeInfo(i).param.raw.vm0 := DontCare
       vlsExeInfo(i).param.raw.rs1 := vecDptInfo.param.raw.rs1
@@ -288,7 +280,6 @@ trait VecPreIssueMux{ this: VecPreIssueBase =>
   validMask(0) := isBufValid
   for( i <- 1 until vParams.vlen/8 ){
     validMask(i) := validMask(i-1)
-    // validMask(i) := validMask(i-1) & ~(1.U((vParams.vlen/8).W) << deqSel(i-1))
     validMask(i)( deqSel(i-1) ) := false.B
   }
 

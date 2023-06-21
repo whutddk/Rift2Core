@@ -65,8 +65,22 @@ abstract class VecPreRenameBase()(implicit p: Parameters) extends RiftModule {
   val vSplitReq = WireDefault(0.U.asTypeOf(new IF4_Bundle))
 
   val vtype   = io.csrfiles.vConfig.vtype
-  val lmul    = vtype(2,0)
-  val vsew    = vtype(5,3)
+  val lmul    =
+    Mux(vSplitReq.lsuIsa.vlre | vSplitReq.lsuIsa.vsr, 0.U, vtype(2,0))
+    
+  val vsew    = WireDefault(vtype(5,3))
+
+  when( vSplitReq.lsuIsa.isUnitStride | vSplitReq.lsuIsa.isStridde ){
+    vsew := Mux1H(Seq(
+      (vSplitReq.lsuIsa.isByte) -> "b00".U,
+      (vSplitReq.lsuIsa.isHalf) -> "b01".U,
+      (vSplitReq.lsuIsa.isWord) -> "b10".U,
+      (vSplitReq.lsuIsa.isDubl) -> "b11".U,
+    ))
+  }.elsewhen( vSplitReq.lsuIsa.isIndex ){
+    vsew := vtype(5,3)
+  }.otherwise{ }
+
   val nf      = (if( hasVector ) {vSplitReq.vAttach.get.nf} else {0.U})
 
   val isVALU  = vSplitReq.vecIsa.isVALU
@@ -354,29 +368,37 @@ trait VecPreRenameVlsMicInstr{ this: VecPreRenameBase =>
     vlsMicInstr(i).vAttach.get.widenSel  := 0.U
     vlsMicInstr(i).vAttach.get.microIdx  := i.U
 
-
-
     vlsMicInstr(i).vAttach.get.eleIdx    := 0.U
+
+
+      // Mux(
+      //   vSplitReq.lsuIsa.vlre | vSplitReq.lsuIsa.vsr, //redirect nf to lmul with value 1,2,3,4,5,6,7,8
+      //   Mux1H(Seq(
+      //     (vSplitReq.lsuIsa.isByte) -> (i*vParams.vlen /  8).U,
+      //     (vSplitReq.lsuIsa.isHalf) -> (i*vParams.vlen / 16).U,
+      //     (vSplitReq.lsuIsa.isWord) -> (i*vParams.vlen / 32).U,
+      //     (vSplitReq.lsuIsa.isDubl) -> (i*vParams.vlen / 64).U,
+      //   )),
     vlsMicInstr(i).vAttach.get.vlIdx   :=
-      Mux1H(Seq(
-        ( (lmul === BitPat("b1??"))   ) -> 0.U,
-        ( (lmul === BitPat("b000"))   ) -> 0.U,
+        Mux1H(Seq(
+          ( (lmul === BitPat("b1??"))   ) -> 0.U,
+          ( (lmul === BitPat("b000"))   ) -> 0.U,
 
-        ( (lmul === BitPat("b001")) & (vsew === "b000".U) ) -> ((i%2)*vParams.vlen /  8).U,
-        ( (lmul === BitPat("b001")) & (vsew === "b001".U) ) -> ((i%2)*vParams.vlen / 16).U,
-        ( (lmul === BitPat("b001")) & (vsew === "b010".U) ) -> ((i%2)*vParams.vlen / 32).U,
-        ( (lmul === BitPat("b001")) & (vsew === "b011".U) ) -> ((i%2)*vParams.vlen / 64).U,
+          ( (lmul === BitPat("b001")) & (vsew === "b000".U) ) -> ((i%2)*vParams.vlen /  8).U,
+          ( (lmul === BitPat("b001")) & (vsew === "b001".U) ) -> ((i%2)*vParams.vlen / 16).U,
+          ( (lmul === BitPat("b001")) & (vsew === "b010".U) ) -> ((i%2)*vParams.vlen / 32).U,
+          ( (lmul === BitPat("b001")) & (vsew === "b011".U) ) -> ((i%2)*vParams.vlen / 64).U,
 
-        ( (lmul === BitPat("b010")) & (vsew === "b000".U) ) -> ((i%4)*vParams.vlen /  8).U,
-        ( (lmul === BitPat("b010")) & (vsew === "b001".U) ) -> ((i%4)*vParams.vlen / 16).U,
-        ( (lmul === BitPat("b010")) & (vsew === "b010".U) ) -> ((i%4)*vParams.vlen / 32).U,
-        ( (lmul === BitPat("b010")) & (vsew === "b011".U) ) -> ((i%4)*vParams.vlen / 64).U,
+          ( (lmul === BitPat("b010")) & (vsew === "b000".U) ) -> ((i%4)*vParams.vlen /  8).U,
+          ( (lmul === BitPat("b010")) & (vsew === "b001".U) ) -> ((i%4)*vParams.vlen / 16).U,
+          ( (lmul === BitPat("b010")) & (vsew === "b010".U) ) -> ((i%4)*vParams.vlen / 32).U,
+          ( (lmul === BitPat("b010")) & (vsew === "b011".U) ) -> ((i%4)*vParams.vlen / 64).U,
 
-        ( (lmul === BitPat("b011")) & (vsew === "b000".U) ) -> ((i%8)*vParams.vlen /  8).U,
-        ( (lmul === BitPat("b011")) & (vsew === "b001".U) ) -> ((i%8)*vParams.vlen / 16).U,
-        ( (lmul === BitPat("b011")) & (vsew === "b010".U) ) -> ((i%8)*vParams.vlen / 32).U,
-        ( (lmul === BitPat("b011")) & (vsew === "b011".U) ) -> ((i%8)*vParams.vlen / 64).U,
-      )); require( vParams.elen == 64 )
+          ( (lmul === BitPat("b011")) & (vsew === "b000".U) ) -> ((i%8)*vParams.vlen /  8).U,
+          ( (lmul === BitPat("b011")) & (vsew === "b001".U) ) -> ((i%8)*vParams.vlen / 16).U,
+          ( (lmul === BitPat("b011")) & (vsew === "b010".U) ) -> ((i%8)*vParams.vlen / 32).U,
+          ( (lmul === BitPat("b011")) & (vsew === "b011".U) ) -> ((i%8)*vParams.vlen / 64).U,
+        )); require( vParams.elen == 64 )
 
     vlsMicInstr(i).vAttach.get.vop0      := false.B
     vlsMicInstr(i).vAttach.get.vop1      := 0.U
