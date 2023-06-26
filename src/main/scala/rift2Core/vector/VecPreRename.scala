@@ -106,16 +106,16 @@ abstract class VecPreRenameBase()(implicit p: Parameters) extends RiftModule {
 
   val vpuMicInstrCnt = 0.U
   val vpuMicInstr = Wire( Vec( 8, new IF4_Bundle ) )
-  val vpuLMulSel  = Wire( Vec( 8, UInt(3.W)) )
+  val vpuLMulSel  = Wire( Vec( 8, UInt(4.W)) )
 
   val isVStartOutStanding = RegInit(false.B)
   val isVSetOutStanding   = RegInit(false.B)
-  val isFoFOutStanding    = RegInit(false.B)
+  val isFoFOutStanding    = RegInit(0.U(3.W))
 
   val isAccessVStart = for( i <- 0 until rnChn ) yield { io.enq(i).bits.csrIsa.isXCSR & io.enq(i).bits.param.imm === "h008".U }
   val isAccessVType  = for( i <- 0 until rnChn ) yield { io.enq(i).bits.csrIsa.isVSet }
 
-  val isVecPnd = isVStartOutStanding | isVSetOutStanding | isFoFOutStanding
+  val isVecPnd = isVStartOutStanding | isVSetOutStanding | isFoFOutStanding =/= 0.U
 }
 
 
@@ -424,7 +424,7 @@ trait VecPreRenameVStartVTypeLock{ this: VecPreRenameBase =>
   when( io.flush ){
     isVStartOutStanding := false.B
     isVSetOutStanding   := false.B
-    isFoFOutStanding    := false.B
+    isFoFOutStanding    := 0.U
   } .elsewhen( ( 0 until rnChn ).map{ i => io.enq(i).fire & io.enq(i).bits.csrIsa.isXCSR & io.enq(i).bits.param.imm === "h008".U }.foldLeft(false.B)(_|_) ){
     isVStartOutStanding := true.B
     assert(~isVStartOutStanding)
@@ -432,8 +432,8 @@ trait VecPreRenameVStartVTypeLock{ this: VecPreRenameBase =>
     isVSetOutStanding := true.B
     assert(~isVSetOutStanding)
   }.elsewhen( ( 0 until rnChn ).map{ i => io.enq(i).fire & io.enq(i).bits.lsuIsa.vleNff }.foldLeft(false.B)(_|_) ){
-    isFoFOutStanding := true.B
-    assert(~isFoFOutStanding)
+    isFoFOutStanding := vlsMicInstrCnt + 1.U
+    assert( isFoFOutStanding === 0.U)
   }.elsewhen( io.isVStartRsv ) {
     isVStartOutStanding := false.B
     assert(isVStartOutStanding)
@@ -441,8 +441,8 @@ trait VecPreRenameVStartVTypeLock{ this: VecPreRenameBase =>
     isVSetOutStanding   := false.B
     assert( isVSetOutStanding )
   } .elsewhen( io.isFoFRsv ) {
-    isFoFOutStanding    := false.B
-    assert( isFoFOutStanding )
+    isFoFOutStanding := isFoFOutStanding - 1.U
+    assert( isFoFOutStanding =/= 0.U )
   }
 
 }
