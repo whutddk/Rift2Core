@@ -380,6 +380,16 @@ trait VecPreRenameVlsMicInstr{ this: VecPreRenameBase =>
       //     (vSplitReq.lsuIsa.isDubl) -> (i*vParams.vlen / 64).U,
       //   )),
     vlsMicInstr(i).vAttach.get.vlIdx   :=
+      Mux(
+        vSplitReq.lsuIsa.vlre | vSplitReq.lsuIsa.vsr,
+
+        Mux1H(Seq(
+          (vsew === "b000".U) -> (i*vParams.vlen /  8).U,
+          (vsew === "b001".U) -> (i*vParams.vlen / 16).U,
+          (vsew === "b010".U) -> (i*vParams.vlen / 32).U,
+          (vsew === "b011".U) -> (i*vParams.vlen / 64).U,
+        )),
+
         Mux1H(Seq(
           ( (lmul === BitPat("b1??"))   ) -> 0.U,
           ( (lmul === BitPat("b000"))   ) -> 0.U,
@@ -398,7 +408,8 @@ trait VecPreRenameVlsMicInstr{ this: VecPreRenameBase =>
           ( (lmul === BitPat("b011")) & (vsew === "b001".U) ) -> ((i%8)*vParams.vlen / 16).U,
           ( (lmul === BitPat("b011")) & (vsew === "b010".U) ) -> ((i%8)*vParams.vlen / 32).U,
           ( (lmul === BitPat("b011")) & (vsew === "b011".U) ) -> ((i%8)*vParams.vlen / 64).U,
-        )); require( vParams.elen == 64 )
+        ))
+      ); require( vParams.elen == 64 )
 
     vlsMicInstr(i).vAttach.get.vop0      := false.B
     vlsMicInstr(i).vAttach.get.vop1      := 0.U
