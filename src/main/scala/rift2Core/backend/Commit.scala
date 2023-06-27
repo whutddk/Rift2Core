@@ -79,7 +79,7 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
     val isPndVStore = Output(Bool())
     val isVStartRsv = Output(Bool())
     val isVSetRsv   = Output(Bool())
-    val isFoFRsv    = Output(Bool())
+    val isFoFRsv    = Output(UInt((log2Ceil(cmChn)+1).W))
   }
 
   val io: CommitIO = IO(new CommitIO)
@@ -622,7 +622,7 @@ trait CommitInfoVec{ this: CommitState =>
 
   io.isVStartRsv := (0 until cmChn).map{ i => io.rod(i).bits.is_csr & (io.xpuCsrCommit.bits.addr === "h008".U) & commit_state_is_comfirm(i) }.foldLeft(false.B)(_|_)
   io.isVSetRsv   := (0 until cmChn).map{ i => io.rod(i).bits.is_csr & (io.xpuCsrCommit.bits.addr === "hFFE".U) & commit_state_is_comfirm(i) }.foldLeft(false.B)(_|_)
-  io.isFoFRsv    := (0 until cmChn).map{ i => io.rod(i).bits.isFoF  & commit_state_is_comfirm(i) }.foldLeft(false.B)(_|_)
+  io.isFoFRsv    := VecInit((0 until cmChn).map{ i => io.rod(i).bits.isFoF  & commit_state_is_comfirm(i) }).count( (x:Bool) => (x === true.B ))
 }
 
 /**

@@ -48,7 +48,7 @@ class VecPreRenameIO()(implicit p: Parameters) extends RiftBundle{
 
   val isVStartRsv = Input(Bool())
   val isVSetRsv   = Input(Bool())
-  val isFoFRsv    = Input(Bool())
+  val isFoFRsv    = Input(UInt((log2Ceil(cmChn)+1).W))
 
   val flush = Input(Bool())
 }
@@ -110,7 +110,7 @@ abstract class VecPreRenameBase()(implicit p: Parameters) extends RiftModule {
 
   val isVStartOutStanding = RegInit(false.B)
   val isVSetOutStanding   = RegInit(false.B)
-  val isFoFOutStanding    = RegInit(0.U(3.W))
+  val isFoFOutStanding    = RegInit(0.U(4.W))
 
   val isAccessVStart = for( i <- 0 until rnChn ) yield { io.enq(i).bits.csrIsa.isXCSR & io.enq(i).bits.param.imm === "h008".U }
   val isAccessVType  = for( i <- 0 until rnChn ) yield { io.enq(i).bits.csrIsa.isVSet }
@@ -432,7 +432,7 @@ trait VecPreRenameVStartVTypeLock{ this: VecPreRenameBase =>
     isVSetOutStanding := true.B
     assert(~isVSetOutStanding)
   }.elsewhen( ( 0 until rnChn ).map{ i => io.enq(i).fire & io.enq(i).bits.lsuIsa.vleNff }.foldLeft(false.B)(_|_) ){
-    isFoFOutStanding := vlsMicInstrCnt + 1.U
+    isFoFOutStanding := vlsMicInstrCnt
     assert( isFoFOutStanding === 0.U)
   }.elsewhen( io.isVStartRsv ) {
     isVStartOutStanding := false.B
@@ -440,8 +440,8 @@ trait VecPreRenameVStartVTypeLock{ this: VecPreRenameBase =>
   } .elsewhen( io.isVSetRsv  ) {
     isVSetOutStanding   := false.B
     assert( isVSetOutStanding )
-  } .elsewhen( io.isFoFRsv ) {
-    isFoFOutStanding := isFoFOutStanding - 1.U
+  } .elsewhen( io.isFoFRsv =/= 0.U ) {
+    isFoFOutStanding := isFoFOutStanding - io.isFoFRsv
     assert( isFoFOutStanding =/= 0.U )
   }
 
