@@ -38,7 +38,7 @@ class MultiplerAccumulater() extends Module{
     val resl = Output(UInt(64.W))
 
     val sew = Input( UInt(3.W) )
-    val op  = Input( UInt(2.W) )    
+    val op  = Input( UInt(2.W) )
   }
 
   val io: MultiplerAccumulaterIO = IO(new MultiplerAccumulaterIO)
