@@ -43,19 +43,17 @@ abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPU
     val lsu_iss_exe = new DecoupledIO(new Lsu_iss_info)
     val fpu_iss_exe = Vec(fpuNum max 1, new DecoupledIO(new Fpu_iss_info))
 
-    // val vpu_iss_exe = new DecoupledIO(new Vpu_iss_info)
-
     val irgLog = Input( Vec(xRegNum, UInt(2.W)) )
     val frgLog = Input( Vec(fRegNum, UInt(2.W)) )
-    val vrgLog = Input( Vec(vRegNum, UInt(2.W)) )
+            // val vrgLog = Input( Vec(vRegNum, UInt(2.W)) )
 
     val irgReq = Vec( opChn, Valid( UInt((log2Ceil(xRegNum)).W) ) )
     val frgReq = Vec( opChn, Valid( UInt((log2Ceil(fRegNum)).W) ) )    
-    val vrgReq = Vec( vParams.opChn, Valid( UInt((log2Ceil(vRegNum)).W) ) )    
+            // val vrgReq = Vec( vParams.opChn, Valid( UInt((log2Ceil(vRegNum)).W) ) )    
 
     val irgRsp = Vec( opChn, Flipped(Valid(new ReadOp_Rsp_Bundle(64)) ) )
     val frgRsp = Vec( opChn, Flipped(Valid(new ReadOp_Rsp_Bundle(65)) ) )
-    val vrgRsp = Vec( vParams.opChn, Flipped(Valid(new ReadOp_Rsp_Bundle(vParams.vlen)) ) )
+            // val vrgRsp = Vec( vParams.opChn, Flipped(Valid(new ReadOp_Rsp_Bundle(vParams.vlen)) ) )
 
     val csrfiles = Input(new CSR_Bundle)
 
@@ -66,16 +64,16 @@ abstract class DptBase ()(implicit p: Parameters) extends RiftModule with HasFPU
 }
 
 
-abstract class DptBoard()(implicit p: Parameters) extends DptBase {
+trait DptBoard{ this: DptBase =>
   val bufValidDnxt = Wire( Vec(rnChn, Vec( dptEntry, Bool() ) ))
   val bufValid     = RegInit( VecInit( Seq.fill(dptEntry){false.B} ))
   val bufInfo      = Reg(  Vec( dptEntry, new Dpt_info              ))
-  val bufReqNum    = Wire( Vec( dptEntry, Vec( 4, UInt((log2Ceil(maxRegNum)).W)) ))
+  val bufReqNum    = Wire( Vec( dptEntry, Vec( 4, UInt((log2Ceil(xRegNum max fRegNum)).W)) ))
   val isBufXop     = Reg(  Vec( dptEntry, Vec( 4, Bool()    )) ) //skip op0 op3
   val isBufFop     = Reg(  Vec( dptEntry, Vec( 4, Bool()    )) ) //skip op0
   val isBufVop     = Reg(  Vec( dptEntry, Vec( 4, Bool()    )) )
   val isOpReady    = Reg(  Vec( dptEntry, Vec( 4, Bool()    )) )
-  val bufOperator  = Reg(  Vec( dptEntry, Vec( 4, UInt(vParams.vlen.W))) )
+  val bufOperator  = Reg(  Vec( dptEntry, Vec( 4, UInt(65.W))) )
 
   val entrySel     = for( i <- 0 until rnChn ) yield {
     if( i == 0 ) {
@@ -126,25 +124,37 @@ abstract class DptBoard()(implicit p: Parameters) extends DptBase {
 
   for( i <- 0 until rnChn ) {
     when( io.dptReq(i).fire ) {
-      when( io.dptReq(i).bits.phy.vm0 === 0.U ) {
+      when(io.dptReq(i).bits.isVM0) {
+        isOpReady (entrySel(i))(0) := true.B
+        bufOperator(entrySel(i))(0) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop0} else {0.U})
+      } .elsewhen( io.dptReq(i).bits.phy.vm0 === 0.U ) {
         isOpReady (entrySel(i))(0) := true.B
         bufOperator(entrySel(i))(0) := 0.U
       } .otherwise {
         isOpReady (entrySel(i))(0) := false.B
       }
-      when( io.dptReq(i).bits.phy.rs1 === 0.U ) {
+      when(io.dptReq(i).bits.isVS1) {
+        isOpReady (entrySel(i))(1) := true.B
+        bufOperator(entrySel(i))(1) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop1} else {0.U})
+      } .elsewhen( io.dptReq(i).bits.phy.rs1 === 0.U ) {
         isOpReady (entrySel(i))(1) := true.B
         bufOperator(entrySel(i))(1) := 0.U
       } .otherwise {
         isOpReady (entrySel(i))(1) := false.B
       }
-      when( io.dptReq(i).bits.phy.rs2 === 0.U ) {
+      when(io.dptReq(i).bits.isVS2) {
+        isOpReady (entrySel(i))(2) := true.B
+        bufOperator(entrySel(i))(2) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop2} else {0.U})
+      } .elsewhen( io.dptReq(i).bits.phy.rs2 === 0.U ) {
         isOpReady (entrySel(i))(2) := true.B
         bufOperator(entrySel(i))(2) := 0.U
-      } .otherwise{
+      }  .otherwise{
         isOpReady (entrySel(i))(2) := false.B
       }
-      when( io.dptReq(i).bits.phy.rs3 === 0.U ) {
+      when(io.dptReq(i).bits.isVS3) {
+        isOpReady (entrySel(i))(3) := true.B
+        bufOperator(entrySel(i))(3) := (if(hasVector) {io.dptReq(i).bits.vAttach.get.vop1} else {0.U})
+      } .elsewhen( io.dptReq(i).bits.phy.rs3 === 0.U ) {
         isOpReady (entrySel(i))(3) := true.B
         bufOperator(entrySel(i))(3) := 0.U
       } .otherwise {
@@ -163,8 +173,12 @@ abstract class DptBoard()(implicit p: Parameters) extends DptBase {
 
 }
 
+trait VecDptBoard { this: DptBase =>
+  val vecBufOperator  = Reg( Vec( 4, UInt((vParams.vlen).W)) )
+}
 
-abstract class DptAgeMatrix()(implicit p: Parameters) extends DptBoard {
+
+abstract class DptAgeMatrix()(implicit p: Parameters) extends DptBase with DptBoard with VecDptBoard {
 
 
   val ageMatrixR = Wire( Vec( dptEntry, Vec(dptEntry, Bool()) ) )
@@ -494,190 +508,42 @@ trait DptReadFOp { this: DptAgeMatrix =>
 
 }
 
-trait DptReadVOp { this: DptAgeMatrix =>
-  val rVOpNum = Wire( Vec( vParams.opChn, UInt((log2Ceil(vRegNum)).W)) )
+// trait DptReadVOp { this: DptAgeMatrix =>
 
+//   /** Whether this vs can request operator reading */
+//   val canVOpReq = Wire( Vec( dptEntry,Bool() ))
+  
+//   for( i <- 0 until dptEntry ) {
+//     canVOpReq(i) := isBufVop(i)(0) | isBufVop(i)(1) | isBufVop(i)(2) | isBufVop(i)(3)   
+//   }
 
-  /** Whether this vs can request operator reading */
-  val canVOpReq = Wire( Vec( dptEntry, Vec( 4, Bool() )))
+//   /** Who is the highest priority to read operator in each dpt Entry */
+//   val selMatrixReadVOp   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) ) )
+//   val maskCondSelReadVOp = Wire( Vec( dptEntry, Bool() ) )
 
-  for( i <- 0 until dptEntry ) {
-    canVOpReq(i)(0) :=
-      io.vrgLog(bufInfo(i).phy.vm0) === "b11".U & //reg-log is ready
-      isBufVop(i)(0) & //is a vop req
-      ~isOpReady(i)(0) & ~io.vrgRsp.map{x => {x.valid & (x.bits.phy === bufReqNum(i)(0))}}.reduce(_|_) //pending and non-rsp in same cycle
+//   for ( i <- 0 until dptEntry ){
+//     maskCondSelReadVOp(i) := ~bufValid(i) | ~canVOpReq(i)
+//   }
 
-    canVOpReq(i)(1) := 
-      io.vrgLog(bufInfo(i).phy.rs1) === "b11".U & //reg-log is ready
-      isBufVop(i)(1) & //is a vop req
-      ~isOpReady(i)(1) & ~io.vrgRsp.map{x => {x.valid & (x.bits.phy === bufReqNum(i)(1))}}.reduce(_|_) //pending and non-rsp in same cycle
+//   selMatrixReadVOp := MatrixMask( ageMatrixPostR, maskCondSelReadVOp )
 
-    canVOpReq(i)(2) :=
-      io.vrgLog(bufInfo(i).phy.rs2) === "b11".U & //reg-log is ready
-      isBufVop(i)(2) & //is a vop req
-      ~isOpReady(i)(2) & ~io.vrgRsp.map{x => {x.valid & (x.bits.phy === bufReqNum(i)(2))}}.reduce(_|_) //pending and non-rsp in same cycle
+//   assert(
+//     selMatrixReadVOp.forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B)} ) |
+//     PopCount( selMatrixReadVOp.map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
+//   )
 
-    canVOpReq(i)(3) :=
-      io.vrgLog(bufInfo(i).phy.rs3) === "b11".U & //reg-log is ready
-      isBufVop(i)(3) & //is a vop req
-      ~isOpReady(i)(3) & ~io.vrgRsp.map{x => {x.valid & (x.bits.phy === bufReqNum(i)(3))}}.reduce(_|_) //pending and non-rsp in same cycle
-    
-
-  }
-
-  val canVOpPostReq = Wire( Vec( rnChn, Vec( 4, Bool() )) )
-
-  for( i <- 0 until rnChn ) {
-    canVOpPostReq(i)(0) :=
-      io.vrgLog(io.dptReq(i).bits.phy.vm0) === "b11".U & //reg-log is ready
-      io.dptReq(i).bits.phy.vm0 =/= 0.U &
-      io.dptReq(i).bits.isVM0
-
-    canVOpPostReq(i)(1) := 
-      io.vrgLog(io.dptReq(i).bits.phy.rs1) === "b11".U & //reg-log is ready
-      io.dptReq(i).bits.phy.rs1 =/= 0.U &
-      io.dptReq(i).bits.isVS1
-    
-    canVOpPostReq(i)(2) :=
-      io.vrgLog(io.dptReq(i).bits.phy.rs2) === "b11".U & //reg-log is ready
-      io.dptReq(i).bits.phy.rs2 =/= 0.U &
-      io.dptReq(i).bits.isVS2
-
-    canVOpPostReq(i)(3) :=
-      io.vrgLog(io.dptReq(i).bits.phy.rs3) === "b11".U & //reg-log is ready
-      io.dptReq(i).bits.phy.rs3 =/= 0.U &
-      io.dptReq(i).bits.isVS3
-      
-  }
-
-
-  /** Who is the highest priority to read operator in each chn */
-  val selMatrixVMS0   = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
-  val selMatrixVRS1   = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
-  val selMatrixVRS2   = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
-  val selMatrixVRS3   = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Vec(dptEntry+rnChn, Bool() ) ) ) )
-
-  val maskCondSelVMS0 = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Bool() ) ) )
-  val maskCondSelVRS1 = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Bool() ) ) )
-  val maskCondSelVRS2 = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Bool() ) ) )
-  val maskCondSelVRS3 = Wire( Vec( vParams.opChn, Vec( dptEntry+rnChn, Bool() ) ) )
+//   // val isReadVOpNoneReq = Wire( Bool())
+//   val selReadVOpEntry = Wire( UInt((log2Ceil(dptEntry)).W) )
 
 
 
 
-  for( chn <- 0 until vParams.opChn ){
-    if( chn == 0 ){
-      for ( i <- 0 until dptEntry ){
-        maskCondSelVMS0(chn)(i) := ~bufValid(i) | ~canVOpReq(i)(0)
-        maskCondSelVRS1(chn)(i) := ~bufValid(i) | ~canVOpReq(i)(1)
-        maskCondSelVRS2(chn)(i) := ~bufValid(i) | ~canVOpReq(i)(2)
-        maskCondSelVRS3(chn)(i) := ~bufValid(i) | ~canVOpReq(i)(3)
-      }
-      for ( i <- 0 until rnChn ){
-        maskCondSelVMS0(chn)(dptEntry+i) := ~io.dptReq(i).fire | ~canVOpPostReq(i)(0)
-        maskCondSelVRS1(chn)(dptEntry+i) := ~io.dptReq(i).fire | ~canVOpPostReq(i)(1)
-        maskCondSelVRS2(chn)(dptEntry+i) := ~io.dptReq(i).fire | ~canVOpPostReq(i)(2)
-        maskCondSelVRS3(chn)(dptEntry+i) := ~io.dptReq(i).fire | ~canVOpPostReq(i)(3)
-      }
-    } else {
-      for ( i <- 0 until dptEntry ){
-        maskCondSelVMS0(chn)(i) := maskCondSelVMS0(chn-1)(i) | (bufReqNum(i)(0) === rVOpNum(chn-1))
-        maskCondSelVRS1(chn)(i) := maskCondSelVRS1(chn-1)(i) | (bufReqNum(i)(1) === rVOpNum(chn-1))
-        maskCondSelVRS2(chn)(i) := maskCondSelVRS2(chn-1)(i) | (bufReqNum(i)(2) === rVOpNum(chn-1))
-        maskCondSelVRS3(chn)(i) := maskCondSelVRS3(chn-1)(i) | (bufReqNum(i)(3) === rVOpNum(chn-1))
-      }
-      for( i <- 0 until rnChn ){
-        maskCondSelVMS0(chn)(dptEntry+i) := maskCondSelVMS0(chn-1)(dptEntry+i) | (io.dptReq(i).bits.phy.vm0 === rVOpNum(chn-1))
-        maskCondSelVRS1(chn)(dptEntry+i) := maskCondSelVRS1(chn-1)(dptEntry+i) | (io.dptReq(i).bits.phy.rs1 === rVOpNum(chn-1))
-        maskCondSelVRS2(chn)(dptEntry+i) := maskCondSelVRS2(chn-1)(dptEntry+i) | (io.dptReq(i).bits.phy.rs2 === rVOpNum(chn-1))
-        maskCondSelVRS3(chn)(dptEntry+i) := maskCondSelVRS3(chn-1)(dptEntry+i) | (io.dptReq(i).bits.phy.rs3 === rVOpNum(chn-1))
-      }
-    }
-    selMatrixVMS0(chn) := MatrixMask( ageMatrixPostR, maskCondSelVMS0(chn) )
-    selMatrixVRS1(chn) := MatrixMask( ageMatrixPostR, maskCondSelVRS1(chn) )
-    selMatrixVRS2(chn) := MatrixMask( ageMatrixPostR, maskCondSelVRS2(chn) )
-    selMatrixVRS3(chn) := MatrixMask( ageMatrixPostR, maskCondSelVRS3(chn) )
+// }
 
-    assert(
-      selMatrixVMS0(chn).forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B)} ) |
-      PopCount( selMatrixVMS0(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
-    )
-
-    assert(
-      selMatrixVRS1(chn).forall( (x: Vec[Bool]) => x.forall{(y: Bool) => (y === true.B)} ) |
-      PopCount( selMatrixVRS1(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
-    )
-
-    assert(
-      selMatrixVRS2(chn).forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B)} ) |
-      PopCount( selMatrixVRS2(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
-    )
-
-    assert(
-      selMatrixVRS3(chn).forall( (x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B)} ) |
-      PopCount( selMatrixVRS3(chn).map{(x: Vec[Bool]) => x.forall{(y: Bool) => (y === false.B)} } ) === 1.U
-    )
-
-  }
-
-  val isVMS0NoneReq = Wire( Vec( vParams.opChn, Bool()) )
-  val isVRS1NoneReq = Wire( Vec( vParams.opChn, Bool()) )
-  val isVRS2NoneReq = Wire( Vec( vParams.opChn, Bool()) )
-  val isVRS3NoneReq = Wire( Vec( vParams.opChn, Bool()) )
-
-  val selVMS0 = Wire( Vec(vParams.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
-  val selVRS1 = Wire( Vec(vParams.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
-  val selVRS2 = Wire( Vec(vParams.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
-  val selVRS3 = Wire( Vec(vParams.opChn,  UInt((log2Ceil(vRegNum)).W) ) )
-
-  for( chn <- 0 until vParams.opChn ){
-    isVMS0NoneReq(chn) := selMatrixVMS0(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
-    isVRS1NoneReq(chn) := selMatrixVRS1(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
-    isVRS2NoneReq(chn) := selMatrixVRS2(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
-    isVRS3NoneReq(chn) := selMatrixVRS3(chn).forall{(x: Vec[Bool]) => x.forall{ (y: Bool) => (y === true.B) }} //all ture
-
-    selVMS0(chn) :=
-      Mux1H(
-        ( 0 until dptEntry ).map{ i => { (selMatrixVMS0(chn)(i).forall         ( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(0) } } ++
-        ( 0 until rnChn    ).map{ i => { (selMatrixVMS0(chn)(dptEntry+i).forall( (y: Bool) => (y === false.B) )) -> io.dptReq(i).bits.phy.vm0 }}
-      ) //index a row which all zero
-    selVRS1(chn) :=
-      Mux1H(
-        ( 0 until dptEntry ).map{ i => { (selMatrixVRS1(chn)(i).forall         ( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(1) } } ++
-        ( 0 until rnChn    ).map{ i => { (selMatrixVRS1(chn)(dptEntry+i).forall( (y: Bool) => (y === false.B) )) -> io.dptReq(i).bits.phy.rs1 }}
-      ) //index a row which all zero
-    selVRS2(chn) :=
-      Mux1H(
-        ( 0 until dptEntry ).map{ i => { (selMatrixVRS2(chn)(i).forall         ( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(2) } } ++
-        ( 0 until rnChn    ).map{ i => { (selMatrixVRS2(chn)(dptEntry+i).forall( (y: Bool) => (y === false.B) )) -> io.dptReq(i).bits.phy.rs2 }}
-      ) //index a row which all zero
-    selVRS3(chn) :=
-      Mux1H(
-        ( 0 until dptEntry ).map{ i => { (selMatrixVRS3(chn)(i).forall         ( (y: Bool) => (y === false.B) )) -> bufReqNum(i)(3) } } ++
-        ( 0 until rnChn    ).map{ i => { (selMatrixVRS3(chn)(dptEntry+i).forall( (y: Bool) => (y === false.B) )) -> io.dptReq(i).bits.phy.rs3 }}
-      ) //index a row which all zero
-
-
-
-    if( chn % 4 == 0 ){
-      rVOpNum(chn) := Mux( ~isVMS0NoneReq(chn), selVMS0(chn), Mux( ~isVRS1NoneReq(chn), selVRS1(chn), Mux( ~isVRS2NoneReq(chn), selVRS2(chn), Mux( ~isVRS3NoneReq(chn), selVRS3(chn), 0.U) )) )
-    } else if( chn % 4 == 1 ){
-      rVOpNum(chn) := Mux( ~isVRS1NoneReq(chn), selVRS1(chn), Mux( ~isVRS2NoneReq(chn), selVRS2(chn), Mux( ~isVRS3NoneReq(chn), selVRS3(chn), Mux( ~isVMS0NoneReq(chn), selVMS0(chn), 0.U) )) )
-    } else if( chn % 4 == 2 ){
-      rVOpNum(chn) := Mux( ~isVRS2NoneReq(chn), selVRS2(chn), Mux( ~isVRS3NoneReq(chn), selVRS3(chn), Mux( ~isVMS0NoneReq(chn), selVMS0(chn), Mux( ~isVRS1NoneReq(chn), selVRS1(chn), 0.U) )) )
-    } else if( chn % 4 == 3 ){
-      rVOpNum(chn) := Mux( ~isVRS3NoneReq(chn), selVRS3(chn), Mux( ~isVMS0NoneReq(chn), selVMS0(chn), Mux( ~isVRS1NoneReq(chn), selVRS1(chn), Mux( ~isVRS2NoneReq(chn), selVRS2(chn), 0.U) )) )
-    }
-
-
-    io.vrgReq(chn).valid := ~isVMS0NoneReq(chn) | ~isVRS1NoneReq(chn) | ~isVRS2NoneReq(chn) | ~isVRS3NoneReq(chn) 
-    io.vrgReq(chn).bits  := rVOpNum(chn)
-  }
-
-
-}
-
-abstract class IssueBase()(implicit p: Parameters) extends DptAgeMatrix with DptReadIOp with DptReadFOp with DptReadVOp
+abstract class IssueBase()(implicit p: Parameters) extends DptAgeMatrix
+with DptReadIOp
+with DptReadFOp
+// with DptReadVOp
 
 
 
@@ -715,42 +581,39 @@ trait IssLoadFOp { this: IssueBase =>
   }
 }
 
-trait IssLoadVOp { this: IssueBase =>
-  for( chn <- 0 until vParams.opChn ){
-    when( io.vrgRsp(chn).valid ){
-      for( i <- 0 until dptEntry ){
-        for( rs <- 0 to 3 ){
-          when( bufValid(i) & (bufReqNum(i)(rs) === io.vrgRsp(chn).bits.phy) & isBufVop(i)(rs) ){
-            when( isOpReady(i)(rs) === true.B ) { /*printf(s"Warning, re-request op at chn $chn, Entry $i, rs( $rs )")*/ }
-            isOpReady(i)(rs)   := true.B
-            bufOperator(i)(rs) := io.vrgRsp(chn).bits.op
-          }
-        }
-      }
-    }    
-  }
-}
+// trait IssLoadVOp { this: IssueBase =>
+//   ( 0 until dptEntry ).map{ i => 
+//     when( selMatrixReadVOp(i).forall( (y: Bool) => (y === false.B) ) ){
+//       for( rs <- 0 to 3 ){
+//         val idx = bufReqNum(i)(rs)
+//         when( isBufVop(i)(rs) & ~isOpReady(i)(rs) & io.vReadOp(idx).valid ){
+//           vecBufOperator(rs) := io.vReadOp(idx).bits
+//           isOpReady(i)(rs) := true.B
+//         }
+//       }
+//     }
+//   }
+// }
 
 
 
 
 abstract class IssueSel()(implicit p: Parameters) extends IssueBase
 with IssLoadIOp
-with IssLoadFOp
-with IssLoadVOp{
+with IssLoadFOp{
   val postIsOpReady = Wire( Vec( dptEntry, Vec(4, Bool())) )
-  val postBufOperator = Wire( Vec( dptEntry, Vec(4, UInt(vParams.vlen.W))) )
+  val postBufOperator = Wire( Vec( dptEntry, Vec(4, UInt(65.W))) )
 
   for( i <- 0 until dptEntry ){
-    postIsOpReady(i)(0)   := MuxCase( isOpReady(i)(0),                                                                                                                                                                                                            io.vrgRsp.map{x => { ( isBufVop(i)(0) & x.valid & (x.bits.phy === bufReqNum(i)(0))) -> true.B }})
-    postIsOpReady(i)(1)   := MuxCase( isOpReady(i)(1),    io.irgRsp.map{x => { ( isBufXop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }} ++ io.frgRsp.map{x => { ( isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }})
-    postIsOpReady(i)(2)   := MuxCase( isOpReady(i)(2),    io.irgRsp.map{x => { ( isBufXop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }} ++ io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }})
-    postIsOpReady(i)(3)   := MuxCase( isOpReady(i)(3),                                                                                                        io.frgRsp.map{x => { ( isBufFop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> true.B }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> true.B }})
+    postIsOpReady(i)(0)   := isOpReady(i)(0)
+    postIsOpReady(i)(1)   := MuxCase( isOpReady(i)(1),    io.irgRsp.map{x => { ( isBufXop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }} ++ io.frgRsp.map{x => { ( isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> true.B }} )
+    postIsOpReady(i)(2)   := MuxCase( isOpReady(i)(2),    io.irgRsp.map{x => { ( isBufXop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }} ++ io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> true.B }} )
+    postIsOpReady(i)(3)   := MuxCase( isOpReady(i)(3),                                                                                                        io.frgRsp.map{x => { ( isBufFop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> true.B }} )
 
-    postBufOperator(i)(0) := MuxCase( bufOperator(i)(0) ,                                                                                                                                                                                                               io.vrgRsp.map{x => { ( isBufVop(i)(0) & x.valid & (x.bits.phy === bufReqNum(i)(0))) -> x.bits.op }})
-    postBufOperator(i)(1) := MuxCase( bufOperator(i)(1) , io.irgRsp.map{x => { ( isBufXop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }})
-    postBufOperator(i)(2) := MuxCase( bufOperator(i)(2) , io.irgRsp.map{x => { ( isBufXop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }})
-    postBufOperator(i)(3) := MuxCase( bufOperator(i)(3) ,                                                                                                        io.frgRsp.map{x => { ( isBufFop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> x.bits.op }} ++ io.vrgRsp.map{x => { ( isBufVop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> x.bits.op }})
+    postBufOperator(i)(0) := bufOperator(i)(0)
+    postBufOperator(i)(1) := MuxCase( bufOperator(i)(1) , io.irgRsp.map{x => { ( isBufXop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(1) & x.valid & (x.bits.phy === bufReqNum(i)(1))) -> x.bits.op }} )
+    postBufOperator(i)(2) := MuxCase( bufOperator(i)(2) , io.irgRsp.map{x => { ( isBufXop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} ++ io.frgRsp.map{x => { ( isBufFop(i)(2) & x.valid & (x.bits.phy === bufReqNum(i)(2))) -> x.bits.op }} )
+    postBufOperator(i)(3) := MuxCase( bufOperator(i)(3) ,                                                                                                        io.frgRsp.map{x => { ( isBufFop(i)(3) & x.valid & (x.bits.phy === bufReqNum(i)(3))) -> x.bits.op }} )
   }
 
 }
@@ -763,60 +626,60 @@ trait IssSelAlu{ this: IssueSel =>
     val res = Wire(new Alu_iss_info)
     val src1 = postBufOperator(idx)(1)
     val src2 = postBufOperator(idx)(2)
-    res.fun.add := bufInfo(idx).alu_isa.is_fun_add
-    res.fun.slt := bufInfo(idx).alu_isa.is_fun_slt
-    res.fun.xor := bufInfo(idx).alu_isa.is_fun_xor
-    res.fun.or  := bufInfo(idx).alu_isa.is_fun_or
-    res.fun.and := bufInfo(idx).alu_isa.is_fun_and
-    res.fun.sll := bufInfo(idx).alu_isa.is_fun_sll
-    res.fun.srl := bufInfo(idx).alu_isa.is_fun_srl
-    res.fun.sra := bufInfo(idx).alu_isa.is_fun_sra
+    res.fun.add := bufInfo(idx).aluIsa.is_fun_add
+    res.fun.slt := bufInfo(idx).aluIsa.is_fun_slt
+    res.fun.xor := bufInfo(idx).aluIsa.is_fun_xor
+    res.fun.or  := bufInfo(idx).aluIsa.is_fun_or
+    res.fun.and := bufInfo(idx).aluIsa.is_fun_and
+    res.fun.sll := bufInfo(idx).aluIsa.is_fun_sll
+    res.fun.srl := bufInfo(idx).aluIsa.is_fun_srl
+    res.fun.sra := bufInfo(idx).aluIsa.is_fun_sra
 
-    res.param.is_32w  := bufInfo(idx).alu_isa.is_32w
-    res.param.is_usi  := bufInfo(idx).alu_isa.is_usi
+    res.param.is_32w  := bufInfo(idx).aluIsa.is_32w
+    res.param.is_usi  := bufInfo(idx).aluIsa.is_usi
 
 
     res.param.dat.op1 :=
       Mux1H(Seq(
-        bufInfo(idx).alu_isa.lui    -> 0.U,  bufInfo(idx).alu_isa.auipc  -> extVaddr(bufInfo(idx).param.pc, vlen),
-        bufInfo(idx).alu_isa.addi   -> src1, bufInfo(idx).alu_isa.addiw  -> src1,
-        bufInfo(idx).alu_isa.slti   -> src1, bufInfo(idx).alu_isa.sltiu  -> src1,
-        bufInfo(idx).alu_isa.xori   -> src1, bufInfo(idx).alu_isa.ori    -> src1,
-        bufInfo(idx).alu_isa.andi   -> src1, bufInfo(idx).alu_isa.slli   -> src1,
-        bufInfo(idx).alu_isa.slliw  -> src1, bufInfo(idx).alu_isa.srli   -> src1,
-        bufInfo(idx).alu_isa.srliw  -> src1, bufInfo(idx).alu_isa.srai   -> src1,
-        bufInfo(idx).alu_isa.sraiw  -> src1, bufInfo(idx).alu_isa.add    -> src1,
-        bufInfo(idx).alu_isa.addw   -> src1, bufInfo(idx).alu_isa.sub    -> src1,
-        bufInfo(idx).alu_isa.subw   -> src1, bufInfo(idx).alu_isa.sll    -> src1,
-        bufInfo(idx).alu_isa.sllw   -> src1, bufInfo(idx).alu_isa.slt    -> src1,
-        bufInfo(idx).alu_isa.sltu   -> src1, bufInfo(idx).alu_isa.xor    -> src1,
-        bufInfo(idx).alu_isa.srl    -> src1, bufInfo(idx).alu_isa.srlw   -> src1,
-        bufInfo(idx).alu_isa.sra    -> src1, bufInfo(idx).alu_isa.sraw   -> src1,
-        bufInfo(idx).alu_isa.or     -> src1, bufInfo(idx).alu_isa.and    -> src1,
+        bufInfo(idx).aluIsa.lui    -> 0.U,  bufInfo(idx).aluIsa.auipc  -> extVaddr(bufInfo(idx).param.pc, vlen),
+        bufInfo(idx).aluIsa.addi   -> src1, bufInfo(idx).aluIsa.addiw  -> src1,
+        bufInfo(idx).aluIsa.slti   -> src1, bufInfo(idx).aluIsa.sltiu  -> src1,
+        bufInfo(idx).aluIsa.xori   -> src1, bufInfo(idx).aluIsa.ori    -> src1,
+        bufInfo(idx).aluIsa.andi   -> src1, bufInfo(idx).aluIsa.slli   -> src1,
+        bufInfo(idx).aluIsa.slliw  -> src1, bufInfo(idx).aluIsa.srli   -> src1,
+        bufInfo(idx).aluIsa.srliw  -> src1, bufInfo(idx).aluIsa.srai   -> src1,
+        bufInfo(idx).aluIsa.sraiw  -> src1, bufInfo(idx).aluIsa.add    -> src1,
+        bufInfo(idx).aluIsa.addw   -> src1, bufInfo(idx).aluIsa.sub    -> src1,
+        bufInfo(idx).aluIsa.subw   -> src1, bufInfo(idx).aluIsa.sll    -> src1,
+        bufInfo(idx).aluIsa.sllw   -> src1, bufInfo(idx).aluIsa.slt    -> src1,
+        bufInfo(idx).aluIsa.sltu   -> src1, bufInfo(idx).aluIsa.xor    -> src1,
+        bufInfo(idx).aluIsa.srl    -> src1, bufInfo(idx).aluIsa.srlw   -> src1,
+        bufInfo(idx).aluIsa.sra    -> src1, bufInfo(idx).aluIsa.sraw   -> src1,
+        bufInfo(idx).aluIsa.or     -> src1, bufInfo(idx).aluIsa.and    -> src1,
 
-        bufInfo(idx).alu_isa.wfi    -> 0.U,
+        bufInfo(idx).aluIsa.wfi    -> 0.U,
 
     ))
 
     res.param.dat.op2 :=
       Mux1H(Seq(
-        bufInfo(idx).alu_isa.lui    -> bufInfo(idx).param.imm,      bufInfo(idx).alu_isa.auipc  -> bufInfo(idx).param.imm,
-        bufInfo(idx).alu_isa.addi   -> bufInfo(idx).param.imm,      bufInfo(idx).alu_isa.addiw  -> bufInfo(idx).param.imm,
-        bufInfo(idx).alu_isa.slti   -> bufInfo(idx).param.imm,      bufInfo(idx).alu_isa.sltiu  -> bufInfo(idx).param.imm,
-        bufInfo(idx).alu_isa.xori   -> bufInfo(idx).param.imm,      bufInfo(idx).alu_isa.ori    -> bufInfo(idx).param.imm,
-        bufInfo(idx).alu_isa.andi   -> bufInfo(idx).param.imm,      bufInfo(idx).alu_isa.slli   -> bufInfo(idx).param.imm(5,0),
-        bufInfo(idx).alu_isa.slliw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).alu_isa.srli   -> bufInfo(idx).param.imm(5,0),
-        bufInfo(idx).alu_isa.srliw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).alu_isa.srai   -> bufInfo(idx).param.imm(5,0),
-        bufInfo(idx).alu_isa.sraiw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).alu_isa.add    -> src2,
-        bufInfo(idx).alu_isa.addw   -> src2,                        bufInfo(idx).alu_isa.sub    -> (~src2 + 1.U),
-        bufInfo(idx).alu_isa.subw   -> (~src2 + 1.U),               bufInfo(idx).alu_isa.sll    -> src2,
-        bufInfo(idx).alu_isa.sllw   -> src2,                        bufInfo(idx).alu_isa.slt    -> src2,
-        bufInfo(idx).alu_isa.sltu   -> src2,                        bufInfo(idx).alu_isa.xor    -> src2,
-        bufInfo(idx).alu_isa.srl    -> src2,                        bufInfo(idx).alu_isa.srlw   -> src2,
-        bufInfo(idx).alu_isa.sra    -> src2,                        bufInfo(idx).alu_isa.sraw   -> src2,
-        bufInfo(idx).alu_isa.or     -> src2,                        bufInfo(idx).alu_isa.and    -> src2,
+        bufInfo(idx).aluIsa.lui    -> bufInfo(idx).param.imm,      bufInfo(idx).aluIsa.auipc  -> bufInfo(idx).param.imm,
+        bufInfo(idx).aluIsa.addi   -> bufInfo(idx).param.imm,      bufInfo(idx).aluIsa.addiw  -> bufInfo(idx).param.imm,
+        bufInfo(idx).aluIsa.slti   -> bufInfo(idx).param.imm,      bufInfo(idx).aluIsa.sltiu  -> bufInfo(idx).param.imm,
+        bufInfo(idx).aluIsa.xori   -> bufInfo(idx).param.imm,      bufInfo(idx).aluIsa.ori    -> bufInfo(idx).param.imm,
+        bufInfo(idx).aluIsa.andi   -> bufInfo(idx).param.imm,      bufInfo(idx).aluIsa.slli   -> bufInfo(idx).param.imm(5,0),
+        bufInfo(idx).aluIsa.slliw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).aluIsa.srli   -> bufInfo(idx).param.imm(5,0),
+        bufInfo(idx).aluIsa.srliw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).aluIsa.srai   -> bufInfo(idx).param.imm(5,0),
+        bufInfo(idx).aluIsa.sraiw  -> bufInfo(idx).param.imm(5,0), bufInfo(idx).aluIsa.add    -> src2,
+        bufInfo(idx).aluIsa.addw   -> src2,                        bufInfo(idx).aluIsa.sub    -> (~src2 + 1.U),
+        bufInfo(idx).aluIsa.subw   -> (~src2 + 1.U),               bufInfo(idx).aluIsa.sll    -> src2,
+        bufInfo(idx).aluIsa.sllw   -> src2,                        bufInfo(idx).aluIsa.slt    -> src2,
+        bufInfo(idx).aluIsa.sltu   -> src2,                        bufInfo(idx).aluIsa.xor    -> src2,
+        bufInfo(idx).aluIsa.srl    -> src2,                        bufInfo(idx).aluIsa.srlw   -> src2,
+        bufInfo(idx).aluIsa.sra    -> src2,                        bufInfo(idx).aluIsa.sraw   -> src2,
+        bufInfo(idx).aluIsa.or     -> src2,                        bufInfo(idx).aluIsa.and    -> src2,
 
-        bufInfo(idx).alu_isa.wfi    -> 0.U
+        bufInfo(idx).aluIsa.wfi    -> 0.U
     ))
     res.param.dat.op0 := 0.U
     res.param.dat.op3 := 0.U
@@ -841,7 +704,7 @@ trait IssSelAlu{ this: IssueSel =>
       for( i <- 0 until dptEntry ) {
         maskCondAluIss(iss)(i) := 
           ~bufValid(i) |
-          ~bufInfo(i).alu_isa.is_alu |
+          ~bufInfo(i).aluIsa.is_alu |
           ~(postIsOpReady(i)(1) & postIsOpReady(i)(2))
       }
     } else {
@@ -868,7 +731,7 @@ trait IssSelAlu{ this: IssueSel =>
         bufValid(i) := false.B
         assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) )
         assert( bufValid(i) )
-        assert( bufInfo(i).alu_isa.is_alu )
+        assert( bufInfo(i).aluIsa.is_alu )
       }
     }
     aluIssFifo(iss).io.deq <> io.alu_iss_exe(iss)
@@ -881,7 +744,7 @@ trait IssSelMul{ this: IssueSel =>
 
   def Pkg_mul_iss(idx: Int): Mul_iss_info = {
     val res = Wire(new Mul_iss_info)
-    res.fun := bufInfo(idx).mul_isa
+    res.fun := bufInfo(idx).mulIsa
 
     res.param.dat.op0 := 0.U
     res.param.dat.op1 := postBufOperator(idx)(1)
@@ -907,7 +770,7 @@ trait IssSelMul{ this: IssueSel =>
         for( i <- 0 until dptEntry ) {
           maskCondMulIss(iss)(i) := 
             ~bufValid(i) |
-            ~bufInfo(i).mul_isa.is_mulDiv |
+            ~bufInfo(i).mulIsa.is_mulDiv |
             ~(postIsOpReady(i)(1) & postIsOpReady(i)(2))
         }
       } else {
@@ -934,7 +797,7 @@ trait IssSelMul{ this: IssueSel =>
           bufValid(i) := false.B
           assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) )
           assert( bufValid(i) )
-          assert( bufInfo(i).mul_isa.is_mulDiv )
+          assert( bufInfo(i).mulIsa.is_mulDiv )
         }
       }
       mulIssFifo(iss).io.deq <> io.mul_iss_exe(iss)
@@ -954,7 +817,7 @@ trait IssSelBru{ this: IssueSel =>
 
   def Pkg_bru_iss(idx: Int): Bru_iss_info = {
     val res = Wire(new Bru_iss_info)
-    res.fun           := bufInfo(idx).bru_isa
+    res.fun           := bufInfo(idx).bruIsa
     res.param.is_rvc  := bufInfo(idx).param.is_rvc
     res.param.pc      := extVaddr(bufInfo(idx).param.pc, vlen)
     res.param.imm     := bufInfo(idx).param.imm
@@ -980,7 +843,7 @@ trait IssSelBru{ this: IssueSel =>
   for( i <- 0 until dptEntry ) {
     maskCondBruIss(i) := 
       ~bufValid(i) |
-      ~bufInfo(i).bru_isa.is_bru
+      ~bufInfo(i).bruIsa.is_bru
   }
 
   bruIssMatrix := MatrixMask( ageMatrixR, maskCondBruIss )
@@ -1003,7 +866,7 @@ trait IssSelBru{ this: IssueSel =>
       bufValid(i) := false.B
       assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) )
       assert( bufValid(i) )
-      assert( bufInfo(i).bru_isa.is_bru )
+      assert( bufInfo(i).bruIsa.is_bru )
     }
   }
 
@@ -1018,47 +881,76 @@ trait IssSelCsr{ this: IssueSel =>
     val res = Wire(new Csr_iss_info)
     val csrSel = bufInfo(idx).param.imm(11,0)
 
-    res.fun.rc  := bufInfo(idx).csr_isa.rc | bufInfo(idx).csr_isa.rci
-    res.fun.rs  := bufInfo(idx).csr_isa.rs | bufInfo(idx).csr_isa.rsi
-    res.fun.rw  := bufInfo(idx).csr_isa.rw | bufInfo(idx).csr_isa.rwi
+    res.fun.rc  := bufInfo(idx).csrIsa.rc | bufInfo(idx).csrIsa.rci
+    res.fun.rs  := bufInfo(idx).csrIsa.rs | bufInfo(idx).csrIsa.rsi
+    res.fun.rw  := bufInfo(idx).csrIsa.rw | bufInfo(idx).csrIsa.rwi
+    res.fun.vsetvli  := ( if(hasVector) {bufInfo(idx).csrIsa.vsetvli  } else {false.B} )
+    res.fun.vsetivli := ( if(hasVector) {bufInfo(idx).csrIsa.vsetivli } else {false.B} )
+    res.fun.vsetvl   := ( if(hasVector) {bufInfo(idx).csrIsa.vsetvl   } else {false.B} )
 
     res.param.dat.op1 := 
-      Mux1H(Seq(
-        bufInfo(idx).csr_isa.rw  -> postBufOperator(idx)(1), bufInfo(idx).csr_isa.rwi -> bufInfo(idx).param.raw.rs1,
-        bufInfo(idx).csr_isa.rs  -> postBufOperator(idx)(1), bufInfo(idx).csr_isa.rsi -> bufInfo(idx).param.raw.rs1,
-        bufInfo(idx).csr_isa.rc  -> postBufOperator(idx)(1), bufInfo(idx).csr_isa.rci -> bufInfo(idx).param.raw.rs1,
-      ))
+      Mux1H(
+        Seq(
+          bufInfo(idx).csrIsa.rw  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rwi -> bufInfo(idx).param.raw.rs1,
+          bufInfo(idx).csrIsa.rs  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rsi -> bufInfo(idx).param.raw.rs1,
+          bufInfo(idx).csrIsa.rc  -> postBufOperator(idx)(1), bufInfo(idx).csrIsa.rci -> bufInfo(idx).param.raw.rs1,
+        ) ++
+        ( if(hasVector){
+          Seq(
+            bufInfo(idx).csrIsa.vsetvli  -> Mux( bufInfo(idx).param.raw.rs1 =/= 0.U, postBufOperator(idx)(1), Mux(bufInfo(idx).param.raw.rd0 =/= 0.U, Fill(64,1.U), io.csrfiles.vl) ),
+            bufInfo(idx).csrIsa.vsetivli -> bufInfo(idx).param.raw.rs1,
+            bufInfo(idx).csrIsa.vsetvl   -> Mux( bufInfo(idx).param.raw.rs1 =/= 0.U, postBufOperator(idx)(1), Mux(bufInfo(idx).param.raw.rd0 =/= 0.U, Fill(64,1.U), io.csrfiles.vl) ),
+          ) } else {Seq()})
+      )
+
+
+
 
     /** automatically create csr address mux according CSRInfoTable */
     res.param.dat.op2 := 
-      Mux1H(
-        (for ( info <- CSRInfoTable.CSRGroup; io <- io.csrfiles.elements; if( (info.name == io._1) ) ) yield {
-          (csrSel === (info.address).U) -> ( io._2.asUInt )
-        }) ++
+      Mux(
+        bufInfo(idx).csrIsa.isXCSR,
+        Mux1H(
+          (for ( info <- CSRInfoTable.CSRGroup; io <- io.csrfiles.elements; if( (info.name == io._1) ) ) yield {
+            (csrSel === (info.address).U) -> ( io._2.asUInt )
+          }) ++
 
-        (for( i <- 0 until pmpNum by 2 ) yield{
-          ((csrSel === ("h3A0".U + i.U)) -> io.csrfiles.pmpcfg(i).asUInt)
-        }) ++
+          (for( i <- 0 until pmpNum by 2 ) yield{
+            ((csrSel === ("h3A0".U + i.U)) -> io.csrfiles.pmpcfg(i).asUInt)
+          }) ++
 
-        (for( i <- 0 until pmpNum*8 ) yield{
-          ((csrSel === ("h3B0".U + i.U)) -> io.csrfiles.pmpaddr(i).asUInt)
-        }) ++
+          (for( i <- 0 until pmpNum*8 ) yield{
+            ((csrSel === ("h3B0".U + i.U)) -> io.csrfiles.pmpaddr(i).asUInt)
+          }) ++
 
-        (for( i <- 3 until 32 ) yield{
-          ((csrSel === ("hB00".U + i.U)) -> io.csrfiles.mhpmcounter(i))
-        }) ++
+          (for( i <- 3 until 32 ) yield{
+            ((csrSel === ("hB00".U + i.U)) -> io.csrfiles.mhpmcounter(i))
+          }) ++
 
-        (for( i <- 3 until 32 ) yield{
-          ((csrSel === ("h320".U + i.U)) -> io.csrfiles.mhpmevent(i))
-        }) ++ 
+          (for( i <- 3 until 32 ) yield{
+            ((csrSel === ("h320".U + i.U)) -> io.csrfiles.mhpmevent(i))
+          }) ++ 
 
-        (for( i <- 3 until 32 ) yield{
-          ((csrSel === ("hC00".U + i.U)) -> io.csrfiles.hpmcounter(i))
-        }) 
+          (for( i <- 3 until 32 ) yield{
+            ((csrSel === ("hC00".U + i.U)) -> io.csrfiles.hpmcounter(i))
+          })
+        ),
+        (if(hasVector){ Mux1H(Seq(
+          bufInfo(idx).csrIsa.vsetvli  -> bufInfo(idx).param.imm(10,0),
+          bufInfo(idx).csrIsa.vsetivli -> bufInfo(idx).param.imm(9,0),
+          bufInfo(idx).csrIsa.vsetvl   -> postBufOperator(idx)(2),
+        ))} else {0.U})
       )
 
+
     res.param.dat.op0 := 0.U
-    res.param.dat.op3 := bufInfo(idx).param.imm(11,0)
+    res.param.dat.op3 := 
+      Mux(
+        ( if(hasVector){ bufInfo(idx).csrIsa.vsetvli | bufInfo(idx).csrIsa.vsetivli | bufInfo(idx).csrIsa.vsetvl } else {false.B} ),
+        "hffe".U(12.W),
+        bufInfo(idx).param.imm(11,0)
+      )
+      
 
     res.param.rd0     := bufInfo(idx).phy.rd0
 
@@ -1076,7 +968,7 @@ trait IssSelCsr{ this: IssueSel =>
   for( i <- 0 until dptEntry ) {
     maskCondCsrIss(i) := 
       ~bufValid(i) |
-      (~bufInfo(i).csr_isa.is_csr) 
+      (~bufInfo(i).csrIsa.is_csr) 
   }
 
   csrIssMatrix := MatrixMask( ageMatrixR, maskCondCsrIss )
@@ -1099,7 +991,7 @@ trait IssSelCsr{ this: IssueSel =>
       bufValid(i) := false.B
       assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) )
       assert( bufValid(i) )
-      assert( bufInfo(i).csr_isa.is_csr )
+      assert( bufInfo(i).csrIsa.is_csr )
     }
   }
 
@@ -1109,61 +1001,75 @@ trait IssSelCsr{ this: IssueSel =>
 
 trait IssSelLsu{ this: IssueSel =>
 
-  def Pkg_lsu_iss( idx: Int ): Lsu_iss_info = {
-    val res = Wire(new Lsu_iss_info)
 
-    res.fun := bufInfo(idx).lsu_isa
 
-    res.param.dat.op0 := Mux( bufInfo(idx).lsu_isa.is_vls, postBufOperator(idx)(0), 0.U )
+  val lsuIssIdx = Wire( UInt((log2Ceil(dptEntry)).W) )
+  val lsuIssInfo = Wire( Vec( dptEntry, new Lsu_iss_info) )
+  val lsuIssFifo = Module(new Queue( new Lsu_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true ) )
 
-    res.param.dat.op1 := 
-      MuxCase( (postBufOperator(idx)(1).asSInt + bufInfo(idx).param.imm.asSInt()).asUInt(), Seq(
-        (bufInfo(idx).lsu_isa.is_lrsc | bufInfo(idx).lsu_isa.is_amo) -> postBufOperator(idx)(1),
 
+  for( i <- 0 until dptEntry ) {
+
+    lsuIssInfo(i).fun := bufInfo(i).lsuIsa
+
+    lsuIssInfo(i).param.dat.op0 := Mux( bufInfo(i).lsuIsa.is_vls, vecBufOperator(0), 0.U )
+
+    lsuIssInfo(i).param.dat.op1 := 
+      Mux1H(Seq(
+        (bufInfo(i).lsuIsa.is_xls  | bufInfo(i).lsuIsa.is_fls)  -> (postBufOperator(i)(1).asSInt + bufInfo(i).param.imm.asSInt()).asUInt(),
+        (bufInfo(i).lsuIsa.is_lrsc | bufInfo(i).lsuIsa.is_amo)  -> postBufOperator(i)(1),
+      ) ++ (if(hasVector) { Seq(
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isByte)                 -> (postBufOperator(i)(1).asSInt + ( ( (bufInfo(i).vAttach.get.nf + 1.U(4.W)) * bufInfo(i).vAttach.get.vlIdx) << 0 ).asSInt                   + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 0 ).asSInt ).asUInt,
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isHalf)                 -> (postBufOperator(i)(1).asSInt + ( ( (bufInfo(i).vAttach.get.nf + 1.U(4.W)) * bufInfo(i).vAttach.get.vlIdx) << 1 ).asSInt                   + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 1 ).asSInt ).asUInt,
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isWord)                 -> (postBufOperator(i)(1).asSInt + ( ( (bufInfo(i).vAttach.get.nf + 1.U(4.W)) * bufInfo(i).vAttach.get.vlIdx) << 2 ).asSInt                   + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 2 ).asSInt ).asUInt,
+              (bufInfo(i).lsuIsa.isUnitStride & bufInfo(i).lsuIsa.isDubl)                 -> (postBufOperator(i)(1).asSInt + ( ( (bufInfo(i).vAttach.get.nf + 1.U(4.W)) * bufInfo(i).vAttach.get.vlIdx) << 3 ).asSInt                   + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 3 ).asSInt ).asUInt,
+
+              (bufInfo(i).lsuIsa.isStridde    & bufInfo(i).lsuIsa.isByte )                -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx * postBufOperator(i)(2)).asSInt   + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 0 ).asSInt ).asUInt(),//rs2
+              (bufInfo(i).lsuIsa.isStridde    & bufInfo(i).lsuIsa.isHalf )                -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx * postBufOperator(i)(2)).asSInt   + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 1 ).asSInt ).asUInt(),//rs2
+              (bufInfo(i).lsuIsa.isStridde    & bufInfo(i).lsuIsa.isWord )                -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx * postBufOperator(i)(2)).asSInt   + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 2 ).asSInt ).asUInt(),//rs2
+              (bufInfo(i).lsuIsa.isStridde    & bufInfo(i).lsuIsa.isDubl )                -> (postBufOperator(i)(1).asSInt + ( bufInfo(i).vAttach.get.vlIdx * postBufOperator(i)(2)).asSInt   + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 3 ).asSInt ).asUInt(),//rs2
+
+              (bufInfo(i).lsuIsa.isIndex      & bufInfo(i).vAttach.get.vsew === "b00".U ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt                                     + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 0 ).asSInt ).asUInt(),//vs2 -> vop2 
+              (bufInfo(i).lsuIsa.isIndex      & bufInfo(i).vAttach.get.vsew === "b01".U ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt                                     + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 1 ).asSInt ).asUInt(),//vs2 -> vop2 
+              (bufInfo(i).lsuIsa.isIndex      & bufInfo(i).vAttach.get.vsew === "b10".U ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt                                     + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 2 ).asSInt ).asUInt(),//vs2 -> vop2 
+              (bufInfo(i).lsuIsa.isIndex      & bufInfo(i).vAttach.get.vsew === "b11".U ) -> (postBufOperator(i)(1).asSInt + postBufOperator(i)(2).asSInt                                     + ( Cat( 0.U(1.W), bufInfo(i).vAttach.get.nfSel) << 3 ).asSInt ).asUInt(),//vs2 -> vop2 
+      )} else { Seq() })
+                                                                      // -> postBufOperator(i)(1).asSInt + adjAddr( i, nf = "b000".U, vWidth = "b000".U ) + ((ori.vAttach.get.nf + 1.U) << log2Ceil(vParams.vlen/8))
+      )
+
+
+      // MuxCase( (postBufOperator(i)(1).asSInt + bufInfo(i).param.imm.asSInt()).asUInt(), Seq(
+      //   (bufInfo(i).lsuIsa.is_lrsc | bufInfo(i).lsuIsa.is_amo) -> postBufOperator(i)(1),
+      // ))
+
+    lsuIssInfo(i).param.dat.op2 :=
+      Mux1H(Seq(
+        bufInfo(i).lsuIsa.is_amo   -> postBufOperator(i)(2),
+        bufInfo(i).lsuIsa.isXStore -> postBufOperator(i)(2),
+        bufInfo(i).lsuIsa.isFStore -> ieee(unbox(postBufOperator(i)(2), 1.U, None), t = FType.D),
+        bufInfo(i).lsuIsa.isVStore -> postBufOperator(i)(3),
       ))
-    res.param.dat.op2 :=
-      MuxCase( postBufOperator(idx)(2), Seq(
-        bufInfo(idx).lsu_isa.isFStore    -> ieee(unbox(postBufOperator(idx)(2), 1.U, None), t = FType.D),
-        bufInfo(idx).lsu_isa.isVConstant -> postBufOperator(idx)(2),//rs2
-        bufInfo(idx).lsu_isa.isVIndex    -> postBufOperator(idx)(2),//vs2
-      ))
+      // MuxCase( postBufOperator(i)(2), Seq(
+      //   bufInfo(i).lsuIsa.isFStore    -> ieee(unbox(postBufOperator(i)(2), 1.U, None), t = FType.D),
+      //   bufInfo(i).lsuIsa.isVConstant -> //postBufOperator(i)(2) *    ,//rs2
+      //   bufInfo(i).lsuIsa.isVIndex    -> //bufInfo(i).vAttach.vop2 + ,//vs2
+      // ))
 
-    res.param.dat.op3 := 
-      Mux( bufInfo(idx).lsu_isa.isVStore, postBufOperator(idx)(3), 0.U )
+    lsuIssInfo(i).param.dat.op3 := DontCare
+      // Mux( bufInfo(i).lsuIsa.isVStore,  , 0.U ) //vs3
 
 
-    res.param.rd0 := bufInfo(idx).phy.rd0
+    lsuIssInfo(i).param.rd0 := bufInfo(i).phy.rd0
 
 
     if( hasVector ){
- 
-      res.vAttach.get.vWidth   := bufInfo(idx).param.vWidth
-      res.vAttach.get.nf       := bufInfo(idx).vAttach.get.nf
-      res.vAttach.get.vm       := bufInfo(idx).vAttach.get.vm
-      // res.vAttach.get.isFoF    := bufInfo(idx).param.raw.rs2.extract(4).asBool
-      res.vAttach.get.bufIdx := DontCare
-      res.vAttach.get.eleIdx := DontCare
-
-      res.vAttach.get.lmulSel   := bufInfo(idx).vAttach.get.lmulSel
-      res.vAttach.get.nfSel     := bufInfo(idx).vAttach.get.nfSel
-      res.vAttach.get.widenSel  := bufInfo(idx).vAttach.get.widenSel
-      res.vAttach.get.vstartSel := bufInfo(idx).vAttach.get.vstartSel
-      res.vAttach.get.isLast    := bufInfo(idx).vAttach.get.isLast
-
-
-      res.vAttach.get.vstart := bufInfo(idx).vAttach.get.vstart
-      res.vAttach.get.vtype  := bufInfo(idx).vAttach.get.vtype
-      res.vAttach.get.vl     := bufInfo(idx).vAttach.get.vl
-
-      res.vAttach.get.nfSel   := bufInfo(idx).vAttach.get.nfSel
-      res.vAttach.get.lmulSel := bufInfo(idx).vAttach.get.lmulSel
-
+      lsuIssInfo(i).vAttach.get.eleIdx := bufInfo(i).vAttach.get.eleIdx
+      lsuIssInfo(i).vAttach.get.vtype  := bufInfo(i).vAttach.get.vtype
     }
-    return res
   }
-  val lsuIssIdx = Wire( UInt((log2Ceil(dptEntry)).W) )
-  val lsuIssInfo = for( i <- 0 until dptEntry ) yield { Pkg_lsu_iss(i) }
-  val lsuIssFifo = Module(new Queue( new Lsu_iss_info, ( if(!isMinArea) 4 else 1 ), flow = true ) )
+
+
+
 
   val lsuIssMatrix   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )) 
   val maskCondLsuIss = Wire( Vec( dptEntry, Bool()) )
@@ -1172,7 +1078,7 @@ trait IssSelLsu{ this: IssueSel =>
   for( i <- 0 until dptEntry ) {
     maskCondLsuIss(i) := 
       ~bufValid(i) |
-      ~bufInfo(i).lsu_isa.is_lsu
+      ~bufInfo(i).lsuIsa.is_lsu
   }
 
   lsuIssMatrix := MatrixMask( ageMatrixR, maskCondLsuIss )
@@ -1195,7 +1101,7 @@ trait IssSelLsu{ this: IssueSel =>
       bufValid(i) := false.B
       assert( postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) )
       assert( bufValid(i) )
-      assert( bufInfo(i).lsu_isa.is_lsu )
+      assert( bufInfo(i).lsuIsa.is_lsu )
     }
   }
 
@@ -1210,7 +1116,7 @@ trait IssSelFpu{ this: IssueSel =>
   def Pkg_fpu_iss(idx: Int): Fpu_iss_info = {
     val res = Wire(new Fpu_iss_info)
 
-    res.fun := bufInfo(idx).fpu_isa
+    res.fun := bufInfo(idx).fpuIsa
 
     res.param.dat.op0 := io.csrfiles.fcsr.frm
     res.param.dat.op1 := postBufOperator(idx)(1)
@@ -1235,7 +1141,7 @@ trait IssSelFpu{ this: IssueSel =>
     for( i <- 0 until dptEntry ) {
       maskCondFpuIss(0)(i) := 
         ~bufValid(i) |
-        ~bufInfo(i).fpu_isa.is_fpu
+        ~bufInfo(i).fpuIsa.is_fpu
     }
 
     fpuIssMatrix(0) := MatrixMask( ageMatrixR, maskCondFpuIss(0) )
@@ -1258,7 +1164,7 @@ trait IssSelFpu{ this: IssueSel =>
         bufValid(i) := false.B
         assert( postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) )
         assert( bufValid(i) )
-        assert( bufInfo(i).fpu_isa.is_fpu )
+        assert( bufInfo(i).fpuIsa.is_fpu )
       }
     }
 
@@ -1271,9 +1177,82 @@ trait IssSelFpu{ this: IssueSel =>
 
 }
 
-trait IssSelVpu{ this: IssueSel =>
 
+trait IssSelVpu{ this: IssueSel =>
+  // val vpuIssIdx  = Wire( UInt((log2Ceil(dptEntry)).W) )
+  // val vpuIssFifo = Module(new Queue( new Vpu_iss_info, 1, flow = true ) )
+  // val vpuIssInfo = Wire( Vec(dptEntry, new Vpu_iss_info) )
+
+  // for( i <- 0 until dptEntry ) {
+  //   vpuIssInfo(i).fun := bufInfo(idx).vecIsa
+
+  //   vpuIssInfo(i).param.dat.op0 :=
+  //   vpuIssInfo(i).param.dat.op1 := 
+  //   vpuIssInfo(i).param.dat.op2 :=
+  //   vpuIssInfo(i).param.dat.op3 := 
+  //   vpuIssInfo(i).param.rd0 := bufInfo(idx).phy.rd0
+
+  //   vpuIssInfo(i).vAttach.get.vWidth    := bufInfo(idx).param.vWidth
+  //   vpuIssInfo(i).vAttach.get.nf        := bufInfo(idx).vAttach.get.nf
+  //   vpuIssInfo(i).vAttach.get.vm        := bufInfo(idx).vAttach.get.vm
+  //   vpuIssInfo(i).vAttach.get.bufIdx    := DontCare
+  //   vpuIssInfo(i).vAttach.get.eleIdx    := DontCare
+  //   vpuIssInfo(i).vAttach.get.lmulSel   := bufInfo(idx).vAttach.get.lmulSel
+  //   vpuIssInfo(i).vAttach.get.nfSel     := bufInfo(idx).vAttach.get.nfSel
+  //   vpuIssInfo(i).vAttach.get.widenSel  := bufInfo(idx).vAttach.get.widenSel
+  //   vpuIssInfo(i).vAttach.get.vlIdx     := bufInfo(idx).vAttach.get.vlIdx
+  //   vpuIssInfo(i).vAttach.get.isLast    := bufInfo(idx).vAttach.get.isLast
+  //   vpuIssInfo(i).vAttach.get.vstart    := DontCare
+  //   vpuIssInfo(i).vAttach.get.vtype     := bufInfo(idx).vAttach.get.vtype
+  //   vpuIssInfo(i).vAttach.get.vl        := DontCare
+  //   vpuIssInfo(i).vAttach.get.nfSel     := bufInfo(idx).vAttach.get.nfSel
+  //   vpuIssInfo(i).vAttach.get.lmulSel   := bufInfo(idx).vAttach.get.lmulSel
+  
+  // }
+
+
+  // val vpuIssMatrix   = Wire( Vec( dptEntry, Vec(dptEntry, Bool() ) )) 
+  // val maskCondVpuIss = Wire( Vec( dptEntry, Bool()) )
+
+  // //only oldest instr will be selected, in-order-issue
+  // for( i <- 0 until dptEntry ) {
+  //   maskCondLsuIss(i) := 
+  //     ~bufValid(i) |
+  //     ~bufInfo(i).vetorIsa.isVector
+  // }
+
+  // vpuIssMatrix := MatrixMask( ageMatrixR, maskCondVpuIss )
+  
+  // assert(
+  //   vpuIssMatrix.forall( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === true.B) ) ) |
+  //   PopCount( vpuIssMatrix.map{(x: Vec[Bool]) => x.forall((y: Bool) => (y === false.B))} ) === 1.U
+  // )
+
+  // vpuIssIdx := vpuIssMatrix.indexWhere( (x: Vec[Bool]) => x.forall( (y: Bool) => (y === false.B) ) ) //index a row which all zero
+
+  // vpuIssFifo.io.enq.valid := 
+  //   ( 0 until dptEntry ).map{ i => { vpuIssMatrix(i).forall( (x: Bool) => (x === false.B) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) } }.reduce(_|_)
+
+  // vpuIssFifo.io.enq.bits  := 
+  //   Mux1H( ( 0 until dptEntry ).map{ i => { (vpuIssMatrix(i).forall( (y: Bool) => ( y === false.B ) ) & postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) ) -> vpuIssInfo(i) } } )
+
+  // for( i <- 0 until dptEntry ) {
+  //   when( vpuIssFifo.io.enq.fire & vpuIssIdx === i.U ) {
+  //     bufValid(i) := false.B
+  //     assert( postIsOpReady(i)(0) & postIsOpReady(i)(1) & postIsOpReady(i)(2) & postIsOpReady(i)(3) )
+  //     assert( bufValid(i) )
+  //     assert( bufInfo(i).vetorIsa.isVector )
+  //   }
+  // }
+
+
+
+  
+  // vpuIssFifo.io.deq <> io.vpu_iss_exe
+  // vpuIssFifo.reset := io.flush | reset.asBool
 }
+
+
 
 
 class Issue()(implicit p: Parameters) extends IssueSel
@@ -1282,8 +1261,7 @@ with IssSelMul
 with IssSelBru
 with IssSelCsr
 with IssSelLsu
-with IssSelFpu
-with IssSelVpu{
+with IssSelFpu{
   
 }
 

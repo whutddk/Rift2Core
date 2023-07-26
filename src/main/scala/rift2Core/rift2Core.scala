@@ -91,7 +91,7 @@ class Rift2Core(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
   lazy val module: Rift2CoreImp = if(isFlatten) {new Rift2CoreImp(this) with FlattenInstance} else {new Rift2CoreImp(this)}
 }
  
-class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyModuleImp(outer) with HasRiftParameters { 
+abstract class Rift2CoreImpBase(outer: Rift2Core, isFlatten: Boolean = false) extends LazyModuleImp(outer) with HasRiftParameters { 
   class Rift2CoreIO extends Bundle{
     val dm        = if (hasDebugger) {Some(Flipped(new Info_DM_cmm))} else {None}
     val rtc_clock = Input(Bool())
@@ -109,13 +109,26 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   val ( prefetch_bus, prefetch_edge) = outer.prefetchClinetNode.out.head
 
 
-
-
   val if1 = (if (hasuBTB) {Module(new IF1Predict)} else {Module(new IF1NPredict)})
   val if2 = Module(new IF2(icache_edge))
   val if3 = Module(new IF3)
   val if4 = Module(new IF4)
+  val preRename_stage = if(hasVector) { Module(new VecPreRename) } else { Module(new FakeVecPreRename) }
+  val rnm_stage = Module(new Rename)
+  val preIssue_stage = if(hasVector) { Module(new VecPreIssue) } else { Module(new FakeVecPreIssue) }
+  val iss_stage = Module(new Issue)
+  val exe_stage = Module(new Execute( (Seq( dcache_edge, system_edge, periph_edge ) ) ) )
+  val iwb_stage = Module(new WriteBack)
+  val cmm_stage = Module(new Commit)
+  val i_mmu = Module(new MMU(edge = mmu_edge ))
+  val diff = Module(new diff)
 
+
+
+
+}
+
+trait Rift2CoreImpFrontend{ this: Rift2CoreImpBase =>
 
   if1.io.if4Redirect := if4.io.if4Redirect
 
@@ -123,174 +136,90 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   if2.io.if2_resp <> if3.io.if3_req
   if3.io.if3_resp <> if4.io.if4_req
 
-
-  
-
-
   if3.io.btbResp  <> if4.io.btbResp
   if3.io.bimResp  <> if4.io.bimResp
   if3.io.tageResp <> if4.io.tageResp
   
-
   if3.io.if4_update_ghist := if4.io.if4_update_ghist
   if3.io.if4Redirect := if4.io.if4Redirect
+}
 
-
+trait Rift2CoreImpBackend{ this: Rift2CoreImpBase =>
   
-  // val vfl_stage = if(hasVector){ Some(Module(new VRenameFilter)) } else {None}
+  if4.io.if4_resp <> preRename_stage.io.enq
+  preRename_stage.io.deq <> rnm_stage.io.rnReq
 
-  val rnm_stage = Module(new Rename)
-  if( hasVector ){
-    // if4.io.if4_resp <> vfl_stage.get.io.enq
-    // vfl_stage.get.io.deq <> rnm_stage.io.rnReq
-  } else {
-    if4.io.if4_resp <> rnm_stage.io.rnReq
-  }
+  preRename_stage.io.vpuCsrMolloc <> iwb_stage.io.vpuCsrMolloc
 
-
-
-
-  val iss_stage = {
-    val mdl = Module(new Issue)
-    mdl.io.dptReq <> rnm_stage.io.rnRsp
-    mdl
-  }
-
-
-  val exe_stage = {
-    val mdl = Module(new Execute( (Seq( dcache_edge, system_edge, periph_edge ) ) ) )
-    iss_stage.io.alu_iss_exe <> mdl.io.alu_iss_exe
-    iss_stage.io.bru_iss_exe <> mdl.io.bru_iss_exe
-    iss_stage.io.lsu_iss_exe <> mdl.io.lsu_iss_exe
-    iss_stage.io.csr_iss_exe <> mdl.io.csr_iss_exe
-    iss_stage.io.mul_iss_exe <> mdl.io.mul_iss_exe
-    iss_stage.io.fpu_iss_exe <> mdl.io.fpu_iss_exe
-    mdl
-  }
-
-
-  val iwb_stage = { 
-    val mdl = Module(new WriteBack)
-    mdl.io.xLookup <> rnm_stage.io.xLookup
-    mdl.io.fLookup <> rnm_stage.io.fLookup
-    mdl.io.vLookup <> rnm_stage.io.vLookup
-
-    mdl.io.xRename <> rnm_stage.io.xRename
-    mdl.io.fRename <> rnm_stage.io.fRename
-    mdl.io.vRename <> rnm_stage.io.vRename
-
-    iss_stage.io.irgLog := mdl.io.irgLog
-    iss_stage.io.frgLog := mdl.io.frgLog
-    iss_stage.io.vrgLog := mdl.io.vrgLog
-
-    mdl.io.irgReq := iss_stage.io.irgReq
-    mdl.io.frgReq := iss_stage.io.frgReq
-    mdl.io.vrgReq := iss_stage.io.vrgReq
-
-    iss_stage.io.irgRsp := mdl.io.irgRsp
-    iss_stage.io.frgRsp := mdl.io.frgRsp
-    iss_stage.io.vrgRsp := mdl.io.vrgRsp
-
-
-    mdl.io.alu_iWriteBack <> exe_stage.io.alu_exe_iwb
-    mdl.io.bru_iWriteBack <> exe_stage.io.bru_exe_iwb
-    mdl.io.csr_iWriteBack <> exe_stage.io.csr_exe_iwb
-    mdl.io.mul_iWriteBack <> exe_stage.io.mul_exe_iwb
-
-    mdl.io.mem_iWriteBack <> exe_stage.io.lsu_exe_iwb
-    mdl.io.mem_fWriteBack <> exe_stage.io.lsu_exe_fwb
-    mdl.io.mem_vWriteBack <> exe_stage.io.lsu_exe_vwb
-
-    mdl.io.fpu_iWriteBack <> exe_stage.io.fpu_exe_iwb
-    mdl.io.fpu_fWriteBack <> exe_stage.io.fpu_exe_fwb
-
-
-    mdl.io.xpuCsrWriteBack := exe_stage.io.xpuCsrWriteBack
-    mdl.io.fpuCsrWriteBack := exe_stage.io.fpuCsrWriteBack
-
-
-    mdl.io.xpuCsrMolloc    <> rnm_stage.io.xpuCsrMolloc
-    mdl.io.fpuCsrMolloc    <> rnm_stage.io.fpuCsrMolloc
-
-    // if(hasVector) {vfl_stage.get.io.csrIsReady := DontCare}
-
-    mdl
-  }
-
-
-
-
-  val cmm_stage = Module(new Commit)
-
-  val i_mmu = {
-    val mdl = Module(new MMU(edge = mmu_edge ))
-    mdl.io.if_mmu <> if2.io.if_mmu
-    mdl.io.mmu_if <> if2.io.mmu_if
-    mdl.io.lsu_mmu <> exe_stage.io.lsu_mmu
-    mdl.io.mmu_lsu <> exe_stage.io.mmu_lsu
-    mdl.io.cmm_mmu <> cmm_stage.io.cmm_mmu
-    mdl
-  }
-
-
-    if1.io.jcmm_update := exe_stage.io.jcmm_update
-    if1.io.bcmm_update := exe_stage.io.bcmm_update
-    if3.io.jcmm_update := exe_stage.io.jcmm_update
-    if3.io.bcmm_update := exe_stage.io.bcmm_update
-    if4.io.jcmm_update := exe_stage.io.jcmm_update
-
+  rnm_stage.io.rnRsp <> preIssue_stage.io.enq
   
+  preIssue_stage.io.deq <> iss_stage.io.dptReq
+
+  preIssue_stage.io.molloc <> iwb_stage.io.vMolloc
+  preIssue_stage.io.readOp <> iwb_stage.io.vReadOp
 
 
-    exe_stage.io.bftq <> if4.io.bftq
-    exe_stage.io.jftq <> if4.io.jftq
+  iss_stage.io.alu_iss_exe <> exe_stage.io.alu_iss_exe
+  iss_stage.io.bru_iss_exe <> exe_stage.io.bru_iss_exe
+  iss_stage.io.lsu_iss_exe <> exe_stage.io.lsu_iss_exe
+  iss_stage.io.csr_iss_exe <> exe_stage.io.csr_iss_exe
+  iss_stage.io.mul_iss_exe <> exe_stage.io.mul_iss_exe
+  iss_stage.io.fpu_iss_exe <> exe_stage.io.fpu_iss_exe
+
+  iwb_stage.io.xLookup <> rnm_stage.io.xLookup
+  iwb_stage.io.fLookup <> rnm_stage.io.fLookup
+
+  iwb_stage.io.xRename <> rnm_stage.io.xRename
+  iwb_stage.io.fRename <> rnm_stage.io.fRename
 
 
-  
+  iss_stage.io.irgLog := iwb_stage.io.irgLog
+  iss_stage.io.frgLog := iwb_stage.io.frgLog
 
-  i_mmu.io.if_flush := if2.io.flush
-  i_mmu.io.lsu_flush := exe_stage.io.flush
+  iwb_stage.io.irgReq := iss_stage.io.irgReq
+  iwb_stage.io.frgReq := iss_stage.io.frgReq
 
-  if2.io.flush := cmm_stage.io.cmmRedirect.fire | if4.io.if4Redirect.valid
-  if3.io.flush := cmm_stage.io.cmmRedirect.fire
-  if4.io.flush := cmm_stage.io.cmmRedirect.fire
+  iss_stage.io.irgRsp := iwb_stage.io.irgRsp
+  iss_stage.io.frgRsp := iwb_stage.io.frgRsp
 
-  rnm_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
-  iss_stage.io.flush := cmm_stage.io.cmmRedirect.fire
-  exe_stage.io.flush := cmm_stage.io.cmmRedirect.fire
+  iwb_stage.io.alu_iWriteBack <> exe_stage.io.alu_exe_iwb
+  iwb_stage.io.bru_iWriteBack <> exe_stage.io.bru_exe_iwb
+  iwb_stage.io.csr_iWriteBack <> exe_stage.io.csr_exe_iwb
+  iwb_stage.io.mul_iWriteBack <> exe_stage.io.mul_exe_iwb
 
+  iwb_stage.io.mem_iWriteBack <> exe_stage.io.lsu_exe_iwb
+  iwb_stage.io.mem_fWriteBack <> exe_stage.io.lsu_exe_fwb
+  iwb_stage.io.mem_vWriteBack <> exe_stage.io.lsu_exe_vwb
 
+  iwb_stage.io.fpu_iWriteBack <> exe_stage.io.fpu_exe_iwb
+  iwb_stage.io.fpu_fWriteBack <> exe_stage.io.fpu_exe_fwb
 
-  cmm_stage.io.cm_op <> iwb_stage.io.commit
-  cmm_stage.io.rod <> rnm_stage.io.rod_i
-  cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
-  cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
-  cmm_stage.io.bctq <> exe_stage.io.bctq
-  cmm_stage.io.jctq <> exe_stage.io.jctq
-  cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect
-  cmm_stage.io.if_cmm := if2.io.if_cmm
-  cmm_stage.io.aclint := io.aclint
-  cmm_stage.io.plic := io.plic
-  if2.io.ifence := cmm_stage.io.ifence
+  iwb_stage.io.xpuCsrWriteBack := exe_stage.io.xpuCsrWriteBack
+  iwb_stage.io.fpuCsrWriteBack := exe_stage.io.fpuCsrWriteBack
+  iwb_stage.io.vpuCsrWriteBack.valid := false.B
+  iwb_stage.io.vpuCsrWriteBack.bits  := DontCare
 
+  iwb_stage.io.xpuCsrMolloc    <> rnm_stage.io.xpuCsrMolloc
+  iwb_stage.io.fpuCsrMolloc    <> rnm_stage.io.fpuCsrMolloc
 
-
-
-  // if(hasVector) {vfl_stage.get.io.csrfiles := cmm_stage.io.csrfiles}
+  preRename_stage.io.csrfiles := cmm_stage.io.csrfiles
+  preIssue_stage.io.csrfiles := cmm_stage.io.csrfiles
   iss_stage.io.csrfiles := cmm_stage.io.csrfiles
 
-  iwb_stage.io.xpuCsrCommit <> cmm_stage.io.xpuCsrCommit
-  iwb_stage.io.fpuCsrCommit <> cmm_stage.io.fpuCsrCommit
+}
 
+trait Rift2CoreImpPredict{ this: Rift2CoreImpBase =>
+  if1.io.jcmm_update := exe_stage.io.jcmm_update
+  if1.io.bcmm_update := exe_stage.io.bcmm_update
+  if3.io.jcmm_update := exe_stage.io.jcmm_update
+  if3.io.bcmm_update := exe_stage.io.bcmm_update
+  if4.io.jcmm_update := exe_stage.io.jcmm_update
 
+  exe_stage.io.bftq <> if4.io.bftq
+  exe_stage.io.jftq <> if4.io.jftq
+}
 
-  cmm_stage.io.rtc_clock := io.rtc_clock
-  if (hasDebugger) {cmm_stage.io.dm <> io.dm.get}
-  else {
-    cmm_stage.io.dm.hartResetReq := false.B
-    cmm_stage.io.dm.hartHaltReq := false.B
-  }
-
+trait Rift2CoreImpBus{ this: Rift2CoreImpBase =>
 
   if2.io.icache_access.bits := icache_bus.d.bits
   if2.io.icache_access.valid := icache_bus.d.valid
@@ -299,9 +228,6 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   icache_bus.a.valid := if2.io.icache_get.valid
   icache_bus.a.bits := if2.io.icache_get.bits
   if2.io.icache_get.ready := icache_bus.a.ready
-
-
-
 
   if( hasL2 ) {
     exe_stage.io.missUnit_dcache_grant.get.bits  := dcache_bus.d.bits
@@ -332,9 +258,6 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
     dcache_bus.e.bits  := exe_stage.io.missUnit_dcache_grantAck.get.bits
     exe_stage.io.missUnit_dcache_grantAck.get.ready := dcache_bus.e.ready
   } else {
-    // val dcache_getPut = if ( hasL2 ) { None } else { Some(        new DecoupledIO(new TLBundleA(dEdge(0).bundle)) ) }
-    // val dcache_access = if ( hasL2 ) { None } else { Some(Flipped(new DecoupledIO(new TLBundleD(dEdge(0).bundle)))) }
-
     dcache_bus.a.valid := exe_stage.io.dcache_getPut.get.valid
     dcache_bus.a.bits  := exe_stage.io.dcache_getPut.get.bits
     exe_stage.io.dcache_getPut.get.ready := dcache_bus.a.ready
@@ -343,11 +266,8 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
     exe_stage.io.dcache_access.get.valid := dcache_bus.d.valid
     dcache_bus.d.ready := exe_stage.io.dcache_access.get.ready
 
-
   }
   
-
-
   exe_stage.io.system_access.bits  := system_bus.d.bits
   exe_stage.io.system_access.valid := system_bus.d.valid
   system_bus.d.ready := exe_stage.io.system_access.ready
@@ -379,28 +299,87 @@ class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false) extends LazyMod
   prefetcher.io.intent.ready := prefetch_bus.a.ready
   prefetch_bus.d.ready := prefetcher.io.hintAck.ready
   prefetcher.io.hintAck.bits  := prefetch_bus.d.bits
-  prefetcher.io.hintAck.valid := prefetch_bus.d.valid    
+  prefetcher.io.hintAck.valid := prefetch_bus.d.valid
+}
+
+trait Rift2CoreImpMMU{ this: Rift2CoreImpBase =>
+  i_mmu.io.if_mmu <> if2.io.if_mmu
+  i_mmu.io.mmu_if <> if2.io.mmu_if
+  i_mmu.io.lsu_mmu <> exe_stage.io.lsu_mmu
+  i_mmu.io.mmu_lsu <> exe_stage.io.mmu_lsu
+  i_mmu.io.cmm_mmu <> cmm_stage.io.cmm_mmu
+}
+
+trait Rift2CoreImpCommit{ this: Rift2CoreImpBase =>
+  iwb_stage.io.xCommit <> cmm_stage.io.xCommit
+  iwb_stage.io.fCommit <> cmm_stage.io.fCommit
+  iwb_stage.io.vCommit <> cmm_stage.io.vCommit
+
+  cmm_stage.io.rod <> rnm_stage.io.rod_i
+
+  cmm_stage.io.cmm_lsu <> exe_stage.io.cmm_lsu
+  cmm_stage.io.lsu_cmm <> exe_stage.io.lsu_cmm
+
+  preIssue_stage.io.isPndVStore := cmm_stage.io.isPndVStore
+  preRename_stage.io.isVStartRsv := cmm_stage.io.isVStartRsv
+  preRename_stage.io.isVSetRsv   := cmm_stage.io.isVSetRsv
+  preRename_stage.io.isFoFRsv    := cmm_stage.io.isFoFRsv
 
 
+  cmm_stage.io.bctq <> exe_stage.io.bctq
+  cmm_stage.io.jctq <> exe_stage.io.jctq
+  cmm_stage.io.cmmRedirect <> if1.io.cmmRedirect
+  cmm_stage.io.if_cmm := if2.io.if_cmm
+  cmm_stage.io.aclint := io.aclint
+  cmm_stage.io.plic := io.plic
+  if2.io.ifence := cmm_stage.io.ifence
 
-
-  val diff = {
-    val mdl = Module(new diff)
-    mdl.io.diffXReg := iwb_stage.io.diffXReg
-    mdl.io.diffFReg := iwb_stage.io.diffFReg
-    mdl.io.commit   := cmm_stage.io.diff_commit
-    mdl.io.csr      := cmm_stage.io.diff_csr
-    mdl
+  iwb_stage.io.xpuCsrCommit <> cmm_stage.io.xpuCsrCommit
+  iwb_stage.io.fpuCsrCommit <> cmm_stage.io.fpuCsrCommit
+  iwb_stage.io.vpuCsrCommit <> cmm_stage.io.vpuCsrCommit
+  rnm_stage.io.isCSRMMUReady := iwb_stage.io.isCSRMMUReady 
+  
+  cmm_stage.io.rtc_clock := io.rtc_clock
+  if (hasDebugger) {cmm_stage.io.dm <> io.dm.get}
+  else {
+    cmm_stage.io.dm.hartResetReq := false.B
+    cmm_stage.io.dm.hartHaltReq := false.B
   }
 
+  i_mmu.io.if_flush  := cmm_stage.io.cmmRedirect.fire | if4.io.if4Redirect.valid
+  i_mmu.io.lsu_flush := cmm_stage.io.cmmRedirect.fire
 
-  rnm_stage.io.vLookup.map{x=>x.rsp := DontCare}
-  iss_stage.io.vrgRsp.map{ x => {x.valid := false.B; x.bits := DontCare} }
-  iss_stage.io.vrgLog      := DontCare
-  rnm_stage.io.vRename.map{x=>x.req.ready := true.B; x.rsp := DontCare}
+  if2.io.flush := cmm_stage.io.cmmRedirect.fire | if4.io.if4Redirect.valid
+  if3.io.flush := cmm_stage.io.cmmRedirect.fire
+  if4.io.flush := cmm_stage.io.cmmRedirect.fire
+
+  preRename_stage.io.flush := cmm_stage.io.cmmRedirect.fire
+  rnm_stage.reset := cmm_stage.io.cmmRedirect.fire | reset.asBool
+  preIssue_stage.io.flush := cmm_stage.io.cmmRedirect.fire
+  iss_stage.io.flush := cmm_stage.io.cmmRedirect.fire
+  exe_stage.io.flush := cmm_stage.io.cmmRedirect.fire
+
+  diff.io.diffXReg := iwb_stage.io.diffXReg
+  diff.io.diffFReg := iwb_stage.io.diffFReg
+  diff.io.commit   := cmm_stage.io.diff_commit
+  diff.io.csr      := cmm_stage.io.diff_csr
 
 
 }
+
+
+class Rift2CoreImp(outer: Rift2Core, isFlatten: Boolean = false)(implicit p: Parameters) extends Rift2CoreImpBase(outer, isFlatten)
+with Rift2CoreImpFrontend
+with Rift2CoreImpBackend
+with Rift2CoreImpPredict
+with Rift2CoreImpBus
+with Rift2CoreImpMMU
+with Rift2CoreImpCommit{
+  
+}
+
+
+
 
 
 

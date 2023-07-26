@@ -64,7 +64,7 @@ class VCSRBundle extends Bundle{
 }
 
 class VConfigBundle(implicit p: Parameters) extends RiftBundle{
-  require( log2Ceil(vParams.vlmax) <= 55 )
+  require( log2Ceil(vParams.vlmax+1) <= 55 )
   val vill     = UInt(1.W)
   val vl       = UInt(55.W)
   val vtype    = UInt(8.W)
@@ -194,9 +194,11 @@ class CSR_Bundle(implicit p: Parameters) extends RiftBundle {
   // val new_priv = UInt(2.W)
   val DMode    = Bool()
 
-  val vstart  = UInt( (log2Ceil(vParams.vlmax)).W )
+  val vstart  = UInt( (log2Ceil(vParams.vlmax)+1).W )
   val vcsr    = new VCSRBundle
   val vConfig = new VConfigBundle
+  val vl    = UInt(64.W)
+  val vtype = UInt(64.W)
   val vlenb   = UInt((log2Ceil(vParams.vlen/8)).W)
 
   // val ustatus  = UInt(64.W)
@@ -1429,18 +1431,12 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
     val vstart = WireDefault( in.csrfiles.vstart )
 
     val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.vstart, "h008".U, in.csrExe )
-    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.vstart, "hFFF".U, in.csrExe ) //vlsu exception
+    // val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.vstart, "hFFF".U, in.csrExe ) //vlsu exception
 
     when( enable0 ){ //csr write vstart
       vstart := dnxt0
-    }.elsewhen( in.rod.isVector & in.rod.isLast ){  //vector commit will auto reset vstart to 0
-      vstart := 0.U
-    }.elsewhen(enable1){
-      when( dnxt1(63) | dnxt1(62) | dnxt1(61) ){
-        vstart := dnxt1( vlen + log2Ceil(vParams.vlmax) -1, vlen )//exception update temp csr
-        // assert( in.rod.isVector )
-        assert( in.isException | in.isInterrupt )        
-      }
+    }.elsewhen( in.rod.isVector & in.isException ){  //vector commit will auto reset vstart to 0
+      vstart := in.rod.vlIdx + in.exceptionIdx
     }
 
     return vstart
@@ -1470,22 +1466,19 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
     val vConfig = WireDefault( in.csrfiles.vConfig )
 
     val (enable0, dnxt0) = Reg_Exe_Port( in.csrfiles.vConfig.asUInt, "hFFE".U, in.csrExe ) //vset config from csr
-    val (enable1, dnxt1) = Reg_Exe_Port( in.csrfiles.vConfig.asUInt, "hFFF".U, in.csrExe ) //vlsu FOF none exception
 
     when( enable0 ){     //vset mux to csr to write vl and vtype
       vConfig.vill  := dnxt0.extract(63)
       vConfig.vl    := dnxt0.apply(62,8)
       vConfig.vtype := dnxt0.apply(7,0)
-    }.elsewhen(enable1){ //vlsu FOF none exception
-      when( dnxt0(60) ){ //trigger fof
-        vConfig.vl    := dnxt0.apply((log2Ceil(vParams.vlmax)-1), 0)        
-      }
-
+    }.elsewhen( in.rod.isVLoad & in.isVException & (in.rod.isFoF & in.exceptionIdx =/= 0.U) ){
+      vConfig.vl    := in.csrfiles.vstart + in.exceptionIdx
     }
 
     return vConfig
   }
 
+  
   def update_vlenb( in: CMMState_Bundle ): UInt = {
     val vlenb = ((vParams.vlen)/8).U
     return vlenb
@@ -1681,11 +1674,15 @@ trait UpdateCsrFilesFun { this: BaseCommit =>
     if(hasVector){
       csrfiles.vstart  := update_vstart(in)
       csrfiles.vcsr    := update_vcsr(in)
+      csrfiles.vl      := csrfiles.vConfig.vl
+      csrfiles.vtype   := Cat( csrfiles.vConfig.vill, 0.U(55.W), csrfiles.vConfig.vtype)
       csrfiles.vConfig := update_vConfig(in)
       csrfiles.vlenb   := update_vlenb(in)      
     } else{
       csrfiles.vstart  := DontCare
       csrfiles.vcsr    := DontCare
+      csrfiles.vl      := DontCare
+      csrfiles.vtype   := DontCare
       csrfiles.vConfig := DontCare
       csrfiles.vlenb   := DontCare
     }

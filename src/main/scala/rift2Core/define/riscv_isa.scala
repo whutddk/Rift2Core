@@ -138,33 +138,69 @@ class Lsu_isa extends Bundle {
   val fsd = Bool()
 
 
-  val vle      = Bool()
-  val vse      = Bool()
+  val vle8  = Bool()
+  val vle16 = Bool()
+  val vle32 = Bool()
+  val vle64 = Bool()
+  def vle   = vle8 | vle16 | vle32 | vle64
+
+  val vse8  = Bool()
+  val vse16 = Bool()
+  val vse32 = Bool()
+  val vse64 = Bool()
+  def vse   = vse8 | vse16 | vse32 | vse64
 
   val vlm      = Bool()
   val vsm      = Bool()
 
-  val vlse     = Bool()
-  val vsse     = Bool()
+  val vlse8  = Bool()
+  val vlse16 = Bool()
+  val vlse32 = Bool()
+  val vlse64 = Bool()
+  def vlse   = vlse8 | vlse16 | vlse32 | vlse64
 
-  val vloxei   = Bool()
-  val vsoxei   = Bool()
+  val vsse8  = Bool()
+  val vsse16 = Bool()
+  val vsse32 = Bool()
+  val vsse64 = Bool()
+  def vsse   = vsse8 | vsse16 | vsse32 | vsse64
 
-  val vlNreN    = Bool()
-  val vsNr      = Bool()
+  val vloxei8  = Bool()
+  val vloxei16 = Bool()
+  val vloxei32 = Bool()
+  val vloxei64 = Bool()
+  def vloxei   = vloxei8 | vloxei16 | vloxei32 | vloxei64
 
-  val vleNff    = Bool()
+  val vsoxei8  = Bool()
+  val vsoxei16 = Bool()
+  val vsoxei32 = Bool()
+  val vsoxei64 = Bool()
+  def vsoxei   = vsoxei8 | vsoxei16 | vsoxei32 | vsoxei64
+
+  val vlre8  = Bool()
+  val vlre16 = Bool()
+  val vlre32 = Bool()
+  val vlre64 = Bool()
+  def vlre   = vlre8 | vlre16 | vlre32 | vlre64
+
+  val vsr    = Bool()
+
+  val vle8ff  = Bool()
+  val vle16ff = Bool()
+  val vle32ff = Bool()
+  val vle64ff = Bool()
+  def vleNff  = vle8ff | vle16ff | vle32ff | vle64ff
 
   def is_sc = sc_d | sc_w
   def is_lr = lr_d | lr_w
 
   def is_lu  =
     lb | lh | lw | ld | lbu | lhu | lwu | flw | fld | is_lr |
-    vle | vlm | vlse | vloxei | vlNreN | vleNff
+    vle | vlm | vlse | vloxei | vlre | vleNff
 
   def is_su  =
     sb | sh | sw | sd | fsw | fsd |
-    vse | vsm | vsse | vsoxei | vsNr
+    vse | vsm | vsse | vsoxei | vsr
 
   def is_xls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd
   def is_lrsc = is_sc | is_lr
@@ -172,16 +208,32 @@ class Lsu_isa extends Bundle {
     amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d | is_sc
   def is_fls = flw | fsw | fld | fsd
 
-  def is_vls = vle | vse | vlm | vsm | vlse | vsse | vloxei | vsoxei | vlNreN | vsNr | vleNff
+  def is_vls = vle | vse | vlm | vsm | vlse | vsse | vloxei | vsoxei | vlre | vsr | vleNff
 
 
   def is_fence = fence | fence_i | sfence_vma
   def is_lsu = is_xls | is_lrsc | is_amo | is_fls | is_fence | is_vls
 
-  def is_byte = lb | lbu | sb
-  def is_half = lh | lhu | sh
-  def is_word = lw | lwu | sw | amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | flw | fsw | lr_w | sc_w
-  def is_dubl = ld | lr_d | fld | sd | sc_d | fsd | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d
+
+  def isByte =
+    lb | lbu | sb |
+    vle8 | vse8 | vlse8 | vsse8 |  vlre8 | vle8ff |
+    vlm | vsm
+
+  def isHalf =
+    lh | lhu | sh |
+    vle16 | vse16 | vlse16 | vsse16 | vlre16 | vle16ff
+
+  def isWord =
+    lw | lwu | sw | amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | flw | fsw | lr_w | sc_w |
+    vle32 | vse32 | vlse32 | vsse32 | vlre32 | vle32ff
+  
+  def isDubl =
+    ld | lr_d | fld | sd | sc_d | fsd | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d |
+    vle64 | vse64 | vlse64 | vsse64 | vlre64 | vle64ff |
+    vsr
+
+  def isDynamic = vloxei | vsoxei
 
   def is_usi = lbu | lhu | lwu
 
@@ -189,11 +241,14 @@ class Lsu_isa extends Bundle {
   def is_R = is_lu | is_lr | is_amo
   def is_W = is_su | is_sc | is_amo
 
+  def isXLoad  = lb | lh | lw | ld | lbu | lhu | lwu | is_lr
+  def isXStore = sb | sh | sw | sd | is_sc
+
   def isFLoad  = flw | fld
   def isFStore = fsw | fsd
 
-  def isVLoad  = vle | vlm | vlse | vloxei | vlNreN | vleNff
-  def isVStore = vse | vsm | vsse | vsoxei | vsNr
+  def isVLoad  = vle | vlm | vlse | vloxei | vlre | vleNff
+  def isVStore = vse | vsm | vsse | vsoxei | vsr
   def isVConstant = vlse | vsse
   def isVIndex = vloxei | vsoxei
 
@@ -203,21 +258,22 @@ class Lsu_isa extends Bundle {
   def isVS2 = isVIndex
   def isVS3 = isVStore
 
-  def is_iwb =
+  def isXwb =
     lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd |
     fence | fence_i | sfence_vma | lr_w | sc_w |
     amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w |
     lr_d | sc_d | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d |
-    fsw | fsd |
-    vse | vsm | vsse | vsoxei | vsNr
-
-  def is_fwb = flw | fld
-
-  def isVwb = isVLoad
+    fsw | fsd
 
 
-  def isAcquireFifo = is_vls
 
+  def isFwb = flw | fld
+
+  def isVwb = is_vls
+
+  def isUnitStride = vle | vse | vlm | vsm | vlre | vsr | vleNff
+  def isStridde = vlse | vsse
+  def isIndex = vloxei | vsoxei
 
   def is_fpu = flw | fsw | fld | fsd
   def isVector = is_vls
@@ -232,9 +288,15 @@ class Csr_isa extends Bundle {
   val rsi = Bool()
   val rci = Bool()
 
-  def is_csr = rw | rs | rc | rwi | rsi | rci
+  val vsetvli  = Bool()
+  val vsetivli = Bool()
+  val vsetvl   = Bool()
 
-  
+  def isXCSR = rw | rs | rc | rwi | rsi | rci
+  def isVSet = vsetvli | vsetivli | vsetvl
+
+  def is_csr = isXCSR | isVSet
+
 }
 
 class Mul_isa extends Bundle {
@@ -459,14 +521,14 @@ class Fpu_isa extends Bundle {
     fcvt_w_d  | fcvt_wu_d | fcvt_l_d  | fcvt_lu_d |
     fcvt_s_d  | fcvt_d_s
 
-  def is_iwb = 
+  def isXwb = 
     feq_s | flt_s | fle_s | feq_d | flt_d | fle_d |
     fmv_x_w | fmv_x_d | fclass_s | fclass_d |
     fcvt_w_s | fcvt_wu_s | fcvt_l_s | fcvt_lu_s | fcvt_w_d | fcvt_wu_d | fcvt_l_d | fcvt_lu_d |
     fmv_x_w | fmv_x_d 
     //| fcsr_rw | fcsr_rs | fcsr_rc | fcsr_rwi | fcsr_rsi | fcsr_rci
 
-  def is_fwb =
+  def isFwb =
     fmadd_s | fmsub_s | fnmsub_s | fnmadd_s | fadd_s | fsub_s | fmul_s | fdiv_s | fsqrt_s |
     fmadd_d | fmsub_d | fnmsub_d | fnmadd_d | fadd_d | fsub_d | fmul_d | fdiv_d | fsqrt_d |
     fsgnj_s | fsgnjn_s | fsgnjx_s |
@@ -587,7 +649,7 @@ class Fpu_isa extends Bundle {
 
 
 
-class VectorIsa extends Bundle {
+class VecIsa extends Bundle {
   class OPI extends Bundle{
     val ivv = Bool()
     val ivx = Bool()
@@ -801,10 +863,6 @@ class VectorIsa extends Bundle {
   val vfwmsac    = new OPF
   val vfwnmsac   = new OPF
 
-  val vsetvli  = Bool()
-  val vsetivli = Bool()
-  val vsetvl   = Bool()
-
   def isOPI = vadd.sel | vsub.sel | vrsub.sel | vminu.sel | vmin.sel | vmaxu.sel | vmax.sel | vand.sel | vor.sel | vxor.sel | vrgather.sel | vslideup.sel | vrgatherei16.sel | vslidedown.sel | vadc.sel | vmadc.sel | vsbc.sel | vmsbc.sel | vmerge.sel | vmv.sel | vmseq.sel | vmsne.sel | vmsltu.sel | vmslt.sel | vmsleu.sel | vmsle.sel | vmsgtu.sel | vmsgt.sel | vsaddu.sel | vsadd.sel | vssubu.sel  | vssub.sel | vsll.sel | vsmul.sel | vmvnr.sel | vsrl.sel | vsra.sel | vssrl.sel | vssra.sel  | vnsrl.sel | vnsra.sel | vnclipu.sel | vnclip.sel  | vwredsumu.sel | vwredsum.sel
   def isOPM = vredsum.sel | vredand.sel | vredor.sel | vredxor.sel | vredminu.sel | vredmin.sel | vredmaxu.sel | vredmax.sel | vaaddu.sel | vaadd.sel | vasubu.sel | vasub.sel | vslide1up.sel | vslide1down.sel | vcompress.sel | vmandnot.sel | vmand.sel | vmor.sel | vmxor.sel | vmornot.sel | vmnand.sel | vmnor.sel | vmxnor.sel | vdivu.sel | vdiv.sel | vremu.sel | vrem.sel | vmulhu.sel | vmul.sel | vmulhsu.sel | vmulh.sel | vmadd.sel | vnmsub.sel | vmacc.sel | vnmsac.sel | vwaddu.sel | vwadd.sel | vwsubu.sel | vwsub.sel | vwaddu_w.sel | vwadd_w.sel | vwsubu_w.sel | vwsub_w.sel | vwmulu.sel | vwmulsu.sel | vwmul.sel | vwmaccu.sel  | vwmacc.sel | vwmaccus.sel | vwmaccsu.sel
   def isOPF = vfadd.sel | vfredusum.sel | vfsub.sel | vfredosum.sel | vfmin.sel | vfredmin.sel | vfmax.sel | vfredmax.sel | vfsgnj.sel | vfsgnjn.sel | vfsgnjx.sel | vfslide1up.sel | vfslide1down.sel | vfmerge.sel | vfmv.sel | vmfeq.sel | vmfle.sel | vmflt.sel | vmfne.sel | vmfgt.sel | vmfge.sel | vfdiv.sel | vfrdiv.sel | vfmul.sel | vfrsub.sel | vfmadd.sel | vfnmadd.sel | vfmsub.sel | vfnmsub.sel | vfmacc.sel | vfnmacc.sel | vfmsac.sel | vfnmsac.sel | vfwadd.sel | vfwredusum.sel | vfwsub.sel | vfwredosum.sel | vfwadd_w.sel | vfwsub_w.sel | vfwmul.sel | vfwmacc.sel | vfwnmacc.sel | vfwmsac.sel | vfwnmsac.sel
@@ -833,7 +891,7 @@ class VectorIsa extends Bundle {
 
 
 
-  def isVAlu =
+  def isVXpu =
     vadd.sel | vsub.sel | vrsub.sel | vminu.sel | vmin.sel | vmaxu.sel | vmax.sel | vand.sel | vor.sel | vxor.sel | 
     vwaddu.sel | vwadd.sel | vwsubu.sel | vwsub.sel | vwaddu_w.sel | vwadd_w.sel  | vwsubu_w.sel | vwsub_w.sel | vadc.sel | vmadc.sel | vsbc.sel | vmsbc.sel |
     vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
@@ -848,9 +906,7 @@ class VectorIsa extends Bundle {
     vslideup.sel | vslidedown.sel | vslide1up.sel | vslide1down.sel |
     vrgather.sel | vrgatherei16.sel |
     vcompress.sel |
-    vmvnr.sel
-
-  def isVMul = 
+    vmvnr.sel |
     vdivu.sel | vdiv.sel  | vremu.sel | vrem.sel  |
     vmulhu.sel | vmul.sel | vmulhsu.sel | vmulh.sel |
     vmadd.sel  | vnmsub.sel | vmacc.sel  | vnmsac.sel |
@@ -882,7 +938,6 @@ class VectorIsa extends Bundle {
     vfslide1up.sel | vfslide1down.sel
 
 
-  def isVConfig = vsetvli | vsetivli | vsetvl
 
 
 
@@ -890,9 +945,8 @@ class VectorIsa extends Bundle {
 
 
 
-
-  def isRS1 = isIVX | isMVX | vsetvli | vsetvl | vmv_s_x
-  def isRS2 = isFVF | vsetvl
+  def isRS1 = isIVX | isMVX | vmv_s_x
+  def isRS2 = isFVF
 
 
 
@@ -922,7 +976,7 @@ class VectorIsa extends Bundle {
 
 
 
-  def isRD0 = isVAlu | isVMul | isVQpu | isVFpu
+  def isRD0 = isVXpu | isVQpu | isVFpu
 
 
   def is2Malloc = 
@@ -938,8 +992,8 @@ class VectorIsa extends Bundle {
 
 
 
-  def isXwb =  vsetvli | vsetivli | vsetvl | vfirst | vpopc | vmv_x_s
-  def isFwb =  vfmv_f_s
+  def isXwb = vfirst | vpopc | vmv_x_s
+  def isFwb = vfmv_f_s
   def isVwb =
     isOPI | isOPM | isOPF |
     vzext_vf8 | vsext_vf8 | vzext_vf4 | vsext_vf4 | vzext_vf2 | vsext_vf2 |
@@ -953,10 +1007,10 @@ class VectorIsa extends Bundle {
 
 
 
-  def isAcquireFifo = isVAlu | isVMul | isVQpu | isVFpu
+  def isVALU = isVXpu | isVQpu | isVFpu
 
-  def isVXpu = isVAlu | isVMul 
-  def isVector = isVXpu | isVQpu | isVFpu | isVConfig// | isVMem
+
+  def isVector = isVXpu | isVQpu | isVFpu //| isVConfig | isVMem
 
 
 
@@ -1029,42 +1083,42 @@ class Reg_PHY(implicit p: Parameters) extends RiftBundle {
   * @param p Implicit parameter containing information about the processor's configuration.
   */
 class Instruction_set(implicit p: Parameters) extends RiftBundle{
-  val alu_isa = new Alu_isa
-  val bru_isa = new Bru_isa
-  val lsu_isa = new Lsu_isa
-  val csr_isa = new Csr_isa
-  val mul_isa = new Mul_isa
+  val aluIsa = new Alu_isa
+  val bruIsa = new Bru_isa
+  val lsuIsa = new Lsu_isa
+  val csrIsa = new Csr_isa
+  val mulIsa = new Mul_isa
   val privil_isa = new Privil_isa
-  val fpu_isa = new Fpu_isa
-  val vectorIsa = new VectorIsa
+  val fpuIsa = new Fpu_isa
+  val vecIsa = new VecIsa
 
 
 
 
   /** @return A Boolean value indicating the whether a float point result will be written back. */
-  def is_fwb = lsu_isa.is_fwb | fpu_isa.is_fwb | vectorIsa.isFwb
+  def isFwb = lsuIsa.isFwb | fpuIsa.isFwb | vecIsa.isFwb
   /** @return A Boolean value indicating whether a integer result will be written back. */
-  def is_iwb = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_iwb | csr_isa.is_csr | mul_isa.is_mulDiv | fpu_isa.is_iwb | vectorIsa.isXwb
-  def isVwb = vectorIsa.isVwb | lsu_isa.isVwb
+  def isXwb = aluIsa.is_alu | bruIsa.is_bru | lsuIsa.isXwb | csrIsa.is_csr | mulIsa.is_mulDiv | fpuIsa.isXwb | vecIsa.isXwb
+  def isVwb = vecIsa.isVwb | lsuIsa.isVwb
 
   /** @return A Boolean value indicating whether this a privileged instruction is dispatched. */
   def is_privil_dpt = privil_isa.is_privil
   /** @return A Boolean value indicating whether the instruction is dispatched to FPU.*/
-  def is_fpu_dpt = fpu_isa.is_fpu
+  def is_fpu_dpt = fpuIsa.is_fpu
   /** @return A Boolean value indicating whether the instruction is legal or not.*/
-  def is_illeage = ~(alu_isa.is_alu | bru_isa.is_bru | lsu_isa.is_lsu | csr_isa.is_csr | mul_isa.is_mulDiv | privil_isa.is_privil | fpu_isa.is_fpu) 
+  def is_illeage = ~(aluIsa.is_alu | bruIsa.is_bru | lsuIsa.is_lsu | csrIsa.is_csr | mulIsa.is_mulDiv | privil_isa.is_privil | fpuIsa.is_fpu) 
 
-  def isRS1 = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.isRS1 | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isRS1
-  def isRS2 = alu_isa.is_alu | bru_isa.is_bru | lsu_isa.isRS2 | csr_isa.is_csr | mul_isa.is_mulDiv | (fpu_isa.is_fpu & ~fpu_isa.is_fop) | vectorIsa.isRS2
+  def isRS1 = aluIsa.is_alu | bruIsa.is_bru | lsuIsa.isRS1 | csrIsa.is_csr | mulIsa.is_mulDiv | (fpuIsa.is_fpu & ~fpuIsa.is_fop) | vecIsa.isRS1
+  def isRS2 = aluIsa.is_alu | bruIsa.is_bru | lsuIsa.isRS2 | csrIsa.is_csr | mulIsa.is_mulDiv | (fpuIsa.is_fpu & ~fpuIsa.is_fop) | vecIsa.isRS2
 
-  def isFS1 = fpu_isa.is_fop | vectorIsa.isFS1
-  def isFS2 = fpu_isa.is_fop | lsu_isa.isFS2
-  def isFS3 = fpu_isa.is_fop
+  def isFS1 = fpuIsa.is_fop | vecIsa.isFS1
+  def isFS2 = fpuIsa.is_fop | lsuIsa.isFS2
+  def isFS3 = fpuIsa.is_fop
 
-  def isVM0 = vectorIsa.isVector
-  def isVS1 = vectorIsa.isVS1
-  def isVS2 = vectorIsa.isVS2 | lsu_isa.isVS2
-  def isVS3 = vectorIsa.isVwb | lsu_isa.isVS3
+  def isVM0 = vecIsa.isVector
+  def isVS1 = vecIsa.isVS1
+  def isVS2 = vecIsa.isVS2 | lsuIsa.isVS2
+  def isVS3 = vecIsa.isVwb | lsuIsa.isVS3
 
 }
 
@@ -1106,8 +1160,6 @@ class Info_instruction(implicit p: Parameters) extends Instruction_set {
   val param = new Instruction_param
 
   val vAttach = if(hasVector){Some(new VRename_Attach_Bundle)} else {None}
-
-  // def isFoF = (param.raw.rs2 === "b10000".U) & lsu_isa.vle
 
 }
 
@@ -1166,7 +1218,7 @@ class Bru_iss_info(implicit p: Parameters) extends RiftBundle {
 
 
 class Lsu_param(implicit p: Parameters) extends RD_PHY {
-  val dat    = new Operation_source( dw=(if(hasVector){vParams.vlen} else{64}) )
+  val dat    = new Operation_source(dw=64)
 
   // override def cloneType = ( new Lsu_param ).asInstanceOf[this.type]
 }
@@ -1184,10 +1236,17 @@ class Lsu_iss_info(implicit p: Parameters) extends RiftBundle {
 
   def is_misAlign =
     Mux1H( Seq(
-      fun.is_half -> (param.dat.op1(0) =/= 0.U),
-      fun.is_word -> (param.dat.op1(1,0) =/= 0.U),
-      fun.is_dubl -> (param.dat.op1(2,0) =/= 0.U)	
-    ))
+      fun.isHalf -> (param.dat.op1(0)   =/= 0.U),
+      fun.isWord -> (param.dat.op1(1,0) =/= 0.U),
+      fun.isDubl -> (param.dat.op1(2,0) =/= 0.U),
+    ) ++
+      (if(hasVector){
+        Seq(fun.isDynamic -> Mux1H(Seq(
+          (vAttach.get.vsew === "b001".U) -> (param.dat.op1(0)   =/= 0.U),
+          (vAttach.get.vsew === "b010".U) -> (param.dat.op1(1,0) =/= 0.U),
+          (vAttach.get.vsew === "b011".U) -> (param.dat.op1(2,0) =/= 0.U),
+      )))} else {Seq()}) 
+    )
 
   def paddr = param.dat.op1
 
@@ -1200,9 +1259,17 @@ class Lsu_iss_info(implicit p: Parameters) extends RiftBundle {
   def wstrb_align(dw: Int) = {
     val wstrb = Wire(UInt((dw/8).W))
     wstrb := Mux1H(Seq(
-        fun.is_byte -> "b00000001".U, fun.is_half -> "b00000011".U,
-        fun.is_word -> "b00001111".U, fun.is_dubl -> "b11111111".U
-      )) << paddr((log2Ceil(dw/8)-1),0)
+        fun.isByte -> "b00000001".U, fun.isHalf -> "b00000011".U,
+        fun.isWord -> "b00001111".U, fun.isDubl -> "b11111111".U,
+      ) ++
+        (if(hasVector){
+          Seq(fun.isDynamic -> Mux1H(Seq(
+            (vAttach.get.vsew === "b000".U) -> "b00000001".U,
+            (vAttach.get.vsew === "b001".U) -> "b00000011".U,
+            (vAttach.get.vsew === "b010".U) -> "b00001111".U,
+            (vAttach.get.vsew === "b011".U) -> "b11111111".U,
+        )))} else {Seq()})
+      ) << paddr((log2Ceil(dw/8)-1),0)
     wstrb
   }
 }
@@ -1228,29 +1295,36 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val pc = UInt(vlen.W)
   val rd0_raw = UInt(5.W)
   val rd0_phy = UInt((log2Ceil(maxRegNum)).W)
+
   val is_branch = Bool()
   val is_jalr = Bool()
+
   val is_lu = Bool()
-  val is_su = Bool()
+  val isXFStore = Bool()
   val is_amo = Bool()
   val is_fence = Bool()
   val is_fence_i = Bool()
   val is_sfence_vma = Bool()
+
+
   val is_wfi = Bool()
   val is_csr = Bool()
   val is_fpu = Bool()
   val is_fcsr = Bool()
   val is_rvc = Bool()
 
-  val isXcmm = Bool()
-  val isFcmm = Bool()
-  val isVcmm = Bool()
+  val isXwb = Bool()
+  val isFwb = Bool()
+  val isVwb = Bool()
 
   val privil = new Privil_isa
   val is_illeage = Bool()
 
   val isVector = Bool()
-  val isLast   = Bool()
+  val isVLoad = Bool()
+  val isVStore = Bool()
+  val isFoF    = Bool()
+  val vlIdx    = UInt( (log2Ceil(vParams.vlmax)+1).W )
 
 }
 
@@ -1262,6 +1336,10 @@ class Csr_function(implicit p: Parameters) extends RiftBundle {
   val rw  = Bool()
   val rs  = Bool()
   val rc  = Bool()
+
+  val vsetvli  = Bool()
+  val vsetivli = Bool()
+  val vsetvl   = Bool()
 }
 
 class Csr_param(implicit p: Parameters) extends RD_PHY {
@@ -1316,7 +1394,7 @@ class Info_clint_csr(implicit p: Parameters) extends RiftBundle {
 
 
 class Info_cmm_lsu(implicit p: Parameters) extends RiftBundle {
-  val isVstorePending = Bool()
+  // val isVstorePending = Bool()
   val is_amo_pending  = Bool()
   val is_store_commit = Vec(cmChn, Bool())
 }

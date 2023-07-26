@@ -115,7 +115,7 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
     //   val (new_data, new_strb) = overlap_wr( rdata, 0.U, overlap_wdata, overlap_wstrb)
     //   new_data
     // }
-    val res_pre = get_loadRes( fun, paddr, rdata )
+    val res_pre = get_loadRes( fun, pending.vAttach.get.vsew, paddr, rdata )
     res_pre
   }
 
@@ -125,6 +125,10 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
 
   io.deq.bits.is_flw := Mux( io.deq.valid, pending.fun.flw, false.B )
   io.deq.bits.is_fld := Mux( io.deq.valid, pending.fun.fld, false.B )
+
+  io.deq.bits.isXwb := pending.fun.isXwb
+  io.deq.bits.isFwb := pending.fun.isFwb
+  io.deq.bits.isVwb := pending.fun.isVwb
 
   if(hasVector){io.deq.bits.vAttach.get := io.enq.bits.vAttach.get}
 

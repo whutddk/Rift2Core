@@ -121,7 +121,7 @@ trait Stq_Ptr { this: Stq_Base =>
       cm_ptr_reg := cm_ptr_reg + 1.U
       assert( ~((is_st_commited(0) | is_st_commited(1)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
       assert( cm_ptr_reg =/= wr_ptr_reg )
-    } .elsewhen( (if(hasVector){(buff(cm_ptr_reg + 1.U).vAttach.get.bufIdx =/= (vParams.lsuEntry).U) & ~emty} else {false.B}) ){ //a vls will auto commit
+    } .elsewhen( buff(cm_ptr_reg).fun.isVector & cm_ptr_reg =/= wr_ptr_reg ){ //a vls will auto commit
       cm_ptr_reg := cm_ptr_reg + 1.U
     }
   } else if( cmChn == 1 ) {
@@ -133,7 +133,7 @@ trait Stq_Ptr { this: Stq_Base =>
       cm_ptr_reg := cm_ptr_reg + 1.U
       assert( ~((is_st_commited(0)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
       assert( cm_ptr_reg =/= wr_ptr_reg )
-    } .elsewhen( (if(hasVector){(buff(cm_ptr_reg + 1.U).vAttach.get.bufIdx =/= (vParams.lsuEntry).U) & ~emty} else {false.B}) ){ //a vls will auto commit
+    } .elsewhen( buff(cm_ptr_reg).fun.isVector & cm_ptr_reg =/= wr_ptr_reg ){ //a vls will auto commit
       cm_ptr_reg := cm_ptr_reg + 1.U
     }
   } else {
@@ -149,7 +149,7 @@ trait Stq_Overlap{ this: Stq_Base =>
 
     when( rd_ptr_reg(st_w) =/= wr_ptr_reg(st_w) ) {
       assert( rd_ptr >= wr_ptr )
-      for ( i <- 0 until stEntry ) yield {
+      for ( i <- 0 until stEntry ) {
         val ro_ptr = (rd_ptr_reg + i.U)(st_w-1,0)
         when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).param.dat.op1(plen-1,3) === io.overlapReq.bits.paddr(plen-1,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
@@ -162,7 +162,7 @@ trait Stq_Overlap{ this: Stq_Base =>
       }
     } .otherwise {
       assert( rd_ptr <= wr_ptr )
-      for ( i <- 0 until stEntry ) yield {
+      for ( i <- 0 until stEntry ) {
         val ro_ptr = (rd_ptr_reg + i.U)(st_w-1,0)
         when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).param.dat.op1(plen-1,3) === io.overlapReq.bits.paddr(plen-1,3)) ) {
           overlap_buff(i) := buff(ro_ptr)

@@ -44,13 +44,13 @@ class Cache_op extends Lsu_isa {
   val preft = Bool()
 
   def is_atom = is_amo
-  def is_access = is_atom | is_lu | is_su | is_lr | is_sc
-  def is_tag_r = is_atom | is_lu | is_su | is_lr | is_sc | grant | probe | preft
-  def is_dat_r = is_atom | is_lu | is_lr | grant | probe
+  def is_access = is_atom | is_lu | is_su | is_lr | is_sc | isVLoad | isVStore
+  def is_tag_r = is_atom | is_lu | is_su | is_lr | is_sc | isVLoad | isVStore | grant | probe | preft
+  def is_dat_r = is_atom | is_lu | isVLoad | is_lr | grant | probe
   def is_tag_w = grant
-  def is_dat_w = is_atom | is_su | is_sc | grant
-  def isDirtyOp = is_atom | is_su | is_sc
-  def is_wb = is_atom | is_lu | is_lr
+  def is_dat_w = is_atom | is_su | is_sc | isVStore | grant
+  def isDirtyOp = is_atom | is_su | is_sc | isVStore
+  def is_wb = is_atom | is_lu | is_lr | isVStore
 
 }
 
@@ -69,7 +69,7 @@ class Dcache_Enq_Bundle(implicit p: Parameters) extends Dcache_ScoreBoard_Bundle
   val fun   = new Cache_op
   val rd    = new RD_PHY
 
-  val vAttach = if(hasVector) {Some(new VDcache_Attach_Bundle)} else {None}
+  val vAttach = if(hasVector) {Some(new VLsu_Attach_Bundle)} else {None}
 
 
   def tagSel = paddr(plen-1,plen-tag_w)
@@ -83,13 +83,14 @@ class Dcache_Deq_Bundle(implicit p: Parameters) extends Dcache_ScoreBoard_Bundle
   val wb = new WriteBack_info(dw=64)
   val is_load_amo = Bool()
 
-  val vAttach = if(hasVector) {Some(new VDcache_Attach_Bundle)} else {None}
+  val vAttach = if(hasVector) {Some(new VLsu_Attach_Bundle)} else {None}
 
   val is_flw = Bool()
   val is_fld = Bool()
 
-  def is_iwb = ~is_fwb
-  def is_fwb = is_flw | is_fld
+  val isXwb = Bool()
+  val isFwb = Bool()
+  val isVwb = Bool()
 
 }
 
@@ -215,7 +216,7 @@ trait DcacheScoreBoard { this: DcacheBase =>
 
 
 
-  for ( i <- 0 until sbEntry ) yield {
+  for ( i <- 0 until sbEntry ) {
     when( sbValid(i) === true.B ) {
       assert( sbBuff.count( (x: Dcache_Enq_Bundle) => (x.paddr === sbBuff(i).paddr) ) === 1.U )
     }

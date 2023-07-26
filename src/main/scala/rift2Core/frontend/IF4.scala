@@ -109,7 +109,7 @@ trait IF4_Decode{ this: IF4Base =>
     instr_fifo.io.enq(i).bits :=
       Mux( is_rvc(i),
         Decode16(x = io.if4_req(i).bits.instr(15,0), pc = io.if4_req(i).bits.pc, fpuNum > 0),
-        Decode32(x = io.if4_req(i).bits.instr,       pc = io.if4_req(i).bits.pc, fpuNum > 0)
+        Decode32(x = io.if4_req(i).bits.instr,       pc = io.if4_req(i).bits.pc, fpuNum > 0, hasVector)
       )
   }
 

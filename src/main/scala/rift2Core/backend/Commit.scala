@@ -48,7 +48,11 @@ class ExInt_Bundle extends Bundle {
 abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
 
   class CommitIO extends Bundle{
-    val cm_op = Vec(cmChn, new Info_commit_op(32, maxRegNum))
+    // val cm_op = Vec(cmChn, new Info_commit_op(32, maxRegNum))
+
+    val xCommit = Vec(cmChn, new Info_commit_op(32, xRegNum))
+    val fCommit = Vec(cmChn, new Info_commit_op(32, fRegNum))
+    val vCommit = Vec(cmChn, new Vector_Commit_Bundle)
               // val csrCmm = Vec(cmChn, new SeqReg_Commit_Bundle(cRegNum))
               // val csrOp = Input(Vec(cmChn, new Exe_Port))
     val rod = Vec(cmChn, Flipped(new DecoupledIO( new Info_reorder_i ) ))
@@ -70,6 +74,12 @@ abstract class BaseCommit()(implicit p: Parameters) extends RiftModule {
 
     val xpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
     val fpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
+    val vpuCsrCommit    = Flipped(Decoupled(new Exe_Port))
+
+    val isPndVStore = Output(Bool())
+    val isVStartRsv = Output(Bool())
+    val isVSetRsv   = Output(Bool())
+    val isFoFRsv    = Output(UInt((log2Ceil(cmChn)+1).W))
   }
 
   val io: CommitIO = IO(new CommitIO)
@@ -195,12 +205,20 @@ with CommitDebug
             commit_state(i) := Mux( io.jctq.bits.isMisPredict, 2.U, 3.U ) //mis-predict )
           }
         }
-        .elsewhen( io.rod(i).bits.is_csr ){
-          commit_state(i) :=  Mux( ( 0 until i ).map{ j => io.rod(j).bits.is_csr }.foldLeft(false.B)(_|_), 0.U, 3.U )
+        .elsewhen( io.rod(i).bits.is_csr  & ( 0 until i ).map{ j => io.rod(j).bits.is_csr }.foldLeft(false.B)(_|_) ){
+          commit_state(i) := 0.U
         }
-        .elsewhen( io.rod(i).bits.is_fcsr ){
-          commit_state(i) :=  Mux( ( 0 until i ).map{ j => io.rod(j).bits.is_fcsr }.foldLeft(false.B)(_|_), 0.U, 3.U )
+        .elsewhen( io.rod(i).bits.is_fcsr & ( 0 until i ).map{ j => io.rod(j).bits.is_fcsr }.foldLeft(false.B)(_|_) ){
+          commit_state(i) := 0.U
         }
+        .elsewhen( io.rod(i).bits.isVStore & ( 0 until i ).map{ j => io.rod(j).bits.isVStore }.foldLeft(false.B)(_|_) ){
+          commit_state(i) := 0.U
+        }
+        // .elsewhen( cmm_state(i).isMMUFlush) {
+        //   commit_state(i) := 1.U //abort
+        //   for ( j <- 0 until i ) { when( ~commit_state_is_comfirm(j) ) {commit_state(i) := 0.U}} //override to idle }
+        //   abort_chn := i.U
+        // }
         .otherwise {
           commit_state(i) := 3.U //confirm
         }
@@ -233,7 +251,13 @@ trait CommitComb{ this: CommitState =>
         io.rod(i).bits.is_fcsr -> io.fpuCsrCommit.bits.asUInt,
       )).asTypeOf(new Exe_Port)
 
-    cmm_state(i).is_wb   := io.cm_op(i).is_writeback
+    cmm_state(i).is_wb   :=
+      Mux1H(Seq(
+        io.rod(i).bits.isXwb -> io.xCommit(i).is_writeback,
+        io.rod(i).bits.isFwb -> io.fCommit(i).is_writeback,
+        io.rod(i).bits.isVwb -> io.vCommit(i).isWroteback,
+      ))
+      
     cmm_state(i).ill_ivaddr               := io.if_cmm.ill_vaddr
     cmm_state(i).ill_dvaddr               := io.lsu_cmm.trap_addr
     // cmm_state(i).is_csrr_illegal          := cmm_state(i).csrfiles.csr_read_prilvl(io.xpuCsrCommit.bits.addr)// & io.csr_addr.valid
@@ -249,6 +273,9 @@ trait CommitComb{ this: CommitState =>
 	  cmm_state(i).exint.mei := io.plic.mei
 	  cmm_state(i).exint.sei := io.plic.sei 
 
+
+    cmm_state(i).isVException := io.rod(i).bits.isVwb & io.vCommit(i).isException
+    cmm_state(i).exceptionIdx := io.vCommit(i).exceptionIdx
   }}
 
 }
@@ -257,19 +284,27 @@ trait CommitComb{ this: CommitState =>
 trait CommitRegFiles { this: CommitState =>
 
   for ( i <- 0 until cmChn ) yield {
-    io.cm_op(i).phy := io.rod(i).bits.rd0_phy
-    io.cm_op(i).raw := io.rod(i).bits.rd0_raw
-    io.cm_op(i).toX := io.rod(i).bits.isXcmm
-    io.cm_op(i).toF := io.rod(i).bits.isFcmm
-    io.cm_op(i).toV := io.rod(i).bits.isVcmm
+    io.xCommit(i).phy := io.rod(i).bits.rd0_phy
+    io.xCommit(i).raw := io.rod(i).bits.rd0_raw
+
+    io.fCommit(i).phy := io.rod(i).bits.rd0_phy
+    io.fCommit(i).raw := io.rod(i).bits.rd0_raw
+
+    io.vCommit(i).phy := io.rod(i).bits.rd0_phy //vstore is 32.U(6.W)
   }
 
 
-
   ( 0 until cmChn ).map{ i =>
-    io.cm_op(i).is_comfirm      := commit_state_is_comfirm(i)
-    io.cm_op(i).is_MisPredict   := commit_state_is_misPredict(i)
-    io.cm_op(i).is_abort        := commit_state_is_abort(i)
+    io.xCommit(i).is_comfirm      := io.rod(i).bits.isXwb & commit_state_is_comfirm(i)
+    io.xCommit(i).is_MisPredict   := io.rod(i).bits.isXwb & commit_state_is_misPredict(i)
+    io.xCommit(i).is_abort        := commit_state_is_abort(i)
+
+    io.fCommit(i).is_comfirm      := io.rod(i).bits.isFwb & commit_state_is_comfirm(i)
+    io.fCommit(i).is_MisPredict   := false.B
+    io.fCommit(i).is_abort        := commit_state_is_abort(i) | commit_state_is_misPredict(i)
+
+    io.vCommit(i).isComfirm := io.rod(i).bits.isVwb & commit_state_is_comfirm(i)
+    io.vCommit(i).isAbort   := commit_state_is_misPredict(i) | commit_state_is_abort(i)
   }
 
 }
@@ -284,6 +319,8 @@ trait CommitCsrFiles { this: CommitState =>
         // io.csrCmm(i).isAbort   := commit_state_is_abort(i) | commit_state_is_misPredict(i)
         // io.csrCmm(i).idx       := io.rod(i).bits.csrw( log2Ceil(cRegNum)-1,  0 )
         // io.csrCmm(i).addr      := io.rod(i).bits.csrw( log2Ceil(cRegNum)+11, log2Ceil(cRegNum)+0 )
+
+  io.vpuCsrCommit.ready := false.B
 
 
   csrfiles.mcycle := csrfiles.mcycle + 1.U //may be overriden
@@ -301,7 +338,19 @@ trait CommitCsrFiles { this: CommitState =>
 
     csrfiles.priv_lvl      := "b11".U
     csrfiles.DMode         := false.B
+
+    csrfiles.vstart         := 0.U
+    csrfiles.vcsr           := 0.U.asTypeOf( new VCSRBundle ) 
+    csrfiles.vConfig        := 0.U.asTypeOf( new VConfigBundle )
+    csrfiles.vl             := 0.U
+    csrfiles.vtype          := 0.U
+    csrfiles.vlenb          := ((vParams.vlen)/8).U
+
+
+    csrfiles.fflags        := 0.U
+    csrfiles.frm           := 0.U
     csrfiles.fcsr          := 0.U.asTypeOf(new FCSRBundle)
+
     csrfiles.cycle         := 0.U
     csrfiles.time          := 0.U
     csrfiles.instret       := 0.U
@@ -389,7 +438,7 @@ trait CommitIFRedirect { this: CommitState =>
 
   io.cmmRedirect.valid := false.B
   io.cmmRedirect.bits.pc := 0.U
-  for ( i <- 0 until cmChn ) yield {
+  for ( i <- 0 until cmChn ) {
     when(io.rod(i).bits.is_branch & io.bctq.bits.isMisPredict & is_retired(i)) {
       io.cmmRedirect.valid := true.B
       io.cmmRedirect.bits.pc := io.bctq.bits.finalTarget
@@ -421,10 +470,8 @@ trait CommitIFRedirect { this: CommitState =>
         when( cmm_state(i).is_dRet ) {
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := cmm_state(i).csrfiles.dpc
-        } 
+        }
       } .otherwise {
-
-
         when(cmm_state(i).isNomaskInterrupt){
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := Mux1H(Seq(
@@ -459,11 +506,15 @@ trait CommitIFRedirect { this: CommitState =>
             ))
         }
 
-        when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma ) {
+        when( cmm_state(i).is_fence_i | cmm_state(i).is_sfence_vma  ) {
           io.cmmRedirect.valid := true.B
           io.cmmRedirect.bits.pc := (extVaddr(io.rod(i).bits.pc, vlen) + 4.U)
         }
 
+        // when( cmm_state(i).isMMUFlush ) {
+        //   io.cmmRedirect.valid   := true.B
+        //   io.cmmRedirect.bits.pc := extVaddr(io.rod(i).bits.pc, vlen)
+        // }
         // assert( PopCount(Seq( cmm_state(i).is_xRet, (cmm_state(i).isInterrupt | cmm_state(i).isException), cmm_state(i).is_fence_i, cmm_state(i).is_sfence_vma)) <= 1.U, "Assert Failed, only one situation will be trigger ecah time!" )
       }
     }
@@ -473,8 +524,8 @@ trait CommitIFRedirect { this: CommitState =>
 trait CommitDiff { this: CommitState =>
   ( 0 until cmChn ).map{i =>
     io.diff_commit.pc(i) := extVaddr(io.rod(i).bits.pc, vlen)
-    io.diff_commit.comfirm(i) := (commit_state_is_comfirm(i) | commit_state_is_misPredict(i)) & io.rod(i).bits.isLast
-    io.diff_commit.abort(i) := commit_state_is_abort(i) & io.rod(i).bits.isLast
+    io.diff_commit.comfirm(i) := (commit_state_is_comfirm(i) | commit_state_is_misPredict(i))
+    io.diff_commit.abort(i) := commit_state_is_abort(i)
   } 
 
   io.diff_commit.priv_lvl := csrfiles.priv_lvl
@@ -534,35 +585,45 @@ trait CommitDiff { this: CommitState =>
 
 
 trait CommitInfoMMU{ this: CommitState =>
-    io.cmm_mmu.satp := csrfiles.satp.asUInt
-    if( pmpNum == 0 ) { io.cmm_mmu.pmpcfg  := DontCare } else { for ( i <- 0 until pmpNum )   io.cmm_mmu.pmpcfg(i)  := csrfiles.pmpcfg(i).asUInt }
-    if( pmpNum == 0 ) { io.cmm_mmu.pmpaddr := DontCare } else { for ( i <- 0 until 8*pmpNum ) io.cmm_mmu.pmpaddr(i) := csrfiles.pmpaddr(i)       }
-    io.cmm_mmu.priv_lvl_if   := csrfiles.priv_lvl
-    io.cmm_mmu.priv_lvl_ls   := Mux( csrfiles.mstatus.mprv.asBool, csrfiles.mstatus.mpp, csrfiles.priv_lvl )
-    io.cmm_mmu.mstatus    := csrfiles.mstatus.asUInt
-    io.cmm_mmu.sstatus    := csrfiles.sstatus.asUInt
-    io.cmm_mmu.sfence_vma := ( 0 until cmChn ).map{ i => 
-      commit_state_is_abort(i) & cmm_state(i).is_sfence_vma 
-    }.reduce(_|_)
+
+  io.cmm_mmu.satp := csrfiles.satp.asUInt
+  if( pmpNum == 0 ) { io.cmm_mmu.pmpcfg  := DontCare } else { for ( i <- 0 until pmpNum )   io.cmm_mmu.pmpcfg(i)  := csrfiles.pmpcfg(i).asUInt }
+  if( pmpNum == 0 ) { io.cmm_mmu.pmpaddr := DontCare } else { for ( i <- 0 until 8*pmpNum ) io.cmm_mmu.pmpaddr(i) := csrfiles.pmpaddr(i)       }
+  io.cmm_mmu.priv_lvl_if   := csrfiles.priv_lvl
+  io.cmm_mmu.priv_lvl_ls   := Mux( csrfiles.mstatus.mprv.asBool, csrfiles.mstatus.mpp, csrfiles.priv_lvl )
+  io.cmm_mmu.mstatus    := csrfiles.mstatus.asUInt
+  io.cmm_mmu.sstatus    := csrfiles.sstatus.asUInt
+  io.cmm_mmu.sfence_vma := ( 0 until cmChn ).map{ i => 
+    commit_state_is_abort(i) & cmm_state(i).is_sfence_vma 
+  }.reduce(_|_)
+
 }
 
 trait CommitInfoLsu{ this: CommitState =>
   io.cmm_lsu.is_amo_pending := {
-    io.rod(0).valid & io.rod(0).bits.is_amo & ~io.cm_op(0).is_writeback //only pending amo in rod0 is send out
+    io.rod(0).valid & io.rod(0).bits.is_amo & ~io.xCommit(0).is_writeback //only pending amo in rod0 is send out
   }
   println("Warning, amo_pending can only emmit at chn0")
 
   ( 0 until cmChn ).map{ i =>
-    io.cmm_lsu.is_store_commit(i) := io.rod(i).bits.is_su & commit_state_is_comfirm(i)
+    io.cmm_lsu.is_store_commit(i) := io.rod(i).bits.isXFStore & commit_state_is_comfirm(i)
   }
+  
 
-  io.cmm_lsu.isVstorePending := {
-    io.rod(0).valid & io.rod(0).bits.is_su & io.rod(0).bits.isVector & ~io.cm_op(0).is_writeback //only pending amo in rod0 is send out
-  }
-  println("Warning, vstore_pending can only emmit at chn0")
 }
 
+trait CommitInfoVec{ this: CommitState =>
 
+  /**
+    * @note this will trigger vstore emitt at preIssue, and will re-trigger again by vstore wroteback
+    */
+  println("Warning, vstore_pending can only emmit at chn0")
+  io.isPndVStore := io.rod(0).valid & io.rod(0).bits.isVStore & ~io.vCommit(0).isWroteback
+
+  io.isVStartRsv := (0 until cmChn).map{ i => io.rod(i).bits.is_csr & (io.xpuCsrCommit.bits.addr === "h008".U) & commit_state_is_comfirm(i) }.foldLeft(false.B)(_|_)
+  io.isVSetRsv   := (0 until cmChn).map{ i => io.rod(i).bits.is_csr & (io.xpuCsrCommit.bits.addr === "hFFE".U) & commit_state_is_comfirm(i) }.foldLeft(false.B)(_|_)
+  io.isFoFRsv    := VecInit((0 until cmChn).map{ i => io.rod(i).bits.isFoF  & commit_state_is_comfirm(i) }).count( (x:Bool) => (x === true.B ))
+}
 
 /**
   * @note new feature
@@ -577,6 +638,7 @@ with CommitRegFiles
 with CommitIFRedirect
 with CommitInfoMMU
 with CommitInfoLsu
+with CommitInfoVec
 with CommitDiff{
 
   ( 0 until cmChn ).map{ i =>
@@ -603,39 +665,52 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   val ill_ivaddr = UInt(64.W)
 	val ill_dvaddr = UInt(64.W)
 
-
   val exint = new ExInt_Bundle
+
+  val isVException = Bool()
+  val exceptionIdx = UInt((log2Ceil(vParams.vlen/8).W))
 
   def is_load_accessFault: Bool = {
     val is_load_accessFault = 
-      rod.is_lu & is_wb & lsu_cmm.is_access_fault
+      lsu_cmm.is_access_fault & (
+        (rod.is_lu & is_wb) | (rod.isVLoad & isVException & ~(rod.isFoF & exceptionIdx =/= 0.U) )
+      )
+
     return is_load_accessFault
   }
 
   def is_store_accessFault: Bool = {
     val is_store_accessFault =
-      ( rod.is_su | rod.is_amo ) & is_wb & lsu_cmm.is_access_fault
+      lsu_cmm.is_access_fault & (
+        ( ( rod.isXFStore | rod.is_amo ) & is_wb ) | (rod.isVStore & isVException)
+      )
 
     return is_store_accessFault
   }
 
   def is_load_pagingFault: Bool = {
     val is_load_pagingFault =
-      rod.is_lu & is_wb & lsu_cmm.is_paging_fault
+      lsu_cmm.is_paging_fault & (
+        ( rod.is_lu & is_wb ) | (rod.isVLoad & isVException & ~(rod.isFoF & exceptionIdx =/= 0.U) )
+      )
 
     return is_load_pagingFault
   }
 
   def is_store_pagingFault: Bool = {
     val is_store_pagingFault =
-      ( rod.is_su | rod.is_amo ) & is_wb & lsu_cmm.is_paging_fault
+      lsu_cmm.is_paging_fault & (
+        (( rod.isXFStore | rod.is_amo ) & is_wb) | (rod.isVStore & isVException)
+      )
 
     return is_store_pagingFault
   }
 
   def is_load_misAlign: Bool = {
     val is_load_misAlign =
-      rod.is_lu & is_wb & lsu_cmm.is_misAlign
+      lsu_cmm.is_misAlign & (
+        ( rod.is_lu & is_wb ) | (rod.isVLoad & isVException & ~(rod.isFoF & exceptionIdx =/= 0.U) )
+      )
 
     return is_load_misAlign
   }
@@ -646,7 +721,9 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
 
   def is_store_misAlign: Bool = {
     val is_store_misAlign =
-      (rod.is_su | rod.is_amo) & is_wb & lsu_cmm.is_misAlign
+      lsu_cmm.is_misAlign & (
+        ( (rod.isXFStore | rod.is_amo) & is_wb ) | (rod.isVStore & isVException)
+      )
 
     return is_store_misAlign
   }
@@ -826,5 +903,24 @@ class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
     return isNomaskInterrupt
   }
 
+  // def isVStartMdf: Bool = {
+  //   val isVStartMdf = 
+  //   return isVStartMdf
+  // }
+
+  // def isVlMdf: Bool = {
+  //   val isVlMdf
+  //   return isVlMdf
+  // }
+
+  // def isFoFTrg: Bool = {
+  //   val isFoFTrg
+  //   return isFoFTrg
+  // }
+
+  // def isVecRedirect: Bool = {
+  //   val isVecRedirect
+  //   return isVecRedirect
+  // }
 }
 

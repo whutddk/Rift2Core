@@ -72,7 +72,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
   val nDevices = 31
   val i_plic = LazyModule( new Plic( nHarts = 1, nPriorities = 8, nDevices = nDevices ))
   val sifiveCache = LazyModule(new InclusiveCache(
-      cache = CacheParameters( level = 2, ways = 8, sets = 2048, blockBytes = l1DW/8, beatBytes = l1BeatBits/8, hintsSkipProbe = false ),
+      cache = CacheParameters( level = 2, ways = 2, sets = 64, blockBytes = l1DW/8, beatBytes = l1BeatBits/8, hintsSkipProbe = false ),
       micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
       control = None
     ))

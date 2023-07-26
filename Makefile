@@ -244,6 +244,10 @@ fpuisa += rv64uf-v-move
 fpuisa += rv64uf-p-recoding
 fpuisa += rv64uf-v-recoding
 
+include ${R2}/tb/ci/vec/testList.mk
+
+
+
 isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa)# $(fpuisa) 
 # isa ?= $(fpuisa)
 
@@ -348,6 +352,11 @@ area: yosys
 	echo "{\n  \"schemaVersion\": 1, \n  \"label\": \"\", \n  \"message\": \""$(basename $(filter %.000000, $(shell cat $(R2)/generated/$(CONFIG)/stat.log) ))"\", \n  \"color\": \"a6bf94\" \n}" >> $(R2)/generated/$(CONFIG)/area.json
 # rm -f $(R2)/generated/$(CONFIG)/stat.log
 
+singleV: VSimTop
+	${R2}/generated/build/$(CONFIG)/VSimTop -w -l -p -f ./tb/ci/vec/$(TESTFILE)
+
+isaV:
+	$(foreach test, $(vecisa), ${R2}/generated/build/$(CONFIG)/VSimTop -l -f ./tb/ci/vec/$(test) || exit; )
 
 # lineCfg += Rift2300
 # lineCfg += Rift2310
