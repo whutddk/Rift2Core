@@ -654,7 +654,6 @@ with CommitDiff{
 
 
 
-@chiselName
 class CMMState_Bundle(implicit p: Parameters) extends RiftBundle{
   val rod = new Info_reorder_i
   val csrfiles = new CSR_Bundle

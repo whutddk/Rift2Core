@@ -260,7 +260,7 @@ isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa)# $(fpuisa)
 
 
 
-.PHONY: compile clean VSimTop
+.PHONY: compile clean VSimTop mill
 
 module:
 	sbt "test:runMain test.testModule --target-dir generated --show-registrations --full-stacktrace -E verilog"
@@ -270,11 +270,14 @@ compile:
 	sbt "test:runMain test.testMain \
 	-e verilog"
 
-
 #--gen-mem-verilog \
 # --inline \
 
 # --list-clocks \
+
+
+mill:
+	./mill -i rift2Core[chisel3].test.runMain test.testMain
 
 noc:
 	rm -rf ./generated/Main/

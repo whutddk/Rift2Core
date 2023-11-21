@@ -280,7 +280,7 @@ trait RegFilesCommit{ this: RegFilesReal =>
   
 
   archit_ptr.map{
-    i => assert( log(i) === "b11".U, "Assert Failed, archit point to should be b11.U! i = "+i+"\n")
+    i => assert( log(i) === "b11".U, cf"Assert Failed, archit point to should be b11.U! i = $i \n")
   }
 
 

@@ -267,7 +267,7 @@ class CaptureChain[+T <: Data](gen: T) extends Chain {
   io.chainOut.data := regs(0)
   
   when (io.chainIn.capture) {
-    (0 until n) map (x => regs(x) := io.capture.bits.asUInt()(x))
+    (0 until n) map (x => regs(x) := io.capture.bits.asUInt.extract(x))
     io.capture.is_valid := true.B
   } .elsewhen (io.chainIn.shift) {
     regs(n-1) := io.chainIn.data
@@ -300,7 +300,7 @@ class CaptureUpdateChain[+T <: Data](gen: T) extends Chain {
     io.update.bits := (Cat(regs.reverse)).asTypeOf(io.update.bits)
 
     when(io.chainIn.capture) {
-      for( i <- 0 until n ) yield { regs(i) := io.capture.bits.asUInt()(i) }
+      for( i <- 0 until n ) yield { regs(i) := io.capture.bits.asUInt.extract(i) }
       io.capture.is_valid := true.B
       io.update.valid := false.B
     } .elsewhen(io.chainIn.update) {

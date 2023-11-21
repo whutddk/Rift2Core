@@ -670,7 +670,7 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
     val bShift = PriorityEncoder(preDdivisor.asBools.reverse)
 
     val shiftDiff = Cat(0.U(1.W), bShift).asSInt - Cat(0.U(1.W), aShift).asSInt
-    val quoBits   = Mux( shiftDiff < 0.S, 0.U, shiftDiff.asUInt())
+    val quoBits   = Mux( shiftDiff < 0.S, 0.U, shiftDiff.asUInt)
 
 
     dividend := 
