@@ -13,15 +13,18 @@ import $file.dependencies.`rocket-chip`.hardfloat.build
 val defaultScalaVersion = "2.13.10"
 
 
+
+
+
 def defaultVersions(chiselVersion: String) = chiselVersion match {
-//   case "chisel" => Map(
-//     "chisel"        -> ivy"org.chipsalliance::chisel:6.0.0-M3",
-//     "chisel-plugin" -> ivy"org.chipsalliance:::chisel-plugin:6.0.0-M3",
-//     "chiseltest"    -> ivy"edu.berkeley.cs::chiseltest:5.0.2"
-//   )
+  case "chisel" => Map(
+    "chisel"        -> ivy"org.chipsalliance::chisel:5.1.0",
+    "chisel-plugin" -> ivy"org.chipsalliance:::chisel-plugin:5.1.0",
+    "chiseltest"    -> ivy"edu.berkeley.cs::chiseltest:5.0.2"
+  )
   case "chisel3" => Map(
-    "chisel"        -> ivy"edu.berkeley.cs::chisel3:3.6.0",
-    "chisel-plugin" -> ivy"edu.berkeley.cs:::chisel3-plugin:3.6.0",
+    "chisel"        -> ivy"edu.berkeley.cs::chisel3:3.5.6",
+    "chisel-plugin" -> ivy"edu.berkeley.cs:::chisel3-plugin:3.5.6",
     "chiseltest"    -> ivy"edu.berkeley.cs::chiseltest:0.6.2"
   )
 }
@@ -43,7 +46,7 @@ trait HasChisel extends SbtModule with Cross.Module[String] {
 }
 
 
-object rocketchip extends Cross[RocketChip]("chisel3")
+object rocketchip extends Cross[RocketChip]("chisel")
 trait RocketChip extends millbuild.dependencies.`rocket-chip`.common.RocketChipModule with HasChisel {
   def scalaVersion: T[String] = T(defaultScalaVersion)
 
@@ -98,7 +101,7 @@ trait BlocksModule extends ScalaModule{
   )  
 }
 
-object blocks extends Cross[Blocks]("chisel3")
+object blocks extends Cross[Blocks]("chisel")
 trait Blocks extends BlocksModule with HasChisel {
   def rocketModule = rocketchip(crossValue)
   def scalaVersion: T[String] = T(defaultScalaVersion)
@@ -109,12 +112,7 @@ trait Blocks extends BlocksModule with HasChisel {
 trait ConstellationModule extends ScalaModule{
   def rocketModule: ScalaModule
   def cdeModule: ScalaModule
-  // override def ivyDeps = Agg(
-  //   ivy"edu.berkeley.cs::rocketchip:1.6.0",
-  //   ivy"edu.berkeley.cs::cde:1.6.0",
-  //   ivy"edu.berkeley.cs::rocket-macros:1.6.0",
-  //   ivy"edu.berkeley.cs::chiseltest:0.5.4",
-  // )
+
   override def moduleDeps = super.moduleDeps ++ Seq(
     rocketModule,
     cdeModule,
@@ -123,8 +121,8 @@ trait ConstellationModule extends ScalaModule{
 
 object constellation extends Cross[Constellation]("chisel3")
 trait Constellation extends ConstellationModule with HasChisel {
-  def rocketModule = rocketchip(crossValue)
-  def cdeModule = rocketchip(crossValue).cde
+  def rocketModule = rocketchip("chisel")
+  def cdeModule = rocketchip("chisel").cde
   def scalaVersion: T[String] = T(defaultScalaVersion)
 
   override def millSourcePath = os.pwd /"dependencies"/ "constellation"
@@ -138,7 +136,7 @@ trait InclusiveModule extends ScalaModule{
     rocketModule,
   )
 }
-object inclusive extends Cross[Inclusive]("chisel3")
+object inclusive extends Cross[Inclusive]("chisel")
 trait Inclusive extends InclusiveModule with HasChisel {
   def rocketModule = rocketchip(crossValue)
   def scalaVersion: T[String] = T(defaultScalaVersion)
@@ -156,7 +154,6 @@ trait RiftModule extends ScalaModule{
   def blocksModule: ScalaModule
   def constellationModule: ScalaModule
   def inclusiveModule: ScalaModule
-  // def cdeModule: ScalaModule
 
 
   override def moduleDeps = super.moduleDeps ++ Seq(
@@ -165,20 +162,18 @@ trait RiftModule extends ScalaModule{
     inclusiveModule,
     blocksModule,
     constellationModule,
-    // cdeModule,
   )
 }
 
-object rift2Core extends Cross[Rift2Core]("chisel3")
+object rift2Core extends Cross[Rift2Core]("chisel")
 trait Rift2Core extends RiftModule with HasChisel{
   override def millSourcePath = os.pwd
 
     def rocketModule = rocketchip(crossValue)
     def hardfloatModule = rocketchip(crossValue).hardfloat(crossValue)
     def blocksModule = blocks(crossValue)
-    def constellationModule = constellation(crossValue)
+    def constellationModule = constellation("chisel3")
     def inclusiveModule = inclusive(crossValue)
-    // def cdeModule = rocketchip(crossValue).cde
 
     override def forkArgs = Seq("-Xmx60G", "-Xss16m")
 

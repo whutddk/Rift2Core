@@ -277,7 +277,8 @@ compile:
 
 
 mill:
-	./mill -i rift2Core[chisel3].test.runMain test.testMain
+	rm -rf ./generated/Main/
+	./mill -i rift2Core[chisel].test.runMain test.testMain
 
 noc:
 	rm -rf ./generated/Main/

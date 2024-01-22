@@ -20,11 +20,14 @@ package test
 
 
 
-import chisel3._
+import chisel3.stage.ChiselGeneratorAnnotation
+import circt.stage.{ChiselStage, FirtoolOption}
+
 import rift2Chip._
 
 import freechips.rocketchip.diplomacy._
-import chisel3.stage._
+
+
 
 class Rift2GoCfg extends Rift2330
 class NormalCfg  extends Rift2370
@@ -38,25 +41,42 @@ object testMain extends App {
   // val cfg = new Rift2350
   val cfg = new Rift2370
 
-  (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
-      ChiselGeneratorAnnotation(() => {
-    val soc = LazyModule(new Rift2Chip()(cfg))
-    soc.module
-  })
-  ))
+
+  // circt.stage.ChiselStage.emitSystemVerilogFile(
+  //   gen =  LazyModule(new Rift2Chip()(cfg)).module,
+  //   firtoolOpts = Array("--disable-annotation-unknown",  "--dedup")
+  // )
+
+
+  (new circt.stage.ChiselStage).execute(
+    Array(
+      "--target-dir", "generated/Main",
+      "--target", "verilog",
+      "--split-verilog",
+      // "--split-verilog",
+      ) ++ args,
+    Seq(
+      chisel3.stage.ChiselGeneratorAnnotation( () => {
+        val soc = LazyModule(new Rift2Chip()(cfg))
+        soc.module
+      }),
+      circt.stage.FirtoolOption("--disable-annotation-unknown"),
+      circt.stage.FirtoolOption( "--dedup"),
+    )
+  )
 }
 
-object testNoC extends App {
+// object testNoC extends App {
 
-  val cfg = new Rift2330
+//   val cfg = new Rift2330
 
-  (new chisel3.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
-      ChiselGeneratorAnnotation(() => {
-    val soc = LazyModule(new Rift2NoC()(cfg))
-    soc.module
-  })
-  ))
-}
+//   (new circt.stage.ChiselStage).execute( Array("--show-registrations", "--full-stacktrace", "--target-dir", "generated/Main") ++ args, Seq(
+//       ChiselGeneratorAnnotation(() => {
+//     val soc = LazyModule(new Rift2NoC()(cfg))
+//     soc.module
+//   })
+//   ))
+// }
 
 
 object tapeMain extends App {
@@ -66,21 +86,21 @@ object tapeMain extends App {
   // val cfg = new Rift2350
   // val cfg = new Rift2370
 
-  (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Main", "-E", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
+  (new circt.stage.ChiselStage).execute( Array( "--target-dir", "generated/Main", "-E", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
       ChiselGeneratorAnnotation(() => {
     val soc = LazyModule(new Rift2Link()(cfg))
     soc.module
   })
   ))
 
-  (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/TapeMain", "-E", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
+  (new circt.stage.ChiselStage).execute( Array( "--target-dir", "generated/TapeMain", "-E", "verilog") ++ args, Seq(//, "--gen-mem-verilog", "true"
       ChiselGeneratorAnnotation(() => {
     val soc = LazyModule(new Rift2LinkA(isFlatten = true)(cfg))
     soc.module
   })
   ))
 
-  (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/TapeSim", "-E", "verilog") ++ args, Seq(
+  (new circt.stage.ChiselStage).execute( Array( "--target-dir", "generated/TapeSim", "-E", "verilog") ++ args, Seq(
       ChiselGeneratorAnnotation(() => {
     val soc = LazyModule(new Rift2LinkB()(cfg))
     soc.module
@@ -109,14 +129,14 @@ object testAll extends App {
   config.map{ cfg =>
     println("Compiling " + cfg._2)
 
-    (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Release/"++cfg._2, "-E", "verilog" ) ++ args, Seq(
+    (new circt.stage.ChiselStage).execute( Array( "--target-dir", "generated/Release/"++cfg._2, "-E", "verilog" ) ++ args, Seq(
         ChiselGeneratorAnnotation(() => {
       val soc = LazyModule(new Rift2Chip(isFlatten = true)(cfg._1))
       soc.module
     })
     ))
 
-    (new chisel3.stage.ChiselStage).execute( Array( "--target-dir", "generated/Debug/"++cfg._2, "-e", "verilog" ) ++ args, Seq(
+    (new circt.stage.ChiselStage).execute( Array( "--target-dir", "generated/Debug/"++cfg._2, "-e", "verilog" ) ++ args, Seq(
         ChiselGeneratorAnnotation(() => {
       val soc = LazyModule(new Rift2Chip(isFlatten = false)(cfg._1))
       soc.module
@@ -140,7 +160,7 @@ object testAll extends App {
 import rift2Core.backend._
 
 object testModule extends App {
-  (new chisel3.stage.ChiselStage).execute(args, Seq(
+  (new circt.stage.ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => {
     new SVPWM(4096)
   })
