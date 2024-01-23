@@ -205,7 +205,7 @@ class Lsu_isa extends Bundle {
   def is_xls = lb | lh | lw | ld | lbu | lhu | lwu | sb | sh | sw | sd
   def is_lrsc = is_sc | is_lr
   def is_amo =
-    amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d | is_sc
+    amoswap_w | amoadd_w | amoxor_w | amoand_w | amoor_w | amomin_w | amomax_w | amominu_w | amomaxu_w | amoswap_d | amoadd_d | amoxor_d | amoand_d | amoor_d | amomin_d | amomax_d | amominu_d | amomaxu_d 
   def is_fls = flw | fsw | fld | fsd
 
   def is_vls = vle | vse | vlm | vsm | vlse | vsse | vloxei | vsoxei | vlre | vsr | vleNff
@@ -1302,6 +1302,7 @@ class Info_reorder_i(implicit p: Parameters) extends RiftBundle {
   val is_lu = Bool()
   val isXFStore = Bool()
   val is_amo = Bool()
+  val is_sc = Bool()
   val is_fence = Bool()
   val is_fence_i = Bool()
   val is_sfence_vma = Bool()

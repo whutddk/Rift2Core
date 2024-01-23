@@ -162,7 +162,7 @@ trait DcacheStageLRSC { this: DcacheStageBase =>
       assert( pipeStage1Bits.fun.isDubl | pipeStage1Bits.fun.isWord )
     } .elsewhen( pipeStage1Bits.fun.is_sc ) {
       is_pending_lr := false.B
-    } .elsewhen( (pipeStage1Bits.fun.is_su | (pipeStage1Bits.fun.is_amo & ~pipeStage1Bits.fun.is_lrsc)) ) {
+    } .elsewhen( pipeStage1Bits.fun.is_su | pipeStage1Bits.fun.is_amo ) {
       when( tagInfoW === lr_addr(plen-1,plen-tag_w) ) {
         is_pending_lr := false.B
       }   

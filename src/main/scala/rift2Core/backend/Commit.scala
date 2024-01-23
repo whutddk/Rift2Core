@@ -601,12 +601,12 @@ trait CommitInfoMMU{ this: CommitState =>
 
 trait CommitInfoLsu{ this: CommitState =>
   io.cmm_lsu.is_amo_pending := {
-    io.rod(0).valid & io.rod(0).bits.is_amo & ~io.xCommit(0).is_writeback //only pending amo in rod0 is send out
+    io.rod(0).valid & ( io.rod(0).bits.is_amo | io.rod(0).bits.is_sc) & ~io.xCommit(0).is_writeback //only pending amo in rod0 is send out
   }
   println("Warning, amo_pending can only emmit at chn0")
 
   ( 0 until cmChn ).map{ i =>
-    io.cmm_lsu.is_store_commit(i) := io.rod(i).bits.isXFStore & commit_state_is_comfirm(i)
+    io.cmm_lsu.is_store_commit(i) := ( io.rod(i).bits.isXFStore & ~io.rod(i).bits.is_sc )& commit_state_is_comfirm(i)
   }
   
 

@@ -169,6 +169,7 @@ trait LoadRob{ this: RenameBase =>
     reOrder_fifo_i.io.enq(i).bits.is_lu          := io.rnReq(i).bits.lsuIsa.is_lu
     reOrder_fifo_i.io.enq(i).bits.isXFStore      := io.rnReq(i).bits.lsuIsa.isXStore | io.rnReq(i).bits.lsuIsa.isFStore 
     reOrder_fifo_i.io.enq(i).bits.is_amo         := io.rnReq(i).bits.lsuIsa.is_amo
+    reOrder_fifo_i.io.enq(i).bits.is_sc         := io.rnReq(i).bits.lsuIsa.is_sc
     reOrder_fifo_i.io.enq(i).bits.is_fence       := io.rnReq(i).bits.lsuIsa.fence
     reOrder_fifo_i.io.enq(i).bits.is_fence_i     := io.rnReq(i).bits.lsuIsa.fence_i
     reOrder_fifo_i.io.enq(i).bits.is_sfence_vma  := io.rnReq(i).bits.lsuIsa.sfence_vma

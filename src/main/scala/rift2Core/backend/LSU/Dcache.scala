@@ -46,11 +46,11 @@ class Cache_op extends Lsu_isa {
   def is_atom = is_amo
   def is_access = is_atom | is_lu | is_su | is_lr | is_sc | isVLoad | isVStore
   def is_tag_r = is_atom | is_lu | is_su | is_lr | is_sc | isVLoad | isVStore | grant | probe | preft
-  def is_dat_r = is_atom | is_lu | isVLoad | is_lr | grant | probe
+  // def is_dat_r = is_atom | is_lu | isVLoad | is_lr | grant | probe
   def is_tag_w = grant
   def is_dat_w = is_atom | is_su | is_sc | isVStore | grant
   def isDirtyOp = is_atom | is_su | is_sc | isVStore
-  def is_wb = is_atom | is_lu | is_lr | isVStore
+  def is_wb = is_atom | is_lu | is_lr | is_sc | isVStore
 
 }
 
