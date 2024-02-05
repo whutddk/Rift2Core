@@ -4,7 +4,7 @@ name: ChiselStage
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master, develop ]
+    branches: [ master, develop, bump/mill_chisel5 ]
   # pull_request:
   #   branches: [ master ]
 
@@ -19,14 +19,19 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     name: chiselStage
     container:
-      image: whutddk/rift2env:riscvtest
+      image: whutddk/rift2env:chisel5
+      # options: >-
+      #   --memory 60g
+      #   --oom-kill-disable
+      #   --memory-swap -1
+
     # needs: clean
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: set up apt
         run: |
           apt-get update
-          apt-get install -y wget git make
+          apt-get install -y wget git make curl
 
 
       - uses: actions/checkout@v3.3.0
@@ -41,8 +46,11 @@ jobs:
       - name: Compile
         run: |
           echo ${GITHUB_WORKSPACE}
-          sbt "test:runMain test.testAll"
-          sbt doc
+
+          rm dependencies/rocket-chip/src/main/resources/META-INF/services/firrtl.options.RegisteredLibrary
+          mill -i rift2Core[chisel].test.runMain test.testAll
+          mill --no-server show rift2Core[chisel].docJar
+          unzip -d ScalaDoc/ out/rift2Core/chisel/docJar.dest/out.jar
 
           echo $GITHUB_REF_NAME
           
@@ -53,19 +61,19 @@ jobs:
 
           cp ${GITHUB_WORKSPACE}/LICENSE.Apache ${GITHUB_WORKSPACE}/../
           cp ${GITHUB_WORKSPACE}/LICENSE.NPL ${GITHUB_WORKSPACE}/../
-          cp -R target/scala-2.13/api ${GITHUB_WORKSPACE}/../ScalaDoc/$GITHUB_REF_NAME
+          cp -R ScalaDoc/* ${GITHUB_WORKSPACE}/../ScalaDoc/$GITHUB_REF_NAME
 
-          cd ${GITHUB_WORKSPACE}/generated/Release/
-          tar -cvf Rift2300-Release.tar Rift2300/*
-          tar -cvf Rift2310-Release.tar Rift2310/*
-          tar -cvf Rift2320-Release.tar Rift2320/*
-          tar -cvf Rift2330-Release.tar Rift2330/*
-          tar -cvf Rift2340-Release.tar Rift2340/*
-          tar -cvf Rift2350-Release.tar Rift2350/*
-          tar -cvf Rift2360-Release.tar Rift2360/*
-          tar -cvf Rift2370-Release.tar Rift2370/*
-          tar -cvf Rift2380-Release.tar Rift2380/*
-          tar -cvf Rift2390-Release.tar Rift2390/*
+          # cd ${GITHUB_WORKSPACE}/generated/Release/
+          # tar -cvf Rift2300-Release.tar Rift2300/*
+          # tar -cvf Rift2310-Release.tar Rift2310/*
+          # tar -cvf Rift2320-Release.tar Rift2320/*
+          # tar -cvf Rift2330-Release.tar Rift2330/*
+          # tar -cvf Rift2340-Release.tar Rift2340/*
+          # tar -cvf Rift2350-Release.tar Rift2350/*
+          # tar -cvf Rift2360-Release.tar Rift2360/*
+          # tar -cvf Rift2370-Release.tar Rift2370/*
+          # tar -cvf Rift2380-Release.tar Rift2380/*
+          # tar -cvf Rift2390-Release.tar Rift2390/*
 
           cd ${GITHUB_WORKSPACE}/generated/Debug/
           tar -cvf Rift2300-Debug.tar  Rift2300/*
@@ -89,7 +97,7 @@ jobs:
           git checkout gh_pages
 
           rm -rf ${GITHUB_WORKSPACE}/ScalaDoc/$GITHUB_REF_NAME
-          cp -R ${GITHUB_WORKSPACE}/../ScalaDoc/$GITHUB_REF_NAME ${GITHUB_WORKSPACE}/ScalaDoc/$GITHUB_REF_NAME
+          cp -R ${GITHUB_WORKSPACE}/../ScalaDoc/* ${GITHUB_WORKSPACE}/ScalaDoc/
           cp ${GITHUB_WORKSPACE}/../LICENSE.Apache ${GITHUB_WORKSPACE}/
           cp ${GITHUB_WORKSPACE}/../LICENSE.NPL ${GITHUB_WORKSPACE}/
 
@@ -124,25 +132,25 @@ jobs:
           prerelease: true
           target_commitish: ${{github.ref_name}}
           files: |
-            ./generated/Release/Rift2300-Release.tar
+            # ./generated/Release/Rift2300-Release.tar
             ./generated/Debug/Rift2300-Debug.tar
-            ./generated/Release/Rift2310-Release.tar
+            # ./generated/Release/Rift2310-Release.tar
             ./generated/Debug/Rift2310-Debug.tar
-            ./generated/Release/Rift2320-Release.tar
+            # ./generated/Release/Rift2320-Release.tar
             ./generated/Debug/Rift2320-Debug.tar
-            ./generated/Release/Rift2330-Release.tar
+            # ./generated/Release/Rift2330-Release.tar
             ./generated/Debug/Rift2330-Debug.tar
-            ./generated/Release/Rift2340-Release.tar
+            # ./generated/Release/Rift2340-Release.tar
             ./generated/Debug/Rift2340-Debug.tar
-            ./generated/Release/Rift2350-Release.tar
+            # ./generated/Release/Rift2350-Release.tar
             ./generated/Debug/Rift2350-Debug.tar
-            ./generated/Release/Rift2360-Release.tar
+            # ./generated/Release/Rift2360-Release.tar
             ./generated/Debug/Rift2360-Debug.tar
-            ./generated/Release/Rift2370-Release.tar
+            # ./generated/Release/Rift2370-Release.tar
             ./generated/Debug/Rift2370-Debug.tar
-            ./generated/Release/Rift2380-Release.tar
+            # ./generated/Release/Rift2380-Release.tar
             ./generated/Debug/Rift2380-Debug.tar
-            ./generated/Release/Rift2390-Release.tar
+            # ./generated/Release/Rift2390-Release.tar
             ./generated/Debug/Rift2390-Debug.tar
             ./LICENSE.Apache
             ./LICENSE.NPL
@@ -160,25 +168,25 @@ jobs:
           prerelease: false
           target_commitish: ${{github.ref_name}}
           files: |
-            ./generated/Release/Rift2300-Release.tar
+            # ./generated/Release/Rift2300-Release.tar
             ./generated/Debug/Rift2300-Debug.tar
-            ./generated/Release/Rift2310-Release.tar
+            # ./generated/Release/Rift2310-Release.tar
             ./generated/Debug/Rift2310-Debug.tar
-            ./generated/Release/Rift2320-Release.tar
+            # ./generated/Release/Rift2320-Release.tar
             ./generated/Debug/Rift2320-Debug.tar
-            ./generated/Release/Rift2330-Release.tar
+            # ./generated/Release/Rift2330-Release.tar
             ./generated/Debug/Rift2330-Debug.tar
-            ./generated/Release/Rift2340-Release.tar
+            # ./generated/Release/Rift2340-Release.tar
             ./generated/Debug/Rift2340-Debug.tar
-            ./generated/Release/Rift2350-Release.tar
+            # ./generated/Release/Rift2350-Release.tar
             ./generated/Debug/Rift2350-Debug.tar
-            ./generated/Release/Rift2360-Release.tar
+            # ./generated/Release/Rift2360-Release.tar
             ./generated/Debug/Rift2360-Debug.tar
-            ./generated/Release/Rift2370-Release.tar
+            # ./generated/Release/Rift2370-Release.tar
             ./generated/Debug/Rift2370-Debug.tar
-            ./generated/Release/Rift2380-Release.tar
+            # ./generated/Release/Rift2380-Release.tar
             ./generated/Debug/Rift2380-Debug.tar
-            ./generated/Release/Rift2390-Release.tar
+            # ./generated/Release/Rift2390-Release.tar
             ./generated/Debug/Rift2390-Debug.tar
             ./LICENSE.Apache
             ./LICENSE.NPL
@@ -202,10 +210,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [Rift2330, Rift2340, Rift2350, Rift2360, Rift2370, Rift2380, Rift2390]
+        version: [Rift2330, Rift2370]
     runs-on: [self-hosted, Linux, X64]
     container:
-      image: whutddk/rift2env:riscvtest
+      image: whutddk/rift2env:chisel5
+      # options: >-
+      #   --memory 60g
+      #   --oom-kill-disable
+      #   --memory-swap -1
 
 
     # services:
@@ -253,7 +265,7 @@ jobs:
           cd /Rift2Core
 
           wget https://github.com/whutddk/Rift2Core/releases/download/${{ steps.getrelease.outputs.tag_name }}/${{matrix.version}}-Debug.tar
-          wget https://github.com/whutddk/Rift2Core/releases/download/${{ steps.getrelease.outputs.tag_name }}/${{matrix.version}}-Release.tar
+          # wget https://github.com/whutddk/Rift2Core/releases/download/${{ steps.getrelease.outputs.tag_name }}/${{matrix.version}}-Release.tar
 
 
 
@@ -262,10 +274,10 @@ jobs:
           cd /Rift2Core
           
           mkdir -p ./generated/Debug
-          mkdir -p ./generated/Release
+          # mkdir -p ./generated/Release
           
           tar -xvf ./${{matrix.version}}-Debug.tar -C ./generated/Debug
-          tar -xvf ./${{matrix.version}}-Release.tar -C ./generated/Release
+          # tar -xvf ./${{matrix.version}}-Release.tar -C ./generated/Release
 
 
 
@@ -276,7 +288,7 @@ jobs:
           cp /test/* ./tb/ci
           git restore -s ${{ github.ref_name }} -- ./tb
           git restore -s ${{ github.ref_name }} -- ./Makefile
-# git restore -s ${{ github.ref_name }} -- ./src/yosys/area.ys
+          # git restore -s ${{ github.ref_name }} -- ./src/yosys/area.ys
 
         
       - name: isa, dhrystone, coremark, yosys
@@ -292,7 +304,7 @@ jobs:
 
 
 
-# make area CONFIG=/Release/${{matrix.version}}/
+      # make area CONFIG=/Release/${{matrix.version}}/
 
       - name: commit result
         if: success() || failure()
@@ -304,7 +316,7 @@ jobs:
           git add ./generated/Debug/${{matrix.version}}/*.json
           git commit --no-gpg-sign --allow-empty -m "ci update ${{matrix.version}}"
 
-# git add ./generated/Release/${{matrix.version}}/area.json
+          # git add ./generated/Release/${{matrix.version}}/area.json
 
       - name: push
         if: success() || failure()

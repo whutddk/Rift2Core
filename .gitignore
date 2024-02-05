@@ -367,3 +367,4 @@ VSimTop
 tb/sw/opensbi/fw_jump.dep
 tb/sw/opensbi/fw_jump.elf.ld
 mill
+ScalaDoc/

@@ -13,13 +13,13 @@ git submodule update --init --recursive
 ```
 
 
-## Setup SBT
-As a lib of scala, [Chisel3](https://github.com/chipsalliance/chisel3) can compile under *the Scala Build Tool* (SBT).
-1. Java is needed
+## ~~Setup SBT~~
+~~As a lib of scala, [Chisel3](https://github.com/chipsalliance/chisel3) can compile under *the Scala Build Tool* (SBT).~~
+~~1. Java is needed~~
 ``` 
 sudo apt-get install default-jdk
 ```
-2. Install the [SBT](https://www.scala-sbt.org/release/docs/Installing-sbt-on-Linux.html)
+~~2. Install the [SBT](https://www.scala-sbt.org/release/docs/Installing-sbt-on-Linux.html)~~
 ``` 
 sudo apt-get update
 sudo apt-get install apt-transport-https curl gnupg -yqq
@@ -30,7 +30,24 @@ sudo chmod 644 /etc/apt/trusted.gpg.d/scalasbt-release.gpg
 sudo apt-get update
 sudo apt-get install sbt
 ```
-You can also install SBT in Windows
+~~You can also install SBT in Windows~~
+
+
+## Setup millw
+
+1. Download the `millw` in an executable **PATH**, which will take the place of the `sbt`
+
+
+>> curl -L https://raw.githubusercontent.com/lefou/millw/0.4.11/millw > mill && chmod +x mill
+
+
+2. Download the `firtool`, the backend, which will translate firrtl to verilog, make sure to unzip it in an executable **PATH**
+
+```
+wget https://github.com/llvm/circt/releases/download/firtool-1.59.0/circt-full-shared-linux-x64.tar.gz
+tar -zxvf circt-full-shared-linux-x64.tar.gz
+```
+
 
 
 ## Setup Verilator and GTKWave
@@ -51,7 +68,7 @@ make -j4096
 sudo make install
 ```
 
-## Compile chisel3 to verilog
+## ~~Compile chisel3 to verilog~~
 
 
 ```
@@ -59,16 +76,27 @@ cd .
 make compile
 ```
 
-The sbt will download the dependency (来自某些地区的赛博残障人士，请自行寻找稳定连接网络的方案，并从**Maven**下载依赖项) and than emits the verilog to `./generated`.
+~~The sbt will download the dependency (来自某些地区的赛博残障人士，请自行寻找稳定连接网络的方案，并从**Maven**下载依赖项) and than emits the verilog to `./generated`.~~
+
+
+## Compile chisel to verilog
+
+
+```
+cd .
+make mill
+```
+
+The mill will download the dependency (来自某些地区的赛博残障人士，请自行寻找稳定连接网络的方案，并从**Maven**下载依赖项) and than emits the verilog to `./generated`.
+
 
 ## Compile Model of Rif2Chip
 
-The Verilator will compile the Verilog-files emited by chisel3 and a top wrapper `SimTop.v` into a library `VSimTop__ALL`. Then a main function in `sim_main.cpp` will be built up to simulate the behavior of the Rift2Chip SoC. 
+The Verilator will compile the Verilog-files emited by chisel and a top wrapper `SimTop.v` into a library `VSimTop__ALL`. Then a main function in `sim_main.cpp` will be built up to simulate the behavior of the Rift2Chip SoC. 
 
 ```
 export R2=/PATH/TO/Rift2Core
-cd ./tb
-make sim 
+make VSimTop 
 ```
 
 We will get an executable file `./tb/build/VSimTop`.
@@ -78,15 +106,14 @@ We will get an executable file `./tb/build/VSimTop`.
 Make sure your executable riscv files are placed in `./tb/ci`.
 
 ```
-cd ./tb
-make single TESTFILE=./ci/FILENAME
+make single TESTFILE=FILENAME
 ```
 
 the FILENAME will be loaded for diff-test with Dromajo. The FILENAME.verilog will be loaded into the memory of Rift2Chip
 
 To check the waveform?
 ```
-make wave
+make fst
 ```
 
 
@@ -95,6 +122,5 @@ make wave
 Make sure your executable riscv files are placed in `./tb/ci`.
 
 ```
-cd ./tb
-make unit
+make isa
 ```

@@ -39,7 +39,7 @@ object testMain extends App {
   // val cfg = new NormalCfg
   // val cfg = new Rift2GoCfg
   // val cfg = new Rift2350
-  val cfg = new Rift2370
+  val cfg = new Rift2330
 
 
   // circt.stage.ChiselStage.emitSystemVerilogFile(
@@ -63,7 +63,22 @@ object testMain extends App {
       circt.stage.FirtoolOption("--disable-annotation-unknown"),
       circt.stage.FirtoolOption( "--dedup"),
     )
+
   )
+
+  // val fir = circt.stage.ChiselStage.emitCHIRRTL(
+  //   gen =  LazyModule(new Rift2Chip()(cfg)).module,
+  //   args = Array(
+  //     // "--target-dir", "generated/Main",
+  //     // "--target", "verilog",
+  //     // "--split-verilog",
+  //     // "--split-verilog",
+  //     ) ++ args,
+  // )
+  // import java.io._
+  // val writer = new PrintWriter(new File("Rift2Chip.fir" ))
+  // writer.write(s"$fir")
+  // writer.close()
 }
 
 // object testNoC extends App {
@@ -129,19 +144,30 @@ object testAll extends App {
   config.map{ cfg =>
     println("Compiling " + cfg._2)
 
-    (new circt.stage.ChiselStage).execute( Array( "--target-dir", "generated/Release/"++cfg._2, "-E", "verilog" ) ++ args, Seq(
-        ChiselGeneratorAnnotation(() => {
-      val soc = LazyModule(new Rift2Chip(isFlatten = true)(cfg._1))
-      soc.module
-    })
-    ))
+    // (new circt.stage.ChiselStage).execute( Array( "--target-dir", "generated/Release/"++cfg._2, "-E", "verilog" ) ++ args, Seq(
+    //     ChiselGeneratorAnnotation(() => {
+    //   val soc = LazyModule(new Rift2Chip(isFlatten = true)(cfg._1))
+    //   soc.module
+    // })
+    // ))
 
-    (new circt.stage.ChiselStage).execute( Array( "--target-dir", "generated/Debug/"++cfg._2, "-e", "verilog" ) ++ args, Seq(
-        ChiselGeneratorAnnotation(() => {
-      val soc = LazyModule(new Rift2Chip(isFlatten = false)(cfg._1))
-      soc.module
-    })
-    ))
+    (new circt.stage.ChiselStage).execute(
+      Array(
+        "--target-dir", "generated/Debug/"++cfg._2,
+        "--target", "verilog",
+        "--split-verilog",
+        ) ++ args,
+      Seq(
+        chisel3.stage.ChiselGeneratorAnnotation( () => {
+          val soc = LazyModule(new Rift2Chip(isFlatten = false)(cfg._1))
+          soc.module
+        }),
+        circt.stage.FirtoolOption("--disable-annotation-unknown"),
+        circt.stage.FirtoolOption( "--dedup"),
+      )
+    )
+
+
   }
 }
 
