@@ -216,7 +216,7 @@ trait LSU_OpMux { this: LsuBase =>
     opStIO.bits  := 0.U.asTypeOf(new Lsu_iss_info)
   }
 
-  when( addrTransIO.bits.fun.is_amo ) {
+  when( addrTransIO.bits.fun.is_amo | addrTransIO.bits.fun.is_sc ) {
     opAmIO.valid      := addrTransIO.valid
     opAmIO.bits       := addrTransIO.bits
     addrTransIO.ready := opAmIO.ready

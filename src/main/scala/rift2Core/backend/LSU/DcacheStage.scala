@@ -162,7 +162,7 @@ trait DcacheStageLRSC { this: DcacheStageBase =>
       assert( pipeStage1Bits.fun.isDubl | pipeStage1Bits.fun.isWord )
     } .elsewhen( pipeStage1Bits.fun.is_sc ) {
       is_pending_lr := false.B
-    } .elsewhen( (pipeStage1Bits.fun.is_su | (pipeStage1Bits.fun.is_amo & ~pipeStage1Bits.fun.is_lrsc)) ) {
+    } .elsewhen( pipeStage1Bits.fun.is_su | pipeStage1Bits.fun.is_amo ) {
       when( tagInfoW === lr_addr(plen-1,plen-tag_w) ) {
         is_pending_lr := false.B
       }   
@@ -380,7 +380,7 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
         res := reAlign_data( from = dw, to = 64, overlap_data, paddr )
         res
       }
-      val res_pre = get_loadRes( fun, pipeStage1Bits.vAttach.get.vsew, paddr, res_pre_pre ) //align 8
+      val res_pre = get_loadRes( fun, (if(hasVector){pipeStage1Bits.vAttach.get.vsew} else {0.U}), paddr, res_pre_pre ) //align 8
 
       val res = MuxCase(res_pre, Seq(
         pipeStage1Bits.fun.is_sc    -> Mux( is_sc_fail, 1.U, 0.U ),

@@ -115,7 +115,7 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
     //   val (new_data, new_strb) = overlap_wr( rdata, 0.U, overlap_wdata, overlap_wstrb)
     //   new_data
     // }
-    val res_pre = get_loadRes( fun, pending.vAttach.get.vsew, paddr, rdata )
+    val res_pre = get_loadRes( fun, (if(hasVector){pending.vAttach.get.vsew} else{0.U}), paddr, rdata )
     res_pre
   }
 

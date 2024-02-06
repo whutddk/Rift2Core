@@ -154,7 +154,7 @@ trait Stq_Overlap{ this: Stq_Base =>
         when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).param.dat.op1(plen-1,3) === io.overlapReq.bits.paddr(plen-1,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
 
-          when( buff(ro_ptr).fun.is_amo ) { io.overlapResp.valid := false.B }
+          when( buff(ro_ptr).fun.is_amo | buff(ro_ptr).fun.is_sc ) { io.overlapResp.valid := false.B }
           // assert( ~(buff(ro_ptr).fun.is_amo & io.overlapResp.valid), "Assert Failed at Store-queue, overlapping an amo-instr, that is not allow!" )
         } .otherwise {
           overlap_buff(i) := 0.U.asTypeOf(new Lsu_iss_info)
@@ -167,7 +167,7 @@ trait Stq_Overlap{ this: Stq_Base =>
         when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).param.dat.op1(plen-1,3) === io.overlapReq.bits.paddr(plen-1,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
 
-          when( buff(ro_ptr).fun.is_amo ) { io.overlapResp.valid := false.B }
+          when( buff(ro_ptr).fun.is_amo | buff(ro_ptr).fun.is_sc ) { io.overlapResp.valid := false.B }
           // assert( ~(buff(ro_ptr).fun.is_amo & io.overlapResp.valid), "Assert Failed at Store-queue, overlapping an amo-instr, that is not allow!" )
         } .otherwise {
           overlap_buff(i) := 0.U.asTypeOf(new Lsu_iss_info)

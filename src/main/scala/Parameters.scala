@@ -207,7 +207,7 @@ case class RiftSetting(
 
   aluNum: Int = 2,
   mulNum: Int = 1,
-  fpuNum: Int = 1,
+  fpuNum: Int = 0,
 
   vectorParameters: VectorParameters = VectorParameters(),
 

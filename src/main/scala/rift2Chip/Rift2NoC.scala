@@ -97,7 +97,7 @@ class Rift2NoC(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyM
 
 
   val noc = LazyModule(new TLNoC(
-    TLNoCParams(
+    SimpleTLNoCParams(
       nodeMappings = DiplomaticNetworkNodeMapping(
         inNodeMapping  = ListMap( "icache[0]" -> 0, "dcache[0]" -> 1, "mmu[0]" -> 2, "prefetch[0]" -> 3, "system[0]"-> 4, "periph[0]"-> 4 ),
         outNodeMapping = ListMap( "soc[0]" -> 5, "soc[1]" -> 6, "dm[0]" -> 7, "i_aclint[0]" -> 8, "i_plic[0]" -> 8 ),

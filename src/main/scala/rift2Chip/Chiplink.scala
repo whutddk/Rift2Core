@@ -148,7 +148,7 @@ class ChipLinkMaster(implicit p: Parameters) extends LazyModule{
     val io: HexSpiMasterIO = IO(new HexSpiMasterIO)
 
     // withClockAndReset( (~io.hspi_clk).asClock, io.hspi_reset ) {
-      io.hspi_clk := clock.asBool()
+      io.hspi_clk := clock.asBool
 
       val txCounter = RegInit(15.U(4.W))
       val rxCounter = RegInit(0.U(3.W))

@@ -608,7 +608,7 @@ trait VDecode32{ this: DecodeBase =>
 
 
 
-  info.vAttach.get.vm  := x(25).asBool()
+  info.vAttach.get.vm  := x(25).asBool
   info.vAttach.get.nf  := x(31,29)
 
   info.vAttach.get.vtype     := 0.U

@@ -260,7 +260,7 @@ isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa)# $(fpuisa)
 
 
 
-.PHONY: compile clean VSimTop
+.PHONY: compile clean VSimTop mill doc
 
 module:
 	sbt "test:runMain test.testModule --target-dir generated --show-registrations --full-stacktrace -E verilog"
@@ -270,11 +270,22 @@ compile:
 	sbt "test:runMain test.testMain \
 	-e verilog"
 
-
 #--gen-mem-verilog \
 # --inline \
 
 # --list-clocks \
+
+
+mill:
+	rm -rf ./generated/Main/
+	rm -f dependencies/rocket-chip/src/main/resources/META-INF/services/firrtl.options.RegisteredLibrary
+	./mill --no-server clean
+	./mill -i rift2Core[chisel].test.runMain test.testMain
+
+doc:
+	rm -f dependencies/rocket-chip/src/main/resources/META-INF/services/firrtl.options.RegisteredLibrary
+	./mill --no-server show rift2Core[chisel].docJar
+	unzip -d ScalaDoc/ out/rift2Core/chisel/docJar.dest/out.jar
 
 noc:
 	rm -rf ./generated/Main/
@@ -283,9 +294,11 @@ noc:
 
 
 line: 
+	rm -f dependencies/rocket-chip/src/main/resources/META-INF/services/firrtl.options.RegisteredLibrary
 	rm -rf generated/Debug/
-	rm -rf generated/Release/
-	sbt "test:runMain test.testAll"
+	# rm -rf generated/Release/
+	./mill --no-server clean
+	./mill -i rift2Core[chisel].test.runMain test.testAll
 
 CONFIG ?= /Main/
 
@@ -312,7 +325,7 @@ VSimTop:
 	${R2}/tb/verilator/sim_main.cpp  \
 	${R2}/tb/verilator/diff.cpp \
 	-Mdir ./generated/build/$(CONFIG) \
-	-j 30
+	-j 1
 
 
 

@@ -152,6 +152,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
     val io: DMIO = IO(new DMIO)
 
+
     def HALTED       : Int = return 0x100
     def GOING        : Int = return 0x104
     def RESUMING     : Int = return 0x108
@@ -173,7 +174,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
     val dmstatus = WireInit(0.U.asTypeOf(new DMSTATUSFields()))
       val dmactive = RegInit(false.B)
-      val ndmreset = RegInit(false.B)
+      val ndmreset = RegInit(false.B); io.ndreset := ndmreset
     val hartsel = WireDefault(0.U(1.W))//RegInit(0.U( (log2Ceil(nComponents) max 1).W))
     val havereset = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
     val hartreset = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
@@ -750,7 +751,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
           WNotifyVal(32, abstractDataMem_qout(i), abstractDataMem_dnxt2(i), abstractDataMem_wen2(i))
         }),
       
-      (FLAGS ) -> RegFieldGroup("debug_flags", Some("Memory region used to control hart going/resuming in Debug Mode"), flags.zipWithIndex.map{case(x, _) => RegField.r(8, x.asUInt())}),
+      (FLAGS ) -> RegFieldGroup("debug_flags", Some("Memory region used to control hart going/resuming in Debug Mode"), flags.zipWithIndex.map{case(x, _) => RegField.r(8, x.asUInt)}),
       (ROMBASE ) -> RegFieldGroup("debug_rom", Some("Debug ROM"), DebugRomContents().zipWithIndex.map{case (x, _) => RegField.r(8, (x & 0xFF).U(8.W))}),
     )
 

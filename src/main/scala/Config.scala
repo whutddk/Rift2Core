@@ -62,7 +62,6 @@ class Rift2300 extends Config((_, _, _) => {
     ),
 
     dptEntry = 1,
-    fpuNum = 0,
     mulNum = 0,
 
     isMinArea = true,
@@ -126,7 +125,6 @@ class Rift2310 extends Config((_, _, _) => {
     ),
 
     dptEntry = 2,
-    fpuNum = 0,
     mulNum = 1,
 
     isMinArea = true,
@@ -186,7 +184,6 @@ class Rift2320 extends Config((_, _, _) => {
     ),
 
     dptEntry = 4,
-    fpuNum = 0,
     mulNum = 1,
 
     isMinArea = true,
@@ -244,7 +241,6 @@ class Rift2330 extends Config((_, _, _) => {
     ),
 
     dptEntry = 4,
-    fpuNum = 0,
 
     isMinArea = true,
     isLowPower = false,
@@ -300,7 +296,6 @@ class Rift2330D extends Config((_, _, _) => {
     ),
 
     dptEntry = 1,
-    fpuNum = 0,
     mulNum = 0,
 
     isMinArea = true,
@@ -345,7 +340,6 @@ class Rift2340 extends Config((_, _, _) => {
     ),
 
     dptEntry = 6,
-    fpuNum = 1,
 
     isMinArea = true,
     isLowPower = false,
@@ -388,7 +382,6 @@ class Rift2350 extends Config((_, _, _) => {
     ),
 
     dptEntry = 8,
-    fpuNum = 0,
 
     isMinArea = true,
     isLowPower = false,
@@ -431,7 +424,6 @@ class Rift2360 extends Config((_, _, _) => {
     ),
 
     dptEntry = 12,
-    fpuNum = 0,
 
     isMinArea = false,
     isLowPower = true,
@@ -440,42 +432,42 @@ class Rift2360 extends Config((_, _, _) => {
 
 class Rift2370 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
-    hasVector = true,
+    // hasVector = true,
 
-    opChn = 2,
-    wbChn = 2,
+    // opChn = 2,
+    // wbChn = 2,
 
-    pmpNum = 1,
-    hpmNum = 0,
+    // pmpNum = 1,
+    // hpmNum = 0,
 
-    icacheParameters = IcacheParameters(
-      bk = 1,
-      cb = 2,
-      cl = 8
-    ),
+    // icacheParameters = IcacheParameters(
+    //   bk = 1,
+    //   cb = 2,
+    //   cl = 8
+    // ),
 
-    dcacheParameters = DcacheParameters(
-      bk = 2,
-      cb = 2,
-      cl = 8,
-      stEntry = 16,
-      sbEntry = 2,
-    ),
+    // dcacheParameters = DcacheParameters(
+    //   bk = 2,
+    //   cb = 2,
+    //   cl = 8,
+    //   stEntry = 16,
+    //   sbEntry = 2,
+    // ),
 
-    ifetchParameters = IFParameters(
-      uBTB_entry = 4,
-      btb_cl = 8,
-      bim_cl = 8,
-      ras_dp = 4,
-    ),
+    // ifetchParameters = IFParameters(
+    //   uBTB_entry = 4,
+    //   btb_cl = 8,
+    //   bim_cl = 8,
+    //   ras_dp = 4,
+    // ),
 
-    dptEntry = 4,
+    // dptEntry = 4,
 
-    aluNum = 1,
+    // aluNum = 1,
 
-    xRegNum = 36,
-    fRegNum = 36,
-    tlbEntry = 4,
+    // xRegNum = 36,
+    // fRegNum = 36,
+    // tlbEntry = 4,
   )
 
 
@@ -517,7 +509,6 @@ class Rift2380 extends Config((_, _, _) => {
     ),
 
     dptEntry = 24,
-    fpuNum = 1,
     isMinArea = false,
     isLowPower = true,
   )
@@ -559,7 +550,6 @@ class Rift2390 extends Config((_, _, _) => {
     ),
 
     dptEntry = 32,
-    fpuNum = 1,
 
     isMinArea = false,
     isLowPower = true,
