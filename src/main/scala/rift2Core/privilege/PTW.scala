@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -25,8 +25,7 @@ import chisel3.experimental.dataview._
 import rift2Chip._
 import base._
 
-import chipsalliance.rocketchip.config.Parameters
-import freechips.rocketchip.diplomacy._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 class Info_ptw_rsp extends Bundle with Info_access_lvl{
@@ -71,7 +70,8 @@ class PTWBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModu
   def dw = l1DW
   def cl = 256
   
-  val io = IO(new Bundle{
+
+  class PTWIO extends Bundle{
     val ptw_i = Flipped(DecoupledIO(new Info_mmu_req))
     val ptw_o = DecoupledIO(new Info_ptw_rsp)
 
@@ -80,8 +80,10 @@ class PTWBase(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModu
     val sfence_vma = Input(Bool())
 
     val ptw_get    = new DecoupledIO(new TLBundleA(mEdge.bundle))
-    val ptw_access = Flipped(new DecoupledIO(new TLBundleD(mEdge.bundle)))
-  })
+    val ptw_access = Flipped(new DecoupledIO(new TLBundleD(mEdge.bundle)))    
+  }
+
+  val io: PTWIO = IO(new PTWIO)
 
   val nextState = WireInit(PTWState.Free.U)
   val currState = RegNext(next=nextState, init=PTWState.Free.U)
@@ -322,7 +324,7 @@ trait PTWCache { this: PTWBase =>
       value := data_sel
     }
 
-    MuxCase(value, Array(
+    MuxCase(value, Seq(
       is_hit        -> data_sel,
       is_trans_done -> data_sel
     ))

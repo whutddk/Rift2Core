@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -20,12 +20,10 @@ import chisel3._
 import chisel3.util._
 import chisel3.util.random._
 
-import rift2Core.define._
-
 import rift2Chip._
 import base._
 
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 
 
@@ -34,7 +32,8 @@ import chipsalliance.rocketchip.config.Parameters
 
 class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
   val id = idx
-  val io = IO(new Bundle {
+
+  class DcacheStageIO extends Bundle{
     val enq = Flipped(Decoupled(new Dcache_Enq_Bundle))
     val reload = Valid(new Dcache_Enq_Bundle)
     val deq = Valid(new Dcache_Deq_Bundle)
@@ -43,9 +42,10 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
     val wb_req = Valid(new Info_writeBack_req)
 
     val isCacheEmpty = Input(Bool())
-    val flush = Input(Bool())
+    val flush = Input(Bool())    
+  }
 
-  })
+  val io: DcacheStageIO = IO(new DcacheStageIO)
 
 
   val datInfoR = Wire( Vec(cb, Vec(dw/8, UInt(8.W))) )
@@ -56,11 +56,9 @@ class DcacheStageBase(idx: Int)(implicit p: Parameters) extends DcacheModule {
 
   val tagEnW = Wire( Vec(cb, Bool()) )
   val datEnW = Wire( Vec(cb, Bool()) )
-  // val tagEnR = Wire( Vec(cb, Bool()) )
-  // val datEnR = Wire( Vec(cb, Bool()) )
 
-  val datRAM = for ( i <- 0 until cb ) yield { Module(new DatRAM(dw, cl)) }
-  val tagRAM = for ( i <- 0 until cb ) yield { Module(new TagRAM(tag_w, cl)) }
+  val datRAM = for ( _ <- 0 until cb ) yield { Module(new DatRAM(dw, cl)) }
+  val tagRAM = for ( _ <- 0 until cb ) yield { Module(new TagRAM(tag_w, cl)) }
 
   val addrSelW = Wire(UInt(line_w.W))
   val addrSelR = Wire(UInt(line_w.W))
@@ -149,8 +147,8 @@ trait DcacheStageLRSC { this: DcacheStageBase =>
   val lr_addr = Reg(UInt(plen.W))
   is_sc_fail := 
     ~is_pending_lr | 
-    (is_lr_64_32n  & pipeStage1Bits.fun.is_word) |
-    (~is_lr_64_32n & pipeStage1Bits.fun.is_dubl) |
+    (is_lr_64_32n  & pipeStage1Bits.fun.isWord) |
+    (~is_lr_64_32n & pipeStage1Bits.fun.isDubl) |
     lr_addr =/= pipeStage1Bits.paddr
 
 
@@ -159,12 +157,12 @@ trait DcacheStageLRSC { this: DcacheStageBase =>
   } .elsewhen( pipeStage1Valid & pipeStage1Bits.fun.is_access & isHit ) {// going to deq fire (validIO)
     when( pipeStage1Bits.fun.is_lr ) {
       is_pending_lr := true.B
-      is_lr_64_32n := pipeStage1Bits.fun.is_dubl
+      is_lr_64_32n := pipeStage1Bits.fun.isDubl
       lr_addr := pipeStage1Bits.paddr
-      assert( pipeStage1Bits.fun.is_dubl | pipeStage1Bits.fun.is_word )
+      assert( pipeStage1Bits.fun.isDubl | pipeStage1Bits.fun.isWord )
     } .elsewhen( pipeStage1Bits.fun.is_sc ) {
       is_pending_lr := false.B
-    } .elsewhen( (pipeStage1Bits.fun.is_su | (pipeStage1Bits.fun.is_amo & ~pipeStage1Bits.fun.is_lrsc)) ) {
+    } .elsewhen( pipeStage1Bits.fun.is_su | pipeStage1Bits.fun.is_amo ) {
       when( tagInfoW === lr_addr(plen-1,plen-tag_w) ) {
         is_pending_lr := false.B
       }   
@@ -215,10 +213,11 @@ trait DcacheStageWData { this: DcacheStageBase =>
       (pipeStage1Bits.fun.amominu_d) -> reAlign_data( from = 64, to = dw, Mux(amo_reAlign_64_a        < amo_reAlign_64_b,        amo_reAlign_64_a, amo_reAlign_64_b), pipeStage1Bits.paddr),
       (pipeStage1Bits.fun.amomaxu_w) -> reAlign_data( from = 64, to = dw, Mux(cmp_a_sel               < cmp_b_sel,               amo_reAlign_64_b, amo_reAlign_64_a), pipeStage1Bits.paddr),
       (pipeStage1Bits.fun.amomaxu_d) -> reAlign_data( from = 64, to = dw, Mux(amo_reAlign_64_a        < amo_reAlign_64_b,        amo_reAlign_64_b, amo_reAlign_64_a), pipeStage1Bits.paddr),
-            
+
+      pipeStage1Bits.fun.isVStore -> pipeStage1Bits.wdata,
     ))
-      
-      
+
+
   datInfoW := VecInit(for ( k <- 0 until dw/8 ) yield dataW(8*k+7, 8*k))
 }
 
@@ -376,26 +375,32 @@ trait DcacheStageRTN{ this: DcacheStageBase =>
       
       val res_pre_pre = {
         val res = Wire( UInt(64.W) )
-        val (new_data, new_strb) = overlap_wr( rdata, 0.U((dw/8).W), overlap_wdata, overlap_wstrb)
-        val overlap_data = Mux( fun.is_lu, new_data, rdata) //align 256
+        val (newData, _) = overlap_wr( rdata, 0.U((dw/8).W), overlap_wdata, overlap_wstrb)
+        val overlap_data = Mux( fun.is_lu, newData, rdata) //align 256
         res := reAlign_data( from = dw, to = 64, overlap_data, paddr )
         res
       }
-      val res_pre = get_loadRes( fun, paddr, res_pre_pre ) //align 8
+      val res_pre = get_loadRes( fun, (if(hasVector){pipeStage1Bits.vAttach.get.vsew} else {0.U}), paddr, res_pre_pre ) //align 8
 
-      val res = Mux(
-        pipeStage1Bits.fun.is_sc,
-        Mux( is_sc_fail, 1.U, 0.U ),
-        res_pre
-      )
+      val res = MuxCase(res_pre, Seq(
+        pipeStage1Bits.fun.is_sc    -> Mux( is_sc_fail, 1.U, 0.U ),
+        pipeStage1Bits.fun.isVStore -> 0.U,
+      ))
+
       res
     }
 
     deqBits.wb.rd0      := pipeStage1Bits.rd.rd0 
-    deqBits.chkIdx     := pipeStage1Bits.chkIdx
+    deqBits.chkIdx      := pipeStage1Bits.chkIdx
     deqBits.is_load_amo := pipeStage1Bits.fun.is_wb
     deqBits.is_flw      := pipeStage1Bits.fun.flw
     deqBits.is_fld      := pipeStage1Bits.fun.fld
+    deqBits.isXwb       := pipeStage1Bits.fun.isXwb
+    deqBits.isFwb       := pipeStage1Bits.fun.isFwb
+    deqBits.isVwb       := pipeStage1Bits.fun.isVwb
+
+    if(hasVector) { deqBits.vAttach.get    := pipeStage1Bits.vAttach.get }
+
   } .otherwise {
     deqValid := false.B
     if( isLowPower ) {

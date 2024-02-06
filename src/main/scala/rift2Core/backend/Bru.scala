@@ -1,7 +1,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -24,10 +24,10 @@ import chisel3.util._
 import chisel3.experimental.dataview._
 import rift2Core.define._
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 abstract class BruBase()(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
+  class BruIO extends Bundle{
     val bru_iss_exe = Flipped(new DecoupledIO(new Bru_iss_info))
     val bru_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
 
@@ -40,8 +40,10 @@ abstract class BruBase()(implicit p: Parameters) extends RiftModule {
     val bcmm_update = Valid(new Branch_CTarget_Bundle)
     val jcmm_update = Valid(new Jump_CTarget_Bundle)
 
-    val flush = Input(Bool())
-  })
+    val flush = Input(Bool())    
+  }
+
+  val io: BruIO = IO(new BruIO)
 
   val bru_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, true, false ) )
   val bctq = Module(new Queue( new Branch_CTarget_Bundle, (if(!isMinArea) 4 else 1) ) )

@@ -1,7 +1,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,22 +22,23 @@ import chisel3._
 import chisel3.util._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config.Parameters
 
 
 //dw:data type aw:address width, in: input port num, out: output port num 
 
 class MultiPortFifo[T<:Data]( dw: T, aw: Int, in: Int, out: Int, flow: Boolean = false )(implicit p: Parameters) extends RiftModule{
-  val io = IO(new Bundle{
+  class MultiPortFifoIO extends Bundle{
     val enq = Vec(in, Flipped(new DecoupledIO(dw)) )
     val deq  = Vec(out, new DecoupledIO(dw) )
 
     val flush = Input(Bool())
-  })
+  }
+  val io: MultiPortFifoIO = IO(new MultiPortFifoIO)
 
   
 
-  def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
+  def dp: Int = { var res = 1; for ( _ <- 0 until aw ) { res = res * 2 }; return res }
 
   require( (in <= dp && out <= dp) , "dp = "+dp+", in = "+in+", out = "+ out )
   override def desiredName = "MultiPortFifo_in"+in+"_out"+out

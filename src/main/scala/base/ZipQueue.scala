@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -21,14 +21,16 @@ import chisel3._
 import chisel3.util._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config.Parameters
 
 class ZipQueue[T<:Data]( dw: T, aw: Int, in: Int, out: Int, zip: Int )(implicit p: Parameters) extends RiftModule{
-  def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
-  val io = IO(new Bundle{
+  def dp: Int = { var res = 1; for ( _ <- 0 until aw ) { res = res * 2 }; return res }
+  class ZipQueueIO extends Bundle{
     val enq = Vec(in, Flipped(new DecoupledIO(dw)) )
     val deq  = Vec(out, new DecoupledIO(dw) )
-  })
+  }
+
+  val io = IO(new ZipQueueIO)
 
   if( out != 1 ) {
     val buff  = Reg(Vec(dp, dw))

@@ -4,7 +4,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -26,10 +26,13 @@ import chisel3.util._
 
 
 class Decoupled1toN[T<:Data]( dw: T, out: Int ) extends Module{
-  val io = IO(new Bundle{
+
+  class Decoupled1toNIO extends Bundle{
     val enq = Flipped(new DecoupledIO(dw))
-    val deq  = Vec(out, new DecoupledIO(dw) )
-  })
+    val deq  = Vec(out, new DecoupledIO(dw) )    
+  }
+
+  val io: Decoupled1toNIO = IO(new Decoupled1toNIO)
 
   io.enq.ready := io.deq.map(x => x.ready).reduce(_&_)
 

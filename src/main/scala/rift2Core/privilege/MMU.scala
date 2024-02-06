@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -20,13 +20,11 @@ package rift2Core.privilege
 import chisel3._
 import chisel3.util._
 
-import chisel3.util.random._
 import chisel3.experimental.dataview._
 
 import rift2Chip._
 
-import chipsalliance.rocketchip.config.Parameters
-import freechips.rocketchip.diplomacy._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 class Info_pte_sv39 extends Bundle {
@@ -110,7 +108,8 @@ class Info_cmm_mmu(implicit p: Parameters) extends RiftBundle {
   *
   */
 class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
+
+  class MMUIO extends Bundle{
     val if_mmu = Flipped(DecoupledIO(new Info_mmu_req))
     val mmu_if = DecoupledIO(new Info_mmu_rsp)
     val if_flush = Input(Bool())
@@ -119,14 +118,13 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     val mmu_lsu = DecoupledIO(new Info_mmu_rsp)
     val lsu_flush = Input(Bool())
 
-
     val cmm_mmu = Input( new Info_cmm_mmu )
-
 
     val ptw_get    = new DecoupledIO(new TLBundleA(edge.bundle))
     val ptw_access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
+  }
 
-  })
+  val io: MMUIO = IO(new MMUIO)
 
   val itlb = Module( new TLB )
   val dtlb = Module( new TLB )
@@ -199,13 +197,15 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     io.mmu_if.bits.paddr := ipaddr
 
     io.mmu_if.bits.is_access_fault :=
-      PMP( io.cmm_mmu, ipaddr, Cat( io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R) ) | 
-      (iptw.io.ptw_o.bits.is_access_fault & iptw.io.ptw_o.bits.is_X & iptw.io.ptw_o.valid) |
-      ipaddr(63,plen) =/= (0.U)
+      io.if_mmu.valid & (
+        PMP( io.cmm_mmu, ipaddr, Cat( io.if_mmu.bits.is_X, io.if_mmu.bits.is_W, io.if_mmu.bits.is_R) ) | 
+        (iptw.io.ptw_o.bits.is_access_fault & iptw.io.ptw_o.bits.is_X & iptw.io.ptw_o.valid) |
+        ipaddr(63,plen) =/= (0.U)        
+      )
+
 
     io.mmu_if.bits.is_paging_fault := 
-      ~is_bypass_if &
-      (
+      io.if_mmu.valid & ~is_bypass_if & (
         is_chk_page_fault( pte, io.if_mmu.bits.vaddr, io.cmm_mmu.priv_lvl_if, "b100".U) |
         (iptw.io.ptw_o.bits.is_ptw_fail & iptw.io.ptw_o.bits.is_X & iptw.io.ptw_o.valid)
       )
@@ -231,12 +231,15 @@ class MMU(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
     io.mmu_lsu.bits.paddr := dpaddr
 
     io.mmu_lsu.bits.is_access_fault :=
-      PMP( io.cmm_mmu, dpaddr, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R) ) | 
-      (dptw.io.ptw_o.bits.is_access_fault & (~dptw.io.ptw_o.bits.is_X & dptw.io.ptw_o.valid)) |
-      dpaddr(63,plen) =/= (0.U)
+      io.mmu_lsu.valid & (
+        PMP( io.cmm_mmu, dpaddr, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R) ) | 
+        (dptw.io.ptw_o.bits.is_access_fault & (~dptw.io.ptw_o.bits.is_X & dptw.io.ptw_o.valid)) |
+        dpaddr(63,plen) =/= (0.U)      
+      )
+
 
     io.mmu_lsu.bits.is_paging_fault :=
-      ~is_bypass_ls & (
+      io.mmu_lsu.valid & ~is_bypass_ls & (
         is_chk_page_fault( pte, io.lsu_mmu.bits.vaddr, io.cmm_mmu.priv_lvl_ls, Cat(io.lsu_mmu.bits.is_X, io.lsu_mmu.bits.is_W, io.lsu_mmu.bits.is_R )) |
         dptw.io.ptw_o.bits.is_ptw_fail & ~dptw.io.ptw_o.bits.is_X & dptw.io.ptw_o.valid
       )

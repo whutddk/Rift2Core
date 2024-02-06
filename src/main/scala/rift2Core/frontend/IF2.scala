@@ -1,7 +1,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -29,8 +29,7 @@ import base._
 import rift2Core.define._
 import rift2Core.privilege._
 
-import chipsalliance.rocketchip.config.Parameters
-import freechips.rocketchip.diplomacy._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 
@@ -41,8 +40,20 @@ import freechips.rocketchip.tilelink._
 abstract class IF2Base(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheModule {
   val iEdge = edge
 
-  val io = IO(new Bundle {
-
+  /**
+   * @constructor Create a new IF2IO bundle instance with the following signals:
+   * @param if2_req a Flipped (input) DecoupledIO bundle of type IF1_Bundle used to receive instruction fetch requests from IF1 stage
+   * @param if2_resp a vector of 4 DecoupledIO bundles of type IF2_Bundle used to send instruction fetch responses to IF3 stage
+   * @param if_mmu a DecoupledIO bundle of type Info_mmu_req used to address translation requests to MMU
+   * @param mmu_if a Flipped (input) DecoupledIO bundle of type Info_mmu_rsp used to receive MMU responses
+   * @param if_cmm an Output bundle of type Info_if_cmm used to provide information to CMM stage about IF stage status
+   * @param icache_get a DecoupledIO bundle of type TLBundleA from instruction cache which used to request data
+   * @param icache_access a Flipped DecoupledIO bundle of type TLBundleD from instruction cache which used to receive data 
+   * @param flush an Input boolean used to signal the IF2 stage to flush the pipeline
+   * @param ifence an Input boolean used to signal that an instruction fetch fence should be inserted
+   * @param preFetch a ValidIO bundle of type PreFetch_Req_Bundle used for requesting data prefetching
+   */
+  class IF2IO extends Bundle{
     val if2_req  = Flipped(new DecoupledIO( new IF1_Bundle ))
     val if2_resp = Vec( 4, new DecoupledIO(new IF2_Bundle) )
 
@@ -50,7 +61,6 @@ abstract class IF2Base(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheMo
     val mmu_if = Flipped(DecoupledIO(new Info_mmu_rsp))
 
     val if_cmm = Output(new Info_if_cmm)
-
 
     val icache_get    = new DecoupledIO(new TLBundleA(iEdge.bundle))
     val icache_access = Flipped(new DecoupledIO(new TLBundleD(iEdge.bundle)))
@@ -60,10 +70,12 @@ abstract class IF2Base(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheMo
     val ifence = Input(Bool())
 
     /** prefetch is not guarantee to be accepted by cache*/
-    val preFetch = ValidIO( new PreFetch_Req_Bundle )
-  })
+    val preFetch = ValidIO( new PreFetch_Req_Bundle )    
+  }
 
+  val io: IF2IO = IO(new IF2IO)
 
+  /** Count the memory transactions using TLEdgeOut object. */
   val (_, _, is_trans_done, transCnt) = iEdge.count(io.icache_access)
   val icache_access_data = Wire(UInt(dw.W))
   val icache_sramrd_data = Wire(UInt(dw.W))
@@ -74,12 +86,10 @@ abstract class IF2Base(edge: TLEdgeOut)(implicit p: Parameters) extends IcacheMo
   ibuf.io.flush := io.flush
   io.if2_resp <> ibuf.io.deq
 
-
-
   val cl_sel = io.mmu_if.bits.paddr(addr_lsb+line_w-1, addr_lsb)
   val tag_sel = io.mmu_if.bits.paddr(plen-1,plen-tag_w)
 
-   /** one hot code indicated which blcok is hit */
+  /** one hot code indicated which blcok is hit */
   val is_hit_oh = Wire(Vec(cb, Bool()))
 
   /** flag that indicated that if there is a cache block hit */
@@ -142,27 +152,6 @@ trait IF2FSM { this: IF2Base =>
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 trait IF2NCache { this: IF2Base =>
   is_hit_oh := VecInit( Seq.fill(cb){false.B} )
   icache_sramrd_data := 0.U
@@ -170,17 +159,13 @@ trait IF2NCache { this: IF2Base =>
 }
 
 
-
-
-
-
 trait IF2ICache { this: IF2Base =>
 
   /** flag that indicated that if a cache block is valid */
   val is_valid = RegInit( VecInit( Seq.fill(cl)(VecInit(Seq.fill(cb)(false.B))) ) )
 
-  val datRAM = for ( i <- 0 until cb ) yield { Module(new DatRAM(dw, cl)) }
-  val tagRAM = for ( i <- 0 until cb ) yield { Module(new TagRAM(tag_w, cl)) }
+  val datRAM = for ( _ <- 0 until cb ) yield { Module(new DatRAM(dw, cl)) }
+  val tagRAM = for ( _ <- 0 until cb ) yield { Module(new TagRAM(tag_w, cl)) }
 
 
   is_hit_oh := {

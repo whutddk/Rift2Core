@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -20,10 +20,9 @@ package rift2Core.backend
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
-import rift2Core.backend.fpu._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 case class FType(exp: Int, sig: Int) {
   def ieeeWidth = exp + sig
@@ -275,7 +274,6 @@ class Fpu_float2int_iss_info extends Bundle {
 class Fpu_param(implicit p: Parameters) extends RD_PHY{
   val dat = new Operation_source(dw=65)
   val rm = UInt(3.W)
-
 }
 
 class Fpu_iss_info()(implicit p: Parameters) extends RiftBundle {

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,10 +19,9 @@ package rift2Core.backend.lsu
 import chisel3._
 import chisel3.util._
 
-import base._
 import rift2Chip._
 
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 
@@ -42,7 +41,8 @@ class Info_writeBack_req(implicit p: Parameters) extends RiftBundle with HasDcac
   * a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Probe-Release-Mode
   */
 class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) extends RiftModule with HasDcacheParameters{
-  val io = IO(new Bundle {
+
+  class WriteBackUnitIO extends Bundle{
     val wb_req = Flipped(new ValidIO(new Info_writeBack_req))
 
     val cache_release = new DecoupledIO(new TLBundleC(edge.bundle))
@@ -50,8 +50,10 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
 
 
     val release_ban = Input(Bool())
-    val miss_ban = Output(Bool())
-  })
+    val miss_ban = Output(Bool())    
+  }
+
+  val io: WriteBackUnitIO = IO(new WriteBackUnitIO)
 
 
 
@@ -184,16 +186,18 @@ class WriteBackUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Paramete
   * a writeBack Unit accept data and paddr from l1cache and write it back to l2cache Put-Mode
   */
 class PutUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule with HasDcacheParameters{
-  val io = IO(new Bundle {
+
+  class PutUnitIO extends Bundle{
     val wb_req = Flipped(new ValidIO(new Info_writeBack_req))
 
     val getPut    = new DecoupledIO(new TLBundleA(edge.bundle))
     val access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
 
-
     val release_ban = Input(Bool())
     val miss_ban = Output(Bool())
-  })
+  }
+
+  val io: PutUnitIO = IO(new PutUnitIO)
 
 
 

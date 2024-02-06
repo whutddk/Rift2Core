@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,22 +17,18 @@
 package rift2Core.diff
 
 import chisel3._
-import chisel3.util._
 import base._
 
-import rift2Core.define._
-
-import rift2Core.frontend._
 import rift2Core.backend._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 
 class Info_cmm_diff(implicit p: Parameters) extends RiftBundle {
-  val pc = Vec(cm_chn, UInt(64.W))
-  val comfirm = Vec(cm_chn, Bool())
-  val abort = Vec(cm_chn, Bool())
+  val pc = Vec(cmChn, UInt(64.W))
+  val comfirm = Vec(cmChn, Bool())
+  val abort = Vec(cmChn, Bool())
   val priv_lvl = UInt(2.W)
   val is_ecall_M = Bool()
   val is_ecall_S = Bool()
@@ -89,13 +85,15 @@ class Info_csr_reg(implicit p: Parameters) extends RiftBundle {
 }
 
 class diff(implicit p: Parameters) extends RiftModule with HasFPUParameters{
-  val io = IO(new Bundle{
+
+  class DiffIO extends Bundle{
     val diffXReg = Input(Vec(32, UInt(64.W)))
     val diffFReg = Input(Vec(32, UInt(65.W)))
 
     val commit = Input(new Info_cmm_diff)
-    val csr = Input(new Info_csr_reg)
-  })
+    val csr = Input(new Info_csr_reg)    
+  }
+  val io = IO(new DiffIO)
 
 
   dontTouch(io)

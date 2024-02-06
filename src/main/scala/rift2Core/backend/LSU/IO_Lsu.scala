@@ -1,7 +1,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -24,14 +24,14 @@ import chisel3.util._
 import rift2Core.define._
 
 import rift2Chip._
-import base._
 
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 
 class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
-  val io = IO(new Bundle{
+
+  class IOLSUIO extends Bundle{
     val enq = Flipped(new DecoupledIO(new Lsu_iss_info))
     val deq = new DecoupledIO(new Dcache_Deq_Bundle)
     val is_empty = Output(Bool())
@@ -39,8 +39,9 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
     val getPut    = new DecoupledIO(new TLBundleA(edge.bundle))
     val access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
 
-    // val flush = Input(Bool())
-  })
+    // val flush = Input(Bool())    
+  }
+  val io: IOLSUIO = IO(new IOLSUIO)
 
   val is_busy    = RegInit(false.B)
   val isTransing = RegInit(false.B)
@@ -114,7 +115,7 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
     //   val (new_data, new_strb) = overlap_wr( rdata, 0.U, overlap_wdata, overlap_wstrb)
     //   new_data
     // }
-    val res_pre = get_loadRes( fun, paddr, rdata )
+    val res_pre = get_loadRes( fun, (if(hasVector){pending.vAttach.get.vsew} else{0.U}), paddr, rdata )
     res_pre
   }
 
@@ -125,6 +126,11 @@ class IO_Lsu(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule{
   io.deq.bits.is_flw := Mux( io.deq.valid, pending.fun.flw, false.B )
   io.deq.bits.is_fld := Mux( io.deq.valid, pending.fun.fld, false.B )
 
+  io.deq.bits.isXwb := pending.fun.isXwb
+  io.deq.bits.isFwb := pending.fun.isFwb
+  io.deq.bits.isVwb := pending.fun.isVwb
+
+  if(hasVector){io.deq.bits.vAttach.get := io.enq.bits.vAttach.get}
 
   io.access.ready := io.deq.ready
 

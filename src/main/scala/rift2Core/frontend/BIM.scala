@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,20 +18,23 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 import base._
 import rift2Core.define._
 
 class BIM()(implicit p: Parameters) extends IFetchModule {
-  val io = IO(new Bundle{
+
+  class BIMIO extends Bundle{
     val req  = Flipped(Decoupled(new BIMReq_Bundle))
     val resp = Decoupled(new BIMResp_Bundle)
     val update   = Flipped(Valid(new BIMUpdate_Bundle))
 
     val isReady = Output(Bool())
     val flush    = Input(Bool())
-  })
+  }
+
+  val io: BIMIO = IO(new BIMIO)
 
   /** BIM needs power reset to initialize the ram */
   val por_reset = RegInit(true.B)

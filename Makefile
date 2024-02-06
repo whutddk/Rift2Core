@@ -244,7 +244,11 @@ fpuisa += rv64uf-v-move
 fpuisa += rv64uf-p-recoding
 fpuisa += rv64uf-v-recoding
 
-isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa) # $(fpuisa) 
+include ${R2}/tb/ci/vec/testList.mk
+
+
+
+isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa)# $(fpuisa) 
 # isa ?= $(fpuisa)
 
 
@@ -256,7 +260,7 @@ isa ?= $(aluisa) $(bruisa) $(lsuisa) $(privisa) $(mulisa) # $(fpuisa)
 
 
 
-.PHONY: compile clean VSimTop
+.PHONY: compile clean VSimTop mill doc
 
 module:
 	sbt "test:runMain test.testModule --target-dir generated --show-registrations --full-stacktrace -E verilog"
@@ -266,11 +270,22 @@ compile:
 	sbt "test:runMain test.testMain \
 	-e verilog"
 
-
 #--gen-mem-verilog \
 # --inline \
 
 # --list-clocks \
+
+
+mill:
+	rm -rf ./generated/Main/
+	rm -f dependencies/rocket-chip/src/main/resources/META-INF/services/firrtl.options.RegisteredLibrary
+	./mill --no-server clean
+	./mill -i rift2Core[chisel].test.runMain test.testMain
+
+doc:
+	rm -f dependencies/rocket-chip/src/main/resources/META-INF/services/firrtl.options.RegisteredLibrary
+	./mill --no-server show rift2Core[chisel].docJar
+	unzip -d ScalaDoc/ out/rift2Core/chisel/docJar.dest/out.jar
 
 noc:
 	rm -rf ./generated/Main/
@@ -279,9 +294,11 @@ noc:
 
 
 line: 
+	rm -f dependencies/rocket-chip/src/main/resources/META-INF/services/firrtl.options.RegisteredLibrary
 	rm -rf generated/Debug/
-	rm -rf generated/Release/
-	sbt "test:runMain test.testAll"
+	# rm -rf generated/Release/
+	./mill --no-server clean
+	./mill -i rift2Core[chisel].test.runMain test.testAll
 
 CONFIG ?= /Main/
 
@@ -308,7 +325,7 @@ VSimTop:
 	${R2}/tb/verilator/sim_main.cpp  \
 	${R2}/tb/verilator/diff.cpp \
 	-Mdir ./generated/build/$(CONFIG) \
-	-j 30
+	-j 1
 
 
 
@@ -348,6 +365,11 @@ area: yosys
 	echo "{\n  \"schemaVersion\": 1, \n  \"label\": \"\", \n  \"message\": \""$(basename $(filter %.000000, $(shell cat $(R2)/generated/$(CONFIG)/stat.log) ))"\", \n  \"color\": \"a6bf94\" \n}" >> $(R2)/generated/$(CONFIG)/area.json
 # rm -f $(R2)/generated/$(CONFIG)/stat.log
 
+singleV: VSimTop
+	${R2}/generated/build/$(CONFIG)/VSimTop -w -l -p -f ./tb/ci/vec/$(TESTFILE)
+
+isaV:
+	$(foreach test, $(vecisa), ${R2}/generated/build/$(CONFIG)/VSimTop -l -f ./tb/ci/vec/$(test) || exit; )
 
 # lineCfg += Rift2300
 # lineCfg += Rift2310

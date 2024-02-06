@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -20,10 +20,9 @@ package rift2Core.backend.lsu
 import chisel3._
 import chisel3.util._
 
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
-import base._
 import rift2Chip._
 
 class Info_probe_req(implicit p: Parameters) extends RiftBundle {
@@ -31,17 +30,21 @@ class Info_probe_req(implicit p: Parameters) extends RiftBundle {
 }
 
 
+class ProbeUnitIO(edge: TLEdgeOut)(implicit p: Parameters) extends RiftBundle{
+  val cache_probe = Flipped(new DecoupledIO(new TLBundleB(edge.bundle)))
+  val req = new DecoupledIO(new Info_probe_req)
+
+  val probeBan = Input(Bool())
+}
+
 
 /**
   * ProbeUnit will accept probe request from l2cache and forward it to l1cache to resp data
   */
-class ProbeUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle {
-    val cache_probe = Flipped(new DecoupledIO(new TLBundleB(edge.bundle)))
-    val req = new DecoupledIO(new Info_probe_req)
+class ProbeUnit(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
 
-    val probeBan = Input(Bool())
-  })
+
+  val io: ProbeUnitIO = IO(new ProbeUnitIO(edge))
 
   /** a tiny fifo that buffer the probe request from l2cache */
   val probe_fifo = Module(new Queue(UInt(plen.W), 1, false, false))
@@ -57,13 +60,8 @@ class ProbeUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftMo
 
 }
 
-class FakeProbeUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle {
-    val cache_probe = Flipped(new DecoupledIO(new TLBundleB(edge.bundle)))
-    val req = new DecoupledIO(new Info_probe_req)
-
-    val probeBan = Input(Bool())
-  })
+class FakeProbeUnit(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
+  val io: ProbeUnitIO = IO(new ProbeUnitIO(edge))
 
   assert( ~io.cache_probe.valid ) 
   io.cache_probe.ready := true.B

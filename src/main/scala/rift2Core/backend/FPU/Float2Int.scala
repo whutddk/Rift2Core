@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,21 +18,22 @@ package rift2Core.backend.fpu
 
 import chisel3._
 import chisel3.util._
-import rift2Core.define._
 import rift2Core.backend._
 import base._
 import chisel3.experimental.dataview._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 
 class FPToInt(latency: Int)(implicit p: Parameters) extends RiftModule with HasFPUParameters{
-  val io = IO(new Bundle {
-    val in = Flipped(ValidIO(new Fpu_iss_info))
-    val frm = Input(UInt(3.W))
-    val out = ValidIO(new Xres_Info)
 
-  })
+  class FPToIntIO extends Bundle{
+    val in = Flipped(ValidIO(new Fpu_iss_info))
+    val out = ValidIO(new Xres_Info) 
+  }
+
+
+  val io: FPToIntIO = IO(new FPToIntIO)
 
 
   
@@ -41,7 +42,7 @@ class FPToInt(latency: Int)(implicit p: Parameters) extends RiftModule with HasF
 
   val op1 = unbox(io.in.bits.param.dat.op1, io.in.bits.fun.FtypeTagIn, None)
   val op2 = unbox(io.in.bits.param.dat.op2, io.in.bits.fun.FtypeTagIn, None)
- 
+  val frm = io.in.bits.param.dat.op0
 
   val store = 
     Mux1H(Seq(
@@ -80,7 +81,7 @@ class FPToInt(latency: Int)(implicit p: Parameters) extends RiftModule with HasF
     val conv =  {
       val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 64))
       mdl.io.in := op1
-      mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+      mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, frm, io.in.bits.param.rm)
       mdl.io.signedOut := ~io.in.bits.fun.is_usi
       mdl
     }
@@ -91,7 +92,7 @@ class FPToInt(latency: Int)(implicit p: Parameters) extends RiftModule with HasF
       val narrow = {
         val mdl = Module(new hardfloat.RecFNToIN( 11, 53, 32)) 
         mdl.io.in := op1
-        mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+        mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, frm, io.in.bits.param.rm)
         mdl.io.signedOut := ~io.in.bits.fun.is_usi
         mdl
       }

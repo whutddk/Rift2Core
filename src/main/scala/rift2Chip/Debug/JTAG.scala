@@ -27,7 +27,7 @@ MODIFICATIONS.
 */
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -131,10 +131,13 @@ class JtagOutput(irLength: Int = 5) extends Bundle {
 }
 
 class JtagStateMachine() extends Module{
-  val io = IO(new Bundle{
+
+  class JtagStateMachineIO extends Bundle{
     val tms = Input(Bool())
-    val currState = Output(JtagState.State.chiselType)
-  })
+    val currState = Output(JtagState.State.chiselType())
+  }
+
+  val io = IO(new JtagStateMachineIO)
 
   //work with TCK and jtag_reset
   val nextState = WireDefault(JtagState.TestLogicReset.U)
@@ -259,12 +262,12 @@ class CaptureChain[+T <: Data](gen: T) extends Chain {
     case _ => require(false, s"can't generate chain for unknown width data type $gen"); -1
   }
 
-  val regs = (0 until n).map(x => Reg(Bool()))
+  val regs = (0 until n).map( _ => Reg(Bool()))
 
   io.chainOut.data := regs(0)
   
   when (io.chainIn.capture) {
-    (0 until n) map (x => regs(x) := io.capture.bits.asUInt()(x))
+    (0 until n) map (x => regs(x) := io.capture.bits.asUInt.extract(x))
     io.capture.is_valid := true.B
   } .elsewhen (io.chainIn.shift) {
     regs(n-1) := io.chainIn.data
@@ -291,13 +294,13 @@ class CaptureUpdateChain[+T <: Data](gen: T) extends Chain {
       case _ => require(false, s"can't generate chain for unknown width data type $gen"); -1
     }
 
-    val regs = (0 until n).map(x => Reg(Bool()))
+    val regs = (0 until n).map( _ => Reg(Bool()))
     io.chainOut.data := regs(0)
     io.chainOut.chainControlFrom(io.chainIn)
     io.update.bits := (Cat(regs.reverse)).asTypeOf(io.update.bits)
 
     when(io.chainIn.capture) {
-      for( i <- 0 until n ) yield { regs(i) := io.capture.bits.asUInt()(i) }
+      for( i <- 0 until n ) yield { regs(i) := io.capture.bits.asUInt.extract(i) }
       io.capture.is_valid := true.B
       io.update.valid := false.B
     } .elsewhen(io.chainIn.update) {
@@ -342,7 +345,7 @@ class JtagTapController() extends Module {
 
   val tapIsInTestLogicReset = Wire(Bool())
 
-  val currState = Wire(JtagState.State.chiselType)
+  val currState = Wire(JtagState.State.chiselType())
 
   io.out.state := currState
 

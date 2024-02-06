@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,15 +19,28 @@ package rift2Core.frontend
 import chisel3._
 import chisel3.util._
 import chisel3.experimental.dataview._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 import rift2Core.define._
 import base._
+
 /**
   * instract fetch stage 3, instr pre-decode, realign, predict-state 1
   */
 abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
-  val io = IO(new Bundle{
+  /**
+    * @param if3_req a vector of 4 decoupled IF2 bundle input ports for each read channel
+    * @param if3_resp a vector of decoupled IF3 bundle output ports for each read channel
+    * @param btbResp a vector of decoupled BTBResp_Bundle output ports for each read channel
+    * @param bimResp a vector of decoupled BIMResp_Bundle output ports for each read channel
+    * @param tageResp a vector of decoupled arrays of 6 TageTableResp_Bundle output ports for each read channel
+    * @param jcmm_update a valid Jump_CTarget_Bundle input port for updating the jump prediction
+    * @param bcmm_update a valid Branch_CTarget_Bundle input port for updating the branch prediction
+    * @param if4_update_ghist a vector of valid Ghist_reflash_Bundle input ports for updating the global history for each read channel
+    * @param if4Redirect a valid IF4_Redirect_Bundle input port for redirecting the fetch pipeline to a new address
+    * @param flush an input Boolean for flushing the pipeline
+    */
+  class IF3IO extends Bundle{
     val if3_req = Vec(4, Flipped(new DecoupledIO(new IF2_Bundle) ))
     val if3_resp = Vec(rnChn, Decoupled(new IF3_Bundle))
 
@@ -41,8 +54,10 @@ abstract class IF3Base()(implicit p: Parameters) extends IFetchModule {
     val if4_update_ghist = Vec(rnChn, Flipped(Valid(new Ghist_reflash_Bundle)))
     val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
 
-    val flush = Input(Bool())
-  })
+    val flush = Input(Bool())    
+  }
+
+  val io: IF3IO = IO(new IF3IO)
 
   val ghist_snap   = RegInit( 0.U(64.W) )
   val ghist_active = RegInit( 0.U(64.W) )

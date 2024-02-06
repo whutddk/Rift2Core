@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@ import chisel3.util._
 class PLRU( cb: Int, cl: Int ) {
   val lvl = log2Ceil(cb)
   val sel = 
-    for ( i <- 0 until cl ) yield { 
-      for ( j <- 0 until lvl ) yield {
-        def n = scala.math.pow(2,j).toInt
+    for ( _ <- 0 until cl ) yield { 
+      for ( i <- 0 until lvl ) yield {
+        def n = scala.math.pow(2,i).toInt
         Reg( Vec(n, Bool() ))
       }
     }
@@ -81,7 +81,7 @@ class PLRU( cb: Int, cl: Int ) {
 
 class LRU( cb: Int, cl: Int ) {
   val history =
-    for ( i <- 0 until cl ) yield {
+    for ( _ <- 0 until cl ) yield {
       RegInit( VecInit( Seq.fill(cb){ 0.U(cb.W) } ) )
     }
 

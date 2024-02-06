@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package debug
 import chisel3._
 import chisel3.util._
 import rift2Chip._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 class Info_sba_req extends Bundle{
@@ -37,13 +37,16 @@ class Info_sba_rsp extends Bundle{
 }
 
 class SBA(edge: TLEdgeOut)(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
+
+  class SBAIO extends Bundle{
     val req = Flipped(Decoupled(new Info_sba_req))
     val rsp = Decoupled(new Info_sba_rsp)
 
     val getPut    = new DecoupledIO(new TLBundleA(edge.bundle))
     val access = Flipped(new DecoupledIO(new TLBundleD(edge.bundle)))
-  })
+  }
+  
+  val io = IO(new SBAIO)
 
 
   val is_busy = RegInit(false.B)

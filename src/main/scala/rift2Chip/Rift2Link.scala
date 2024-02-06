@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,27 +19,26 @@
 package rift2Chip
 
 import chisel3._
-import chisel3.util._
 import rift2Core._
 
 import debug._
 
 import rift2Core.define._
 
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.amba.axi4._
 import sifive.blocks.inclusivecache._
 
 
-import constellation.noc._
-import constellation.channel._
-import constellation.protocol._
-import constellation.router._
-import constellation.topology._
-import constellation.routing._
-import scala.collection.immutable.ListMap
+// import constellation.noc._
+// import constellation.channel._
+// import constellation.protocol._
+// import constellation.router._
+// import constellation.topology._
+// import constellation.routing._
+// import scala.collection.immutable.ListMap
 
 
 class Rift2LinkA(isFlatten: Boolean = false)(implicit p: Parameters) extends LazyModule with HasRiftParameters{
@@ -47,7 +46,7 @@ class Rift2LinkA(isFlatten: Boolean = false)(implicit p: Parameters) extends Laz
   val i_rift2Core = LazyModule( new Rift2Core(isFlatten) )
 
   val sifiveCache = if( hasL2 ) { Some(    LazyModule(new InclusiveCache(
-      cache = CacheParameters( level = 2, ways = 2, sets = 2*icacheParams.cl, blockBytes = l1DW/8, beatBytes = l1BeatBits/8 ),
+      cache = CacheParameters( level = 2, ways = 2, sets = 2*icacheParams.cl, blockBytes = l1DW/8, beatBytes = l1BeatBits/8, hintsSkipProbe = false ),
       micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
       control = None
     )))
@@ -86,11 +85,11 @@ class Rift2LinkA(isFlatten: Boolean = false)(implicit p: Parameters) extends Laz
     linkMXbar := i_rift2Core.periphClientNode
 
 
+  lazy val module = new Impl
 
+  class Impl extends LazyModuleImp(this) {
 
-  lazy val module = new LazyModuleImp(this) {
-    val io = IO( new Bundle{
-
+    class Rift2LinkAIO extends Bundle{
       val rtc_clock = Input(Bool())
 
       val dm        = if (hasDebugger) {Some(Flipped(new Info_DM_cmm))} else {None}
@@ -102,8 +101,10 @@ class Rift2LinkA(isFlatten: Boolean = false)(implicit p: Parameters) extends Laz
       // val hspi_reset = Input(Bool())
       val hspi_rx    = Input ( new HexSpiIO_Bundle )
       val hspi_tx   = Output( new HexSpiIO_Bundle )
-      val hspi_oen = Output(Bool())
-    })
+      val hspi_oen = Output(Bool())      
+    }
+
+    val io: Rift2LinkAIO = IO( new Rift2LinkAIO )
   
 
     if( hasDebugger ) {
@@ -190,9 +191,11 @@ class Rift2LinkB(implicit p: Parameters) extends LazyModule with HasRiftParamete
     i_aclint.node := linkSXbar
     i_plic.node   := linkSXbar
 
+  lazy val module = new Impl
 
-  lazy val module = new LazyModuleImp(this) {
-    val io = IO( new Bundle{
+  class Impl extends LazyModuleImp(this) {
+
+    class Rift2LinkBIO extends Bundle{
       val rtc_clock = Input(Bool())
 
       val JtagIO  = if (hasDebugger) {Some(new JtagIO())} else { None }
@@ -207,8 +210,10 @@ class Rift2LinkB(implicit p: Parameters) extends LazyModule with HasRiftParamete
       val hspi_reset = Input(Bool())
 
       val hspi_rx    = Input ( new HexSpiIO_Bundle )
-      val hspi_tx   = Output( new HexSpiIO_Bundle )
-    })
+      val hspi_tx   = Output( new HexSpiIO_Bundle )      
+    }
+
+    val io: Rift2LinkBIO = IO( new Rift2LinkBIO )
   
     if( hasDebugger ) {
       i_debugger.get.module.io.JtagIO <> io.JtagIO.get
@@ -248,9 +253,14 @@ class Rift2Link(implicit p: Parameters) extends LazyModule with HasRiftParameter
   val rift2LinkA = LazyModule( new Rift2LinkA )
   val rift2LinkB = LazyModule( new Rift2LinkB )
   val nDevices = 31
-  lazy val module = new LazyModuleImp(this) {
+
+  lazy val module = new Impl
+
+  class Impl extends LazyModuleImp(this) {
+
     override val desiredName = "Rift2Chip"
-    val io = IO(new Bundle{
+
+    class Rift2LinkIO extends Bundle{
       val JtagIO  = if (hasDebugger) {Some(new JtagIO())} else { None }
       val ndreset = if (hasDebugger) {Some(Output(Bool()))}  else { None }
 
@@ -259,10 +269,10 @@ class Rift2Link(implicit p: Parameters) extends LazyModule with HasRiftParameter
 
       val hspi_clk   = Output(Bool())//Input(Bool())
       val hspi_reset = Input(Bool())
-      val hspi_oen = Output(Bool())  
-
-  
-    })
+      val hspi_oen = Output(Bool())
+    }
+    
+    val io: Rift2LinkIO = IO(new Rift2LinkIO)
     dontTouch(rift2LinkA.module.io)
     dontTouch(rift2LinkB.module.io)
 

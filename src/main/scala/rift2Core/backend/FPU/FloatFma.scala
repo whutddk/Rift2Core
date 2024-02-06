@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,12 +18,11 @@ package rift2Core.backend.fpu
 
 import chisel3._
 import chisel3.util._
-import rift2Core.define._
 import rift2Core.backend._
 import chisel3.experimental.dataview._
 
 import rift2Chip._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 
       // res.fun.viewAsSupertype(new Lsu_isa) := ori.fun.viewAsSupertype(new Lsu_isa)
 
@@ -127,11 +126,13 @@ import chipsalliance.rocketchip.config._
 // }
 
 class FPUFMAPipe(latency: Int, val t: FType)(implicit p: Parameters) extends RiftModule with HasFPUParameters {
-  val io = IO(new Bundle {
+
+  class FPUFMAPipeIO extends Bundle{
     val in = Flipped(ValidIO(new Fpu_iss_info))
-    val frm = Input(UInt(3.W))
     val out = ValidIO(new Fres_Info)
-  })
+  }
+
+  val io: FPUFMAPipeIO = IO(new FPUFMAPipeIO)
 
   val out = Wire(new Fres_Info)
   out.viewAsSupertype(new Fpu_iss_info) := io.in.bits
@@ -139,6 +140,7 @@ class FPUFMAPipe(latency: Int, val t: FType)(implicit p: Parameters) extends Rif
   val op1 = unbox(io.in.bits.param.dat.op1, 0.U, Some(t))
   val op2 = unbox(io.in.bits.param.dat.op2, 0.U, Some(t))
   val op3 = unbox(io.in.bits.param.dat.op3, 0.U, Some(t))
+  val frm = io.in.bits.param.dat.op0
 
 
 
@@ -182,7 +184,7 @@ class FPUFMAPipe(latency: Int, val t: FType)(implicit p: Parameters) extends Rif
   val fma = {
     val mdl = Module(new hardfloat.MulAddRecFN(t.exp, t.sig))
     mdl.io.op := op
-    mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, io.frm, io.in.bits.param.rm)
+    mdl.io.roundingMode := Mux(io.in.bits.param.rm === "b111".U, frm, io.in.bits.param.rm)
     mdl.io.detectTininess := hardfloat.consts.tininess_afterRounding
     mdl.io.a := in1
     mdl.io.b := in2

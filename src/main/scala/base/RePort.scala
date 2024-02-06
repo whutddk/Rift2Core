@@ -2,7 +2,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -24,10 +24,13 @@ import chisel3.util._
 
 
 class RePort[T<:Data]( dw: T, port: Int) extends Module{
-  val io = IO( new Bundle{
+
+  class RePortIO extends Bundle{
     val enq = Vec(port, Flipped(new DecoupledIO(dw)) )
     val deq  = Vec(port, new DecoupledIO(dw) )
-    } )
+  }
+
+  val io: RePortIO = IO( new RePortIO)
 
     assert ( PopCount( io.enq.map(_.fire) ) === PopCount( io.deq.map(_.fire) ), "Assert Failed at RePort! enq-fire should equal to deq-fire!"  )
 
@@ -77,7 +80,7 @@ class RePort[T<:Data]( dw: T, port: Int) extends Module{
     }
     // for decouple
     io.deq(i).valid := (io.enq.count((x:DecoupledIO[T]) => (x.fire === true.B)) > i.U)
-    io.enq(i).ready := (for ( j <- 0 to i ) yield { io.deq(i).ready === true.B }).reduce(_&_)
+    io.enq(i).ready := (for ( _ <- 0 to i ) yield { io.deq(i).ready === true.B }).reduce(_&_)
 
   }
 
@@ -149,11 +152,14 @@ object RePort{
 }
 
 class ReDirect[T<:Data]( dw: T, port: Int) extends Module{
-  val io = IO( new Bundle{
+
+  class ReDirectIO extends Bundle{
     val enq = Vec(port, Flipped(new DecoupledIO(dw)) )
     val deq  = Vec(port, new DecoupledIO(dw) )
-    val mapper = Input(Vec(port, Bool()))
-    } )
+    val mapper = Input(Vec(port, Bool()))    
+  }
+
+  val io: ReDirectIO = IO( new ReDirectIO)
 
   for ( i <- 0 until port ) yield {
     io.deq(i).valid := false.B 
@@ -194,10 +200,12 @@ object ReDirect{
 
 
 class ZipPort[T<:Data]( dw: T, port: Int) extends Module{
-  val io = IO( new Bundle{
+
+  class ZipPortIO extends Bundle{
     val enq = Vec(port, Flipped(new DecoupledIO(dw)) )
-    val deq  = Vec(port, new DecoupledIO(dw) )
-    })
+    val deq  = Vec(port, new DecoupledIO(dw) )    
+  }
+  val io: ZipPortIO = IO( new ZipPortIO)
 
   val outValid = Wire( Vec(port, Vec(port, Bool())))
   val inReady  = Wire( Vec(port, Vec(port, Bool())))

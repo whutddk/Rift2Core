@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,25 +22,21 @@ import chisel3.util._
 
 import rift2Core.define._
 
-import base._
 import rift2Chip._
 
-import chipsalliance.rocketchip.config.Parameters
-import freechips.rocketchip.diplomacy._
+import org.chipsalliance.cde.config._
 
 
 abstract class Stq_Base()(implicit p: Parameters) extends DcacheModule{
 
   def st_w = log2Ceil(stEntry)
 
-  val io = IO( new Bundle{
+  class StqIO extends Bundle{
     val enq = Flipped(DecoupledIO(new Lsu_iss_info))
     val deq = DecoupledIO(new Lsu_iss_info)
 
     val cmm_lsu = Input(new Info_cmm_lsu)
     val is_empty = Output(Bool())
-
-
 
     val overlapReq  = Flipped(Valid(new Stq_req_Bundle))
     val overlapResp = Valid(new Stq_resp_Bundle)
@@ -49,7 +45,10 @@ abstract class Stq_Base()(implicit p: Parameters) extends DcacheModule{
 
     /** prefetch is not guarantee to be accepted by cache*/
     val preFetch = ValidIO( new PreFetch_Req_Bundle )
-  } )
+  }
+
+
+  val io: StqIO = IO( new StqIO )
 
   val buff = RegInit(VecInit(Seq.fill(stEntry)(0.U.asTypeOf(new Lsu_iss_info))))
   
@@ -72,17 +71,17 @@ abstract class Stq_Base()(implicit p: Parameters) extends DcacheModule{
 }
 
 trait Stq_Ptr { this: Stq_Base => 
-  {
-    val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending, false.B)
-    val is_amo_pos = io.cmm_lsu.is_amo_pending & ~is_amo_pre
-    when( io.flush ) {
-      is_amo := false.B
-    } .elsewhen( is_amo_pos ) {
-      is_amo := true.B
-    } .elsewhen(is_amo & ~io.is_empty) {
-      is_amo := false.B
-    }
+{
+  val is_amo_pre = RegNext(io.cmm_lsu.is_amo_pending, false.B)
+  val is_amo_pos = io.cmm_lsu.is_amo_pending & ~is_amo_pre
+  when( io.flush ) {
+    is_amo := false.B
+  } .elsewhen( is_amo_pos ) {
+    is_amo := true.B
+  } .elsewhen(is_amo & ~io.is_empty) {
+    is_amo := false.B
   }
+}
 
 
   val is_st_commited = io.cmm_lsu.is_store_commit
@@ -92,13 +91,13 @@ trait Stq_Ptr { this: Stq_Base =>
   io.deq.bits := Mux( io.deq.valid, rd_buff, 0.U.asTypeOf(new Lsu_iss_info) )
 
   when( io.flush ) {
-    if( cm_chn ==2 ) {
+    if( cmChn == 2 ) {
       when( is_st_commited(1) & is_st_commited(0) ) { wr_ptr_reg := cm_ptr_reg + 2.U }
       .elsewhen( is_st_commited(0) | (is_amo & ~io.is_empty) | is_st_commited(1) ) { wr_ptr_reg := cm_ptr_reg + 1.U } //amo only resolved at chn0
-      .otherwise{ wr_ptr_reg := cm_ptr_reg }      
-    } else if ( cm_chn == 1 ) {
+      .otherwise{ wr_ptr_reg := cm_ptr_reg }
+    } else if ( cmChn == 1 ) {
       when( is_st_commited(0) | (is_amo & ~io.is_empty) ) { wr_ptr_reg := cm_ptr_reg + 1.U } //amo only resolved at chn0
-      .otherwise{ wr_ptr_reg := cm_ptr_reg }         
+      .otherwise{ wr_ptr_reg := cm_ptr_reg }
     } else {
       require(false)
     }
@@ -113,7 +112,7 @@ trait Stq_Ptr { this: Stq_Base =>
     buff(rd_ptr) := 0.U.asTypeOf(new Lsu_iss_info)
   }
 
-  if( cm_chn == 2 ) {
+  if( cmChn == 2 ) {
     when( is_st_commited(1) & is_st_commited(0) ) {
       cm_ptr_reg := cm_ptr_reg + 2.U
       assert( ~is_amo )
@@ -122,8 +121,10 @@ trait Stq_Ptr { this: Stq_Base =>
       cm_ptr_reg := cm_ptr_reg + 1.U
       assert( ~((is_st_commited(0) | is_st_commited(1)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
       assert( cm_ptr_reg =/= wr_ptr_reg )
-    }    
-  } else if( cm_chn == 1 ) {
+    } .elsewhen( buff(cm_ptr_reg).fun.isVector & cm_ptr_reg =/= wr_ptr_reg ){ //a vls will auto commit
+      cm_ptr_reg := cm_ptr_reg + 1.U
+    }
+  } else if( cmChn == 1 ) {
     when( is_st_commited(0) ) {
       cm_ptr_reg := cm_ptr_reg + 1.U
       assert( ~is_amo )
@@ -132,13 +133,14 @@ trait Stq_Ptr { this: Stq_Base =>
       cm_ptr_reg := cm_ptr_reg + 1.U
       assert( ~((is_st_commited(0)) & (is_amo & ~io.is_empty)), "Assert Failed, is_amo only launch at chn 0!\n" )
       assert( cm_ptr_reg =/= wr_ptr_reg )
+    } .elsewhen( buff(cm_ptr_reg).fun.isVector & cm_ptr_reg =/= wr_ptr_reg ){ //a vls will auto commit
+      cm_ptr_reg := cm_ptr_reg + 1.U
     }
   } else {
     require(false)
   }
 
-
-    io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
+  io.is_empty := (cm_ptr_reg === wr_ptr_reg) & (cm_ptr_reg === rd_ptr_reg)
 }
 
 trait Stq_Overlap{ this: Stq_Base => 
@@ -147,12 +149,12 @@ trait Stq_Overlap{ this: Stq_Base =>
 
     when( rd_ptr_reg(st_w) =/= wr_ptr_reg(st_w) ) {
       assert( rd_ptr >= wr_ptr )
-      for ( i <- 0 until stEntry ) yield {
+      for ( i <- 0 until stEntry ) {
         val ro_ptr = (rd_ptr_reg + i.U)(st_w-1,0)
         when( (ro_ptr >= rd_ptr || ro_ptr < wr_ptr) && (buff(ro_ptr).param.dat.op1(plen-1,3) === io.overlapReq.bits.paddr(plen-1,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
 
-          when( buff(ro_ptr).fun.is_amo ) { io.overlapResp.valid := false.B }
+          when( buff(ro_ptr).fun.is_amo | buff(ro_ptr).fun.is_sc ) { io.overlapResp.valid := false.B }
           // assert( ~(buff(ro_ptr).fun.is_amo & io.overlapResp.valid), "Assert Failed at Store-queue, overlapping an amo-instr, that is not allow!" )
         } .otherwise {
           overlap_buff(i) := 0.U.asTypeOf(new Lsu_iss_info)
@@ -160,12 +162,12 @@ trait Stq_Overlap{ this: Stq_Base =>
       }
     } .otherwise {
       assert( rd_ptr <= wr_ptr )
-      for ( i <- 0 until stEntry ) yield {
+      for ( i <- 0 until stEntry ) {
         val ro_ptr = (rd_ptr_reg + i.U)(st_w-1,0)
         when( ro_ptr >= rd_ptr && ro_ptr < wr_ptr && (buff(ro_ptr).param.dat.op1(plen-1,3) === io.overlapReq.bits.paddr(plen-1,3)) ) {
           overlap_buff(i) := buff(ro_ptr)
 
-          when( buff(ro_ptr).fun.is_amo ) { io.overlapResp.valid := false.B }
+          when( buff(ro_ptr).fun.is_amo | buff(ro_ptr).fun.is_sc ) { io.overlapResp.valid := false.B }
           // assert( ~(buff(ro_ptr).fun.is_amo & io.overlapResp.valid), "Assert Failed at Store-queue, overlapping an amo-instr, that is not allow!" )
         } .otherwise {
           overlap_buff(i) := 0.U.asTypeOf(new Lsu_iss_info)

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,11 +22,14 @@ import chisel3.util._
 import chisel3.util.random._
 
 class Sky130BLFSR extends Module{
-  val io = IO(new Bundle{
-    val num = Output(Vec(4, UInt(7.W)))
 
-    val lock = Input(Bool())
-  })
+  class Sky130BLFSRIO extends Bundle{
+    val num = Output(Vec(4, UInt(7.W)))
+    val lock = Input(Bool())    
+  }
+
+  val io: Sky130BLFSRIO = IO(new Sky130BLFSRIO)
+
   def zero  = "b1000000".U
   def one   = "b1111001".U
   def two   = "b0100100".U

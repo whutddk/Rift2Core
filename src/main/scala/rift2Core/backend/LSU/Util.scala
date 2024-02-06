@@ -2,7 +2,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -24,10 +24,7 @@ import chisel3.util._
 
 import rift2Core.define._
 
-import rift2Chip._
-import base._
-
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 import chisel3.experimental.dataview._
 
 
@@ -43,60 +40,7 @@ object Strb2Mask{
 }
 
 
-object pkg_Dcache_Enq_Bundle{
-  def apply( ori: Info_miss_rsp )(implicit p: Parameters) = {
-    val res = Wire(new Dcache_Enq_Bundle)
 
-    res.paddr := ori.paddr
-    res.wstrb := "hFFFFFFFF".U
-    res.wdata := ori.wdata
-
-    {
-      res.fun := 0.U.asTypeOf(new Cache_op)
-      res.fun.grant := true.B      
-    }
-    res.rd := 0.U.asTypeOf(new RD_PHY)
-    res.chkIdx := 0.U
-    res
-  }
-  
-  def apply( ori: Info_probe_req )(implicit p: Parameters) = {
-    val res = Wire(new Dcache_Enq_Bundle)
-    res.paddr := ori.paddr
-    res.wstrb := 0.U
-    res.wdata := 0.U
-
-    {
-      res.fun := 0.U.asTypeOf(new Cache_op)
-      res.fun.probe := true.B      
-    }
-    res.rd := 0.U.asTypeOf(new RD_PHY)
-    res.chkIdx := 0.U
-    res
-  }
-
-  /** package write and amo operation*/
-  def apply( ori: Lsu_iss_info, overlapReq: Stq_req_Bundle, overlapResp: Stq_resp_Bundle)(implicit p: Parameters) = {
-
-    val res = Wire(new Dcache_Enq_Bundle)
-    val dw = res.wdata.getWidth
-
-    res.paddr := ori.paddr
-    res.wdata := Mux( ori.fun.is_lu, reAlign_data( from = 64, to = dw, data = overlapResp.wdata, addr = overlapReq.paddr ), ori.wdata_align(dw))
-    res.wstrb := Mux( ori.fun.is_lu, reAlign_strb( from = 64, to = dw, strb = overlapResp.wstrb, addr = overlapReq.paddr ), ori.wstrb_align(dw))
-
-    {
-      res.fun := 0.U.asTypeOf(new Cache_op)
-      res.fun.viewAsSupertype(new Lsu_isa) := ori.fun.viewAsSupertype(new Lsu_isa)
-
-    }
-    res.rd.rd0 := ori.param.rd0
-
-    res.chkIdx := 0.U
-    res
-  
-  }
-}
 
 object overlap_wr{
   def apply( ori: UInt, ori_wstrb: UInt, wdata: UInt, wstrb: UInt): (UInt, UInt) = {
@@ -113,7 +57,7 @@ object overlap_wr{
 }
 
 object get_loadRes{
-  def apply( fun: Lsu_isa, paddr: UInt, rdata: UInt ) = {
+  def apply( fun: Lsu_isa, vsew: UInt, paddr: UInt, rdata: UInt ) = {
     require( rdata.getWidth == 64 )
     val res = Wire(UInt(64.W))
 
@@ -124,10 +68,17 @@ object get_loadRes{
     val align = reAlign_data( from = 64, to = 8, rdata, paddr )
 
     res := Mux1H(Seq(
-      fun.is_byte -> load_byte(fun.is_usi, align),
-      fun.is_half -> load_half(fun.is_usi, align),
-      fun.is_word -> load_word(fun.is_usi, align),
-      fun.is_dubl -> align
+      fun.isByte    -> load_byte(fun.is_usi, align),
+      fun.isHalf    -> load_half(fun.is_usi, align),
+      fun.isWord    -> load_word(fun.is_usi, align),
+      fun.isDubl    -> align,
+      fun.isDynamic -> Mux1H(Seq(
+                        (vsew === "b000".U) -> load_byte(fun.is_usi, align),
+                        (vsew === "b001".U) -> load_half(fun.is_usi, align),
+                        (vsew === "b010".U) -> load_word(fun.is_usi, align),
+                        (vsew === "b011".U) -> align,
+                      ))
+
     ))  
 
     res

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,12 +18,11 @@ package debug
 
 import chisel3._
 import chisel3.util._
-import rift2Chip._
 
 import freechips.rocketchip.regmapper._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.diplomacy._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 
 object WNotifyVal {
   def apply(n: Int, rVal: UInt, wVal: UInt, wNotify: Bool, desc: RegFieldDesc = RegFieldDesc("NA", "NA") ): RegField = {
@@ -107,7 +106,10 @@ class Info_DM_cmm() extends Bundle{
   val hartHaltReq = Output(Bool())
 }
 
-
+class DEBUG_ROM_FLAGS extends Bundle{
+  val isResume = Bool()
+  val isGoing  = Bool()
+}
 
 
 
@@ -132,7 +134,8 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
   // }
   
   abstract class DMBase extends LazyModuleImp(this) {
-    val io = IO(new Bundle{
+
+    class DMIO extends Bundle{
       val dmi = Flipped(new DMIIO())
 
       val ndreset         = Output(Bool())
@@ -144,8 +147,11 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       // val debugResetReq  = Input(Vec(nComponents, Bool()))
 
       // val sba_getPut    = new DecoupledIO(new TLBundleA(edgeOut.bundle))
-      // val sba_access = Flipped(new DecoupledIO(new TLBundleD(edgeOut.bundle)))
-    })
+      // val sba_access = Flipped(new DecoupledIO(new TLBundleD(edgeOut.bundle)))      
+    }
+
+    val io: DMIO = IO(new DMIO)
+
 
     def HALTED       : Int = return 0x100
     def GOING        : Int = return 0x104
@@ -168,7 +174,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
     val dmstatus = WireInit(0.U.asTypeOf(new DMSTATUSFields()))
       val dmactive = RegInit(false.B)
-      val ndmreset = RegInit(false.B)
+      val ndmreset = RegInit(false.B); io.ndreset := ndmreset
     val hartsel = WireDefault(0.U(1.W))//RegInit(0.U( (log2Ceil(nComponents) max 1).W))
     val havereset = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
     val hartreset = RegInit(VecInit(Seq.fill(nComponents)(false.B)))
@@ -206,10 +212,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     // dontTouch(hartGoingWrEn)
     // dontTouch(hartResumingWrEn)
 
-    val flags   = RegInit( VecInit(Seq.fill(nComponents)(0.U.asTypeOf(new Bundle{
-      val is_resume = Bool()
-      val is_going  = Bool()
-    }))))
+    val flags   = RegInit( VecInit(Seq.fill(nComponents)(0.U.asTypeOf(new DEBUG_ROM_FLAGS))))
 
     val setresethaltEn = Wire(Bool())
     val clrresethaltEn = Wire(Bool())
@@ -247,9 +250,9 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
     
     for ( i <- 0 until nComponents ) yield {
       when( resumeReq_W1 & (i.U === hartsel) ){
-        flags(i).is_resume := true.B
+        flags(i).isResume := true.B
       } .elsewhen( hartResumingWrEn & (i.U === hartResumingId) ) {
-        flags(i).is_resume := false.B
+        flags(i).isResume := false.B
       }
 
       when( io.dm_cmm(i).hartIsInReset ) {
@@ -283,7 +286,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
     
     when(hartGoingWrEn) {
-      flags(hartGoingId).is_going := false.B
+      flags(hartGoingId).isGoing := false.B
     } .elsewhen( hartHaltedWrEn & busy & abstract_hartId === hartHaltedId ){
       busy := false.B
     } .elsewhen( hartExceptionWrEn & busy & abstract_hartId === hartExceptionId ){
@@ -399,7 +402,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
 
     when( is_access_register ) {
 
-      whereTo := Cat(((ABSTRACT-WHERETO).U)(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U)(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx (debug_abstarct)
+      whereTo := Cat(((ABSTRACT-WHERETO).U).extract(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U).extract(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx (debug_abstarct)
 
       when( is_access_CSR ) {
         val reg_sel = regno(11,0)
@@ -426,7 +429,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         // csrr s0 dscratch1   
         abstractGeneratedMem(4) := Cat("h7b3".U(12.W), 0.U(5.W), "b010".U(3.W), 8.U(5.W), "b1110011".U(7.W))
         abstractGeneratedMem(5) := Mux( postexec, 
-        Cat(((PROGBUF-ABSTRACT-5*4).U)(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U)(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
+        Cat(((PROGBUF-ABSTRACT-5*4).U).extract(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U).extract(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
         "b0010011".U(32.W) ) //nop
         abstractGeneratedMem(6) := "b0010011".U(32.W)  //nop
         abstractGeneratedMem(7) := "b000000000000100000000000001110011".U
@@ -448,7 +451,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         abstractGeneratedMem(3) := "b0010011".U(32.W)
         abstractGeneratedMem(4) := "b0010011".U(32.W)
         abstractGeneratedMem(5) := Mux( postexec, 
-          Cat(((PROGBUF-ABSTRACT-5*4).U)(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U)(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
+          Cat(((PROGBUF-ABSTRACT-5*4).U).extract(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U).extract(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
           "b0010011".U(32.W) ) //nop
         abstractGeneratedMem(6) := "b0010011".U(32.W)
         abstractGeneratedMem(7) := "b000000000000100000000000001110011".U  //ebreak
@@ -472,17 +475,18 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
         abstractGeneratedMem(3) := "b0010011".U(32.W)
         abstractGeneratedMem(4) := "b0010011".U(32.W)
         abstractGeneratedMem(5) := Mux( postexec, 
-          Cat(((PROGBUF-ABSTRACT-5*4).U)(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U)(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
+          Cat(((PROGBUF-ABSTRACT-5*4).U).extract(20), ((PROGBUF-ABSTRACT-5*4).U)(10,1), ((PROGBUF-ABSTRACT-5*4).U).extract(11), ((PROGBUF-ABSTRACT-5*4).U)(19,12), "b000001101111".U(12.W) ), //to PROGBUF (ABSTRACT+5*4+hxx) jal hxx
           "b0010011".U(32.W) ) //nop
         abstractGeneratedMem(6) := "b0010011".U(32.W)
         abstractGeneratedMem(7) := "b000000000000100000000000001110011".U  //ebreak
 
       }
     } .elsewhen( is_quick_access ) {
-      whereTo := Cat(((ABSTRACT-WHERETO).U)(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U)(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT(WHERETO+hxxx) jal hxxx
+      printf("Warning, arriving unsupport region!")
+      whereTo := Cat(((PROGBUF-WHERETO).U).extract(20), ((PROGBUF-WHERETO).U)(10,1), ((PROGBUF-WHERETO).U).extract(11), ((PROGBUF-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to PROGBUF (WHERETO+hxxx) jal hxxx
     } .elsewhen( is_access_memory ) {
-
-      whereTo := Cat(((PROGBUF-WHERETO).U)(20), ((PROGBUF-WHERETO).U)(10,1), ((PROGBUF-WHERETO).U)(11), ((PROGBUF-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to PROGBUF (WHERETO+hxxx) jal hxxx
+      printf("Warning, arriving unsupport region!")
+      whereTo := Cat(((ABSTRACT-WHERETO).U).extract(20), ((ABSTRACT-WHERETO).U)(10,1), ((ABSTRACT-WHERETO).U).extract(11), ((ABSTRACT-WHERETO).U)(19,12), "b000001101111".U(12.W) ) //to ABSTRACT (WHERETO+hxxx) jal hxxx
 
       // csrw s0 dscratch1,
       abstractGeneratedMem(0) := Cat("h7b3".U(12.W), 8.U(5.W), "b001".U(3.W), 0.U(5.W), "b1110011".U(7.W))
@@ -542,13 +546,13 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
           } .otherwise {
             busy := true.B
             abstract_hartId := hartsel
-            flags(hartsel).is_going  := true.B
+            flags(hartsel).isGoing  := true.B
           }
         } 
 
         when( is_quick_access ) {
           cmderr := 2.U
-          // flags(hartsel).is_going  := true.B
+          // flags(hartsel).isGoing  := true.B
 
           // busy := true.B
           // abstract_hartId := hartsel
@@ -563,7 +567,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
           //   busy := true.B
           //   abstract_hartId := hartsel
 
-          //   flags(hartsel).is_going  := true.B
+          //   flags(hartsel).isGoing  := true.B
 
           // }
         }
@@ -735,7 +739,7 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
       (EXCEPTION ) -> Seq(WNotifyVal(32, 0.U, hartExceptionId,  hartExceptionWrEn, RegFieldDesc("debug_hart_exception", "Debug ROM causes hart to write 0 here if it gets an exception in Debug Mode."))), //EXCEPTION
       (WHERETO ) -> Seq(RegField.r(32, whereTo, RegFieldDesc("debug_whereto", "Instruction filled in by Debug Module to control hart in Debug Mode", volatile = true))),
       
-      (ABSTRACT ) -> RegFieldGroup("debug_abstract", Some("Instructions generated by Debug Module"), abstractGeneratedMem.zipWithIndex.map{ case (x,i) => RegField.r(32, x)}),
+      (ABSTRACT ) -> RegFieldGroup("debug_abstract", Some("Instructions generated by Debug Module"), abstractGeneratedMem.zipWithIndex.map{ case (x, _) => RegField.r(32, x)}),
       (PROGBUF ) -> RegFieldGroup("debug_progbuf", Some("Program buffer used to communicate with Debug Module"),
         (0 to 15).map{ i => 
           // RegField(32, programBufferMem_qout(i), RegFieldDesc("programBuffer", "programBuffer", reset=Some(0)))
@@ -747,8 +751,8 @@ class DebugModule(device: Device, nComponents: Int = 1)(implicit p: Parameters) 
           WNotifyVal(32, abstractDataMem_qout(i), abstractDataMem_dnxt2(i), abstractDataMem_wen2(i))
         }),
       
-      (FLAGS ) -> RegFieldGroup("debug_flags", Some("Memory region used to control hart going/resuming in Debug Mode"), flags.zipWithIndex.map{case(x, i) => RegField.r(8, x.asUInt())}),
-      (ROMBASE ) -> RegFieldGroup("debug_rom", Some("Debug ROM"), DebugRomContents().zipWithIndex.map{case (x, i) => RegField.r(8, (x & 0xFF).U(8.W))}),
+      (FLAGS ) -> RegFieldGroup("debug_flags", Some("Memory region used to control hart going/resuming in Debug Mode"), flags.zipWithIndex.map{case(x, _) => RegField.r(8, x.asUInt)}),
+      (ROMBASE ) -> RegFieldGroup("debug_rom", Some("Debug ROM"), DebugRomContents().zipWithIndex.map{case (x, _) => RegField.r(8, (x & 0xFF).U(8.W))}),
     )
 
     //Abstract Debug

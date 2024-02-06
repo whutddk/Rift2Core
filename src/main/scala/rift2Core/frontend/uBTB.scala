@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,22 +18,22 @@ package rift2Core.frontend
 
 import chisel3._
 import chisel3.util._
-import base._
 import rift2Core.define._
-import chisel3.experimental.dataview._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 import chisel3.util.random._
 
 abstract class uBTBBase()(implicit p: Parameters) extends IFetchModule {
 
-  val io = IO(new Bundle{
+  class uBTBIO extends Bundle{
     val req  = Input(new uBTBReq_Bundle)
     val resp = Output( new uBTBResp_Bundle )
 
     val update = Flipped(Valid(new uBTBUpdate_Bundle))
-    val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
-  })
+    val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))    
+  }
+
+  val io: uBTBIO = IO(new uBTBIO)
 
 
   val buff    = RegInit(VecInit( Seq.fill(uBTB_entry)(0.U(vlen.W))))
@@ -136,14 +136,7 @@ class uBTB()(implicit p: Parameters) extends uBTBBase with uBTBLookup with uBTBF
 }
 
 
-class FakeuBTB()(implicit p: Parameters) extends IFetchModule {
-  val io = IO(new Bundle{
-    val req  = Input(new uBTBReq_Bundle)
-    val resp = Output( new uBTBResp_Bundle )
-
-    val update = Flipped(Valid(new uBTBUpdate_Bundle))
-    val if4Redirect = Flipped(Valid(new IF4_Redirect_Bundle))
-  })
+class FakeuBTB()(implicit p: Parameters) extends uBTBBase {
 
   io.resp := 0.U.asTypeOf(new uBTBResp_Bundle)
   for ( i <- 0 until ftChn ) {

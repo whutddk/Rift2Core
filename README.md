@@ -12,14 +12,9 @@
 --------------------------------------------
 
 
-Based on Chisel3, Rift2Core is a 9-stage, N-issue(Configurable), out-of-order, 64-bits RISC-V Core, which supports RV64GC and M, S, U mode.
+Based on Chisel, Rift2Core is a 9-stage, N-issue(Configurable), out-of-order, 64-bits RISC-V Core, which supports RV64GC and M, S, U mode.
 
 [RiftCore](https://github.com/whutddk/RiftCore) is the previous version of Rift2Core in Verilog.
-
-
-
-
-
 
 
 
@@ -30,14 +25,16 @@ Based on Chisel3, Rift2Core is a 9-stage, N-issue(Configurable), out-of-order, 6
 ## [How to Setup](doc/Setup.md)
 You can complete the deployment of the compilation and test environment following the steps below:
 * Setup Repo
-* Setup sbt
+* ~~Setup sbt~~
+* Setup mill
 * Setup verilator and gtkwave
-* Compile chisel3 to verilog
+* ~~Compile chisel3 to verilog~~
+* Compile chisel to verilog
 * Compile Model of Rif2Chip
 * Test a single ISA with waveform
 * Test all ISA without waveform
 
-Also we provide a [Docker-Image](https://hub.docker.com/repository/docker/whutddk/rift2env) mainly for CI, which can also be used for compiling and testing.
+Also we provide a [Docker-Image](https://hub.docker.com/repository/docker/whutddk/chisel5) mainly for CI, which can also be used for compiling and testing.
 
 ## [How to Config](doc/Configuration.md)
 
@@ -55,12 +52,12 @@ Download Pre-compile Version [Here](https://github.com/whutddk/Rift2Core/release
 |Rift-2310|N/A|N/A|N/A|
 |Rift-2320|N/A|N/A|N/A|
 |Rift-2330|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2330/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2330/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2330/coremark.json)|
-|Rift-2340|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2340/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2340/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2340/coremark.json)|
-|Rift-2350|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2350/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2350/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2350/coremark.json)|
-|Rift-2360|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2360/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2360/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2360/coremark.json)|
+|Rift-2340|N/A|N/A|N/A|
+|Rift-2350|N/A|N/A|N/A|
+|Rift-2360|N/A|N/A|N/A|
 |Rift-2370|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2370/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2370/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2370/coremark.json)|
-|Rift-2380|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2380/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2380/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2380/coremark.json)|
-|Rift-2390|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2390/isa.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2390/dhrystone.json)|![](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/whutddk/Rift2Core/gh_pages/generated/Debug/Rift2390/coremark.json)|
+|Rift-2380|N/A|N/A|N/A|
+|Rift-2390|N/A|N/A|N/A|
 
 
 
@@ -87,11 +84,11 @@ Download Pre-compile Version [Here](https://github.com/whutddk/Rift2Core/release
 
 ## API
 
-Rift2Core is not only a highly configurable RISC-V CPU generator, but also provides configurable generation of submodules.
+Rift2Core is not only an extremely configurable RISC-V CPU generator, but also provides configurable generation of submodules.
 
 Search the provided API in the Scala Doc.
 
-[API Here](https://whutddk.github.io/Rift2Core/ScalaDoc/api/index.html)
+[API Here](https://whutddk.github.io/Rift2Core/ScalaDoc/index.html)
 
 ## Wiki
 

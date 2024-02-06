@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -21,27 +21,34 @@ import chisel3.util._
 import base._
 import rift2Core.define._
 import chisel3.experimental.dataview._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 
 
-
+/**
+  * A branch target buffer (BTB) module for RISC-V processors.
+  * @constructor Creates a new instance of the BTB.
+  * @param p The implicit Parameters object for the processor.
+  */
 class BTB()(implicit p: Parameters) extends IFetchModule {
-  val io = IO(new Bundle{
+
+  class BTBIO extends Bundle{
     val req  = Flipped(Decoupled(new BTBReq_Bundle))
     val resp = Decoupled( new BTBResp_Bundle )
 
     val update = Flipped(Valid(new BTBUpdate_Bundle))
 
     val isReady = Output(Bool())
-    val flush = Input(Bool())
-  })
+    val flush = Input(Bool())    
+  }
+
+  val io: BTBIO = IO(new BTBIO)
 
   
   val bypassFifo = Module( new Queue( new BTBResp_Bundle, entries = 1, pipe = false, flow = true) )
 
   if ( btb_cl != 0 ) {
-    def cl_w = log2Ceil(btb_cl)
+    // def cl_w = log2Ceil(btb_cl)
     /** tage_table needs poweron reset to initialize the ram */
     val por_reset = RegInit(true.B)
     val (reset_cl, reset_end) = Counter( Range(0, btb_cl), por_reset )

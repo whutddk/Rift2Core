@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -26,16 +26,19 @@ import base._
 
 import rift2Chip._
 
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 
 /** the RV64M will be executed in this module */
 abstract class MulDivBase(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle {
+  
+  class MulDivIO extends Bundle{
     val mul_iss_exe = Flipped(new DecoupledIO(new Mul_iss_info))
     val mul_exe_iwb = new DecoupledIO(new WriteBack_info(dw=64))
-    val flush = Input(Bool())
-  })
+    val flush = Input(Bool())    
+  }
+
+  val io: MulDivIO = IO(new MulDivIO)
 
   val mul_exe_iwb_fifo = Module( new Queue( new WriteBack_info(dw=64), 1, true, false ) )
   mul_exe_iwb_fifo.reset := reset.asBool | io.flush
@@ -141,15 +144,20 @@ class MulDiv(implicit p: Parameters) extends MulDivBase with Mul with Div {
 
 }
 
+class MultiplierIO[T<:Data]( pipeType: T, dw: Int ) extends Bundle{
+  val enq = Flipped(new DecoupledIO(pipeType))
+  val deq = Decoupled(pipeType)
+  val op1 = Input(UInt(dw.W))
+  val op2 = Input(UInt(dw.W))
+  val res = Output(UInt((2*dw).W))
+  val flush = Input(Bool())     
+}
+
 class Multiplier[T<:Data]( pipeType: T, dw: Int ) extends Module {
-  val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(pipeType))
-    val deq = Decoupled(pipeType)
-    val op1 = Input(UInt(dw.W))
-    val op2 = Input(UInt(dw.W))
-    val res = Output(UInt((2*dw).W))
-    val flush = Input(Bool()) 
-  })
+
+
+
+  val io: MultiplierIO[T] = IO(new MultiplierIO( pipeType, dw ))
 
   val pipeMidStageInfo = Module( new Queue( pipeType, 1, true, false ) )
   val pipeFnlStageInfo = Module( new Queue( pipeType, 1, true, false ) )
@@ -219,10 +227,10 @@ class Multiplier[T<:Data]( pipeType: T, dw: Int ) extends Module {
     require( col.length == lat.length )
 
     val len = col.length
-            val column  = col ++ Seq.fill(3-(len%3))(false.B)
-            val latency = lat ++ Seq.fill(3-(len%3))(0)
+            // val column  = col ++ Seq.fill(3-(len%3))(false.B)
+            // val latency = lat ++ Seq.fill(3-(len%3))(0)
 
-    // println( "ColumnCompress: col length = "+ col.length + " , column length = "+ column.length + " \n" )
+            // println( "ColumnCompress: col length = "+ col.length + " , column length = "+ column.length + " \n" )
 
             // val adder = for( i <- 0 until ((len+2) / 3) ) yield {
             //   csa_3_2(VecInit(column(3*i), column(3*i+1), column(3*i+2)), Seq( latency(3*i), latency(3*i+1), latency(3*i+2) ) )
@@ -406,26 +414,23 @@ class Multiplier[T<:Data]( pipeType: T, dw: Int ) extends Module {
 
 
 class NorMultiplier[T<:Data]( pipeType: T, dw: Int ) extends Module {
-  val io = IO(new Bundle{
-    val enq = Flipped(new DecoupledIO(pipeType))
-    val deq = Decoupled(pipeType)
-    val op1 = Input(UInt(dw.W))
-    val op2 = Input(UInt(dw.W))
-    val res = Output(UInt((2*dw).W))
-    val flush = Input(Bool()) 
-  })
+  val io: MultiplierIO[T] = IO(new MultiplierIO( pipeType, dw ))
 
   io.deq <> io.enq
   io.res := (io.op1.asSInt * io.op2.asSInt).asUInt
 }
 
 
+
+
 class Dividor(implicit p: Parameters) extends RiftModule {
-  val io = IO(new Bundle{
+
+  class DividorIO extends Bundle{
     val enq = Flipped(new DecoupledIO(new Mul_iss_info))
     val deq = Decoupled(new WriteBack_info(dw=64))
-    val flush = Input(Bool())
-  })
+    val flush = Input(Bool())  
+  }
+  val io: DividorIO = IO(new DividorIO)
 
   when( io.enq.fire ) { assert( io.enq.bits.fun.isDiv ) }
 
@@ -554,6 +559,7 @@ class Dividor(implicit p: Parameters) extends RiftModule {
   divRtnArb.io.in(0).valid := algDivider.io.deq.valid
   divRtnArb.io.in(0).bits.res := divRes
   divRtnArb.io.in(0).bits.rd0 := algDivider.io.deq.bits.param.rd0
+
   algDivider.io.deq.ready  := divRtnArb.io.in(0).ready
 
   io.enq.ready := Mux(divBypass, divRtnArb.io.in(1).ready, algDivider.io.enq.ready)
@@ -569,15 +575,18 @@ class Dividor(implicit p: Parameters) extends RiftModule {
 
 
 class NorDivider[T<:Data]( pipeType: T, dw: Int ) extends Module {
-  val io = IO(new Bundle{
+
+  class NorDividerIO extends Bundle{
     val enq = Flipped(new DecoupledIO(pipeType))
     val deq = Decoupled(pipeType)
     val op1 = Input(UInt(dw.W))
     val op2 = Input(UInt(dw.W))
     val quo = Output(UInt((dw).W))
     val rem = Output(UInt((dw).W))
-    val flush = Input(Bool()) 
-  })
+    val flush = Input(Bool())     
+  }
+
+  val io: NorDividerIO = IO(new NorDividerIO)
 
   val isDivBusy = RegInit(false.B)
 
@@ -633,16 +642,17 @@ class NorDivider[T<:Data]( pipeType: T, dw: Int ) extends Module {
 
 
 class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
-
-  val io = IO(new Bundle{
+  class SRT4DividerIO extends Bundle{
     val enq = Flipped(new DecoupledIO(pipeType))
     val deq = Decoupled(pipeType)
     val op1 = Input(UInt(dw.W))
     val op2 = Input(UInt(dw.W))
     val quo = Output(UInt((dw).W))
     val rem = Output(UInt((dw).W))
-    val flush = Input(Bool()) 
-  })
+    val flush = Input(Bool())     
+  }
+
+  val io: SRT4DividerIO = IO(new SRT4DividerIO)
 
 
   def preProcess( preDividend: UInt, preDdivisor: UInt ): (UInt, UInt, UInt, UInt) = {
@@ -660,7 +670,7 @@ class SRT4Divider[T<:Data]( pipeType: T, dw: Int ) extends Module {
     val bShift = PriorityEncoder(preDdivisor.asBools.reverse)
 
     val shiftDiff = Cat(0.U(1.W), bShift).asSInt - Cat(0.U(1.W), aShift).asSInt
-    val quoBits   = Mux( shiftDiff < 0.S, 0.U, shiftDiff.asUInt())
+    val quoBits   = Mux( shiftDiff < 0.S, 0.U, shiftDiff.asUInt)
 
 
     dividend := 

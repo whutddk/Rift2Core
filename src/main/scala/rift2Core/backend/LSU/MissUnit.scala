@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,10 +19,9 @@ package rift2Core.backend.lsu
 import chisel3._
 import chisel3.util._
 
-import base._
 import rift2Chip._
 
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
 
 
@@ -39,7 +38,8 @@ class Info_miss_rsp(implicit p: Parameters) extends RiftBundle with HasDcachePar
 
 /** The Queue of cache to request acquire and waiting for grant and ack grant */
 class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) extends RiftModule with HasDcacheParameters{
-  val io = IO(new Bundle{
+
+  class MissUnitIO extends Bundle{
     val req = Flipped(Valid(new Info_miss_req))
     val rsp = DecoupledIO(new Info_miss_rsp)
 
@@ -48,9 +48,10 @@ class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) e
     val cache_grantAck  = new DecoupledIO(new TLBundleE(edge.bundle))
 
     val miss_ban = Input(Bool())
-    val release_ban = Output(Bool())
+    val release_ban = Output(Bool())    
+  }
 
-  })
+  val io: MissUnitIO = IO(new MissUnitIO)
 
   /** a parallel buff of *paddr* miss request, when a duplicated request comes, it will be acked but dismiss */
   val miss_queue = RegInit(VecInit( Seq.fill(dcacheParams.sbEntry)( 0.U.asTypeOf(new Info_miss_req) )))
@@ -208,7 +209,8 @@ class MissUnit(edge: TLEdgeOut, setting: Int, id: Int)(implicit p: Parameters) e
 
 /** The Queue of cache to request acquire and waiting for grant and ack grant Get-Mode*/
 class GetUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModule with HasDcacheParameters{
-  val io = IO(new Bundle{
+
+  class GetUnitIO extends Bundle{
     val req = Flipped(Valid(new Info_miss_req))
     val rsp = DecoupledIO(new Info_miss_rsp)
 
@@ -217,8 +219,9 @@ class GetUnit(edge: TLEdgeOut, id: Int)(implicit p: Parameters) extends RiftModu
 
     val miss_ban = Input(Bool())
     val release_ban = Output(Bool())
+  }
 
-  })
+  val io: GetUnitIO = IO(new GetUnitIO)
 
   /** a parallel buff of *paddr* miss request, when a duplicated request comes, it will be acked but dismiss */
   val miss_queue = RegInit(VecInit( Seq.fill(dcacheParams.sbEntry)( 0.U.asTypeOf(new Info_miss_req) )))

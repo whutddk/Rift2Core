@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import rift2Core.define._
 import freechips.rocketchip.regmapper._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.diplomacy._
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 
 class AClint( nTiles: Int = 1 )(implicit p: Parameters) extends LazyModule {
   require( nTiles < 4096 && nTiles > 0)
@@ -42,11 +42,17 @@ class AClint( nTiles: Int = 1 )(implicit p: Parameters) extends LazyModule {
     device    = device,
     beatBytes = 8)
 
-  lazy val module = new LazyModuleImp(this) {
-    val io = IO(new Bundle {
+
+  lazy val module = new Impl
+  
+  class Impl extends LazyModuleImp(this) {
+
+    class AClintIO extends Bundle{
       val rtc_clock = Input(Bool())
       val int = Output( Vec(nTiles, new AClint_Bundle) )
-    })
+    }
+    
+    val io = IO(new AClintIO)
 
     val rtc = ShiftRegisters( io.rtc_clock, 4 )
 

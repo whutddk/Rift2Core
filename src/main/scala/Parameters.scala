@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -20,9 +20,7 @@ import chisel3._
 import chisel3.util._
 
 
-import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp, TransferSizes}
-import freechips.rocketchip.tilelink._
-import chipsalliance.rocketchip.config.{Field, Parameters}
+import org.chipsalliance.cde.config._
 
 import rift2Core.define._
 
@@ -93,16 +91,63 @@ abstract class DcacheBundle(implicit val p: Parameters) extends Bundle with HasD
 
 
 case class VectorParameters(
-  vlen: Int = 128,
-  elen: Int = 64,
-)
+  vlen: Int = 128,    //The number of bits in a single vector register
+  elen: Int = 64,     //The maximum size in bits that can produce or consume 
+  isEEW8: Boolean = true,
+  isEEW16: Boolean = true,
+  isEEW32: Boolean = true,
+  isEEW64: Boolean = true,
+  maxMUL : Int  = 8,
 
-trait HasVectorParameters extends HasRiftParameters{
-  val vectorParams: VectorParameters
+  // opChn: Int = 4,
+  // wbChn: Int = 4,
 
-  // def vlen = vectorParams.vlen
-  // def elen = vectorParams.elen
+  // lsuEntry: Int = 16,
+
+){
+
+  require( isPow2(elen) )
+  require( isPow2(vlen) )
+  require( elen >= 8 )
+  require( vlen >= elen )
+  require( vlen < 65536 )
+
+  var minEEW: Int = 0
+  if( isEEW64 ) { minEEW = 64; require(elen >= 64) }
+  if( isEEW32 ) { minEEW = 32; require(elen >= 32) }
+  if( isEEW16 ) { minEEW = 16; require(elen >= 16) }
+  if( isEEW8 )  { minEEW = 8;  require(elen >= 8 ) }
+
+  //requirement of V for application Processors
+  require( vlen >= 128 )
+  require(isEEW8  == true)
+  require(isEEW16 == true)
+  require(isEEW32 == true)
+  require(isEEW64 == true)
+  require( isPow2(maxMUL) )
+  require(maxMUL >= 8)
+
+  val vlmax = (vlen / minEEW * maxMUL)
+  // val atw: Int = {
+  //   if(isEEW8) {8}
+  //   else if(isEEW16) {16}
+  //   else if(isEEW32) {32}
+  //   else if(isEEW64) {64}
+  // }
+
+  // val atNum: Int = vRegNum * (vlen / atw)
+  // val minLMUL: float = atw / elen
+
 }
+
+
+
+// trait HasVectorParameters extends HasRiftParameters{
+//   val vParams: VectorParameters
+
+//   // def vlen = vectorParams.vlen
+//   // def elen = vectorParams.elen
+// }
 
 
 
@@ -120,6 +165,7 @@ case class RiftSetting(
   hasPreFetch: Boolean = false,
   hasuBTB: Boolean = true,
   hasLRU: Boolean = false,
+  hasVector: Boolean = false,
 
 
   isMinArea: Boolean = false,
@@ -127,11 +173,15 @@ case class RiftSetting(
 
   ftChn: Int = 8, //fetch width
   rnChn: Int = 2,
-  cm_chn: Int = 2,
+  cmChn: Int = 2,
   opChn: Int = 4,
   wbChn: Int = 4,
 
-  regNum: Int = 64,
+  xRegNum: Int = 64,
+  fRegNum: Int = 64,
+  vRegNum: Int = 64,
+  // cRegNum: Int = 8,
+
   pmpNum: Int = 1,
   hpmNum: Int = 4,
 
@@ -143,31 +193,23 @@ case class RiftSetting(
 
   tlbEntry: Int = 16, 
   ifetchParameters: IFParameters = IFParameters(
-    // GHR_length = 64,
-    // UBTB_entry = 16,
-    // fetch_w   = 64,
-
-    // btb_tag_w = 8,
-    // btb_cb  = 4,
-  uBTB_entry = 16,
-  uBTB_tag_w = 16,
-  btb_cl = 4096,
-  bim_cl = 4096,
-  ras_dp = 256,
-  tage_table = 6, 
-
-
-
-    // tage_tag_w = 8,
+    uBTB_entry = 16,
+    uBTB_tag_w = 16,
+    btb_cl = 4096,
+    bim_cl = 4096,
+    ras_dp = 256,
+    tage_table = 6, 
   ),
 
   l1DW: Int = 256,
 
   dptEntry: Int = 16,
 
-  aluNum: Int = 1,
+  aluNum: Int = 2,
   mulNum: Int = 1,
   fpuNum: Int = 0,
+
+  vectorParameters: VectorParameters = VectorParameters(),
 
 
   icacheParameters: IcacheParameters = IcacheParameters(
@@ -189,13 +231,19 @@ case class RiftSetting(
   require( plen >=32 && plen <= 56 )
   require( memBeatBits <= l1BeatBits )
   //require( opChn % 2 == 0 )
-  require( regNum > 33 )
+  require( xRegNum > 33 & fRegNum > 33 && vRegNum > 33)
   require( pmpNum >= 0 && pmpNum <= 8 )
   require( isPow2(dcacheParameters.stEntry) )
   require( isPow2(ftChn) )
   require( aluNum > 0 )
   require( dptEntry >= 1 )
 
+
+  if(hasVector){
+    // require( rnChn >= 2 )
+    require( fpuNum > 0 )
+    require( dcacheParameters.stEntry >= vectorParameters.vlen/8, "Error! VStore will be stuck at Store Queue!" )
+  }
 }
 
 trait HasRiftParameters {
@@ -204,6 +252,7 @@ trait HasRiftParameters {
   val riftSetting = p(RiftParamsKey)
 
   val ifParams     = riftSetting.ifetchParameters
+  val vParams      = riftSetting.vectorParameters
   val icacheParams = riftSetting.icacheParameters
   val dcacheParams = riftSetting.dcacheParameters
 
@@ -212,16 +261,23 @@ trait HasRiftParameters {
   def hasPreFetch = riftSetting.hasPreFetch
   def hasuBTB  = riftSetting.hasuBTB
   def hasLRU  = riftSetting.hasLRU
-  // def hasMulDiv = riftSetting.hasMulDiv
+  def hasVector = riftSetting.hasVector
+
   
   def ftChn = riftSetting.ftChn
 
-  def cm_chn = riftSetting.cm_chn
+  def cmChn = riftSetting.cmChn
   def rnChn = riftSetting.rnChn
   def opChn = riftSetting.opChn
   def wbChn = riftSetting.wbChn
 
-  def regNum = riftSetting.regNum
+  def xRegNum = riftSetting.xRegNum
+  def fRegNum = riftSetting.fRegNum
+  def vRegNum = riftSetting.vRegNum
+  def maxRegNum = xRegNum max fRegNum max vRegNum
+
+  // def cRegNum = riftSetting.cRegNum
+
   def pmpNum = riftSetting.pmpNum
   def hpmNum = riftSetting.hpmNum
 

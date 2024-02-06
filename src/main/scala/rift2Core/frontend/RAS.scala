@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -21,20 +21,22 @@ package rift2Core.frontend
 import chisel3._
 import chisel3.util._
 import rift2Core.define._
-import chipsalliance.rocketchip.config.Parameters
+import org.chipsalliance.cde.config._
 
 
 
 
 class RAS()(implicit p: Parameters) extends IFetchModule {
-  val io = IO(new Bundle{
+
+  class RASIO extends Bundle{
     val enq = Flipped(Valid(new RASPP_Bundle))
     val deq  = new DecoupledIO(new RASPP_Bundle)
 
     // flush when RAS mis-predict
-    val flush = Input(Bool())
+    val flush = Input(Bool())    
+  }
 
-  })
+  val io: RASIO = IO(new RASIO)
 
   if ( ras_dp > 0 ) {
     def aw = log2Ceil(ras_dp)

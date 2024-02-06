@@ -1,6 +1,6 @@
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,13 +19,10 @@
 package rift2Chip
 
 import chisel3._
-import chisel3.util._
 import rift2Core._
 import debug._
 
-import rift2Core.define._
-
-import chipsalliance.rocketchip.config._
+import org.chipsalliance.cde.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.amba.axi4._
@@ -75,7 +72,7 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
   val nDevices = 31
   val i_plic = LazyModule( new Plic( nHarts = 1, nPriorities = 8, nDevices = nDevices ))
   val sifiveCache = LazyModule(new InclusiveCache(
-      cache = CacheParameters( level = 2, ways = 4, sets = 4096, blockBytes = l1DW/8, beatBytes = l1BeatBits/8 ),
+      cache = CacheParameters( level = 2, ways = 2, sets = 64, blockBytes = l1DW/8, beatBytes = l1BeatBits/8, hintsSkipProbe = false ),
       micro = InclusiveCacheMicroParameters( writeBytes = memBeatBits/8, memCycles = 40, portFactor = 4),
       control = None
     ))
@@ -172,16 +169,19 @@ class Rift2Chip(isFlatten: Boolean = false)(implicit p: Parameters) extends Lazy
   }
   
 
+  lazy val module = new Impl
 
-  lazy val module = new LazyModuleImp(this) {
-    val io = IO( new Bundle{
+  class Impl extends LazyModuleImp(this) {
+
+    class Rift2ChipIO extends Bundle{
       val JtagIO  = if (hasDebugger) {Some(new JtagIO())} else { None }
       val ndreset = if (hasDebugger) {Some(Output(Bool()))}  else { None }
 
-
       val interrupt = Input( Vec(nDevices, Bool()) )
-      val rtc_clock = Input(Bool())
-    })
+      val rtc_clock = Input(Bool())      
+    }
+
+    val io: Rift2ChipIO = IO( new Rift2ChipIO)
   
     if( hasDebugger ) {
       i_debugger.get.module.io.JtagIO <> io.JtagIO.get

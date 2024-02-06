@@ -2,7 +2,7 @@
 
 
 /*
-  Copyright (c) 2020 - 2023 Wuhan University of Technology <295054118@whut.edu.cn>
+  Copyright (c) 2020 - 2024 Wuhan University of Technology <295054118@whut.edu.cn>
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ package base
 
 import chisel3._
 import chisel3.util._
-import chisel3.util.experimental.loadMemoryFromFileInline
+
 
 // @chiselName
 // class Gen_sram(dw: Int, aw: Int) extends BlackBox(Map("DW" -> dw, "AW" -> aw)) with HasBlackBoxResource {
@@ -46,8 +46,8 @@ import chisel3.util.experimental.loadMemoryFromFileInline
 // }
 
 class SPSRAM(dw: Int, dp: Int) extends Module {
-  val io = IO(new Bundle{
 
+  class SPSRAMIO extends Bundle{
     val addr = Input(UInt((log2Ceil(dp)).W))
 
     val data_w = Input(UInt(dw.W))
@@ -55,8 +55,9 @@ class SPSRAM(dw: Int, dp: Int) extends Module {
 
     val data_r = Output(UInt(dw.W))
     val en_r   = Input(Bool())
-    val en_w   = Input(Bool())
-  })
+    val en_w   = Input(Bool())    
+  }
+  val io: SPSRAMIO = IO(new SPSRAMIO)
 
   def byte_cnt = (dw+7)/8
   val mem = SyncReadMem( dp, Vec( (dw+7)/8, UInt(8.W) ) )
@@ -82,7 +83,8 @@ class SPSRAM(dw: Int, dp: Int) extends Module {
 
 
 class DPSram(dw: Int, aw: Int) extends Module {
-  val io = IO(new Bundle{
+
+  class DPSramIO extends Bundle{
     val data_w = Input(UInt(dw.W))
     val addr_w = Input(UInt(aw.W))
     val data_wstrb = Input(UInt(((dw+7)/8).W))
@@ -90,12 +92,12 @@ class DPSram(dw: Int, aw: Int) extends Module {
 
     val data_r = Output(UInt(dw.W))
     val addr_r = Input(UInt(aw.W))
-    val en_r   = Input(Bool())
+    val en_r   = Input(Bool())    
+  }
 
-    // val clk    = Input(Clock())
-  })
+  val io: DPSramIO = IO(new DPSramIO)
 
-  def dp: Int = { var res = 1; for ( i <- 0 until aw ) { res = res * 2 }; return res }
+  def dp: Int = { var res = 1; for ( _ <- 0 until aw ) { res = res * 2 }; return res }
   def byte_cnt = (dw+7)/8
 
   val ram = Mem( dp, Vec( byte_cnt, UInt(8.W) ) )

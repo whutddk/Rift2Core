@@ -1,16 +1,15 @@
 package rift2Chip
 
-import chisel3._
-import chisel3.util._
+
+
 
 import rift2Core.define.{IFParameters}
-import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.config._
+import org.chipsalliance.cde.config._
+
+ 
 
 
-
-
-class Rift2300 extends Config((site, here, up) => {
+class Rift2300 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasL2  = false,
     hasDebugger = true,
@@ -24,10 +23,12 @@ class Rift2300 extends Config((site, here, up) => {
     rnChn = 1,
     opChn = 1,
     wbChn = 1,
-    cm_chn = 1,
+    cmChn = 1,
 
     pmpNum = 0,
-    regNum = 34,
+    xRegNum = 34,
+    fRegNum = 34,
+    vRegNum = 34,
     hpmNum  = 0,
 
     l1BeatBits = 64,
@@ -61,7 +62,6 @@ class Rift2300 extends Config((site, here, up) => {
     ),
 
     dptEntry = 1,
-    fpuNum = 0,
     mulNum = 0,
 
     isMinArea = true,
@@ -72,7 +72,7 @@ class Rift2300 extends Config((site, here, up) => {
 
 
 
-class Rift2310 extends Config((site, here, up) => {
+class Rift2310 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasL2  = true,
     hasDebugger = true,
@@ -86,10 +86,12 @@ class Rift2310 extends Config((site, here, up) => {
     rnChn = 1,
     opChn = 1,
     wbChn = 1,
-    cm_chn = 1,
+    cmChn = 1,
 
     pmpNum = 0,
-    regNum = 34,
+    xRegNum = 34,
+    fRegNum = 34,
+    vRegNum = 34,
     hpmNum  = 0,
 
     l1BeatBits = 64,
@@ -123,7 +125,6 @@ class Rift2310 extends Config((site, here, up) => {
     ),
 
     dptEntry = 2,
-    fpuNum = 0,
     mulNum = 1,
 
     isMinArea = true,
@@ -132,7 +133,7 @@ class Rift2310 extends Config((site, here, up) => {
   )
 })
 
-class Rift2320 extends Config((site, here, up) => {
+class Rift2320 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasL2  = true,
     hasDebugger = true,
@@ -144,10 +145,12 @@ class Rift2320 extends Config((site, here, up) => {
     rnChn = 1,
     opChn = 2,
     wbChn = 1,
-    cm_chn = 1,
+    cmChn = 1,
 
     pmpNum = 0,
-    regNum = 34,
+    xRegNum = 34,
+    fRegNum = 34,
+    vRegNum = 34,
     hpmNum  = 0,
 
     l1BeatBits = 64,
@@ -181,7 +184,6 @@ class Rift2320 extends Config((site, here, up) => {
     ),
 
     dptEntry = 4,
-    fpuNum = 0,
     mulNum = 1,
 
     isMinArea = true,
@@ -190,22 +192,26 @@ class Rift2320 extends Config((site, here, up) => {
   )
 })
 
-class Rift2330 extends Config((site, here, up) => {
+class Rift2330 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
+    hasL2  = true,
     hasDebugger = true,
     hasPreFetch = false,
     hasuBTB = false,
-    // hasLRU = false,
 
     ftChn = 4,
 
+    rnChn = 2,
     opChn = 2,
     wbChn = 2,
+    cmChn = 2,
 
-      pmpNum = 0,
-      hpmNum  = 0,
+    pmpNum = 0,
+    hpmNum  = 0,
 
-    regNum = 34,
+    xRegNum = 34,
+    fRegNum = 34,
+    vRegNum = 34,
 
     l1BeatBits = 64,
     memBeatBits = 64,
@@ -218,11 +224,6 @@ class Rift2330 extends Config((site, here, up) => {
       btb_cl = 4,
       bim_cl = 8,
       ras_dp = 4,
-      // uBTB_tag_w = 16,
-      // btb_cl = 4096,
-      // bim_cl = 4096,
-      // ras_dp = 256,
-      // tage_table = 6, 
     ),
 
     l1DW = 128,
@@ -240,24 +241,32 @@ class Rift2330 extends Config((site, here, up) => {
     ),
 
     dptEntry = 4,
-    fpuNum = 0,
 
     isMinArea = true,
     isLowPower = false,
   )
 })
 
-class Rift2330D extends Config((site, here, up) => {
+class Rift2330D extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
     hasuBTB = false,
     // hasLRU = false,
 
+    ftChn = 4,
+
+    rnChn = 1,
     opChn = 1,
     wbChn = 1,
+    cmChn = 1,
 
-    regNum = 34,
+    xRegNum = 34,
+    fRegNum = 34,
+    vRegNum = 34,
+
+    pmpNum = 0,
+    hpmNum  = 0,
 
     l1BeatBits = 64,
     memBeatBits = 64,
@@ -267,14 +276,9 @@ class Rift2330D extends Config((site, here, up) => {
     ifetchParameters = IFParameters(
       uBTB_entry = 8,
 
-      btb_cl = 2,
+      btb_cl = 0,
       bim_cl = 2,
-      ras_dp = 4,
-      // uBTB_tag_w = 16,
-      // btb_cl = 4096,
-      // bim_cl = 4096,
-      // ras_dp = 256,
-      // tage_table = 6, 
+      ras_dp = 0,
     ),
 
     l1DW = 128,
@@ -287,12 +291,12 @@ class Rift2330D extends Config((site, here, up) => {
       bk = 1,
       cb = 1,
       cl = 2,
-      sbEntry = 2,
+      sbEntry = 1,
       stEntry = 2,
     ),
 
-    dptEntry = 2,
-    fpuNum = 0,
+    dptEntry = 1,
+    mulNum = 0,
 
     isMinArea = true,
     isLowPower = false,
@@ -300,7 +304,7 @@ class Rift2330D extends Config((site, here, up) => {
 })
 
 
-class Rift2340 extends Config((site, here, up) => {
+class Rift2340 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
@@ -308,7 +312,9 @@ class Rift2340 extends Config((site, here, up) => {
     opChn = 4,
     wbChn = 2,
 
-    regNum = 48,
+    xRegNum = 48,
+    fRegNum = 48,
+    vRegNum = 48,
 
     l1BeatBits = 64,
     memBeatBits = 64,
@@ -334,14 +340,13 @@ class Rift2340 extends Config((site, here, up) => {
     ),
 
     dptEntry = 6,
-    fpuNum = 1,
 
     isMinArea = true,
     isLowPower = false,
   )
 })
 
-class Rift2350 extends Config((site, here, up) => {
+class Rift2350 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
@@ -349,7 +354,9 @@ class Rift2350 extends Config((site, here, up) => {
     opChn = 4,
     wbChn = 4,
 
-    regNum = 48,
+    xRegNum = 48,
+    fRegNum = 48,
+    vRegNum = 48,
 
     l1BeatBits = 128,
     memBeatBits = 128,
@@ -375,14 +382,13 @@ class Rift2350 extends Config((site, here, up) => {
     ),
 
     dptEntry = 8,
-    fpuNum = 0,
 
     isMinArea = true,
     isLowPower = false,
   )
 })
 
-class Rift2360 extends Config((site, here, up) => {
+class Rift2360 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
@@ -390,7 +396,9 @@ class Rift2360 extends Config((site, here, up) => {
     opChn = 4,
     wbChn = 4,
 
-    regNum = 54,
+    xRegNum = 54,
+    fRegNum = 54,
+    vRegNum = 54,
 
     l1BeatBits = 128,
     memBeatBits = 128,
@@ -416,21 +424,56 @@ class Rift2360 extends Config((site, here, up) => {
     ),
 
     dptEntry = 12,
-    fpuNum = 0,
 
     isMinArea = false,
     isLowPower = true,
   )
 })
 
-class Rift2370 extends Config((site, here, up) => {
+class Rift2370 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
-    fpuNum = 1,
-    aluNum = 2,
+    // hasVector = true,
+
+    // opChn = 2,
+    // wbChn = 2,
+
+    // pmpNum = 1,
+    // hpmNum = 0,
+
+    // icacheParameters = IcacheParameters(
+    //   bk = 1,
+    //   cb = 2,
+    //   cl = 8
+    // ),
+
+    // dcacheParameters = DcacheParameters(
+    //   bk = 2,
+    //   cb = 2,
+    //   cl = 8,
+    //   stEntry = 16,
+    //   sbEntry = 2,
+    // ),
+
+    // ifetchParameters = IFParameters(
+    //   uBTB_entry = 4,
+    //   btb_cl = 8,
+    //   bim_cl = 8,
+    //   ras_dp = 4,
+    // ),
+
+    // dptEntry = 4,
+
+    // aluNum = 1,
+
+    // xRegNum = 36,
+    // fRegNum = 36,
+    // tlbEntry = 4,
   )
+
+
 })
 
-class Rift2380 extends Config((site, here, up) => {
+class Rift2380 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
@@ -438,7 +481,9 @@ class Rift2380 extends Config((site, here, up) => {
     opChn = 6,
     wbChn = 4,
 
-    regNum = 96,
+    xRegNum = 96,
+    fRegNum = 96,
+    vRegNum = 96,
 
     l1BeatBits = 128,
     memBeatBits = 128,
@@ -464,13 +509,12 @@ class Rift2380 extends Config((site, here, up) => {
     ),
 
     dptEntry = 24,
-    fpuNum = 1,
     isMinArea = false,
     isLowPower = true,
   )
 })
 
-class Rift2390 extends Config((site, here, up) => {
+class Rift2390 extends Config((_, _, _) => {
   case RiftParamsKey => RiftSetting(
     hasDebugger = true,
     hasPreFetch = false,
@@ -478,7 +522,9 @@ class Rift2390 extends Config((site, here, up) => {
     opChn = 8,
     wbChn = 4,
 
-    regNum = 128,
+    xRegNum = 128,
+    fRegNum = 128,
+    vRegNum = 128,
 
     l1BeatBits = 128,
     memBeatBits = 128,
@@ -504,7 +550,6 @@ class Rift2390 extends Config((site, here, up) => {
     ),
 
     dptEntry = 32,
-    fpuNum = 1,
 
     isMinArea = false,
     isLowPower = true,
